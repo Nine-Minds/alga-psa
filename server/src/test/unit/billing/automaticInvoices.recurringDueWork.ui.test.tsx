@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
@@ -123,6 +124,12 @@ function createQueryBuilder(rows: Row[]) {
         resultRows = resultRows.filter((row) =>
           applyOperator(String(row[column] ?? '').slice(0, 10), operator, expected),
         );
+        return builder;
+      }
+
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (commercialOnly) {
+        resultRows = resultRows.filter(commercialOnly);
         return builder;
       }
 
@@ -1357,7 +1364,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -1411,7 +1418,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
 
@@ -1492,7 +1499,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput, groupedMember.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
     });
   });
 
@@ -1529,7 +1536,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1697,7 +1704,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [clientRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });
@@ -1740,7 +1747,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         expect.objectContaining({
           selectorInputs: [contractRow.selectorInput],
         }),
-      ]);
+      ], { consolidateFixedBundles: false });
       expect(screen.getByText('Client Details')).toBeInTheDocument();
     });
   });

@@ -57,6 +57,7 @@ vi.mock('./warranty/WarrantyCard', () => ({
 }));
 
 import { AssetBentoLayout } from './AssetBentoLayout';
+import { AssetSurfaceAccessProvider } from '../context/AssetSurfaceAccessContext';
 
 const asset: any = {
   asset_id: 'a1',
@@ -65,17 +66,19 @@ const asset: any = {
   server: { installed_software: [] },
 };
 
-function renderLayout(onFocusChange = vi.fn()) {
+function renderLayout(onFocusChange = vi.fn(), access?: any, layoutAsset: any = asset) {
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, shouldRetryOnError: false }}>
-      <AssetBentoLayout
-        asset={asset}
-        metrics={undefined}
-        rmmData={null}
-        assetFacts={undefined}
-        focusView={null}
-        onFocusChange={onFocusChange}
-      />
+      <AssetSurfaceAccessProvider access={access}>
+        <AssetBentoLayout
+          asset={layoutAsset}
+          metrics={undefined}
+          rmmData={null}
+          assetFacts={undefined}
+          focusView={null}
+          onFocusChange={onFocusChange}
+        />
+      </AssetSurfaceAccessProvider>
     </SWRConfig>
   );
   return onFocusChange;
@@ -130,5 +133,35 @@ describe('AssetBentoLayout software tile count', () => {
     expect(screen.queryByText('No software inventory reported.')).not.toBeInTheDocument();
     expect(screen.queryByText(/packages reported/)).not.toBeInTheDocument();
     expect(document.getElementById('asset-bento-software-open')).toBeNull();
+  });
+});
+
+describe('AssetBentoLayout on a read-only device surface', () => {
+  beforeEach(() => {
+    getAssetSoftwareSummary.mockReset();
+    getAssetSoftwareSummary.mockResolvedValue({ total_installed: 0 });
+  });
+  afterEach(cleanup);
+
+  const ungrouped = { ...asset, client_id: 'c1', group: null };
+  const readOnly = { closedActions: ['create', 'update', 'delete'], closedOperations: [], closedFields: [] };
+
+  it('offers Add to group and the Manage entry points on an open surface', async () => {
+    renderLayout(vi.fn(), undefined, ungrouped);
+    expect(await screen.findByText('No software inventory reported.')).toBeInTheDocument();
+    expect(document.getElementById('asset-bento-add-to-group')).not.toBeNull();
+    expect(document.getElementById('asset-bento-related-manage')).not.toBeNull();
+    expect(document.getElementById('asset-bento-maintenance-open')).not.toBeNull();
+    expect(document.getElementById('asset-bento-docs')).not.toBeNull();
+  });
+
+  it('leaves out grouping, the write entry points and documents when updates are closed', async () => {
+    renderLayout(vi.fn(), readOnly, ungrouped);
+    expect(await screen.findByText('No software inventory reported.')).toBeInTheDocument();
+    expect(document.getElementById('asset-bento-related')).not.toBeNull();
+    expect(document.getElementById('asset-bento-add-to-group')).toBeNull();
+    expect(document.getElementById('asset-bento-related-manage')).toBeNull();
+    expect(document.getElementById('asset-bento-maintenance-open')).toBeNull();
+    expect(document.getElementById('asset-bento-docs')).toBeNull();
   });
 });

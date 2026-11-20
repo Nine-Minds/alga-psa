@@ -43,7 +43,9 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   NO_LOCATION_EMAIL: 'auth.portalSetup.errors.noLocationEmail',
   BASE_URL_NOT_CONFIGURED: 'auth.portalSetup.errors.baseUrlNotConfigured',
   INVITATION_NOT_FOUND: 'auth.portalSetup.errors.invitationNotFound',
-  REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed'
+  REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed',
+  BATCH_LIMIT_EXCEEDED: 'auth.portalSetup.errors.batchLimitExceeded',
+  NO_TARGETS_SELECTED: 'auth.portalSetup.errors.noTargetsSelected'
 };
 
 interface ContactInfo {
@@ -205,12 +207,18 @@ function PortalSetupContent() {
           router.push(signinUrl);
         }
       } else {
-        toast.error(translatePortalError(
+        const message = translatePortalError(
           result.errorCode,
           result.error,
           'auth.portalSetup.createFailed',
           'Failed to create account'
-        ));
+        );
+        if (result.errorCode === 'PORTAL_USER_ALREADY_EXISTS') {
+          // "You already have an account" is a dead end for this form: show the
+          // persistent card with the sign-in button, not a toast that scrolls away.
+          setError(message);
+        }
+        toast.error(message);
       }
     } catch (error) {
       console.error('Setup completion error:', error);

@@ -1,4 +1,5 @@
 import type { ContactPhoneNumberInput } from '@alga-psa/types';
+import { checkContactPhoneNumberValue } from '@alga-psa/shared/models/contactPhoneValue';
 import type { EntraSyncUser } from './types';
 
 function toObject(value: unknown): Record<string, unknown> {
@@ -32,33 +33,99 @@ function fallbackDisplayName(user: EntraSyncUser): string {
   return (user.email || user.userPrincipalName || 'Entra Contact').split('@')[0];
 }
 
-export function buildEntraContactPhoneNumbers(user: EntraSyncUser): ContactPhoneNumberInput[] {
-  const businessPhones = user.businessPhones
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const mobilePhone = user.mobilePhone?.trim() || '';
+export interface ParsedEntraPhoneValue {
+  phoneNumber: string;
+  extension?: string;
+  /** Set only when an extension marker was found but the extension failed the row limits. */
+  discardedExtension?: string;
+}
 
-  const phoneNumbers: ContactPhoneNumberInput[] = [];
+export interface EntraPhoneFieldNotice {
+  field: 'phone_numbers';
+  source: 'businessPhones' | 'mobilePhone';
+  rawValue: string;
+  message: string;
+}
 
-  businessPhones.forEach((phoneNumber, index) => {
-    phoneNumbers.push({
-      phone_number: phoneNumber,
-      canonical_type: 'work',
-      is_default: index === 0,
-      display_order: phoneNumbers.length,
-    });
-  });
+// Extension markers recognised at the end of a Microsoft phone value (case-insensitive):
+//   ;ext=228        unambiguous marker, captures everything after '='
+//   <ws>ext 228     whitespace required before 'ext' / 'ext.'
+//   <digit|ws|)>x228  'x' must follow a digit, whitespace or ')' so vanity numbers
+//                     such as 1-800-BOX1234 are never split.
+const ENTRA_PHONE_EXTENSION =
+  /^(?<phone>.*?)(?:\s*;\s*ext\s*=\s*(?<semi>[^;]*)|\s+ext\.?\s*(?<word>[\d\s-]+)|(?<=[\d\s)])\s*x\s*(?<x>[\d\s-]+))\s*$/i;
 
-  if (mobilePhone) {
-    phoneNumbers.push({
-      phone_number: mobilePhone,
-      canonical_type: 'mobile',
-      is_default: businessPhones.length === 0,
-      display_order: phoneNumbers.length,
-    });
+const EXTENSION_PATTERN = /^\d{1,10}$/;
+
+export function parseEntraPhoneValue(raw: string): ParsedEntraPhoneValue {
+  const trimmed = raw.trim();
+  const match = ENTRA_PHONE_EXTENSION.exec(trimmed);
+  const phoneNumber = match?.groups?.phone?.trim() ?? '';
+  if (!match || !phoneNumber) {
+    return { phoneNumber: trimmed };
   }
 
-  return phoneNumbers;
+  const captured = (match.groups?.semi ?? match.groups?.word ?? match.groups?.x ?? '').trim();
+  const extension = captured.replace(/[\s-]/g, '');
+  if (EXTENSION_PATTERN.test(extension)) {
+    return { phoneNumber, extension };
+  }
+  return { phoneNumber, discardedExtension: captured };
+}
+
+export function buildEntraContactPhoneRows(user: EntraSyncUser): {
+  rows: ContactPhoneNumberInput[];
+  notices: EntraPhoneFieldNotice[];
+} {
+  const candidates: Array<{ source: EntraPhoneFieldNotice['source']; raw: string }> = [
+    ...user.businessPhones.map((raw) => ({ source: 'businessPhones' as const, raw: raw.trim() })),
+    { source: 'mobilePhone' as const, raw: user.mobilePhone?.trim() || '' },
+  ].filter((candidate) => candidate.raw);
+
+  const notices: EntraPhoneFieldNotice[] = [];
+  const kept: Array<{ source: EntraPhoneFieldNotice['source']; phoneNumber: string; extension?: string }> = [];
+
+  for (const { source, raw } of candidates) {
+    const parsed = parseEntraPhoneValue(raw);
+    if (parsed.discardedExtension !== undefined) {
+      notices.push({
+        field: 'phone_numbers',
+        source,
+        rawValue: raw,
+        message: `Extension "${parsed.discardedExtension}" was dropped: extensions are 1-10 digits.`,
+      });
+    }
+
+    const check = checkContactPhoneNumberValue(parsed.phoneNumber);
+    if (check.valid === false) {
+      notices.push({
+        field: 'phone_numbers',
+        source,
+        rawValue: raw,
+        message: `Phone number "${raw}" was not imported: ${check.message}.`,
+      });
+      continue;
+    }
+    kept.push({ source, phoneNumber: check.phoneNumber, extension: parsed.extension });
+  }
+
+  const defaultIndex = Math.max(
+    kept.findIndex((entry) => entry.source === 'businessPhones'),
+    0
+  );
+  const rows = kept.map((entry, index): ContactPhoneNumberInput => ({
+    phone_number: entry.phoneNumber,
+    ...(entry.extension ? { extension: entry.extension } : {}),
+    canonical_type: entry.source === 'businessPhones' ? 'work' : 'mobile',
+    is_default: index === defaultIndex,
+    display_order: index,
+  }));
+
+  return { rows, notices };
+}
+
+export function buildEntraContactPhoneNumbers(user: EntraSyncUser): ContactPhoneNumberInput[] {
+  return buildEntraContactPhoneRows(user).rows;
 }
 
 export function buildContactFieldSyncPatch(

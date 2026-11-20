@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+export { acquireOrganizationSlaLock } from '@alga-psa/shared/lib/sla/organizationSlaLock';
 
 /**
  * Serialize SLA writes per ticket.

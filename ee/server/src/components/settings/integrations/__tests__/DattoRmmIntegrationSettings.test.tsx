@@ -24,8 +24,11 @@ vi.mock('@ee/lib/actions/integrations/dattoRmmActions', () => actions);
 vi.mock('@alga-psa/integrations/actions', () => ({
   getRmmIntegrationIdByProvider: vi.fn(async () => ({ success: true, data: { integrationId: 'int-1' } })),
 }));
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn(async () => ({ clients: [], total: 0 })),
+}));
+
 vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: vi.fn(async () => []),
   getAllContacts: vi.fn(async () => []),
 }));
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));

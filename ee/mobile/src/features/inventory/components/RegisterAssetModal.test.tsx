@@ -87,6 +87,41 @@ describe("RegisterAssetModal", () => {
     expect(onCreated).toHaveBeenCalledWith("asset-77", "Front desk PC");
   });
 
+  it("T128 registers into an audit's scope without asking for the client", async () => {
+    let tree!: ReactTestRenderer;
+    const onCreated = vi.fn();
+    await act(async () => {
+      tree = create(
+        <RegisterAssetModal
+          visible
+          client={apiClient}
+          apiKey="key"
+          code="SN-FIELD-42"
+          clientId="cl-1"
+          clientName="Emerald City"
+          locationId="loc-1"
+          locationName="Main office"
+          onClose={vi.fn()}
+          onCreated={onCreated}
+        />,
+      );
+    });
+
+    expect(mockListClients).not.toHaveBeenCalled();
+    expect(hosts(tree, "inventory-register-change-client")).toHaveLength(0);
+
+    act(() => byLabel(tree, "inventory-register-name")[0].props.onChangeText("Hall switch"));
+    await act(async () => byLabel(tree, "inventory-register-submit")[0].props.onPress());
+
+    expect(mockCreateAsset).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: expect.objectContaining({ client_id: "cl-1", location_id: "loc-1" }),
+      }),
+    );
+    expect(onCreated).toHaveBeenCalledWith("asset-77", "Hall switch");
+  });
+
   it("keeps submit disabled without a name and surfaces server errors", async () => {
     mockCreateAsset.mockResolvedValue({
       ok: false,

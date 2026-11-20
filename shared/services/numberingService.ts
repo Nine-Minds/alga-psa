@@ -26,6 +26,27 @@ export interface NumberingOverrides {
 }
 
 export class SharedNumberingService {
+  /** Read the next value with the same formatting as issuance, without
+   * initializing settings, locking the allocator, or reserving a number. */
+  static async previewNextNumber(
+    entityType: EntityType,
+    deps: NumberingServiceDependencies,
+    overrides?: NumberingOverrides,
+  ): Promise<{ number: string; value: number; padding: number | null }> {
+    if (!deps.tenant) throw new Error('Tenant context is required for previewing numbers');
+    const settings = await tenantDb(deps.knex, deps.tenant).table('next_number')
+      .where('entity_type', entityType)
+      .select('last_number', 'initial_value', 'prefix', 'padding_length', 'prefix_date_format')
+      .first<{ last_number: number | string; initial_value: number | string | null; prefix: string | null; padding_length: number | null; prefix_date_format: string | null }>();
+    const defaults = NUMBERING_DEFAULTS[entityType];
+    const value = Math.max(Number(settings?.last_number ?? 0) + 1, settings ? Number(settings.initial_value ?? 1) : defaults.initial_value);
+    const padding = settings ? settings.padding_length : defaults.padding_length;
+    const prefix = settings ? settings.prefix ?? '' : defaults.prefix;
+    const raw = `${prefix}${String(value).padStart(padding ?? 0, '0')}`;
+    const number = await applyPrefixDateFormat(raw, settings, deps, overrides);
+    return { number, value, padding };
+  }
+
   /**
    * Generates the next sequential number for a given entity type.
    *

@@ -147,6 +147,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       is_inactive: zOpenApi.enum(['true', 'false']).optional(),
       has_client: zOpenApi.enum(['true', 'false']).optional(),
       client_name: zOpenApi.string().optional(),
+      location_id: zOpenApi.string().uuid().optional()
+        .describe('Contacts linked to this client location in any role, primary or not.'),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).optional(),
     }),
   );
 
@@ -225,6 +228,26 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // The client locations a person works at, primary first. Address fields are read through from the
+  // client location, so a caller never has to fetch it separately.
+  const ContactLocationLink = registry.registerSchema(
+    'ContactLocationLink',
+    zOpenApi.object({
+      location_id: zOpenApi.string().uuid(),
+      location_name: zOpenApi.string().nullable(),
+      is_primary: zOpenApi.boolean(),
+      is_active: zOpenApi.boolean(),
+      address_line1: zOpenApi.string().nullable().optional(),
+      address_line2: zOpenApi.string().nullable().optional(),
+      address_line3: zOpenApi.string().nullable().optional(),
+      city: zOpenApi.string().nullable().optional(),
+      state_province: zOpenApi.string().nullable().optional(),
+      postal_code: zOpenApi.string().nullable().optional(),
+      country_code: zOpenApi.string().nullable().optional(),
+      country_name: zOpenApi.string().nullable().optional(),
+    }),
+  );
+
   const ContactResource = registry.registerSchema(
     'ContactResource',
     zOpenApi.object({
@@ -270,6 +293,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       primary_email_custom_type_id: zOpenApi.string().guid().nullable().optional(),
       primary_email_type: zOpenApi.string().nullable().optional(),
       notes: zOpenApi.string().nullable().optional(),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).nullable().optional(),
+      locations: zOpenApi.array(ContactLocationLink).optional(),
       avatarUrl: zOpenApi.string().nullable().optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       client_name: zOpenApi.string().nullable().optional(),
@@ -317,6 +342,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_name: zOpenApi.string().nullable(),
       default_phone_number: zOpenApi.string().nullable(),
       default_phone_type: zOpenApi.string().nullable(),
+      work_arrangement: zOpenApi.string().nullable().optional(),
+      // `format=json` returns the links; `format=csv` flattens them into the Locations and
+      // Primary Location columns ("Warehouse; Head office").
+      locations: zOpenApi.array(ContactLocationLink).optional(),
     }),
   );
 
@@ -468,10 +497,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/clients/{id}/contacts',
     summary: 'List contacts for client',
-    description: 'Returns paginated contacts filtered by client_id after client existence check.',
+    description: 'Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam },
+    request: { params: ClientIdParam, query: ContactListQuery },
     responses: {
       200: { description: 'Client contacts returned.', schema: PaginatedContactEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },
@@ -488,7 +517,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/clients/{id}/locations',
     summary: 'List client locations',
-    description: 'Returns locations associated with client_id after client existence check.',
+    description: 'Returns locations associated with client_id after client existence check. Each row carries contact_count: how many contacts work at that location, which is also why deleting it would be refused.',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam },
@@ -882,7 +911,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts',
     summary: 'List contacts',
-    description: 'Inherited ApiBaseController list route for contacts.',
+    description: 'Inherited ApiBaseController list route for contacts. Each row carries work_arrangement (on_site | hybrid | remote) and locations[] — the client locations the person works at, primary first, with the address fields read through from the client. Filterable by location_id (contacts linked to that location in any role) and work_arrangement.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactListQuery },
@@ -901,7 +930,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/contacts',
     summary: 'Create contact',
-    description: 'Inherited ApiBaseController create route for contacts.',
+    description: 'Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact\'s client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: ContactBody } },
@@ -920,7 +949,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/{id}',
     summary: 'Get contact',
-    description: 'Inherited ApiBaseController get route for one contact_name_id.',
+    description: 'Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam },
@@ -940,7 +969,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/contacts/{id}',
     summary: 'Update contact',
-    description: 'Inherited ApiBaseController update route for one contact_name_id.',
+    description: 'Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
@@ -1028,7 +1057,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/search',
     summary: 'Search contacts',
-    description: 'Runs advanced contact search with explicit API-key auth and contact:read permission check.',
+    description: 'Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactSearchQuery },
@@ -1047,7 +1076,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/export',
     summary: 'Export contacts',
-    description: 'Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.',
+    description: 'Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations ("Warehouse; Head office") and Primary Location columns; JSON rows carry work_arrangement and locations[].',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactExportQuery },

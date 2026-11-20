@@ -1,0 +1,52 @@
+{
+  "capturedAt": "2026-11-03T23:08:47Z",
+  "productRevisionAtStart": "605341a1b06c379b4144e27dbb260beb77fef417",
+  "projectId": "408b0ddd-de45-4ef6-bf35-b88251c8515c",
+  "cliClient": "/home/robert/.alga-xo/bin/cli.mjs",
+  "supportedSocketUsed": "/tmp/ghostty-pane-ide/agent-cli.sock",
+  "projectScope": "ALGA_PROJECT_ID=408b0ddd-de45-4ef6-bf35-b88251c8515c",
+  "checks": [
+    {
+      "paneId": "f9b1c96a-95c0-46ea-b8af-e0deaa1b6039",
+      "observation": "initial explicit-scope commands returned Unsupported method: cli.request; later same-turn attempts returned Pane belongs to a different host for browser-get-url and Pane not found for list-pane-tabs",
+      "currentInventoryContainsPane": false,
+      "status": "stale_or_foreign_pane_not_reproducibly_routable"
+    },
+    {
+      "command": "list-browsers --allTabs",
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "status": "succeeded",
+      "result": "project-scoped inventory returned one browser pane on ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+    },
+    {
+      "command": "browser-get-url",
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "status": "succeeded",
+      "result": "https://example.com/ — Example Domain"
+    },
+    {
+      "command": "list-pane-tabs",
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "status": "succeeded",
+      "result": "one active browser tab; scopedTo ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+    },
+    {
+      "command": "browser-navigate --url=https://example.com",
+      "paneId": "363aee64-8363-4f73-a507-21e87b473299",
+      "status": "succeeded",
+      "result": "https://example.com"
+    }
+  ],
+  "intendedRouterImplementation": {
+    "revision": "f1627486d2440b5b82734a29c0782482630e17eb",
+    "repository": "/home/robert/alga-dev/ghostty-pane-ide-cli-viewer-fix/ghostty-pane-ide",
+    "path": "agent server executeViewerCommand -> routeViewerCommand; fallback relay through requestHubCommand on NATS subject wf.cli.hub",
+    "targetedBehavioralTests": "12/12 passed"
+  },
+  "appPorts": {
+    "3835": "closed (HTTP 000)",
+    "23835": "closed (HTTP 000)"
+  },
+  "interpretation": "Current routing is verified only for the pane returned by current project inventory. The prior success for pane f9b1c96a and for the old pane be074bd7 was time-bound. ALGA_PROJECT_ID scopes the CLI but does not make a stale/foreign pane ID valid.",
+  "noSupervisorOrApplicationRestart": true
+}

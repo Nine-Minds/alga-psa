@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDocumentServingPolicy, buildContentDisposition } from './documentServingPolicy';
+import { resolveDocumentServingPolicy, buildContentDisposition, isRasterImageMime, buildDocumentPreviewHeaders } from './documentServingPolicy';
 import { isPreviewableDocumentMimeType } from './documentMimeType';
 
 describe('resolveDocumentServingPolicy', () => {
@@ -66,5 +66,31 @@ describe('buildContentDisposition', () => {
     expect(buildContentDisposition('inline', 'a"b.png')).toContain('filename="a_b.png"');
     expect(buildContentDisposition('attachment', 'a\\')).toContain('filename="a_"');
     expect(buildContentDisposition('attachment', 'a\\')).not.toContain('\\"');
+  });
+});
+
+describe('isRasterImageMime', () => {
+  it.each(['image/png', 'image/jpeg', 'IMAGE/WEBP', 'image/png; charset=x'])('accepts %s', (m) => {
+    expect(isRasterImageMime(m)).toBe(true);
+  });
+  it.each(['image/svg+xml', 'text/html', 'image/gif', 'application/pdf', '', null, undefined])('rejects %s', (m) => {
+    expect(isRasterImageMime(m as any)).toBe(false);
+  });
+});
+
+describe('buildDocumentPreviewHeaders', () => {
+  it.each(['image/png', 'image/jpeg', 'image/webp'])('serves %s inline with nosniff and CSP', (m) => {
+    const h = buildDocumentPreviewHeaders(m);
+    expect(h['Content-Type']).toBe(m);
+    expect(h['Content-Disposition']).toBe('inline');
+    expect(h['X-Content-Type-Options']).toBe('nosniff');
+    expect(h['Content-Security-Policy']).toContain('sandbox');
+  });
+  it.each(['image/svg+xml', 'text/html', null, undefined, '', 'application/x-weird'])('neutralises %s', (m) => {
+    const h = buildDocumentPreviewHeaders(m as any);
+    expect(h['Content-Type']).toBe('application/octet-stream');
+    expect(h['Content-Disposition']).toBe('attachment');
+    expect(h['X-Content-Type-Options']).toBe('nosniff');
+    expect(h['Content-Security-Policy']).toBe("default-src 'none'; sandbox");
   });
 });

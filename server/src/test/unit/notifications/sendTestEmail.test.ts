@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { replaceTemplateSampleVariables } from '@alga-psa/notifications/lib/templateSampleData';
 
 /**
  * Unit tests for sendTestEmailAction concepts.
@@ -9,24 +10,8 @@ import { describe, it, expect } from 'vitest';
  */
 
 describe('sendTestEmail concepts', () => {
-  // Replicate the replaceVars function from notificationActions.ts
   function replaceVars(content: string, data: Record<string, string>): string {
-    // Process {{#if condition}}...{{/if}} blocks first
-    let result = content.replace(
-      /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-      (_match, condition, blockContent) => {
-        const key = condition.trim();
-        return key in data ? blockContent : '';
-      }
-    );
-
-    // Then replace simple {{variable}} placeholders
-    result = result.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-      const trimmedKey = key.trim();
-      return trimmedKey in data ? data[trimmedKey] : match;
-    });
-
-    return result;
+    return replaceTemplateSampleVariables(content, data, (condition) => Object.hasOwn(data, condition));
   }
 
   describe('variable replacement for test emails', () => {

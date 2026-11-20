@@ -89,7 +89,7 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
 
 export interface CoManagedSharedTaskRow {
   taskId: string; taskName: string; dueDate: string | null; taskUpdatedAt: string;
-  reference: { revision: number; assigneeName: string; assignedToMe: boolean } | null;
+  reference: { revision: number; assigneeName: string | null; assignedToMe: boolean } | null;
 }
 export interface CoManagedSharedTaskPage { rows: CoManagedSharedTaskRow[]; nextAfterTaskId: string | null }
 
@@ -118,7 +118,8 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);
         return { taskId: task.task_id, taskName: task.task_name, dueDate: dueHidden || !task.due_date ? null : new Date(task.due_date).toISOString(), taskUpdatedAt: new Date(task.updated_at).toISOString(),
-          reference: reference ? { revision: reference.revision, assigneeName: reference.assignee_name, assignedToMe: reference.assigned_to === actor.userId } : null };
+          reference: reference ? maskCoManagedSnapshot(context.redactedFields, { revision: reference.revision as number, assigneeName: (reference.assignee_name ?? null) as string | null, assignedToMe: reference.assigned_to === actor.userId },
+            { assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES }) : null };
       }),
       nextAfterTaskId: tasks.length > limit ? page[page.length - 1].task_id : null,
     };

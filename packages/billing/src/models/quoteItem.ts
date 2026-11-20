@@ -3,6 +3,7 @@ import type { IQuoteItem } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { deriveServiceTaxTreatment } from '@alga-psa/shared/billingClients/serviceTaxTreatment';
 import { knownUnitCodeForLabel } from '@alga-psa/core/unitOfMeasure';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
@@ -49,6 +50,7 @@ type QuoteItemServiceLookupRow = {
   item_kind?: IQuoteItem['service_item_kind'];
   cost?: number | string | null;
   cost_currency?: string | null;
+  tax_rate_id?: string | null;
 };
 
 type QuoteCurrencyLookupRow = {
@@ -172,7 +174,8 @@ const QuoteItem = {
           'billing_method',
           'item_kind',
           'cost',
-          'cost_currency'
+          'cost_currency',
+          'tax_rate_id'
         )
         .first();
 
@@ -214,8 +217,22 @@ const QuoteItem = {
           ? snapshotFromOptions
           : normalizeCatalogDescription(service.description);
 
+      // Tax treatment follows the catalog service unless the caller made an
+      // explicit choice. A service with no tax_rate_id is non-taxable (the
+      // invoice rule), so a quote can no longer charge phantom tax on a
+      // non-taxable service via the client's default rate.
+      const taxTreatment = resolvedItem.is_taxable === undefined
+        ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
+        : null;
+
       resolvedItem = {
         ...resolvedItem,
+        ...(taxTreatment
+          ? {
+            is_taxable: taxTreatment.isTaxable,
+            tax_region: resolvedItem.tax_region ?? taxTreatment.taxRegion,
+          }
+          : {}),
         service_name: resolvedItem.service_name ?? service.service_name,
         service_sku: resolvedItem.service_sku ?? service.sku ?? null,
         unit_price: resolvedUnitPrice,
@@ -239,6 +256,10 @@ const QuoteItem = {
         catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
       };
     }
+
+    // Always explicit on insert: the column default (true) must never be the
+    // thing that decides a line's tax treatment.
+    resolvedItem.is_taxable = resolvedItem.is_taxable ?? true;
 
     if (resolvedItem.unit_of_measure !== undefined) {
       resolvedItem.unit_code = await resolveTenantUnitCodeForLabel(
@@ -316,15 +337,28 @@ const QuoteItem = {
       if (updateData.service_id) {
         const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
           .where({ service_id: updateData.service_id })
-          .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind')
+          .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind', 'tax_rate_id')
           .first();
 
         if (!service) {
           throw new Error(`Service ${updateData.service_id} not found in tenant ${tenant}`);
         }
 
+        // Re-deriving tax treatment belongs with the rest of the catalog
+        // recapture: a new service brings its own tax configuration unless the
+        // caller sent an explicit choice in the same update.
+        const taxTreatment = updateData.is_taxable === undefined
+          ? await deriveServiceTaxTreatment(knexOrTrx, tenant, service.tax_rate_id)
+          : null;
+
         resolvedUpdate = {
           ...resolvedUpdate,
+          ...(taxTreatment
+            ? {
+              is_taxable: taxTreatment.isTaxable,
+              tax_region: updateData.tax_region ?? taxTreatment.taxRegion,
+            }
+            : {}),
           service_name: service.service_name,
           service_sku: service.sku ?? null,
           unit_of_measure: updateData.unit_of_measure ?? service.unit_of_measure ?? null,

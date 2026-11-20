@@ -202,7 +202,8 @@ describe('T002 bento layout capability gating', () => {
   // If any gate in TicketBentoLayout were removed the "all off" test above fails;
   // if a gate pointed at the wrong key this positive control fails.
   it.each(SECTIONS)('capability %s alone enables only its own section', (key, testId) => {
-    renderWith(withCaps({ [key]: true }));
+    // The add-time-entry action needs both the section and the write capability.
+    renderWith(withCaps({ [key]: true, ...(key === 'timeEntry' ? { timeEntryCreate: true } : {}) }));
     for (const [, other] of SECTIONS) {
       if (other === testId) expect(screen.getByTestId(other)).toBeTruthy();
       else expect(screen.queryByTestId(other)).toBeNull();

@@ -125,7 +125,7 @@ The invoice generation process is a crucial part of our billing system. It invol
 
 ### Key Steps:
 1. **Charge Calculation**: The `BillingEngine` calculates all relevant charges for the billing period.
-2. **Invoice Creation**: The `generateInvoice` function in `invoiceActions.ts` creates a new invoice record.
+2. **Invoice Creation**: Recurring generation (`generateInvoiceForSelectionInput` / `generateInvoiceForSelectionInputs` in `invoiceGeneration.ts`) creates a new invoice record from the due recurring work that Automatic Invoices selects.
 3. **Invoice Item Generation**: Charges are converted into invoice items, each representing a billable component.
 4. **Invoice Data Aggregation**: Full invoice data is fetched, including all related items and the company's billing information.
 5. **Invoice Document Generation**: An invoice document is created based on the aggregated data and the company's invoice template.
@@ -133,7 +133,11 @@ The invoice generation process is a crucial part of our billing system. It invol
 Here's a simplified example of the invoice generation process:
 
 ```typescript
-async function generateInvoice(clientId: string, billingPeriod: DateRange): Promise<IInvoice> {
+async function generateInvoiceForDueWork(selectorInputs: IRecurringDueSelectionInput[]): Promise<IInvoice> {
+  // All selector inputs share one client and invoice window
+  const { clientId, windowStart, windowEnd } = selectorInputs[0];
+  const billingPeriod = { startDate: windowStart, endDate: windowEnd };
+
   // Calculate charges using BillingEngine
   const charges = await billingEngine.calculateBilling(clientId,
     billingPeriod.startDate,
@@ -226,7 +230,7 @@ WHERE period_end_date IS NOT NULL AND period_end_date > period_start_date;
 ## Implementation Details
 
 1. The `BillingEngine` class considers custom billing cycles when calculating charges and applying proration.
-2. The `generateInvoice` function uses the client's billing cycle to determine the invoice period and due date.
+2. Recurring generation (`generateInvoiceForSelectionInput(s)`) takes the invoice window from the selected due work, which follows the client's billing cycle, and uses it to determine the invoice period and due date.
 3. The `billingCycleActions.ts` file contains server actions for managing billing cycles.
 4. The BillingDashboard component includes a "Billing Cycles" tab for easy management of client billing cycles.
 

@@ -9,10 +9,7 @@
     "newRequestHeading": "Invia una nuova richiesta"
   },
   "detail": {
-    "version": "Versione {{version}}",
     "submitted": "Richiesta inviata",
-    "requestIdLabel": "ID richiesta: ",
-    "ticketIdLabel": "ID ticket: ",
     "unableToSubmit": "Impossibile inviare la richiesta",
     "formTitle": "Modulo della richiesta",
     "noFields": "Nessun campo configurato.",
@@ -21,8 +18,18 @@
     "optionLabel": "Opzione {{index}}",
     "submit": "Invia richiesta",
     "requiredField": "Questo campo è obbligatorio.",
-    "initialValuesTitle": "Valori iniziali",
-    "noInitialValues": "Nessun valore predefinito statico configurato."
+    "validation": {
+      "type": "Questa risposta non ha il formato previsto.",
+      "pattern": "Questa risposta non ha il formato previsto.",
+      "minLength": "Usa almeno {{minLength}} caratteri.",
+      "maxLength": "Usa al massimo {{maxLength}} caratteri.",
+      "min": "Inserisci {{min}} o più.",
+      "max": "Inserisci {{max}} o meno.",
+      "minDate": "Scegli {{minDate}} o una data successiva.",
+      "maxDate": "Scegli {{maxDate}} o una data precedente.",
+      "minSelected": "Scegline almeno {{minSelected}}.",
+      "maxSelected": "Scegline al massimo {{maxSelected}}."
+    }
   },
   "myRequests": {
     "title": "Le mie richieste",
@@ -46,19 +53,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Torna a Le mie richieste",
-    "requestIdLabel": "ID richiesta:",
     "statusSection": "Stato",
     "submittedAt": "Inviata: {{date}}",
-    "executionStatus": "Stato di esecuzione: {{status}}",
-    "ticketLabel": "Ticket:",
-    "workflowLabel": "ID workflow: {{id}}",
     "submittedAnswersTitle": "Risposte inviate",
     "noResponse": "Nessuna risposta",
     "attachmentsTitle": "Allegati",
     "noAttachments": "Nessun allegato incluso.",
-    "fileIdLabel": "ID file: {{id}}",
     "fileTypeLabel": "Tipo: {{mime}}",
-    "versionLabel": "Versione {{version}}",
     "historyTitle": "Cronologia",
     "historyEmpty": "Nessuna cronologia registrata.",
     "historyActor": "da {{actor}}",
@@ -66,7 +67,8 @@
       "service_request_submission_created": "Richiesta inviata",
       "service_request_submission_execution_succeeded": "Elaborazione completata",
       "service_request_submission_execution_failed": "Elaborazione non riuscita"
-    }
+    },
+    "unnamedAttachment": "Allegato"
   },
   "recent": {
     "title": "Le tue richieste recenti",
@@ -77,5 +79,12 @@
   },
   "myRequestsAll": {
     "title": "Le tue richieste"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, inviata il {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Visualizza ticket"
   }
 }

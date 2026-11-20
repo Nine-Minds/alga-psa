@@ -10,6 +10,7 @@ import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -757,6 +758,7 @@ export class NinjaOneSyncEngine {
     return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
       const db = tenantDb(trx, this.tenantId);
+      const identity = await prepareAssetIdentity(trx, { tenant: this.tenantId, clientId: createRequest.client_id });
 
       // Insert base asset
       const [asset] = await db.table('assets')
@@ -764,7 +766,7 @@ export class NinjaOneSyncEngine {
           tenant: this.tenantId,
           asset_type: createRequest.asset_type,
           client_id: createRequest.client_id,
-          asset_tag: createRequest.asset_tag,
+          ...identity,
           name: createRequest.name,
           status: createRequest.status,
           location: createRequest.location || '',
@@ -1157,7 +1159,7 @@ export class NinjaOneSyncEngine {
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
     await tenantDb(this.knex!, this.tenantId).table('rmm_organization_mappings')
       .where({ mapping_id: mappingId })
-      .update({ last_synced_at: new Date().toISOString() });
+      .update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   }
 
   /**

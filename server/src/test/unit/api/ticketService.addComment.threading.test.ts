@@ -63,7 +63,7 @@ describe('TicketService.addComment threading contract', () => {
     expect(topLevelBranch).toContain("await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({");
     expect(topLevelBranch).toContain('root_comment_id: apiCommentId,');
     // Top-level visibility still derives from the request body, unchanged.
-    expect(topLevelBranch).toContain('apiIsInternal = data.is_internal || false;');
+    expect(topLevelBranch).toContain('apiIsInternal = data.is_internal ?? isBareServicePrincipal(context);');
 
     // A non-reply does not bump reply_count.
     const elseStart = body.indexOf('} else {');

@@ -108,9 +108,13 @@ const createQuoteItemBaseSchema = z.object({
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
   applies_to_item_id: z.string().guid().optional().nullable(),
   applies_to_service_id: z.string().guid().optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // No default: "not sent" must stay distinguishable from an explicit `true`
+  // so the model can derive the treatment from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  tax_rate: z.number().int().min(0).optional().nullable(),
+  // Fractional percentages (e.g. 6.875) are stored as-is, so the round-trip
+  // through the editor must not reject them.
+  tax_rate: z.number().min(0).optional().nullable(),
   location_id: z.string().guid().optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),

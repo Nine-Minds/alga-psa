@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { productionSourceFiles } from '../../../../scripts/lib/production-source-files.mjs';
 
 /**
  * Coverage ledger for every `client_locations` write path. Each path either publishes
@@ -75,33 +76,15 @@ const SILENT_WRITERS: Record<string, string> = {
 const SILENT_DELETE_ONLY_NOTES = 'client hard delete removes the locations with the client; deletes cascade silently by design';
 
 const WRITE_VERB = /\.(insert|update|del|delete|upsert)\(/;
-const SKIP_DIR = /(^|\/)(node_modules|dist|migrations|generated|__tests__|test|tests|test-utils)$|^\.next|\.next/;
-
-function walk(dir: string, out: string[]): void {
-  for (const name of readdirSync(dir)) {
-    const full = path.join(dir, name);
-    if (SKIP_DIR.test(name)) continue;
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx)$/.test(name) && !/\.(test|d)\.tsx?$/.test(name)) out.push(full);
-  }
-}
 
 function writersOfClientLocations(): string[] {
-  const files: string[] = [];
-  for (const base of ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/temporal-workflows/src']) {
-    const abs = path.join(root, base);
-    try {
-      if (statSync(abs).isDirectory()) walk(abs, files);
-    } catch {
-      /* optional tree */
-    }
-  }
+  const files = productionSourceFiles(root, ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/temporal-workflows/src'])
+    .filter((file: string) => !/(^|\/)migrations\//.test(file));
   const writers: string[] = [];
   for (const file of files) {
-    const lines = readFileSync(file, 'utf8').split('\n');
+    const lines = read(file).split('\n');
     const writes = lines.some((line, i) => line.includes("'client_locations'") && WRITE_VERB.test(lines.slice(i, i + 9).join(' ')));
-    if (writes) writers.push(path.relative(root, file));
+    if (writes) writers.push(file);
   }
   return writers.sort();
 }

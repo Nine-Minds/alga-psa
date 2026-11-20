@@ -20,17 +20,25 @@ describe('contact API service tenant-scoped query contract', () => {
     expect(source).not.toMatch(/trx\('contacts as c'\)[\s\S]*?'c\.tenant': context\.tenant/);
   });
 
-  it('clears reports-to and asset assignment links before hard-deleting a contact', () => {
+  it('validates dependencies before the shared cascade removes the contact row', () => {
     const source = fs.readFileSync(
       path.join(repoRoot, 'server/src/lib/api/services/ContactService.ts'),
       'utf8'
     );
     const deleteStart = source.indexOf('async delete(id: string, context: ServiceContext)');
-    const helperCall = source.indexOf('clearContactLinksBeforeDelete(trx, context.tenant, id)', deleteStart);
-    const rowDelete = source.indexOf('.delete();', helperCall);
+    const validation = source.indexOf('deleteEntityWithValidation(', deleteStart);
+    const cascade = source.indexOf('deleteContactCascade(trx, tenant, id,', validation);
+    const conflict = source.indexOf('throw new ConflictError(', cascade);
 
     expect(deleteStart).toBeGreaterThan(-1);
-    expect(helperCall).toBeGreaterThan(deleteStart);
-    expect(rowDelete).toBeGreaterThan(helperCall);
+    expect(validation).toBeGreaterThan(deleteStart);
+    expect(cascade).toBeGreaterThan(validation);
+    expect(conflict).toBeGreaterThan(cascade);
+
+    // The row delete and every child cleanup live in the shared cascade, so the
+    // API path can never drift from the MSP action and strand a portal user.
+    const deleteSection = source.slice(deleteStart, source.indexOf('async search(', deleteStart));
+    expect(deleteSection).not.toContain(".table('contacts')");
+    expect(deleteSection).not.toContain('clearContactLinksBeforeDelete');
   });
 });

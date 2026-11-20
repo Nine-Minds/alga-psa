@@ -96,4 +96,10 @@ export type TenantTemplateDifference = 'colors' | 'text' | 'subject';
 export interface TenantTemplateClassification {
   state: TenantTemplateState;
   differs: TenantTemplateDifference[];
+  /**
+   * True when the row is `branded` because it equals the template it was copied from (see
+   * `copiedFromSystemRow`), not this template. An apply rebuilds it from this template, subject
+   * and plain text included.
+   */
+  copyOfSplitSource?: boolean;
 }

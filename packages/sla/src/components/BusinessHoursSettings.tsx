@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, MoreVertical, Clock, Calendar, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -51,8 +51,8 @@ import {
 } from '../actions';
 import { ColumnDefinition } from '@alga-psa/types';
 
-// Day names with Sunday = 0
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Day-of-week index (Sunday = 0) → translation key under sla.businessHours.days.
+const DAY_NAME_DEFAULTS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // Format 24h time string (e.g. "18:00" or "18:00:00") to 12h display (e.g. "6:00 PM")
 function formatTime(time: string): string {
@@ -91,6 +91,14 @@ interface HolidayFormData {
 
 export function BusinessHoursSettings() {
   const { t } = useTranslation('msp/settings');
+  // The loader reads the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
+  const dayName = useCallback(
+    (dayOfWeek: number) => t(`sla.businessHours.days.${dayOfWeek}`, { defaultValue: DAY_NAME_DEFAULTS[dayOfWeek] }),
+    [t]
+  );
   // Tenant timezone for defaulting new schedules (browser timezone as fallback)
   const browserTimezone = typeof Intl !== 'undefined'
     ? Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -155,8 +163,8 @@ export function BusinessHoursSettings() {
       setSchedules(data);
       setError(null);
     } catch (err) {
-      handleError(err, 'Failed to load business hours schedules');
-      setError('Failed to load business hours schedules');
+      handleError(err, tRef.current('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
+      setError(tRef.current('sla.businessHours.errors.loadSchedules', { defaultValue: 'Failed to load business hours schedules' }));
     } finally {
       setLoading(false);
     }
@@ -168,9 +176,9 @@ export function BusinessHoursSettings() {
       const data = await getBusinessHoursScheduleById(scheduleId);
       setSelectedSchedule(data);
     } catch (err) {
-      handleError(err, 'Failed to load schedule details');
+      handleError(err, t('sla.businessHours.errors.loadScheduleDetails', { defaultValue: 'Failed to load schedule details' }));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchSchedules();
@@ -233,7 +241,7 @@ export function BusinessHoursSettings() {
       setIsScheduleDialogOpen(true);
       setError(null);
     } catch (err) {
-      handleError(err, 'Failed to load schedule details');
+      handleError(err, t('sla.businessHours.errors.loadScheduleDetails', { defaultValue: 'Failed to load schedule details' }));
     }
   };
 
@@ -248,7 +256,7 @@ export function BusinessHoursSettings() {
   const handleSaveSchedule = async () => {
     // Validation
     if (!scheduleFormData.schedule_name.trim()) {
-      setError('Schedule name is required');
+      setError(t('sla.businessHours.errors.nameRequired', { defaultValue: 'Schedule name is required' }));
       return;
     }
 
@@ -256,7 +264,7 @@ export function BusinessHoursSettings() {
     if (!scheduleFormData.is_24x7) {
       for (const entry of scheduleFormData.entries) {
         if (entry.is_enabled && entry.start_time >= entry.end_time) {
-          setError(`Invalid time range for ${DAY_NAMES[entry.day_of_week]}: End time must be after start time`);
+          setError(t('sla.businessHours.errors.invalidTimeRange', { defaultValue: 'Invalid time range for {{day}}: End time must be after start time', day: dayName(entry.day_of_week) }));
           return;
         }
       }
@@ -300,7 +308,7 @@ export function BusinessHoursSettings() {
       await fetchSchedules();
     } catch (err) {
       console.error('Error saving schedule:', err);
-      setError('Failed to save schedule');
+      setError(t('sla.businessHours.errors.saveSchedule', { defaultValue: 'Failed to save schedule' }));
     } finally {
       setIsSavingSchedule(false);
     }
@@ -322,7 +330,7 @@ export function BusinessHoursSettings() {
 
       await fetchSchedules();
     } catch (err) {
-      handleError(err, 'Failed to delete schedule');
+      handleError(err, t('sla.businessHours.errors.deleteSchedule', { defaultValue: 'Failed to delete schedule' }));
     }
   };
 
@@ -334,7 +342,7 @@ export function BusinessHoursSettings() {
       toast.success(t('sla.messages.defaultHoursCreated'));
       await fetchSchedules();
     } catch (err) {
-      handleError(err, 'Failed to create default schedule');
+      handleError(err, t('sla.businessHours.errors.createDefaultSchedule', { defaultValue: 'Failed to create default schedule' }));
     } finally {
       setLoading(false);
     }
@@ -397,7 +405,7 @@ export function BusinessHoursSettings() {
       handleCloseHolidayDialog();
       await fetchScheduleDetails(selectedSchedule.schedule_id);
     } catch (err) {
-      handleError(err, 'Failed to add holiday');
+      handleError(err, t('sla.businessHours.errors.addHoliday', { defaultValue: 'Failed to add holiday' }));
     } finally {
       setIsSavingHoliday(false);
     }
@@ -415,21 +423,21 @@ export function BusinessHoursSettings() {
         await fetchScheduleDetails(selectedSchedule.schedule_id);
       }
     } catch (err) {
-      handleError(err, 'Failed to delete holiday');
+      handleError(err, t('sla.businessHours.errors.deleteHoliday', { defaultValue: 'Failed to delete holiday' }));
     }
   };
 
   // Table columns for schedules
   const scheduleColumns: ColumnDefinition<IBusinessHoursSchedule>[] = [
     {
-      title: 'Name',
+      title: t('sla.businessHours.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'schedule_name',
       render: (value: string, record: IBusinessHoursSchedule) => (
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{value}</span>
           {record.is_default && (
-            <Badge variant="info">Default</Badge>
+            <Badge variant="info">{t('sla.businessHours.default', { defaultValue: 'Default' })}</Badge>
           )}
           {record.is_24x7 && (
             <Badge variant="outline">24/7</Badge>
@@ -438,14 +446,14 @@ export function BusinessHoursSettings() {
       ),
     },
     {
-      title: 'Timezone',
+      title: t('sla.businessHours.columns.timezone', { defaultValue: 'Timezone' }),
       dataIndex: 'timezone',
       render: (value: string) => (
         <span className="text-muted-foreground">{value}</span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('sla.businessHours.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'schedule_id',
       width: '80px',
       render: (_: unknown, record: IBusinessHoursSchedule) => (
@@ -457,7 +465,7 @@ export function BusinessHoursSettings() {
               id={`schedule-actions-${record.schedule_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('sla.businessHours.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -469,7 +477,7 @@ export function BusinessHoursSettings() {
                 handleOpenEditScheduleDialog(record);
               }}
             >
-              Edit
+              {t('sla.businessHours.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`view-schedule-${record.schedule_id}`}
@@ -478,7 +486,7 @@ export function BusinessHoursSettings() {
                 fetchScheduleDetails(record.schedule_id);
               }}
             >
-              View Details
+              {t('sla.businessHours.actions.viewDetails', { defaultValue: 'View Details' })}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -493,7 +501,7 @@ export function BusinessHoursSettings() {
                 });
               }}
             >
-              Delete
+              {t('sla.businessHours.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -504,20 +512,20 @@ export function BusinessHoursSettings() {
   // Table columns for holidays
   const holidayColumns: ColumnDefinition<IHoliday>[] = [
     {
-      title: 'Holiday Name',
+      title: t('sla.businessHours.columns.holidayName', { defaultValue: 'Holiday Name' }),
       dataIndex: 'holiday_name',
       render: (value: string, record: IHoliday) => (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span>{value}</span>
           {record.is_recurring && (
-            <Badge variant="outline">Recurring</Badge>
+            <Badge variant="outline">{t('sla.businessHours.recurring', { defaultValue: 'Recurring' })}</Badge>
           )}
         </div>
       ),
     },
     {
-      title: 'Date',
+      title: t('sla.businessHours.columns.date', { defaultValue: 'Date' }),
       dataIndex: 'holiday_date',
       render: (value: string) => (
         <span className="text-muted-foreground">
@@ -526,7 +534,7 @@ export function BusinessHoursSettings() {
       ),
     },
     {
-      title: 'Actions',
+      title: t('sla.businessHours.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'holiday_id',
       width: '80px',
       render: (_: unknown, record: IHoliday) => (
@@ -543,7 +551,7 @@ export function BusinessHoursSettings() {
             });
           }}
         >
-          <span className="sr-only">Delete</span>
+          <span className="sr-only">{t('sla.businessHours.actions.delete', { defaultValue: 'Delete' })}</span>
           <MoreVertical className="h-4 w-4" />
         </Button>
       ),
@@ -556,7 +564,7 @@ export function BusinessHoursSettings() {
         <div className="flex items-center justify-center py-8">
           <LoadingIndicator
             layout="stacked"
-            text="Loading business hours schedules..."
+            text={t('sla.businessHours.loading', { defaultValue: 'Loading business hours schedules...' })}
             spinnerProps={{ size: 'md' }}
           />
         </div>
@@ -569,9 +577,9 @@ export function BusinessHoursSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Business Hours Schedules</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('sla.businessHours.title', { defaultValue: 'Business Hours Schedules' })}</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Define when your support team is available for SLA calculations
+            {t('sla.businessHours.description', { defaultValue: 'Define when your support team is available for SLA calculations' })}
           </p>
         </div>
       </div>
@@ -586,9 +594,9 @@ export function BusinessHoursSettings() {
       {schedules.length === 0 && !loading && (
         <div className="text-center p-8 border border-dashed rounded-lg">
           <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No Business Hours Schedules</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">{t('sla.businessHours.empty.title', { defaultValue: 'No Business Hours Schedules' })}</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Create your first business hours schedule to start calculating SLA times.
+            {t('sla.businessHours.empty.description', { defaultValue: 'Create your first business hours schedule to start calculating SLA times.' })}
           </p>
           <div className="flex gap-2 justify-center">
             <Button
@@ -597,7 +605,7 @@ export function BusinessHoursSettings() {
               className="bg-primary-500 text-white hover:bg-primary-600"
             >
               <Star className="h-4 w-4 mr-2" />
-              Create Default Schedule
+              {t('sla.businessHours.actions.createDefault', { defaultValue: 'Create Default Schedule' })}
             </Button>
             <Button
               id="create-custom-schedule"
@@ -605,7 +613,7 @@ export function BusinessHoursSettings() {
               onClick={handleOpenCreateScheduleDialog}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Custom Schedule
+              {t('sla.businessHours.actions.createCustom', { defaultValue: 'Create Custom Schedule' })}
             </Button>
           </div>
         </div>
@@ -632,7 +640,7 @@ export function BusinessHoursSettings() {
               className="bg-primary-500 text-white hover:bg-primary-600"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Schedule
+              {t('sla.businessHours.actions.addSchedule', { defaultValue: 'Add Schedule' })}
             </Button>
           </div>
         </>
@@ -646,10 +654,10 @@ export function BusinessHoursSettings() {
               <h4 className="text-lg font-medium text-foreground">
                 {selectedSchedule.schedule_name}
                 {selectedSchedule.is_default && (
-                  <Badge variant="info" className="ml-2">Default</Badge>
+                  <Badge variant="info" className="ml-2">{t('sla.businessHours.default', { defaultValue: 'Default' })}</Badge>
                 )}
               </h4>
-              <p className="text-sm text-muted-foreground">Timezone: {selectedSchedule.timezone}</p>
+              <p className="text-sm text-muted-foreground">{t('sla.businessHours.timezoneLabel', { defaultValue: 'Timezone: {{timezone}}', timezone: selectedSchedule.timezone })}</p>
             </div>
             <Button
               variant="outline"
@@ -657,14 +665,14 @@ export function BusinessHoursSettings() {
               onClick={() => setSelectedSchedule(null)}
               id="close-schedule-details"
             >
-              Close
+              {t('sla.businessHours.actions.close', { defaultValue: 'Close' })}
             </Button>
           </div>
 
           {/* Daily hours */}
           {!selectedSchedule.is_24x7 && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground mb-3">Working Hours</h5>
+              <h5 className="text-sm font-medium text-foreground mb-3">{t('sla.businessHours.workingHours', { defaultValue: 'Working Hours' })}</h5>
               <div className="space-y-2">
                 {selectedSchedule.entries.sort((a, b) => a.day_of_week - b.day_of_week).map((entry) => (
                   <div
@@ -673,13 +681,13 @@ export function BusinessHoursSettings() {
                       entry.is_enabled ? '' : 'bg-muted'
                     }`}
                   >
-                    <span className="w-24 font-medium">{DAY_NAMES[entry.day_of_week]}</span>
+                    <span className="w-24 font-medium">{dayName(entry.day_of_week)}</span>
                     {entry.is_enabled ? (
                       <span className="text-foreground">
                         {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground italic">Closed</span>
+                      <span className="text-muted-foreground italic">{t('sla.businessHours.closed', { defaultValue: 'Closed' })}</span>
                     )}
                   </div>
                 ))}
@@ -689,14 +697,14 @@ export function BusinessHoursSettings() {
 
           {selectedSchedule.is_24x7 && (
             <div className="mb-6 p-4 bg-[rgb(var(--badge-info-bg))] rounded-lg">
-              <p className="text-[rgb(var(--badge-info-text))] font-medium">This is a 24/7 schedule - available all day, every day.</p>
+              <p className="text-[rgb(var(--badge-info-text))] font-medium">{t('sla.businessHours.alwaysOpen', { defaultValue: 'This is a 24/7 schedule - available all day, every day.' })}</p>
             </div>
           )}
 
           {/* Holidays */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h5 className="text-sm font-medium text-foreground">Holidays</h5>
+              <h5 className="text-sm font-medium text-foreground">{t('sla.businessHours.holidays', { defaultValue: 'Holidays' })}</h5>
               <Button
                 variant="outline"
                 size="sm"
@@ -704,13 +712,13 @@ export function BusinessHoursSettings() {
                 id="add-holiday-button"
               >
                 <Plus className="h-4 w-4 mr-1" />
-                Add Holiday
+                {t('sla.businessHours.actions.addHoliday', { defaultValue: 'Add Holiday' })}
               </Button>
             </div>
 
             {(!selectedSchedule.holidays || selectedSchedule.holidays.length === 0) ? (
               <div className="text-center p-4 border border-dashed rounded-lg">
-                <p className="text-sm text-muted-foreground">No holidays defined for this schedule.</p>
+                <p className="text-sm text-muted-foreground">{t('sla.businessHours.noHolidays', { defaultValue: 'No holidays defined for this schedule.' })}</p>
               </div>
             ) : (
               <DataTable
@@ -728,7 +736,7 @@ export function BusinessHoursSettings() {
       <GenericDialog
         isOpen={isScheduleDialogOpen}
         onClose={handleCloseScheduleDialog}
-        title={editingScheduleId ? 'Edit Schedule' : 'Create Schedule'}
+        title={editingScheduleId ? t('sla.businessHours.dialog.editTitle', { defaultValue: 'Edit Schedule' }) : t('sla.businessHours.dialog.createTitle', { defaultValue: 'Create Schedule' })}
         id="schedule-dialog"
         maxWidth="max-w-2xl"
       >
@@ -741,19 +749,19 @@ export function BusinessHoursSettings() {
 
           {/* Schedule Name */}
           <div className="space-y-1">
-            <Label htmlFor="schedule-name-field">Schedule Name *</Label>
+            <Label htmlFor="schedule-name-field">{t('sla.businessHours.fields.scheduleName', { defaultValue: 'Schedule Name *' })}</Label>
             <Input
               id="schedule-name-field"
               value={scheduleFormData.schedule_name}
               onChange={(e) => setScheduleFormData(prev => ({ ...prev, schedule_name: e.target.value }))}
-              placeholder="e.g., Standard Business Hours"
+              placeholder={t('sla.businessHours.fields.scheduleNamePlaceholder', { defaultValue: 'e.g., Standard Business Hours' })}
               disabled={isSavingSchedule}
             />
           </div>
 
           {/* Timezone */}
           <div className="space-y-1">
-            <Label>Timezone *</Label>
+            <Label>{t('sla.businessHours.fields.timezone', { defaultValue: 'Timezone *' })}</Label>
             <TimezonePicker
               value={scheduleFormData.timezone}
               onValueChange={(value: string) => setScheduleFormData(prev => ({ ...prev, timezone: value }))}
@@ -768,7 +776,7 @@ export function BusinessHoursSettings() {
               onCheckedChange={(checked) => setScheduleFormData(prev => ({ ...prev, is_24x7: checked }))}
               disabled={isSavingSchedule}
             />
-            <Label htmlFor="schedule-is-24x7-field">24/7 Schedule (always available)</Label>
+            <Label htmlFor="schedule-is-24x7-field">{t('sla.businessHours.fields.is24x7', { defaultValue: '24/7 Schedule (always available)' })}</Label>
           </div>
 
           {/* Is Default */}
@@ -779,19 +787,19 @@ export function BusinessHoursSettings() {
               onCheckedChange={(checked) => setScheduleFormData(prev => ({ ...prev, is_default: checked }))}
               disabled={isSavingSchedule}
             />
-            <Label htmlFor="schedule-is-default-field">Set as default schedule</Label>
+            <Label htmlFor="schedule-is-default-field">{t('sla.businessHours.fields.isDefault', { defaultValue: 'Set as default schedule' })}</Label>
           </div>
 
           {/* Daily hours grid */}
           {!scheduleFormData.is_24x7 && (
             <div className="space-y-2">
-              <Label>Daily Hours</Label>
+              <Label>{t('sla.businessHours.dailyHours', { defaultValue: 'Daily Hours' })}</Label>
               <div className="border border-border rounded-lg overflow-hidden">
                 <div className="bg-muted px-3 py-2 grid gap-2 text-xs font-medium text-muted-foreground border-b" style={{ gridTemplateColumns: '80px 50px 1fr 1fr' }}>
-                  <span>Day</span>
-                  <span>Enabled</span>
-                  <span>Start Time</span>
-                  <span>End Time</span>
+                  <span>{t('sla.businessHours.columns.day', { defaultValue: 'Day' })}</span>
+                  <span>{t('sla.businessHours.columns.enabled', { defaultValue: 'Enabled' })}</span>
+                  <span>{t('sla.businessHours.columns.startTime', { defaultValue: 'Start Time' })}</span>
+                  <span>{t('sla.businessHours.columns.endTime', { defaultValue: 'End Time' })}</span>
                 </div>
                 {scheduleFormData.entries.map((entry) => (
                   <div
@@ -801,7 +809,7 @@ export function BusinessHoursSettings() {
                     }`}
                     style={{ gridTemplateColumns: '80px 50px 1fr 1fr' }}
                   >
-                    <span className="text-sm font-medium">{DAY_NAMES[entry.day_of_week]}</span>
+                    <span className="text-sm font-medium">{dayName(entry.day_of_week)}</span>
                     <div>
                       <Checkbox
                         id={`day-enabled-${entry.day_of_week}`}
@@ -838,14 +846,16 @@ export function BusinessHoursSettings() {
               disabled={isSavingSchedule}
               id="schedule-dialog-cancel"
             >
-              Cancel
+              {t('sla.businessHours.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               onClick={handleSaveSchedule}
               disabled={isSavingSchedule}
               id="schedule-dialog-save"
             >
-              {isSavingSchedule ? 'Saving...' : (editingScheduleId ? 'Update' : 'Create')}
+              {isSavingSchedule
+                ? t('sla.businessHours.actions.saving', { defaultValue: 'Saving...' })
+                : (editingScheduleId ? t('sla.businessHours.actions.update', { defaultValue: 'Update' }) : t('sla.businessHours.actions.create', { defaultValue: 'Create' }))}
             </Button>
           </div>
         </div>
@@ -855,25 +865,25 @@ export function BusinessHoursSettings() {
       <GenericDialog
         isOpen={isHolidayDialogOpen}
         onClose={handleCloseHolidayDialog}
-        title="Add Holiday"
+        title={t('sla.businessHours.actions.addHoliday', { defaultValue: 'Add Holiday' })}
         id="holiday-dialog"
       >
         <div className="space-y-4 py-4">
           {/* Holiday Name */}
           <div className="space-y-1">
-            <Label htmlFor="holiday-name-field">Holiday Name *</Label>
+            <Label htmlFor="holiday-name-field">{t('sla.businessHours.fields.holidayName', { defaultValue: 'Holiday Name *' })}</Label>
             <Input
               id="holiday-name-field"
               value={holidayFormData.holiday_name}
               onChange={(e) => setHolidayFormData(prev => ({ ...prev, holiday_name: e.target.value }))}
-              placeholder="e.g., Christmas Day"
+              placeholder={t('sla.businessHours.fields.holidayNamePlaceholder', { defaultValue: 'e.g., Christmas Day' })}
               disabled={isSavingHoliday}
             />
           </div>
 
           {/* Holiday Date */}
           <div className="space-y-1">
-            <Label htmlFor="holiday-date-field">Date *</Label>
+            <Label htmlFor="holiday-date-field">{t('sla.businessHours.fields.holidayDate', { defaultValue: 'Date *' })}</Label>
             <DatePicker
               id="holiday-date-field"
               value={toCalendarDisplayDate(holidayFormData.holiday_date) ?? undefined}
@@ -881,7 +891,7 @@ export function BusinessHoursSettings() {
                 const dateStr = toCalendarDateString(date) ?? '';
                 setHolidayFormData(prev => ({ ...prev, holiday_date: dateStr }));
               }}
-              placeholder="Select date"
+              placeholder={t('sla.businessHours.fields.holidayDatePlaceholder', { defaultValue: 'Select date' })}
               disabled={isSavingHoliday}
             />
           </div>
@@ -897,7 +907,7 @@ export function BusinessHoursSettings() {
               }))}
               disabled={isSavingHoliday}
             />
-            <Label htmlFor="holiday-is-recurring-field">Repeats annually</Label>
+            <Label htmlFor="holiday-is-recurring-field">{t('sla.businessHours.fields.isRecurring', { defaultValue: 'Repeats annually' })}</Label>
           </div>
 
           {/* Dialog actions */}
@@ -908,14 +918,14 @@ export function BusinessHoursSettings() {
               disabled={isSavingHoliday}
               id="holiday-dialog-cancel"
             >
-              Cancel
+              {t('sla.businessHours.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               onClick={handleSaveHoliday}
               disabled={isSavingHoliday}
               id="holiday-dialog-save"
             >
-              {isSavingHoliday ? 'Adding...' : 'Add Holiday'}
+              {isSavingHoliday ? t('sla.businessHours.actions.adding', { defaultValue: 'Adding...' }) : t('sla.businessHours.actions.addHoliday', { defaultValue: 'Add Holiday' })}
             </Button>
           </div>
         </div>
@@ -926,10 +936,10 @@ export function BusinessHoursSettings() {
         isOpen={deleteScheduleDialog.isOpen}
         onClose={() => setDeleteScheduleDialog({ isOpen: false, scheduleId: '', scheduleName: '' })}
         onConfirm={handleDeleteSchedule}
-        title="Delete Schedule"
-        message={`Are you sure you want to delete "${deleteScheduleDialog.scheduleName}"? This will also delete all associated holidays. This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('sla.businessHours.dialog.deleteScheduleTitle', { defaultValue: 'Delete Schedule' })}
+        message={t('sla.businessHours.dialog.deleteScheduleMessage', { defaultValue: 'Are you sure you want to delete "{{name}}"? This will also delete all associated holidays. This action cannot be undone.', name: deleteScheduleDialog.scheduleName })}
+        confirmLabel={t('sla.businessHours.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('sla.businessHours.actions.cancel', { defaultValue: 'Cancel' })}
       />
 
       {/* Delete Holiday Confirmation */}
@@ -937,10 +947,10 @@ export function BusinessHoursSettings() {
         isOpen={deleteHolidayDialog.isOpen}
         onClose={() => setDeleteHolidayDialog({ isOpen: false, holidayId: '', holidayName: '' })}
         onConfirm={handleDeleteHoliday}
-        title="Delete Holiday"
-        message={`Are you sure you want to delete "${deleteHolidayDialog.holidayName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('sla.businessHours.dialog.deleteHolidayTitle', { defaultValue: 'Delete Holiday' })}
+        message={t('sla.businessHours.dialog.deleteHolidayMessage', { defaultValue: 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', name: deleteHolidayDialog.holidayName })}
+        confirmLabel={t('sla.businessHours.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('sla.businessHours.actions.cancel', { defaultValue: 'Cancel' })}
       />
     </div>
   );

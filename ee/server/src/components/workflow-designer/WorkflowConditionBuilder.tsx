@@ -53,8 +53,13 @@ const OPERATOR_LABEL_DEFAULTS: Record<WorkflowConditionOperator, string> = {
   lt: 'is less than',
   lte: 'is at most',
   contains: 'contains',
+  not_contains: 'does not contain',
+  contains_ci: 'contains, ignoring case',
+  not_contains_ci: 'does not contain, ignoring case',
   starts_with: 'starts with',
   ends_with: 'ends with',
+  not_starts_with: 'does not start with',
+  not_ends_with: 'does not end with',
   is_empty: 'is empty',
   is_not_empty: 'is not empty',
 };
@@ -78,9 +83,9 @@ export const getConditionOperatorsForField = (
     case 'number':
       return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'];
     case 'string':
-      return ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
+      return ['equals', 'not_equals', 'contains', 'not_contains', 'contains_ci', 'not_contains_ci', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
     default:
-      return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'contains', 'starts_with', 'ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
+      return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'contains', 'not_contains', 'contains_ci', 'not_contains_ci', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
   }
 };
 
@@ -179,6 +184,7 @@ export const describeConditionField = (path: string): string => {
   return `${parent} ${field}`;
 };
 
+const UUID_GLOBAL = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const formatLiteral = (
@@ -243,7 +249,9 @@ export const WorkflowConditionSummary: React.FC<{ expression: string }> = ({ exp
     const group = parseConditionExpression(expression);
     return Boolean(group && group.clauses.length > 0);
   }, [expression]);
-  const entityLabels = useWorkflowEntityLabels(isBuilderShaped);
+  // Id literals in the condition may be clients; their names are looked up by id.
+  const idLiterals = useMemo(() => Array.from(new Set(expression.match(UUID_GLOBAL) ?? [])), [expression]);
+  const entityLabels = useWorkflowEntityLabels(isBuilderShaped, idLiterals);
   const summary = useMemo(() => describeWorkflowCondition(t, expression, entityLabels), [entityLabels, expression, t]);
   const text = summary ?? expression.trim();
 

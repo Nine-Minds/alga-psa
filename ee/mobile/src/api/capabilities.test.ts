@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, parseFeatureCapabilities, type MyCapabilities } from "./capabilities";
+import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, parseFeatureCapabilities, parseOperationalScope, type MyCapabilities } from "./capabilities";
 import type { ApiClient } from "./client";
 import { ALGA_THEME_TOKENS } from "../ui/themes";
 
@@ -50,5 +50,35 @@ describe("capabilities api", () => {
       clientsCreate: true,
     });
     expect(parseFeatureCapabilities(undefined)).toEqual(EMPTY_FEATURE_CAPABILITIES);
+  });
+
+  it("T004 defaults assets and assetAudit to false on an older server and ignores non-booleans", () => {
+    expect(parseFeatureCapabilities({ inventory: true })).toMatchObject({
+      assets: false,
+      assetAudit: false,
+    });
+    expect(parseFeatureCapabilities({ assets: "yes", assetAudit: 1 })).toMatchObject({
+      assets: false,
+      assetAudit: false,
+    });
+    expect(parseFeatureCapabilities({ assets: true, assetAudit: true })).toMatchObject({
+      assets: true,
+      assetAudit: true,
+    });
+  });
+
+  it("reads operationalOnly only when the server sends true, so an older server keeps the full app", () => {
+    expect(parseFeatureCapabilities({}).operationalOnly).toBe(false);
+    expect(parseFeatureCapabilities({ operationalOnly: "yes" }).operationalOnly).toBe(false);
+    expect(parseFeatureCapabilities({ operationalOnly: true }).operationalOnly).toBe(true);
+  });
+
+  it("parses the operational scope and drops anything malformed", () => {
+    expect(parseOperationalScope({
+      client: { clientId: "c1", clientName: "Acme" },
+      creatableBoardIds: ["b1", 7, "b2"],
+    })).toEqual({ client: { clientId: "c1", clientName: "Acme" }, creatableBoardIds: ["b1", "b2"] });
+    expect(parseOperationalScope({ client: { clientId: 1 } })).toEqual({ client: null, creatableBoardIds: [] });
+    expect(parseOperationalScope(null)).toBeNull();
   });
 });

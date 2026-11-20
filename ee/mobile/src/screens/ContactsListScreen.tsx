@@ -13,7 +13,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { buildContactAvatarUri, getContactReachLine, listContacts, type ContactListItem } from "../api/contacts";
+import { buildContactAvatarUri, contactPrimaryLocationLabel, getContactReachLine, listContacts, type ContactListItem } from "../api/contacts";
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
 import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
@@ -268,7 +268,7 @@ export function ContactsListScreen({ navigation }: Props) {
         ListHeaderComponent={header}
         renderItem={renderItem}
         ListEmptyComponent={
-          searching ? null : (
+          searching ? undefined : (
             <EmptyState
               title={search ? t("list.noResults") : t("list.noContacts")}
               description={search ? t("list.noResultsDescription") : t("list.noContactsDescription")}
@@ -287,7 +287,7 @@ export function ContactsListScreen({ navigation }: Props) {
             <View style={{ paddingVertical: theme.spacing.lg, alignItems: "center" }}>
               <ActivityIndicator color={theme.colors.primary} />
             </View>
-          ) : null
+          ) : undefined
         }
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
@@ -318,6 +318,7 @@ const ContactRow = memo(function ContactRow({
   const fullName = item.full_name;
   const handlePress = useCallback(() => onPress(contactId, fullName), [contactId, fullName, onPress]);
   const reachLine = getContactReachLine(item);
+  const locationLine = contactPrimaryLocationLabel(item, t("list.remote", { defaultValue: "Remote" }));
 
   return (
     <Pressable
@@ -354,6 +355,11 @@ const ContactRow = memo(function ContactRow({
         {reachLine ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
             {reachLine}
+          </Text>
+        ) : null}
+        {locationLine ? (
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
+            {locationLine}
           </Text>
         ) : null}
       </View>

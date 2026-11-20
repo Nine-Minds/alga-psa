@@ -90,6 +90,8 @@ export async function setupTestUserWithPermissions(
     'time_period',
     'service',
     'storage',
+    'ticket_template',
+    'recurring_ticket',
   ];
   const actions = ['create', 'read', 'update', 'delete'];
   
