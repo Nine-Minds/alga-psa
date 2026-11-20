@@ -641,8 +641,10 @@ async function persistImapConfig(
   reconnectRequired: boolean;
   secretWrites: Array<{ key: string; value: string }>;
   credentialGeneration: string | null;
+  retiredCredentialGeneration: string | null;
+  stagedCredentialGeneration: string | null;
 }> {
-  if (!config) return { config: undefined, reconnectRequired: false, secretWrites: [], credentialGeneration: null };
+  if (!config) return { config: undefined, reconnectRequired: false, secretWrites: [], credentialGeneration: null, retiredCredentialGeneration: null, stagedCredentialGeneration: null };
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save IMAP email configuration');
 
   // Both OAuth endpoints receive tokens or client credentials, so they must
@@ -678,6 +680,7 @@ async function persistImapConfig(
   const existing = await tenantDb(trx, tenant)
     .table('imap_email_provider_config')
     .where({ email_provider_id: providerId })
+    .forUpdate()
     .first();
   const incomingClientSecret =
     typeof config.oauth_client_secret === 'string' && config.oauth_client_secret.length > 0
@@ -706,7 +709,13 @@ async function persistImapConfig(
     (existing.oauth_client_id ?? null) !== (config.oauth_client_id || null) ||
     (incomingClientSecret !== null && incomingClientSecret !== (existing.oauth_client_secret ?? null))
   ));
-  const credentialGeneration = !existing || credentialScopeChanged
+  const explicitPasswordReplacement = typeof config.password === 'string' && config.password.length > 0;
+  const explicitRefreshTokenReplacement = typeof config.refresh_token === 'string' && config.refresh_token.length > 0;
+  const replaceClientSecret = incomingClientSecret !== null &&
+    (!existing || credentialScopeChanged || incomingClientSecret !== (existing.oauth_client_secret ?? null));
+  const credentialReplacement = explicitPasswordReplacement || explicitRefreshTokenReplacement;
+  const rotateGeneration = !existing || credentialScopeChanged || credentialReplacement;
+  const credentialGeneration = rotateGeneration
     ? randomUUID()
     : existing.credential_generation ?? null;
 
@@ -715,25 +724,23 @@ async function persistImapConfig(
   const connectionTimeoutMs = Number(process.env.IMAP_CONNECTION_TIMEOUT_MS || 10_000);
   const socketKeepalive = (process.env.IMAP_SOCKET_KEEPALIVE || 'true') !== 'false';
 
-  if (credentialScopeChanged) {
-    // Secret storage does not join the SQL transaction. Invalidate first, so a
-    // later SQL failure can only leave the old scope without credentials.
-    for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
-      await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId));
-      if (existing.credential_generation) {
-        await secretProvider.deleteTenantSecret(
-          tenant,
-          imapCredentialSecretKey(kind, providerId, existing.credential_generation)
-        );
-      }
+  const secretWrites: Array<{ key: string; value: string }> = [];
+  // A generation is the database-published credential pointer. When rotating
+  // on an unchanged scope, copy untouched credentials into the new namespace;
+  // never mutate the namespace selected by the currently committed row.
+  if (existing && !credentialScopeChanged && rotateGeneration) {
+    for (const kind of ['password', 'refresh_token', 'oauth_client_secret'] as const) {
+      if ((kind === 'password' && explicitPasswordReplacement) ||
+          (kind === 'refresh_token' && explicitRefreshTokenReplacement) ||
+          (kind === 'oauth_client_secret' && replaceClientSecret)) continue;
+      const value = await getImapCredentialSecret(secretProvider, tenant, providerId, kind, existing.credential_generation);
+      if (value) secretWrites.push({ key: imapCredentialSecretKey(kind, providerId, credentialGeneration), value });
     }
   }
-
-  const secretWrites: Array<{ key: string; value: string }> = [];
   if (config.password && typeof config.password === 'string') {
     secretWrites.push({ key: imapCredentialSecretKey('password', providerId, credentialGeneration), value: config.password });
   }
-  if (incomingClientSecret) {
+  if (replaceClientSecret) {
     secretWrites.push({ key: imapCredentialSecretKey('oauth_client_secret', providerId, credentialGeneration), value: incomingClientSecret });
   }
   if (!credentialScopeChanged && config.refresh_token && typeof config.refresh_token === 'string') {
@@ -825,13 +832,77 @@ async function persistImapConfig(
     imapConfig.folder_filters = imapConfig.folder_filters || [];
   }
 
-  return { config: imapConfig, reconnectRequired: credentialScopeChanged, secretWrites, credentialGeneration };
+  return {
+    config: imapConfig,
+    reconnectRequired: credentialScopeChanged,
+    secretWrites,
+    credentialGeneration,
+    retiredCredentialGeneration: rotateGeneration ? existing?.credential_generation ?? null : null,
+    stagedCredentialGeneration: rotateGeneration ? credentialGeneration : null,
+  };
 }
 
 async function applyImapSecretWrites(tenant: string, writes: Array<{ key: string; value: string }>): Promise<void> {
   if (writes.length === 0) return;
   const secretProvider = await getSecretProviderInstance();
   for (const { key, value } of writes) await secretProvider.setTenantSecret(tenant, key, value);
+}
+
+async function retireImapCredentialsAfterCommit(
+  tenant: string,
+  providerId: string,
+  retiredGeneration: string | null,
+  generationPublished: string | null,
+  cleanLegacyKeys: boolean
+): Promise<void> {
+  if (!retiredGeneration && !cleanLegacyKeys) return;
+  try {
+    const { knex } = await createTenantKnex();
+    const committed = await tenantDb(knex, tenant)
+      .table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .first();
+    // A later committed operation may still select this generation. Recheck
+    // the database pointer before retiring it so cleanup cannot break it.
+    if (!committed || (retiredGeneration && committed.credential_generation === retiredGeneration)) return;
+    const secretProvider = await getSecretProviderInstance();
+    if (retiredGeneration) {
+      for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+        await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId, retiredGeneration));
+      }
+    }
+    if (cleanLegacyKeys && generationPublished) {
+      for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+        await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId));
+      }
+    }
+  } catch (error) {
+    // Cleanup is best-effort after commit: a storage outage must not turn a
+    // committed configuration into an apparent rollback.
+    console.warn('Failed to retire superseded IMAP credentials after commit:', error);
+  }
+}
+
+async function discardUnpublishedImapCredentials(
+  tenant: string,
+  providerId: string,
+  generation: string | null
+): Promise<void> {
+  if (!generation) return;
+  try {
+    const { knex } = await createTenantKnex();
+    const committed = await tenantDb(knex, tenant)
+      .table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .first();
+    if (committed?.credential_generation === generation) return;
+    const secretProvider = await getSecretProviderInstance();
+    for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+      await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId, generation));
+    }
+  } catch (error) {
+    console.warn('Failed to discard unpublished IMAP credentials:', error);
+  }
 }
 
 /**
@@ -1004,11 +1075,15 @@ export const upsertEmailProvider = withAuth(async (
     provider: null as unknown as EmailProvider,
     setupWarnings: []
   };
-  let imapSecretWrites: Array<{ key: string; value: string }> = [];
+  let imapGenerationToDiscard: string | null = null;
+  let retiredImapGeneration: string | null = null;
+  let publishedImapGeneration: string | null = null;
+  let imapProviderId: string | null = null;
 
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data);
+      imapProviderId = base.id;
 
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(
@@ -1023,7 +1098,10 @@ export const upsertEmailProvider = withAuth(async (
       } else if (data.providerType === 'imap') {
         const imap = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
         base.imapConfig = imap.config;
-        imapSecretWrites = imap.secretWrites;
+        imapGenerationToDiscard = imap.stagedCredentialGeneration;
+        publishedImapGeneration = imap.credentialGeneration;
+        retiredImapGeneration = imap.retiredCredentialGeneration;
+        await applyImapSecretWrites(tenant, imap.secretWrites);
         if (imap.reconnectRequired) result.reconnectRequired = true;
         await auditLog(trx, {
           userId: user.user_id,
@@ -1045,7 +1123,8 @@ export const upsertEmailProvider = withAuth(async (
       return base;
     });
 
-    await applyImapSecretWrites(tenant, imapSecretWrites);
+    await retireImapCredentialsAfterCommit(tenant, provider.id, retiredImapGeneration, publishedImapGeneration, imapGenerationToDiscard !== null);
+    imapGenerationToDiscard = null;
     result.provider = provider;
     if (result.reconnectRequired) {
       result.setupWarnings = [
@@ -1113,6 +1192,7 @@ export const upsertEmailProvider = withAuth(async (
 
     return { ...result, provider: toPublicProvider(result.provider) };
   } catch (error) {
+    if (imapProviderId) await discardUnpublishedImapCredentials(tenant, imapProviderId, imapGenerationToDiscard);
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
     }
@@ -1177,7 +1257,9 @@ export const updateEmailProvider = withAuth(async (
     provider: null as unknown as EmailProvider,
     setupWarnings: []
   };
-  let imapSecretWrites: Array<{ key: string; value: string }> = [];
+  let imapGenerationToDiscard: string | null = null;
+  let retiredImapGeneration: string | null = null;
+  let publishedImapGeneration: string | null = null;
 
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
@@ -1196,7 +1278,10 @@ export const updateEmailProvider = withAuth(async (
       } else if (data.providerType === 'imap') {
         const imap = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
         base.imapConfig = imap.config;
-        imapSecretWrites = imap.secretWrites;
+        imapGenerationToDiscard = imap.stagedCredentialGeneration;
+        publishedImapGeneration = imap.credentialGeneration;
+        retiredImapGeneration = imap.retiredCredentialGeneration;
+        await applyImapSecretWrites(tenant, imap.secretWrites);
         if (imap.reconnectRequired) result.reconnectRequired = true;
         await auditLog(trx, {
           userId: user.user_id,
@@ -1218,7 +1303,8 @@ export const updateEmailProvider = withAuth(async (
       return base;
     });
 
-    await applyImapSecretWrites(tenant, imapSecretWrites);
+    await retireImapCredentialsAfterCommit(tenant, provider.id, retiredImapGeneration, publishedImapGeneration, imapGenerationToDiscard !== null);
+    imapGenerationToDiscard = null;
     result.provider = provider;
     if (result.reconnectRequired) {
       result.setupWarnings = [
@@ -1472,6 +1558,7 @@ export const updateEmailProvider = withAuth(async (
 
     return { ...result, provider: toPublicProvider(result.provider) };
   } catch (error) {
+    await discardUnpublishedImapCredentials(tenant, providerId, imapGenerationToDiscard);
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
     }

@@ -14,9 +14,11 @@ const mocks = vi.hoisted(() => ({
   renewWebhooks: vi.fn(),
   recoverAuthPaused: vi.fn(),
   failImapMerge: false,
+  failCommit: false,
   staleCredentialUpdate: false,
   axiosPost: vi.fn(),
   imapConnect: vi.fn(),
+  imapConstructorOptions: [] as any[],
   lookup: vi.fn(),
   secrets: {
     getTenantSecret: vi.fn(),
@@ -42,6 +44,7 @@ function makeTable(name: string) {
       if (values && typeof values === 'object') Object.assign(filters, values);
       return chain;
     },
+    forUpdate: () => chain,
     orderBy: () => chain,
     select: () => thenable(() => seed().rows ?? [], { first: async () => seed().first }),
     first: async () => seed().first,
@@ -81,7 +84,20 @@ vi.mock('@alga-psa/db', () => ({
     knex: {
       transaction: async (fn: any) => {
         mocks.transaction();
-        return fn({ fn: { now: () => 'NOW' }, raw: (sql: string) => ({ raw: sql }) });
+        const result = await fn({ fn: { now: () => 'NOW' }, raw: (sql: string) => ({ raw: sql }) });
+        if (mocks.failCommit) throw new Error('database commit failed');
+        const imapMerge = [...mocks.merges].reverse().find(([table]) => table === 'imap_email_provider_config')?.[1];
+        if (imapMerge && mocks.tables.imap_email_provider_config?.first) {
+          mocks.tables.imap_email_provider_config.first = {
+            ...mocks.tables.imap_email_provider_config.first,
+            credential_generation: imapMerge.credential_generation,
+            host: imapMerge.host,
+            auth_type: imapMerge.auth_type,
+            username: imapMerge.username,
+            oauth_client_secret: imapMerge.oauth_client_secret,
+          };
+        }
+        return result;
       },
       fn: { now: () => 'NOW' },
     },
@@ -99,6 +115,7 @@ vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
 vi.mock('imapflow', () => ({
   ImapFlow: class {
     commands = new Map();
+    constructor(options: any) { mocks.imapConstructorOptions.push(options); }
     connect = mocks.imapConnect;
     logout = vi.fn();
   },
@@ -205,10 +222,12 @@ beforeEach(() => {
     delete mocks.secretValues[key];
   });
   mocks.failImapMerge = false;
+  mocks.failCommit = false;
   mocks.staleCredentialUpdate = false;
   mocks.secretProviderOverride = null;
   mocks.axiosPost.mockResolvedValue({ data: { access_token: 'at', expires_in: 3600 } });
   mocks.imapConnect.mockResolvedValue(undefined);
+  mocks.imapConstructorOptions.length = 0;
   mocks.renewWebhooks.mockResolvedValue([]);
 });
 
@@ -574,7 +593,7 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     };
     seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: row, returned: { ...row } } });
     mocks.secrets.setTenantSecret.mockImplementation(async (_tenant: string, key: string, value: string) => {
-      if (key.endsWith('_generation-old')) {
+      if (key.startsWith('imap_password_prov-1_')) {
         passwordWriteStarted();
         await delayedWrite;
       }
@@ -587,6 +606,7 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
       password: 'delayed-old-password',
     }));
     await started;
+    const firstGeneration = mocks.merges[mocks.merges.length - 1]![1].credential_generation;
 
     const secondSave: any = await updateEmailProvider('prov-1', imapPayload({
       host: 'imap.new-scope.example.test',
@@ -605,7 +625,7 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
 
     const tested = await testEmailProviderConnection('prov-1');
     expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
-    expect(mocks.secretValues['imap_password_prov-1_generation-old']).toBe('delayed-old-password');
+    expect(mocks.secretValues[`imap_password_prov-1_${firstGeneration}`]).toBe('delayed-old-password');
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 
@@ -620,10 +640,13 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
     const saved: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
     expect(saved.reconnectRequired).toBe(true);
+    const generation = mocks.tables.imap_email_provider_config.first.credential_generation;
+    expect(generation).toBeTruthy();
 
     mocks.tables.imap_email_provider_config.first = {
       ...storedImapRow,
       host: 'mail.new.example.test',
+      credential_generation: generation,
       access_token: null,
       refresh_token: null,
       token_expires_at: null,
@@ -631,6 +654,8 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     const tested = await testEmailProviderConnection('prov-1');
     expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
     expect(Object.keys(mocks.secretValues)).toEqual([]);
+    expect(mocks.secrets.getTenantSecret).toHaveBeenCalledWith('tenant-123', `imap_refresh_token_prov-1_${generation}`);
+    expect(mocks.secrets.getTenantSecret).not.toHaveBeenCalledWith('tenant-123', 'imap_refresh_token_prov-1');
     expect(mocks.axiosPost).not.toHaveBeenCalled();
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
@@ -656,29 +681,83 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 
-  it('fails before changing the row if any secret invalidation fails', async () => {
+  it('reports success after commit when retirement of old secrets fails', async () => {
     seedStored();
     mocks.secrets.deleteTenantSecret.mockImplementation(async (_tenant: string, key: string) => {
       if (key === 'imap_refresh_token_prov-1') throw new Error('secret store unavailable');
     });
     const { updateEmailProvider } = await import('./emailProviderActions');
-    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
+    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test', password: 'new-password' }));
 
-    expect(result.actionError).toBeTruthy();
-    expect(mocks.merges).toEqual([]);
-    expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalled();
+    expect(result.actionError).toBeUndefined();
+    expect(mocks.tables.imap_email_provider_config.first.credential_generation).toBeTruthy();
+    expect(Object.values(mocks.secretValues)).toContain('new-password');
   });
 
-  it('fails closed when the database write fails after secrets were invalidated', async () => {
+  it('preserves committed legacy credentials when the database write fails', async () => {
+    const oldPassword = 'committed-password';
+    mocks.secretValues['imap_password_prov-1'] = oldPassword;
     seedStored();
     mocks.failImapMerge = true;
-    const { updateEmailProvider } = await import('./emailProviderActions');
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
     const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
 
     expect(result.actionError).toBeTruthy();
-    expect(mocks.secrets.deleteTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_password_prov-1');
+    expect(mocks.tables.imap_email_provider_config.first.host).toBe(storedImapRow.host);
+    expect(mocks.secretValues['imap_password_prov-1']).toBe(oldPassword);
     expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalled();
     expect(mocks.merges).toHaveLength(1);
+
+    mocks.failImapMerge = false;
+    mocks.tables.imap_email_provider_config.first = { ...storedImapRow, auth_type: 'password', credential_generation: null };
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested.success).toBe(true);
+    expect(mocks.imapConstructorOptions.at(-1).auth.pass).toBe(oldPassword);
+  });
+
+  it('keeps the committed password after an explicit same-scope replacement fails at commit', async () => {
+    const oldPassword = 'old-committed-password';
+    mocks.secretValues['imap_password_prov-1_generation-old'] = oldPassword;
+    const oldRow = { ...storedImapRow, auth_type: 'password', credential_generation: 'generation-old' };
+    seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: oldRow, returned: { ...oldRow } } });
+    mocks.failCommit = true;
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const failed: any = await updateEmailProvider('prov-1', imapPayload({ auth_type: 'password', password: 'replacement-password' }));
+    expect(failed.actionError).toBeTruthy();
+    expect(mocks.secretValues['imap_password_prov-1_generation-old']).toBe(oldPassword);
+    expect(mocks.tables.imap_email_provider_config.first.credential_generation).toBe('generation-old');
+
+    mocks.failCommit = false;
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested.success).toBe(true);
+    expect(mocks.imapConstructorOptions.at(-1).auth.pass).toBe(oldPassword);
+  });
+
+  it('keeps generation-bound OAuth credentials usable when a destination change fails at commit', async () => {
+    const oldRow = {
+      ...storedImapRow,
+      auth_type: 'oauth2',
+      credential_generation: 'oauth-generation-old',
+      access_token: null,
+      refresh_token: null,
+      token_expires_at: null,
+    };
+    mocks.secretValues['imap_refresh_token_prov-1_oauth-generation-old'] = 'committed-refresh-token';
+    mocks.secretValues['imap_oauth_client_secret_prov-1_oauth-generation-old'] = 'committed-client-secret';
+    seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: oldRow, returned: { ...oldRow } } });
+    mocks.failCommit = true;
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const failed: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.changed.example.test' }));
+    expect(failed.actionError).toBeTruthy();
+    expect(mocks.tables.imap_email_provider_config.first.credential_generation).toBe('oauth-generation-old');
+
+    mocks.failCommit = false;
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested.success).toBe(true);
+    expect(mocks.secrets.getTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_refresh_token_prov-1_oauth-generation-old');
+    expect(mocks.axiosPost.mock.calls.at(-1)?.[1].toString()).toContain('committed-refresh-token');
+    expect(mocks.axiosPost.mock.calls.at(-1)?.[1].toString()).toContain('committed-client-secret');
+    expect(mocks.imapConstructorOptions.at(-1).auth.accessToken).toBe('at');
   });
 
   it('keeps tokens when the same client secret is resubmitted', async () => {
