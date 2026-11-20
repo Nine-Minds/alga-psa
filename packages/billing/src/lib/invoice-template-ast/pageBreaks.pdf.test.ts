@@ -228,5 +228,14 @@ describe('forced page breaks in the printed document', () => {
     const withTrailingBreak = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), invoiceModel);
     expect(withTrailingBreak).toHaveLength(2);
     expect(withTrailingBreak[1].trim().length).toBeGreaterThan(0);
-  }, 120_000);
+
+    // Reported from the designer: a Page Break dropped after a block that
+    // already ended with one. The last break is dropped for being last, but the
+    // one before it would then open a page whose only occupant is that dropped
+    // break — a blank final sheet the author never asked for.
+    addPageBreak(workspace, 'stacked-trailing-break', page.children.length);
+    const withStackedBreaks = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), invoiceModel);
+    expect(withStackedBreaks).toHaveLength(2);
+    expect(withStackedBreaks[1].trim().length).toBeGreaterThan(0);
+  }, 180_000);
 });

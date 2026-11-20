@@ -128,6 +128,51 @@ describe('template print behaviour', () => {
     expect(html).not.toMatch(/id="trailing-break"[^>]*style="[^"]*break-after:\s*page/);
   });
 
+  it('neutralizes every forced break that only inkless blocks follow', async () => {
+    // Reported from the designer: a Page Break dropped after a block that
+    // already ended with one. The second break is the document's last node and
+    // is dropped, but the first then opens a page whose only occupant is that
+    // dropped break — a blank final sheet. Nothing after a break that draws
+    // ink means nothing to put on the page it opens, however many breaks and
+    // wrappers sit in between.
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      metadata: { templateName: 'Stacked trailing breaks' },
+      bindings: { values: {}, collections: {} },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'signature-container',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { breakAfter: 'page' } },
+            children: [{ id: 'sign-here', type: 'text', content: { type: 'literal', value: 'Sign here' } }],
+          },
+          { id: 'authored-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+          {
+            id: 'break-wrapper',
+            type: 'stack',
+            direction: 'column',
+            children: [
+              { id: 'added-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+            ],
+          },
+        ],
+      },
+    };
+    expect(() => validateTemplateAst(ast)).not.toThrow();
+
+    const { html } = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}), { locale: 'en-US' });
+
+    expect(html).not.toMatch(/id="signature-container"[^>]*style="[^"]*break-after:\s*page/);
+    expect(html).not.toMatch(/id="authored-break"[^>]*style="[^"]*break-after:\s*page/);
+    expect(html).not.toMatch(/id="added-break"[^>]*style="[^"]*break-after:\s*page/);
+    expect(html).toMatch(/id="signature-container"[^>]*style="[^"]*break-after:\s*auto/);
+  });
+
   it('omits a hideWhenZero totals row when its value is zero and keeps it otherwise', async () => {
     const withOptionals = await render(9540);
     expect(withOptionals.html).toContain('Optional if selected');
