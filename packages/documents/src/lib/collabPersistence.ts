@@ -33,7 +33,9 @@ async function authorizeWriterInTransaction(
 
   const db = tenantDb(trx, tenant);
   const row = await db.table('users').where({ user_id: claims.userId }).first();
-  if (!row) return { allowed: false, message: 'Permission denied: Document writer no longer exists' };
+  if (!row || row.is_inactive) {
+    return { allowed: false, message: 'Permission denied: Document writer is inactive or no longer exists' };
+  }
 
   let clientId: string | undefined;
   if (row.contact_id) {

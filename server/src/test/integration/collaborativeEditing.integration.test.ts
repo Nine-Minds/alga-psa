@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createServer, type Server as HttpServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import jwt from 'jsonwebtoken';
 import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { POST as persistRoute } from '@/app/api/internal/collab/persist/route';
@@ -483,6 +484,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     let authApiUrl: string;
     const providers = new Set<HocuspocusProvider>();
     const documents = new Set<Y.Doc>();
+    const renewalStops = new Set<() => void>();
     const requests: Array<{ status: number; path: string }> = [];
     const transportErrors: Error[] = [];
     let expectedStatuses: number[];
@@ -550,9 +552,12 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     afterEach(async () => {
+      for (const stop of renewalStops) stop();
+      renewalStops.clear();
       for (const provider of providers) provider.destroy();
       for (const document of documents) document.destroy();
       providers.clear(); documents.clear();
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
       await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
       await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
       expect(transportErrors).toEqual([]);
@@ -605,6 +610,35 @@ describe('Collaborative Editing — Integration Tests', () => {
     async function saved(documentId: string) {
       const row = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
       return typeof row.block_data === 'string' ? JSON.parse(row.block_data) : row.block_data;
+    }
+
+    function shortLivedCredential(documentId: string) {
+      const token = jwt.sign({
+        tenantId,
+        documentId,
+        userId,
+        scope: 'document-room',
+      }, process.env.HOCUSPOCUS_JWT_SECRET || 'dev-hocuspocus-jwt-secret', {
+        algorithm: 'HS256', audience: 'document-room', issuer: 'alga-psa',
+        expiresIn: 4, jwtid: uuidv4(),
+      });
+      const claims = jwt.decode(token) as jwt.JwtPayload;
+      return { token, expiresAt: claims.exp! * 1000 };
+    }
+
+    async function connectWithRenewal(room: string, issueCredential: () => Promise<{ token: string; expiresAt: number }>) {
+      const document = new Y.Doc(); documents.add(document);
+      const provider = new HocuspocusProvider({
+        url, name: room, document, parameters: { tenantId, userId }, preserveConnection: false,
+      });
+      providers.add(provider);
+      const { startDocumentRoomConnection } = await import('@alga-psa/documents/lib/documentRoomConnection');
+      const connection = startDocumentRoomConnection(provider, issueCredential, error => {
+        transportErrors.push(error instanceof Error ? error : new Error(String(error)));
+      });
+      renewalStops.add(connection.stop);
+      await connection.ready;
+      return { document, provider };
     }
 
     it('persists editor content after the last client disconnects and the room is evicted', async () => {
@@ -763,6 +797,127 @@ describe('Collaborative Editing — Integration Tests', () => {
       await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
       expect((await saved(documentId)).content[0].content[0].text)
         .toBe('Editing recovers after access returns');
+    });
+
+    it('renews an expiring credential and preserves pending edits through reconnect and room unload', async () => {
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      let tokenCalls = 0;
+      let firstExpiresAt = 0;
+      let firstToken = '';
+      let releaseRenewal!: () => void;
+      let renewalStarted!: () => void;
+      const renewalStartedPromise = new Promise<void>(resolve => { renewalStarted = resolve; });
+      const renewalGate = new Promise<void>(resolve => { releaseRenewal = resolve; });
+      const issueCredential = async () => {
+        tokenCalls += 1;
+        if (tokenCalls === 2) {
+          renewalStarted();
+          await renewalGate;
+        }
+        const credential = shortLivedCredential(documentId);
+        if (tokenCalls === 1) {
+          firstExpiresAt = credential.expiresAt;
+          firstToken = credential.token;
+        }
+        return credential;
+      };
+
+      const editor = await connectWithRenewal(room, issueCredential);
+      await synced(editor.provider);
+      await expect(renewalStartedPromise).resolves.toBeUndefined();
+
+      // Simulate a dropped socket while a refresh is in flight. The update is
+      // now only in the provider's Y.Doc and must survive the credential swap.
+      editor.provider.disconnect();
+      await expect.poll(() => editor.provider.isConnected).toBe(false);
+      write(editor.document, 'Pending edit survives credential rotation');
+      expect(editor.document.getXmlFragment('prosemirror').length).toBeGreaterThan(0);
+      releaseRenewal();
+
+      await expect.poll(() => tokenCalls >= 2 && editor.provider.isConnected && editor.provider.synced, { timeout: 5000 })
+        .toBe(true);
+      await expect.poll(() => Date.now() > firstExpiresAt, { timeout: 5000 }).toBe(true);
+      expect(editor.provider.isConnected).toBe(true);
+      expect(editor.provider.synced).toBe(true);
+      expect(tokenCalls).toBeGreaterThanOrEqual(2);
+      expect(() => validateDocumentRoomToken(room, firstToken)).toThrow();
+
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
+        .toBe('Pending edit survives credential rotation');
+      expect(requests.some(request => request.path.endsWith('/persist') && request.status === 200)).toBe(true);
+    });
+
+    it('denies inactive writers issued credentials before admission and after connection, then recovers on reactivation', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+      const storedBefore = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
+      const metadataBefore = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: true });
+      const admission = await authorizeRoute(new NextRequest(authApiUrl, {
+        method: 'POST', headers: { 'x-api-key': process.env.COLLAB_PERSIST_API_KEY!, 'content-type': 'application/json' },
+        body: JSON.stringify({ tenantId, documentId, credential }),
+      }));
+      expect(admission.status).toBe(403);
+      const denied = connect(room, tenantId, userId, credential);
+      let deniedClosed = false;
+      denied.provider.on('close', () => { deniedClosed = true; });
+      await expect.poll(() => deniedClosed, { timeout: 5000 }).toBe(true);
+      expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+        .toMatchObject({ block_data: storedBefore.block_data, updated_at: storedBefore.updated_at });
+      expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+        .select('updated_at', 'edited_by').first()).toEqual(metadataBefore);
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+      const editor = connect(room);
+      await synced(editor.provider);
+      write(editor.document, 'Authorized before deactivation');
+      await expect.poll(() => editor.provider.hasUnsyncedChanges).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Authorized before deactivation');
+      const activeSnapshot = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
+      const activeMetadata = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: true });
+      const requestsBeforeRevocation = requests.length;
+      let revokedClosed = false;
+      editor.provider.on('close', () => { revokedClosed = true; });
+      write(editor.document, 'Inactive edit must not persist');
+      await expect.poll(() => revokedClosed || requests.slice(requestsBeforeRevocation).some(request => request.status === 403), { timeout: 5000 })
+        .toBe(true);
+
+      const attempted = new Y.Doc(); documents.add(attempted);
+      write(attempted, 'Inactive internal persistence must be denied');
+      const update = Buffer.from(Y.encodeStateAsUpdate(attempted)).toString('base64');
+      const persistenceResponse = await fetch(apiUrl, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+        body: JSON.stringify({ tenantId, documentId, update, credential }),
+      });
+      expect(persistenceResponse.status).toBe(403);
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+        .toMatchObject({ block_data: activeSnapshot.block_data, updated_at: activeSnapshot.updated_at });
+      expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+        .select('updated_at', 'edited_by').first()).toEqual(activeMetadata);
+      expect(requests.slice(requestsBeforeRevocation).some(request => request.status === 403)).toBe(true);
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+      const recovered = connect(room);
+      await synced(recovered.provider);
+      write(recovered.document, 'Editing recovers after reactivation');
+      await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
+      recovered.provider.destroy(); providers.delete(recovered.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      expect((await saved(documentId)).content[0].content[0].text).toBe('Editing recovers after reactivation');
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
     });
 
     it('rejects redacted room admission and persistence without changing content or metadata', async () => {

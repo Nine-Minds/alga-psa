@@ -56,7 +56,7 @@ vi.mock('../actions/documentBlockContentActions', () => ({
   getBlockContent: vi.fn(),
   updateBlockContent: vi.fn(),
 }));
-vi.mock('../actions/collaborativeEditingActions', () => ({ getDocumentRoomToken: vi.fn(async () => ({ token: 'signed-token' })) }));
+vi.mock('../actions/collaborativeEditingActions', () => ({ getDocumentRoomToken: vi.fn(async () => ({ token: 'signed-token', expiresAt: Date.now() + 100_000 })) }));
 
 describe('CollaborativeEditor room name', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -80,7 +80,7 @@ describe('CollaborativeEditor room name', () => {
     });
   });
 
-  it('requests a fresh server credential when the provider reconnects', async () => {
+  it('uses a server-issued credential before connecting to the room', async () => {
     render(
       <CollaborativeEditor
         documentId="doc-123"
@@ -91,9 +91,8 @@ describe('CollaborativeEditor room name', () => {
     );
 
     await waitFor(() => expect(mockProvider.setConfiguration).toHaveBeenCalled());
-    const config = mockProvider.setConfiguration.mock.calls[0][0] as { token: () => Promise<string> };
-    expect(await config.token()).toBe('signed-token');
-    expect(await config.token()).toBe('signed-token');
-    expect(getDocumentRoomToken).toHaveBeenCalledTimes(2);
+    expect(mockProvider.setConfiguration).toHaveBeenCalledWith({ token: 'signed-token' });
+    expect(getDocumentRoomToken).toHaveBeenCalledTimes(1);
+    expect(mockProvider.connect).toHaveBeenCalledTimes(1);
   });
 });

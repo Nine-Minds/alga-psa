@@ -36,6 +36,7 @@ import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import { getDocumentRoomToken } from '../actions/collaborativeEditingActions';
+import { startDocumentRoomConnection } from '../lib/documentRoomConnection';
 import { EditorImage } from '../lib/editorImageExtension';
 import {
   editorImageUploadMessage,
@@ -395,31 +396,22 @@ export function CollaborativeEditor({
     const issueToken = async () => {
       const result = await getDocumentRoomToken(documentId);
       if (isDocumentActionError(result)) throw new Error(getErrorMessage(result));
-      return result.token;
+      return { token: result.token, expiresAt: result.expiresAt };
     };
-    void issueToken().then((initialToken) => {
-      if (!active) return;
-      let nextToken: string | null = initialToken;
-      provider.setConfiguration({
-        token: async () => {
-          if (nextToken) {
-            const token = nextToken;
-            nextToken = null;
-            return token;
-          }
-          return issueToken();
-        },
-      });
-      return provider.connect();
-    }).catch((error) => {
+    const reportAuthorizationFailure = (error: unknown) => {
       if (!active) return;
       const message = error instanceof Error ? error.message : 'Permission denied: Cannot edit this document';
       console.error('[CollaborativeEditor] Failed to authorize document room:', error);
       setConnectionStatus('disconnected');
       onConnectionStatusChangeRef.current?.('disconnected');
       toast.error(message);
-    });
-    return () => { active = false; };
+    };
+    const connection = startDocumentRoomConnection(provider, issueToken, reportAuthorizationFailure);
+    void connection.ready.catch(reportAuthorizationFailure);
+    return () => {
+      active = false;
+      connection.stop();
+    };
   }, [documentId, provider]);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { createYjsProvider } from '@alga-psa/ui/editor';
 import { getAuthorizedDocumentById } from './documentActions';
 import { isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
-import { signDocumentRoomToken } from '@shared/lib/documentRoomToken';
+import { DOCUMENT_ROOM_TOKEN_TTL_SECONDS, signDocumentRoomToken } from '@shared/lib/documentRoomToken';
 import { persistCollabSnapshot } from '../lib/collabPersistence';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -24,7 +24,10 @@ export const getDocumentRoomToken = withAuth(async (user, { tenant }, documentId
     return permissionError('Permission denied: Cannot edit redacted document content', 'documents:errors.permissions.update');
   }
 
-  return { token: signDocumentRoomToken({ tenantId: tenant, documentId, userId: user.user_id }) };
+  return {
+    token: signDocumentRoomToken({ tenantId: tenant, documentId, userId: user.user_id }),
+    expiresAt: Date.now() + DOCUMENT_ROOM_TOKEN_TTL_SECONDS * 1000,
+  };
 });
 
 const waitForSync = (provider: HocuspocusProvider, timeoutMs = SYNC_TIMEOUT_MS) => {

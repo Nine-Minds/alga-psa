@@ -26,6 +26,7 @@ vi.mock('@shared/lib/documentAuthorization', () => ({
   isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
 }));
 vi.mock('@shared/lib/documentRoomToken', () => ({
+  DOCUMENT_ROOM_TOKEN_TTL_SECONDS: 900,
   signDocumentRoomToken: () => 'signed-room-token',
 }));
 
