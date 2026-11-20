@@ -123,7 +123,8 @@ describe('document layout editor header row', () => {
   it('puts the header row and the Visual / Code tabs in one card', () => {
     const { container } = renderEditor();
 
-    const card = container.firstElementChild as HTMLElement;
+    // The focus surface wraps the card; the card is still the only one.
+    const card = byId('document-template-editor-surface').firstElementChild as HTMLElement;
     expect(card.className).toContain('card-elevated');
     expect(card.contains(byId('document-template-editor-back'))).toBe(true);
     expect(card.contains(byId('document-template-name-input'))).toBe(true);

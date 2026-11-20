@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
 import { Input } from '@alga-psa/ui/components/Input';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -130,6 +132,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
+  // One preference for every document type: the author's choice is about the editor.
+  const focus = useDesignerFocusPreference('document_layout');
+  const fillHeight = focus.isFocused ? 'flex min-h-0 flex-1 flex-col' : '';
   const typeLabel = useMemo(() => documentTypeLabel(documentType, t), [documentType, t]);
 
   const [template, setTemplate] = useState<DocumentTemplateDraft>(initialTemplate);
@@ -267,7 +272,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     calculateHeight();
     window.addEventListener('resize', calculateHeight);
     return () => window.removeEventListener('resize', calculateHeight);
-  }, []);
+  }, [focus.isFocused]);
 
   // Authoritative preview pipeline — export the workspace and render it server-side.
   useEffect(() => {
@@ -396,7 +401,16 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   // the same arrangement as the invoice and quote layout editors: the rest of the window belongs
   // to the designer, so the page never scrolls while editing.
   return (
-    <Card id="document-template-editor-page">
+    <DesignerFocusSurface
+      id="document-template-editor-surface"
+      focused={focus.isFocused}
+      onFocusedChange={focus.setFocused}
+    >
+    <Card
+      id="document-template-editor-page"
+      className={fillHeight ? `${fillHeight} rounded-none border-0` : undefined}
+      style={focus.isFocused ? { boxShadow: 'none' } : undefined}
+    >
       <CardHeader className="pb-3 shrink-0">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Button id="document-template-editor-back" variant="soft" onClick={onCancel}>
@@ -530,6 +544,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 })
                 : t('documentTemplates.editor.fields.notSaved', { defaultValue: 'Not saved yet' })}
             </span>
+            <DesignerFocusToggle id="document-template-editor-focus-toggle" />
             <Button id="document-template-editor-close" variant="outline" onClick={onCancel}>
               {t('templateEditor.actions.close', { defaultValue: 'Close' })}
             </Button>
@@ -546,8 +561,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </Alert>
         ) : null}
       </CardHeader>
-      <CardContent className="pt-0">
-      <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
+      <CardContent className={`pt-0 ${fillHeight}`.trim()}>
+      <Tabs
+        value={editorTab}
+        onValueChange={(value) => setEditorTab(value as EditorTab)}
+        className={`space-y-4 ${fillHeight}`.trim()}
+      >
         <TabsList>
           <TabsTrigger
             id="document-template-editor-visual-tab"
@@ -565,12 +584,16 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visual" className="pt-4 space-y-3">
-          <div className="border rounded overflow-hidden bg-card" id="document-template-visual-designer">
+        <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
+          <div
+            className={`border rounded overflow-hidden bg-card ${fillHeight}`.trim()}
+            id="document-template-visual-designer"
+          >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="document-designer-visual-workspace-tabs"
+              className={fillHeight || undefined}
             >
               <TabsList>
                 <TabsTrigger
@@ -596,11 +619,14 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className="pt-3">
+              <TabsContent value="design" className={`pt-3 ${fillHeight}`.trim()}>
                 <DesignerShell />
               </TabsContent>
 
-              <TabsContent value="transforms" className="pt-3">
+              <TabsContent
+                value="transforms"
+                className={`pt-3 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+              >
                 <TransformsWorkspace
                   previewState={previewState}
                   previewData={null}
@@ -613,7 +639,10 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 />
               </TabsContent>
 
-              <TabsContent value="preview" className="pt-3 space-y-3">
+              <TabsContent
+                value="preview"
+                className={`pt-3 space-y-3 ${focus.isFocused ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+              >
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <ViewSwitcher
@@ -768,7 +797,10 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="code" className="pt-4">
+        <TabsContent
+          value="code"
+          className={`pt-4 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+        >
           <Alert variant="info" className="mb-3">
             <AlertDescription>
               {t('templateEditor.alerts.codeReadonly', {
@@ -796,6 +828,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       </Tabs>
       </CardContent>
     </Card>
+    </DesignerFocusSurface>
   );
 };
 

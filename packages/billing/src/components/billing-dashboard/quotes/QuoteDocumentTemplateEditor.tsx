@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -83,6 +85,10 @@ const buildPreviewSourceOptions = (
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
   const { t, i18n } = useTranslation('msp/quotes');
   const { formatDate } = useFormatters();
+  const focus = useDesignerFocusPreference('quote_layout');
+  // In focus mode every level between the card and the designer shell passes the
+  // remaining height down, so the shell fills the window.
+  const fillHeight = focus.isFocused ? 'flex min-h-0 flex-1 flex-col' : '';
   const router = useRouter();
   const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
   const isNewTemplate = !templateId;
@@ -402,7 +408,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     calculateHeight();
     window.addEventListener('resize', calculateHeight);
     return () => window.removeEventListener('resize', calculateHeight);
-  }, [isLoading]);
+  }, [isLoading, focus.isFocused]);
 
   // Preview pipeline
   useEffect(() => {
@@ -529,7 +535,15 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   // of the window to the designer, exactly as the invoice layout editor does, so the page never
   // scrolls while editing and nothing the job needs sits below the fold.
   return (
-    <Card>
+    <DesignerFocusSurface
+      id="quote-template-editor-surface"
+      focused={focus.isFocused}
+      onFocusedChange={focus.setFocused}
+    >
+    <Card
+      className={fillHeight ? `${fillHeight} rounded-none border-0` : undefined}
+      style={focus.isFocused ? { boxShadow: 'none' } : undefined}
+    >
       <CardHeader className="pb-3 shrink-0">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Button id="quote-template-editor-back" variant="soft" onClick={() => handleBack()}>
@@ -596,6 +610,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 })
                 : t('templateEditor.fields.notSaved', { defaultValue: 'Not saved yet' })}
             </span>
+            <DesignerFocusToggle id="quote-template-editor-focus-toggle" />
             <Button
               id="quote-template-editor-close"
               variant="outline"
@@ -617,19 +632,27 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           </Alert>
         ) : null}
       </CardHeader>
-      <CardContent className="pt-0">
-      <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
+      <CardContent className={`pt-0 ${fillHeight}`.trim()}>
+      <Tabs
+        value={editorTab}
+        onValueChange={(value) => setEditorTab(value as EditorTab)}
+        className={`space-y-4 ${fillHeight}`.trim()}
+      >
         <TabsList>
           <TabsTrigger value="visual" data-automation-id="quote-template-editor-visual-tab">{t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}</TabsTrigger>
           <TabsTrigger value="code" data-automation-id="quote-template-editor-code-tab">{t('templateEditor.tabs.code', { defaultValue: 'Code' })}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visual" className="pt-4 space-y-3">
-          <div className="border rounded overflow-hidden bg-card" id="quote-template-visual-designer">
+        <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
+          <div
+            className={`border rounded overflow-hidden bg-card ${fillHeight}`.trim()}
+            id="quote-template-visual-designer"
+          >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="quote-designer-visual-workspace-tabs"
+              className={fillHeight || undefined}
             >
               <TabsList>
                 <TabsTrigger value="design" data-automation-id="quote-designer-design-tab">{t('templateEditor.tabs.design', { defaultValue: 'Design' })}</TabsTrigger>
@@ -637,11 +660,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <TabsTrigger value="preview" data-automation-id="quote-designer-preview-tab">{t('templateEditor.tabs.preview', { defaultValue: 'Preview' })}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className="pt-3">
+              <TabsContent value="design" className={`pt-3 ${fillHeight}`.trim()}>
                 <DesignerShell />
               </TabsContent>
 
-              <TabsContent value="transforms" className="pt-3">
+              <TabsContent
+                value="transforms"
+                className={`pt-3 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+              >
                 <TransformsWorkspace
                   previewState={previewState}
                   previewData={previewData}
@@ -654,7 +680,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 />
               </TabsContent>
 
-              <TabsContent value="preview" className="pt-3 space-y-3">
+              <TabsContent
+                value="preview"
+                className={`pt-3 space-y-3 ${focus.isFocused ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+              >
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <ViewSwitcher
@@ -849,7 +878,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           </div>
         </TabsContent>
 
-        <TabsContent value="code" className="pt-4">
+        <TabsContent
+          value="code"
+          className={`pt-4 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+        >
           <Alert variant="info" className="mb-3">
             <AlertDescription>
               {t('templateEditor.codeReadonly', {
@@ -877,6 +909,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       </Tabs>
       </CardContent>
     </Card>
+    </DesignerFocusSurface>
   );
 };
 

@@ -615,7 +615,7 @@
       "FR-F1",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuoteDocumentTemplateEditor is wrapped in DesignerFocusSurface, driven by the quote_layout preference, and has the toggle with id quote-template-editor-focus-toggle in the header row before Close"
   },
   {
@@ -624,7 +624,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the quote editor keeps its whole header row; name, version, saved status, Close and Save stay visible and editable, and the card loses its border, radius and shadow"
   },
   {
@@ -633,7 +633,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the quote editor's card content, tab sets and designer wrapper pass the remaining height down so the Design shell fills the window"
   },
   {
@@ -642,7 +642,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the quote editor's Transforms, Preview and Code views scroll inside the surface"
   },
   {
@@ -661,7 +661,7 @@
       "FR-F1",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DocumentTemplateEditor is wrapped in DesignerFocusSurface, driven by the document_layout preference, and has the toggle with id document-template-editor-focus-toggle in the header row before Close"
   },
   {
@@ -670,7 +670,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the document editor keeps its whole header row; name, version, Label settings, saved status, Close and Save stay visible and usable, and the card loses its border, radius and shadow"
   },
   {
@@ -679,7 +679,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the document editor's card content, tab sets and designer wrapper pass the remaining height down so the Design shell fills the window"
   },
   {
@@ -688,7 +688,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the document editor's Transforms, Preview and Code views scroll inside the surface"
   },
   {
@@ -706,7 +706,7 @@
     "prdRefs": [
       "FR-F2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Toggling focus mode in the quote and document editors keeps the designer workspace, name and version edits and the active tabs"
   },
   {

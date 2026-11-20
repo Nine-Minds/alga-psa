@@ -115,7 +115,8 @@ describe('quote layout editor header row', () => {
   it('puts the header row and the Visual / Code tabs in one card', async () => {
     const { container } = await renderEditor();
 
-    const card = container.firstElementChild as HTMLElement;
+    // The focus surface wraps the card; the card is still the only one.
+    const card = byId('quote-template-editor-surface').firstElementChild as HTMLElement;
     expect(card.className).toContain('card-elevated');
     expect(card.contains(byId('quote-template-editor-back'))).toBe(true);
     expect(card.contains(byId('quote-template-name-input'))).toBe(true);

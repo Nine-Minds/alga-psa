@@ -1082,7 +1082,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the quote editor renders #quote-template-editor-focus-toggle in the header row before Close and clicking it saves designer_focus_mode_quote_layout as true"
   },
   {
@@ -1091,7 +1091,7 @@
     "featureIds": [
       "F067"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode the quote editor still renders the name input, version input, saved status, Close and Save"
   },
   {
@@ -1100,7 +1100,7 @@
     "featureIds": [
       "F067"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a load or save error alert is rendered in the quote editor in focus mode"
   },
   {
@@ -1109,7 +1109,7 @@
     "featureIds": [
       "F076"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode, type a new quote layout name and version and save; the save call carries both"
   },
   {
@@ -1118,7 +1118,7 @@
     "featureIds": [
       "F076"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: edit the quote template name, enter and leave focus mode; the name field shows the edited value"
   },
   {
@@ -1127,7 +1127,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the quote editor existingQuote and tenantBranding suites pass with the surface in place"
   },
   {
@@ -1136,7 +1136,7 @@
     "featureIds": [
       "F071"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the document editor renders #document-template-editor-focus-toggle in the header row before Close and clicking it saves designer_focus_mode_document_layout as true"
   },
   {
@@ -1145,7 +1145,7 @@
     "featureIds": [
       "F072"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode the document editor still renders the name input, version input, saved status, Close and Save, and Label settings for a work-tag layout"
   },
   {
@@ -1154,7 +1154,7 @@
     "featureIds": [
       "F072"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode the Label settings popover opens and its controls change the layout's label class and hidden fields"
   },
   {
@@ -1163,7 +1163,7 @@
     "featureIds": [
       "F075"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the preference saved while editing one document type opens the editor focused for a different type"
   },
   {
@@ -1172,7 +1172,7 @@
     "featureIds": [
       "F076"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: edit the document layout name, enter and leave focus mode; the name field shows the edited value"
   },
   {
