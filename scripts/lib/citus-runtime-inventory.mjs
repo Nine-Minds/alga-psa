@@ -7,5 +7,6 @@ export const citusRuntimeFiles = Object.freeze([
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
   'server/migrations/__tests__/coManagedSeatTrialTicketWorkMigration.integration.test.ts',
+  'server/migrations/__tests__/stripeCatalogAccountBackfill.integration.test.ts',
   'server/migrations/__tests__/timeSheetUniquenessMigrationDistribution.integration.test.ts',
 ]);

@@ -4,6 +4,8 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createOfferCatalog, CO_MANAGED_SEAT_OFFER_KEY as KEY, OfferTermsChangedError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
 import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, reconcilePortalPurchase, PortalFulfillmentRetryableError, PortalPurchaseOwnershipError } from '../../lib/stripe/coManagedFulfillment';
@@ -13,6 +15,7 @@ const operator = { tenantId: MASTER, userId: 'op@nineminds.test' };
 const price = (id: string) => ({ id, active: true, livemode: false, type: 'recurring', billing_scheme: 'per_unit', currency: 'eur', unit_amount: 1100,
   product: 'prod_seat', transform_quantity: null, recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } });
 const PERIOD_1 = 1796000000, PERIOD_2 = 1798600000;
+const portalStripe = (priceId: string) => ({ checkout: { sessions: { retrieve: async () => ({ id: 'checkout', line_items: { data: [{ price: { id: priceId } }] } }) } } } as any);
 
 describe('co-managed portal fulfillment (postgres)', () => {
   let db: Knex;
@@ -30,6 +33,9 @@ describe('co-managed portal fulfillment (postgres)', () => {
 
   beforeAll(async () => {
     db = await createTestDbConnection({ databaseName: 'co_managed_portal_fulfillment_test', runSeeds: false });
+    const require = createRequire(import.meta.url);
+    await require(path.resolve(__dirname, '../../../migrations/20261118090000_create_stripe_offer_catalog.cjs')).up(db);
+    await require(path.resolve(__dirname, '../../../migrations/20261120120000_add_stripe_catalog_account_settings.cjs')).up(db);
   });
   afterAll(async () => { await db?.destroy(); });
   beforeEach(async () => {
@@ -39,35 +45,63 @@ describe('co-managed portal fulfillment (postgres)', () => {
     catalog = createOfferCatalog({ db, scope: async () => ({ stripeAccount: 'acct_1', livemode: false }), env: { MASTER_BILLING_TENANT_ID: MASTER },
       stripe: { prices: { retrieve: async (id: string) => prices[id] } } as any });
     await catalog.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
-    const row = await bindPortalPurchase({ db, catalog }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' });
+    const row = await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' });
     purchaseId = row.purchase_id;
     sub = subscription();
     session = { id: 'cs_1', status: 'complete', subscription: 'sub_portal', metadata: { portal_purchase_id: purchaseId, entitlement_id: 'ent_1' } };
   });
 
   it('binds checkout to entitlement before payment, idempotently, and refuses another entitlement; a rotated review needs a fresh review', async () => {
-    const again = await bindPortalPurchase({ db, catalog }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' });
+    const again = await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' });
     expect(again.purchase_id).toBe(purchaseId);
-    await expect(bindPortalPurchase({ db, catalog }, { entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
     const current = await catalog.inspect(KEY, 'month');
     await catalog.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_b', expectedCurrentVersionId: current.current!.version_id });
-    await expect(bindPortalPurchase({ db, catalog }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_2', offerRef: current.current!.version_id })).rejects.toBeInstanceOf(OfferTermsChangedError);
+    // An existing binding keeps its original price and merchant even after current terms rotate.
+    expect(await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY,
+      interval: 'month', quantity: 5, checkoutSessionId: 'cs_1', offerRef: current.current!.version_id })).toMatchObject({ price_id: 'price_a', stripe_account: 'acct_1' });
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_b') as any }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_2', offerRef: current.current!.version_id })).rejects.toBeInstanceOf(OfferTermsChangedError);
+  });
+
+  it('serializes portal checkout binding with an account switch lock', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const insideStripeRead = new Promise<void>((resolve) => { entered = resolve; });
+    const holdStripeRead = new Promise<void>((resolve) => { release = resolve; });
+    const stripe = { checkout: { sessions: { retrieve: async () => {
+      entered(); await holdStripeRead;
+      return { id: 'cs_racing', line_items: { data: [{ price: { id: 'price_a' } }] } };
+    } } } };
+    const binding = bindPortalPurchase({ db, catalog, stripe: stripe as any }, { entitlementId: 'ent_race', licenseTenantId: 'appliance-tenant',
+      offerKey: KEY, interval: 'month', quantity: 1, checkoutSessionId: 'cs_racing' });
+    await insideStripeRead;
+    let switched = false;
+    const switching = db.transaction(async (trx) => {
+      await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', ['stripe-billing-catalog:test']);
+      switched = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(switched).toBe(false);
+    release();
+    await binding;
+    await switching;
+    expect(switched).toBe(true);
   });
 
   it('binds with a storefront-chosen purchase id, so the Checkout session can carry it from creation (Stripe ordering)', async () => {
     // The storefront picks the id, creates the session with portal_purchase_id in metadata and
     // subscription_data.metadata, then binds before the customer pays.
     const chosen = '5d8f1a2e-7c3b-4e9a-9b1f-0a2b3c4d5e6f';
-    const row = await bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
+    const row = await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') as any }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
     expect(row.purchase_id).toBe(chosen);
-    const again = await bindPortalPurchase({ db, catalog }, { purchaseId: chosen.toUpperCase(), entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
+    const again = await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') as any }, { purchaseId: chosen.toUpperCase(), entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
     expect(again.purchase_id).toBe(chosen);
     // The same id cannot be re-bound to another checkout or another entitlement.
-    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
-    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other2' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') as any }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') as any }, { purchaseId: chosen, entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other2' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
     // Nor can an already-bound checkout be claimed under a new id.
-    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: '6e9a2b3f-8d4c-4fab-8c2a-1b3c4d5e6f70', entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
-    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: 'not-a-uuid', entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_x' })).rejects.toThrow('purchaseId must be a UUID');
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') as any }, { purchaseId: '6e9a2b3f-8d4c-4fab-8c2a-1b3c4d5e6f70', entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { purchaseId: 'not-a-uuid', entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_x' })).rejects.toThrow('purchaseId must be a UUID');
     expect(await db('co_managed_portal_purchases').where({ entitlement_id: 'ent_2' })).toHaveLength(1);
   });
 

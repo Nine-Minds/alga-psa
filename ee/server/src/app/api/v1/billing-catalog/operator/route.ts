@@ -15,7 +15,7 @@ import { BadRequest, catalogRoute, readJson, str } from '@ee/lib/stripe/offerCat
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COMMANDS = ['inspect', 'inventory', 'seed', 'publish', 'restore', 'pause', 'retry-fulfillments'];
+const COMMANDS = ['inspect', 'inspect-account', 'set-account', 'inventory', 'seed', 'publish', 'restore', 'pause', 'retry-fulfillments'];
 
 export async function POST(request: NextRequest) {
   return catalogRoute(request, async (operator) => {

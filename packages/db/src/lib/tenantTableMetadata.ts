@@ -575,6 +575,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   stripe_customers: { scope: 'tenant' },
   stripe_customer_bindings: { scope: 'tenant' },
   stripe_offer_publications: { scope: 'global' },
+  stripe_offer_catalog_settings: { scope: 'global' },
+  stripe_offer_catalog_setting_audit: { scope: 'global' },
   stripe_offer_versions: { scope: 'global' },
   co_managed_fulfillments: { scope: 'global' },
   co_managed_portal_purchases: { scope: 'global' },
