@@ -152,12 +152,16 @@ async function seedLedger(): Promise<void> {
     { tenant: tenantId, ticket_id: ticketId, client_id: clientId, title: 'Selected ticket', ticket_number: `DEL-${ticketId.slice(0, 8)}` },
     { tenant: tenantId, ticket_id: otherTicketId, client_id: clientId, title: 'Unrelated ticket', ticket_number: `DEL-${otherTicketId.slice(0, 8)}` },
   ]);
-  await scoped.table('time_periods').insert({
-    tenant: tenantId, period_id: periodId, start_date: '2026-03-01', end_date: '2026-04-01',
-  });
+  // A user has one sheet per period. Keep both periods in the same billing
+  // month so the sheet-isolation case still exercises a shared bucket ledger.
+  const otherPeriodId = randomUUID();
+  await scoped.table('time_periods').insert([
+    { tenant: tenantId, period_id: periodId, start_date: '2026-03-01', end_date: '2026-03-15' },
+    { tenant: tenantId, period_id: otherPeriodId, start_date: '2026-03-15', end_date: '2026-04-01' },
+  ]);
   await scoped.table('time_sheets').insert([
     { tenant: tenantId, id: sheetId, period_id: periodId, user_id: ownerId, approval_status: 'DRAFT' },
-    { tenant: tenantId, id: otherSheetId, period_id: periodId, user_id: ownerId, approval_status: 'DRAFT' },
+    { tenant: tenantId, id: otherSheetId, period_id: otherPeriodId, user_id: ownerId, approval_status: 'DRAFT' },
     { tenant: tenantId, id: coworkerSheetId, period_id: periodId, user_id: coworkerId, approval_status: 'DRAFT' },
   ]);
 }
@@ -172,13 +176,14 @@ async function seedAllocatedEntry(params: {
   const entryId = params.entryId ?? randomUUID();
   const workItemId = params.workItemId ?? ticketId;
   const timeSheetId = params.timeSheetId ?? sheetId;
-  const start = '2026-03-10T10:00:00.000Z';
-  const end = '2026-03-10T11:00:00.000Z';
+  const workDate = timeSheetId === otherSheetId ? '2026-03-20' : '2026-03-10';
+  const start = `${workDate}T10:00:00.000Z`;
+  const end = `${workDate}T11:00:00.000Z`;
   await tenantDb(db, tenantId).table('time_entries').insert({
     tenant: tenantId, entry_id: entryId, user_id: params.userId ?? ownerId, time_sheet_id: timeSheetId,
     work_item_id: workItemId, work_item_type: 'ticket', service_id: serviceId,
     contract_line_id: contractLineId, start_time: start, end_time: end,
-    work_date: '2026-03-10', work_timezone: 'UTC', billable_duration: 60,
+    work_date: workDate, work_timezone: 'UTC', billable_duration: 60,
     approval_status: 'DRAFT', invoiced: params.invoiced ?? false,
   });
   await db.transaction(async (trx) => {
@@ -189,7 +194,7 @@ async function seedAllocatedEntry(params: {
     const allocations = await allocateTimeEntry(trx, tenantId, clientId, {
       entry_id: entryId, service_id: serviceId, work_item_id: workItemId,
       work_item_type: 'ticket', contract_line_id: contractLineId,
-      work_date: '2026-03-10', start_time: start, billable_duration: 60,
+      work_date: workDate, start_time: start, billable_duration: 60,
     });
     expect(allocations).toHaveLength(1);
     expect(allocations[0].block_id).toBe(hourBlockId);
@@ -229,7 +234,7 @@ describe('deleteWorkItem authorization and billing reversal through deleteTimeEn
     tenantId = '';
   });
 
-  it('deletes only the selected owner, sheet and item and reverses only their billing allocations', async () => {
+  it('deletes only the selected owner, sheet and item, preserving allocations on the same owner’s next-period sheet', async () => {
     await seedLedger();
     const first = await seedAllocatedEntry({ entryId: '00000000-0000-4000-8000-000000000001' });
     const second = await seedAllocatedEntry({ entryId: '00000000-0000-4000-8000-000000000002' });
