@@ -531,6 +531,12 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
  */
 export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: string }> = [
   {
+    table: 'co_managed_seat_trials',
+    reason:
+      'Live arrangements block the merge. The retained trial claim keeps the original client identity '
+      + 'to match its arrangement and preserve the sponsor’s trial history.',
+  },
+  {
     table: 'co_managed_seat_arrangements',
     reason:
       'Live seat arrangements block the merge through SOURCE_HAS_CO_MANAGEMENT. Ended arrangements '

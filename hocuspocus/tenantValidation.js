@@ -116,6 +116,10 @@ export function validateDocumentRoomAccess(roomName, request, options) {
       throw new Error('Ticket validation failed: room ticket mismatch');
     }
 
+    if (typeof claims.userId !== 'string' || !claims.userId) {
+      throw new Error('Ticket validation failed: missing user');
+    }
+
     return {
       status: 'ok',
       tenantId: parsedTicketRoom.tenantId,

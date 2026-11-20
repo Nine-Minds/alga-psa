@@ -23,6 +23,7 @@ export interface CoManagedPurchaseQuote {
  * itself; callers re-read verified state instead.
  */
 export function useCoManagedPurchaseController(options: {
+  confirm?: (input: { operationId: string; quantity: number }, quote: CoManagedPurchaseQuote | null) => ReturnType<typeof purchaseCoManagedSeatsAction>;
   /** Called before the purchase request leaves the browser, so a caller can record the operation it is about to start. */
   onOperation?: (operation: { operationId: string; quantity: number }) => void;
 } = {}) {
@@ -64,8 +65,10 @@ export function useCoManagedPurchaseController(options: {
     options.onOperation?.({ operationId: operation.current, quantity: quantityToBuy });
     setBusy(true); setError(null);
     try {
-      const result = await purchaseCoManagedSeatsAction({ quantity: quantityToBuy, operationId: operation.current,
-        ...(preview?.offerRef ? { offerRef: preview.offerRef } : {}) });
+      const input = { quantity: quantityToBuy, operationId: operation.current };
+      const result = options.confirm
+        ? await options.confirm(input, preview)
+        : await purchaseCoManagedSeatsAction({ ...input, ...(preview?.offerRef ? { offerRef: preview.offerRef } : {}) });
       if (result.kind === 'review_required') {
         // The price changed after review. Nothing was charged; show the new terms for fresh consent.
         operation.current = null;
@@ -85,7 +88,7 @@ export function useCoManagedPurchaseController(options: {
           // keep the pending operation so a repair resumes the same purchase.
           setPreview(null);
           setError('checkoutUnavailable');
-          await reload();
+          if (!options.confirm) await reload();
           return 'checkout-unavailable' as const;
         }
         setCheckout({ clientSecret: result.clientSecret, publishableKey: result.publishableKey });
@@ -94,17 +97,17 @@ export function useCoManagedPurchaseController(options: {
       setPreview(null); setCheckout(null);
       if (result.kind === 'expired') {
         setError('expired');
-        await reload();
+        if (!options.confirm) await reload();
         return 'expired' as const;
       }
       return 'updated' as const;
     } catch {
       // The operation identity stays frozen so a retry recovers the same charge.
       setError('purchase');
-      await reload().catch(() => undefined);
+      if (!options.confirm) await reload().catch(() => undefined);
       return 'ambiguous' as const;
     } finally { setBusy(false); }
-  }, [preview, quantity, reload, review, options.onOperation]);
+  }, [preview, quantity, reload, review, options.onOperation, options.confirm]);
 
   /** Replays an operation this browser already started. The server answers from the operation, so it cannot charge twice. */
   const replay = useCallback((operationId: string, replayQuantity: number) => {
@@ -112,5 +115,9 @@ export function useCoManagedPurchaseController(options: {
     return purchase(replayQuantity);
   }, [purchase]);
 
-  return { state, closed, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
+  const startNewReview = (quote: CoManagedPurchaseQuote) => {
+    operation.current = null;
+    setError(null); setCheckout(null); setPreview(quote);
+  };
+  return { startNewReview, state, closed, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
 }

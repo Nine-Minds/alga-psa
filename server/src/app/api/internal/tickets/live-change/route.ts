@@ -1,17 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
+import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
+import { admitSeatTrialCredential } from '@enterprise/lib/co-managed/seatTrialSession';
+import { getHocuspocusJwtSecret } from '@/lib/hocuspocusJwt';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+function hasRelayKey(request: NextRequest) {
   const expected = process.env.COLLAB_PERSIST_API_KEY;
-  if (!expected || request.headers.get('x-api-key') !== expected) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return Boolean(expected && request.headers.get('x-api-key') === expected);
+}
+
+async function readAuthorizedTicket(trx: Knex.Transaction, tenantId: string, userId: string, ticketId: string) {
+  const scoped = tenantDb(trx, tenantId);
+  const user = await scoped.table('users').where({ user_id: userId, is_inactive: false }).first() as IUserWithRoles | undefined;
+  if (!user || user.user_type !== 'internal' || !(await hasPermission(user, 'ticket', 'read', trx))) return null;
+  const ticket = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
+  if (!ticket) return null;
+  await authorizeTicketRecordAccess({ trx, tenant: tenantId, user, ticketId, action: 'read', ticketRow: ticket });
+  return { scoped, user, ticket };
+}
+
+function isTicketReadDenied(error: unknown) {
+  return error instanceof Error && (error.message.includes('Permission denied') || error.message === 'Ticket not found');
+}
+
+async function readRelayTicketReader(token: string) {
+  const secret = await getHocuspocusJwtSecret();
+  try {
+    const claims = jwt.verify(token, secret, { algorithms: ['HS256'], audience: 'ticket-live-access', maxAge: 15 });
+    const reader = typeof claims === 'object' ? claims.ticketReader : null;
+    if (typeof reader?.tenantId !== 'string' || !reader.tenantId ||
+        typeof reader?.userId !== 'string' || !reader.userId ||
+        typeof reader?.ticketId !== 'string' || !reader.ticketId) return null;
+    return { tenantId: reader.tenantId, userId: reader.userId, ticketId: reader.ticketId };
+  } catch {
+    return null;
+  }
+}
+
+export async function HEAD(request: NextRequest) {
+  const respond = (status: number) => new NextResponse(null, { status, headers: { 'Cache-Control': 'no-store, private' } });
+  const token = request.headers.get('x-api-key');
+  if (!token) return respond(401);
+
+  try {
+    const reader = await readRelayTicketReader(token);
+    if (!reader) return respond(401);
+    const { tenantId, userId, ticketId } = reader;
+    const db = await getConnection(tenantId);
+    const allowed = await withTransaction(db, async trx => {
+      if (!await admitSeatTrialCredential(tenantId, userId, trx)) return false;
+      return Boolean(await readAuthorizedTicket(trx, tenantId, userId, ticketId));
+    });
+    return respond(allowed ? 204 : 403);
+  } catch (error) {
+    if (isTicketReadDenied(error)) return respond(403);
+    console.error('[ticket-live-change] Failed to check ticket room access', error);
+    return respond(503);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!hasRelayKey(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await request.json().catch(() => null) as null | {
     tenantId?: string; userId?: string; ticketId?: string; event?: Record<string, unknown>;
   };
@@ -23,12 +81,9 @@ export async function POST(request: NextRequest) {
   try {
     const db = await getConnection(tenantId);
     const change = await withTransaction(db, async (trx) => {
-      const scoped = tenantDb(trx, tenantId);
-      const user = await scoped.table('users').where({ user_id: userId, is_inactive: false }).first() as IUserWithRoles | undefined;
-      if (!user || user.user_type !== 'internal' || !(await hasPermission(user, 'ticket', 'read', trx))) return null;
-      const ticket = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
-      if (!ticket) return null;
-      await authorizeTicketRecordAccess({ trx, tenant: tenantId, user, ticketId, action: 'read', ticketRow: ticket });
+      const access = await readAuthorizedTicket(trx, tenantId, userId, ticketId);
+      if (!access) return null;
+      const { scoped, user, ticket } = access;
 
       const status = await scoped.table('statuses').where({ status_id: ticket.status_id }).first('is_closed', 'name');
       const board = ticket.board_id
@@ -120,7 +175,7 @@ export async function POST(request: NextRequest) {
     });
     return change ? NextResponse.json({ change }, { headers: { 'Cache-Control': 'no-store, private' } }) : NextResponse.json({ change: null }, { status: 404 });
   } catch (error) {
-    if (error instanceof Error && (error.message.includes('Permission denied') || error.message === 'Ticket not found')) {
+    if (isTicketReadDenied(error)) {
       return NextResponse.json({ change: null }, { status: 404 });
     }
     console.error('[ticket-live-change] Failed to authorize or enrich change', error);

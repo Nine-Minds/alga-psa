@@ -398,6 +398,48 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "trial": {
+      "title": "Prova di 15 giorni per una postazione cogestita",
+      "description": "Invita un tecnico del cliente a lavorare sulle bacheche che scegli. I 15 giorni decorrono dal suo primo accesso. Per accedere occorre un abbonamento di base attivo o una prova attiva del piano di base.",
+      "terms": "Una postazione a pagamento costa {{amount}} al mese. La prova termina senza addebiti, a meno che non confermi la capacità a pagamento.",
+      "status": {
+        "active": "Attiva",
+        "pending": "In attesa del primo accesso",
+        "base_paused": "Abbonamento di base in pausa",
+        "expired": "Prova scaduta",
+        "paid": "Postazione a pagamento in uso",
+        "ended": "Prova terminata",
+        "checkout_pending": "In attesa del pagamento"
+      },
+      "purchaseAwaitingVerification": "Acquisto in attesa di verifica",
+      "conversionFailed": "Il passaggio a una postazione a pagamento non è stato completato. Verifica la capacità a pagamento disponibile o riprova a effettuare l’acquisto.",
+      "deadline": "La prova della postazione termina il {{date}}.",
+      "baseUntil": "L’accesso di base attuale termina il {{date}}.",
+      "openSetup": "Apri la configurazione della postazione del cliente",
+      "invite": "Invita il tecnico per 15 giorni",
+      "resend": "Invia nuovamente l’invito",
+      "replace": "Sostituisci il tecnico",
+      "cancelInvitation": "Annulla l’invito",
+      "restoreBase": "Ripristina l’accesso di base in Account",
+      "resumePurchase": "Riprendi l’acquisto",
+      "cancelConversion": "Annulla la conversione della postazione",
+      "spareSeatTerms": "Usa subito una postazione a pagamento disponibile. Il totale delle postazioni del gruppo rimane invariato.",
+      "confirmSpareSeat": "Conferma l’uso di una postazione a pagamento",
+      "keepSeat": "Mantieni questa postazione",
+      "refresh": "Aggiorna lo stato della prova",
+      "returnToTrial": "Torna alla prova della postazione del cliente",
+      "notice": {
+        "invitationSaved": "Invito salvato. Riprova a inviarlo qui sotto.",
+        "deliveryFailed": "Invio non riuscito. Puoi riprovare.",
+        "replacementSent": "Invito inviato al tecnico sostitutivo.",
+        "replacementSaved": "Tecnico sostitutivo salvato. Riprova a inviare l’invito."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossibile caricare le bacheche disponibili.",
+        "actionFailed": "Impossibile completare l’operazione. Aggiorna lo stato della prova e riprova.",
+        "paymentFailed": "Impossibile completare il pagamento. Controlla lo stato della prova."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Questo spazio di lavoro non ha un pool cogestito. Aggiungi postazioni cogestite per usarlo.",

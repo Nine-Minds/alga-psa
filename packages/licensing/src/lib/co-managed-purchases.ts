@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { readCoManagedPoolCapacity } from './co-managed-capacity';
 import { readCoManagedFirstPurchasePhase } from './co-managed-first-purchase';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export interface CoManagedPurchaseOperation {
   operation_id: string;
@@ -9,6 +10,7 @@ export interface CoManagedPurchaseOperation {
   quantity: number;
   state: 'preparing' | 'checkout' | 'completed' | 'expired' | 'payment_failed';
   provider_reference: string | null;
+  trial_id?: string | null;
   /** Catalog terms pinned when the purchase was first confirmed; null for pre-catalog operations. */
   offer_version_id?: string | null;
   price_id?: string | null;
@@ -60,6 +62,8 @@ export async function runCoManagedPurchase(db: Knex, input: {
   sponsorTenant: string;
   operationId: string;
   quantity: number;
+  trialId?: string;
+  bindIntent?: (trx: Knex.Transaction) => Promise<void>;
   /** Reviewed terms to record with a NEW operation. Resume and retry read them back from the row;
    * they are never re-resolved, so a price rotation cannot reprice a confirmed purchase. */
   pinned?: { offerVersionId: string | null; priceId: string };
@@ -74,11 +78,12 @@ export async function runCoManagedPurchase(db: Knex, input: {
   try {
     await db.transaction(async (trx) => {
       const scoped = tenantDb(trx, input.sponsorTenant);
+      await lockCoManagedSponsorPool(trx, input.sponsorTenant);
       const tenant = await scoped.table('tenants').forUpdate().first();
       if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
       const existing = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).first();
       if (existing) {
-        if (existing.quantity !== input.quantity) throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        if (existing.quantity !== input.quantity || (existing.trial_id ?? null) !== (input.trialId ?? null)) throw new CoManagedPurchaseError('OPERATION_CONFLICT');
         return;
       }
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {
@@ -97,9 +102,11 @@ export async function runCoManagedPurchase(db: Knex, input: {
       if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
         throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
       }
+      await input.bindIntent?.(trx);
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
         operation_id: input.operationId, quantity: input.quantity, state: 'preparing',
+        ...(input.trialId ? { trial_id: input.trialId } : {}),
         ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId } : {}) });
     });
   } catch (error) {
@@ -111,7 +118,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
   // 2. Call the provider while holding entitlement then tenant, so a reservation cannot race a reduction.
   return db.transaction(async (trx) => {
     const scoped = tenantDb(trx, input.sponsorTenant);
-    const entitlement = await scoped.table('co_managed_entitlements').forUpdate().first();
+    const entitlement = await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     const tenant = await scoped.table('tenants').forUpdate().first();
     if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
     if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');
@@ -139,7 +146,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
     }
     // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
     await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
-      state: result.kind === 'checkout' ? 'checkout' : result.kind === 'expired' ? 'expired' : 'completed',
+      state: result.kind === 'checkout' ? 'checkout' : result.kind === 'expired' ? 'expired' : operation.trial_id ? 'preparing' : 'completed',
       provider_reference: result.kind === 'checkout' ? result.sessionId : result.kind === 'updated' ? result.subscriptionId : null,
       updated_at: trx.fn.now(),
     });
