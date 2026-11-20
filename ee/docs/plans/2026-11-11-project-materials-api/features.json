@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "ProjectService.getProjectMaterials lists a project's materials with product name and SKU",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "ProjectService.addProjectMaterial delegates to the shared addMaterial core with parent_type project",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "client_id for a new project material is derived from the project, not accepted from the body",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "ProjectService.deleteProjectMaterial delegates to the shared delete core and restores stock",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "GET /api/v1/projects/{id}/materials route and controller handler",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "POST /api/v1/projects/{id}/materials route and controller handler returning 201 with the created material",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "DELETE /api/v1/projects/{id}/materials/{materialId} route returning 204",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "MaterialValidationError maps to 400 with field path; unknown project maps to 404",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "InsufficientStockError and reserved or held stock map to 400 on quantity; allow_reserved_override is never passed",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Routes enforce project read and update permissions and the existing record-level project authorization",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Zod schema for the add body including billing_destination and billing_schedule_entry_id",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Routes registered in the project OpenAPI definitions with request body schemas",
+    "implemented": true
+  }
+]
