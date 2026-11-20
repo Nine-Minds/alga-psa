@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import type { BrowserContext } from 'puppeteer';
+import type { Browser, BrowserContext } from 'puppeteer';
 
 import { browserPoolService } from '../../services/browserPoolService';
 import { buildPreviewPageCaptions } from './previewPageCaption';
@@ -176,7 +176,7 @@ export const paginateTemplatePreviewHtml = async (
     guideMarginMm: geometry.marginMm,
   });
 
-  let browser = null;
+  let browser: Browser | null = null;
   let context: BrowserContext | null = null;
   try {
     browser = await browserPoolService.getBrowser();
