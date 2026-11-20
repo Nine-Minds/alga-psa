@@ -7,23 +7,20 @@ const mocks = vi.hoisted(() => ({
   tenantDb: vi.fn(),
 }));
 
-vi.mock('./getCurrentUser', () => ({
-  getCurrentUserWithRevocationCheck: vi.fn(async () => mocks.currentUser),
-}));
-vi.mock('./localizeActionError', () => ({ localizeActionError: async (value: unknown) => value }));
-vi.mock('next/headers.js', () => ({
-  headers: vi.fn(async () => new Headers({ 'x-tenant-id': 'tenant-b' })),
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth: (action: (user: unknown, context: { tenant: string }) => unknown) => async () => {
+    if (!mocks.currentUser) throw new Error('User not authenticated');
+    return action(mocks.currentUser, { tenant: mocks.currentUser.tenant });
+  },
 }));
 vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: mocks.getLicenseUsage }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: mocks.getConnection,
   tenantDb: mocks.tenantDb,
-  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
-  getAdminConnection: vi.fn(),
 }));
 
 const { getActiveUserCountAction, getLicenseUsageAction } = await import(
-  '../../../../server/src/lib/actions/licensingActions'
+  '../../lib/actions/licensingActions'
 );
 
 describe('licensing actions enforce authenticated tenant scope', () => {
