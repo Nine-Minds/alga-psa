@@ -634,7 +634,8 @@
       "downloadPdf": "Pobierz PDF",
       "sendEmail": "Wyślij e-mail",
       "unfinalize": "Cofnij finalizację",
-      "recordPayment": "Zarejestruj płatność"
+      "recordPayment": "Zarejestruj płatność",
+      "viewPayments": "Płatności"
     },
     "status": {
       "finalized": "Sfinalizowana"
@@ -922,7 +923,9 @@
       "reasonPlaceholder": "Powód anulowania...",
       "cancel": "Anuluj",
       "confirm": "Anuluj fakturę",
-      "voiding": "Anulowanie…"
+      "voiding": "Anulowanie…",
+      "algaOnly": "Anuluj tylko w AlgaPSA (odłącz od {{provider}})",
+      "algaOnlyWarning": "Dokument w {{provider}} pozostaje bez zmian, a ta faktura zostaje od niego odłączona, więc AlgaPSA i {{provider}} nie będą co do niej zgodne."
     },
     "history": {
       "title": "Historia",
@@ -2975,6 +2978,25 @@
       "statusNotPayable": "Nie można zarejestrować płatności dla faktury o statusie: {{status}}.",
       "overpaymentNotConfirmed": "Ta płatność jest wyższa niż pozostała kwota do zapłaty. Potwierdź nadpłatę, aby ją zarejestrować.",
       "recordFailed": "Nie udało się zarejestrować płatności. Spróbuj ponownie."
+    },
+    "void": {
+      "paymentsRecorded": "Wycofaj płatności przed anulowaniem.",
+      "paymentsRecordedManual": "Wycofaj płatności zarejestrowane w AlgaPSA ({{sources}}) przed anulowaniem tej faktury.",
+      "paymentsRecordedIntegration": "Ta faktura ma płatności z Twojego systemu księgowego ({{sources}}). Usuń je lub edytuj tam, a następna synchronizacja wycofa je tutaj, albo wycofaj je tylko w AlgaPSA.",
+      "paymentsRecordedGateway": "Ta faktura ma płatności pobrane przez dostawcę płatności ({{sources}}). Zwróć je tam przed anulowaniem.",
+      "paymentsRecordedMixed": "Wycofaj płatności na tej fakturze ({{sources}}) przed jej anulowaniem.",
+      "creditNoteCreditApplied": "Ta nota kredytowa ma zastosowany kredyt. Cofnij zastosowanie kredytu przed anulowaniem."
+    },
+    "reversePayment": {
+      "permissionDenied": "Brak uprawnień: wycofywanie płatności faktur wymaga uprawnienia do płatności faktur.",
+      "reasonRequired": "Wycofanie płatności wymaga podania powodu.",
+      "paymentNotFound": "Nie znaleziono płatności. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "notReversible": "Tej płatności nie można wycofać.",
+      "alreadyReversed": "Ta płatność została już wycofana.",
+      "gatewayRefundRequired": "Ta płatność została pobrana przez dostawcę płatności ({{method}}). Zamiast tego zwróć ją tam.",
+      "integrationOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj w {{provider}}, a następna synchronizacja wycofa ją tutaj.",
+      "remoteMutateRequired": "Brak uprawnień: wycofanie zsynchronizowanej płatności tylko w AlgaPSA wymaga uprawnienia do zdalnych zmian w księgowości.",
+      "reverseFailed": "Nie udało się wycofać płatności. Spróbuj ponownie."
     }
   },
   "periodTotal": {
@@ -3034,6 +3056,37 @@
     },
     "toasts": {
       "recorded": "Płatność zarejestrowana"
+    }
+  },
+  "invoicePayments": {
+    "title": "Płatności",
+    "titleForInvoice": "Płatności — {{invoiceNumber}}",
+    "loading": "Wczytywanie płatności...",
+    "empty": "Dla tej faktury nie zarejestrowano żadnych płatności.",
+    "sources": {
+      "manual": "Zarejestrowano w AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Dostawca płatności"
+    },
+    "fields": {
+      "reason": "Powód"
+    },
+    "actions": {
+      "reverse": "Wycofaj płatność",
+      "confirmReverse": "Wycofaj płatność",
+      "algaOnly": "Wycofaj tylko w AlgaPSA",
+      "cancel": "Anuluj",
+      "close": "Zamknij"
+    },
+    "notes": {
+      "gatewayRefund": "Pobrano przez dostawcę płatności ({{method}}): zwróć ją tam.",
+      "alreadyReversed": "Już wycofano.",
+      "providerOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj tam, a następna synchronizacja wycofa ją tutaj.",
+      "algaOnlyWarning": "AlgaPSA i {{provider}} nie będą zgodne co do tej płatności: zapis w {{provider}} pozostaje bez zmian, a płatność zostaje tutaj odłączona."
+    },
+    "toasts": {
+      "reversed": "Płatność wycofana"
     }
   }
 }

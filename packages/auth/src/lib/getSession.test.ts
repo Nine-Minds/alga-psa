@@ -8,6 +8,9 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
+const trialAdmission = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@enterprise/lib/co-managed/seatTrialSession', () => ({ admitSeatTrialSession: trialAdmission }));
+
 const requestHeaders = vi.hoisted(() => ({ current: new Headers({ 'x-request-id': 'req-safe-1' }) }));
 vi.mock('next/headers', () => ({
   headers: vi.fn(async () => requestHeaders.current),
@@ -53,6 +56,7 @@ const trackedSession = {
 const envSnapshot = { ...process.env };
 
 beforeEach(() => {
+  trialAdmission.mockReset().mockResolvedValue(true);
   vi.mocked(edgeAuth).mockReset();
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
@@ -264,4 +268,17 @@ describe('getSession login policy (SSO required)', () => {
 
     expect(await getSession()).toBe(session);
   });
+});
+
+it('checks Seat access on each request by a live session and skips admission on failed authentication', async () => {
+  vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
+  vi.mocked(UserSession.getRejectionReason).mockResolvedValue(null);
+  expect(await getSession()).toBe(trackedSession);
+  trialAdmission.mockResolvedValue(false);
+  expect(await getSession()).toBeNull();
+  expect(trialAdmission).toHaveBeenLastCalledWith('tenant-1', 'user-1', 'session-1');
+  vi.mocked(edgeAuth).mockResolvedValue(null);
+  vi.mocked(fullAuth).mockResolvedValue(null);
+  expect(await getSession()).toBeNull();
+  expect(trialAdmission).toHaveBeenCalledTimes(2);
 });

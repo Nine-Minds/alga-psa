@@ -13,6 +13,7 @@ export * from './lib/licensed-internal-users';
 export * from './lib/license-types';
 export * from './lib/co-managed-license';
 export * from './lib/co-managed-capacity';
+export * from './lib/co-managed-pool-lock';
 export * from './lib/co-managed-reservation';
 export * from './lib/co-managed-entitlements';
 export * from './lib/co-managed-purchases';

@@ -288,7 +288,18 @@ its own `FORCE_CAPABILITIES` key.
 | Capability | Admits (with the flag) | Serves |
 | --- | --- | --- |
 | `co-managed` | an entitlement row | a relationship row (either side), an entitlement row, or a `co_managed` tenant |
-| `co-managed-seat` | an entitlement row on a `psa` tenant | any seat arrangement row |
+| `co-managed-seat` | a `psa` tenant with an operational pool entitlement row, or an eligible hosted Seat-trial sponsor | any seat arrangement row |
+
+`co-managed-seat` eligibility has a second path for the hosted 15-day Seat trial (EE). A
+`psa` tenant with no operational entitlement row is eligible when it appears in the
+`co_managed_trial_sponsors` view (hosted Pro plan, not suspended, not manually billed, an
+active or trialing base Stripe subscription whose access end is still in the future, and no
+non-hosted entitlement) **and** the co-managed purchase surface is open. The purchase-surface
+check requires a configured offer and reads the `co-managed` key, not `co-managed-seat`:
+`FORCE_CAPABILITIES=co-managed:off` therefore also closes trial eligibility, while
+`co-managed-seat:off` closes the seat shape as usual. The gate only decides whether a trial
+may start; whether a trial-funded technician is served is decided at Seat admission from the
+trial deadline and the base-subscription access end, independent of the flag.
 
 - `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
   Eligibility defaults to false until a resolver is registered.

@@ -313,7 +313,7 @@ export const explainCoManagedSeatTicketAccessAction = withAuth(async (user, { te
     principalUserId: input.userId, resourceType: 'ticket', action: 'read', resourceId: input.ticketId,
   });
   // A refusal the simulator names (or CE, which has no simulator) comes back as a code; the screen words it.
-  if (result.ok === false) return { ok: false as const, code: result.error.code };
+  if ('error' in result) return { ok: false as const, code: result.error.code };
   const { allowed, explanations } = result.data.published;
   return { ok: true as const, allowed, explanations };
 });

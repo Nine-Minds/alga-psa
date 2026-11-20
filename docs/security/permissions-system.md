@@ -269,4 +269,3 @@ These are the grants a new tenant starts with. A tenant's admin can change them,
 | `ticket` | create, read, update | create, read, update |
 | `ticket_attachment` | create, read | create, read |
 | `user` | create, delete, read, reset_password, update | - |
-

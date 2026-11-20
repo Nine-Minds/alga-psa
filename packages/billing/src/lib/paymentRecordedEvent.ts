@@ -29,6 +29,34 @@ export function buildExternalPaymentRecordedPayload(params: {
   });
 }
 
+/**
+ * A payment backed out in AlgaPSA (manual reversal, or a synced payment
+ * reversed here only). Not a refund: no money moved through a gateway.
+ */
+export function buildExternalPaymentReversedPayload(params: {
+  paymentId: string;
+  invoiceId?: string | null;
+  reversedAt: string;
+  reversedByUserId?: string | null;
+  /** Amount in cents (positive) */
+  amount: number;
+  currency: string;
+  reason?: string;
+  /** True when the payment's accounting-system mapping was unlinked too. */
+  unlinkedFromProvider?: boolean;
+}) {
+  return builtWorkflowPayload('PAYMENT_REVERSED', {
+    paymentId: params.paymentId,
+    invoiceId: params.invoiceId ?? undefined,
+    reversedAt: params.reversedAt,
+    reversedByUserId: params.reversedByUserId ?? undefined,
+    amount: Number.isFinite(params.amount) ? String(Math.max(0, params.amount)) : '0',
+    currency: params.currency,
+    reason: params.reason,
+    unlinkedFromProvider: params.unlinkedFromProvider,
+  });
+}
+
 // LEVERAGE: pattern payment-recorded-builder — same payload as
 // buildPaymentAppliedPayload in server/src/lib/api/services/paymentWorkflowEvents.ts.
 export function buildExternalPaymentAppliedPayload(params: {

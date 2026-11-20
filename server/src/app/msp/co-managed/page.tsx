@@ -8,6 +8,7 @@ import CoManagedOverview from '@/components/co-managed/CoManagedOverview';
 import CoManagedCustomerHome from '@/components/co-managed/CoManagedCustomerHome';
 import { resolveCoManagedRootAccess } from '@/lib/co-managed/commercialAccess';
 import CoManagedPurchaseOverview from '@enterprise/components/co-managed/CoManagedPurchaseOverview';
+import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedPurchasePool from '@enterprise/components/co-managed/CoManagedPurchasePool';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!tenant) return {};
   try {
     const access = await resolveCoManagedRootAccess(tenant);
-    if (!access.commercial) await requireCapabilityForPage('co-managed', tenant, 'serves');
+    if (!access.commercial && !access.trial) await requireCapabilityForPage('co-managed', tenant, 'serves');
   } catch {
     return {};
   }
@@ -43,10 +44,11 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
   // Commercial eligibility alone gets the pool and nothing else: no client query is even read, so a
   // `clientId` confers no authority, and none of the operational readers mount.
   if (access.commercial && !access.operational) return <CoManagedPurchaseOverview />;
+  if (access.trial && !access.operational) return <CoManagedSeatTrial />;
   if (!access.served) notFound();
   const clientId = (await searchParams)?.clientId;
   // When both paths apply, the existing overview carries the pool in place of its capacity line.
   return <CoManagedOverview
     initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined}
-    purchasePool={access.commercial ? <CoManagedPurchasePool /> : undefined} />;
+    purchasePool={access.commercial ? <CoManagedPurchasePool /> : access.trial ? <CoManagedSeatTrial /> : undefined} />;
 }
