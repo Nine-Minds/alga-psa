@@ -128,6 +128,7 @@ async function endAssignment(
     .update({ state: 'revoked', revoked_at: now, ended_reason: reason, updated_at: now });
 
   if (assignment.trialFunded) {
+    // write-admission: exempt — revocation ends the active trial under the same locks as the assignment.
     await sponsor.table('co_managed_seat_trials').where({ assignment_id: assignment.assignment_id, state: 'active' })
       .update({ state: 'ended', updated_at: now, revision: trx.raw('revision + 1') });
   }

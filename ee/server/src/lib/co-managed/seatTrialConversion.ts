@@ -28,9 +28,12 @@ async function handoff(trx: Knex.Transaction, tenant: string, trialId: string) {
   const pool = await getCoManagedEntitlementState(trx, tenant);
   const base = await db.table('co_managed_trial_sponsors').where('base_until', '>', trx.fn.now()).first('tenant');
   if (!pool.canGrow || !base) return false;
+  // write-admission: exempt — conversion changes funding under the sponsor lock after validating paid capacity.
   await db.table('co_managed_allocations').where({ allocation_id: pilot.allocation_id }).update({ funding_source: 'paid' });
+  // write-admission: exempt — the trial ledger commits the conversion with its allocation.
   await db.table('co_managed_seat_trials').where({ trial_id: trialId })
     .update({ state: 'paid', conversion_state: 'paid', updated_at: trx.fn.now() });
+  // write-admission: exempt — this receipt records the conversion in the same transaction.
   if (pilot.activated_at) await db.table('co_managed_seat_trial_milestones').insert({ tenant, trial_id: trialId, milestone: 'converted' })
     .onConflict(['tenant', 'trial_id', 'milestone']).ignore();
   return true;
@@ -55,6 +58,7 @@ export async function bindTrialPurchase(trx: Knex.Transaction, tenant: string, t
   if (!pilot || (allocationId && pilot.allocation_id !== allocationId) || pilot.conversion_state === 'pending' || pool.available || quote.quantity !== pool.capacity + 1 || pool.allocated > pool.capacity) {
     throw new Error('The pool or pilot changed. Review the purchase again.');
   }
+  // write-admission: exempt — checkout binds a validated quote to the trial under the sponsor lock.
   await tenantDb(trx, tenant).table('co_managed_seat_trials').where({ trial_id: trialId }).update({
     conversion_state: 'pending', conversion_operation_id: operationId, quoted_quantity: quote.quantity,
     conversion_quote: quote, updated_at: trx.fn.now(),
@@ -73,6 +77,7 @@ export async function reconcileTrialPurchase(trx: Knex.Transaction, tenant: stri
   const pilot = await db.table('co_managed_seat_trials').where({ trial_id: snapshot.trialId, conversion_operation_id: snapshot.operationId,
     conversion_state: 'pending', quoted_quantity: snapshot.capacity }).first('trial_id');
   if (pilot && !await handoff(trx, tenant, pilot.trial_id)) {
+    // write-admission: exempt — fulfillment records the failed conversion under the sponsor lock.
     await db.table('co_managed_seat_trials').where({ trial_id: pilot.trial_id }).update({ conversion_state: 'failed' });
   }
 }
@@ -81,8 +86,10 @@ export async function releaseTrialPurchase(db: Knex, tenant: string, operationId
   await db.transaction(async trx => {
     await lockCoManagedSponsorPool(trx, tenant);
     const home = tenantDb(trx, tenant);
+    // write-admission: exempt — checkout recovery clears the trial binding under the sponsor lock.
     const updated = await home.table('co_managed_seat_trials')
       .where({ conversion_operation_id: operationId, conversion_state: 'pending', ...(trialId ? { trial_id: trialId } : {}) }).update({ conversion_state: state });
+    // write-admission: exempt — checkout recovery expires the purchase in the same transaction as its trial binding.
     if (updated) await home.table('co_managed_purchase_operations').where({ operation_id: operationId })
       .whereIn('state', ['preparing', 'checkout', 'payment_failed']).update({ state: 'expired', updated_at: trx.fn.now() });
   });

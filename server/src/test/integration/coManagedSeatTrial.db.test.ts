@@ -4,12 +4,16 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { acceptCoManagedSeatInvitation, endCoManagedSeatArrangement } from '@alga-psa/co-managed';
+import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
+import { executeClientMerge } from '@alga-psa/clients/lib/clientMergeEngine';
+import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { resizeCoManagedSeatAllocation, assertCoManagedSeatTechnicianWrite, reserveCoManagedWorkspace, getCoManagedEntitlementState, readCoManagedPoolCapacity, reserveAndActivateCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { admitSeatTrialCredential, admitSeatTrialSession } from '../../../../ee/server/src/lib/co-managed/seatTrialSession';
 import { cancelCoManagedSeatTrial, replaceCoManagedSeatTrialTechnician, prepareCoManagedSeatTrial, readCoManagedSeatTrialAdmission } from '../../../../ee/server/src/lib/co-managed/seatTrial';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { usePaidSeatForTrial } from '../../../../ee/server/src/lib/co-managed/seatTrialConversion';
+import { admitCoManagedSponsor } from '../../lib/co-managed/admitSponsor';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { coManagedSeatAuthority } from '@alga-psa/co-managed/seatAuthority';
@@ -271,6 +275,40 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     const usersAfter = await db('users').where({ tenant }).count('* as count').first();
     expect(String(usersAfter?.count ?? 0)).toBe(String(usersBefore?.count ?? 0));
   });
+
+  it('grants sponsor permissions once with current hosted base access and no paid entitlement', async () => {
+    const tenant = await sponsorWithBase();
+    const expired = await sponsorWithBase();
+    await db('stripe_subscriptions').where({ tenant: expired }).update({ trial_end: new Date(0) });
+
+    await Promise.all([admitCoManagedSponsor(tenant, db), admitCoManagedSponsor(tenant, db)]);
+    await admitCoManagedSponsor(expired, db);
+
+    expect(await db('co_managed_entitlements').where({ tenant })).toHaveLength(0);
+    expect(await db('permissions').where({ tenant, resource: 'co_management' }).orderBy('action').pluck('action'))
+      .toEqual(['manage', 'read']);
+    expect(await db('permissions').where({ tenant: expired, resource: 'co_management' })).toHaveLength(0);
+  });
+
+  it('blocks merging a live trial client and retains the original client on the cancelled claim', async () => {
+    const tenant = await sponsorWithBase();
+    const source = await draft(tenant);
+    const target = await createClient(db, tenant, 'Merge destination');
+    const trial = await prepareCoManagedSeatTrial(db, source);
+    registerCapabilityParticipation('co-managed-seat', ({ tenantIds }) => coManagedSeatParticipants(tenantIds, db));
+    const merge = () => db.transaction(trx => executeClientMerge(trx, tenant, null, {
+      sourceClientId: source.clientId, targetClientId: target,
+    }));
+
+    await expect(merge()).rejects.toMatchObject({
+      blockers: [expect.objectContaining({ code: 'SOURCE_HAS_CO_MANAGEMENT' })],
+    });
+    await cancelCoManagedSeatTrial(db, { tenant, trialId: trial.trialId });
+    await expect(merge()).resolves.toMatchObject({ targetClientId: target });
+    expect(await db('co_managed_seat_trials').where({ tenant, trial_id: trial.trialId }).first())
+      .toMatchObject({ client_id: source.clientId, arrangement_id: trial.arrangementId, state: 'ended' });
+  });
+
   it('starts on the first server session after password authentication and tracked session issuance', async () => {
     const tenant = await sponsorWithBase();
     const setup = await prepareCoManagedSeatTrial(db, await draft(tenant));

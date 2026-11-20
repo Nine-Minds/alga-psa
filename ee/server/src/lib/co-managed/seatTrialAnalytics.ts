@@ -14,6 +14,7 @@ export async function reportSeatTrialMilestones(db: Knex, tenant: string) {
       for (const row of await rows().whereNull('reported_at').forUpdate().skipLocked()) {
         await client.captureImmediate({ distinctId: await analytics.getDistinctId(), event: 'co_managed_seat_trial_' + row.milestone,
           uuid: row.event_id, properties: { trial_id: row.trial_id } });
+        // write-admission: exempt — telemetry delivery acknowledges a locked receipt independently of trial access.
         await rows().where({ trial_id: row.trial_id, milestone: row.milestone }).update({ reported_at: trx.fn.now() });
       }
     });

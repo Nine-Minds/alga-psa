@@ -114,6 +114,7 @@ export async function releaseCoManagedSeatAllocation(db: Knex, sponsorTenant: st
       .update({ state: 'released', released_at: trx.fn.now(), updated_at: trx.fn.now() }).returning('seats');
     if (freed.length === 0) return { released: false, seats: 0 };
     if (allocation.funding_source === 'seat_trial') {
+      // write-admission: exempt — releasing trial funding ends the trial under the sponsor and allocation locks.
       await sponsor.table('co_managed_seat_trials').where({ allocation_id: allocation.allocation_id }).whereNot('state', 'paid')
         .update({ state: 'ended', updated_at: trx.fn.now(), revision: trx.raw('revision + 1') });
       return { released: true, seats: 0 };

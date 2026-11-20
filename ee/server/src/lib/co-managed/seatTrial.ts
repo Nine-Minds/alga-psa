@@ -59,12 +59,14 @@ export async function prepareCoManagedSeatTrial(db: Knex, input: {
       contactId: input.contactId, invitedBy: input.invitedBy, allowTrialFunding: true });
     const trialId = randomUUID();
     if (existing) {
+      // write-admission: exempt — the sponsor lock protects rebinding an unused trial claim.
       await sponsor.table('co_managed_seat_trials').where({ trial_id: existing.trial_id }).update({ client_id: input.clientId,
         arrangement_id: arrangement.arrangement_id, allocation_id: arrangement.allocation_id, assignment_id: invitation.assignment_id,
         state: 'pending', activated_at: null, deadline_at: null, conversion_state: 'none', conversion_operation_id: null,
         quoted_quantity: null, conversion_quote: null, updated_at: trx.fn.now(), revision: Number(existing.revision) + 1 });
       return { trialId: existing.trial_id, arrangementId: arrangement.arrangement_id, assignmentId: invitation.assignment_id, invitation };
     }
+    // write-admission: exempt — the initial trial claim is created under the sponsor lock after base eligibility is checked.
     await sponsor.table('co_managed_seat_trials').insert({ tenant: input.tenant, trial_id: trialId, client_id: input.clientId,
       arrangement_id: arrangement.arrangement_id, allocation_id: arrangement.allocation_id,
       assignment_id: invitation.assignment_id, state: 'pending' });
@@ -108,6 +110,7 @@ export async function replaceCoManagedSeatTrialTechnician(db: Knex, input: Pilot
     await revokeUnusedTechnician(trx, input.tenant, pilot, state);
     const invitation = await inviteCoManagedSeatTechnician(trx, { sponsorTenant: input.tenant, arrangementId: pilot.arrangement_id,
       contactId: input.contactId, invitedBy: input.invitedBy, allowTrialFunding: true });
+    // write-admission: exempt — the locked pending trial follows the newly invited technician.
     await tenantDb(trx, input.tenant).table('co_managed_seat_trials').where({ trial_id: pilot.trial_id })
       .update({ assignment_id: invitation.assignment_id, updated_at: trx.fn.now(), revision: trx.raw('revision + 1') });
     return { invitation };
@@ -123,6 +126,7 @@ export async function cancelCoManagedSeatTrial(db: Knex, input: PilotBinding) {
   return withPendingPilot(db, input, async (trx, pilot, state) => {
     await revokeUnusedTechnician(trx, input.tenant, pilot, state);
     const sponsor = tenantDb(trx, input.tenant);
+    // write-admission: exempt — cancellation owns the arrangement lock and ends access even when operational writes are closed.
     await sponsor.table('co_managed_seat_arrangements').where({ arrangement_id: pilot.arrangement_id }).update({ state: 'ended', ended_at: trx.fn.now() });
     // Releasing the allocation also marks this pilot ended.
     await releaseCoManagedSeatAllocation(trx, input.tenant, { allocationId: pilot.allocation_id });
@@ -183,11 +187,13 @@ export async function activateCoManagedSeatTrial(
     if (!baseAccessUntil || baseAccessUntil.getTime() <= now.getTime()) {
       return admission('pending', pilot, baseAccessUntil);
     }
+    // write-admission: exempt — first sign-in establishes the locked trial's admission window after session and base checks.
     await sponsor.table('co_managed_seat_trials').where({ trial_id: pilot.trial_id })
       .whereNull('activated_at').update({
         state: 'active', activated_at: now, deadline_at: new Date(clock.rows[0].deadline), updated_at: now, revision: Number(pilot.revision) + 1,
       });
     const activated = await sponsor.table('co_managed_seat_trials').where({ trial_id: pilot.trial_id }).first();
+    // write-admission: exempt — this receipt records the activation in the same transaction.
     await sponsor.table('co_managed_seat_trial_milestones').insert({
       tenant: input.tenant, trial_id: pilot.trial_id, milestone: 'technician_sign_in',
     }).onConflict(['tenant', 'trial_id', 'milestone']).ignore();
