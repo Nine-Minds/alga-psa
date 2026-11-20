@@ -160,15 +160,31 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return ids;
   }
 
-  /** Checks catalog configuration without validating the price in Stripe. */
-  async function isOfferSellable(offerKey: string, interval: BillingInterval): Promise<boolean> {
+  /** Admission to the purchase surface, independent of the price an existing pool is billed at. */
+  async function requireSellableOffer(offerKey: string, interval: BillingInterval): Promise<void> {
     const legacy = legacyEnvPriceId(offerKey, interval, env);
-    // Without a binding in any account, even a successful scope lookup cannot open this offer.
-    if (!legacy && !(await isManagedAnywhere(offerKey, interval))) return false;
+    if (!legacy && !(await isManagedAnywhere(offerKey, interval))) {
+      throw new OfferUnavailableError('not_configured', 'This offer has no price configured.');
+    }
     const scope = await scopeOrNull();
-    if (!scope) return false;
-    if (!(await isManaged(scope, offerKey, interval))) return Boolean(legacy);
-    try { return Boolean(await currentVersion(scope, offerKey, interval)); } catch { return false; }
+    if (!scope) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode could not be determined.');
+    if (!(await isManaged(scope, offerKey, interval))) {
+      if (legacy) return;
+      throw new OfferUnavailableError('not_configured', 'This offer has no price configured in this scope.');
+    }
+    if (!await guarded(() => currentVersion(scope, offerKey, interval), undefined)) {
+      throw new OfferUnavailableError('no_current_version', 'New purchases are paused until a price is published.');
+    }
+  }
+
+  async function isOfferSellable(offerKey: string, interval: BillingInterval): Promise<boolean> {
+    try {
+      await requireSellableOffer(offerKey, interval);
+      return true;
+    } catch (error) {
+      if (error instanceof OfferUnavailableError) return false;
+      throw error;
+    }
   }
 
   async function getVersion(versionId: string): Promise<OfferVersionRow | undefined> {
@@ -475,7 +491,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
   }
 
   return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
-    inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
+    requireSellableOffer, inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

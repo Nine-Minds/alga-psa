@@ -753,6 +753,11 @@
       "intro": "Acquista qui un pool di posti in co-gestione. Dopo l'acquisto, assegna i posti ai clienti dalla scheda di ciascun cliente."
     },
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "billingCustomerUnlinked": "Impossibile verificare un account di fatturazione Stripe per questo spazio di lavoro. Contatta l’assistenza per collegarlo.",
+    "proSubscriptionRequired": "Le postazioni in cogestione richiedono un abbonamento Pro in corso. Verifica il tuo abbonamento in Gestione account.",
+    "offerPaused": "Gli acquisti di nuovi posti sono sospesi. Contatta il tuo account manager per aggiornamenti.",
+    "offerMisconfigured": "L’offerta di posti co-gestiti non è configurata correttamente. Contatta il supporto.",
+    "offerTemporarilyUnavailable": "Il servizio di determinazione dei prezzi è temporaneamente non disponibile. Riprova tra poco.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",
     "purchaseUnavailable": "L'acquisto di co-gestione ospitata non è disponibile in questa distribuzione.",

@@ -753,6 +753,11 @@
       "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
     },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "billingCustomerUnlinked": "Impossible de vérifier un compte de facturation Stripe pour cet espace de travail. Contactez l’assistance pour le faire associer.",
+    "proSubscriptionRequired": "Les sièges cogérés nécessitent un abonnement Pro en cours. Vérifiez votre abonnement dans la gestion du compte.",
+    "offerPaused": "Les nouveaux achats de sièges sont suspendus. Contactez votre gestionnaire de compte pour en savoir plus.",
+    "offerMisconfigured": "L’offre de sièges co-gérés est mal configurée. Contactez le support.",
+    "offerTemporarilyUnavailable": "Le service de tarification est temporairement indisponible. Veuillez réessayer sous peu.",
     "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
     "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
     "purchaseUnavailable": "L'achat de cogestion hébergée n'est pas disponible dans ce déploiement.",

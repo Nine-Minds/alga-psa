@@ -52,6 +52,7 @@ vi.mock('../../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
   getOfferCatalog: async () => ({
     deploymentLivemode: async () => false,
     effectiveAccountSetting: async () => ({ stripeAccount: 'acct_database', priceId: 'price_database', accountSource: 'database', priceSource: 'database setting' }),
+    requireSellableOffer: async () => { await mocks.resolve(); },
     resolveCurrentOffer: mocks.resolve }),
   previewCoManagedSeats: mocks.preview, purchaseCoManagedSeats: mocks.purchase, getPublishableKey: async () => 'pk_test',
 }) }));
@@ -78,6 +79,7 @@ import { loadBillingCatalogContext } from '../../../lib/stripe/offerCatalog/surf
 import CoManagedPage from '../../../../../../server/src/app/msp/co-managed/page';
 import { resolveCoManagedRootAccess } from '../../../../../../server/src/lib/co-managed/commercialAccess';
 import CoManagedPurchaseOverview from '@enterprise/components/co-managed/CoManagedPurchaseOverview';
+import { OfferUnavailableError } from '../../../lib/stripe/offerCatalog/types';
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -100,7 +102,7 @@ describe('independent first-purchase entry points', () => {
     expect(await previewCoManagedSeatsAction(1)).toMatchObject({ unitAmount: 1200, offerRef: 'version-1' });
     expect(await purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'purchase-1', offerRef: 'version-1' }))
       .toMatchObject({ kind: 'checkout', publishableKey: 'pk_test' });
-    expect(mocks.resolve).toHaveBeenCalledTimes(3);
+    expect(mocks.resolve).toHaveBeenCalledTimes(4);
     expect(mocks.preview).toHaveBeenCalledTimes(1);
     expect(mocks.purchase).toHaveBeenCalledTimes(1);
   });
@@ -109,9 +111,9 @@ describe('independent first-purchase entry points', () => {
     mocks.user.user_type = 'client';
     expect(await resolveCoManagedPurchaseDiscovery(mocks.user, 'sponsor')).toEqual({ eligible: false, reason: 'not_internal' });
     mocks.user.user_type = 'internal';
-    mocks.resolve.mockRejectedValue(new Error('no current offer'));
+    mocks.resolve.mockRejectedValue(new OfferUnavailableError('no_current_version', 'no current offer'));
     expect(await getCoManagedPurchaseState()).toBeNull();
-    await expect(previewCoManagedSeatsAction(1)).rejects.toThrow('not available');
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
     await expect(purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'purchase-2' })).rejects.toThrow('not available');
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.purchase).not.toHaveBeenCalled();

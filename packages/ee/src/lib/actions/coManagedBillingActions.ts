@@ -1,8 +1,11 @@
 'use server';
 
-export async function previewCoManagedSeatsAction(_quantity: number): Promise<{
-  unitAmount: number; monthlyTotal: number; amountDue: number; currency: string; offerRef: string;
-}> {
+import type { CoManagedPurchaseBlockedReason } from '@alga-psa/licensing';
+
+export async function previewCoManagedSeatsAction(_quantity: number): Promise<
+  | { kind: 'quote'; unitAmount: number; monthlyTotal: number; amountDue: number; currency: string; offerRef: string }
+  | { kind: 'blocked'; reason: CoManagedPurchaseBlockedReason }
+> {
   throw new Error('Hosted co-managed purchasing requires Enterprise Edition');
 }
 

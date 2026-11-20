@@ -26,6 +26,7 @@ import { stripeApiOverride } from './stripeApiOverride';
 import { countLicensedInternalUsers, lockCoManagedSponsorPool, reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { bindTrialPurchase, reconcileTrialPurchase, releaseTrialPurchase, type SeatTrialQuote } from '../co-managed/seatTrialConversion';
 import { billingPeriodEnd, coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { CoManagedPurchaseBlockedError } from './coManagedPurchaseErrors';
 import {
   StripeOwnershipError,
   selectOwnedCustomer,
@@ -1741,7 +1742,7 @@ export class StripeService {
 
   private async recognizedCoManagedPrices(scope?: { stripeAccount: string; livemode: boolean }): Promise<ReadonlySet<string>> {
     const prices = await this.refreshCoManagedRecognition(scope);
-    if (!prices.size) throw new Error('Co-managed pricing is not configured');
+    if (!prices.size) throw new CoManagedPurchaseBlockedError('misconfigured');
     return prices;
   }
 
@@ -2031,7 +2032,9 @@ export class StripeService {
     const recognized = await this.recognizedCoManagedPricesAcrossMode(scope);
     const customer = await this.getOrImportCustomer(tenantId);
     const subscriptions = await this.loadCoManagedSubscriptions(customer.stripe_customer_external_id, scope, db, tenantId);
-    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), recognized)) throw new Error('A current Pro subscription is required');
+    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), recognized)) {
+      throw new CoManagedPurchaseBlockedError('no_current_pro');
+    }
     const terms = await this.coManagedTerms(subscriptions, recognized, scope);
     const price = terms.kind === 'existing' ? { unit_amount: terms.price.unit_amount!, currency: terms.price.currency } : { unit_amount: terms.offer.terms.unitAmount, currency: terms.offer.terms.currency };
     const monthlyTotal = price.unit_amount * quantity;
