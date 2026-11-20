@@ -2,6 +2,18 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-19 — `DELETE /api/v1/contacts/{id}` checks dependencies
+
+**Affected endpoint:** `DELETE /api/v1/contacts/{id}`
+
+The REST delete removed the contact row without the dependency check or the cleanup that the MSP app runs. A contact with a portal user could be deleted, leaving an account that could neither sign in nor be invited again.
+
+**Changes:**
+
+- A contact with dependent records (portal user, tickets, interactions, documents, survey records, asset links and similar) is no longer deleted. The call returns `409 CONFLICT` with `details.code`, `details.dependencies` and `details.alternatives`.
+- A successful delete now runs the same cascade as the MSP app: phone numbers, additional email addresses, comments, portal invitations, asset and group links, RMM mapping, notes document and Entra reconciliation entries.
+- Portal accounts already orphaned this way are recovered rather than blocked: inviting or creating a portal user for a contact with the same email relinks the existing account to that contact.
+
 ## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
 
 **Affected endpoint:** `POST /api/v1/tickets`
