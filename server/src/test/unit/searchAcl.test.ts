@@ -165,6 +165,7 @@ describe('search ACL SQL predicate', () => {
     const query = {
       select: vi.fn(() => query),
       where: vi.fn(() => query),
+      whereIn: vi.fn(() => query),
       first: vi.fn(() => query),
       andWhere: vi.fn(() => query),
       then: (
@@ -172,7 +173,7 @@ describe('search ACL SQL predicate', () => {
         reject: (reason?: unknown) => unknown,
       ) => Promise.resolve(undefined).then(resolve, reject),
     };
-    const knex = vi.fn((table: string) => {
+    const knex: any = vi.fn((table: string) => {
       expect(table).toBe('tickets');
       return query;
     });
@@ -190,7 +191,7 @@ describe('search ACL SQL predicate', () => {
     );
 
     expect(query.where).toHaveBeenCalledWith('tickets.tenant', 'tenant-1');
-    expect(query.where).toHaveBeenCalledWith({ ticket_id: 'ticket-missing' });
+    expect(query.whereIn).toHaveBeenCalledWith('ticket_id', ['ticket-missing']);
     expect(visible).toEqual([]);
   });
 
@@ -201,6 +202,7 @@ describe('search ACL SQL predicate', () => {
     const query = {
       select: vi.fn(() => query),
       where: vi.fn(() => query),
+      whereIn: vi.fn(() => query),
       first: vi.fn(() => query),
       andWhere: vi.fn(() => query),
       then: (
@@ -247,6 +249,7 @@ describe('search ACL SQL predicate', () => {
     const query = {
       select: vi.fn(() => query),
       where: vi.fn(() => query),
+      whereIn: vi.fn(() => query),
       first: vi.fn(() => query),
       andWhere: vi.fn(() => query),
       then: (
@@ -259,6 +262,7 @@ describe('search ACL SQL predicate', () => {
       if (table === 'team_members' || table === 'users') return emptyQuery();
       throw new Error(`Unexpected table ${table}`);
     });
+    knex.raw = vi.fn((sql: string) => ({ sql }));
     const rows = [{ type: 'ticket' as const, id: 'ticket-1' }];
 
     try {
@@ -286,6 +290,7 @@ describe('search ACL SQL predicate', () => {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
         whereNull: vi.fn(() => query),
+        whereIn: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (
@@ -295,14 +300,15 @@ describe('search ACL SQL predicate', () => {
       };
       return query;
     };
-    const commentQuery = makeQuery({ ticket_id: 'ticket-1', is_internal: true });
+    const commentQuery = makeQuery({ comment_id: 'comment-1', ticket_id: 'ticket-1', is_internal: true, audience: 'shared_it' });
     const ticketQuery = makeQuery(authorizedTicketRow());
     const knex = vi.fn((table: string) => {
-      if (table === 'comments') return commentQuery;
+      if (table === 'comments' || table === 'comments as c') return commentQuery;
       if (table === 'tickets') return ticketQuery;
       if (table === 'team_members' || table === 'users') return emptyQuery();
       throw new Error(`Unexpected table ${table}`);
     });
+    (knex as any).raw = vi.fn((sql: string) => ({ sql }));
     const rows = [{ type: 'ticket_comment' as const, id: 'comment-1' }];
 
     await expect(verifyResultVisibility(
@@ -317,14 +323,15 @@ describe('search ACL SQL predicate', () => {
       rows,
     )).resolves.toEqual(rows);
 
-    expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
-    expect(ticketQuery.where).toHaveBeenCalledWith({ ticket_id: 'ticket-1' });
+    expect(commentQuery.whereIn).toHaveBeenCalledWith('c.comment_id', ['comment-1']);
+    expect(ticketQuery.whereIn).toHaveBeenCalledWith('ticket_id', ['ticket-1']);
   });
 
   it('T166 drops internal ticket-comment hits for non-internal users', async () => {
     const commentQuery = {
       select: vi.fn(() => commentQuery),
       where: vi.fn(() => commentQuery),
+      whereIn: vi.fn(() => commentQuery),
       whereNull: vi.fn(() => commentQuery),
       first: vi.fn(() => commentQuery),
       andWhere: vi.fn(() => commentQuery),
@@ -334,7 +341,7 @@ describe('search ACL SQL predicate', () => {
       ) => Promise.resolve({ ticket_id: 'ticket-1', is_internal: true }).then(resolve, reject),
     };
     const knex = vi.fn((table: string) => {
-      if (table === 'comments') return commentQuery;
+      if (table === 'comments' || table === 'comments as c') return commentQuery;
       throw new Error(`Unexpected table ${table}`);
     });
 
@@ -349,7 +356,7 @@ describe('search ACL SQL predicate', () => {
       [{ type: 'ticket_comment' as const, id: 'comment-1' }],
     )).resolves.toEqual([]);
 
-    expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
+    expect(knex).not.toHaveBeenCalledWith('tickets');
     expect(knex).not.toHaveBeenCalledWith('tickets');
   });
 
@@ -358,15 +365,14 @@ describe('search ACL SQL predicate', () => {
       const comment = { ticket_id: 'ticket-1', is_internal: false };
       const makeQuery = (row: unknown) => {
         const q: any = {
-          select: () => q, where: () => q, whereNull: () => q, first: () => q, join: () => q, leftJoin: () => q,
+          select: () => q, where: () => q, whereIn: () => q, whereNull: () => q, first: () => q, join: () => q, leftJoin: () => q,
           then: (res: any, rej: any) => Promise.resolve(row).then(res, rej),
         };
         return q;
       };
       let commentCalls = 0;
       const knex: any = vi.fn((table: string) => {
-        if (table === 'comments') return makeQuery(comment);
-        if (table === 'comments as c') { commentCalls++; return makeQuery({ audience }); }
+        if (table === 'comments' || table === 'comments as c') { commentCalls++; return makeQuery({ ...comment, comment_id: 'comment-1', audience }); }
         if (table === 'tickets') return makeQuery(authorizedTicketRow());
         if (table === 'team_members' || table === 'users') return emptyQuery();
         throw new Error(`Unexpected table ${table}`);
@@ -403,6 +409,10 @@ describe('search ACL SQL predicate', () => {
         }
         return query;
       },
+      whereIn: (column: string, values: unknown[]) => {
+        conditions.push((r) => values.includes(r[strip(column)]));
+        return query;
+      },
       andWhere: (column: string, value: unknown) => query.where(column, value),
       whereNull: (column: string) => {
         conditions.push((r) => r[strip(column)] == null);
@@ -426,12 +436,13 @@ describe('search ACL SQL predicate', () => {
   it('C7 ticket_comment verifier denies soft-deleted and unpublished comments, allows published live ones', async () => {
     const ticketQuery = fakeRowQuery(authorizedTicketRow());
     const run = (comment: Record<string, unknown>) => {
-      const knex = vi.fn((table: string) => {
-        if (table === 'comments') return fakeRowQuery({ comment_id: 'comment-1', ticket_id: 'ticket-1', is_internal: false, ...comment });
+      const knex: any = vi.fn((table: string) => {
+        if (table === 'comments' || table === 'comments as c') return fakeRowQuery({ comment_id: 'comment-1', ticket_id: 'ticket-1', is_internal: false, audience: 'requester', ...comment });
         if (table === 'tickets') return ticketQuery;
         if (table === 'team_members' || table === 'users') return emptyQuery();
         throw new Error(`Unexpected table ${table}`);
       });
+      knex.raw = vi.fn((sql: string) => ({ sql }));
       return verifyResultVisibility(knex as never, internalUser, [{ type: 'ticket_comment' as const, id: 'comment-1' }]);
     };
 
@@ -498,6 +509,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereIn: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (
@@ -541,6 +553,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereIn: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (

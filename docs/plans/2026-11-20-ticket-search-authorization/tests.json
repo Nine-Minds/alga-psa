@@ -1,0 +1,37 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001"
+    ],
+    "description": "Exercise authorized, missing and excluded tickets across all seven protected reads.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ],
+    "description": "Compare compiled and record decisions with real tenant-scoped PostgreSQL records, including portal comment rules, mixed results, unsupported rules and resolver failure.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F004"
+    ],
+    "description": "Verify delayed PostgreSQL pagination with a denied prefix, later readable hits, exact counts, unique pages and termination.",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F002",
+      "F004"
+    ],
+    "description": "Benchmark baseline and revised typeahead and later pages with equivalent results on a representative large fixture and report p95 and SQL statements per request for broad and restricted access.",
+    "implemented": false
+  }
+]

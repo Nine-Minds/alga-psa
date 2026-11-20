@@ -13,6 +13,7 @@ import {
   decodeSearchCursor,
   encodeSearchCursor,
   runSearchQuery,
+  countSearchMatchesByType,
   type SearchIndexHit,
   type SearchQueryOptions,
 } from './query';
@@ -188,15 +189,48 @@ export async function runAuthorizedSearchCandidates(input: {
   const acl = await resolveSearchAclPrincipal(input.knex, input.user, clientAccess);
   const allowedTypes = filterTypesByPermission(input.requestedTypes, acl.permissions);
   const visibleHits: SearchIndexHit[] = [];
+  const directlyAuthorizedHits: SearchIndexHit[] = [];
   const groups = emptyGroups();
   let candidateCursor: string | undefined;
+  const hasCompiledTicketPolicy = acl.ticketPolicySqlSupported === true && Boolean(acl.ticketVisibilitySql);
+  const ticketTypes = hasCompiledTicketPolicy
+    ? allowedTypes.filter((type) => type === 'ticket' || type === 'ticket_comment')
+    : [];
+  const candidateTypes = hasCompiledTicketPolicy
+    ? allowedTypes.filter((type) => type !== 'ticket' && type !== 'ticket_comment')
+    : allowedTypes;
 
-  while (true) {
+  if (ticketTypes.length > 0) {
+    const ticketCounts = await countSearchMatchesByType({
+      knex: input.knex,
+      tenant: input.tenant,
+      query: input.query,
+      allowedTypes: ticketTypes,
+      acl,
+      searchIndex: input.searchIndex,
+    });
+    for (const type of ticketTypes) groups[type] = ticketCounts[type] ?? 0;
+    directlyAuthorizedHits.push(...await runSearchQuery({
+      knex: input.knex,
+      tenant: input.tenant,
+      query: input.query,
+      allowedTypes: ticketTypes,
+      limit: input.pageSize + 1,
+      cursor: input.cursor,
+      sort,
+      rankingAsOf,
+      includeSnippets: input.includeSnippets,
+      acl,
+      searchIndex: input.searchIndex,
+    }));
+  }
+
+  while (candidateTypes.length > 0) {
     const batch = await runSearchQuery({
       knex: input.knex,
       tenant: input.tenant,
       query: input.query,
-      allowedTypes,
+      allowedTypes: candidateTypes,
       limit: AUTHORIZED_SEARCH_SCAN_SIZE,
       cursor: candidateCursor,
       sort,
@@ -222,6 +256,12 @@ export async function runAuthorizedSearchCandidates(input: {
     }
     candidateCursor = nextCursor;
   }
+
+  visibleHits.push(...directlyAuthorizedHits);
+  visibleHits.sort((left, right) => sort === 'recent'
+    ? right.updatedAt.getTime() - left.updatedAt.getTime() || left.id.localeCompare(right.id)
+    : right.score - left.score || right.updatedAt.getTime() - left.updatedAt.getTime() || left.id.localeCompare(right.id));
+  visibleHits.splice(input.pageSize + 1);
 
   return {
     visibleHits,

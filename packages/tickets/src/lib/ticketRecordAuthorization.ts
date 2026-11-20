@@ -11,10 +11,13 @@ import {
   type AuthorizationSubject,
   type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
+import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import type { TenantScopedQuery } from '@alga-psa/db';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import type { ContactVisibilityContext } from './clientPortalVisibility';
 import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
+import { createTicketRelationshipSqlAdapter } from './ticketAuthorizationSql';
 
 /**
  * Per-record ticket authorization for server actions.
@@ -67,8 +70,8 @@ async function resolveAuthorizationSubjectForUser(
         .where({ user_id: user.user_id })
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
+    } catch (error) {
+      throw new Error('Unable to resolve ticket authorization roles', { cause: error });
     }
   }
 
@@ -78,15 +81,15 @@ async function resolveAuthorizationSubjectForUser(
     teamRows = await tenantScopedTable(trx, tenant, 'team_members')
       .where({ user_id: user.user_id })
       .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
+  } catch (error) {
+    throw new Error('Unable to resolve ticket authorization teams', { cause: error });
   }
   try {
     managedRows = await tenantScopedTable(trx, tenant, 'users')
       .where({ reports_to: user.user_id })
       .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
+  } catch (error) {
+    throw new Error('Unable to resolve ticket authorization reporting relationships', { cause: error });
   }
 
   return {
@@ -137,15 +140,15 @@ async function resolveClientVisibility(
   }
 }
 
-interface TicketAuthorizationContext {
+export interface TicketAuthorizationContext {
   authorizationSubject: AuthorizationSubject;
   selectedBoardIds: string[] | undefined;
   contactVisibility: ContactVisibilityContext | null | undefined;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   requestCache: RequestLocalAuthorizationCache;
+  ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }
 
-// LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.
 export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
@@ -161,25 +164,55 @@ export async function createTicketAuthorizationContext(
   // ticket to belong to the contact's client and denies when the context is null.
   const relationshipRules: RelationshipRule[] =
     contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
+  const requestCache = new RequestLocalAuthorizationCache();
+  const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, {
+    subject: authorizationSubject,
+    resource: { type: 'ticket', action: 'read' },
+    selectedBoardIds,
+    contactVisibility,
+    requestCache,
+    knex: trx as Knex,
+  });
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: (input) =>
-        resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
+      resolveRules: async (input) => input.resource.type === 'ticket' && input.resource.action === 'read'
+        ? ticketReadBundleNarrowingRules
+        : resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
     }),
     rbacEvaluator: async () => true,
   });
-  const requestCache = new RequestLocalAuthorizationCache();
-
   return {
     authorizationSubject,
     selectedBoardIds,
     contactVisibility,
     authorizationKernel,
     requestCache,
+    ticketReadBundleNarrowingRules,
   };
+}
+
+/** Shared compiler boundary for ticket lists and search's correlated ticket queries. */
+export function applyTicketReadAuthorizationSql(
+  query: TenantScopedQuery,
+  trx: Conn,
+  tenant: string,
+  context: TicketAuthorizationContext,
+): { supported: true } | { supported: false; reason: string } {
+  return compileTenantScopedResourceReadAuthorizationSql(query, {
+    resourceType: 'ticket',
+    action: 'read',
+    builtinRules: context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }],
+    bundleRules: context.ticketReadBundleNarrowingRules,
+    ctx: {
+      subject: context.authorizationSubject,
+      selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
+      adapter: createTicketRelationshipSqlAdapter(trx, tenant),
+    },
+  });
 }
 
 export interface TicketRecordRow {
@@ -213,6 +246,44 @@ async function resolveTicketRecord(
       'attributes',
     )) as TicketRecordRow | undefined;
   return row ?? null;
+}
+
+/** Evaluate a candidate batch with one request context and one ticket lookup. */
+export async function authorizeTicketRecordBatch(input: {
+  trx: Conn;
+  tenant: string;
+  user: IUserWithRoles;
+  ticketIds: string[];
+  action?: 'read' | 'update';
+  context?: TicketAuthorizationContext;
+}): Promise<Set<string>> {
+  const ticketIds = [...new Set(input.ticketIds.filter(Boolean))];
+  if (ticketIds.length === 0) return new Set();
+
+  const loadedTickets = await tenantScopedTable(input.trx, input.tenant, 'tickets')
+    .whereIn('ticket_id', ticketIds)
+    .select<TicketRecordRow[]>(
+      'ticket_id', 'assigned_to', 'entered_by', 'client_id', 'board_id', 'assigned_team_id',
+      'contact_name_id', 'billing_profile_id', 'attributes',
+    );
+  const tickets = Array.isArray(loadedTickets) ? loadedTickets : loadedTickets ? [loadedTickets] : [];
+  const ticketById = new Map(tickets.map((ticket) => [ticket.ticket_id, ticket]));
+  const context = input.context ?? await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
+  const decisions = await Promise.all(ticketIds.map(async (ticketId) => {
+    const ticket = ticketById.get(ticketId);
+    if (!ticket) return [ticketId, false] as const;
+    const decision = await context.authorizationKernel.authorizeResource({
+      subject: context.authorizationSubject,
+      resource: { type: 'ticket', action: input.action ?? 'read', id: ticketId },
+      record: toTicketAuthorizationRecord(ticket as Partial<ITicket>),
+      selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
+      requestCache: context.requestCache,
+      knex: input.trx as Knex,
+    });
+    return [ticketId, decision.allowed] as const;
+  }));
+  return new Set(decisions.filter(([, allowed]) => allowed).map(([ticketId]) => ticketId));
 }
 
 /**

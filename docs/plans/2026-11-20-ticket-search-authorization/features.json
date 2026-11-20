@@ -1,0 +1,22 @@
+[
+  {
+    "id": "F001",
+    "description": "The seven ticket summary and sibling reads enforce record policy and conceal missing and excluded tickets.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Ticket list and search use a shared compiled read policy to count and page visible tickets and comments with their live visibility rules.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Unsupported policies use batched records and the shared evaluator, and policy resolution failures deny affected matches.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Typeahead, full search and the shared API preserve authorized totals, stable public pagination and other object types in mixed results.",
+    "implemented": true
+  }
+]

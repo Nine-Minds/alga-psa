@@ -5,7 +5,12 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
-import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import {
+  applyTicketReadAuthorizationSql,
+  authorizeTicketRecordBatch,
+  createTicketAuthorizationContext,
+  type TicketAuthorizationContext,
+} from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
@@ -40,6 +45,10 @@ export interface SearchAclPrincipal {
   clientAccess: ClientAccess;
   /** Authenticated identity used by the shared ticket record policy. */
   authorizationUser?: IUserWithRoles;
+  ticketVisibilitySql?: SqlFragment;
+  ticketPolicySqlSupported?: boolean;
+  ticketAuthorizationResolutionFailed?: boolean;
+  ticketAuthorizationContext?: TicketAuthorizationContext;
 }
 
 export interface SqlFragment {
@@ -153,7 +162,7 @@ export async function resolveSearchAclPrincipal(
     }
   }
 
-  return {
+  const principal: SearchAclPrincipal = {
     userId: user.user_id,
     tenant: user.tenant,
     permissions: [...permissions],
@@ -162,6 +171,58 @@ export async function resolveSearchAclPrincipal(
     clientAccess,
     authorizationUser: user,
   };
+
+  if (user.tenant && [...permissions].includes('ticket:read')) {
+    let context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
+    try {
+      context = await createTicketAuthorizationContext(knex, user.tenant, user);
+    } catch {
+      principal.ticketPolicySqlSupported = false;
+      principal.ticketAuthorizationResolutionFailed = true;
+      return principal;
+    }
+    principal.ticketAuthorizationContext = context;
+    const ticketQuery = tenantDb(knex, user.tenant).scoped('tickets as t');
+    ticketQuery.builder.whereRaw('t.ticket_id = s.object_id');
+    const ticketCompiled = applyTicketReadAuthorizationSql(ticketQuery, knex, user.tenant, context);
+    if (!ticketCompiled.supported) {
+      principal.ticketPolicySqlSupported = false;
+      return principal;
+    }
+
+    const parentTicketQuery = tenantDb(knex, user.tenant).scoped('tickets as t');
+    parentTicketQuery.builder.whereRaw('t.ticket_id = c.ticket_id');
+    const parentCompiled = applyTicketReadAuthorizationSql(parentTicketQuery, knex, user.tenant, context);
+    if (!parentCompiled.supported) {
+      principal.ticketPolicySqlSupported = false;
+      return principal;
+    }
+
+    const commentQuery = tenantDb(knex, user.tenant).table('comments as c');
+    const scoped = tenantDb(knex, user.tenant);
+    scoped.tenantJoin(commentQuery, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
+    scoped.tenantJoin(commentQuery, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+    commentQuery
+      .select('c.comment_id')
+      .whereRaw('c.comment_id = s.object_id')
+      .whereNull('c.deleted_at')
+      .where('c.publish_state', 'published');
+    if (!principal.isInternal) {
+      commentQuery.where('c.is_internal', false)
+        .whereRaw('(?) = ?', [commentAudienceSql(knex, 'ct', 'rc', 'c'), 'requester']);
+    }
+    commentQuery.whereExists(parentTicketQuery.builder);
+
+    const ticketSql = ticketQuery.builder.toSQL();
+    const commentSql = commentQuery.toSQL();
+    principal.ticketVisibilitySql = {
+      sql: `((s.object_type <> 'ticket' OR EXISTS (${ticketSql.sql})) AND (s.object_type <> 'ticket_comment' OR EXISTS (${commentSql.sql})))`,
+      bindings: [...ticketSql.bindings, ...commentSql.bindings],
+    };
+    principal.ticketPolicySqlSupported = true;
+  }
+
+  return principal;
 }
 
 export function registerSearchVisibilityVerifier(
@@ -176,9 +237,65 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
   user: SearchAclPrincipal,
   rows: TRow[],
 ): Promise<TRow[]> {
+  const ticketRows = rows.filter((row) => row.type === 'ticket');
+  const commentRows = rows.filter((row) => row.type === 'ticket_comment');
+  const commentById = new Map<string, { ticket_id: string; is_internal: boolean | null; audience: string | null }>();
+
+  if (user.tenant && user.authorizationUser && commentRows.length > 0) {
+    const query = tenantScopedRoot<{ comment_id: string; ticket_id: string; is_internal: boolean | null; audience: string | null }>(
+      knex, user, 'comments as c',
+    );
+    const scoped = tenantDb(knex, user.tenant);
+    scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
+    scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+    const loadedComments = await query
+      .select('c.comment_id', 'c.ticket_id', 'c.is_internal')
+      .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
+      .whereIn('c.comment_id', commentRows.map((row) => row.id))
+      .whereNull('c.deleted_at')
+      .where('c.publish_state', 'published');
+    const commentRecords = Array.isArray(loadedComments) ? loadedComments : loadedComments ? [loadedComments] : [];
+    for (const comment of commentRecords) commentById.set(comment.comment_id, comment);
+  }
+
+  const parentTicketIds = [
+    ...ticketRows.map((row) => row.id),
+    ...Array.from(commentById.values())
+      .filter((comment) => (!comment.is_internal || user.isInternal) && (user.isInternal || comment.audience === 'requester'))
+      .map((comment) => comment.ticket_id),
+  ];
+  let authorizedTicketIds = new Set<string>();
+  if (!user.ticketAuthorizationResolutionFailed && user.tenant && user.authorizationUser && parentTicketIds.length > 0) {
+    try {
+      authorizedTicketIds = await authorizeTicketRecordBatch({
+        trx: knex,
+        tenant: user.tenant,
+        user: user.authorizationUser,
+        ticketIds: parentTicketIds,
+        context: user.ticketAuthorizationContext,
+      });
+    } catch {
+      // Policy resolution and record loading failures deny the whole ticket batch.
+      authorizedTicketIds = new Set();
+    }
+  }
+
   const visibleRows: TRow[] = [];
 
   for (const row of rows) {
+    if (row.type === 'ticket') {
+      if (authorizedTicketIds.has(row.id)) visibleRows.push(row);
+      else emitAclDrift(row, user);
+      continue;
+    }
+    if (row.type === 'ticket_comment') {
+      const comment = commentById.get(row.id);
+      const allowed = Boolean(comment && (!comment.is_internal || user.isInternal) &&
+        (user.isInternal || comment.audience === 'requester') && authorizedTicketIds.has(comment.ticket_id));
+      if (allowed) visibleRows.push(row);
+      else emitAclDrift(row, user);
+      continue;
+    }
     const verifier = visibilityVerifiers.get(row.type);
     if (!verifier) {
       visibleRows.push(row);
@@ -238,39 +355,6 @@ function tenantScopedRoot<Row extends object>(
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
 }
 
-async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, commentId: string): Promise<boolean> {
-  const query = tenantScopedRoot<{ audience: string | null }>(knex, user, 'comments as c');
-  const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
-  scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
-  scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
-  const found = await query
-    .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
-    .where('c.comment_id', commentId)
-    .first();
-  return found?.audience === 'requester';
-}
-
-async function ticketIsAuthorizedForRead(
-  knex: Knex,
-  user: SearchAclPrincipal,
-  ticketId: string,
-): Promise<boolean> {
-  if (!user.tenant || !user.authorizationUser) return false;
-  try {
-    await authorizeTicketRecordAccess({
-      trx: knex,
-      tenant: user.tenant,
-      user: user.authorizationUser,
-      ticketId,
-      action: 'read',
-    });
-    return true;
-  } catch {
-    // Missing records, policy denials, and resolver failures all deny search visibility.
-    return false;
-  }
-}
-
 async function projectClientIdForProject(
   knex: Knex,
   user: SearchAclPrincipal,
@@ -282,30 +366,6 @@ async function projectClientIdForProject(
     .first();
   return row?.client_id;
 }
-
-registerSearchVisibilityVerifier('ticket', async (knex, user, row) => {
-  return ticketIsAuthorizedForRead(knex, user, row.id);
-});
-
-registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
-  const comment = await tenantScopedRoot<{ ticket_id: string; is_internal: boolean | null }>(
-    knex,
-    user,
-    'comments',
-  )
-    .select('ticket_id', 'is_internal')
-    .where('comment_id', row.id)
-    .whereNull('deleted_at')
-    .where('publish_state', 'published')
-    .first();
-  if (!comment) return false;
-  if (comment.is_internal && !user.isInternal) return false;
-  // Audience is an additional restriction on non-staff readers (staff of the owning tenant see
-  // every audience stored there). It uses the same predicate as the indexer and portal reads, so
-  // a public-flagged comment on a private thread cannot be reached through search.
-  if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
-  return ticketIsAuthorizedForRead(knex, user, comment.ticket_id);
-});
 
 registerSearchVisibilityVerifier('project', async (knex, user, row) => {
   const clientId = await projectClientIdForProject(knex, user, row.id);

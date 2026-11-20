@@ -307,6 +307,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const ticketPredicate = options.acl?.ticketPolicySqlSupported
+    ? options.acl.ticketVisibilitySql
+    : undefined;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
   const cursorPredicateSql = sort === 'recent'
     ? `
@@ -408,6 +411,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
         CROSS JOIN q
         WHERE s.object_type = ANY(?::text[])
           AND ${aclPredicate.sql}
+          ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
           AND (
             s.search_vector @@ q.tsq
             OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -442,6 +446,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
+      ...(ticketPredicate?.bindings ?? []),
       ...cursorBindings,
       limit,
       offset,
@@ -474,6 +479,9 @@ export async function countSearchMatchesByType(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const ticketPredicate = options.acl?.ticketPolicySqlSupported
+    ? options.acl.ticketVisibilitySql
+    : undefined;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
@@ -490,6 +498,7 @@ export async function countSearchMatchesByType(
       CROSS JOIN q
       WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
+        ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
         AND (
           s.search_vector @@ q.tsq
           OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -517,6 +526,7 @@ export async function countSearchMatchesByType(
       ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
+      ...(ticketPredicate?.bindings ?? []),
     ] as Knex.RawBinding[],
   );
 
@@ -539,6 +549,9 @@ export async function countSearchMatches(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const ticketPredicate = options.acl?.ticketPolicySqlSupported
+    ? options.acl.ticketVisibilitySql
+    : undefined;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
@@ -555,6 +568,7 @@ export async function countSearchMatches(
       CROSS JOIN q
       WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
+        ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
         AND (
           s.search_vector @@ q.tsq
           OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -581,6 +595,7 @@ export async function countSearchMatches(
       ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,
+      ...(ticketPredicate?.bindings ?? []),
     ] as Knex.RawBinding[],
   );
 

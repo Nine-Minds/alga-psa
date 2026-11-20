@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   comments: new Map<string, Record<string, unknown>>(),
   candidateHits: [] as any[],
   tenantReads: [] as string[],
+  policyResolutions: 0,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -27,6 +28,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => {
+    state.policyResolutions += 1;
     if (state.rejectBundleResolution) throw new Error('bundle resolver unavailable');
     return state.bundleRules;
   },
@@ -44,9 +46,30 @@ vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/tickets/lib/ticketRecordAuthorization', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/tickets/lib/ticketRecordAuthorization')>()),
+  applyTicketReadAuthorizationSql: () => ({ supported: false, reason: 'fixture exercises evaluator fallback' }),
+}));
+
 vi.mock('@alga-psa/db', () => {
   const makeQuery = (table: string, tenant: string) => {
     let criteria: Record<string, unknown> = {};
+    let inCriteria: Record<string, unknown[]> = {};
+    const builder: any = {
+      whereRaw: () => builder,
+      where: (value: any, right?: unknown) => {
+        criteria = typeof value === 'string' ? { ...criteria, [value]: right } : { ...criteria, ...value };
+        return builder;
+      },
+      whereIn: (column: string, values: unknown[]) => { inCriteria[column.split('.').at(-1)!] = values; return builder; },
+      whereNull: () => builder,
+      whereNotNull: () => builder,
+      whereExists: () => builder,
+      andWhere: () => builder,
+      orWhere: () => builder,
+      select: () => builder,
+      toSQL: () => ({ sql: `select * from ${table} where tenant = ?`, bindings: [tenant] }),
+    };
     const query: any = {
       where: (value: any, right?: unknown) => {
         criteria = typeof value === 'string' ? { ...criteria, [value]: right } : { ...criteria, ...value };
@@ -54,6 +77,9 @@ vi.mock('@alga-psa/db', () => {
       },
       whereNull: () => query,
       whereNotNull: () => query,
+      whereIn: (column: string, values: unknown[]) => { inCriteria[column.split('.').at(-1)!] = values; return query; },
+      whereRaw: () => query,
+      whereExists: () => query,
       andWhere: () => query,
       select: () => query,
       first: async () => {
@@ -70,8 +96,17 @@ vi.mock('@alga-psa/db', () => {
         return undefined;
       },
       then: (resolve: (value: unknown[]) => unknown, reject: (error: unknown) => unknown) =>
-        Promise.resolve([]).then(resolve, reject),
+        Promise.resolve(table.startsWith('tickets') && Array.isArray(inCriteria.ticket_id)
+          ? inCriteria.ticket_id.map((id) => state.tickets.get(`${tenant}:${id}`)).filter(Boolean)
+          : table.startsWith('comments') && Array.isArray(inCriteria.comment_id)
+            ? inCriteria.comment_id.map((id) => {
+              const comment = state.comments.get(`${tenant}:${id}`);
+              return comment ? { comment_id: id, ...comment, audience: 'requester' } : undefined;
+            }).filter(Boolean)
+            : []).then(resolve, reject),
+      toSQL: () => ({ sql: `select * from ${table} where tenant = ?`, bindings: [tenant] }),
     };
+    Object.assign(builder, query);
     return query;
   };
 
@@ -79,6 +114,7 @@ vi.mock('@alga-psa/db', () => {
     createTenantKnex: async () => ({ knex: { raw: () => ({}) } }),
     tenantDb: (_knex: unknown, tenant: string) => ({
       table: (table: string) => makeQuery(table, tenant),
+      scoped: (table: string) => ({ tenant, builder: makeQuery(table, tenant) }),
       tenantJoin: (query: unknown) => query,
     }),
   };
@@ -198,6 +234,7 @@ describe('search record authorization regression', () => {
       hit('ticket', 'foreign-tenant-ticket', 'Foreign tenant record'),
     ];
     state.tenantReads = [];
+    state.policyResolutions = 0;
   });
 
   it('filters selected-client ticket and comment candidates on full search and typeahead while retaining readable rows', async () => {
@@ -270,6 +307,17 @@ describe('search record authorization regression', () => {
     expect(full.groups.ticket).toBe(1);
     expect(typeahead.results.map(({ id }) => id)).toEqual(['z-readable-later']);
     expect(typeahead.totalCount).toBe(1);
+  });
+
+  it('resolves ticket policy once and reuses it across candidate batches', async () => {
+    state.candidateHits = Array.from({ length: 205 }, (_, index) =>
+      hit('ticket', `not-loaded-${String(index).padStart(3, '0')}`, 'Missing policy candidate'),
+    );
+
+    const result = await searchAppAction({ query: 'support', limit: 5 });
+    expect(result.results).toEqual([]);
+    expect(result.totalCount).toBe(0);
+    expect(state.policyResolutions).toBe(1);
   });
 
   it('applies cursors to admitted results and preserves counts across readable pages', async () => {

@@ -12,7 +12,6 @@ import { resolveTicketMutationCollaborator, type TicketMutationCollaborationCont
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
-import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { nativeThreadAudience, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
@@ -92,25 +91,22 @@ import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/vali
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
 import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '../lib/bundleWorkflowLock';
 import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationRecord,
-  type AuthorizationSubject,
-  type RelationshipRule,
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
-import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
+import {
+  applyTicketReadAuthorizationSql as applySharedTicketReadAuthorizationSql,
+  createTicketAuthorizationContext as createSharedTicketAuthorizationContext,
+  authorizeTicketRecordAccess,
+  type TicketAuthorizationContext,
+  type TicketRecordRow,
+} from '../lib/ticketRecordAuthorization';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
-import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -118,7 +114,6 @@ import {
   buildTicketResponseStateChangedPayload,
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
-import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent, publishWorkflowTicketSlaStageEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
@@ -211,38 +206,6 @@ function toIsoTimestamp(value: unknown, fallback: string): string {
   return fallback;
 }
 
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-    .where({ user_id: user.user_id })
-    .select<{ role_id: string }[]>('role_id')
-    .catch(() => []);
-
-  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-    .where({ user_id: user.user_id })
-    .select<{ team_id: string }[]>('team_id')
-    .catch(() => []);
-
-  const managedRows = await tenantScopedTable(trx, 'users', tenant)
-    .where({ reports_to: user.user_id })
-    .select<{ user_id: string }[]>('user_id')
-    .catch(() => []);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds: roleRows.map((row) => row.role_id),
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
-}
-
 function toTicketAuthorizationRecord(
   ticket: Partial<ITicket>
 ): AuthorizationRecord {
@@ -265,81 +228,12 @@ function toTicketAuthorizationRecord(
   };
 }
 
-async function resolveClientVisibility(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<ContactVisibilityContext | null | undefined> {
-  if (isMspPrincipalUserType(user.user_type)) return undefined;
-  if (!user.contact_id) return null;
-  try {
-    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-  } catch {
-    // A failed resolution is distinct from an internal user: deny all.
-    return null;
-  }
-}
-
 async function createTicketAuthorizationContext(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<{
-  authorizationSubject: AuthorizationSubject;
-  authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
-  selectedBoardIds: string[] | undefined;
-  contactVisibility: ContactVisibilityContext | null | undefined;
-  requestCache: RequestLocalAuthorizationCache;
-  ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
-}> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
-  const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
-  const relationshipRules =
-    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
-  const requestCache = new RequestLocalAuthorizationCache();
-  const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
-    subject: authorizationSubject,
-    resource: {
-      type: 'ticket',
-      action: 'read',
-    },
-    selectedBoardIds,
-    contactVisibility,
-    requestCache,
-    knex: trx,
-  });
-
-  return {
-    authorizationSubject,
-    authorizationKernel: createAuthorizationKernel({
-      builtinProvider: new BuiltinAuthorizationKernelProvider({
-        relationshipRules,
-      }),
-      bundleProvider: new BundleAuthorizationKernelProvider({
-        resolveRules: async (input) => {
-          if (input.resource.type === 'ticket' && input.resource.action === 'read') {
-            return ticketReadBundleNarrowingRules;
-          }
-
-          try {
-            return await resolveBundleNarrowingRulesForEvaluation(trx, {
-              ...input,
-              requestCache,
-              knex: trx,
-            });
-          } catch {
-            return [];
-          }
-        },
-      }),
-      rbacEvaluator: async () => true,
-    }),
-    selectedBoardIds,
-    contactVisibility,
-    requestCache,
-    ticketReadBundleNarrowingRules,
-  };
+): Promise<TicketAuthorizationContext> {
+  return createSharedTicketAuthorizationContext(trx, tenant, user);
 }
 
 async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
@@ -373,30 +267,13 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   return tickets.filter((_, index) => decisions[index]?.allowed);
 }
 
-type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
-
 function applyTicketReadAuthorizationSql(
   query: TenantScopedQuery,
   trx: Knex.Transaction,
   tenant: string,
   context: TicketAuthorizationContext
 ): RelationshipSqlCompileResult {
-  // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
-  const builtinRules: RelationshipRule[] =
-    context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
-
-  return compileTenantScopedResourceReadAuthorizationSql(query, {
-    resourceType: 'ticket',
-    action: 'read',
-    builtinRules,
-    bundleRules: context.ticketReadBundleNarrowingRules,
-    ctx: {
-      subject: context.authorizationSubject,
-      selectedBoardIds: context.selectedBoardIds,
-      contactVisibility: context.contactVisibility,
-      adapter: createTicketRelationshipSqlAdapter(trx, tenant),
-    },
-  });
+  return applySharedTicketReadAuthorizationSql(query, trx, tenant, context);
 }
 
 // LEVERAGE: pattern response-state-from-comment — duplicate of applyCommentResponseState (shared/lib/tickets/responseState.ts) minus the tracking-setting check; not swapped because the contract/live-update tests pin this local function and the swap adds the tracking check.
