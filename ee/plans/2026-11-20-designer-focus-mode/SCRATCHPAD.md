@@ -48,13 +48,16 @@
 - (2026-11-20) `themeContract.paletteBaseline.ts` pins hard-coded palette class counts per file: billing `DesignerShell.tsx` at 223, `DesignerPalette.tsx` at 3, `DesignerPaletteItem.tsx` at 9. Do not add `slate-*` / `gray-*` classes.
 - (2026-11-20) Locales: `de en es fr it nl pl pt sv` plus pseudo `xx yy`. Spanish is usted-only. `keyboard-shortcuts/i18n.contract.test.ts` requires key parity and a label for every catalog action.
 - (2026-11-20) `ee/server` component tests are not in the PR-gated lane.
+- (2026-11-20, implementation) `@alga-psa/user-composition/hooks/*` resolves from `ee/server`: the package's exports map carries `./hooks/*` and `tsconfig.base.json` maps `@alga-psa/user-composition/*` to its `src/*`, so the workflow designer imports the hook the same way its API routes already import `./actions`.
+- (2026-11-20, implementation) Seven `ee/server` workflow-designer suites already fail locally on this machine (`window.localStorage.clear is not a function` — the Node 22 unconfigured-`localStorage` quirk that `packages/ui/vitest.setup.ts` patches and `ee/server` does not). Verified identical with this change reverted; the new `WorkflowDesignerFocusMode.test.tsx` installs an in-memory Storage of its own.
+- (2026-11-20, implementation) The document editor's own root carried the `p-6` page margin its list view uses; folding it into one card moved that margin onto the focus surface, which drops it when focused.
 
 ## To verify during implementation
 
-- Whether a page-scope action with `allowInEditable` fires while the invoice designer's `editor` scope is on top of the scope stack (`packages/ui/src/keyboard-shortcuts/provider.tsx`). If not, register in both scopes or move the entry to `global`.
-- Whether `mod+.` reaches the page in Chrome, Safari and Firefox on macOS and Windows.
-- The sidebar tooltip (`Sidebar.tsx:417`, `z-50`) is inside the sidebar; confirm it never shows over a focused surface.
-- Whether the Preview and Transforms tabs carry fixed heights that look wrong at full window size.
+- **Answered (2026-11-20, implementation).** A page-scope action does **not** fire under a pushed `editor` scope: `isScopeEligible` drops page-scope candidates whenever `panel`, `dialog` or `editor` is anywhere in the stack, and `allowInEditable` has no bearing on it. The catalog entry stays at page scope (it is what the help dialog and the settings panel list), and `DesignerFocusSurface` registers the same resolved binding a second time under an internal id (`designer.toggleFocusModeInEditor`) at editor scope — the registry is keyed by action id, so one id cannot hold two scopes. The two are never eligible at once, and the clone follows the user's own binding and disabled flag. Covered by `designer-focus-mode.test.tsx` ("fires while the editor shortcut scope is active").
+- Still open (browser): whether `mod+.` reaches the page in Chrome, Safari and Firefox on macOS and Windows.
+- Still open (browser): the sidebar tooltip (`Sidebar.tsx:417`, `z-50`) is inside the sidebar; confirm it never shows over a focused surface.
+- Still open (browser): whether the Preview and Transforms tabs carry fixed heights that look wrong at full window size. In focus mode each scrolls inside the surface (`min-h-0 flex-1 overflow-y-auto`), so a fixed inner height shows as empty space rather than a page scroll.
 
 ## Commands / Runbooks
 
