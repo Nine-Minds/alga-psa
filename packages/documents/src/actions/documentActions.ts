@@ -56,7 +56,10 @@ import {
   documentActionErrorMessage,
   type DocumentActionError,
 } from './documentActionErrors';
-import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import {
+  authorizeAndRedactDocuments as authorizeDocumentRows,
+  isDocumentFieldRedacted,
+} from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
@@ -545,7 +548,9 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
-
+      if (isDocumentFieldRedacted(authorizedDocument, 'content')) {
+        return permissionError('Permission denied: Cannot update redacted document content', 'documents:errors.permissions.update');
+      }
       await tenantScopedTable(trx, 'documents', tenant)
         .where('document_id', documentId)
         .update({

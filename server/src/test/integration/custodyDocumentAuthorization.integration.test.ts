@@ -10,6 +10,8 @@ import { seedLabelWorld, type LabelWorld } from './labelsFixtures';
 import { authorizeAndRedactDocuments, canAuthorizeDocumentAssociation } from '@shared/lib/documentAuthorization';
 import { createBlockDocument } from '@alga-psa/block-content/actions/blockContentActions';
 import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
+import { updateDocument } from '@alga-psa/documents/actions/documentActions';
+import { updateDocumentContent } from '@alga-psa/documents/actions/documentContentActions';
 
 const session = vi.hoisted(() => ({ user: null as any, db: null as any, tenant: '' }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => session.user }));
@@ -117,7 +119,10 @@ describe('asset-associated document authorization', () => {
     expect(initialRead).toMatchObject({ block_data: { body: 'private block document payload' } });
     const initialContent = await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).first();
     const initialMetadata = await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
-      .select('updated_at', 'edited_by').first();
+      .select('document_name', 'updated_at', 'edited_by').first();
+    const legacyContent = { id: randomUUID(), tenant: world.tenant, document_id: doc.document_id,
+      content: 'private legacy content', created_by_id: world.tech.user_id, updated_by_id: world.tech.user_id };
+    await db('document_content').insert(legacyContent);
 
     const bundles = await import('@alga-psa/authorization/bundles/service');
     const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
@@ -126,13 +131,24 @@ describe('asset-associated document authorization', () => {
     let missingDocumentId: string | undefined;
     try {
       expect(await getBlockContent(doc.document_id)).toBeNull();
+      const deniedMetadataUpdate = await updateDocument(doc.document_id, { document_name: 'hidden content overwritten' });
+      expect(deniedMetadataUpdate).toMatchObject({ permissionError: expect.any(String) });
+      expect(await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
+        .select('document_name', 'updated_at', 'edited_by').first())
+        .toEqual(initialMetadata);
+      const deniedLegacyContentUpdate = await updateDocumentContent(doc.document_id, {
+        content: 'hidden legacy content overwritten', updated_by_id: world.tech.user_id,
+      });
+      expect(deniedLegacyContentUpdate).toMatchObject({ permissionError: expect.any(String) });
+      expect(await db('document_content').where({ tenant: world.tenant, document_id: doc.document_id }).first())
+        .toMatchObject({ ...legacyContent, content: 'private legacy content' });
       for (const block_data of ['', { body: 'replacement payload' }]) {
         const denied = await invokeUpdate(block_data);
         expect(denied).toMatchObject({ permissionError: expect.any(String) });
         expect(await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).first())
           .toMatchObject({ block_data: initialContent.block_data, updated_at: initialContent.updated_at, version_id: initialContent.version_id });
         expect(await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
-          .select('updated_at', 'edited_by').first()).toEqual(initialMetadata);
+          .select('document_name', 'updated_at', 'edited_by').first()).toEqual(initialMetadata);
       }
 
       missingDocumentId = randomUUID();
@@ -149,6 +165,7 @@ describe('asset-associated document authorization', () => {
         .toMatchObject({ block_data: { body: 'authorized replacement' } });
     } finally {
       rulesSpy.mockRestore();
+      await db('document_content').where({ tenant: world.tenant, document_id: doc.document_id }).del();
       if (missingDocumentId) await db('documents').where({ tenant: world.tenant, document_id: missingDocumentId }).del();
       await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).update({
         block_data: initialContent.block_data, version_id: initialContent.version_id, updated_at: initialContent.updated_at,
