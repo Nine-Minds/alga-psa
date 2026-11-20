@@ -2,6 +2,22 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-20 — `POST /api/v1/users/bulk/create` and `PUT /api/v1/users/bulk/deactivate` work as documented
+
+**Affected endpoints:** `POST /api/v1/users/bulk/create`, `PUT /api/v1/users/bulk/deactivate`
+
+Both routes were wired to the single-user handlers. Bulk create validated against the single-user schema, so it created at most one user, and bulk deactivate failed on the literal path segment `bulk`, so it could not be used. Both now have their own handlers and request schemas.
+
+**Changes:**
+
+- Bulk create takes `users` (1–100 single-user create bodies) and optional `options`. A single-user body is rejected with `400`. Omitting `options` gives the same defaults as sending `{}`: `skip_invalid: true`, `send_welcome_email: true`, `force_password_reset: false`, `dry_run: false`.
+- The batch runs in one transaction with a savepoint per user. With `skip_invalid: true` a rejected user rolls back only its own rows and is listed in `errors` by `index`; with `skip_invalid: false` the whole batch rolls back. Users created earlier in a batch are visible to later ones.
+- `dry_run: true` validates every entry and returns the summary without opening a transaction.
+- `force_password_reset` now sets the account's must-change-password preference. `send_welcome_email` now sends each new account a password-setup link after the batch commits, so a mail failure never undoes an account.
+- A duplicate email that stops the batch returns `409` (as single-user create does) instead of `500`. A seat-limit refusal still returns `403 LICENSE_LIMIT_REACHED`. Success returns `201` with `total_processed`, `successful`, `failed`, `errors` and `results`.
+- New users can no longer be given a role from the other portal, for example an MSP role on a client-portal user. This applies to single and bulk create.
+- Bulk deactivate takes `user_ids` (1–100) and `deactivate` (default `true`; `false` reactivates). Reactivating internal users is checked against the seat limit, and an over-limit request fails as a whole.
+
 ## 2026-11-19 — Bulk client portal invitations
 
 **New endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
