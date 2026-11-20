@@ -14,6 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
+import { stripeApiOverride } from '../stripe/stripeApiOverride';
 import { inactiveStripeKey, readStripeCredentials, withLockedStripeConfig } from '../payments/stripeTenantCredentials';
 import {
   STRIPE_PERMISSION_MANIFEST,
@@ -216,6 +217,7 @@ export const connectStripeAction = withAuth(async (
     // Validate credentials by making a test API call
     const stripe = new Stripe(credentials.secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
+      ...stripeApiOverride(credentials.secretKey),
     });
 
     const permissionStatuses = await checkStripePermissions(stripe);
@@ -377,6 +379,7 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
           if (secretKey) {
             const stripe = new Stripe(secretKey, {
               apiVersion: '2024-12-18.acacia' as any,
+              ...stripeApiOverride(secretKey),
             });
 
             await stripe.webhookEndpoints.del(webhookEndpointId);
@@ -498,6 +501,7 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
 
     const stripe = new Stripe(secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
+      ...stripeApiOverride(secretKey),
     });
 
     const permissions = await checkStripePermissions(stripe);
@@ -634,6 +638,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
 
     const stripe = new Stripe(secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
+      ...stripeApiOverride(secretKey),
     });
 
     // Get the webhook URL
