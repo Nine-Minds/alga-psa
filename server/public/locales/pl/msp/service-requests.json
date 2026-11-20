@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplikuj",
       "archive": "Archiwizuj",
-      "unarchive": "Przywróć z archiwum"
+      "unarchive": "Przywróć z archiwum",
+      "delete": "Usuń"
     },
     "lifecycleLabels": {
       "published": "Opublikowano",
@@ -87,12 +88,23 @@
         "unchecked": "Niezaznaczone"
       },
       "types": {
-        "short-text": "krótki tekst",
-        "long-text": "długi tekst",
-        "select": "lista wyboru",
-        "checkbox": "pole wyboru",
-        "date": "data",
-        "file-upload": "przesyłanie pliku"
+        "short-text": "Krótki tekst",
+        "long-text": "Długi tekst",
+        "select": "Lista rozwijana",
+        "checkbox": "Pole wyboru",
+        "date": "Data",
+        "file-upload": "Przesłanie pliku",
+        "number": "Liczba",
+        "email": "Adres e-mail",
+        "phone": "Numer telefonu",
+        "url": "Adres internetowy",
+        "radio": "Wybór jednej opcji",
+        "multi-select": "Wybór wielu opcji",
+        "date-time": "Data i godzina",
+        "section": "Sekcja",
+        "text": "Instrukcje",
+        "callout": "Wyróżniona notatka",
+        "divider": "Separator"
       },
       "visibility": {
         "title": "Pokaż, gdy…",
@@ -123,7 +135,13 @@
         },
         "advancedJson": "Zaawansowane (JSON)",
         "advancedJsonHelp": "Pełna zapisana konfiguracja, w tym wartości domyślne kontekstu. Reguły widoczności łatwiej zmieniać w edytorze „Pokaż, gdy…” przy każdym polu. Niezapisane zmiany w tym miejscu zostaną odrzucone, jeśli zmienisz tam regułę."
-      }
+      },
+      "openBuilder": "Otwórz kreator formularza",
+      "summary": "Pytania: {{questions}} · wymagane: {{required}}",
+      "requiredChip": "Wymagane",
+      "datePlaceholder": "Wybierz datę",
+      "showFields": "Pokaż pytania",
+      "hideFields": "Ukryj pytania"
     },
     "execution": {
       "title": "Wykonanie",
@@ -150,7 +168,12 @@
         "priorityCalculated": "Priorytet (obliczony)",
         "selectImpactAndUrgency": "Wybierz wpływ i pilność",
         "priorityFormula": "{{label}} (Wpływ {{impact}} x Pilność {{urgency}})",
-        "titleFieldKey": "Klucz pola tytułu",
+        "ticketSubject": "Temat zgłoszenia",
+        "ticketSubjectHelp": "Odpowiedzi są wstawiane po przesłaniu wniosku. Pozostaw puste, aby użyć pierwszej odpowiedzi.",
+        "insertField": "Wstaw pole",
+        "noInsertableFields": "Ten formularz nie ma jeszcze pól do wstawienia.",
+        "unknownFields": "Nieznane pole: {{fields}}",
+        "unknownFieldsBlocked": "Przed zapisaniem popraw nieznane pola w temacie zgłoszenia lub prefiksie opisu.",
         "descriptionPrefix": "Prefiks opisu",
         "save": "Zapisz routing zgłoszeń"
       },
@@ -420,7 +443,8 @@
         "applyFailed": "Nie udało się zastosować mapowania odpowiedzi",
         "applied": "Zastosowano mapowanie odpowiedzi"
       }
-    }
+    },
+    "delete": "Usuń"
   },
   "icons": {
     "file-text": "Zgłoszenie ogólne",
@@ -463,7 +487,8 @@
       "workflowConfigurationUpdated": "Zaktualizowano konfigurację workflow",
       "formBehaviorConfigUpdated": "Zaktualizowano konfigurację zachowania formularza",
       "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności",
-      "audienceUpdated": "Odbiorcy zaktualizowani"
+      "audienceUpdated": "Odbiorcy zaktualizowani",
+      "definitionDeleted": "Formularz zgłoszenia usługi został usunięty"
     },
     "error": {
       "loadFailed": "Nie udało się wczytać zgłoszeń serwisowych",
@@ -487,7 +512,343 @@
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
-      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców",
+      "deleteFailed": "Nie udało się usunąć formularza zgłoszenia usługi"
     }
+  },
+  "designer": {
+    "palette": {
+      "searchPlaceholder": "Szukaj",
+      "showPalette": "Pokaż paletę",
+      "hidePalette": "Ukryj paletę",
+      "dragHint": "Upuść na formularzu, aby dodać",
+      "noMatches": {
+        "title": "Brak wyników dla „{{query}}”",
+        "tipWords": "Spróbuj krótszego lub innego słowa, na przykład „data”, „wybór” albo „plik”.",
+        "tipVerb": "Szukaj według tego, o co pyta pytanie: nazwa, data, kwota, plik.",
+        "tipBrowse": "Wyczyść wyszukiwanie, aby przejrzeć wszystkie grupy.",
+        "clear": "Wyczyść wyszukiwanie"
+      },
+      "categories": {
+        "text": "Tekst",
+        "choices": "Wybory",
+        "datesAndNumbers": "Daty i liczby",
+        "files": "Pliki",
+        "layout": "Układ"
+      }
+    },
+    "saveStatus": {
+      "justNow": "przed chwilą",
+      "minutesAgo": "{{count}} min temu",
+      "atTime": "o {{time}}",
+      "notSavedYet": "Jeszcze nie zapisano",
+      "unsaved": "Niezapisane zmiany",
+      "savedAgo": "Zapisano · {{ago}}",
+      "saved": "Zapisano"
+    }
+  },
+  "formBuilder": {
+    "leftPane": {
+      "label": "Dodaj elementy lub przejrzyj konspekt",
+      "add": "Dodaj",
+      "outline": "Konspekt",
+      "insertionHint": "Następny element trafi w zaznaczone miejsce."
+    },
+    "toolbar": {
+      "undo": "Cofnij",
+      "redo": "Ponów",
+      "mode": "Tryb edycji",
+      "edit": "Edytuj",
+      "tryIt": "Wypróbuj",
+      "desktopWidth": "Szerokość komputera",
+      "phoneWidth": "Szerokość telefonu",
+      "formSettings": "Ustawienia formularza",
+      "duplicate": "Duplikuj",
+      "delete": "Usuń"
+    },
+    "canvas": {
+      "renameHint": "Kliknij, aby zmienić nazwę",
+      "insertHere": "Dodaj tutaj element",
+      "insertAtEnd": "Dodaj element na końcu",
+      "dragHandle": "Przeciągnij, aby zmienić kolejność",
+      "ruleChip": "Reguły widoczności: {{count}}",
+      "validationChip": "Odpowiedź jest sprawdzana",
+      "datePlaceholder": "Wybierz datę",
+      "emptyHint": "Jeszcze nic tu nie ma. Dodaj pierwsze pytanie z karty Dodaj po lewej stronie.",
+      "showTemplates": "Pokaż szablony"
+    },
+    "outline": {
+      "empty": "Formularz jest jeszcze pusty.",
+      "halfWidthPair": "Dzieli wiersz",
+      "requiredChip": "Na to trzeba odpowiedzieć",
+      "ruleChip": "Pokazywane tylko czasami"
+    },
+    "gallery": {
+      "title": "Zacznij od szablonu",
+      "subtitle": "Wybierz punkt wyjścia, a potem zmień w nim, co chcesz."
+    },
+    "messages": {
+      "saveFailed": "Nie udało się zapisać formularza.",
+      "notFound": "To zgłoszenie serwisowe już nie istnieje.",
+      "loadFailedTitle": "Nie można otworzyć kreatora formularza",
+      "loading": "Otwieranie kreatora formularza…",
+      "published": "Opublikowano. Klienci widzą nową wersję.",
+      "publishBlocked": "Popraw to, co zgłasza strona definicji, a potem opublikuj.",
+      "publishFailed": "Nie udało się opublikować tego zgłoszenia serwisowego.",
+      "restoreBackup": "Niezapisane zmiany z poprzedniej wizyty zostały zachowane w tej przeglądarce.",
+      "restoreBackupApply": "Przywróć je",
+      "restoreBackupDismiss": "Odrzuć"
+    },
+    "types": {
+      "short-text": {
+        "description": "Jeden wiersz tekstu"
+      },
+      "long-text": {
+        "description": "Akapit lub więcej"
+      },
+      "email": {
+        "description": "Sprawdzane jako adres e-mail"
+      },
+      "phone": {
+        "description": "Sprawdzane jako numer telefonu"
+      },
+      "url": {
+        "description": "Sprawdzane jako odnośnik"
+      },
+      "select": {
+        "description": "Jedna odpowiedź z listy"
+      },
+      "radio": {
+        "description": "Jedna odpowiedź, wszystkie widoczne"
+      },
+      "multi-select": {
+        "description": "Dowolna liczba odpowiedzi"
+      },
+      "checkbox": {
+        "description": "Odpowiedź tak lub nie"
+      },
+      "number": {
+        "description": "Liczba z ograniczeniami"
+      },
+      "date": {
+        "description": "Pojedynczy dzień"
+      },
+      "date-time": {
+        "description": "Dzień i godzina"
+      },
+      "file-upload": {
+        "description": "Załącznik"
+      },
+      "section": {
+        "description": "Grupuje pytania pod spodem"
+      },
+      "text": {
+        "description": "Akapit z objaśnieniem"
+      },
+      "callout": {
+        "description": "Wyróżniona uwaga"
+      },
+      "divider": {
+        "description": "Linia między elementami"
+      }
+    },
+    "inspector": {
+      "resize": "Zmień szerokość panelu",
+      "nothingSelected": "Wybierz element formularza, aby go zmienić.",
+      "basics": "Podstawy",
+      "label": "Pytanie",
+      "sectionTitle": "Nagłówek sekcji",
+      "calloutTitle": "Nagłówek notatki",
+      "helpText": "Wskazówka pod pytaniem",
+      "bodyText": "Tekst",
+      "calloutTone": "Wygląd",
+      "calloutTones": {
+        "info": "Warto wiedzieć",
+        "warning": "Ostrzeżenie",
+        "success": "Dobra wiadomość"
+      },
+      "sectionCollapsible": "Tę sekcję można zwinąć",
+      "answerKey": "Klucz odpowiedzi (używany w raportach i regułach)",
+      "asking": "Pytanie",
+      "required": "Na to trzeba odpowiedzieć",
+      "placeholder": "Przygaszony tekst przykładowy",
+      "width": "Szerokość",
+      "widthFull": "Pełna",
+      "widthHalf": "Połowa",
+      "choices": "Możliwe odpowiedzi",
+      "choicesHelp": "Jeden wiersz na każdą możliwą odpowiedź.",
+      "choiceLabel": "Opcja {{index}}",
+      "newChoice": "Opcja {{index}}",
+      "removeChoice": "Usuń tę opcję",
+      "addChoice": "Dodaj opcję",
+      "checkTheAnswer": "Sprawdź odpowiedź",
+      "checkHelp": {
+        "default": "Pozostaw pole puste, aby pominąć to sprawdzenie.",
+        "number": "Liczby spoza tego zakresu są odrzucane.",
+        "date": "Daty spoza tego zakresu są odrzucane."
+      },
+      "rules": {
+        "default": {
+          "minLength": "Najkrótsza odpowiedź (znaki)",
+          "maxLength": "Najdłuższa odpowiedź (znaki)",
+          "pattern": "Musi pasować do tego wzorca",
+          "min": "Najmniejsza liczba",
+          "max": "Największa liczba",
+          "minDate": "Najwcześniejsza data",
+          "maxDate": "Najpóźniejsza data",
+          "minSelected": "Najmniej opcji do wybrania",
+          "maxSelected": "Najwięcej opcji do wybrania"
+        }
+      },
+      "customMessage": "Co pokazać, gdy warunek nie jest spełniony",
+      "customMessagePlaceholder": "Pozostaw puste, aby użyć standardowego tekstu",
+      "onlyShowWhen": "Pokaż to tylko, gdy…",
+      "onlyShowWhenHelp": "Bez reguły jest zawsze pokazywane.",
+      "onlyShowWhenSectionHelp": "Ukrycie sekcji ukrywa także pytania, które zawiera.",
+      "visibilityNeedsEarlierField": "Dodaj wyżej pytanie, na którym oprzesz regułę.",
+      "visibilityAlways": "Zawsze pokazywane.",
+      "visibilityWhen": "Gdy",
+      "visibilityIs": "jest",
+      "visibilityValue": "tą odpowiedzią",
+      "visibilityOperators": {
+        "equals": "dokładnie",
+        "not-equals": "cokolwiek poza",
+        "is-true": "zaznaczone",
+        "is-false": "niezaznaczone",
+        "has-value": "wypełnione",
+        "is-empty": "pozostawione puste"
+      },
+      "addVisibilityRule": "Dodaj warunek",
+      "formSettings": {
+        "title": "Cały formularz",
+        "description": "Jak wygląda formularz i co dzieje się po wysłaniu.",
+        "width": "Szerokość formularza",
+        "widthNarrow": "Wąska",
+        "widthBoxed": "Wygodna szerokość do czytania",
+        "widthWide": "Szeroka",
+        "widthFull": "Cała strona",
+        "submitLabel": "Napis na przycisku wysyłania",
+        "submitLabelPlaceholder": "Wyślij zgłoszenie",
+        "successMessage": "Co pokazać po wysłaniu",
+        "successMessagePlaceholder": "Dziękujemy — zgłoszenie dotarło, wkrótce się odezwiemy."
+      },
+      "startWithThisAnswer": "Zacznij od tej odpowiedzi",
+      "startWithThisAnswerHelp": "Formularz otworzy się z tym wypełnionym. Można to zmienić.",
+      "noDefaultAnswer": "Brak odpowiedzi na start",
+      "clearDefaultAnswer": "Zacznij od pustego",
+      "defaultNotAnOption": "Ta odpowiedź nie jest żadną z powyższych opcji.",
+      "defaultFailsRules": "Ta odpowiedź nie przechodzi sprawdzeń ustawionych poniżej.",
+      "legacyRuleOutsideBuilder": "Ten element ma też regułę ustawioną poza kreatorem, która nadal obowiązuje.",
+      "renameBreaksTemplates": "Temat lub opis zgłoszenia nadal odwołuje się do „{{key}}”. Popraw to na stronie wniosku.",
+      "renameKeyEmpty": "Klucz odpowiedzi nie może być pusty. Poprzedni klucz pozostaje w użyciu.",
+      "renameKeyTaken": "Inne pytanie używa już klucza odpowiedzi „{{key}}”. Poprzedni klucz pozostaje w użyciu."
+    },
+    "tryIt": {
+      "banner": "Odpowiedzi na tym ekranie nigdzie nie trafiają. Reguły i sprawdzenia działają dokładnie tak, jak u klienta.",
+      "check": "Sprawdź odpowiedzi",
+      "reset": "Zacznij od nowa",
+      "allGood": "Wszystkie odpowiedzi są poprawne.",
+      "required": "To pytanie wymaga odpowiedzi.",
+      "invalid": "Ta odpowiedź nie ma oczekiwanej postaci.",
+      "validation": {
+        "type": "Ta odpowiedź nie ma oczekiwanej postaci.",
+        "pattern": "Ta odpowiedź nie ma oczekiwanej postaci.",
+        "minLength": "Użyj co najmniej {{minLength}} znaków.",
+        "maxLength": "Użyj najwyżej {{maxLength}} znaków.",
+        "min": "Wpisz {{min}} lub więcej.",
+        "max": "Wpisz {{max}} lub mniej.",
+        "minDate": "Wybierz {{minDate}} lub później.",
+        "maxDate": "Wybierz {{maxDate}} lub wcześniej.",
+        "minSelected": "Wybierz co najmniej {{minSelected}}.",
+        "maxSelected": "Wybierz najwyżej {{maxSelected}}."
+      }
+    },
+    "templates": {
+      "newEmployee": {
+        "name": "Wdrożenie nowego pracownika",
+        "description": "Kto dołącza, kiedy i czego potrzebuje pierwszego dnia.",
+        "callout": {
+          "label": "Potrzebujemy pięciu dni roboczych",
+          "help": "Konta i sprzęt wymagają kilku dni, dlatego prosimy o jak najwcześniejsze zgłoszenie."
+        },
+        "section": {
+          "employee": "Pracownik",
+          "employeeHelp": "Kto dołącza i kiedy zaczyna.",
+          "hardware": "Sprzęt"
+        },
+        "fullName": "Imię i nazwisko",
+        "startDate": "Data rozpoczęcia",
+        "department": "Dział",
+        "departments": {
+          "engineering": "Inżynieria",
+          "sales": "Sprzedaż",
+          "operations": "Operacje",
+          "finance": "Finanse",
+          "customerSuccess": "Sukces klienta"
+        },
+        "needsLaptop": "Czy potrzebny jest laptop?",
+        "needsLaptopHelp": "Przygotujemy go przed datą rozpoczęcia.",
+        "laptopModel": "Model laptopa",
+        "peripherals": "Akcesoria",
+        "peripheralOptions": {
+          "monitor": "Monitor zewnętrzny",
+          "dock": "Stacja dokująca",
+          "headset": "Zestaw słuchawkowy",
+          "keyboard": "Klawiatura i mysz"
+        },
+        "policy": "Podpisany regulamin sprzętu (PDF)",
+        "laptops": {
+          "macbookAir": "MacBook Air 13\"",
+          "latitude": "Dell Latitude 5450",
+          "thinkpad": "Lenovo ThinkPad T14"
+        }
+      },
+      "access": {
+        "name": "Wniosek o dostęp",
+        "description": "Nowy, zmieniony lub odebrany dostęp do systemu.",
+        "callout": {
+          "label": "O zgodę poprosimy przełożonego",
+          "help": "Zmiany dostępu wymagają zatwierdzenia, zanim je wprowadzimy."
+        },
+        "section": "Jaki dostęp jest potrzebny",
+        "requestedFor": "Dotyczy",
+        "system": "Aplikacja lub system",
+        "requestType": "Rodzaj wniosku",
+        "requestTypes": {
+          "new": "Nowy dostęp",
+          "change": "Zmiana istniejącego dostępu",
+          "remove": "Odebranie dostępu"
+        },
+        "neededBy": "Potrzebne do",
+        "justification": "Uzasadnienie biznesowe"
+      },
+      "repair": {
+        "name": "Naprawa sprzętu",
+        "description": "Urządzenie do naprawy lub wymiany.",
+        "section": {
+          "device": "Urządzenie",
+          "problem": "Na czym polega problem"
+        },
+        "assetTag": "Numer inwentarzowy lub seryjny",
+        "deviceType": "Rodzaj urządzenia",
+        "deviceTypes": {
+          "laptop": "Komputer przenośny",
+          "desktop": "Komputer stacjonarny",
+          "monitor": "Ekran",
+          "phone": "Telefon",
+          "other": "Inne"
+        },
+        "symptoms": "Opisz problem",
+        "stillUsable": "Urządzenie nadal nadaje się do użytku",
+        "photo": "Zdjęcie problemu"
+      },
+      "blank": {
+        "name": "Zacznij od pustego",
+        "description": "Pusty formularz budowany pytanie po pytaniu."
+      }
+    }
+  },
+  "deleteDialog": {
+    "confirmation": "„{{name}}” i wszystkie jego wersje zostaną trwale usunięte. Tej operacji nie można cofnąć."
   }
 }

@@ -472,18 +472,37 @@
         "noLimit": "Sin límite"
       },
       "actions": {
-        "save": "Guardar reglas de servicio"
+        "save": "Guardar reglas de servicio",
+        "savePortalBooking": "Guardar la configuración de reservas del portal"
       },
       "feedback": {
         "selectServiceError": "Por favor seleccione un servicio",
         "saveSuccess": "Reglas de servicio guardadas",
         "saveError": "No se pudieron guardar las reglas del servicio",
         "deleteSuccess": "Reglas de servicio eliminadas",
-        "deleteError": "No se pudieron eliminar las reglas del servicio"
+        "deleteError": "No se pudieron eliminar las reglas del servicio",
+        "portalBookingSaveSuccess": "Configuración de reservas del portal del cliente guardada"
       },
       "deleteDialog": {
         "title": "Eliminar reglas del servicio",
         "message": "¿Está seguro de que desea eliminar las reglas de {{serviceName}}? Esta acción no se puede deshacer."
+      },
+      "portalBooking": {
+        "title": "Reservas en el portal del cliente",
+        "description": "Lo que ven los clientes cuando solicitan una cita desde el portal."
+      },
+      "portalHideContractServices": {
+        "label": "Mostrar en el portal del cliente solo los servicios configurados para reserva",
+        "help": "Oculta los servicios que los clientes heredan de sus contratos: el portal muestra únicamente los servicios configurados arriba con «Permitir reserva sin contrato»."
+      },
+      "portalDefaultService": {
+        "label": "Servicio de reserva predeterminado",
+        "none": "Sin valor predeterminado: el cliente elige",
+        "help": "Se preselecciona para los clientes, de modo que nunca deban elegir un servicio. Elija uno de sus servicios configurados: hasta entonces no se preselecciona ninguno."
+      },
+      "portalShowServiceRates": {
+        "label": "Mostrar las tarifas de los servicios a los clientes",
+        "help": "Si se desactiva, los clientes nunca ven el precio de un servicio al reservar."
       }
     },
     "exceptions": {

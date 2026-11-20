@@ -25,14 +25,13 @@ import {
   getDashboardWelcomeSettingsAction,
   setDashboardWelcomeUseCompanyNameAction,
 } from "@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions";
-import { getAllClients } from "@alga-psa/clients/actions/queryActions";
+import { searchClientsForPicker } from "@alga-psa/clients/actions/clientPickerActions";
 import {
   getClientCountryDefaultsPreview,
   type IClientCountryDefaultsPreview,
 } from "@alga-psa/clients/actions/countryActions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
-import { IClient } from "@alga-psa/types";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { describeCountryDefaults } from './countryDefaultsPreview';
 
@@ -52,7 +51,6 @@ const GeneralSettings = () => {
     loadTenantData();
   }, []);
   const [selectedClientId, setSelectedClientId] = React.useState<string | null>(null);
-  const [allClients, setAllClients] = React.useState<IClient[]>([]);
   const [filterState, setFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [pendingDefaultClient, setPendingDefaultClient] = React.useState<{ id: string; name: string } | null>(null);
@@ -62,7 +60,8 @@ const GeneralSettings = () => {
   const requestedCountryDefaults = React.useRef<Set<string>>(new Set());
 
   const defaultClient = clients.find(c => c.isDefault) ?? null;
-  const selectableClients = allClients.filter(c => !clients.some(tc => tc.id === c.client_id));
+  // Already-added tenant clients are left out of the picker's results on the server.
+  const tenantClientIds = React.useMemo(() => clients.map(c => c.id), [clients]);
 
   const loadTenantData = async () => {
     try {
@@ -152,7 +151,9 @@ const GeneralSettings = () => {
     }
 
     try {
-      const clientToAdd = allClients.find(c => c.client_id === selectedClientId);
+      // The picker searches on the server, so the picked client's name is read by id.
+      const lookup = await searchClientsForPicker({ ids: [selectedClientId], status: 'all' });
+      const clientToAdd = lookup.clients.find(c => c.client_id === selectedClientId);
       if (!clientToAdd) {
         throw new Error(t('general.messages.error.clientNotFound'));
       }
@@ -182,18 +183,6 @@ const GeneralSettings = () => {
       handleError(error, t('general.messages.error.addClient'));
     }
   };
-
-  React.useEffect(() => {
-    const loadClients = async () => {
-      try {
-        const clients = await getAllClients();
-        setAllClients(clients);
-      } catch (error) {
-        handleError(error, t('general.messages.error.loadClients'));
-      }
-    };
-    loadClients();
-  }, []);
 
   const handleRemoveClient = async (clientId: string) => {
     try {
@@ -381,7 +370,8 @@ const GeneralSettings = () => {
           <div className="space-y-4">
             <ClientPicker
               id="tenant-client-picker"
-              clients={selectableClients}
+              searchClients={searchClientsForPicker}
+              excludeIds={tenantClientIds}
               onSelect={setSelectedClientId}
               selectedClientId={selectedClientId}
               filterState={filterState}

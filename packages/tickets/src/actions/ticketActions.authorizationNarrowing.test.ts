@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // test happens to run first. vi.mock factories below are hoisted above this
 // import by vitest.
 import { getTicketById, getTicketsForList, updateTicket, bulkUpdateTicketStatus } from './ticketActions';
+import { summarizeTicketActivityHistory, countAuthorizedTicketChanges } from '../lib/ticketChangeCounts';
+import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_ENTITY, TICKET_ACTIVITY_EVENT, TICKET_ACTIVITY_SOURCE } from '@alga-psa/shared/lib/ticketActivity';
 
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
@@ -13,6 +15,15 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getClientContactVisibilityContextMock = vi.fn();
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -30,7 +41,9 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
-  tenantDb: (conn: any) => ({
+  // Seat work state settles only when a write moves the ticket's client/board; these tests never do.
+  releaseSeatTicketOnMove: vi.fn(async () => ({ assigneeCleared: false })),
+  tenantDb:(conn: any) => ({
     table: (table: string) => conn(table),
     subquery: (table: string) => conn(table),
     tenantJoin: (query: any) => query.join?.() ?? query,
@@ -197,6 +210,10 @@ function buildTrx(params: {
       return queryBuilder;
     }
 
+    if (table === 'user_client_portfolios') {
+      return { where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue([]) }) }) };
+    }
+
     if (table === 'user_roles' || table === 'team_members') {
       return {
         where: vi.fn().mockReturnValue({
@@ -216,13 +233,15 @@ function buildTrx(params: {
     }
 
     if (table === 'users') {
-      return {
+      // Agent directory: `.select(...).where(...).orderBy(...)`; authorization subject lookup:
+      // `.where({ reports_to }).select('user_id')`.
+      const builder: any = {
+        select: vi.fn(() => builder),
+        where: vi.fn(() => builder),
         orderBy: vi.fn().mockResolvedValue([]),
-        where: vi.fn().mockReturnValue({
-          select: vi.fn().mockResolvedValue([]),
-          orderBy: vi.fn().mockResolvedValue([]),
-        }),
+        then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
       };
+      return builder;
     }
 
     if (table === 'statuses') {
@@ -450,6 +469,47 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+
+  it('persists mutation actors so a later viewer edit cannot erase another user’s recovery activity', async () => {
+    const ticket = makeTicket({ title: 'Before' });
+    const auditRows: any[] = [];
+    const trx: any = (table: string) => {
+      if (table === 'tickets') return {
+        where: () => ({
+          first: async () => ticket,
+          update: (data: any) => ({ returning: async () => [{ ...ticket, ...data }] }),
+        }),
+      };
+      if (table === 'statuses') return { where: () => ({ first: async () => ({ status_id: 'status-1', is_closed: false }) }) };
+      // The update guard resolves the editor as an authorization subject: an ordinary internal user with no
+      // roles, teams, reports or client portfolio, so no built-in rule resolver governs the write.
+      if (table === 'users') return { where: () => ({ first: async () => undefined, select: async () => [] }) };
+      if (table === 'user_roles' || table === 'team_members') return { where: () => ({ select: async () => [] }) };
+      if (table === 'user_client_portfolios') return { where: () => ({ orderBy: () => ({ select: async () => [] }) }) };
+      if (table === 'ticket_audit_logs') return { insert: async (row: any) => { auditRows.push(row); } };
+      throw new Error(`Unexpected table ${table}`);
+    };
+    trx.fn = { now: () => new Date().toISOString() };
+    trx.raw = (value: string) => value;
+    trx.isTransaction = true;
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(trx));
+
+    currentUser = { user_id: 'editor-other', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    await updateTicket('ticket-1', { title: 'Other user edit' } as any);
+    currentUser = { user_id: 'viewer', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    await updateTicket('ticket-1', { title: 'Viewer edit' } as any);
+
+    const recovered = auditRows.map(({ actor_user_id, occurred_at }) => ({ actorUserId: actor_user_id, occurredAt: occurred_at }));
+    const summary = summarizeTicketActivityHistory({ entries: recovered, currentUserId: 'viewer', listSince: 0 });
+    const counts = countAuthorizedTicketChanges({
+      candidates: [{ ticket_id: 'ticket-1', board_id: 'board-1', ...summary }],
+      matchingTicketIds: new Set(['ticket-1']), loadedTicketIds: new Set(), currentUserId: 'viewer', since: 0,
+    });
+    expect(auditRows.map((entry) => entry.actor_user_id)).toEqual(['editor-other', 'viewer']);
+    expect(auditRows.every((entry) => entry.tenant === 'tenant-1' && entry.event_type === TICKET_ACTIVITY_EVENT.UPDATED && entry.entity_type === TICKET_ACTIVITY_ENTITY.TICKET && entry.source === TICKET_ACTIVITY_SOURCE.UI && entry.actor_type === TICKET_ACTIVITY_ACTOR.USER)).toBe(true);
+    expect(counts.newCount).toBe(1);
   });
   it.each([false, true])('uses the real kernel for contact narrowing on list/detail (admin=%s)', async (admin) => {
     currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', clientId: 'client-1', contact_id: 'contact-1', roles: [] };

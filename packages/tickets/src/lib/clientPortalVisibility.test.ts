@@ -43,6 +43,10 @@ function buildTrx(params: {
   grants?: Array<{ billing_profile_id: string }>;
   /** (contact, manager) edges the hierarchy query returns for the client. */
   reports?: Array<{ contact_name_id: string; manager_contact_id: string | null }>;
+  /** Tickets the shared-workspace resolver finds for the contact subtree. */
+  workspaceTickets?: string[];
+  /** Assets the shared-workspace resolver finds for the contact subtree. */
+  workspaceAssets?: string[];
 }) {
   return ((table: string) => {
     if (table === 'boards') {
@@ -82,6 +86,23 @@ function buildTrx(params: {
       return {
         where: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue(params.group && { ticket_scope: 'client', ...params.group }),
+        }),
+      };
+    }
+
+    // FR-E7 / FR-E7b: the shared-workspace grants are resolved to id lists
+    // here instead of being correlated inside the predicates (Citus cannot push
+    // a correlated subquery down to a distributed table).
+    if (table === 'asset_associations as aa' || table === 'asset_group_members as m') {
+      const rows =
+        table === 'asset_associations as aa'
+          ? (params.workspaceTickets ?? []).map((entity_id) => ({ entity_id }))
+          : (params.workspaceAssets ?? []).map((asset_id) => ({ asset_id }));
+      return {
+        where: vi.fn().mockReturnValue({
+          whereIn: vi.fn().mockReturnValue({
+            distinct: vi.fn().mockResolvedValue(rows),
+          }),
         }),
       };
     }
@@ -378,6 +399,65 @@ describe('contact scope', () => {
 
     const ungrouped = await getClientContactVisibilityContext(buildTrx({ contact: { ...contact, portal_visibility_group_id: null } }), 'tenant-1', 'contact-1');
     expect(ungrouped).toMatchObject({ effectiveAssetScope: 'client', effectiveProjectScope: 'client' });
+  });
+
+  it('resolves the shared-workspace ticket and device ids each contact-scoped grant needs', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const workspace = { workspaceTickets: ['ticket-7'], workspaceAssets: ['asset-9'] };
+
+    const both = await getClientContactVisibilityContext(buildTrx({
+      contact,
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact', asset_scope: 'contact' },
+      boardIds: ['board-1'],
+      ...workspace,
+    }), 'tenant-1', 'contact-1');
+    expect(both).toMatchObject({ workspaceTicketIds: ['ticket-7'], workspaceAssetIds: ['asset-9'] });
+    // There is no project membership model, so the project grant stays empty.
+    expect(both.workspaceProjectIds).toBeUndefined();
+
+    // Each scope pulls only its own list.
+    const ticketsOnly = await getClientContactVisibilityContext(buildTrx({
+      contact,
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact', asset_scope: 'client' },
+      boardIds: ['board-1'],
+      ...workspace,
+    }), 'tenant-1', 'contact-1');
+    expect(ticketsOnly.workspaceTicketIds).toEqual(['ticket-7']);
+    expect(ticketsOnly.workspaceAssetIds).toBeUndefined();
+
+    const devicesOnly = await getClientContactVisibilityContext(buildTrx({
+      contact,
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'contact' },
+      boardIds: ['board-1'],
+      ...workspace,
+    }), 'tenant-1', 'contact-1');
+    expect(devicesOnly.workspaceAssetIds).toEqual(['asset-9']);
+    expect(devicesOnly.workspaceTicketIds).toBeUndefined();
+  });
+
+  it('never resolves workspace ids for a client-scoped contact or a client admin', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    // buildTrx throws on tables it is not asked about, and the workspace tables
+    // are deliberately left out here: reaching them would fail the test.
+    const trxWithoutWorkspaceTables = (params: Parameters<typeof buildTrx>[0]) => {
+      const trx = buildTrx(params);
+      return ((table: string) => {
+        if (table === 'asset_associations as aa' || table === 'asset_group_members as m') {
+          throw new Error(`Unexpected workspace query: ${table}`);
+        }
+        return trx(table);
+      }) as any;
+    };
+
+    for (const params of [
+      { contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'client' }, boardIds: ['b'] },
+      { contact: { ...contact, is_client_admin: true }, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact', asset_scope: 'contact' }, boardIds: ['b'] },
+      { contact: { ...contact, portal_visibility_group_id: null } },
+    ]) {
+      const result = await getClientContactVisibilityContext(trxWithoutWorkspaceTables(params), 'tenant-1', 'contact-1');
+      expect(result.workspaceTicketIds).toBeUndefined();
+      expect(result.workspaceAssetIds).toBeUndefined();
+    }
   });
 
   it('rejects a group with an invalid asset or project scope', async () => {

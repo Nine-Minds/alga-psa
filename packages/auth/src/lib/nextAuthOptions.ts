@@ -61,6 +61,7 @@ import {
     parsePendingRememberContextCookie,
 } from "./mspRememberedEmail";
 import { UserSession } from "@alga-psa/db/models/UserSession";
+import { isTokenRevokedByLoginPolicy } from "./passwordLoginGate";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
@@ -1656,10 +1657,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
+            // LEVERAGE: pattern credentials-authorize — this authorize() is a near-verbatim copy of the other CredentialsProvider (login protection, tenant resolution, 2FA step, token claims); the policy gate is shared via passwordLoginGate.ts but the rest still drifts. Candidate for one shared authorize factory.
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
                 const { authenticateUser } = await import('../actions/auth');
+                const { completePasswordLoginSecondFactor } = await import('./passwordLoginGate');
                 const {
                     enforceLoginProtection,
                     normalizeLoginEmail,
@@ -1773,70 +1776,17 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     }
                     }
 
-                    // 2FA Verification with device recognition
-                    if (user.two_factor_enabled) {
-                        console.log('2FA is enabled for user, checking device recognition');
-
-                        let shouldRequire2FA = true;
-
-                        // Check if device-based 2FA skip is enabled
-                        if ((user as any).two_factor_required_new_device && request) {
-                            try {
-                                // Generate device fingerprint from request
-                                const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
-                                const deviceFingerprint = generateDeviceFingerprint(userAgent);
-
-                                // Check if this device is known
-                                const isKnown = await UserSession.isKnownDevice(
-                                    user.tenant,
-                                    user.user_id.toString(),
-                                    deviceFingerprint
-                                );
-
-                                console.log('Device recognition check:', {
-                                    deviceFingerprint,
-                                    isKnownDevice: isKnown
-                                });
-
-                                // Skip 2FA for known devices
-                                if (isKnown) {
-                                    shouldRequire2FA = false;
-                                    console.log('Device recognized, skipping 2FA verification');
-                                }
-                            } catch (error) {
-                                console.error('Device recognition check failed, falling back to 2FA:', error);
-                                // On error, require 2FA for security
-                                shouldRequire2FA = true;
-                            }
-                        }
-
-                        if (shouldRequire2FA) {
-                            console.log('2FA verification required, starting verification');
-                            if (!credentials.twoFactorCode) {
-                                console.log('2FA verification failed: No code provided');
-                                logger.warn("2FA code required for email", credentials.email);
-                                return null;
-                            }
-                            if (!user.two_factor_secret) {
-                                console.log('2FA verification failed: No secret found');
-                                logger.warn("2FA secret not found for email", credentials.email);
-                                return null;
-                            }
-                            console.log('Verifying 2FA code');
-                            const { verifyAuthenticator } = await import('./authenticator/authenticator');
-                            const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
-                            console.log('2FA verification result:', { isValid: isValid2FA });
-                            if (!isValid2FA) {
-                                console.log('2FA verification failed: Invalid code');
-                                logger.warn("Invalid 2FA code for email", credentials.email);
-                                // A wrong TOTP code is guessable evidence just like a wrong
-                                // password, so it shares the same failure budget.
-                                await recordLoginFailure(attemptContext);
-                                return null;
-                            }
-                            console.log('2FA verification successful');
-                        }
-                    }
+                    // Second factor (tenant 2FA policy, the user's own 2FA, known-device skip).
+                    // authenticateUser has already applied the SSO-required / forced-enrollment
+                    // policy; the TOTP step is shared by both authorize copies in passwordLoginGate.
+                    await completePasswordLoginSecondFactor({
+                        user,
+                        twoFactorCode: typeof credentials.twoFactorCode === 'string' && credentials.twoFactorCode
+                            ? credentials.twoFactorCode
+                            : undefined,
+                        request,
+                        onInvalidCode: () => recordLoginFailure(attemptContext),
+                    });
 
                     // Defence in depth behind authenticateUser: re-read the stored type and
                     // active flag before recording success or touching any session state.
@@ -2190,6 +2140,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+                // When this token was minted by a sign-in; with `login_method` it lets the
+                // tenant login policy tell password sessions issued before a cutoff.
+                token.auth_issued_at = Date.now();
 
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
@@ -2300,6 +2253,13 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
             if (trackedSession === 'unverified') {
                 return token;
+            }
+
+            // Tenant login policy: an internal password session issued before SSO became
+            // required is revoked (break-glass users excepted). A policy lookup that
+            // cannot complete leaves the cookie alone, like the session lookup above.
+            if (await isTokenRevokedByLoginPolicy(token)) {
+                return null;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2446,6 +2406,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
             if (token.login_method) {
                 (session as any).login_method = token.login_method as string;
+            }
+            if (typeof token.auth_issued_at === 'number') {
+                (session as any).auth_issued_at = token.auth_issued_at;
             }
 
             return session;

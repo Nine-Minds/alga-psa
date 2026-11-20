@@ -30,7 +30,12 @@ import { requireRequestContext } from '../utils/requestContext';
 import type { ApiContext } from '../middleware/apiMiddleware';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { guardAssetRead } from './assetReadGuard';
+import { readAssetGateProjection } from './assetReadGuard';
+import { reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
+import {
+  ASSET_CUSTODY_MUTATION_RESPONSE_SOURCE,
+  ASSET_CUSTODY_RESPONSE_SOURCE,
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 
 const STATUS_BY_CODE: Record<CustodyErrorCode, number> = {
   not_found: 404,
@@ -77,6 +82,7 @@ export class ApiAssetCustodyController {
       user_type: user.user_type as 'internal' | 'client',
       clientId: user.clientId ?? null,
       roles: user.roles,
+      apiKeyId: context.apiKeyId,
     };
   }
 
@@ -107,12 +113,12 @@ export class ApiAssetCustodyController {
     req: NextRequest,
     assetId: string,
     action: 'read' | 'update'
-  ): Promise<{ context: ApiContext } | { denied: NextResponse }> {
+  ): Promise<{ context: ApiContext; projection: AuthorizedProjection<Record<string, any>> } | { denied: NextResponse }> {
     const context = await this.requireAllowedContext(req);
     const noPermission = await this.requirePermission(context, action);
     if (noPermission) return { denied: noPermission };
-    const denied = await guardAssetRead(context, assetId, this.assetService);
-    return denied ? { denied } : { context };
+    const gate = await readAssetGateProjection(context, assetId, this.assetService);
+    return gate.denied ? { denied: gate.denied } : { context, projection: gate.projection };
   }
 
   /** GET /api/v1/assets/{id}/custody - the open episode and the episode history. */
@@ -125,7 +131,12 @@ export class ApiAssetCustodyController {
         getAssetCustodyService(knex, g.context.tenant, this.authUser(g.context), params.id),
         listCustodyEventsService(knex, g.context.tenant, this.authUser(g.context), params.id),
       ]);
-      return createApiResponse({ open: state.open, episodes: state.episodes, events });
+      const data = reprojectUnderDecision(
+        g.projection,
+        { open: state.open, episodes: state.episodes, events },
+        ASSET_CUSTODY_RESPONSE_SOURCE,
+      );
+      return data === null ? createErrorResponse('Asset not found', 404, 'NOT_FOUND') : createApiResponse(data);
     } catch (error) {
       return this.fail(error);
     }
@@ -140,7 +151,12 @@ export class ApiAssetCustodyController {
       const input = openCustodyInputSchema.parse({ ...body, asset_id: params.id });
       const knex = await getConnection(g.context.tenant);
       const result = await openCustodyService(knex, g.context.tenant, this.authUser(g.context), input);
-      return createApiResponse({ custody: result.custody, event: result.event }, 201);
+      const data = reprojectUnderDecision(
+        g.projection,
+        { custody: result.custody, event: result.event },
+        ASSET_CUSTODY_MUTATION_RESPONSE_SOURCE,
+      );
+      return data === null ? createErrorResponse('Asset not found', 404, 'NOT_FOUND') : createApiResponse(data, 201);
     } catch (error) {
       return this.fail(error);
     }
@@ -159,7 +175,12 @@ export class ApiAssetCustodyController {
         return createErrorResponse('This asset is not in custody.', 409, 'NOT_IN_CUSTODY');
       }
       const result = await recordCustodyEventService(knex, g.context.tenant, user, open.custody_id, input);
-      return createApiResponse({ custody: result.custody, event: result.event }, 201);
+      const data = reprojectUnderDecision(
+        g.projection,
+        { custody: result.custody, event: result.event },
+        ASSET_CUSTODY_MUTATION_RESPONSE_SOURCE,
+      );
+      return data === null ? createErrorResponse('Asset not found', 404, 'NOT_FOUND') : createApiResponse(data, 201);
     } catch (error) {
       return this.fail(error);
     }

@@ -1,3 +1,5 @@
+import type { PredicateOperator } from '@alga-psa/predicates';
+import { getFieldElementKind, getFieldType } from '@alga-psa/ui/form-fields';
 import type { VisibilityRule, VisibilityRuleOperator } from '../../../lib/service-requests/formVisibility';
 
 export const VISIBILITY_OPERATORS: VisibilityRuleOperator[] = [
@@ -8,6 +10,80 @@ export const VISIBILITY_OPERATORS: VisibilityRuleOperator[] = [
   'has-value',
   'is-empty',
 ];
+
+/**
+ * Visibility rules keep their own six-operator dialect in storage, and the evaluator in
+ * `formVisibility.ts` keeps reading it verbatim — moving published definitions to predicate
+ * clauses would rewrite every stored rule for no behaviour change. New rule kinds (phase 3's
+ * required-when, option filters) use `PredicateClause` directly; this adapter is how the
+ * builder's predicate-shaped editor reads and writes today's dialect.
+ */
+export const VISIBILITY_OPERATOR_AS_PREDICATE: Readonly<
+  Record<VisibilityRuleOperator, PredicateOperator>
+> = {
+  equals: 'equals',
+  'not-equals': 'not_equals',
+  // "is true"/"is false" are equality against a boolean once the value is typed.
+  'is-true': 'equals',
+  'is-false': 'not_equals',
+  'has-value': 'is_not_empty',
+  'is-empty': 'is_empty',
+};
+
+/**
+ * The operators a source field's type can be compared with, in the visibility dialect.
+ *
+ * `is-true` / `is-false` are asking whether a box is ticked, so they belong to a checkbox and
+ * nowhere else — the predicate adapter alone cannot tell, because it maps them onto `equals` /
+ * `not_equals`, which every type supports. An unknown type *name* keeps the whole dialect: a
+ * rule stored against a type this build does not know must still round-trip. No type at all is
+ * a `context.*` source — a requester, client or contact identifier — which is compared as text.
+ */
+const CHECKBOX_ONLY_OPERATORS: ReadonlySet<VisibilityRuleOperator> = new Set(['is-true', 'is-false']);
+
+/** What a source with no field type offers: identifiers compare and can be absent, nothing ticks. */
+const TYPELESS_SOURCE_OPERATORS: VisibilityRuleOperator[] = [
+  'equals',
+  'not-equals',
+  'has-value',
+  'is-empty',
+];
+
+export function getVisibilityOperatorsForType(type: unknown): VisibilityRuleOperator[] {
+  const definition = getFieldType(type);
+  if (!definition) {
+    return typeof type === 'string' && type.trim().length > 0
+      ? VISIBILITY_OPERATORS
+      : TYPELESS_SOURCE_OPERATORS;
+  }
+  if (definition.key === 'checkbox') {
+    // A box always holds an answer, so "has a value" and "is empty" say nothing about it.
+    return ['is-true', 'is-false', 'equals', 'not-equals'];
+  }
+  const supported = new Set<PredicateOperator>(definition.operators);
+  return VISIBILITY_OPERATORS.filter(
+    (operator) =>
+      !CHECKBOX_ONLY_OPERATORS.has(operator) &&
+      supported.has(VISIBILITY_OPERATOR_AS_PREDICATE[operator])
+  );
+}
+
+export interface VisibilityCandidateField {
+  key?: unknown;
+  type?: unknown;
+}
+
+/**
+ * The elements that can be read by a rule: answer-carrying inputs only. A display block can be
+ * shown or hidden, but it holds no value, so it is never a rule source.
+ */
+export function getVisibilitySourceFields<T extends VisibilityCandidateField>(
+  fields: readonly T[]
+): T[] {
+  return fields.filter(
+    (field) => typeof field?.key === 'string' && getFieldElementKind(field.type) === 'input'
+  );
+}
 
 export const VISIBILITY_CONTEXT_SOURCES = [
   'context.requesterUserId',

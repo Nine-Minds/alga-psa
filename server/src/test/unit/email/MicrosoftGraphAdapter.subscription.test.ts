@@ -4,14 +4,15 @@ const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
   const tokenPost = vi.fn();
   const dbUpdate = vi.fn().mockResolvedValue(1);
+  const dbPluck = vi.fn();
   const client = {
-    interceptors: { request: { use: requestUse } },
+    interceptors: { request: { use: requestUse }, response: { use: vi.fn() } },
     get: vi.fn(),
     post: vi.fn(),
     patch: vi.fn(),
     delete: vi.fn(),
   };
-  return { client, requestUse, tokenPost, dbUpdate };
+  return { client, requestUse, tokenPost, dbUpdate, dbPluck };
 });
 
 vi.mock('axios', () => ({
@@ -25,7 +26,9 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     const query: any = {
       where: vi.fn().mockReturnThis(),
+      whereIn: vi.fn().mockReturnThis(),
       update: mocks.dbUpdate,
+      pluck: mocks.dbPluck,
     };
     return vi.fn(() => query);
   }),
@@ -75,6 +78,7 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it('keeps creation and renewal expirations within the Graph 4230-minute cap', async () => {
@@ -95,6 +99,65 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     expect(creationLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
     expect(renewalLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
     expect(renewalLifetimeMs).toBe(creationLifetimeMs);
+  });
+
+  it('moves an existing subscription to the configured callback while renewing after a hostname change', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
+    vi.stubEnv('NGROK_URL', 'https://stale-tunnel.ngrok.test');
+    vi.stubEnv('PUBLIC_WEBHOOK_BASE_URL', 'https://psa.new-customer.example');
+    vi.stubEnv('APPLICATION_URL', 'http://alga-core.msp.svc.cluster.local:3000');
+
+    const providerConfig = config();
+    providerConfig.webhook_notification_url = 'https://psa.old-customer.example/api/email/webhooks/microsoft';
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await adapter.renewWebhookSubscription();
+
+    expect(mocks.client.patch).toHaveBeenCalledWith(
+      '/subscriptions/old-subscription',
+      expect.objectContaining({
+        expirationDateTime: expect.any(String),
+        notificationUrl: 'https://psa.new-customer.example/api/email/webhooks/microsoft',
+      }),
+    );
+    expect(providerConfig.webhook_notification_url)
+      .toBe('https://psa.new-customer.example/api/email/webhooks/microsoft');
+    expect(mocks.dbUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.dbUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      webhook_expires_at: expect.any(String),
+      last_subscription_renewal: expect.any(String),
+    }));
+    expect(mocks.dbUpdate.mock.calls[0][0]).not.toHaveProperty('webhook_notification_url');
+  });
+
+  it('renews expiration only when no public webhook override is configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
+    vi.stubEnv('NGROK_URL', 'https://stale-tunnel.ngrok.test');
+    vi.stubEnv('PUBLIC_WEBHOOK_BASE_URL', '');
+    vi.stubEnv('APPLICATION_URL', 'http://alga-core.msp.svc.cluster.local:3000');
+    vi.stubEnv('NEXT_PUBLIC_BASE_URL', '');
+    vi.stubEnv('NEXTAUTH_URL', '');
+
+    const providerConfig = config();
+    providerConfig.webhook_notification_url = 'https://existing-hosted.example/api/email/webhooks/microsoft';
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await adapter.renewWebhookSubscription();
+
+    expect(mocks.client.patch).toHaveBeenCalledTimes(1);
+    expect(mocks.client.patch).toHaveBeenCalledWith(
+      '/subscriptions/old-subscription',
+      { expirationDateTime: expect.any(String) },
+    );
+    expect(providerConfig.webhook_notification_url)
+      .toBe('https://existing-hosted.example/api/email/webhooks/microsoft');
+    expect(mocks.dbUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.dbUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      webhook_expires_at: expect.any(String),
+      last_subscription_renewal: expect.any(String),
+    }));
   });
 
   it('best-effort deletes the previous subscription before creating its replacement', async () => {
@@ -121,17 +184,26 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     );
   });
 
-  it('deletes only same-notification-url subscriptions that are not the DB cursor', async () => {
+  it('keeps other subscriptions when mailboxes share the same webhook URL', async () => {
+    const provider = { ...config(), mailbox: 'support@example.test' };
+    const mailboxSubscription = {
+      notificationUrl: provider.webhook_notification_url,
+      changeType: 'created',
+      resource: 'users/support%40example.test/mailFolders/inbox/messages',
+    };
+    mocks.dbPluck.mockResolvedValue(['tracked-by-another-provider']);
     mocks.client.get.mockResolvedValue({
       data: {
         value: [
-          { id: 'old-subscription', notificationUrl: config().webhook_notification_url },
-          { id: 'orphan', notificationUrl: config().webhook_notification_url },
-          { id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
+          { ...mailboxSubscription, id: 'old-subscription' },
+          { ...mailboxSubscription, id: 'orphan' },
+          { ...mailboxSubscription, id: 'tracked-by-another-provider' },
+          { ...mailboxSubscription, id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
+          { ...mailboxSubscription, id: 'other-mailbox', resource: 'users/sales%40example.test/mailFolders/inbox/messages' },
         ],
       },
     });
-    const adapter = new MicrosoftGraphAdapter(config());
+    const adapter = new MicrosoftGraphAdapter(provider);
 
     await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
     expect(mocks.client.delete).toHaveBeenCalledTimes(1);

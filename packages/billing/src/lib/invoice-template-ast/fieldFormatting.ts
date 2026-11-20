@@ -1,4 +1,4 @@
-import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
 import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
@@ -23,12 +23,10 @@ const formatCurrency = (value: number, currencyCode: string, locale?: string) =>
   try {
     const currency = currencyCode || FALLBACK_CURRENCY;
     const resolvedLocale = locale || FALLBACK_LOCALE;
-    // LEVERAGE: pattern minor-unit-currency-format — duplicated in react-renderer.formatValue; see there
-    // Amounts are minor units; the exponent comes from the currency (USD 2, JPY 0, KWD 3).
-    return new Intl.NumberFormat(resolvedLocale, {
-      style: 'currency',
-      currency,
-    }).format(fromMinorUnits(value, resolvedLocale, currency));
+    // Amounts are minor units; the shared formatter takes the exponent from the
+    // currency (USD 2, JPY 0, KWD 3) and shows the product's symbol, so a
+    // rendered invoice reads "R 12.34" like every other surface — not "ZAR 12.34".
+    return formatCurrencyFromMinorUnits(value, resolvedLocale, currency);
   } catch {
     return formatCurrencyFromMinorUnits(value, FALLBACK_LOCALE, FALLBACK_CURRENCY);
   }

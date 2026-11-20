@@ -2,14 +2,12 @@
  * Hudu asset-import helpers (F215/F216, EE-only).
  *
  * Kept out of the actions file so tests can assert the tag/status rules
- * directly. The status default mirrors the manual create form (OQ2:
- * QuickAddAsset.tsx initializes formData.status = 'active'); the tag
- * pre-check is app-level courtesy — assets.asset_tag has no unique
- * constraint (OQ2 resolution in the Phase 2 scratchpad).
+ * directly. The status default mirrors the manual create form. Serial and
+ * external identifiers remain separate from the physical tag; a new discovery
+ * delegates tag allocation to shared numbering.
  */
 
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
 
 /** F216: same default asset status as the manual create form. */
 export function huduImportAssetStatus(): string {
@@ -22,18 +20,14 @@ export interface DeriveHuduAssetTagInput {
 }
 
 /**
- * F215: primary_serial when non-blank AND no asset in the tenant already
- * uses it as asset_tag; otherwise `hudu-<hudu asset id>`.
+ * Hudu exposes a serial number and external id, not a supplied physical tag.
+ * New Hudu discoveries therefore use the shared sequence; existing mapped
+ * assets are updated without changing their printed tags.
  */
 export async function deriveHuduAssetTag(
-  knex: Knex,
-  tenant: string,
-  input: DeriveHuduAssetTagInput
+  _knex: Knex,
+  _tenant: string,
+  _input: DeriveHuduAssetTagInput
 ): Promise<string> {
-  const serial = (input.primarySerial ?? '').trim();
-  if (serial) {
-    const taken = await tenantDb(knex, tenant).table('assets').where({ asset_tag: serial }).first('asset_id');
-    if (!taken) return serial;
-  }
-  return `hudu-${input.huduAssetId}`;
+  return '';
 }

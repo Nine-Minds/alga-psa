@@ -31,13 +31,16 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
 vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
   getClientBillingProfilesForBilling: mocks.loadProfiles,
 }));
+vi.mock('../../actions/billingClientsActions', () => ({
+  getClientByIdForBilling: vi.fn(async () => ({ client_id: 'client-1', client_name: 'Northstar Dental Group' })),
+}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
 }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, clients, onSelect }: any) => (
-    <button id={id} type="button" onClick={() => onSelect(clients[0].client_id)}>
+  ClientPicker: ({ id, onSelect }: any) => (
+    <button id={id} type="button" onClick={() => onSelect('client-1')}>
       pick client
     </button>
   ),
@@ -55,9 +58,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 const ManualInvoices = (await import('./ManualInvoices')).default;
 
-const clients = [{ client_id: 'client-1', client_name: 'Northstar Dental Group' }] as any;
 const props = {
-  clients,
   services: [],
   onGenerateSuccess: vi.fn(),
 };

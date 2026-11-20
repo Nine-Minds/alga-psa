@@ -3,6 +3,7 @@ import {
   User,
   computeWorkDateFields,
   createTenantKnex,
+  prepareTicketAssigneeChange,
   resolveUserTimeZone,
   tenantDb,
   truncateToMinute,
@@ -283,13 +284,18 @@ export async function updateTeamsTicketAssignee(params: {
   actorUserId: string;
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
-  await tenantDb(knex, params.tenantId).table('tickets')
-    .where({ ticket_id: params.ticketId })
-    .update({
-      assigned_to: params.assigneeId,
-      updated_by: params.actorUserId,
-      updated_at: knex.raw('now()'),
-    });
+  await withTransaction(knex, async (trx) => {
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    const recordAssigneeChange = await prepareTicketAssigneeChange(trx, params.tenantId, params.ticketId);
+    await tenantDb(trx, params.tenantId).table('tickets')
+      .where({ ticket_id: params.ticketId })
+      .update({
+        assigned_to: params.assigneeId,
+        updated_by: params.actorUserId,
+        updated_at: trx.raw('now()'),
+      });
+    await recordAssigneeChange(params.assigneeId);
+  });
 }
 
 export async function addTeamsTicketComment(params: {

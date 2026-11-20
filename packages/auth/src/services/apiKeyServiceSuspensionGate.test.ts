@@ -46,7 +46,7 @@ describe('ApiKeyService validation gates', () => {
       usage_limit: null,
       usage_count: 0,
     };
-    mocks.userRow = { is_inactive: false };
+    mocks.userRow = { is_inactive: false, user_type: 'internal' };
   });
 
   it('T033: rejects an otherwise-valid key whose owning user is inactive', async () => {

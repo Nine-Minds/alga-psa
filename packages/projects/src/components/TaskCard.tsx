@@ -31,6 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTaskSelection } from './TaskSelectionContext';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -110,6 +111,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
   const taskTypeLabel = useTaskTypeLabel();
+  const projectSource = useProjectDataSource();
+  // A non-native source admits status changes only: no assignment, tags, move, duplicate or delete from the card.
+  const cardLocked = projectSource.kind !== 'native' || projectSource.screen.readOnly;
+  const cardDragHidden = projectSource.screen.hideKanbanDrag || projectSource.screen.readOnly;
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
@@ -291,7 +296,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <div
-      draggable
+      draggable={!cardDragHidden}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={(e) => e.preventDefault()} // Allow drop
@@ -350,22 +355,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onSelect={handleMoveClick}>
+            {!cardLocked && <DropdownMenuItem onSelect={handleMoveClick}>
               <Move className="mr-2 h-4 w-4" />
               <span>{t('projectDetail.moveTaskTitle', 'Move Task')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleDuplicateClick}>
+            </DropdownMenuItem>}
+            {!cardLocked && <DropdownMenuItem onSelect={handleDuplicateClick}>
               <Copy className="mr-2 h-4 w-4" />
               <span>{t('dialogs.duplicateTask.title', 'Duplicate Task')}</span>
-            </DropdownMenuItem>
+            </DropdownMenuItem>}
             <DropdownMenuItem onSelect={handleEditClick}>
               <Edit className="mr-2 h-4 w-4" />
               <span>{t('taskForm.editTitle', 'Edit Task')}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleDeleteClick} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            {!cardLocked && <DropdownMenuItem onSelect={handleDeleteClick} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="mr-2 h-4 w-4" />
               <span>{t('projectDetail.deleteTaskTitle', 'Delete Task')}</span>
-            </DropdownMenuItem>
+            </DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -437,7 +442,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       )}
       <div className={`flex items-center ${zoomLevel <= 30 ? 'gap-1' : 'gap-2'}`}>
-        <div onClick={(e) => e.stopPropagation()}>
+        {cardLocked ? (() => {
+          const assignee = task.assigned_to ? users.find(u => u.user_id === task.assigned_to) : null;
+          const assigneeName = assignee ? `${assignee.first_name} ${assignee.last_name}` : '';
+          return assignee ? (
+            <UserAvatar
+              userId={assignee.user_id}
+              userName={assigneeName}
+              avatarUrl={avatarUrls[assignee.user_id] ?? null}
+              size={zoomLevel <= 30 ? 'xs' : 'sm'}
+            />
+          ) : null;
+        })() : <div onClick={(e) => e.stopPropagation()}>
           <UserAndTeamPicker
             value={task.assigned_to || ''}
             onValueChange={(newAssigneeId: string) => onAssigneeChange(task.task_id, newAssigneeId)}
@@ -452,7 +468,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             initialUserAvatarUrls={avatarUrls}
             initialTeamAvatarUrls={teamAvatarUrls}
           />
-        </div>
+        </div>}
         {task.assigned_team_id && teamNames[task.assigned_team_id] && (
           <Tooltip content={teamNames[task.assigned_team_id]}>
             <span className="inline-flex items-center cursor-help">
@@ -655,7 +671,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   >
                     {t('projectDetail.hideTags', 'Hide tags')}
                   </Button>
-                  {onTaskTagsChange && task.task_id ? (
+                  {onTaskTagsChange && !cardLocked && task.task_id ? (
                     <TagManager
                       id={`task-tags-${task.task_id}`}
                       entityId={task.task_id}
@@ -680,7 +696,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )
         ) : (
           // Normal mode: always show TagManager or TagList
-          onTaskTagsChange && task.task_id ? (
+          onTaskTagsChange && !cardLocked && task.task_id ? (
             <TagManager
               id={`task-tags-${task.task_id}`}
               entityId={task.task_id}

@@ -7,13 +7,14 @@
  */
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactBentoLayout from './ContactBentoLayout';
 
 const hoisted = vi.hoisted(() => ({
   openDrawer: vi.fn(),
   closeDrawer: vi.fn(),
+  getClientById: vi.fn(),
 }));
 
 // Stable references: the layout lists these in effect dependencies.
@@ -34,6 +35,7 @@ vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => {
 });
 vi.mock('@alga-psa/clients/actions', () => ({
   updateContact: vi.fn(),
+  getClientById: hoisted.getClientById,
   getInteractionsForEntity: vi.fn().mockResolvedValue([]),
 }));
 vi.mock('@alga-psa/tags/components', () => ({ TagManager: () => null }));
@@ -58,7 +60,10 @@ const contact: any = {
 };
 
 describe('ContactBentoLayout full edit save', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hoisted.getClientById.mockResolvedValue({ client_id: 'triage-id', client_name: 'Looked Up Co' });
+  });
 
   it('fires onChangesSaved and onContactUpdated when the edit drawer saves', () => {
     const onChangesSaved = vi.fn();
@@ -66,7 +71,7 @@ describe('ContactBentoLayout full edit save', () => {
     render(
       <ContactBentoLayout
         contact={contact}
-        clients={[]}
+        clientName="Triage Co"
         quickView
         onChangesSaved={onChangesSaved}
         onContactUpdated={onContactUpdated}
@@ -83,5 +88,29 @@ describe('ContactBentoLayout full edit save', () => {
     expect(hoisted.closeDrawer).toHaveBeenCalledTimes(1);
     expect(onChangesSaved).toHaveBeenCalledTimes(1);
     expect(onContactUpdated).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the supplied client name without a lookup', () => {
+    render(<ContactBentoLayout contact={contact} clientName="Triage Co" quickView />);
+    expect(screen.getByText('Triage Co')).toBeInTheDocument();
+    expect(hoisted.getClientById).not.toHaveBeenCalled();
+  });
+
+  it('resolves the client name by id when the caller supplies none, never loading a client list', async () => {
+    render(<ContactBentoLayout contact={contact} quickView />);
+    expect(await screen.findByText('Looked Up Co')).toBeInTheDocument();
+    expect(hoisted.getClientById).toHaveBeenCalledTimes(1);
+    expect(hoisted.getClientById).toHaveBeenCalledWith('triage-id');
+  });
+
+  it('re-resolves the name when a save moves the contact to another client', async () => {
+    render(<ContactBentoLayout contact={contact} clientName="Triage Co" quickView />);
+    fireEvent.click(screen.getAllByRole('button', { name: /edit contact/i })[0]);
+    const drawerElement = hoisted.openDrawer.mock.calls[0][0] as React.ReactElement<any>;
+    hoisted.getClientById.mockResolvedValue({ client_id: 'life-id', client_name: 'Life Landscaping' });
+    drawerElement.props.onSave({ ...contact, client_id: 'life-id' });
+    await waitFor(() => expect(hoisted.getClientById).toHaveBeenCalledWith('life-id'));
+    expect(await screen.findByText('Life Landscaping')).toBeInTheDocument();
+    expect(screen.queryByText('Triage Co')).not.toBeInTheDocument();
   });
 });

@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
 import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
+import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -13,10 +15,12 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
+import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
+import BulkPortalInvitationDialog, { type BulkPortalInvitationTarget } from './BulkPortalInvitationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
@@ -37,7 +41,6 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   }));
 };
 
-// LEVERAGE: friction client-picker-option-threading — ClientPicker's options are threaded from every caller (about 51 files call getAllClients). A caller that passes a list scoped to its page quietly shrinks the picker, as alga0002338 showed. A ClientPicker that loads its own tenant list would remove this class of bug.
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
@@ -45,8 +48,17 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [error, setError] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  // 'all' | 'remote' | 'none' | a location id. Options come from the contacts on screen, so the
+  // filter never offers a site nobody here works at.
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
+  const [invitationTarget, setInvitationTarget] = useState<BulkPortalInvitationTarget | null>(null);
+  // False until the check resolves, so the invite affordances never flash in
+  // for a reader who would only meet a server refusal. Same gate the contact's
+  // own Portal tab uses.
+  const [canInvite, setCanInvite] = useState(false);
   const openContactQuickView = useContactQuickViewDrawer();
   const openContactEdit = useContactEditDrawer();
 
@@ -79,6 +91,18 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     fetchContacts();
   }, [clientId, statusFilter, t]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    getContactPortalPermissions()
+      .then((permissions) => {
+        if (!isCancelled) setCanInvite(Boolean(permissions?.canInvite));
+      })
+      .catch((err) => console.error('Error checking portal invitation permission:', err));
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Re-run the list query so a contact moved to another client drops out of
   // this list as soon as the drawer saves.
@@ -152,7 +176,96 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     );
   }, [contacts, searchTerm, indexedSearchContactIds]);
 
+  const locationFilterOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const contact of contacts) {
+      for (const location of contact.locations ?? []) {
+        byId.set(location.location_id, location.location_name?.trim() || location.address_line1?.trim() || '—');
+      }
+    }
+    return [
+      { value: 'all', label: t('clientContactsList.filter.allLocations', { defaultValue: 'All locations' }) },
+      ...[...byId.entries()]
+        .sort((left, right) => left[1].localeCompare(right[1]))
+        .map(([value, label]) => ({ value, label })),
+      { value: 'remote', label: t('contactLocations.arrangement.remote', { defaultValue: 'Remote' }) },
+      { value: 'none', label: t('clientContactsList.filter.noLocation', { defaultValue: 'No location' }) },
+    ];
+  }, [contacts, t]);
+
+  const locationFilteredContacts = useMemo(() => {
+    if (locationFilter === 'all') return filteredContacts;
+    if (locationFilter === 'remote') {
+      return filteredContacts.filter((contact) => contact.work_arrangement === 'remote');
+    }
+    if (locationFilter === 'none') {
+      return filteredContacts.filter((contact) => (contact.locations ?? []).length === 0);
+    }
+    return filteredContacts.filter((contact) =>
+      (contact.locations ?? []).some((location) => location.location_id === locationFilter));
+  }, [filteredContacts, locationFilter]);
+
+  // Select-all covers exactly what the filters left on screen, so the header
+  // box never quietly ticks a contact the user cannot see.
+  const selectedOnScreen = useMemo(
+    () => locationFilteredContacts.filter((contact) => selectedContactIds.has(contact.contact_name_id)),
+    [locationFilteredContacts, selectedContactIds],
+  );
+  const allOnScreenSelected = locationFilteredContacts.length > 0
+    && selectedOnScreen.length === locationFilteredContacts.length;
+
+  const toggleContactSelection = (contactId: string, selected: boolean) => {
+    setSelectedContactIds((previous) => {
+      const next = new Set(previous);
+      if (selected) next.add(contactId); else next.delete(contactId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnScreen = (selected: boolean) => {
+    setSelectedContactIds((previous) => {
+      const next = new Set(previous);
+      for (const contact of locationFilteredContacts) {
+        if (selected) next.add(contact.contact_name_id); else next.delete(contact.contact_name_id);
+      }
+      return next;
+    });
+  };
+
+  // The selection column exists only to feed the bulk invitation, so it is
+  // gated on the same permission as the buttons it serves.
+  const selectColumn: ColumnDefinition<IContact>[] = canInvite ? [
+    {
+      title: (
+        <Checkbox
+          id="client-contacts-select-all"
+          checked={allOnScreenSelected}
+          indeterminate={selectedOnScreen.length > 0 && !allOnScreenSelected}
+          onChange={(e) => toggleSelectAllOnScreen(e.target.checked)}
+          aria-label={t('clientContactsList.actions.selectAll', { defaultValue: 'Select all contacts' })}
+        />
+      ),
+      dataIndex: 'contact_name_id',
+      id: 'select',
+      width: '3%',
+      sortable: false,
+      render: (value, record): React.ReactNode => (
+        <Checkbox
+          id={`client-contacts-select-${record.contact_name_id}`}
+          checked={selectedContactIds.has(record.contact_name_id)}
+          onChange={(e) => toggleContactSelection(record.contact_name_id, e.target.checked)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={t('clientContactsList.actions.selectContact', {
+            defaultValue: 'Select {{name}}',
+            name: record.full_name,
+          })}
+        />
+      ),
+    },
+  ] : [];
+
   const columns: ColumnDefinition<IContact>[] = [
+    ...selectColumn,
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
@@ -199,6 +312,31 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       width: '22%',
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      title: t('clientContactsList.table.location', { defaultValue: 'Location' }),
+      // The nested name, so the table sorts the column by it rather than by the object.
+      dataIndex: ['primaryLocation', 'location_name'],
+      width: '15%',
+      render: (value, record): React.ReactNode => {
+        const cell = contactLocationCell(record);
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : '';
+        }
+        return (
+          <span className="truncate">
+            {cell.label}
+            {cell.extraCount > 0 ? (
+              <span className="text-gray-500">
+                {' '}
+                {t('contactLocations.extraCount', { defaultValue: '+{{count}}', count: cell.extraCount })}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       title: t('clientContactsList.table.phoneNumber', {
@@ -334,6 +472,12 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               }
             ]}
           />
+          <CustomSelect
+            id="contact-location-filter"
+            value={locationFilter}
+            onValueChange={setLocationFilter}
+            options={locationFilterOptions}
+          />
           {/* W7 (roast gap): a client with dozens of contacts had no search. */}
           <Input
             id="client-contacts-search"
@@ -344,18 +488,43 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             containerClassName="w-[220px]"
           />
         </div>
-        <Button
-          id="add-new-contact-btn"
-          onClick={() => setIsQuickAddContactOpen(true)}
-        >
-          {t('clientContactsList.actions.addNewContact', {
-            defaultValue: 'Add contact'
-          })}
-        </Button>
+        <div className="flex items-center gap-2">
+          {canInvite && selectedContactIds.size > 0 && (
+            <Button
+              id="invite-selected-contacts-btn"
+              variant="secondary"
+              onClick={() => setInvitationTarget({ mode: 'selected', contactIds: [...selectedContactIds] })}
+            >
+              {t('clientContactsList.actions.inviteSelected', {
+                defaultValue: 'Invite to portal ({{selected}})',
+                selected: selectedContactIds.size
+              })}
+            </Button>
+          )}
+          {canInvite && (
+            <Button
+              id="invite-all-eligible-contacts-btn"
+              variant="secondary"
+              onClick={() => setInvitationTarget({ mode: 'allEligible' })}
+            >
+              {t('clientContactsList.actions.inviteAllEligible', {
+                defaultValue: 'Invite all eligible'
+              })}
+            </Button>
+          )}
+          <Button
+            id="add-new-contact-btn"
+            onClick={() => setIsQuickAddContactOpen(true)}
+          >
+            {t('clientContactsList.actions.addNewContact', {
+              defaultValue: 'Add contact'
+            })}
+          </Button>
+        </div>
       </div>
       <DataTable
         id="client-contacts-list"
-        data={filteredContacts}
+        data={locationFilteredContacts}
         columns={columns}
         pagination={true}
         currentPage={currentPage}
@@ -371,9 +540,22 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             .then(data => setContacts(addIdToContacts(data)))
             .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
-        clients={[client]}
         selectedClientId={clientId}
       />
+      {invitationTarget && (
+        <BulkPortalInvitationDialog
+          isOpen
+          clientId={clientId}
+          target={invitationTarget}
+          statusFilter={statusFilter}
+          contacts={contacts}
+          onClose={() => setInvitationTarget(null)}
+          onSent={() => {
+            setSelectedContactIds(new Set());
+            refreshContacts();
+          }}
+        />
+      )}
     </div>
   );
 };
