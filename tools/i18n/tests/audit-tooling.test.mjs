@@ -64,6 +64,17 @@ test('pseudo-localized co-managed ticket copy resolves with the same keys as Eng
   }
 });
 
+test('Dutch co-managed purchase messages follow the formal register', () => {
+  const { report } = runAudit({
+    locale: 'nl',
+    namespaceFilter: new Set(['msp/licensing']),
+    writeReport: false,
+  });
+  const [licensing] = report.namespaces;
+  assert.deepEqual(licensing.structuralErrors, []);
+  assert.deepEqual(licensing.forbiddenViolations.filter(({ key }) => key.startsWith('coManaged.')), []);
+});
+
 test('pseudo-localized service principal messages preserve current copy and layout expansion', () => {
   const readMessages = (locale) => {
     const settings = JSON.parse(readFileSync(new URL(
