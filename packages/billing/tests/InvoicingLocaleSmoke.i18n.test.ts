@@ -59,6 +59,7 @@ describe('Invoicing locale smoke', () => {
       'periodTotal',
       'draftInvoiceAdjustments',
       'recordPayment',
+      'invoicePayments',
     ]);
   });
 
