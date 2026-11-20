@@ -651,7 +651,7 @@
     "prdRefs": [
       "FR-F3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The quote editor's focus mode works and shares one saved preference on /msp/billing?tab=quote-templates and /msp/quote-document-templates"
   },
   {
@@ -697,7 +697,7 @@
     "prdRefs": [
       "FR-F4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The document editor's saved preference is the same for every document type"
   },
   {
@@ -779,7 +779,7 @@
     "prdRefs": [
       "FR-G1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Toggling focus mode keeps the workflow draft, the selected step, the list / graph view and the properties panel width"
   }
 ]
