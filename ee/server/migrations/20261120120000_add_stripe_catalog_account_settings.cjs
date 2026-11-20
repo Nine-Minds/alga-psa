@@ -1,5 +1,6 @@
 const SETTINGS = 'stripe_offer_catalog_settings';
 const AUDIT = 'stripe_offer_catalog_setting_audit';
+const BATCH_SIZE = 1000;
 
 async function reference(knex, table) {
   const fn = await knex.raw(`SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_reference_table') AS present`);
@@ -42,18 +43,42 @@ exports.up = async function up(knex) {
     }
   }
   if (await knex.schema.hasTable('co_managed_purchase_operations') && await knex.schema.hasTable('stripe_offer_versions')) {
-    await knex.raw(`UPDATE co_managed_purchase_operations o SET stripe_account = v.stripe_account, livemode = v.livemode
-      FROM stripe_offer_versions v WHERE o.offer_version_id = v.version_id AND o.stripe_account IS NULL AND o.livemode IS NULL`);
-    // A price ID is a safe migration key only when the historical catalog assigns it to exactly
-    // one merchant and mode. Pending operations with no such evidence remain pinned-null and are
-    // explicitly reconciled on resume; never guess from today's environment or database setting.
-    await knex.raw(`WITH unique_price_scope AS (
-      SELECT price_id, MIN(stripe_account) AS stripe_account, BOOL_AND(livemode) AS livemode
-      FROM stripe_offer_versions WHERE offer_key = 'co_managed_technician_seat' AND billing_interval = 'month' GROUP BY price_id
-      HAVING COUNT(DISTINCT (stripe_account, livemode)) = 1
-    )
-    UPDATE co_managed_purchase_operations o SET stripe_account = v.stripe_account, livemode = v.livemode
-    FROM unique_price_scope v WHERE o.price_id = v.price_id AND o.stripe_account IS NULL AND o.livemode IS NULL`);
+    const tenants = await knex('co_managed_purchase_operations')
+      .whereNull('stripe_account').whereNull('livemode').distinct('tenant').pluck('tenant');
+    // Pin each batch to one tenant shard. With Knex's migration transaction disabled,
+    // each statement commits separately and a retry skips rows already pinned.
+    for (const tenant of tenants) {
+      for (;;) {
+        // A price ID is safe only when the historical catalog assigns it to exactly
+        // one merchant and mode. The catalog's unique scope/price key makes a
+        // second matching version evidence of ambiguity. An explicit version wins.
+        const result = await knex.raw(`WITH batch AS (
+          SELECT o.operation_id,
+            COALESCE(v.stripe_account, p.stripe_account) AS stripe_account,
+            COALESCE(v.livemode, p.livemode) AS livemode
+          FROM co_managed_purchase_operations o
+          LEFT JOIN stripe_offer_versions v ON o.offer_version_id = v.version_id
+          LEFT JOIN stripe_offer_versions p ON v.version_id IS NULL AND o.price_id = p.price_id
+            AND p.offer_key = 'co_managed_technician_seat' AND p.billing_interval = 'month'
+            AND NOT EXISTS (
+              SELECT 1 FROM stripe_offer_versions other
+              WHERE other.price_id = p.price_id AND other.offer_key = p.offer_key
+                AND other.billing_interval = p.billing_interval AND other.version_id <> p.version_id
+            )
+          WHERE o.tenant = ? AND o.stripe_account IS NULL AND o.livemode IS NULL
+            AND (v.version_id IS NOT NULL OR p.price_id IS NOT NULL)
+          ORDER BY o.operation_id
+          LIMIT ?
+          FOR UPDATE OF o
+        )
+        UPDATE co_managed_purchase_operations o
+        SET stripe_account = batch.stripe_account, livemode = batch.livemode
+        FROM batch
+        WHERE o.tenant = ? AND o.operation_id = batch.operation_id
+          AND o.stripe_account IS NULL AND o.livemode IS NULL`, [tenant, BATCH_SIZE, tenant]);
+        if (result.rowCount < BATCH_SIZE) break;
+      }
+    }
   }
   // Existing stripe_subscriptions rows without historical account evidence deliberately stay null.
   // Runtime reconciliation resolves them from historical Price mappings or fails closed.
