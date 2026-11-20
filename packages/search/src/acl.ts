@@ -49,11 +49,121 @@ export interface SearchAclPrincipal {
   ticketPolicySqlSupported?: boolean;
   ticketAuthorizationResolutionFailed?: boolean;
   ticketAuthorizationContext?: TicketAuthorizationContext;
+  recordVisibilitySql?: SqlFragment;
 }
 
 export interface SqlFragment {
   sql: string;
   bindings: unknown[];
+}
+
+/**
+ * Source-record checks that can be expressed as correlated predicates over the
+ * indexed candidate. These predicates are shared by ranked pages and exact
+ * counts so authorized candidates never need to be materialized in JS.
+ */
+const compiledVisibilityTypes = new Set<SearchObjectType>([
+  'project', 'project_phase', 'project_task', 'project_task_comment',
+  'document', 'workflow_task', 'status',
+]);
+
+export function canCompileSearchVisibility(type: SearchObjectType): boolean {
+  return !visibilityVerifiers.has(type) || compiledVisibilityTypes.has(type);
+}
+
+function compileRecordVisibilitySql(user: SearchAclPrincipal): SqlFragment {
+  if (!user.tenant) return { sql: 'FALSE', bindings: [] };
+  const scopedClientIds = user.clientAccess.mode === 'scoped' ? user.clientAccess.clientIds : undefined;
+  const clientAllowed = (alias: string) => scopedClientIds
+    ? `(${alias}.client_id IS NULL OR ${alias}.client_id = ANY(?::uuid[]))`
+    : 'TRUE';
+  const projectExists = (projectId: string) => `EXISTS (
+    SELECT 1 FROM projects p
+    WHERE p.tenant = ?::uuid AND p.project_id::text = ${projectId}
+      AND ${clientAllowed('p')}
+  )`;
+  const projectJoin = `EXISTS (
+    SELECT 1 FROM projects p
+    WHERE p.tenant = ?::uuid AND p.project_id = pp.project_id
+      AND ${clientAllowed('p')}
+  )`;
+  const assignedUserId = `(CASE
+    WHEN jsonb_typeof(assignee) = 'string' THEN nullif(assignee #>> '{}', '')
+    WHEN jsonb_typeof(assignee) = 'object' THEN CASE
+      WHEN jsonb_typeof(assignee->'user_id') IS NOT NULL AND jsonb_typeof(assignee->'user_id') <> 'null'
+        THEN CASE WHEN jsonb_typeof(assignee->'user_id') = 'string' THEN nullif(assignee->>'user_id', '') END
+      WHEN jsonb_typeof(assignee->'userId') IS NOT NULL AND jsonb_typeof(assignee->'userId') <> 'null'
+        THEN CASE WHEN jsonb_typeof(assignee->'userId') = 'string' THEN nullif(assignee->>'userId', '') END
+      WHEN jsonb_typeof(assignee->'id') = 'string' THEN nullif(assignee->>'id', '')
+    END
+  END)`;
+  const types: Array<{ type: SearchObjectType; sql: string; clientBinding?: boolean }> = [
+    { type: 'project', sql: projectExists('s.object_id'), clientBinding: true },
+    { type: 'project_phase', sql: `EXISTS (
+      SELECT 1 FROM project_phases pp
+      WHERE pp.tenant = ?::uuid AND pp.phase_id::text = s.object_id
+        AND ${projectJoin}
+    )`, clientBinding: true },
+    { type: 'project_task', sql: `EXISTS (
+      SELECT 1 FROM project_tasks pt
+      JOIN project_phases pp ON pp.tenant = pt.tenant AND pp.phase_id = pt.phase_id
+      WHERE pt.tenant = ?::uuid AND pt.task_id::text = s.object_id
+        AND ${projectJoin}
+    )`, clientBinding: true },
+    { type: 'project_task_comment', sql: `EXISTS (
+      SELECT 1 FROM project_task_comments ptc
+      JOIN project_tasks pt ON pt.tenant = ptc.tenant AND pt.task_id = ptc.task_id
+      JOIN project_phases pp ON pp.tenant = pt.tenant AND pp.phase_id = pt.phase_id
+      WHERE ptc.tenant = ?::uuid AND ptc.task_comment_id::text = s.object_id
+        AND ptc.deleted_at IS NULL AND ${projectJoin}
+    )`, clientBinding: true },
+    { type: 'document', sql: `EXISTS (
+      SELECT 1 FROM documents d
+      WHERE d.tenant = ?::uuid AND d.document_id::text = s.object_id
+        AND (
+          ?::boolean OR NOT EXISTS (
+            SELECT 1 FROM document_associations da
+            WHERE da.tenant = d.tenant AND da.document_id = d.document_id AND da.entity_type = 'client'
+          ) OR EXISTS (
+            SELECT 1 FROM document_associations da
+            WHERE da.tenant = d.tenant AND da.document_id = d.document_id AND da.entity_type = 'client'
+              AND da.entity_id::text = ANY(?::text[])
+          )
+        )
+    )`, clientBinding: true },
+    { type: 'workflow_task', sql: `EXISTS (
+      SELECT 1 FROM workflow_tasks wt
+      WHERE wt.tenant = ?::uuid AND wt.task_id::text = s.object_id
+        AND CASE WHEN jsonb_typeof(wt.assigned_users) = 'array' THEN (
+          jsonb_array_length(wt.assigned_users) = 0 OR NOT EXISTS (
+            SELECT 1 FROM jsonb_array_elements(wt.assigned_users) assignee
+            WHERE ${assignedUserId} IS NOT NULL
+          ) OR EXISTS (
+            SELECT 1 FROM jsonb_array_elements(wt.assigned_users) assignee
+            WHERE ${assignedUserId} = ?
+          )
+        ) ELSE TRUE END
+    )` },
+    { type: 'status', sql: `EXISTS (
+      SELECT 1 FROM statuses st
+      WHERE st.tenant = ?::uuid AND st.name = s.object_id AND st.status_type = 'ticket'
+    )` },
+  ];
+  const bindings: unknown[] = [];
+  const predicates = types.map(({ type, sql, clientBinding }) => {
+    bindings.push(type);
+    bindings.push(user.tenant);
+    if (type === 'document') {
+      bindings.push(user.clientAccess.mode === 'all', scopedClientIds ?? []);
+    } else if (type === 'workflow_task') {
+      bindings.push(user.userId);
+    } else {
+      if (['project_phase', 'project_task', 'project_task_comment'].includes(type)) bindings.push(user.tenant);
+      if (clientBinding && scopedClientIds) bindings.push(scopedClientIds);
+    }
+    return `(s.object_type <> ? OR ${sql})`;
+  });
+  return { sql: predicates.join(' AND '), bindings };
 }
 
 export interface SearchVisibilityRow {
@@ -171,6 +281,7 @@ export async function resolveSearchAclPrincipal(
     clientAccess,
     authorizationUser: user,
   };
+  principal.recordVisibilitySql = compileRecordVisibilitySql(principal);
 
   if (user.tenant && [...permissions].includes('ticket:read')) {
     let context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>;

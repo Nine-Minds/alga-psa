@@ -126,8 +126,11 @@ vi.mock('@alga-psa/search/projectSearchAccess', () => ({
 }));
 
 vi.mock('@alga-psa/search/query', () => ({
-  runSearchQuery: async ({ limit, cursor, sort }: { limit: number; cursor?: string; sort?: 'relevance' | 'recent' }) => {
-    const sorted = [...state.candidateHits].sort((left, right) => {
+  countSearchMatchesByType: async ({ allowedTypes }: { allowedTypes: string[] }) => Object.fromEntries(
+    allowedTypes.map((type) => [type, state.candidateHits.filter((candidate) => candidate.type === type).length]),
+  ),
+  runSearchQuery: async ({ limit, cursor, sort, allowedTypes }: { limit: number; cursor?: string; sort?: 'relevance' | 'recent'; allowedTypes: string[] }) => {
+    const sorted = state.candidateHits.filter((candidate) => allowedTypes.includes(candidate.type)).sort((left, right) => {
       if (sort === 'recent') {
         return right.updatedAt.getTime() - left.updatedAt.getTime() || left.id.localeCompare(right.id);
       }

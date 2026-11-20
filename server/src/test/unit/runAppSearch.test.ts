@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/search/acl', () => ({
+  canCompileSearchVisibility: () => false,
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { applyTicketReadAuthorizationSql } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { countSearchMatchesByType, encodeSearchCursor, runSearchQuery } from '@alga-psa/search/query';
+import { registerSearchVisibilityVerifier } from '@alga-psa/search/acl';
 import type { TenantScopedQuery } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -30,6 +31,10 @@ vi.mock('@alga-psa/search/acl', async (importOriginal) => {
 
 import { runAppSearch } from '@alga-psa/search/runAppSearch';
 import { decodeSearchCursor } from '@alga-psa/search/query';
+
+// Exercise the authorized batched-scan path with delayed batches while the
+// production client path remains SQL-admitted by its index ACL.
+registerSearchVisibilityVerifier('client', async (_knex, _acl, row) => state.readableIds.has(row.id));
 
 const TENANT = randomUUID();
 const USER = {

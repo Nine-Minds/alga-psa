@@ -313,6 +313,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const ticketPredicate = options.acl?.ticketPolicySqlSupported
     ? options.acl.ticketVisibilitySql
     : undefined;
+  const recordVisibility = options.acl?.recordVisibilitySql;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
   const cursorPredicateSql = sort === 'recent'
     ? `
@@ -415,6 +416,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
         WHERE s.object_type = ANY(?::text[])
           AND ${aclPredicate.sql}
           ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
+          ${recordVisibility ? `AND ${recordVisibility.sql}` : ''}
           AND (
             s.search_vector @@ q.tsq
             OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -450,6 +452,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       options.allowedTypes,
       ...aclPredicate.bindings,
       ...(ticketPredicate?.bindings ?? []),
+      ...(recordVisibility?.bindings ?? []),
       ...cursorBindings,
       limit,
       offset,
@@ -485,6 +488,7 @@ export async function countSearchMatchesByType(
   const ticketPredicate = options.acl?.ticketPolicySqlSupported
     ? options.acl.ticketVisibilitySql
     : undefined;
+  const recordVisibility = options.acl?.recordVisibilitySql;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
@@ -502,6 +506,7 @@ export async function countSearchMatchesByType(
       WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
         ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
+        ${recordVisibility ? `AND ${recordVisibility.sql}` : ''}
         AND (
           s.search_vector @@ q.tsq
           OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -530,6 +535,7 @@ export async function countSearchMatchesByType(
       options.allowedTypes,
       ...aclPredicate.bindings,
       ...(ticketPredicate?.bindings ?? []),
+      ...(recordVisibility?.bindings ?? []),
     ] as Knex.RawBinding[],
   );
 
@@ -555,6 +561,7 @@ export async function countSearchMatches(
   const ticketPredicate = options.acl?.ticketPolicySqlSupported
     ? options.acl.ticketVisibilitySql
     : undefined;
+  const recordVisibility = options.acl?.recordVisibilitySql;
   const searchIndex = scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex);
 
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
@@ -572,6 +579,7 @@ export async function countSearchMatches(
       WHERE s.object_type = ANY(?::text[])
         AND ${aclPredicate.sql}
         ${ticketPredicate ? `AND ${ticketPredicate.sql}` : ''}
+        ${recordVisibility ? `AND ${recordVisibility.sql}` : ''}
         AND (
           s.search_vector @@ q.tsq
           OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
@@ -599,6 +607,7 @@ export async function countSearchMatches(
       options.allowedTypes,
       ...aclPredicate.bindings,
       ...(ticketPredicate?.bindings ?? []),
+      ...(recordVisibility?.bindings ?? []),
     ] as Knex.RawBinding[],
   );
 

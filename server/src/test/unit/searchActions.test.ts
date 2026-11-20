@@ -46,6 +46,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('@alga-psa/search/acl', () => ({
+  canCompileSearchVisibility: () => false,
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));

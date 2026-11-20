@@ -7,6 +7,7 @@ import { registeredObjectTypes } from './index';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
+  canCompileSearchVisibility,
   type ClientAccess,
 } from './acl';
 import {
@@ -193,28 +194,27 @@ export async function runAuthorizedSearchCandidates(input: {
   const groups = emptyGroups();
   let candidateCursor: string | undefined;
   const hasCompiledTicketPolicy = acl.ticketPolicySqlSupported === true && Boolean(acl.ticketVisibilitySql);
-  const ticketTypes = hasCompiledTicketPolicy
-    ? allowedTypes.filter((type) => type === 'ticket' || type === 'ticket_comment')
-    : [];
-  const candidateTypes = hasCompiledTicketPolicy
-    ? allowedTypes.filter((type) => type !== 'ticket' && type !== 'ticket_comment')
-    : allowedTypes;
+  const directlyAuthorizedTypes = allowedTypes.filter((type) => {
+    if (type === 'ticket' || type === 'ticket_comment') return hasCompiledTicketPolicy;
+    return canCompileSearchVisibility(type);
+  });
+  const candidateTypes = allowedTypes.filter((type) => !directlyAuthorizedTypes.includes(type));
 
-  if (ticketTypes.length > 0) {
+  if (directlyAuthorizedTypes.length > 0) {
     const ticketCounts = await countSearchMatchesByType({
       knex: input.knex,
       tenant: input.tenant,
       query: input.query,
-      allowedTypes: ticketTypes,
+      allowedTypes: directlyAuthorizedTypes,
       acl,
       searchIndex: input.searchIndex,
     });
-    for (const type of ticketTypes) groups[type] = ticketCounts[type] ?? 0;
+    for (const type of directlyAuthorizedTypes) groups[type] = ticketCounts[type] ?? 0;
     directlyAuthorizedHits.push(...await runSearchQuery({
       knex: input.knex,
       tenant: input.tenant,
       query: input.query,
-      allowedTypes: ticketTypes,
+      allowedTypes: directlyAuthorizedTypes,
       limit: input.pageSize + 1,
       cursor: input.cursor,
       sort,
