@@ -1072,10 +1072,12 @@ export class ContactModel {
     }
 
     let promotedEmailRow: PreparedEmailAddressInput | null = null;
+    let primaryEmailChanged = false;
 
     if (updateData.email?.trim()) {
       const normalizedEmail = updateData.email.trim().toLowerCase();
       if (normalizedEmail !== existingContact.email?.toLowerCase()) {
+        primaryEmailChanged = true;
         const incomingAdditionalRows = updateData.additional_email_addresses ?? [];
         const normalizedExistingPrimaryEmail = normalizeEmailAddress(existingContact.email || '');
         const hasDemotedPrimaryRow = incomingAdditionalRows.some((row) => {
@@ -1087,6 +1089,10 @@ export class ContactModel {
           updateData.primary_email_custom_type !== undefined ||
           updateData.primary_email_custom_type_id !== undefined;
 
+        // The arms below promote an address the contact already has (or one the caller re-sends)
+        // and keep the old primary as an additional row. When none applies the new address
+        // replaces the primary one: overwriting a wrong address is a correction, not a swap, so
+        // the old address is dropped and the primary label only changes when the caller sent one.
         const matchingAdditional = incomingAdditionalRows.find((row) => {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
           return normalizedRowEmail === normalizedEmail;
@@ -1097,7 +1103,9 @@ export class ContactModel {
           const existingAdditionalRows = await this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
           const existingPromotedRow = existingAdditionalRows.find((row) => row.normalized_email_address === normalizedEmail);
 
-          if (existingPromotedRow && hasDemotedPrimaryRow) {
+          if (existingPromotedRow) {
+            // One of this contact's own stored addresses becomes the default: a promotion,
+            // whether or not the caller also sent the old primary back as an additional row.
             promotedEmailRow = toPreparedEmailAddressInput(existingPromotedRow);
           } else if (hasDemotedPrimaryRow && hasIncomingPrimaryType) {
             const customType = updateData.primary_email_custom_type?.trim() || null;
@@ -1111,10 +1119,6 @@ export class ContactModel {
               display_order: 0,
             };
           }
-        }
-
-        if (!promotedEmailRow) {
-          throw new Error('VALIDATION_ERROR: Changing primary email requires promote an additional email first');
         }
       }
       const emailExists = await this.checkEmailExists(normalizedEmail, tenant, trx, contactId);
@@ -1213,7 +1217,7 @@ export class ContactModel {
       updateData.primary_email_custom_type_id = primaryEmailCustomTypeId;
     }
     const shouldClearAdditionalEmailAddressesBeforePrimarySwap =
-      promotedEmailRow !== null &&
+      primaryEmailChanged &&
       updateData.additional_email_addresses !== undefined;
 
     const dbData: Record<string, unknown> = {
@@ -1235,9 +1239,10 @@ export class ContactModel {
     }
 
     if (shouldClearAdditionalEmailAddressesBeforePrimarySwap) {
-      // During a primary-email promotion, clear the existing additional rows before
-      // updating contacts.email so immediate uniqueness triggers never see both
-      // the old and new primary addresses in conflicting locations at once.
+      // Whenever the primary email changes (promotion or replacement) and the rows are being
+      // rewritten anyway, clear the stored additional rows before updating contacts.email so
+      // immediate uniqueness triggers never see both the old and new primary addresses in
+      // conflicting locations at once.
       await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)
         .where('contact_name_id', contactId)
         .delete();

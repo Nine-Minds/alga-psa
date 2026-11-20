@@ -267,6 +267,178 @@ describe('contact model email addresses integration', () => {
     });
   });
 
+  it('replaces the primary email on a bare change and drops the old address', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Typo Correction Contact',
+        email: `typo-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx);
+
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `corrected-${tenantId}@example.com`,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`corrected-${tenantId}@example.com`);
+      expect(updated.primary_email_canonical_type).toBe('work');
+      expect(updated.additional_email_addresses).toHaveLength(1);
+      expect(updated.additional_email_addresses[0].email_address).toBe(`billing-${tenantId}@example.com`);
+      expect(
+        updated.additional_email_addresses.find((row) => row.email_address === `typo-${tenantId}@example.com`)
+      ).toBeUndefined();
+    });
+  });
+
+  it('replaces the primary email when the caller sends nothing but the new address', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Bare Primary Change Contact',
+        email: `old-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'personal',
+      }, tenantId, trx);
+
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `new-${tenantId}@example.com`,
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`new-${tenantId}@example.com`);
+      // The caller stated no label, so the primary keeps the one it had.
+      expect(updated.primary_email_canonical_type).toBe('personal');
+      expect(updated.additional_email_addresses).toHaveLength(0);
+    });
+  });
+
+  it('refuses a bare primary change to an address another contact already owns', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Collision Source Contact',
+        email: `source-${tenantId}@example.com`,
+        client_id: clientId,
+      }, tenantId, trx);
+
+      await ContactModel.createContact({
+        full_name: 'Collision Owner Contact',
+        email: `taken-${tenantId}@example.com`,
+        client_id: clientId,
+      }, tenantId, trx);
+
+      await expect(ContactModel.updateContact(created.contact_name_id, {
+        email: `taken-${tenantId}@example.com`,
+      }, tenantId, trx)).rejects.toThrow('EMAIL_EXISTS');
+    });
+  });
+
+  it('still promotes and swaps when the new primary is one of the contact own additional addresses', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Bare Promotion Contact',
+        email: `primary-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx);
+
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `billing-${tenantId}@example.com`,
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`billing-${tenantId}@example.com`);
+      expect(updated.primary_email_canonical_type).toBe('billing');
+      expect(updated.additional_email_addresses).toHaveLength(1);
+      expect(updated.additional_email_addresses[0].email_address).toBe(`primary-${tenantId}@example.com`);
+      expect(updated.additional_email_addresses[0].canonical_type).toBe('work');
+    });
+  });
+
+  it('keeps the old primary as an additional address when the caller sends it back', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Keep Old Primary Contact',
+        email: `old-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx);
+
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `new-${tenantId}@example.com`,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `billing-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+          {
+            email_address: `old-${tenantId}@example.com`,
+            canonical_type: 'work',
+            display_order: 1,
+          },
+        ],
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`new-${tenantId}@example.com`);
+      expect(updated.additional_email_addresses).toHaveLength(2);
+      expect(
+        updated.additional_email_addresses.find((row) => row.email_address === `old-${tenantId}@example.com`)?.canonical_type
+      ).toBe('work');
+    });
+  });
+
   it('T014: rejects removing the primary email directly', async () => {
     const tenantId = uuidv4();
     const clientId = uuidv4();
