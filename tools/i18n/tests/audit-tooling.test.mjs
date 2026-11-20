@@ -64,6 +64,23 @@ test('pseudo-localized co-managed ticket copy resolves with the same keys as Eng
   }
 });
 
+test('expanded pseudo-locale keeps co-managed pricing errors readable and padded for layout QA', () => {
+  const readMessages = (locale) => JSON.parse(readFileSync(new URL(
+    `../../../server/public/locales/${locale}/msp/licensing.json`, import.meta.url,
+  ), 'utf8')).coManaged;
+  const english = readMessages('en');
+  const accented = readMessages('xx');
+  const expanded = readMessages('yy');
+
+  for (const key of ['offerMisconfigured', 'offerPaused', 'offerTemporarilyUnavailable']) {
+    assert.match(accented[key], /^⟦.+⟧$/u, `${key}: expected readable accented text`);
+    const message = /^〖(.+) (·+)〗$/u.exec(expanded[key]);
+    assert.ok(message, `${key}: expected accented text with layout padding`);
+    assert.equal(message[1], accented[key].slice(1, -1), `${key}: expansion preserves the wording`);
+    assert.equal(message[2].length, Math.ceil(english[key].length * 0.4), `${key}: expected 40% padding`);
+  }
+});
+
 test('Dutch co-managed purchase messages follow the formal register', () => {
   const { report } = runAudit({
     locale: 'nl',
