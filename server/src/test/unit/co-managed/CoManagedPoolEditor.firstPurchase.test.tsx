@@ -60,6 +60,7 @@ describe('pool editor: first co-managed purchase', () => {
     ['no_current_pro', 'Co-managed seats require a current Pro subscription. Check your subscription in Account Management.'],
     ['offer_paused', 'New seat purchases are paused. Contact your account manager for an update.'],
     ['misconfigured', 'The co-managed seat offer is not configured correctly. Contact support for help.'],
+    ['temporarily_unavailable', 'Pricing is temporarily unavailable. Please try again shortly.'],
   ])('shows the next step for a failed quote (%s)', async (reason, message) => {
     actions.preview.mockResolvedValue({ kind: 'blocked', reason });
     render(<CoManagedPoolEditor showTotals />);

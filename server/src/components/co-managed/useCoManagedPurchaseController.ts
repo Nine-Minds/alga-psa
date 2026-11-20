@@ -15,7 +15,7 @@ export interface CoManagedPurchaseQuote {
   offerRef?: string;
 }
 
-export type CoManagedPurchaseBlockedReason = 'customer_unverified' | 'no_current_pro' | 'offer_paused' | 'offer_changed' | 'misconfigured';
+export type CoManagedPurchaseBlockedReason = 'customer_unverified' | 'no_current_pro' | 'offer_paused' | 'offer_changed' | 'misconfigured' | 'temporarily_unavailable';
 export type CoManagedPreviewProblem = CoManagedPurchaseBlockedReason | 'unexpected';
 type CoManagedPurchaseProblem = CoManagedPurchaseBlockedReason | 'preview' | 'termsChanged' | 'offerUnavailable' | 'checkoutUnavailable' | 'expired' | 'purchase';
 
@@ -71,6 +71,11 @@ export function useCoManagedPurchaseController(options: {
       setError('preview');
       return false;
     } finally { setBusy(false); }
+  }, []);
+
+  const clearPreviewProblem = useCallback(() => {
+    setPreviewProblem(null);
+    setError(null);
   }, []);
 
   const purchase = useCallback(async (nextQuantity?: number) => {
@@ -131,5 +136,5 @@ export function useCoManagedPurchaseController(options: {
     return purchase(replayQuantity);
   }, [purchase]);
 
-  return { state, closed, quantity, setQuantity, preview, setPreview, previewProblem, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
+  return { state, closed, quantity, setQuantity, preview, setPreview, previewProblem, clearPreviewProblem, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
 }

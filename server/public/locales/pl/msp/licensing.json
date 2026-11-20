@@ -717,6 +717,7 @@
     "proSubscriptionRequired": "Stanowiska współzarządzane wymagają aktualnej subskrypcji Pro. Sprawdź subskrypcję w sekcji zarządzania kontem.",
     "offerPaused": "Zakup nowych stanowisk jest wstrzymany. Skontaktuj się z opiekunem konta, aby uzyskać informacje.",
     "offerMisconfigured": "Oferta stanowisk co-managed jest nieprawidłowo skonfigurowana. Skontaktuj się z pomocą techniczną.",
+    "offerTemporarilyUnavailable": "Wycena jest tymczasowo niedostępna. Spróbuj ponownie za chwilę.",
     "purchaseNeedsAdmin": "Administrator konta musi dodać pojemność współzarządzania.",
     "purchaseProviderUnconfigured": "Dostawca płatności nie jest skonfigurowany.",
     "purchaseUnavailable": "Zakup hostowanego współzarządzania nie jest dostępny w tym wdrożeniu.",

@@ -7,7 +7,8 @@ export type CoManagedPurchaseBlockedReason =
   | 'no_current_pro'
   | 'offer_paused'
   | 'offer_changed'
-  | 'misconfigured';
+  | 'misconfigured'
+  | 'temporarily_unavailable';
 
 /** A server-owned, browser-safe classification for expected quote failures. */
 export class CoManagedPurchaseBlockedError extends Error {
@@ -24,7 +25,9 @@ export function coManagedPurchaseBlockedReason(error: unknown): CoManagedPurchas
   if (error instanceof CoManagedProSubscriptionRequiredError) return 'no_current_pro';
   if (error instanceof OfferTermsChangedError) return 'offer_changed';
   if (error instanceof OfferUnavailableError) {
-    return error.reason === 'no_current_version' ? 'offer_paused' : 'misconfigured';
+    if (error.reason === 'no_current_version') return 'offer_paused';
+    if (['stripe_unavailable', 'catalog_unavailable', 'scope_unavailable'].includes(error.reason)) return 'temporarily_unavailable';
+    return 'misconfigured';
   }
   return null;
 }

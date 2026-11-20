@@ -715,6 +715,7 @@
     "proSubscriptionRequired": "Co-managed seats require a current Pro subscription. Check your subscription in Account Management.",
     "offerPaused": "New seat purchases are paused. Contact your account manager for an update.",
     "offerMisconfigured": "The co-managed seat offer is not configured correctly. Contact support for help.",
+    "offerTemporarilyUnavailable": "Pricing is temporarily unavailable. Please try again shortly.",
     "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
     "purchaseProviderUnconfigured": "The payment provider is not configured.",
     "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment.",

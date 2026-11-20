@@ -715,6 +715,7 @@
     "proSubscriptionRequired": "Samhanterade platser kräver en giltig Pro-prenumeration. Kontrollera din prenumeration i kontohanteringen.",
     "offerPaused": "Köp av nya platser är pausade. Kontakta din kontoansvariga för en uppdatering.",
     "offerMisconfigured": "Erbjudandet för co-managed-platser är felkonfigurerat. Kontakta supporten.",
+    "offerTemporarilyUnavailable": "Prissättningen är tillfälligt otillgänglig. Försök igen om en liten stund.",
     "purchaseNeedsAdmin": "En kontoadministratör måste lägga till samförvaltad kapacitet.",
     "purchaseProviderUnconfigured": "Betalningsleverantören är inte konfigurerad.",
     "purchaseUnavailable": "Värdbaserat samförvaltat köp är inte tillgängligt i den här driftsättningen.",

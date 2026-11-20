@@ -19,6 +19,7 @@ export function coManagedPurchaseErrorMessage(error: string | null, t: Translate
     offer_paused: { key: 'offerPaused', fallback: 'New seat purchases are paused. Contact your account manager for an update.' },
     offer_changed: { key: 'termsChanged', fallback: 'The price changed after you reviewed it. Review the updated terms before confirming.' },
     misconfigured: { key: 'offerMisconfigured', fallback: 'The co-managed seat offer is not configured correctly. Contact support for help.' },
+    temporarily_unavailable: { key: 'offerTemporarilyUnavailable', fallback: 'Pricing is temporarily unavailable. Please try again shortly.' },
   };
   if (error && blockedMessages[error]) {
     const { key, fallback } = blockedMessages[error];

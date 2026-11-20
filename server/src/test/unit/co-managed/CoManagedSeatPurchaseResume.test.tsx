@@ -90,6 +90,25 @@ describe('short capacity from the seat setup (F087)', () => {
     expect(localStorage.length).toBe(0);
   });
 
+  it('shows a blocked quote after setup returns to idle, then clears it when the user retries', async () => {
+    actions.state.mockResolvedValue(pool(4, 2));
+    actions.preview.mockResolvedValue({ kind: 'blocked', reason: 'no_current_pro' });
+    mount(2);
+    await fill('5');
+    fireEvent.click(screen.getByRole('button', { name: 'Enable seats' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Co-managed seats require a current Pro subscription. Check your subscription in Account Management.');
+
+    let resolveRetry!: (value: ReturnType<typeof pool>) => void;
+    actions.state.mockImplementationOnce(() => new Promise((resolve) => { resolveRetry = resolve; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enable seats' }));
+    await waitFor(() => expect(actions.state).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    resolveRetry(pool(4, 2));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Co-managed seats require a current Pro subscription.');
+  });
+
   it('a reload after a paid purchase completes the allocation without a second purchase', async () => {
     const operationId = '22222222-2222-4222-8222-222222222222';
     localStorage.setItem('co-managed-seat-intent:c1', JSON.stringify({

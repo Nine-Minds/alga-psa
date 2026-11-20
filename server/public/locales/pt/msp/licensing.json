@@ -715,6 +715,7 @@
     "proSubscriptionRequired": "As vagas cogerenciadas exigem uma assinatura Pro vigente. Verifique sua assinatura em Gerenciamento de contas.",
     "offerPaused": "A compra de novos lugares está pausada. Contacte o gestor da conta para obter informações.",
     "offerMisconfigured": "A oferta de lugares co-geridos não está configurada corretamente. Contacte o suporte.",
+    "offerTemporarilyUnavailable": "A consulta de preços está temporariamente indisponível. Tente novamente em breve.",
     "purchaseNeedsAdmin": "Um administrador da conta tem de adicionar capacidade cogerida.",
     "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",
     "purchaseUnavailable": "A compra de cogestão alojada não está disponível nesta implementação.",

@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { isCoManagedPurchaseFeatureEnabled, isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
 import { getStripeService } from '../stripe/StripeService';
 import { coManagedPurchaseBlockedReason } from '../stripe/coManagedPurchaseErrors';
 import '../stripe/offerCatalog/surfaceProbe';
@@ -23,14 +23,18 @@ function offerOutcome(error: unknown): CoManagedOfferOutcome | null {
 }
 
 // LEVERAGE: pattern co-managed-purchase-admission — every purchase entry point repeats "internal user + account_management:update + surface open"; a shared guard belongs below.
-async function requirePurchaser(user: { user_type: string }, tenant: string): Promise<void> {
+async function requirePurchaser(user: { user_type: string }, tenant: string, checkOfferAvailability = true): Promise<void> {
   if (user.user_type !== 'internal' || !await hasPermission(user as never, 'account_management', 'update')) throw new Error('Permission denied');
-  // Kill switch, release flag and price: a closed surface is inert, not merely hidden.
-  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) throw new Error('Co-managed purchasing is not available');
+  // Preview keeps the reason returned by current catalog terms; all purchase attempts still require a sellable offer.
+  const open = checkOfferAvailability
+    ? await isCoManagedPurchaseSurfaceOpen(tenant)
+    : await isCoManagedPurchaseFeatureEnabled(tenant);
+  if (!open) throw new Error('Co-managed purchasing is not available');
 }
 
 export const previewCoManagedSeatsAction = withAuth(async (user, { tenant }, quantity: number) => {
-  await requirePurchaser(user, tenant);
+  // The quote resolver classifies a paused or unavailable offer for an authorized purchaser.
+  await requirePurchaser(user, tenant, false);
   try {
     const quote = await getStripeService().previewCoManagedSeats(tenant, quantity);
     return { kind: 'quote', ...quote } as const;
