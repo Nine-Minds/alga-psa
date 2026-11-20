@@ -1,0 +1,1365 @@
+[
+  {
+    "id": "T001",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "Component: the surface renders focused or not strictly from its focused prop and calls onFocusedChange with the opposite value when its toggle is used"
+  },
+  {
+    "id": "T002",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "Contract: nothing in packages/ui/src/components/designer imports user-composition or reads localStorage for focus mode"
+  },
+  {
+    "id": "T003",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Component: useDesignerFocusPreference is unfocused when the user has no saved preference"
+  },
+  {
+    "id": "T004",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Component: it is focused once the user's saved preference loads as true"
+  },
+  {
+    "id": "T005",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Component: it is focused on mount from the local cache before the account value has loaded"
+  },
+  {
+    "id": "T006",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Component: an account value of false overrides a cached true"
+  },
+  {
+    "id": "T007",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "Component: toggle flips isFocused and calls setUserPreference with designer_focus_mode_<designer> and the new value"
+  },
+  {
+    "id": "T008",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "Component: setFocused(false) from focused clears focus and saves false"
+  },
+  {
+    "id": "T009",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "Component: toggling updates the local cache under the same key"
+  },
+  {
+    "id": "T010",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "Unit: each designer name maps to its own designer_focus_mode_<designer> key and no two share one"
+  },
+  {
+    "id": "T011",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "Component: focusing invoice_layout leaves a hook on quote_layout unfocused and saves nothing under its key"
+  },
+  {
+    "id": "T012",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F005"
+    ],
+    "implemented": false,
+    "description": "Component: toggle on while the account value is still loading, then let it resolve to false; the hook stays focused and true is saved"
+  },
+  {
+    "id": "T013",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "Component: when loading the account value fails, the hook uses the cached value and toggle still changes isFocused"
+  },
+  {
+    "id": "T014",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "Component: when saving fails, isFocused keeps the new value for the visit"
+  },
+  {
+    "id": "T015",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "Contract: the hook resolves from @alga-psa/user-composition/hooks/useDesignerFocusPreference and from the hooks index"
+  },
+  {
+    "id": "T016",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": false,
+    "description": "Component: an unfocused surface has the id, the host className, data-focus-mode=\"off\" and no fixed class"
+  },
+  {
+    "id": "T017",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Component: a focused surface has fixed, inset-0 and z-40, the focusedClassName, and data-focus-mode=\"on\""
+  },
+  {
+    "id": "T018",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Contract: the focused surface class list uses z-40 and a theme token background, with no hard-coded palette class"
+  },
+  {
+    "id": "T019",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": false,
+    "description": "Component: a child with local state (a typed input value and a mount counter) keeps its value and mounts once across two changes of focused"
+  },
+  {
+    "id": "T020",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": false,
+    "description": "Component: the surface DOM node is the same object before and after focused changes"
+  },
+  {
+    "id": "T021",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "Component: useDesignerFocusState inside a surface reports the surface's state and its toggle changes it"
+  },
+  {
+    "id": "T022",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "Component: useDesignerFocusState outside a surface reports not focused and its toggle is a no-op"
+  },
+  {
+    "id": "T023",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": false,
+    "description": "Component: the toggle has the given id, aria-pressed=\"false\" and the enter label when unfocused"
+  },
+  {
+    "id": "T024",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": false,
+    "description": "Component: clicking the toggle focuses the surface; the button then has aria-pressed=\"true\" and the exit label"
+  },
+  {
+    "id": "T025",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": false,
+    "description": "Component: the toggle renders nothing outside a surface"
+  },
+  {
+    "id": "T026",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": false,
+    "description": "Contract: the designer index exports DesignerFocusSurface, DesignerFocusToggle and useDesignerFocusState"
+  },
+  {
+    "id": "T027",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "Unit: the catalog has designer.toggleFocusMode bound to mod+. at page scope with allowInEditable"
+  },
+  {
+    "id": "T028",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "Unit: no other catalog action at page or global scope is bound to mod+."
+  },
+  {
+    "id": "T029",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Component: pressing mod+. with a surface mounted inside the shortcut provider toggles it on, and again toggles it off"
+  },
+  {
+    "id": "T030",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Component: after the surface unmounts, mod+. does nothing and does not throw"
+  },
+  {
+    "id": "T031",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F017"
+    ],
+    "implemented": false,
+    "description": "Component: mod+. toggles the surface while a text input inside it has focus"
+  },
+  {
+    "id": "T032",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Component: mod+. toggles the surface while the editor shortcut scope is active (the invoice designer case)"
+  },
+  {
+    "id": "T033",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false,
+    "description": "Contract: the keyboard-shortcuts i18n contract test passes with the new action in every production locale"
+  },
+  {
+    "id": "T034",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false,
+    "description": "Contract: the xx and yy pseudo-locales carry the new shortcut keys"
+  },
+  {
+    "id": "T035",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": false,
+    "description": "Contract: designer.focusMode.enter and designer.focusMode.exit exist in common.json for every production locale and both pseudo-locales"
+  },
+  {
+    "id": "T036",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": false,
+    "description": "Contract: the Spanish strings use the usted register and pass the glossary checks"
+  },
+  {
+    "id": "T037",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F020"
+    ],
+    "implemented": false,
+    "description": "Component: the toggle tooltip includes the displayed binding for designer.toggleFocusMode"
+  },
+  {
+    "id": "T038",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F021"
+    ],
+    "implemented": false,
+    "description": "Component: with no saved preference, the form builder page renders its surface with data-focus-mode=\"off\" and no fixed class"
+  },
+  {
+    "id": "T039",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "Component: with designer_focus_mode_service_request_form saved as true, the page renders the surface focused"
+  },
+  {
+    "id": "T040",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "Component: the toolbar has #service-request-form-builder-focus-toggle and clicking it focuses the surface and saves designer_focus_mode_service_request_form as true"
+  },
+  {
+    "id": "T041",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "Component: clicking the toggle again returns to the normal layout and saves false"
+  },
+  {
+    "id": "T042",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": false,
+    "description": "Component: at a measured surface width of 1000 px with no manual choice, the palette is collapsed"
+  },
+  {
+    "id": "T043",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F025"
+    ],
+    "implemented": false,
+    "description": "Component: when the measured width goes from 1000 px to 1400 px with no manual choice, the palette expands"
+  },
+  {
+    "id": "T044",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F026"
+    ],
+    "implemented": false,
+    "description": "Component: after the user expands the palette at 1000 px, it stays expanded at 1000 px"
+  },
+  {
+    "id": "T045",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F026"
+    ],
+    "implemented": false,
+    "description": "Component: after the user collapses the palette at 1400 px, entering focus mode leaves it collapsed"
+  },
+  {
+    "id": "T046",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F027"
+    ],
+    "implemented": false,
+    "description": "Component: with the preference saved as true, the loading state and the load-failed alert render without a focused surface"
+  },
+  {
+    "id": "T047",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "Component: back link, undo, redo, save status, Edit / Try it, preview width, settings and Publish are present in both modes"
+  },
+  {
+    "id": "T048",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "Component: add a field, select it, toggle focus mode; the field, the selection and an available undo step are all still there"
+  },
+  {
+    "id": "T049",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "Component: the existing ServiceRequestFormBuilder test suite passes unchanged in the normal layout"
+  },
+  {
+    "id": "T050",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F021",
+      "F024"
+    ],
+    "implemented": false,
+    "description": "Browser: at 1280 x 800 with the app sidebar open and no saved preference, the builder shows the sidebar and header, the palette is collapsed and the canvas is wide enough to edit a field"
+  },
+  {
+    "id": "T051",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F022",
+      "F025"
+    ],
+    "implemented": false,
+    "description": "Browser: entering focus mode covers the sidebar and header, expands the palette, and the page does not scroll"
+  },
+  {
+    "id": "T052",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the template gallery dialog, a field-type dropdown, a save toast and the AI chat panel all appear above the builder"
+  },
+  {
+    "id": "T053",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "Browser: after reloading in focus mode the builder opens focused; the invoice designer still opens in the normal layout"
+  },
+  {
+    "id": "T054",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "Browser: the same user in a second browser profile finds the builder focused; a different user in the first browser, after their own preference loads as false, does not"
+  },
+  {
+    "id": "T055",
+    "commitGroup": "form-builder",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "Browser: the back link from focus mode lands on the definition page with the sidebar and header visible"
+  },
+  {
+    "id": "T056",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F030"
+    ],
+    "implemented": false,
+    "description": "Component: the billing DesignerShell rendered with no surface has the viewport calc height and min-h-[480px] on its root"
+  },
+  {
+    "id": "T057",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F030"
+    ],
+    "implemented": false,
+    "description": "Component: inside an unfocused surface the shell root has the same classes as with no surface"
+  },
+  {
+    "id": "T058",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "Component: inside a focused surface the shell root has flex-1 and min-h-0 and neither the viewport calc height nor min-h-[480px]"
+  },
+  {
+    "id": "T059",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F030"
+    ],
+    "implemented": false,
+    "description": "Component: the existing DesignerShell panelScroll, gridLayoutControls, flexItemControls and fieldDisplayControls suites pass unchanged"
+  },
+  {
+    "id": "T060",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F032"
+    ],
+    "implemented": false,
+    "description": "Contract: themeContract.paletteBaseline passes with the billing DesignerShell count unchanged"
+  },
+  {
+    "id": "T061",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F033",
+      "F034"
+    ],
+    "implemented": false,
+    "description": "Component: the invoice editor renders #invoice-template-editor-focus-toggle before the Close button, and clicking it focuses the surface and saves designer_focus_mode_invoice_layout as true"
+  },
+  {
+    "id": "T062",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "Component: with designer_focus_mode_invoice_layout saved as true the invoice editor opens focused; with only designer_focus_mode_quote_layout saved as true it does not"
+  },
+  {
+    "id": "T063",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode the name input, save status, Close and Save are still rendered"
+  },
+  {
+    "id": "T064",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F038"
+    ],
+    "implemented": false,
+    "description": "Component: the Code editor height effect runs again after a focus toggle"
+  },
+  {
+    "id": "T065",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Component: type a new template name, toggle focus mode; the name input keeps the typed value and the active tab is unchanged"
+  },
+  {
+    "id": "T066",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "Component: the InvoiceTemplateEditor authoritativeFlow suite passes with the surface in place"
+  },
+  {
+    "id": "T067",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F035",
+      "F036"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode on the Design tab the invoice shell reaches the bottom of the window, the three panels scroll inside themselves and the page does not scroll"
+  },
+  {
+    "id": "T068",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F036"
+    ],
+    "implemented": false,
+    "description": "Browser: leaving focus mode restores the previous shell height inside the billing page with its tabs and sidebar"
+  },
+  {
+    "id": "T069",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F037"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the Transforms, Preview and Code views are fully reachable by scrolling inside the surface"
+  },
+  {
+    "id": "T070",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Browser: move a block, toggle focus mode twice; the block stays moved and undo still reverts it"
+  },
+  {
+    "id": "T071",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode a designer dropdown, the save toast, a confirmation dialog and the AI chat panel appear above the invoice designer"
+  },
+  {
+    "id": "T072",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "Component: the quote editor renders no Layout Details heading, no description paragraph and no Created / Last Updated footer"
+  },
+  {
+    "id": "T073",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "Component: the header row and the Visual / Code tabs are inside one card"
+  },
+  {
+    "id": "T074",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F041"
+    ],
+    "implemented": false,
+    "description": "Component: clicking #quote-template-editor-back calls onBack when given"
+  },
+  {
+    "id": "T075",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F041"
+    ],
+    "implemented": false,
+    "description": "Component: without onBack, clicking #quote-template-editor-back navigates to /msp/billing?tab=quote-templates"
+  },
+  {
+    "id": "T076",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Component: an existing layout shows 'Edit Layout: <name>' and the title follows the name as it is typed"
+  },
+  {
+    "id": "T077",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Component: a new layout shows 'New Quote Layout'"
+  },
+  {
+    "id": "T078",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F043"
+    ],
+    "implemented": false,
+    "description": "Component: #quote-template-name-input is in the header, shows the loaded name, accepts typing, and is disabled while loading"
+  },
+  {
+    "id": "T079",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F044"
+    ],
+    "implemented": false,
+    "description": "Component: #quote-template-version-input shows the loaded version and clamps 0, negative and non-numeric input to 1"
+  },
+  {
+    "id": "T080",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "Component: the saved status shows the formatted updated_at for a saved layout and 'Not saved yet' for a new one"
+  },
+  {
+    "id": "T081",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "Component: after a successful save the saved status shows the new time"
+  },
+  {
+    "id": "T082",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "Component: the saved status has aria-live=\"polite\" and the created date in its title"
+  },
+  {
+    "id": "T083",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F046"
+    ],
+    "implemented": false,
+    "description": "Component: #quote-template-editor-close runs the same back behaviour as the back navigation"
+  },
+  {
+    "id": "T084",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F046"
+    ],
+    "implemented": false,
+    "description": "Component: #quote-template-editor-save is disabled while saving and while loading, and saves the edited name and version"
+  },
+  {
+    "id": "T085",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F047"
+    ],
+    "implemented": false,
+    "description": "Component: a failed load renders the error alert inside the card header"
+  },
+  {
+    "id": "T086",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "Contract: every header string the quote editor uses resolves in each production locale of msp/quotes and in xx / yy"
+  },
+  {
+    "id": "T087",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "Contract: msp/quotes no longer carries the description, layoutDetails and footer keys, and no source file references them"
+  },
+  {
+    "id": "T088",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F051"
+    ],
+    "implemented": false,
+    "description": "Component: the quote editor existingQuote and tenantBranding suites pass against the reorganised editor"
+  },
+  {
+    "id": "T089",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F051"
+    ],
+    "implemented": false,
+    "description": "Component: opening with a standardCode pre-fills the name from that standard layout in the header input"
+  },
+  {
+    "id": "T090",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": false,
+    "description": "Browser: at 1440 x 900 on /msp/billing?tab=quote-templates&templateId=<id> the Design view shows header, tabs and the full designer with no page scrollbar"
+  },
+  {
+    "id": "T091",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": false,
+    "description": "Browser: the same holds on /msp/quote-document-templates?templateId=<id>"
+  },
+  {
+    "id": "T092",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F048"
+    ],
+    "implemented": false,
+    "description": "Browser: at 1024 px wide the header row wraps cleanly; every control is visible and usable"
+  },
+  {
+    "id": "T093",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F040",
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Browser: the quote editor header matches the invoice editor header side by side: same row height, spacing, title size and button styles"
+  },
+  {
+    "id": "T094",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Browser: a 60-character layout name truncates in the title and stays fully editable in the name input"
+  },
+  {
+    "id": "T095",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "Component: the document editor renders no Layout Details heading, no description paragraph and no Created / Last Updated footer"
+  },
+  {
+    "id": "T096",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "Component: the header row and the Visual / Code tabs are inside one card"
+  },
+  {
+    "id": "T097",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F053"
+    ],
+    "implemented": false,
+    "description": "Component: the back navigation names the document type and clicking it calls onCancel"
+  },
+  {
+    "id": "T098",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "Component: an existing layout shows 'Edit Layout: <name>' and the title follows the name as it is typed"
+  },
+  {
+    "id": "T099",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "Component: a new layout shows 'New <Type> Layout' for its document type"
+  },
+  {
+    "id": "T100",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F055"
+    ],
+    "implemented": false,
+    "description": "Component: #document-template-name-input is in the header, shows the loaded name and its type-specific placeholder, and accepts typing"
+  },
+  {
+    "id": "T101",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F056"
+    ],
+    "implemented": false,
+    "description": "Component: #document-template-version-input is in the header and clamps 0, negative and non-numeric input to 1"
+  },
+  {
+    "id": "T102",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F057"
+    ],
+    "implemented": false,
+    "description": "Component: a work-tag layout renders #document-template-label-settings in the header"
+  },
+  {
+    "id": "T103",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F057"
+    ],
+    "implemented": false,
+    "description": "Component: a non-label document type renders no Label settings button and no label controls"
+  },
+  {
+    "id": "T104",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "Component: clicking Label settings shows #document-template-label-class-select and a checkbox per hideable field with the hint text"
+  },
+  {
+    "id": "T105",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "Component: choosing a label class and unticking a field leave the popover open"
+  },
+  {
+    "id": "T106",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F059"
+    ],
+    "implemented": false,
+    "description": "Component: untick a field, close the popover, reopen it; the field is still unticked"
+  },
+  {
+    "id": "T107",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F059"
+    ],
+    "implemented": false,
+    "description": "Component: change the label class and untick a field, then save; the save call carries the new class and hidden field as it did before the reorganisation"
+  },
+  {
+    "id": "T108",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F060"
+    ],
+    "implemented": false,
+    "description": "Component: the saved status shows the formatted updated_at for a saved layout, 'Not saved yet' for a new one, and the created date in its title"
+  },
+  {
+    "id": "T109",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F061"
+    ],
+    "implemented": false,
+    "description": "Component: #document-template-editor-close calls onCancel"
+  },
+  {
+    "id": "T110",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F061"
+    ],
+    "implemented": false,
+    "description": "Component: #document-template-editor-save is disabled while saving and saves the edited name and version"
+  },
+  {
+    "id": "T111",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F062"
+    ],
+    "implemented": false,
+    "description": "Component: a failed save renders the error alert inside the card header"
+  },
+  {
+    "id": "T112",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F064"
+    ],
+    "implemented": false,
+    "description": "Contract: every header string the document editor uses resolves in each production locale of msp/invoicing and in xx / yy"
+  },
+  {
+    "id": "T113",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F064"
+    ],
+    "implemented": false,
+    "description": "Contract: msp/invoicing no longer carries the removed description, details heading and footer keys, and no source file references them"
+  },
+  {
+    "id": "T114",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F065"
+    ],
+    "implemented": false,
+    "description": "Component: the DocumentTemplateEditor existingDocument suite passes against the reorganised editor"
+  },
+  {
+    "id": "T115",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F063"
+    ],
+    "implemented": false,
+    "description": "Browser: at 1440 x 900 on /msp/document-templates/<type> the Design view shows header, tabs and the full designer with no page scrollbar"
+  },
+  {
+    "id": "T116",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F063"
+    ],
+    "implemented": false,
+    "description": "Browser: at 1024 px wide the header row wraps cleanly for a label layout, with Label settings visible and usable"
+  },
+  {
+    "id": "T117",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F052",
+      "F054"
+    ],
+    "implemented": false,
+    "description": "Browser: the document, quote and invoice editor headers match side by side: same row height, spacing, title size and button styles"
+  },
+  {
+    "id": "T118",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "Browser: the Label settings popover opens below its button, the label class dropdown opens above the popover, and clicking outside closes it"
+  },
+  {
+    "id": "T119",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F065"
+    ],
+    "implemented": false,
+    "description": "Browser: a layout of each document type opens, is renamed, saved and reopened with the new name"
+  },
+  {
+    "id": "T120",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F066"
+    ],
+    "implemented": false,
+    "description": "Component: the quote editor renders #quote-template-editor-focus-toggle in the header row before Close and clicking it saves designer_focus_mode_quote_layout as true"
+  },
+  {
+    "id": "T121",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F067"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode the quote editor still renders the name input, version input, saved status, Close and Save"
+  },
+  {
+    "id": "T122",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F067"
+    ],
+    "implemented": false,
+    "description": "Component: a load or save error alert is rendered in the quote editor in focus mode"
+  },
+  {
+    "id": "T123",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F076"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode, type a new quote layout name and version and save; the save call carries both"
+  },
+  {
+    "id": "T124",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F076"
+    ],
+    "implemented": false,
+    "description": "Component: edit the quote template name, enter and leave focus mode; the name field shows the edited value"
+  },
+  {
+    "id": "T125",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F066"
+    ],
+    "implemented": false,
+    "description": "Component: the quote editor existingQuote and tenantBranding suites pass with the surface in place"
+  },
+  {
+    "id": "T126",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F071"
+    ],
+    "implemented": false,
+    "description": "Component: the document editor renders #document-template-editor-focus-toggle in the header row before Close and clicking it saves designer_focus_mode_document_layout as true"
+  },
+  {
+    "id": "T127",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F072"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode the document editor still renders the name input, version input, saved status, Close and Save, and Label settings for a work-tag layout"
+  },
+  {
+    "id": "T128",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F072"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode the Label settings popover opens and its controls change the layout's label class and hidden fields"
+  },
+  {
+    "id": "T129",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F075"
+    ],
+    "implemented": false,
+    "description": "Component: the preference saved while editing one document type opens the editor focused for a different type"
+  },
+  {
+    "id": "T130",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F076"
+    ],
+    "implemented": false,
+    "description": "Component: edit the document layout name, enter and leave focus mode; the name field shows the edited value"
+  },
+  {
+    "id": "T131",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F068",
+      "F073"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode on the Design tab the quote and the document shells each reach the bottom of the window with no page scroll"
+  },
+  {
+    "id": "T132",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F069",
+      "F074"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the Transforms, Preview and Code views of both editors are fully reachable by scrolling inside the surface"
+  },
+  {
+    "id": "T133",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F070"
+    ],
+    "implemented": false,
+    "description": "Browser: focus mode entered at /msp/billing?tab=quote-templates is restored at /msp/quote-document-templates for the same user"
+  },
+  {
+    "id": "T134",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F066",
+      "F071"
+    ],
+    "implemented": false,
+    "description": "Browser: leaving each editor from focus mode with its back control returns to the layout list with the sidebar and header visible"
+  },
+  {
+    "id": "T135",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F067",
+      "F068"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode a quote layout is renamed, re-versioned, edited on the canvas, previewed and saved without leaving focus mode"
+  },
+  {
+    "id": "T136",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F072",
+      "F073"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode a label layout is renamed, its label class and fields changed in Label settings, edited on the canvas, previewed and saved without leaving focus mode"
+  },
+  {
+    "id": "T137",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F072"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the Label settings popover and its dropdown appear above the designer"
+  },
+  {
+    "id": "T138",
+    "commitGroup": "quote-document-editors",
+    "featureIds": [
+      "F071"
+    ],
+    "implemented": false,
+    "description": "Browser: the document editor in focus mode covers the inventory sidebar menu, and leaving focus mode shows it again"
+  },
+  {
+    "id": "T139",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F077",
+      "F078"
+    ],
+    "implemented": false,
+    "description": "Component: in designer mode the header has #workflow-designer-focus-toggle and clicking it focuses the surface and saves designer_focus_mode_workflow as true"
+  },
+  {
+    "id": "T140",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F079"
+    ],
+    "implemented": false,
+    "description": "Component: in control panel mode with the preference saved as true, there is no toggle and no focused surface"
+  },
+  {
+    "id": "T141",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F081"
+    ],
+    "implemented": false,
+    "description": "Component: in focus mode the graph container has no fixed 650 px height class and keeps a 650 px minimum"
+  },
+  {
+    "id": "T142",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F084"
+    ],
+    "implemented": false,
+    "description": "Component: select a step, toggle focus mode; the same step is selected and the properties panel shows it"
+  },
+  {
+    "id": "T143",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F080"
+    ],
+    "implemented": false,
+    "description": "Browser: after entering focus mode the palette sits at the left edge of the canvas and the properties panel at the right edge, both below the header"
+  },
+  {
+    "id": "T144",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F080"
+    ],
+    "implemented": false,
+    "description": "Browser: after leaving focus mode both floating panels return to their positions inside the normal layout"
+  },
+  {
+    "id": "T145",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F081",
+      "F082"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the graph view fills the window height and the properties panel can grow taller than in the normal layout"
+  },
+  {
+    "id": "T146",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F083"
+    ],
+    "implemented": false,
+    "description": "Browser: the payload schema, trigger schema and published contract modals open above a focused designer"
+  },
+  {
+    "id": "T147",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F077"
+    ],
+    "implemented": false,
+    "description": "Browser: dragging a palette item onto the canvas works in focus mode"
+  },
+  {
+    "id": "T148",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F084"
+    ],
+    "implemented": false,
+    "description": "Browser: an unsaved step edit survives entering and leaving focus mode, and Save still saves it"
+  },
+  {
+    "id": "T149",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F077"
+    ],
+    "implemented": false,
+    "description": "Browser: in focus mode the AI chat panel and the workflow quick-ask open above the designer"
+  },
+  {
+    "id": "T150",
+    "commitGroup": "workflow-designer",
+    "featureIds": [
+      "F079"
+    ],
+    "implemented": false,
+    "description": "Browser: the workflow list at /msp/workflow-editor shows the sidebar and header even with the preference saved as true"
+  }
+]

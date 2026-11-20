@@ -1,0 +1,785 @@
+[
+  {
+    "id": "F001",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A1"
+    ],
+    "implemented": false,
+    "description": "DesignerFocusSurface is controlled: it takes focused and onFocusedChange and holds no storage of its own"
+  },
+  {
+    "id": "F002",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J1"
+    ],
+    "implemented": false,
+    "description": "useDesignerFocusPreference(designer) in packages/user-composition/src/hooks returns { isFocused, setFocused, toggle }, built on useUserPreference<boolean> with key designer_focus_mode_<designer> and default false"
+  },
+  {
+    "id": "F003",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J2"
+    ],
+    "implemented": false,
+    "description": "The five designers (service_request_form, invoice_layout, quote_layout, document_layout, workflow) are a typed union; each has its own preference key and changing one never changes another"
+  },
+  {
+    "id": "F004",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J3"
+    ],
+    "implemented": false,
+    "description": "Toggling saves the new value to the signed-in user's preferences and to the local cache under the same key, as useUserPreference does for view modes"
+  },
+  {
+    "id": "F005",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J4"
+    ],
+    "implemented": false,
+    "description": "A toggle made before the account value has loaded is kept and saved; the late-arriving value does not overwrite it"
+  },
+  {
+    "id": "F006",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J5"
+    ],
+    "implemented": false,
+    "description": "If the account value cannot be loaded or saved, the cached or default value is used and the toggle keeps working for the visit"
+  },
+  {
+    "id": "F007",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-J6"
+    ],
+    "implemented": false,
+    "description": "The hook is importable as @alga-psa/user-composition/hooks/useDesignerFocusPreference and is also listed in the hooks index"
+  },
+  {
+    "id": "F008",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A3"
+    ],
+    "implemented": false,
+    "description": "DesignerFocusSurface renders one element carrying idPrefix as its id, the host className, and data-focus-mode=\"off\" when unfocused"
+  },
+  {
+    "id": "F009",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A3",
+      "NFR-1",
+      "NFR-3"
+    ],
+    "implemented": false,
+    "description": "When focused the same element carries fixed inset-0 z-40, the page background token and a flex column, plus the host's focusedClassName, and data-focus-mode=\"on\""
+  },
+  {
+    "id": "F010",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A3"
+    ],
+    "implemented": false,
+    "description": "Changing focused changes classes on the same element; children are not remounted and keep their state"
+  },
+  {
+    "id": "F011",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A4"
+    ],
+    "implemented": false,
+    "description": "The surface provides a context; useDesignerFocusState() returns { isFocused, toggle } inside a surface and { isFocused: false, toggle: no-op } outside one"
+  },
+  {
+    "id": "F012",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A5",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "DesignerFocusToggle renders an icon button with the given id, Maximize2 when unfocused and Minimize2 when focused, aria-pressed reflecting the state, and calls toggle on click"
+  },
+  {
+    "id": "F013",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A5"
+    ],
+    "implemented": false,
+    "description": "DesignerFocusToggle renders nothing when there is no surface above it"
+  },
+  {
+    "id": "F014",
+    "commitGroup": "focus-primitive",
+    "prdRefs": [
+      "FR-A7"
+    ],
+    "implemented": false,
+    "description": "The surface, toggle and state hook are exported from @alga-psa/ui/components/designer"
+  },
+  {
+    "id": "F015",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-B1"
+    ],
+    "implemented": false,
+    "description": "Shortcut catalog gains designer.toggleFocusMode in the editor group: mod+., page scope, allowInEditable"
+  },
+  {
+    "id": "F016",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-A6"
+    ],
+    "implemented": false,
+    "description": "DesignerFocusSurface registers designer.toggleFocusMode while mounted; the shortcut toggles that surface and is unregistered on unmount"
+  },
+  {
+    "id": "F017",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-B1"
+    ],
+    "implemented": false,
+    "description": "The shortcut fires while focus is in an input, textarea or contenteditable inside the designer"
+  },
+  {
+    "id": "F018",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-B2",
+      "FR-B3"
+    ],
+    "implemented": false,
+    "description": "msp/keyboard-shortcuts has actions.designer.toggleFocusMode label and description in en, de, es, fr, it, nl, pl, pt, sv and the xx / yy pseudo-locales, so the help dialog lists it under Editor"
+  },
+  {
+    "id": "F019",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-B3",
+      "NFR-4"
+    ],
+    "implemented": false,
+    "description": "common namespace has designer.focusMode.enter and designer.focusMode.exit in every production locale and both pseudo-locales; the toggle uses them for its tooltip and accessible name"
+  },
+  {
+    "id": "F020",
+    "commitGroup": "shortcut-i18n",
+    "prdRefs": [
+      "FR-A5"
+    ],
+    "implemented": false,
+    "description": "The toggle tooltip shows the shortcut through the shortcut display helper, so the platform modifier and a customised binding render correctly"
+  },
+  {
+    "id": "F021",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C1"
+    ],
+    "implemented": false,
+    "description": "ServiceRequestFormBuilderPage no longer wraps the builder in a fixed full-window layer; the builder fills the height of the MSP content area with the sidebar and header visible"
+  },
+  {
+    "id": "F022",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C2"
+    ],
+    "implemented": false,
+    "description": "The builder is wrapped in DesignerFocusSurface driven by the service_request_form preference read in the page component; the surface keeps the id service-request-form-builder-surface"
+  },
+  {
+    "id": "F023",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C2",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The builder toolbar has the focus toggle with id service-request-form-builder-focus-toggle, placed before Publish"
+  },
+  {
+    "id": "F024",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C3"
+    ],
+    "implemented": false,
+    "description": "With no manual palette choice in this visit, the palette is collapsed while the surface is narrower than 1100 px"
+  },
+  {
+    "id": "F025",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C3"
+    ],
+    "implemented": false,
+    "description": "With no manual palette choice in this visit, the palette expands when the surface reaches 1100 px or wider, including on entering focus mode"
+  },
+  {
+    "id": "F026",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C3"
+    ],
+    "implemented": false,
+    "description": "After the user collapses or expands the palette by hand, width changes and focus toggles no longer change it for the rest of the visit"
+  },
+  {
+    "id": "F027",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C4"
+    ],
+    "implemented": false,
+    "description": "The loading text and the load-failed alert render in the normal layout regardless of the saved preference"
+  },
+  {
+    "id": "F028",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C5"
+    ],
+    "implemented": false,
+    "description": "Back link, save status, notice banner, draft restore banner, Try it mode and Publish are inside the surface and work in both modes"
+  },
+  {
+    "id": "F029",
+    "commitGroup": "form-builder",
+    "prdRefs": [
+      "FR-C5"
+    ],
+    "implemented": false,
+    "description": "Toggling focus mode keeps the form document, undo / redo history, selection, inspector width and left tab"
+  },
+  {
+    "id": "F030",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-D1",
+      "FR-D2"
+    ],
+    "implemented": false,
+    "description": "Billing DesignerShell reads useDesignerFocusState(); unfocused, or outside any surface, its root keeps h-[calc(100vh-24.75rem)] min-h-[480px]"
+  },
+  {
+    "id": "F031",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-D1"
+    ],
+    "implemented": false,
+    "description": "Focused, the billing DesignerShell root fills its parent (flex-1 min-h-0) with no viewport-based height and no minimum height"
+  },
+  {
+    "id": "F032",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "NFR-3"
+    ],
+    "implemented": false,
+    "description": "The billing DesignerShell edit adds no hard-coded palette classes; themeContract.paletteBaseline stays at its pinned count"
+  },
+  {
+    "id": "F033",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E1"
+    ],
+    "implemented": false,
+    "description": "InvoiceTemplateEditor is wrapped in DesignerFocusSurface, driven by the invoice_layout preference"
+  },
+  {
+    "id": "F034",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E1",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The invoice editor header action group has the focus toggle with id invoice-template-editor-focus-toggle, placed before Close"
+  },
+  {
+    "id": "F035",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the invoice editor card fills the surface without border, radius or shadow, and the header row stays at the top"
+  },
+  {
+    "id": "F036",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the card content, the Visual / Code tabs, the designer wrapper and the Design / Transforms / Preview tabs in DesignerVisualWorkspace pass the remaining height down so the Design shell fills the window"
+  },
+  {
+    "id": "F037",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E3"
+    ],
+    "implemented": false,
+    "description": "In focus mode the Transforms, Preview and Code views scroll inside the surface; the page behind does not scroll"
+  },
+  {
+    "id": "F038",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E3"
+    ],
+    "implemented": false,
+    "description": "The Code editor's computed height is recalculated when focus mode is toggled"
+  },
+  {
+    "id": "F039",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-E2"
+    ],
+    "implemented": false,
+    "description": "Toggling focus mode keeps the invoice designer workspace, selection, undo history, template name edits and the active tabs"
+  },
+  {
+    "id": "F040",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H1"
+    ],
+    "implemented": false,
+    "description": "QuoteDocumentTemplateEditor renders as one Card with a compact header row and the Visual / Code tabs in its content; the page title block, description paragraph, Layout Details card and footer are removed"
+  },
+  {
+    "id": "F041",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2",
+      "FR-H3",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The header row starts with back navigation labelled Back to Quote Layouts, keeping id quote-template-editor-back and using the editor's existing back behaviour (onBack, else the quote layouts tab)"
+  },
+  {
+    "id": "F042",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2"
+    ],
+    "implemented": false,
+    "description": "The title is a compact heading reading 'Edit Layout: <name>' for an existing layout and 'New Quote Layout' for a new one, and truncates instead of wrapping the row"
+  },
+  {
+    "id": "F043",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2",
+      "FR-H4",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The Template Name input sits inline in the header with id quote-template-name-input, takes the spare width, and is disabled while loading"
+  },
+  {
+    "id": "F044",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2",
+      "FR-H4",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The Version input sits inline in the header as a narrow number input with id quote-template-version-input, clamped to integers of at least 1, disabled while loading"
+  },
+  {
+    "id": "F045",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H5"
+    ],
+    "implemented": false,
+    "description": "The saved status shows 'Saved <time>' from updated_at or 'Not saved yet', has aria-live polite, and carries the created date as its tooltip"
+  },
+  {
+    "id": "F046",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2",
+      "FR-H3",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "Close (id quote-template-editor-close) and Save Layout (id quote-template-editor-save) sit at the right of the row; Close uses the back behaviour; Save is disabled while saving or loading"
+  },
+  {
+    "id": "F047",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H6"
+    ],
+    "implemented": false,
+    "description": "A load or save error alert renders inside the card header, under the row"
+  },
+  {
+    "id": "F048",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H2"
+    ],
+    "implemented": false,
+    "description": "On a narrow window the header row wraps onto further lines; nothing overflows or is clipped"
+  },
+  {
+    "id": "F049",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H7"
+    ],
+    "implemented": false,
+    "description": "In the normal layout the quote editor's Design view fits the window with no page scroll on /msp/billing?tab=quote-templates and on /msp/quote-document-templates"
+  },
+  {
+    "id": "F050",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "NFR-4"
+    ],
+    "implemented": false,
+    "description": "msp/quotes has the new header strings (back to quote layouts, title with name, saved at, not saved yet, close) in every production locale and both pseudo-locales; strings used only by the removed description, details card and footer are deleted"
+  },
+  {
+    "id": "F051",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H8"
+    ],
+    "implemented": false,
+    "description": "Loading an existing layout, creating one from a standard code, saving, and the sample / existing-quote preview behave as before the reorganisation"
+  },
+  {
+    "id": "F052",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I1"
+    ],
+    "implemented": false,
+    "description": "DocumentTemplateEditor renders as one Card with a compact header row and the Visual / Code tabs in its content; the page title block, description paragraph, Layout Details card and footer are removed"
+  },
+  {
+    "id": "F053",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2",
+      "FR-I3",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The header row starts with back navigation labelled 'Back to <Type> Layouts' for the current document type, keeping id document-template-editor-back and calling onCancel"
+  },
+  {
+    "id": "F054",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2"
+    ],
+    "implemented": false,
+    "description": "The title is a compact heading reading 'Edit Layout: <name>' for an existing layout and 'New <Type> Layout' for a new one, and truncates instead of wrapping the row"
+  },
+  {
+    "id": "F055",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2",
+      "FR-I4"
+    ],
+    "implemented": false,
+    "description": "The Template Name input sits inline in the header, keeps id document-template-name-input and its type-specific placeholder, and takes the spare width"
+  },
+  {
+    "id": "F056",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2",
+      "FR-I4"
+    ],
+    "implemented": false,
+    "description": "The Version input sits inline in the header as a narrow number input, keeps id document-template-version-input and its clamp to integers of at least 1"
+  },
+  {
+    "id": "F057",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2",
+      "FR-I5",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "For work-tag layouts the header has a Label settings button with id document-template-label-settings; other document types do not render it"
+  },
+  {
+    "id": "F058",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I5"
+    ],
+    "implemented": false,
+    "description": "Label settings opens a popover holding the label class select, the field checkboxes and their hint, with their existing ids; the popover stays open while the select and checkboxes are used"
+  },
+  {
+    "id": "F059",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I5"
+    ],
+    "implemented": false,
+    "description": "Label class and hidden fields keep their state while the popover is closed and are saved with the layout exactly as before"
+  },
+  {
+    "id": "F060",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I6"
+    ],
+    "implemented": false,
+    "description": "The saved status shows 'Saved <time>' from updated_at or 'Not saved yet', has aria-live polite, and carries the created date as its tooltip"
+  },
+  {
+    "id": "F061",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I2",
+      "FR-I3",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "Close (id document-template-editor-close) and Save Layout (id document-template-editor-save) sit at the right of the row; Close calls onCancel; Save is disabled while saving"
+  },
+  {
+    "id": "F062",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I6"
+    ],
+    "implemented": false,
+    "description": "A load or save error alert renders inside the card header, under the row"
+  },
+  {
+    "id": "F063",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I6"
+    ],
+    "implemented": false,
+    "description": "In the normal layout the document editor's Design view fits the window with no page scroll, and the header row wraps rather than overflows on a narrow window"
+  },
+  {
+    "id": "F064",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "NFR-4"
+    ],
+    "implemented": false,
+    "description": "msp/invoicing has the new documentTemplates.editor header strings (back to type layouts, title with name, saved at, not saved yet, close, label settings) in every production locale and both pseudo-locales; strings used only by the removed description, details heading and footer are deleted"
+  },
+  {
+    "id": "F065",
+    "commitGroup": "document-editor-header",
+    "prdRefs": [
+      "FR-I7"
+    ],
+    "implemented": false,
+    "description": "Loading, saving and the sample / existing-document preview behave as before the reorganisation for every document type"
+  },
+  {
+    "id": "F066",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F1",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "QuoteDocumentTemplateEditor is wrapped in DesignerFocusSurface, driven by the quote_layout preference, and has the toggle with id quote-template-editor-focus-toggle in the header row before Close"
+  },
+  {
+    "id": "F067",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the quote editor keeps its whole header row; name, version, saved status, Close and Save stay visible and editable, and the card loses its border, radius and shadow"
+  },
+  {
+    "id": "F068",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the quote editor's card content, tab sets and designer wrapper pass the remaining height down so the Design shell fills the window"
+  },
+  {
+    "id": "F069",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the quote editor's Transforms, Preview and Code views scroll inside the surface"
+  },
+  {
+    "id": "F070",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F3"
+    ],
+    "implemented": false,
+    "description": "The quote editor's focus mode works and shares one saved preference on /msp/billing?tab=quote-templates and /msp/quote-document-templates"
+  },
+  {
+    "id": "F071",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F1",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "DocumentTemplateEditor is wrapped in DesignerFocusSurface, driven by the document_layout preference, and has the toggle with id document-template-editor-focus-toggle in the header row before Close"
+  },
+  {
+    "id": "F072",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the document editor keeps its whole header row; name, version, Label settings, saved status, Close and Save stay visible and usable, and the card loses its border, radius and shadow"
+  },
+  {
+    "id": "F073",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the document editor's card content, tab sets and designer wrapper pass the remaining height down so the Design shell fills the window"
+  },
+  {
+    "id": "F074",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "In focus mode the document editor's Transforms, Preview and Code views scroll inside the surface"
+  },
+  {
+    "id": "F075",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F4"
+    ],
+    "implemented": false,
+    "description": "The document editor's saved preference is the same for every document type"
+  },
+  {
+    "id": "F076",
+    "commitGroup": "quote-document-editors",
+    "prdRefs": [
+      "FR-F2"
+    ],
+    "implemented": false,
+    "description": "Toggling focus mode in the quote and document editors keeps the designer workspace, name and version edits and the active tabs"
+  },
+  {
+    "id": "F077",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G1"
+    ],
+    "implemented": false,
+    "description": "WorkflowDesigner's root is wrapped in DesignerFocusSurface, driven by the workflow preference, when it renders in designer mode"
+  },
+  {
+    "id": "F078",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G1",
+      "NFR-2"
+    ],
+    "implemented": false,
+    "description": "The designer-mode header action group has the focus toggle with id workflow-designer-focus-toggle"
+  },
+  {
+    "id": "F079",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G1"
+    ],
+    "implemented": false,
+    "description": "The workflow list and control panel modes show no toggle and never render focused, whatever the saved preference"
+  },
+  {
+    "id": "F080",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G2"
+    ],
+    "implemented": false,
+    "description": "The floating palette and properties panels are positioned correctly after entering and after leaving focus mode"
+  },
+  {
+    "id": "F081",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G3"
+    ],
+    "implemented": false,
+    "description": "In focus mode the graph view fills the available height instead of the fixed 650 px, with 650 px as its minimum"
+  },
+  {
+    "id": "F082",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G3"
+    ],
+    "implemented": false,
+    "description": "In focus mode the properties panel's maximum height uses the space freed by the hidden chrome"
+  },
+  {
+    "id": "F083",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "NFR-1"
+    ],
+    "implemented": false,
+    "description": "The payload schema, trigger schema and published contract modals render above a focused workflow designer"
+  },
+  {
+    "id": "F084",
+    "commitGroup": "workflow-designer",
+    "prdRefs": [
+      "FR-G1"
+    ],
+    "implemented": false,
+    "description": "Toggling focus mode keeps the workflow draft, the selected step, the list / graph view and the properties panel width"
+  }
+]
