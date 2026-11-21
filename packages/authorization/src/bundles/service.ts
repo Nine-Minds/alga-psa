@@ -908,8 +908,6 @@ export async function resolveBundleNarrowingRulesForEvaluation(
   input: AuthorizationEvaluationInput,
   options: {
     lock?: boolean;
-    /** Memberships already resolved for this same principal and transaction. */
-    principalMemberships?: { roleIds: string[]; teamIds: string[] };
   } = {}
 ): Promise<BundleNarrowingRule[]> {
   if (options.lock && !knex.isTransaction) throw new Error('Retaining authorization bundle locks requires a transaction');
@@ -921,8 +919,8 @@ export async function resolveBundleNarrowingRulesForEvaluation(
   }
 
   const [roleIds, teamIds] = await Promise.all([
-    options.principalMemberships?.roleIds ?? resolveRoleIdsForUser(knex, tenant, userId, options.lock),
-    options.principalMemberships?.teamIds ?? resolveTeamIdsForUser(knex, tenant, userId, options.lock),
+    resolveRoleIdsForUser(knex, tenant, userId, options.lock),
+    resolveTeamIdsForUser(knex, tenant, userId, options.lock),
   ]);
 
   const targetClauses: Array<{ target_type: AuthorizationBundleTargetType; ids: string[] }> = [

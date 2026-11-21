@@ -35,53 +35,13 @@ function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.Quer
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
 }
 
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
 async function resolveAuthorizationSubjectForUser(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
   apiKeyId?: string,
 ): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, tenant, 'user_roles')
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
   let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, tenant, 'team_members')
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
   try {
     managedRows = await tenantScopedTable(trx, tenant, 'users')
       .where({ reports_to: user.user_id })
@@ -94,8 +54,11 @@ async function resolveAuthorizationSubjectForUser(
     tenant,
     userId: user.user_id,
     userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
+    // Bundle target memberships are resolved from current database rows by
+    // resolveBundleNarrowingRulesForEvaluation. Never copy a potentially stale
+    // role/team snapshot from the request principal into this authorization context.
+    roleIds: [],
+    teamIds: [],
     managedUserIds: managedRows.map((row) => row.user_id),
     clientId: user.clientId ?? null,
     portfolioClientIds: [],
@@ -171,12 +134,9 @@ export async function createTicketAuthorizationContext(
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) => {
         try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input, {
-            principalMemberships: {
-              roleIds: authorizationSubject.roleIds ?? [],
-              teamIds: authorizationSubject.teamIds ?? [],
-            },
-          });
+          // Bundle targets follow current database membership. `user.roles` may
+          // have been loaded before the principal's role assignment changed.
+          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
         } catch {
           return [];
         }
