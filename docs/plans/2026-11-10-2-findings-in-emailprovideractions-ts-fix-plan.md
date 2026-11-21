@@ -241,10 +241,11 @@ requirement for this repair now includes them. The shared outbound-target
 resolver returns a vetted address after checking every DNS answer. OAuth HTTPS
 requests use a pinned `https.Agent`, disable proxy routing, and reject redirects;
 ImapFlow receives the pinned lookup callback for the initial socket and any TLS
-upgrade. OAuth endpoints are HTTPS/443 only, while IMAP is limited to ports 143
-and 993. This removes the validate-then-resolve gap described in the historical
-scope note below. The existing explicit IMAP private-target allowlist remains
-scoped to mail-server addresses only.
+upgrade. OAuth endpoints are HTTPS/443 only. IMAP ports must be valid integers
+from 1 through 65535, so operator-configured custom ports remain usable through
+the same protected connection path. This removes the validate-then-resolve gap
+described in the historical scope note below. The existing explicit IMAP
+private-target allowlist remains scoped to mail-server addresses only.
 
 **Not doing in this card:**
 
