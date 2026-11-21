@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { toast } from 'react-hot-toast';
 import KBArticleEditor from './KBArticleEditor';
 import type { IKBArticleWithDocument } from '../../actions/kbArticleActions';
 
@@ -32,7 +33,8 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+vi.mock('@alga-psa/ui/lib/errorHandling', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/lib/errorHandling')>()),
   handleError: vi.fn(),
 }));
 
@@ -73,6 +75,8 @@ const mockArticle: IKBArticleWithDocument = vi.hoisted(() => ({
 vi.mock('../../actions/kbArticleActions', () => ({
   getArticle: vi.fn().mockResolvedValue(mockArticle),
   updateArticle: vi.fn().mockResolvedValue(mockArticle),
+  publishArticle: vi.fn().mockResolvedValue(mockArticle),
+  deleteArticle: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('@alga-psa/tags', () => ({
@@ -223,5 +227,23 @@ describe('KBArticleEditor', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '' })).toBeInTheDocument();
     });
+  });
+
+  // A refused write comes back as a value, not a throw. A co-managed seat technician may read a client
+  // article but not change it: the editor must say so instead of announcing a status change that did not happen.
+  it('reports a refused status change as an error, not a success', async () => {
+    const { updateArticle } = await import('../../actions/kbArticleActions');
+    vi.mocked(updateArticle).mockResolvedValueOnce({ permissionError: 'Permission denied' } as any);
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.error).mockClear();
+
+    render(<KBArticleEditor articleId="article-1" userId="user-1" />);
+    const submit = await screen.findByText('Submit for Review');
+    fireEvent.click(submit);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to change article status');
+    });
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

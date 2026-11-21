@@ -65,12 +65,19 @@ describe('billing PDFGenerationService print settings', () => {
 
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -90,22 +97,30 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'Legal',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '18mm',
+        right: '18mm',
+        bottom: '18mm',
+        left: '18mm',
       },
     });
+    expect(context.close).toHaveBeenCalledOnce();
   });
 
   it('generates a PDF successfully for a template with explicit paper preset and margin settings', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -133,22 +148,29 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '12mm',
+        right: '12mm',
+        bottom: '12mm',
+        left: '12mm',
       },
     });
   });
 
   it('preserves legacy templates without explicit print metadata by inferring fallback PDF options', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -174,10 +196,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'Letter',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '10.58mm',
+        right: '10.58mm',
+        bottom: '10.58mm',
+        left: '10.58mm',
       },
     });
   });

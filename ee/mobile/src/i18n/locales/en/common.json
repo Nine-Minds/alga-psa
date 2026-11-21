@@ -38,5 +38,10 @@
   "recordUnavailable": {
     "title": "Not found, or you don't have access",
     "back": "Back"
+  },
+  "entityTags": {
+    "tag": "Tag {{tag}}",
+    "more_one": "{{count}} more tag: {{names}}",
+    "more_other": "{{count}} more tags: {{names}}"
   }
 }

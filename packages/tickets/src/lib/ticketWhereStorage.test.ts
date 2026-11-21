@@ -22,7 +22,7 @@ describe('where in stored views (sanitize / validate)', () => {
     const out = sanitizeStoredTicketView({ filters: { where, requester_vip: true, tags: ['x'] } });
     expect(out?.filters?.where).toEqual(where);
     expect((out?.filters as Record<string, unknown>).requester_vip).toBeUndefined();
-    expect(out?.schemaVersion).toBe(2);
+    expect(out?.schemaVersion).toBe(3);
   });
 
   it('sanitizeStoredTicketView drops malformed clauses and nested groups', () => {
@@ -34,6 +34,24 @@ describe('where in stored views (sanitize / validate)', () => {
 
   it('applies the alias-free path as a contract: unknown path is dropped, not guessed', () => {
     expect(sanitizeStoredTicketView({ filters: { where: { join: 'and', clauses: [{ path: 'requester.tags', operator: 'in', value: ['a'] }] } } })?.filters?.where).toBeUndefined();
+  });
+
+  // Saving a view must keep a location clause: there is no "live location ids" universe to validate
+  // against, and "cannot validate" never means "drop".
+  it('keeps the location paths through sanitize and capture validation', () => {
+    const withLocations: PredicateGroup = {
+      join: 'and',
+      clauses: [
+        { path: 'location_id', operator: 'in', value: [LIVE] },
+        { path: 'contact.locations', operator: 'not_in', value: [DEAD] },
+      ],
+    };
+    expect(sanitizeStoredTicketView({ filters: { where: withLocations } })?.filters?.where).toEqual(withLocations);
+    const out = validateCapturedFilters(
+      { where: withLocations },
+      { whereTagIds: { 'contact.tags': new Set([LIVE]), 'client.tags': new Set([LIVE]) } },
+    );
+    expect(out.where).toEqual(withLocations);
   });
 
   it('validateCapturedFilters drops deleted tag ids, and clauses left empty', () => {
@@ -58,7 +76,7 @@ describe('where in stored views (sanitize / validate)', () => {
 
   it('capture stamps the current version and skips an empty where; the write schema accepts it', () => {
     const captured = captureTicketViewSettings({ filters: { where, tags: [] } });
-    expect(captured.schemaVersion).toBe(2);
+    expect(captured.schemaVersion).toBe(3);
     expect(parseTicketViewSettings(captured).filters?.where).toEqual(where);
     expect(captureTicketViewSettings({ filters: { where: { join: 'and', clauses: [] } } }).filters).toEqual({});
   });

@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Caricamento anteprima modello...",
     "errorPrefix": "Errore:",
-    "empty": "Seleziona una fattura e un modello per visualizzarne l'anteprima."
+    "empty": "Seleziona una fattura e un modello per visualizzarne l'anteprima.",
+    "frameTitle": "Anteprima della fattura"
   },
   "templateDesigner": {
     "propertyEditor": {

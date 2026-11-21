@@ -7,6 +7,8 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { requireTenantSettingsUpdate } from './tenantSettingsAuthorization';
+import { sanitizePortalBranding } from '../../lib/sanitizePortalBranding';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
 export type PortalSidebarStyle = 'default' | 'primary' | 'secondary' | 'custom';
@@ -59,22 +61,11 @@ const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
 /**
- * Which image each square mark is re-cut from is bookkeeping for the settings
- * screens, not branding — and it names a document, so it stays out of a payload
- * the portal and the sign-in page also read.
- */
-const withoutMarkProvenance = (branding: TenantBranding): TenantBranding => {
-  const rest = { ...branding } as TenantBranding & Record<string, unknown>;
-  delete rest.logoMarkSource;
-  delete rest.logoDarkMarkSource;
-  return rest;
-};
-
-/**
  * Update tenant's branding settings
  */
 export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, branding: TenantBranding) => {
-  // Check if user has admin permissions
+  await requireTenantSettingsUpdate(user, tenant);
+  // Preserve the existing internal-user restriction in addition to settings:update.
   if (user.user_type !== 'internal') {
     throw new Error('Only internal users can update tenant branding');
   }
@@ -180,11 +171,12 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
     return null;
   }
 
-  return scopeBrandingToEdition({
-    ...withoutMarkProvenance(tenantSettings.settings.branding),
+  const branding = sanitizePortalBranding({
+    ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  }, isEnterprise);
+  });
+  return scopeBrandingToEdition(branding, isEnterprise);
 });
 
 /**
@@ -200,9 +192,10 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
     return null;
   }
 
-  return scopeBrandingToEdition({
-    ...withoutMarkProvenance(tenantSettings.settings.branding),
+  const branding = sanitizePortalBranding({
+    ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  }, isEnterprise);
+  });
+  return scopeBrandingToEdition(branding, isEnterprise);
 }

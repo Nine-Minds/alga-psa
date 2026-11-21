@@ -44,6 +44,7 @@ const apiKeyUser = {
   last_name: 'Key',
   email: 'apikey@example.test',
   is_inactive: false,
+  roles: [],
 } as unknown as IUserWithRoles;
 
 beforeEach(() => {

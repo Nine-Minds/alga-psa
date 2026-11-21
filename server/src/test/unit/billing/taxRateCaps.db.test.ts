@@ -1,5 +1,7 @@
+import { generateInvoiceForCycle } from '../../../../test-utils/billingTestHelpers';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import knex, { type Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 
 const context = vi.hoisted(() => ({ tenant: '', db: undefined as Knex.Transaction | undefined, denied: '' , productDenied: false, user: { user_id: 'tax-fixture' } as any }));
@@ -40,16 +42,14 @@ let foreignTenant: string;
 let foreignRate: string;
 let clientId: string;
 const rateData = (extra = {}) => ({ region_code: 'CAP', start_date: '2026-01-01', tax_percentage: 10, ...extra } as any);
+// T018 reads the dev-seed tenant (internal user, hourly service, ticket
+// statuses). The DB lane runs files serially against one shared database and
+// earlier files may recreate it without seeds, so this file recreates the
+// seeded database itself rather than inheriting whatever the previous file left.
 beforeAll(async () => {
-  const database = process.env.DB_NAME_SERVER || 'test_database';
-  if (!database.includes('test')) throw new Error('Tax cap tests require an explicitly named test database');
-  db = knex({ client: 'pg', connection: {
-    host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5432),
-    user: process.env.DB_USER_SERVER || 'app_user', password: process.env.DB_PASSWORD_SERVER,
-    database,
-  }, pool: { min: 0, max: 2 } });
-  await db.raw('select 1');
-});
+  wireLocalTestDbEnv();
+  db = await createTestDbConnection({ runSeeds: true });
+}, 300_000);
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
   context.db = await db.transaction(); context.tenant = randomUUID(); context.denied = ''; context.productDenied = false; context.user = { user_id: 'tax-fixture' };
@@ -308,10 +308,10 @@ describe('T018: recurring draft preview and persisted tax cap', () => {
       }, { materializeServicePeriods: false });
       const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
       await syncRecurringServicePeriodsForContractLine(context.db!, { tenant: context.tenant, contractLineId: ids.lineId, sourceRunPrefix: 'tax-cap-invoice-test' });
-      const { previewInvoice, generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+      const { previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
       const preview = await previewInvoice(ids.cycleId);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
-      const generated: any = await generateInvoice(ids.cycleId);
+      const generated: any = await generateInvoiceForCycle(ids.cycleId);
       expect(generated?.invoice_id, JSON.stringify(generated)).toBeTruthy();
       const persisted = await context.db!('invoices').where({ tenant: context.tenant, invoice_id: generated.invoice_id }).first();
       expect(persisted).toMatchObject({ status: 'draft', currency_code: 'GBP' });

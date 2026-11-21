@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Chargement de l'aperçu du modèle...",
     "errorPrefix": "Erreur:",
-    "empty": "Veuillez sélectionner une facture et un modèle à prévisualiser."
+    "empty": "Veuillez sélectionner une facture et un modèle à prévisualiser.",
+    "frameTitle": "Aperçu de la facture"
   },
   "templateDesigner": {
     "propertyEditor": {

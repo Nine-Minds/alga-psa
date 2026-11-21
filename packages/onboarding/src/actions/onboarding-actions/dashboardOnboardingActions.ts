@@ -1,9 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { withAuth, type AuthContext } from '@alga-psa/auth';
-import type { IUserWithRoles } from '@alga-psa/types';
-import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
+import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
+import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import type { OnboardingStepId } from '../onboarding-progress';
 import type { OnboardingActionResult } from './onboardingActions';
 import {
@@ -24,14 +25,14 @@ async function getDismissedStepIds(): Promise<OnboardingStepId[]> {
   return getDismissedStepIdsFromTenantSettings(tenantSettings?.settings);
 }
 
-async function saveDismissedStepIds(nextDismissedStepIds: OnboardingStepId[]): Promise<void> {
+async function saveDismissedStepIds(tenant: string, nextDismissedStepIds: OnboardingStepId[]): Promise<void> {
   const tenantSettings = await getTenantSettings();
   const mergedSettings = setDismissedStepIdsInTenantSettings(
     tenantSettings?.settings,
     nextDismissedStepIds
   );
 
-  await updateTenantSettings({
+  await mergeTenantSettingsJson(tenant, {
     [DASHBOARD_ONBOARDING_SETTINGS_KEY]: mergedSettings[DASHBOARD_ONBOARDING_SETTINGS_KEY],
   });
   revalidatePath('/msp/dashboard');
@@ -42,14 +43,15 @@ function dashboardOnboardingActionErrorMessage(_error: unknown, fallback: string
 }
 
 export const dismissDashboardOnboardingStep = withAuth(async (
-  _user: IUserWithRoles,
-  _context: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   stepId: OnboardingStepId
 ): Promise<DashboardOnboardingDismissalResult> => {
   try {
     if (!isOnboardingStepId(stepId)) {
       return { success: false, error: 'Invalid onboarding step id.' };
     }
+    if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) return { success: false, error: 'Permission denied.' };
 
     const dismissedStepIds = await getDismissedStepIds();
 
@@ -58,7 +60,7 @@ export const dismissDashboardOnboardingStep = withAuth(async (
     }
 
     const nextDismissedStepIds = [...dismissedStepIds, stepId];
-    await saveDismissedStepIds(nextDismissedStepIds);
+    await saveDismissedStepIds(tenant, nextDismissedStepIds);
 
     return { success: true, data: { dismissedStepIds: nextDismissedStepIds } };
   } catch (error) {
@@ -68,14 +70,15 @@ export const dismissDashboardOnboardingStep = withAuth(async (
 });
 
 export const restoreDashboardOnboardingStep = withAuth(async (
-  _user: IUserWithRoles,
-  _context: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   stepId: OnboardingStepId
 ): Promise<DashboardOnboardingDismissalResult> => {
   try {
     if (!isOnboardingStepId(stepId)) {
       return { success: false, error: 'Invalid onboarding step id.' };
     }
+    if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) return { success: false, error: 'Permission denied.' };
 
     const dismissedStepIds = await getDismissedStepIds();
     const nextDismissedStepIds = dismissedStepIds.filter((id) => id !== stepId);
@@ -84,7 +87,7 @@ export const restoreDashboardOnboardingStep = withAuth(async (
       return { success: true, data: { dismissedStepIds } };
     }
 
-    await saveDismissedStepIds(nextDismissedStepIds);
+    await saveDismissedStepIds(tenant, nextDismissedStepIds);
 
     return { success: true, data: { dismissedStepIds: nextDismissedStepIds } };
   } catch (error) {

@@ -1,4 +1,4 @@
-import { AUTOMATIC_DISCOUNT_MAPPING_ID } from '@alga-psa/types';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE, isSharedMappingTarget } from '@alga-psa/types';
 
 /** File-based QuickBooks adapters whose exports can create unmapped entities as new. */
 export const QUICKBOOKS_FILE_ADAPTERS: readonly string[] = ['quickbooks_desktop', 'quickbooks_csv'];
@@ -127,6 +127,9 @@ export interface QuickBooksMappingProblem {
 }
 
 const MESSAGE_KEY_PREFIX = 'errors.accountingExport.quickbooksMapping';
+/** The entity type a decision is stored under in tenant_external_entity_mappings. */
+const storedEntityTypeOf = (type: UnmappedEntityType): string =>
+  type === 'discount' ? DISCOUNT_MAPPING_ENTITY_TYPE : type;
 const problem = (
   key: string,
   message: string,
@@ -189,10 +192,10 @@ export function validateQuickBooksMappingDecisions(
       }
       createdNames.add(nameKey);
     }
-    // CSV mappings are one Alga entity per QuickBooks name within an entity type
-    // (idx_unique_external_mapping), and so are Desktop customers. A Desktop
-    // item name lives in metadata, and several services may share one item.
-    const sharesItemNames = adapterType === 'quickbooks_desktop' && decision.algaEntityType !== 'client';
+    // Whether several Alga entities may share one QuickBooks name is decided
+    // only by the shared mapping-target policy (isSharedMappingTarget); targets
+    // it does not share stay one Alga entity per name (idx_unique_external_mapping).
+    const sharesItemNames = isSharedMappingTarget(adapterType, storedEntityTypeOf(decision.algaEntityType));
     const mappedKey = `${decision.algaEntityType}:${name}`;
     if (!sharesItemNames && mappedNames.has(mappedKey)) {
       return decision.algaEntityType === 'client'
@@ -228,11 +231,11 @@ export function findQuickBooksNameConflict(
   decisions: QuickBooksMappingDecision[],
   existing: ExistingQuickBooksMappingRow[],
   storedEntityType: (type: UnmappedEntityType) => string,
-  adapterType?: string
+  adapterType: string
 ): QuickBooksMappingProblem | null {
   for (const decision of decisions) {
-    // Desktop item names are metadata, not the mapped value, so only customers can clash.
-    if (adapterType === 'quickbooks_desktop' && decision.algaEntityType !== 'client') continue;
+    // Targets the shared mapping-target policy allows several entities to share cannot clash.
+    if (isSharedMappingTarget(adapterType, storedEntityType(decision.algaEntityType))) continue;
     const name = decision.externalName.trim();
     const owner = existing.find(
       (row) =>

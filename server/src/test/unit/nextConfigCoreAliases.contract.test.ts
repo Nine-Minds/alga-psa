@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +30,33 @@ function coreSubpathExports(): Array<{ name: string; typesPath: string }> {
 }
 
 describe('@alga-psa/core Turbopack alias contract', () => {
+  it('resolves core exports through the configured Webpack resolver without built packages', async () => {
+    vi.stubEnv('USE_PREBUILT', 'false');
+    vi.resetModules();
+    const { default: nextConfig } = await import('../../../next.config.mjs');
+    const { webpack } = createRequire(import.meta.url)('next/dist/compiled/webpack/webpack');
+    const configured = nextConfig.webpack({ module: { rules: [] }, output: {} }, { isServer: true, dev: true });
+    const compiler = webpack({
+      mode: 'none',
+      target: 'node',
+      resolve: { ...configured.resolve, extensions: ['.ts', '.tsx', '.js'] },
+    });
+    const resolver = compiler.resolverFactory.get('normal');
+    try {
+      for (const { name, typesPath } of coreSubpathExports()) {
+        const resolved = await new Promise((resolve, reject) => {
+          resolver.resolve({}, serverDir, `@alga-psa/core/${name}`, {}, (error: Error | null, result: string) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        expect(resolved).toBe(path.join(coreDir, typesPath));
+      }
+    } finally {
+      await new Promise<void>((resolve, reject) => compiler.close((error: Error | null) => error ? reject(error) : resolve()));
+    }
+  });
+
   it('resolves every core subpath export from source in next dev', async () => {
     const { default: nextConfig } = await import('../../../next.config.mjs');
     const resolveAlias = (nextConfig.turbopack?.resolveAlias ?? {}) as Record<string, string>;

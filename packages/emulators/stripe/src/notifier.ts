@@ -13,15 +13,16 @@ export function signStripePayload(payload: string, secret: string, timestamp?: n
 }
 
 /**
- * Delivers a signed event to every configured webhook target and records the
- * delivery outcome in the pure core. I/O stays here, outside the core.
+ * Delivers a signed event to every configured webhook target and every enabled
+ * webhook endpoint subscribed to its type, and records each delivery outcome in
+ * the pure core. I/O stays here, outside the core.
  */
 export async function deliverEvent(core: StripeEmulatorCore, event: StripeEvent, env: HostEnv): Promise<void> {
   const payload = JSON.stringify(event);
-  for (const target of core.webhookTargets) {
+  for (const { url: target, secret, endpointId } of core.webhookDeliveryTargets(event.type)) {
     // Sign delivery time, not event creation time. Old events and virtual-clock
     // scenarios still pass the provider SDK's webhook timestamp tolerance.
-    const signature = signStripePayload(payload, core.webhookSecret);
+    const signature = signStripePayload(payload, secret);
     let status = 0;
     let response = '';
     try {
@@ -44,10 +45,11 @@ export async function deliverEvent(core: StripeEmulatorCore, event: StripeEvent,
       eventId: event.id,
       eventType: event.type,
       target,
+      ...(endpointId ? { endpointId } : {}),
       attempt: core.deliveries.filter(delivery => delivery.eventId === event.id && delivery.target === target).length + 1,
       status,
       response,
     });
-    env.log('stripe webhook delivery', { eventId: event.id, eventType: event.type, target, status });
+    env.log('stripe webhook delivery', { eventId: event.id, eventType: event.type, target, endpointId, status });
   }
 }

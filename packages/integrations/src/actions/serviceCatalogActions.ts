@@ -4,6 +4,7 @@ import type { IService } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 
 export interface PaginatedServicesResponse {
   services: IService[];
@@ -23,12 +24,13 @@ export interface ServiceListOptions {
 }
 
 export const getServices = withAuth(async (
-  _user,
+  user,
   { tenant },
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse> => {
+  await assertCommercialReadPermission(user);
   const { knex: db } = await createTenantKnex();
 
   const itemKind = options.item_kind ?? 'service';

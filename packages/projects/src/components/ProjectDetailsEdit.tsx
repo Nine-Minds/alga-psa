@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -18,7 +17,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { releaseAllProjectStaging } from '../actions/stagingActions';
 import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
-import { getServices } from '../actions/serviceCatalogActions';
+import { loadServiceOptions } from '../lib/serviceOptions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
@@ -45,7 +44,6 @@ import { useTranslation } from 'react-i18next';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
-  clients: IClient[];
   onSave: (updatedProject: IProject) => void;
   onCancel: () => void;
   onChange?: () => void;
@@ -57,7 +55,6 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 
 const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   initialProject,
-  clients,
   onSave,
   onCancel,
 }) => {
@@ -66,15 +63,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   // Initialize tag permissions for project tags
   useTagPermissions(['project']);
   
-  // Debug logs
-  useEffect(() => {
-    console.log('ProjectDetailsEdit:', {
-      initialProject,
-      clientsLength: clients?.length,
-      clients
-    });
-  }, [initialProject, clients]);
-
   const [project, setProject] = useState<IProject>(initialProject);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -101,10 +89,10 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           getAllUsersBasic(),
           getProjectStatuses(),
           initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
-          getServices(1, 999)
+          loadServiceOptions()
         ]);
         setUsers(allUsers);
-        setServices(servicesResponse.services);
+        setServices(servicesResponse);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -346,7 +334,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             </label>
             <ClientPicker
               id='client-picker'
-              clients={clients}
               selectedClientId={project.client_id}
               onSelect={handleClientSelect}
               filterState="all"

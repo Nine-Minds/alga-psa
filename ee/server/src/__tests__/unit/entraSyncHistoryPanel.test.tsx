@@ -39,6 +39,21 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       if (key === 'integrations.entra.syncHistory.details.summarySkipped') {
         return `Skipped provisioning outcomes: ${vars?.count}`;
       }
+      if (key === 'integrations.entra.syncHistory.details.contactsFailed') {
+        return `${vars?.count} contacts failed`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.summaryFailed') {
+        return `Contacts that failed: ${vars?.count}`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.failureEntry') {
+        return `${vars?.user} (${vars?.stage}): ${vars?.message}`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.moreFailures') {
+        return `and ${vars?.count} more`;
+      }
+      if (key.startsWith('integrations.entra.syncHistory.details.stages.')) {
+        return key.split('.').pop() as string;
+      }
       return key;
     },
   }),
@@ -176,5 +191,120 @@ describe('EntraSyncHistoryPanel', () => {
     expect(
       screen.getByText('created 2, linked 3, updated 1, ambiguous 0, inactivated 4, skipped 2')
     ).toBeInTheDocument();
+  });
+
+  async function openDrilldown(tenantResult: Record<string, unknown>, summary: Record<string, unknown>) {
+    getEntraSyncRunHistoryMock.mockResolvedValue({
+      success: true,
+      data: {
+        runs: [
+          {
+            runId: 'run-f',
+            status: 'completed',
+            runType: 'all-tenants',
+            startedAt: '2026-02-20T04:10:00.000Z',
+            completedAt: '2026-02-20T04:20:00.000Z',
+            totalTenants: 1,
+            processedTenants: 1,
+            succeededTenants: 1,
+            failedTenants: 0,
+          },
+        ],
+      },
+    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          run: {
+            runId: 'run-f',
+            status: 'completed',
+            runType: 'all-tenants',
+            startedAt: '2026-02-20T04:10:00.000Z',
+            completedAt: '2026-02-20T04:20:00.000Z',
+            totalTenants: 1,
+            processedTenants: 1,
+            succeededTenants: 1,
+            failedTenants: 0,
+            summary,
+          },
+          tenantResults: [
+            {
+              managedTenantId: 'managed-f',
+              clientId: 'client-f',
+              status: 'completed',
+              created: 1,
+              linked: 0,
+              updated: 0,
+              ambiguous: 0,
+              inactivated: 0,
+              errorMessage: null,
+              ...tenantResult,
+            },
+          ],
+        },
+      }),
+    });
+
+    render(<EntraSyncHistoryPanel />);
+    await screen.findByText('all-tenants · completed');
+    fireEvent.click(document.getElementById('entra-sync-run-drilldown-run-f') as HTMLElement);
+    await screen.findByText('Tenant managed-f · completed');
+  }
+
+  it('T008: shows "N contacts failed" and the failed users by display name, never by id', async () => {
+    await openDrilldown(
+      {
+        failed: 3,
+        userIssues: [
+          {
+            severity: 'failure',
+            stage: 'create',
+            entraObjectId: 'entra-object-secret-1',
+            userPrincipalName: 'ann@example.com',
+            displayName: 'Ann Example',
+            contactNameId: 'contact-secret-1',
+            message: 'Cannot create contact for Entra user without email/UPN.',
+          },
+          {
+            severity: 'failure',
+            stage: 'link',
+            entraObjectId: 'entra-object-secret-2',
+            userPrincipalName: 'bob@example.com',
+            displayName: null,
+            message: 'link boom',
+          },
+          {
+            severity: 'notice',
+            stage: 'create',
+            entraObjectId: 'entra-object-secret-3',
+            userPrincipalName: 'cy@example.com',
+            displayName: 'Cy Example',
+            field: 'phone_numbers',
+            message: 'Extension "12345678901" was dropped: extensions are 1-10 digits.',
+          },
+        ],
+      },
+      { failed: 3 }
+    );
+
+    expect(screen.getByText('Contacts that failed: 3')).toBeInTheDocument();
+    expect(screen.getByText('3 contacts failed')).toBeInTheDocument();
+    expect(
+      screen.getByText('Ann Example (create): Cannot create contact for Entra user without email/UPN.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('bob@example.com (link): link boom')).toBeInTheDocument();
+    expect(screen.getByText('and 1 more')).toBeInTheDocument();
+    expect(screen.getByText(/Cy Example \(create\): Extension/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('entra-object-secret');
+    expect(document.body.textContent).not.toContain('contact-secret');
+  });
+
+  it('T008: shows nothing about failures when failed is 0', async () => {
+    await openDrilldown({ failed: 0, userIssues: [] }, { failed: 0 });
+
+    expect(screen.queryByText(/contacts failed/)).toBeNull();
+    expect(screen.queryByText(/Contacts that failed/)).toBeNull();
   });
 });

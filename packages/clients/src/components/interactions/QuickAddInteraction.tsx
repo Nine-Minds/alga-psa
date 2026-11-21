@@ -12,14 +12,22 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 
 // Dynamic import for TextEditor
+// A component, not inline JSX, so the skeleton title can reach useTranslation
+// from the module-scope dynamic() options.
+function NotesEditorSkeleton() {
+  const { t } = useTranslation('msp/clients');
+  return <RichTextEditorSkeleton height="150px" title={t('interactions.quickAdd.fields.notes.label', { defaultValue: 'Interaction Notes' })} />;
+}
+
 const TextEditor = dynamic<any>(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
-  loading: () => <RichTextEditorSkeleton height="150px" title="Interaction Notes" />,
+  loading: () => <NotesEditorSkeleton />,
   ssr: false
 });
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
-import { getInteractionById, getAllClients, getAllContacts, getClientById } from '@alga-psa/clients/actions';
+import { getInteractionById, getAllContacts, getClientById } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { addInteraction, updateInteraction, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
@@ -34,7 +42,6 @@ import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { clampDuration, durationFromRange } from '../../lib/durationHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -56,8 +63,10 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 
 // The duration fields cannot represent more than a day, so the date pickers must not
 // accept a range they would have to misreport. Same rule the server reconciles against.
-const END_BEFORE_START_MESSAGE = 'End time must be on or after the start time.';
-const RANGE_TOO_LONG_MESSAGE = "Interactions can't be longer than 24 hours.";
+const END_BEFORE_START_KEY = 'interactions.quickAdd.endBeforeStart';
+const END_BEFORE_START_DEFAULT = 'End time must be on or after the start time.';
+const RANGE_TOO_LONG_KEY = 'interactions.quickAdd.rangeTooLong';
+const RANGE_TOO_LONG_DEFAULT = "Interactions can't be longer than 24 hours.";
 
 // Keyed by the capability reason the Teams service returns, so the copy under
 // interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
@@ -110,7 +119,6 @@ export function QuickAddInteraction({
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -119,6 +127,8 @@ export function QuickAddInteraction({
   const tenant = useTenant()!;
   const { data: session } = useSession();
   const { t } = useTranslation('msp/clients');
+  const END_BEFORE_START_MESSAGE = t(END_BEFORE_START_KEY, { defaultValue: END_BEFORE_START_DEFAULT });
+  const RANGE_TOO_LONG_MESSAGE = t(RANGE_TOO_LONG_KEY, { defaultValue: RANGE_TOO_LONG_DEFAULT });
   const clientCrossFeature = useOptionalClientCrossFeature();
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -207,109 +217,113 @@ export function QuickAddInteraction({
     id: `${id}-type-select`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Interaction Type',
-    helperText: 'Select the type of interaction (phone call, email, meeting, etc.)'
+    label: t('interactions.quickAdd.fields.type.label', { defaultValue: 'Interaction Type' }),
+    helperText: t('interactions.quickAdd.fields.type.helper', { defaultValue: 'Select the type of interaction (phone call, email, meeting, etc.)' })
   });
 
   const { automationIdProps: titleInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-title-input`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Interaction Title',
-    helperText: 'Enter a descriptive title for this interaction'
+    label: t('interactions.quickAdd.fields.title.label', { defaultValue: 'Interaction Title' }),
+    helperText: t('interactions.quickAdd.fields.title.helper', { defaultValue: 'Enter a descriptive title for this interaction' })
   });
 
   const { automationIdProps: notesEditorProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-notes-editor`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Interaction Notes',
-    helperText: 'Add detailed notes about this interaction'
+    label: t('interactions.quickAdd.fields.notes.label', { defaultValue: 'Interaction Notes' }),
+    helperText: t('interactions.quickAdd.fields.notes.helper', { defaultValue: 'Add detailed notes about this interaction' })
   });
 
   const { automationIdProps: statusSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-status-select`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Interaction Status',
-    helperText: 'Set the current status of this interaction'
+    label: t('interactions.quickAdd.fields.status.label', { defaultValue: 'Interaction Status' }),
+    helperText: t('interactions.quickAdd.fields.status.helper', { defaultValue: 'Set the current status of this interaction' })
   });
 
   const { automationIdProps: userPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-user-picker`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Assigned User',
-    helperText: 'Select the user responsible for this interaction'
+    label: t('interactions.quickAdd.fields.user.label', { defaultValue: 'Assigned User' }),
+    helperText: t('interactions.quickAdd.fields.user.helper', { defaultValue: 'Select the user responsible for this interaction' })
   });
 
   const { automationIdProps: clientPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-client-picker`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Associated Client',
-    helperText: 'Select the client this interaction is related to'
+    label: t('interactions.quickAdd.fields.client.label', { defaultValue: 'Associated Client' }),
+    helperText: t('interactions.quickAdd.fields.client.helper', { defaultValue: 'Select the client this interaction is related to' })
   });
 
   const { automationIdProps: contactPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-contact-picker`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Associated Contact',
-    helperText: 'Select the contact this interaction is with'
+    label: t('interactions.quickAdd.fields.contact.label', { defaultValue: 'Associated Contact' }),
+    helperText: t('interactions.quickAdd.fields.contact.helper', { defaultValue: 'Select the contact this interaction is with' })
   });
 
   const { automationIdProps: startTimeProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-start-time`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Start Time',
-    helperText: 'When did this interaction start?'
+    label: t('interactions.quickAdd.fields.startTime.label', { defaultValue: 'Start Time' }),
+    helperText: t('interactions.quickAdd.fields.startTime.helper', { defaultValue: 'When did this interaction start?' })
   });
 
   const { automationIdProps: endTimeProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-end-time`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'End Time',
-    helperText: 'When did this interaction end?'
+    label: t('interactions.quickAdd.fields.endTime.label', { defaultValue: 'End Time' }),
+    helperText: t('interactions.quickAdd.fields.endTime.helper', { defaultValue: 'When did this interaction end?' })
   });
 
   const { automationIdProps: durationHoursProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-duration-hours`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Duration Hours',
-    helperText: 'Duration hours of the interaction'
+    label: t('interactions.quickAdd.fields.durationHours.label', { defaultValue: 'Duration Hours' }),
+    helperText: t('interactions.quickAdd.fields.durationHours.helper', { defaultValue: 'Duration hours of the interaction' })
   });
 
   const { automationIdProps: durationMinutesProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: `${id}-duration-minutes`,
     type: 'formField',
     fieldType: 'textField',
-    label: 'Duration Minutes',
-    helperText: 'Duration minutes of the interaction'
+    label: t('interactions.quickAdd.fields.durationMinutes.label', { defaultValue: 'Duration Minutes' }),
+    helperText: t('interactions.quickAdd.fields.durationMinutes.helper', { defaultValue: 'Duration minutes of the interaction' })
   });
 
   const { automationIdProps: cancelButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-cancel-button`,
     type: 'button',
-    label: 'Cancel',
-    helperText: 'Cancel creating/editing this interaction'
+    label: t('interactions.quickAdd.actions.cancel', { defaultValue: 'Cancel' }),
+    helperText: t('interactions.quickAdd.actions.cancelHelper', { defaultValue: 'Cancel creating/editing this interaction' })
   });
 
   const { automationIdProps: saveButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-save-button`,
     type: 'button',
-    label: isEditMode ? 'Update Interaction' : 'Save Interaction',
-    helperText: isEditMode ? 'Save changes to this interaction' : 'Create this new interaction'
+    label: isEditMode
+      ? t('interactions.quickAdd.actions.update', { defaultValue: 'Update Interaction' })
+      : t('interactions.quickAdd.actions.save', { defaultValue: 'Save Interaction' }),
+    helperText: isEditMode
+      ? t('interactions.quickAdd.actions.updateHelper', { defaultValue: 'Save changes to this interaction' })
+      : t('interactions.quickAdd.actions.saveHelper', { defaultValue: 'Create this new interaction' })
   });
 
   const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-close-button`,
     type: 'button',
-    label: 'Close Dialog',
-    helperText: 'Close the interaction dialog'
+    label: t('interactions.quickAdd.actions.close', { defaultValue: 'Close Dialog' }),
+    helperText: t('interactions.quickAdd.actions.closeHelper', { defaultValue: 'Close the interaction dialog' })
   });
 
   useEffect(() => {
@@ -350,9 +364,6 @@ export function QuickAddInteraction({
 
         // Edit mode and standalone creation both need entity pickers.
         if (isEditMode || isStandaloneCreate) {
-          const clientsList = await getAllClients();
-          setClients(clientsList);
-          
           // Get all contacts - the ContactPicker will filter by client internally
           const allContacts = await getAllContacts();
           setContacts(allContacts);
@@ -786,7 +797,7 @@ export function QuickAddInteraction({
     if (startTime && endTime) {
       const { totalMinutes, exceedsCap } = durationFromRange(startTime, endTime);
       if (totalMinutes < 0) {
-        errors.push('End time must be on or after the start time');
+        errors.push(t('interactions.quickAdd.endBeforeStartShort', { defaultValue: 'End time must be on or after the start time' }));
         setEndTimeError(END_BEFORE_START_MESSAGE);
       } else if (exceedsCap) {
         errors.push(RANGE_TOO_LONG_MESSAGE);
@@ -999,7 +1010,7 @@ export function QuickAddInteraction({
         className="flex-1"
         onClick={handleClose}
       >
-        Cancel
+        {t('interactions.quickAdd.actions.cancel', { defaultValue: 'Cancel' })}
       </Button>
       <Button
         id="save-interaction-button"
@@ -1008,17 +1019,21 @@ export function QuickAddInteraction({
         className={`flex-1 ${!typeId || !title.trim() ? 'opacity-50' : ''}`}
         disabled={!typeId || !title.trim() || !!endTimeError}
       >
-        {isEditMode ? 'Update Interaction' : 'Save Interaction'}
+        {isEditMode
+          ? t('interactions.quickAdd.actions.update', { defaultValue: 'Update Interaction' })
+          : t('interactions.quickAdd.actions.save', { defaultValue: 'Save Interaction' })}
       </Button>
     </div>
   );
 
   return (
-    <ReflectionContainer id={id} label="Quick Add Interaction">
+    <ReflectionContainer id={id} label={t('interactions.quickAdd.reflectionLabel', { defaultValue: 'Quick Add Interaction' })}>
       <Dialog
         isOpen={isOpen}
         onClose={handleClose}
-        title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
+        title={isEditMode
+          ? t('interactions.quickAdd.dialog.editTitle', { defaultValue: 'Edit Interaction' })
+          : t('interactions.quickAdd.dialog.createTitle', { defaultValue: 'Add New Interaction' })}
         className="max-w-2xl"
         hideCloseButton={false}
         footer={footer}
@@ -1039,7 +1054,7 @@ export function QuickAddInteraction({
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Please fix the following errors:
+                    {t('interactions.quickAdd.validationIntro', { defaultValue: 'Please fix the following errors:' })}
                     <ul className="list-disc pl-5 mt-1 text-sm">
                       {validationErrors.map((err, index) => (
                         <li key={index}>{err}</li>
@@ -1053,7 +1068,7 @@ export function QuickAddInteraction({
                   options={typeOptions}
                   value={typeId}
                   onValueChange={setTypeId}
-                  placeholder="Select Interaction Type"
+                  placeholder={t('interactions.quickAdd.fields.type.placeholder', { defaultValue: 'Select Interaction Type' })}
                   className={`w-fit ${hasAttemptedSubmit && !typeId ? 'ring-1 ring-red-500' : ''}`}
                   required
                 />
@@ -1062,7 +1077,7 @@ export function QuickAddInteraction({
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Title"
+                  placeholder={t('interactions.quickAdd.fields.title.placeholder', { defaultValue: 'Title' })}
                   required
                   className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
                 />
@@ -1143,7 +1158,7 @@ export function QuickAddInteraction({
                       </label>
                       <ClientPicker
                         id={`${id}-client-picker`}
-                        clients={clients}
+                        searchClients={searchClientsForPicker}
                         onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
@@ -1177,11 +1192,11 @@ export function QuickAddInteraction({
               
                 {/* Notes right under title */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Notes</label>
+                  <label className="text-sm font-medium">{t('interactions.quickAdd.fields.notesShort', { defaultValue: 'Notes' })}</label>
                   <div>
                     {/* Only render TextEditor when content is ready */}
                     {isNotesContentReady ? (
-                      <Suspense fallback={<RichTextEditorSkeleton height="150px" title="Interaction Notes" />}>
+                      <Suspense fallback={<RichTextEditorSkeleton height="150px" title={t('interactions.quickAdd.fields.notes.label', { defaultValue: 'Interaction Notes' })} />}>
                         <TextEditor
                           key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
                           {...notesEditorProps}
@@ -1191,7 +1206,7 @@ export function QuickAddInteraction({
                       </Suspense>
                     ) : (
                       <div className="w-full h-[100px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500 dark:text-gray-400">Loading editor...</span>
+                        <span className="text-gray-500 dark:text-gray-400">{t('interactions.quickAdd.loadingEditor', { defaultValue: 'Loading editor...' })}</span>
                       </div>
                     )}
                   </div>
@@ -1203,7 +1218,7 @@ export function QuickAddInteraction({
                   <div className="space-y-4">
                     {/* Status - fit content */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Status</label>
+                      <label className="text-sm font-medium">{t('interactions.overall.columns.status', { defaultValue: 'Status' })}</label>
                       <CustomSelect
                         options={statuses.map((status) => ({ 
                           value: status.status_id, 
@@ -1211,20 +1226,20 @@ export function QuickAddInteraction({
                         }))}
                         value={statusId}
                         onValueChange={setStatusId}
-                        placeholder="Select Status"
+                        placeholder={t('interactions.quickAdd.fields.status.placeholder', { defaultValue: 'Select Status' })}
                         className="w-fit"
                       />
                     </div>
                     
                     {/* User under status */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">User</label>
+                      <label className="text-sm font-medium">{t('interactions.quickAdd.fields.userShort', { defaultValue: 'User' })}</label>
                       <UserPicker
                         users={users}
                         value={selectedUserId}
                         onValueChange={setSelectedUserId}
                         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                        placeholder="Select User"
+                        placeholder={t('interactions.quickAdd.fields.user.placeholder', { defaultValue: 'Select User' })}
                         buttonWidth="fit"
                       />
                     </div>
@@ -1233,10 +1248,10 @@ export function QuickAddInteraction({
                   <div className="space-y-4">
                     {/* Client in right column */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Client</label>
+                      <label className="text-sm font-medium">{t('interactions.quickAdd.fields.clientShort', { defaultValue: 'Client' })}</label>
                       <ClientPicker
                         id={`${id}-client-picker`}
-                        clients={clients}
+                        searchClients={searchClientsForPicker}
                         onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
@@ -1250,14 +1265,16 @@ export function QuickAddInteraction({
                     
                     {/* Contact in right column */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Contact</label>
+                      <label className="text-sm font-medium">{t('interactions.quickAdd.fields.contactShort', { defaultValue: 'Contact' })}</label>
                       <ContactPicker
                         id={`${id}-contact-picker`}
                         contacts={contacts}
                         value={selectedContactId || ''}
                         onValueChange={(value) => setSelectedContactId(value || '')}
                         clientId={selectedClientId}
-                        placeholder={!selectedClientId ? "Select client first" : "Select Contact"}
+                        placeholder={!selectedClientId
+                          ? t('interactions.quickAdd.selectClientFirst', { defaultValue: 'Select client first' })
+                          : t('interactions.quickAdd.fields.contact.placeholder', { defaultValue: 'Select Contact' })}
                         disabled={!selectedClientId}
                         buttonWidth="fit"
                         onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
@@ -1282,22 +1299,12 @@ export function QuickAddInteraction({
                   setSelectedContactId(newContact.contact_name_id);
                   setIsQuickAddContactOpen(false);
                 }}
-                clients={clients}
                 selectedClientId={selectedClientId}
               />
               <QuickAddClient
                 open={isQuickAddClientOpen}
                 onOpenChange={setIsQuickAddClientOpen}
                 onClientAdded={(newClient) => {
-                  setClients((currentClients) => {
-                    const existingIndex = currentClients.findIndex(
-                      (client) => client.client_id === newClient.client_id,
-                    );
-                    if (existingIndex === -1) return [...currentClients, newClient];
-                    const nextClients = [...currentClients];
-                    nextClients[existingIndex] = newClient;
-                    return nextClients;
-                  });
                   handleClientSelect(newClient.client_id);
                 }}
                 skipSuccessDialog
@@ -1317,7 +1324,7 @@ export function QuickAddInteraction({
                       }))}
                       value={statusId}
                       onValueChange={setStatusId}
-                      placeholder="Select Status"
+                      placeholder={t('interactions.quickAdd.fields.status.placeholder', { defaultValue: 'Select Status' })}
                       className="w-fit"
                     />
                   </div>
@@ -1343,7 +1350,7 @@ export function QuickAddInteraction({
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">Start Time</label>
+                  <label className="text-sm font-medium">{t('interactions.quickAdd.fields.startTime.label', { defaultValue: 'Start Time' })}</label>
                   <DateTimePicker
                     id={`${id}-start-time`}
                     value={startTime}
@@ -1356,13 +1363,13 @@ export function QuickAddInteraction({
                         setDurationMinutes('');
                       }
                     }}
-                    placeholder="Select start time"
-                    label="Start Time"
+                    placeholder={t('interactions.quickAdd.fields.startTime.placeholder', { defaultValue: 'Select start time' })}
+                    label={t('interactions.quickAdd.fields.startTime.label', { defaultValue: 'Start Time' })}
                     clearable
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">End Time</label>
+                  <label className="text-sm font-medium">{t('interactions.quickAdd.fields.endTime.label', { defaultValue: 'End Time' })}</label>
                   <DateTimePicker
                     id={`${id}-end-time`}
                     value={endTime}
@@ -1376,8 +1383,8 @@ export function QuickAddInteraction({
                         setDurationMinutes('');
                       }
                     }}
-                    placeholder="Select end time"
-                    label="End Time"
+                    placeholder={t('interactions.quickAdd.fields.endTime.placeholder', { defaultValue: 'Select end time' })}
+                    label={t('interactions.quickAdd.fields.endTime.label', { defaultValue: 'End Time' })}
                     minDate={startTime}
                     clearable
                   />
@@ -1387,7 +1394,7 @@ export function QuickAddInteraction({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Duration</label>
+                <label className="text-sm font-medium">{t('interactions.quickAdd.fields.duration', { defaultValue: 'Duration' })}</label>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Input
@@ -1400,7 +1407,7 @@ export function QuickAddInteraction({
                       max="24"
                       className="w-20"
                     />
-                    <span className="text-sm text-muted-foreground">hours</span>
+                    <span className="text-sm text-muted-foreground">{t('interactions.quickAdd.fields.hours', { defaultValue: 'hours' })}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Input
@@ -1413,7 +1420,7 @@ export function QuickAddInteraction({
                       max="59"
                       className="w-20"
                     />
-                    <span className="text-sm text-muted-foreground">minutes</span>
+                    <span className="text-sm text-muted-foreground">{t('interactions.quickAdd.fields.minutes', { defaultValue: 'minutes' })}</span>
                   </div>
                 </div>
               </div>

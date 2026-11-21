@@ -23,6 +23,8 @@ import { writeCoManagedSharedTask } from '../../lib/co-managed/editProjectTask';
 let db: Knex;
 let world: L3cWorld;
 let collab: L3cProject, readOnly: L3cProject, unshared: L3cProject;
+/** A second, fully valid sponsor/customer pair: its staff are authorized there and nowhere else. */
+let otherWorld: L3cWorld;
 
 const actor = () => sessionActor(world.sponsor, world.technician);
 const viewerActor = () => sessionActor(world.sponsor, world.viewer);
@@ -58,15 +60,16 @@ describe('CM L3c task editing and assignment', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc']);
+    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc', 'redact-assignee-conflict']);
     readOnly = await seedL3cProject(db, world, 'Read-only project', ['ro']);
     unshared = await seedL3cProject(db, world, 'Unshared project', ['hidden']);
     await shareProject(db, world, collab.projectId, true);
     await shareProject(db, world, readOnly.projectId, false);
+    otherWorld = await seedL3cWorld(db);
   }, 180_000);
 
   afterAll(async () => {
-    await cleanupL3cTenants(world?.tenants ?? []);
+    await cleanupL3cTenants([...(world?.tenants ?? []), ...(otherWorld?.tenants ?? [])]);
     await db?.destroy().catch(() => undefined);
   });
 
@@ -217,6 +220,33 @@ describe('CM L3c task editing and assignment', () => {
     });
   });
 
+  it('serves the snapshot only to an admitted co-managed technician; staff without an assignment and other tenants are refused', async () => {
+    const own = await seedL3cProject(db, world, 'Snapshot authz project', ['snapshot-authz']);
+    await shareProject(db, world, own.projectId, true);
+    const id = own.taskIds[0];
+    // (a) Admitted: sponsor technician with a co-managed staff assignment on this relationship.
+    const served = await openTask(id);
+    expect(served.values.task_name).toBe('snapshot-authz');
+    expect(served.assignee?.name).toBeTruthy();
+
+    // (b) Same sponsor tenant, same home RBAC, but no co-managed staff assignment: refused.
+    const assignment = { tenant: world.sponsor, customer_tenant: world.customer, relationship_id: world.relationshipId, principal_type: 'user', principal_id: world.technician.userId };
+    const saved = await db('co_management_staff_assignments').where(assignment);
+    expect(saved).toHaveLength(1);
+    await db('co_management_staff_assignments').where(assignment).delete();
+    try {
+      await expect(getCoManagedProjectTaskSnapshot(db, actor(), resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+    } finally { await db('co_management_staff_assignments').insert(saved); }
+    expect((await getCoManagedProjectTaskSnapshot(db, actor(), resource(id))).values.task_name).toBe('snapshot-authz');
+
+    // (c) Other tenants: a technician fully admitted in another sponsor's relationship, addressing this task
+    // through this relationship or through its own; and the customer's own workspace user.
+    const foreign = sessionActor(otherWorld.sponsor, otherWorld.technician);
+    await expect(getCoManagedProjectTaskSnapshot(db, foreign, resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+    await expect(getCoManagedProjectTaskSnapshot(db, foreign, { ...resource(id), relationshipId: otherWorld.relationshipId })).rejects.toSatisfy(isCoManagedSharedWorkError);
+    await expect(getCoManagedProjectTaskSnapshot(db, sessionActor(world.customer, world.customerStaff), resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+  });
+
   it('masks the snapshot assignee name when assignee is redacted', async () => {
     const id = collab.taskIds[7];
     const snapshot = await openTask(id);
@@ -228,13 +258,46 @@ describe('CM L3c task editing and assignment', () => {
     } finally { await setRedactions([]); }
   });
 
+  it('masks the assignee name in revision and customer-drift conflict snapshots when assignee is redacted', async () => {
+    const id = collab.taskIds[11];
+    const snapshot = await openTask(id);
+    expect(snapshot.assignee?.name).toBeTruthy();
+    const taskBefore = await taskRow(id);
+    await setRedactions(['assignee']);
+    try {
+      const stale = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: snapshot.revision + 1, expectedTaskUpdatedAt: snapshot.taskUpdatedAt, patch: { task_name: 'Never written' } }, writeCoManagedSharedTask));
+      expect(stale.reason).toBe('revision');
+      expect(stale.snapshot?.revision).toBe(snapshot.revision);
+      expect(stale.snapshot?.taskUpdatedAt).toBe(snapshot.taskUpdatedAt);
+      expect(stale.snapshot?.assignee?.name ?? null).toBeNull();
+      expect(stale.snapshot?.assignee?.kind).toBe('user');
+
+      const drift = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: snapshot.revision, expectedTaskUpdatedAt: new Date(Date.parse(snapshot.taskUpdatedAt) + 1).toISOString(), patch: { task_name: 'Never written' } }, writeCoManagedSharedTask));
+      expect(drift.reason).toBe('customer_drift');
+      expect(drift.snapshot?.revision).toBe(snapshot.revision);
+      expect(drift.snapshot?.taskUpdatedAt).toBe(snapshot.taskUpdatedAt);
+      expect(drift.snapshot?.assignee?.name ?? null).toBeNull();
+      expect(drift.snapshot?.assignee?.kind).toBe('user');
+
+      const taskAfter = await taskRow(id);
+      for (const column of ['task_name', 'due_date', 'project_status_mapping_id', 'updated_at']) expect(taskAfter[column]).toEqual(taskBefore[column]);
+      expect((await referenceRow(id)).revision).toBe(snapshot.revision);
+    } finally { await setRedactions([]); }
+  });
+
   it('control: with no redactions snapshot, history and status options are served with the exact fixture values', async () => {
-    const id = collab.taskIds[8];
-    // The shared fixture seeds no status mappings, so give the collab project two (project-level) and put the task on the first.
+    // Own project: the suite runs shuffled, and other tests add project-level mappings to the collab project,
+    // which would leak into this exact status-option list.
+    const own = await seedL3cProject(db, world, 'Control project', ['control']);
+    await shareProject(db, world, own.projectId, true);
+    const id = own.taskIds[0];
+    // The shared fixture seeds no status mappings, so give the project two (project-level) and put the task on the first.
     const [todo, doing] = [uuidv4(), uuidv4()];
     await db('project_status_mappings').insert([
-      { tenant: world.customer, project_status_mapping_id: todo, project_id: collab.projectId, status_id: world.statusId, custom_name: 'Control Todo', is_standard: false, display_order: 1, is_visible: true },
-      { tenant: world.customer, project_status_mapping_id: doing, project_id: collab.projectId, status_id: world.statusId, custom_name: 'Control Doing', is_standard: false, display_order: 2, is_visible: true },
+      { tenant: world.customer, project_status_mapping_id: todo, project_id: own.projectId, status_id: world.statusId, custom_name: 'Control Todo', is_standard: false, display_order: 1, is_visible: true },
+      { tenant: world.customer, project_status_mapping_id: doing, project_id: own.projectId, status_id: world.statusId, custom_name: 'Control Doing', is_standard: false, display_order: 2, is_visible: true },
     ]);
     await db('project_tasks').where({ tenant: world.customer, task_id: id }).update({ project_status_mapping_id: todo, due_date: new Date('2026-03-01T00:00:00.000Z') });
     await setRedactions([]);

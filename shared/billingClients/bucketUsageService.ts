@@ -38,6 +38,7 @@
  */
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate, toCalendarDateString } from '@alga-psa/core';
@@ -947,6 +948,7 @@ export async function reconcileBucketUsageRecord(
        // are explicit members of another pool); members override the multiplier.
        const entries = await db.table('time_entries')
            .where({ tenant, contract_line_id })
+           .whereRaw(commercialTimeEntrySql('time_entries'))
            .where('start_time', '>=', periodStartTs)
            .where('start_time', '<', periodEndExclusive)
            .select('entry_id', 'service_id', 'start_time', 'end_time', 'billable_duration');
@@ -975,6 +977,7 @@ export async function reconcileBucketUsageRecord(
        if (serviceIds.length > 0) {
            const entries = await db.table('time_entries')
                .where({ tenant, contract_line_id })
+               .whereRaw(commercialTimeEntrySql('time_entries'))
                .whereIn('service_id', serviceIds)
                .where('start_time', '>=', periodStartTs)
                .where('start_time', '<', periodEndExclusive)
@@ -1135,6 +1138,7 @@ export async function computePoolContributionsByService(
     if (isLineScoped || memberServiceIds.length > 0) {
         const entriesQuery = db.table('time_entries')
             .where({ tenant, contract_line_id: opts.contractLineId })
+            .whereRaw(commercialTimeEntrySql('time_entries'))
             .where('start_time', '>=', opts.periodStart)
             .where('start_time', '<', opts.periodEndExclusive);
         if (!isLineScoped) {
