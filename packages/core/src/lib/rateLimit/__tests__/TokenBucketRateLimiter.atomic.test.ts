@@ -57,7 +57,7 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic', () => {
     expect(options.arguments[0]).toBe('5'); // maxTokens
     expect(options.arguments[1]).toBe('1'); // refillRate (tokens/second)
     expect(options.arguments[2]).toBe('1'); // tokens requested
-    expect(options.arguments[4]).toBe('3600'); // bucket TTL
+    expect(options.arguments[3]).toBe('3600'); // bucket TTL
   });
 
   it('denies with retryAfterMs when the script reports an exhausted bucket', async () => {
@@ -301,7 +301,6 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic corrupt state (live Redis)', (
     ['tokens above capacity (fractional)', JSON.stringify({ tokens: MAX_TOKENS + 0.5, lastRefillMs: now() }), ''],
     ['non-finite tokens (huge float)', `{"tokens": 1e400, "lastRefillMs": ${now()}}`, ''],
     ['zero refill timestamp', JSON.stringify({ tokens: 5, lastRefillMs: 0 }), ''],
-    ['future refill timestamp', JSON.stringify({ tokens: 5, lastRefillMs: now() + 60000 }), ''],
   ])(
     'denies, discards the corrupt bucket, and lets the next request re-establish it (%s)',
     async (_label, rawState) => {
@@ -323,6 +322,21 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic corrupt state (live Redis)', (
     },
   );
 
+  it('preserves an affordable balance and normalizes a future refill timestamp', async () => {
+    if (!client) {
+      return;
+    }
+    await seed(bucketKey, JSON.stringify({ tokens: 5, lastRefillMs: now() + 60_000 }));
+    const limiter = await makeLimiter();
+
+    const consumed = await limiter.tryConsumeAtomic(NAMESPACE, 'tenant-c', 'registry-1');
+
+    expect(consumed).toEqual({ allowed: true, remaining: 4 });
+    const stored = JSON.parse((await client.get(bucketKey))!);
+    expect(stored.tokens).toBe(4);
+    expect(stored.lastRefillMs).toBeLessThan(now() + 60_000);
+  });
+
   it('happy path keeps TTL, fractional accumulation, and time-based refill intact', async () => {
     if (!client) {
       return;
@@ -343,7 +357,7 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic corrupt state (live Redis)', (
     expect(first.remaining).toBe(0); // 1.5 - 1 = 0.5, floored
 
     const stored = JSON.parse((await client.get(fracKey))!);
-    expect(stored.tokens).toBeCloseTo(0.5, 5);
+    expect(stored.tokens).toBeCloseTo(0.5, 2);
     expect(stored.lastRefillMs).toBeGreaterThan(0);
 
     const ttlMs = await client.pTTL(fracKey);

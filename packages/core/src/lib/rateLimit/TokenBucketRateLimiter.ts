@@ -67,8 +67,7 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * ARGV[1] = maxTokens
  * ARGV[2] = refillRate (tokens/second)
  * ARGV[3] = tokens requested
- * ARGV[4] = now (epoch ms)
- * ARGV[5] = TTL seconds for the bucket key
+ * ARGV[4] = TTL seconds for the bucket key
  *
  * Returns `{1, remaining, 0}` when allowed and `{0, remaining, retryAfterMs}`
  * when denied, so check + consume + refill + TTL management happen in one
@@ -79,9 +78,10 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * - Invalid call parameters (non-finite or non-positive ARGV) deny without
  *   touching the stored bucket.
  * - Corrupt stored state (unparseable JSON, missing/wrong-shape fields,
- *   non-finite or negative tokens, tokens above capacity, absent/future refill
+ *   non-finite or negative tokens, tokens above capacity, or absent refill
  *   timestamps) denies and discards the bucket (`DEL`) so the next request
- *   re-establishes a valid one. The in-flight request is never credited.
+ *   re-establishes a valid one. A future timestamp is normalized without
+ *   changing its token balance.
  * - A computed refill that leaves tokens non-finite or above capacity denies
  *   and discards the bucket.
  */
@@ -90,8 +90,9 @@ local key = KEYS[1]
 local maxTokens = tonumber(ARGV[1])
 local refillRate = tonumber(ARGV[2])
 local tokensNeeded = tonumber(ARGV[3])
-local nowMs = tonumber(ARGV[4])
-local ttlSeconds = tonumber(ARGV[5])
+local ttlSeconds = tonumber(ARGV[4])
+local redisTime = redis.call('TIME')
+local nowMs = tonumber(redisTime[1]) * 1000 + tonumber(redisTime[2]) / 1000
 
 if not maxTokens or not refillRate or not tokensNeeded or not nowMs or not ttlSeconds
    or maxTokens <= 0 or refillRate <= 0 or tokensNeeded <= 0 or nowMs <= 0 or ttlSeconds <= 0
@@ -115,12 +116,15 @@ if state then
     if not storedTokens or not storedLastRefill
        or storedTokens < 0 or storedTokens > maxTokens
        or storedTokens ~= storedTokens
-       or storedLastRefill <= 0 or storedLastRefill > nowMs
+       or storedLastRefill <= 0
        or storedLastRefill ~= storedLastRefill then
       corrupt = true
     else
       tokens = storedTokens
-      lastRefillMs = storedLastRefill
+      -- A future baseline can come from a prior clock anomaly. Preserve the
+      -- consumed balance, grant no refill for the anomalous interval, and
+      -- resume refill from Redis's current clock.
+      lastRefillMs = math.min(storedLastRefill, nowMs)
     end
   end
   if corrupt then
@@ -442,7 +446,6 @@ export class TokenBucketRateLimiter {
           String(config.maxTokens),
           String(config.refillRate),
           String(tokens),
-          String(now),
           String(this.bucketTtlSeconds),
         ],
       });

@@ -113,3 +113,49 @@ Run: `npm test` in `packages/email` (`vitest run`). For Test B against local Red
 - **EVAL support requirement:** `tryConsumeAtomic` needs a Redis client exposing `eval`. If a deployment's injected client lacks it, the method fails **open** (`remaining:-1`, lines 407-410) — no worse than today, but worth confirming the production client supports `EVAL`.
 - **Test B flakiness/CI:** the concurrency test requires a live Redis and self-skips otherwise; ensure CI either provides Redis or the skip is acceptable, leaning on Test A for always-on coverage.
 - **Blast radius:** a single-line change at a shared chokepoint touches both regular sends and diagnostics simultaneously — intended, but means the regular-send path should be exercised (existing `packages/email` suite) to confirm no normal-path regression.
+
+---
+
+## 5. Timestamp safety repair (PR #4253 follow-up, 2026-11-20)
+
+The atomic email gate is now in place. A separate review found that the shared
+Lua consume script still accepted a caller's `Date.now()` and treated any
+stored refill timestamp later than that caller timestamp as corrupt. The script
+deleted such a bucket, allowing a full-capacity reset after request reordering
+or application clock disagreement.
+
+The atomic operation now reads Redis `TIME` itself and uses that clock for
+refill, persistence, and TTL-managed balance updates. A stored future timestamp
+is normalized to Redis's current time while the stored token balance is kept
+unchanged. This grants no refill for the anomalous interval, does not erase
+quota, and lets future refill accrue from the normalization point. The change
+is in the shared limiter script and therefore applies to atomic namespaces
+without changing their failure policy.
+
+Behavioral coverage now includes live Redis and the diagnostics production
+send path with a provider double: different application clocks cannot replenish
+quota, future timestamp state retains its consumed balance, exhaustion remains
+blocked, parallel live sends stay at capacity, and refill resumes from a
+normalized baseline. Existing `TenantEmailService` EVAL-failure fail-open and
+valid-quota-denial assertions remain in the focused suite. The core limiter's
+old expectation that future timestamps are corrupt was replaced with the new
+normalization behavior.
+
+Focused validation with isolated Redis:
+
+```bash
+EMAIL_RATE_LIMIT_TEST_REDIS=redis://127.0.0.1:6387 npm test -- --run \
+  src/__tests__/TenantEmailService.rateLimit.test.ts \
+  src/__tests__/TenantEmailService.rateLimit.concurrency.test.ts \
+  src/diagnostics/__tests__/outboundDiagnostics.liveSendGates.test.ts
+
+EXT_GATEWAY_RATE_LIMIT_TEST_REDIS=redis://127.0.0.1:6387 npm test -- --run \
+  src/lib/rateLimit/__tests__/TokenBucketRateLimiter.atomic.test.ts
+```
+
+The timestamp regression was also run as a negative control against the
+pre-repair `TokenBucketRateLimiter.ts`; it failed because the future timestamp
+was deleted and the provider was invoked beyond configured capacity. The test
+passed after restoring the repair. Reviewer focus: confirm Redis `TIME` is the
+sole clock governing the atomic bucket and that future-state normalization
+keeps the existing balance while re-establishing a safe refill baseline.
