@@ -56,6 +56,14 @@ The registered-source regression includes a same-tenant, same-sheet entry attrib
 
 Standalone server typecheck passed with a 12 GiB heap. The repository community build (`npm run build`) completed Next.js compilation and page generation but exited 1 at Next.js 16.4.2 `SecurityFatalError`; this remains a failed build. The full log is `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/takeover-d5fdb48ecc/community-build.log`. No dependency upgrade was run. The app server remained stopped, and no fresh browser or live smoke result is claimed.
 
+## Repair round 2: native aggregate scope and delegated search dates
+
+Native `list` now uses one correlated entry-query builder for `has_entries`, `total_hours`, `billable_hours`, and `entry_count`. Each subquery inherits `tenantDb` isolation and constrains both `time_sheet_id` and `user_id` to the outer sheet. The regression creates one owned and one mismatched-owner entry: list reports one hour and one entry; after removing the owned entry, `has_entries=true` no longer returns the sheet while `has_entries=false` does. Since export calls `list`, it receives the same corrected aggregates and filter behavior.
+
+Registered-source `search` now normalizes `period_start` and `period_end` with `formatDbDate` before applying `date_from`/`date_to`; a missing bounded date excludes the row. Both bounds are covered with mixed `Date` and `YYYY-MM-DD` provider values, one out-of-range row, and missing dates. The two cases pass in `Pacific/Auckland` as well as the default timezone.
+
+Round-two focused verification passed 46 database-backed tests across five suites using `TEST_DB_NAME=test_timesheet_security_takeover`, plus 34 database-free route and sort tests across two suites. Server typecheck passed with a 12 GiB heap. The repository community build again generated pages and then exited 1 at Next.js 16.4.2 `SecurityFatalError`; no upgrade was run. Logs are under `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/takeover-d5fdb48ecc/`: `round2-focused-database.log`, `round2-focused-database-free.log`, `round2-search-auckland.log`, `round2-typecheck.log`, and `round2-community-build.log`. App server remains stopped; no live browser behavior is claimed.
+
 ## Commands and results
 
 The collection-enforcement implementation is [`aaac6d4731`](https://github.com/Nine-Minds/alga-psa/commit/aaac6d4731), following the initially published repair commit [`74a14f348ea857a402755d3b70698f98421a41b9`](https://github.com/Nine-Minds/alga-psa/commit/74a14f348ea857a402755d3b70698f98421a41b9).

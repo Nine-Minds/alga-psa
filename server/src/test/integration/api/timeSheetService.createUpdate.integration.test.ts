@@ -298,6 +298,12 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
       });
     }
 
+    const hasEntries = await service.list({ page: 1, limit: 25, filters: { has_entries: true } } as any, ctx);
+    expect(hasEntries.data).toHaveLength(1);
+    expect(hasEntries.data[0].id).toBe(sheet.id);
+    expect(Number(hasEntries.data[0].total_hours)).toBe(1);
+    expect(Number(hasEntries.data[0].entry_count)).toBe(1);
+
     const entries = await service.getTimeSheetEntries(sheet.id, ctx);
     expect(entries).toHaveLength(1);
     expect(entries[0].user_id).toBe(f.actor);
@@ -306,6 +312,10 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
       billable_hours: 1,
       non_billable_hours: 0,
     });
+
+    await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: sheet.id, user_id: f.actor }).del();
+    expect((await service.list({ page: 1, limit: 25, filters: { has_entries: true } } as any, ctx)).data).toEqual([]);
+    expect((await service.list({ page: 1, limit: 25, filters: { has_entries: false } } as any, ctx)).data.map((row: any) => row.id)).toEqual([sheet.id]);
   });
 
   it('enforces the shared scope over an unfiltered registered provider collection before every read surface', async () => {
@@ -444,6 +454,26 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     rows.splice(0, rows.length);
     await expect(service.list({ page: 1, limit: 25 } as any, actor, { created_from: '2025-03-10T12:00:00Z' } as any))
       .rejects.toThrow(/Created and updated date filters are not supported/);
+  });
+
+  it.each(['date_from', 'date_to'] as const)('filters delegated search %s using normalized calendar dates', async (bound) => {
+    const f = await seed();
+    const rows = [
+      { id: 'search-date-string', tenant: f.tenantId, user_id: f.actor, user_name: 'Date Search', period_start: '2026-01-05', period_end: '2026-01-12', time_entries: [], comments: [] },
+      { id: 'search-date-value', tenant: f.tenantId, user_id: f.actor, user_name: 'Date Search', period_start: new Date(2026, 0, 5), period_end: new Date(2026, 0, 12), time_entries: [], comments: [] },
+      { id: 'search-outside-value', tenant: f.tenantId, user_id: f.actor, user_name: 'Date Search', period_start: new Date(2026, 0, 1), period_end: new Date(2026, 0, 15), time_entries: [], comments: [] },
+      { id: 'search-missing-date', tenant: f.tenantId, user_id: f.actor, user_name: 'Date Search', period_start: null, period_end: null, time_entries: [], comments: [] },
+    ];
+    registerTimeSource('delegated-search-date-test-source', () => ({
+      kind: 'delegated-search-date-test-source',
+      rest: { collectTimeSheetReadRows: async () => rows },
+    } as any), { servesCapability: 'co-managed' });
+
+    const result = await serviceFor(f.tenantId).search({
+      query: 'Date Search',
+      [bound]: bound === 'date_from' ? '2026-01-05' : '2026-01-12',
+    } as any, contextFor(f.tenantId, f.actor));
+    expect(result.map((row: any) => row.id).sort()).toEqual(['search-date-string', 'search-date-value']);
   });
 
   it('exports only rows inside the shared registered-source subject and tenant scope', async () => {

@@ -303,6 +303,12 @@ export class TimeSheetService extends BaseService<any> {
       // The controller passes filters as options.filters; direct callers use the third argument.
       const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
 
+      // Every native entry read in this list is constrained to its sheet's tenant,
+      // id, and owner before it can affect filters or returned aggregates.
+      const entriesForSheet = () => tenantDb(knex, context.tenant).table('time_entries')
+        .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+        .where('time_entries.user_id', knex.raw(`${this.tableName}.user_id`));
+
       let query = this.buildTenantScopedQuery(knex, context);
       await this.authorizeTimeSheetRead(query, context, knex);
 
@@ -324,9 +330,7 @@ export class TimeSheetService extends BaseService<any> {
           query.where(`${this.tableName}.approved_by`, effectiveFilters.approved_by);
         }
         if (effectiveFilters.has_entries !== undefined) {
-          const subquery = tenantDb(knex, context.tenant).table('time_entries')
-            .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-            .select(knex.raw('1'));
+          const subquery = entriesForSheet().select(knex.raw('1'));
           
           if (effectiveFilters.has_entries) {
             query.whereExists(subquery);
@@ -357,8 +361,7 @@ export class TimeSheetService extends BaseService<any> {
       // Add computed fields
       // One correlated scalar subquery per aggregate (each selects exactly one column).
       const entryAggregate = (expression: string) =>
-        tenantDb(knex, context.tenant).table('time_entries')
-          .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+        entriesForSheet()
           .select(knex.raw(expression))
           .toQuery();
 
@@ -1537,8 +1540,12 @@ export class TimeSheetService extends BaseService<any> {
           if (searchData.approval_statuses?.length && !searchData.approval_statuses.includes(row.approval_status)) return false;
           if (searchData.user_ids?.length && !searchData.user_ids.includes(row.user_id)) return false;
           if (searchData.period_ids?.length && !searchData.period_ids.includes(row.period_id)) return false;
-          if (searchData.date_from && String(row.period_start ?? '') < searchData.date_from) return false;
-          if (searchData.date_to && String(row.period_end ?? '') > searchData.date_to) return false;
+          if (searchData.date_from) {
+            if (row.period_start == null || formatDbDate(row.period_start) < searchData.date_from) return false;
+          }
+          if (searchData.date_to) {
+            if (row.period_end == null || formatDbDate(row.period_end) > searchData.date_to) return false;
+          }
           return true;
         })
         .slice(0, searchData.limit || 25)
