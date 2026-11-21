@@ -889,3 +889,82 @@ describe('updateAsset returns validation failures instead of throwing (alga00022
     expect(response.results[0].error).not.toBe('Failed to update asset');
   });
 });
+
+describe('asset array masks across history and update normalization', () => {
+  it.each(['field', 'field_name', 'path'])('conceals indexed and ancestor historical deltas labelled by %s', async (label) => {
+    seedAsset();
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: ['attributes.entries.secret', 'network_device.vlan_config.entries.secret'],
+    };
+    const changes = [
+      { [label]: 'assets.attributes.entries.0.secret', before: 'HIDDEN-BEFORE', after: 'HIDDEN-AFTER' },
+      { [label]: 'network_device.vlan_config.entries.0.secret', previous_value: 'HIDDEN-OLD', new_value: 'HIDDEN-NEW' },
+      { [label]: 'attributes.entries.0', old_value: { secret: 'HIDDEN' }, value: { secret: 'HIDDEN-NEW' } },
+      { [label]: 'attributes.entries.0.public', before: 'visible-before', after: 'visible-after' },
+    ];
+    h.dbState.asset_history.push({
+      tenant: TENANT,
+      asset_id: ASSET_ID,
+      history_id: 'review-history',
+      changed_at: new Date(NOW_ISO),
+      changes,
+    });
+    const expectedChanges = [
+      { [label]: changes[0][label] },
+      { [label]: changes[1][label] },
+      { [label]: changes[2][label] },
+      changes[3],
+    ];
+    const history = await getAssetHistory(ASSET_ID) as any;
+    expect(history[0].changes).toEqual(expectedChanges);
+    const bundle = await getAssetDetailBundle(ASSET_ID) as any;
+    expect(bundle.history[0].changes).toEqual(expectedChanges);
+    expect(h.dbState.asset_history[0].changes).toEqual(changes);
+  });
+
+  it.each(['implicit', 'indexed'])('saves visible siblings without pruning empty array positions under %s masks', async (style) => {
+    seedAsset({ attributes: { entries: [null, { secret: 'ATTRIBUTE-KEEP' }, { public: 'old' }] } });
+    seedNetworkDevice({ vlan_config: { entries: [null, { secret: 'EXTENSION-KEEP' }, { public: 'old' }] } });
+    const suffix = style === 'indexed' ? '1.secret' : 'secret';
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: [`attributes.entries.${suffix}`, `network_device.vlan_config.entries.${suffix}`],
+    };
+    const loaded = await getAsset(ASSET_ID) as any;
+    expect(loaded.attributes.entries).toEqual([null, {}, { public: 'old' }]);
+    expect(loaded.network_device.vlan_config.entries).toEqual([null, {}, { public: 'old' }]);
+    loaded.attributes.entries[2].public = 'new';
+    loaded.network_device.vlan_config.entries[2].public = 'extension-new';
+    const result = await updateAsset(ASSET_ID, {
+      name: 'Renamed', attributes: loaded.attributes, network_device: loaded.network_device,
+    } as any) as any;
+    expect(result.name).toBe('Renamed');
+    expect(result.attributes.entries).toEqual([null, {}, { public: 'new' }]);
+    expect(result.network_device.vlan_config.entries).toEqual([null, {}, { public: 'extension-new' }]);
+    expect(h.dbState.assets[0].attributes.entries).toEqual([null, { secret: 'ATTRIBUTE-KEEP' }, { public: 'new' }]);
+    expect(h.dbState.network_device_assets[0].vlan_config.entries).toEqual([null, { secret: 'EXTENSION-KEEP' }, { public: 'extension-new' }]);
+    const history = await getAssetHistory(ASSET_ID) as any;
+    expect(history[0].changes.attributes.entries).toEqual([null, {}, { public: 'new' }]);
+    expect(history[0].changes.network_device.vlan_config.entries).toEqual([null, {}, { public: 'extension-new' }]);
+  });
+
+  it('retains empty positions through multiple implicit array levels', async () => {
+    seedAsset({ attributes: { groups: [{ entries: [{ secret: 'KEEP' }, { public: 'old' }] }] } });
+    seedNetworkDevice({ vlan_config: { groups: [{ entries: [{ secret: 'EXTENSION-KEEP' }, { public: 'old' }] }] } });
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: ['attributes.groups.entries.secret', 'network_device.vlan_config.groups.entries.secret'],
+    };
+    const loaded = await getAsset(ASSET_ID) as any;
+    loaded.attributes.groups[0].entries[1].public = 'new';
+    loaded.network_device.vlan_config.groups[0].entries[1].public = 'extension-new';
+    const result = await updateAsset(ASSET_ID, {
+      attributes: loaded.attributes, network_device: loaded.network_device,
+    } as any) as any;
+    expect(result.attributes.groups[0].entries).toEqual([{}, { public: 'new' }]);
+    expect(result.network_device.vlan_config.groups[0].entries).toEqual([{}, { public: 'extension-new' }]);
+    expect(h.dbState.assets[0].attributes.groups[0].entries).toEqual([{ secret: 'KEEP' }, { public: 'new' }]);
+    expect(h.dbState.network_device_assets[0].vlan_config.groups[0].entries).toEqual([{ secret: 'EXTENSION-KEEP' }, { public: 'extension-new' }]);
+  });
+});

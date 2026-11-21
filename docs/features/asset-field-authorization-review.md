@@ -29,7 +29,11 @@ No browser verification of this edit flow was performed during the repair assign
 
 ## Automated checks executed for the repair
 
-Focused behavioral suites passed: 72 tests in seven files. They cover the existing six read paths and record denial, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions, nested masked descendants in attributes and extension JSON columns, ancestor replacements, implicit nested-array masks, whole-element array masks with stable indices, history/workflow output redaction, readable nullable-field clearing, and form submission with a concealed required attribute. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed. A full server typecheck in the prior repair round exhausted Node's heap at both 4 GB and 8 GB.
+Focused behavioral suites passed: 79 tests in seven files. They cover the existing six read paths and record denial, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions, nested masked descendants in attributes and extension JSON columns, ancestor replacements, implicit nested-array masks, whole-element array masks with stable indices, history/workflow output redaction, readable nullable-field clearing, and form submission with a concealed required attribute.
+
+Array coverage includes empty objects whose only fields were concealed, null positions before masked elements, and permitted sibling edits through multiple array levels. Historical deltas labelled by `field`, `field_name`, or `path` conceal both indexed values and ancestor values containing hidden descendants. Values at different explicit indices remain readable when their paths are permitted.
+
+The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed. The full server typecheck also passed with `NODE_OPTIONS=--max-old-space-size=16384`; earlier attempts with 4 GB and 8 GB exhausted Node's heap.
 
 Commands:
 

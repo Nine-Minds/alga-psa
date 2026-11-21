@@ -51,6 +51,20 @@ describe('projectAssetReadFields', () => {
     }, ['workstation'])).toEqual({ changes: [{ field: 'workstation.serial_number' }] });
   });
 
+  it('keeps labelled history values at different explicit array indices', () => {
+    expect(projectAssetReadFields({
+      changes: [
+        { field: 'attributes.entries.0.secret', before: 'SECRET', after: 'SECRET2' },
+        { field: 'attributes.entries.1.secret', before: 'visible', after: 'visible2' },
+      ],
+    }, ['attributes.entries.0.secret'])).toEqual({
+      changes: [
+        { field: 'attributes.entries.0.secret' },
+        { field: 'attributes.entries.1.secret', before: 'visible', after: 'visible2' },
+      ],
+    });
+  });
+
   it('matches dotted extension and attribute paths below history wrappers and retains sibling values', () => {
     expect(projectAssetReadFields({
       changes: {

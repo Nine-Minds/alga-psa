@@ -72,7 +72,7 @@ import {
     projectAssetReadFields,
     removeAssetReadMaskedFields,
     restoreAssetReadMaskedDescendants,
-    isAssetReadFieldPathMasked,
+    createAssetReadFieldMask,
 } from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
@@ -262,15 +262,21 @@ function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAss
     };
 }
 
-function pruneNullishValues(value: unknown, path = '', redactedFields: readonly string[] = []): unknown {
+function pruneNullishValues(value: unknown, path = '', mask?: ReturnType<typeof createAssetReadFieldMask>): unknown {
     if (Array.isArray(value)) {
+        const preservePositions = mask?.isMasked(path) ?? false;
         return value
             .map((item, index) => {
                 const itemPath = path ? `${path}.${index}` : String(index);
-                // Masked array elements use null as an index-preserving
-                // placeholder until trusted stored values are restored.
-                if (item === null && isAssetReadFieldPathMasked(itemPath, redactedFields)) return null;
-                return pruneNullishValues(item, itemPath, redactedFields);
+                const cleanedValue = pruneNullishValues(item, itemPath, mask);
+                // Even a visible {} may stand for an item whose only fields
+                // were redacted. Retain every position in a masked array so
+                // trusted restoration can preserve it and apply sibling edits.
+                if (cleanedValue === undefined && preservePositions) {
+                    if (Array.isArray(item)) return [];
+                    return item && typeof item === 'object' ? {} : null;
+                }
+                return cleanedValue;
             })
             .filter((item) => item !== undefined);
     }
@@ -278,7 +284,7 @@ function pruneNullishValues(value: unknown, path = '', redactedFields: readonly 
     if (value && typeof value === 'object') {
         const entries = Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>((acc, [key, val]) => {
             const childPath = path ? `${path}.${key}` : key;
-            const cleanedValue = pruneNullishValues(val, childPath, redactedFields);
+            const cleanedValue = pruneNullishValues(val, childPath, mask);
             if (cleanedValue !== undefined) {
                 acc[key] = cleanedValue;
             }
@@ -327,7 +333,7 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest, redactedFields: readonl
     };
 
     // A payload made only of explicit nulls prunes to undefined; restore the object so they can be re-attached.
-    const cleaned = (pruneNullishValues(sanitized, '', redactedFields) ?? {}) as UpdateAssetRequest;
+    const cleaned = (pruneNullishValues(sanitized, '', createAssetReadFieldMask(redactedFields)) ?? {}) as UpdateAssetRequest;
     if (data.location_id === null) {
         cleaned.location_id = null;
     }

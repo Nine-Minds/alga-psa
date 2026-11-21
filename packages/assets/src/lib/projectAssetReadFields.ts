@@ -2,8 +2,6 @@
 export function projectAssetReadFields<T>(value: T, redactedFields: readonly string[] = []): T {
   const mask = createAssetReadFieldMask(redactedFields);
   const paths = mask.paths;
-  const pathsOverlap = (left: string, right: string) =>
-    left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
   const historyPathIsMasked = (path: string) => {
     const assetPath = path.startsWith('changes.') ? path.slice('changes.'.length) : path;
     const segments = assetPath.split('.');
@@ -17,8 +15,7 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
   const project = (node: unknown, path: string): unknown => {
     if (Array.isArray(node)) return node.map((item, index) => {
       const itemPath = `${path}.${index}`;
-      // Keep masked array positions stable. A null placeholder is omitted by
-      // object serialization but does not shift the meaning of numeric masks.
+      // A null placeholder conceals the element without shifting numeric masks.
       const historyElementMasked = (path === 'changes' || path.startsWith('changes.'))
         && historyPathIsMasked(itemPath);
       return isPathMasked(itemPath, paths) || historyElementMasked ? null : project(item, itemPath);
@@ -36,7 +33,7 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
       if (isPathMasked(childPath, paths) || historyFieldMatch) continue;
       if (isHistoryValue && (key === 'before' || key === 'after' || key === 'previous_value' || key === 'new_value' || key === 'old_value' || key === 'value')) {
         const field = (node as Record<string, unknown>).field ?? (node as Record<string, unknown>).field_name ?? (node as Record<string, unknown>).path;
-        if (typeof field === 'string' && [...paths].some((redactedPath) => pathsOverlap(field, redactedPath))) continue;
+        if (typeof field === 'string' && mask.isMasked(field)) continue;
       }
       result[key] = project(child, childPath);
     }
@@ -57,10 +54,13 @@ const ASSET_READ_FIELD_ALIASES = [
 
 /** The shared path interpretation used by read projection and safe mutations. */
 export function createAssetReadFieldMask(redactedFields: readonly string[] = []) {
-  const paths = new Set(redactedFields.map((field) => field.replace(/^assets?\./, '').replace(/^asset\./, '')));
-  const overlaps = (left: string, right: string) =>
-    left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
-  const isMasked = (field: string) => [...paths].some((path) => overlaps(field, path));
+  const paths = new Set(redactedFields.map(normalizeAssetFieldPath));
+  // Ancestor values and positional containers also intersect a descendant
+  // mask. Use the same indexed/implicit-array semantics as leaf projection.
+  const isMasked = (field: string) => {
+    const segments = normalizeAssetFieldPath(field).split('.');
+    return [...paths].some((path) => pathsOverlap(segments, path.split('.')));
+  };
   let expanded = true;
   while (expanded) {
     expanded = false;
@@ -76,6 +76,10 @@ export function createAssetReadFieldMask(redactedFields: readonly string[] = [])
     }
   }
   return { paths, isMasked };
+}
+
+function normalizeAssetFieldPath(field: string): string {
+  return field.replace(/^assets?\./, '').replace(/^asset\./, '');
 }
 
 /** Remove every redacted path before update validation or normalization. */
@@ -116,15 +120,28 @@ function pathStartsWithMask(path: readonly string[], mask: readonly string[]): b
   return true;
 }
 
+function pathsOverlap(left: readonly string[], right: readonly string[]): boolean {
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] === right[rightIndex]) {
+      leftIndex += 1;
+      rightIndex += 1;
+    } else if (/^\d+$/.test(left[leftIndex]) && !/^\d+$/.test(right[rightIndex])) {
+      leftIndex += 1;
+    } else if (/^\d+$/.test(right[rightIndex]) && !/^\d+$/.test(left[leftIndex])) {
+      rightIndex += 1;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** True when a path reaches or descends from a redacted path. */
 function isPathMasked(path: string, masks: ReadonlySet<string>): boolean {
   const segments = path.split('.');
   return [...masks].some((mask) => pathStartsWithMask(segments, mask.split('.')));
-}
-
-/** Used by update normalization to retain null placeholders at masked array indices. */
-export function isAssetReadFieldPathMasked(path: string, redactedFields: readonly string[] = []): boolean {
-  return isPathMasked(path, createAssetReadFieldMask(redactedFields).paths);
 }
 
 /**
