@@ -41,24 +41,26 @@ async function resolveAuthorizationSubjectForUser(
   user: IUserWithRoles,
   apiKeyId?: string,
 ): Promise<AuthorizationSubject> {
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    managedRows = await tenantScopedTable(trx, tenant, 'users')
+  const [teamRows, managedRows] = await Promise.all([
+    tenantScopedTable(trx, tenant, 'team_members')
+      .where({ user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id'),
+    tenantScopedTable(trx, tenant, 'users')
       .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
+      .select<{ user_id: string }[]>('user_id')
+      .catch(() => []),
+  ]);
 
   return {
     tenant,
     userId: user.user_id,
     userType: user.user_type,
-    // Bundle target memberships are resolved from current database rows by
-    // resolveBundleNarrowingRulesForEvaluation. Never copy a potentially stale
-    // role/team snapshot from the request principal into this authorization context.
+    // Bundle role targets are resolved from current database rows by
+    // resolveBundleNarrowingRulesForEvaluation. Team relationships also need
+    // current memberships here, so load them in this transaction rather than
+    // copying a potentially stale user.teams snapshot from the request principal.
     roleIds: [],
-    teamIds: [],
+    teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
     clientId: user.clientId ?? null,
     portfolioClientIds: [],

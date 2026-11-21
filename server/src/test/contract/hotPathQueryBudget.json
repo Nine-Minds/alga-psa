@@ -25,12 +25,12 @@
     },
     {
       "name": "ticket.update",
-      "statements": 16,
+      "statements": 17,
       "locks": 0
     },
     {
       "name": "ticket.boardMove",
-      "statements": 29,
+      "statements": 30,
       "locks": 0
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 474,
+    "statements": 476,
     "locks": 17
   },
   "denylist": [
@@ -95,5 +95,5 @@
     "^native_time_tracking_",
     "^tenant_license_state$"
   ],
-  "notes": "ticket.update adds 4 statements: current role membership (required to find role-targeted bundles without trusting stale principal roles), current team membership, current managed-user relationships, and active bundle assignments. The ticket row is reused. boardMove incurs the same per-ticket authorization delta."
+  "notes": "ticket.update adds 5 statements: current role membership (required to find role-targeted bundles without trusting stale principal roles), current team membership for bundle targets, current team membership on AuthorizationSubject for same_team evaluation, current managed-user relationships, and active bundle assignments. The ticket row is reused. boardMove incurs the same per-ticket authorization delta."
 }

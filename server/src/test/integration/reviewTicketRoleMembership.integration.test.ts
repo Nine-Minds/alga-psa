@@ -138,6 +138,46 @@ async function assignSelectedClientBundle(userId: string, targetType: 'user' | '
   });
 }
 
+async function assignSameTeamBundle(userId: string, action: 'read' | 'update') {
+  await table('authorization_bundle_assignments')
+    .where({ target_type: 'user', target_id: userId })
+    .delete();
+  const bundle = await createAuthorizationBundle(context.db, {
+    tenant,
+    name: `Ticket ${action} same team ${uuidv4()}`,
+    actorUserId: actor.user_id,
+  });
+  await upsertBundleRule(context.db, {
+    tenant,
+    bundleId: bundle.bundleId,
+    revisionId: bundle.revisionId,
+    resourceType: 'ticket',
+    action,
+    templateKey: 'same_team',
+    config: {},
+    actorUserId: actor.user_id,
+  });
+  await publishBundleRevision(context.db as any, {
+    tenant,
+    bundleId: bundle.bundleId,
+    revisionId: bundle.revisionId,
+    actorUserId: actor.user_id,
+  });
+  await createBundleAssignment(context.db, {
+    tenant,
+    bundleId: bundle.bundleId,
+    targetType: 'user',
+    targetId: userId,
+    actorUserId: actor.user_id,
+  });
+}
+
+async function createAssignedTeamTicket(teamId: string, title: string) {
+  const ticketId = await insertTicket(clientOutside, title);
+  await table('tickets').where({ ticket_id: ticketId }).update({ assigned_team_id: teamId });
+  return ticketId;
+}
+
 describe('ticket update record authorization (real transaction)', () => {
   beforeAll(async () => {
     await context.initialize();
@@ -204,6 +244,73 @@ describe('ticket update record authorization (real transaction)', () => {
     expect(Number((await table('ticket_audit_logs').count('* as count').first() as any).count)).toBe(beforeAuditCount);
     expect(Number((await table('internal_notifications').count('* as count').first() as any).count)).toBe(beforeNotificationCount);
     expect(workflowEvents).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('same_team update permits a current member even when the loaded principal has no team snapshot', async () => {
+    await assignSameTeamBundle(actor.user_id, 'update');
+    const teamId = uuidv4();
+    await table('teams').insert({ tenant, team_id: teamId, team_name: 'Current team member', manager_id: actor.user_id });
+    await table('team_members').insert({ tenant, team_id: teamId, user_id: actor.user_id, role: 'member' });
+    const ticketId = await createAssignedTeamTicket(teamId, 'Current team original');
+
+    // The actor was loaded before team membership was added; the database is authoritative.
+    actor = { ...actor, teams: [] };
+    actAs(actor);
+    const { updateTicketInTransaction } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    await expect(withTransaction(context.db, trx => updateTicketInTransaction(
+      trx, actor, tenant, ticketId, { title: 'Current team authorized' },
+    ))).resolves.toBe('success');
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).title).toBe('Current team authorized');
+  }, HOOK_TIMEOUT);
+
+  it('same_team update denies a nonmember despite a stale principal team snapshot', async () => {
+    await assignSameTeamBundle(actor.user_id, 'update');
+    const teamId = uuidv4();
+    await table('teams').insert({ tenant, team_id: teamId, team_name: 'Not a member', manager_id: null });
+    const ticketId = await createAssignedTeamTicket(teamId, 'Nonmember original');
+    actor = { ...actor, teams: [{ team_id: teamId }] };
+    actAs(actor);
+
+    const { updateTicketInTransaction } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    await expect(withTransaction(context.db, trx => updateTicketInTransaction(
+      trx, actor, tenant, ticketId, { title: 'Must remain denied' },
+    ))).rejects.toThrow('Permission denied: Cannot access ticket');
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).title).toBe('Nonmember original');
+  }, HOOK_TIMEOUT);
+
+  it('same_team update denies a removed member despite the principal retaining the old team', async () => {
+    await assignSameTeamBundle(actor.user_id, 'update');
+    const teamId = uuidv4();
+    await table('teams').insert({ tenant, team_id: teamId, team_name: 'Removed member', manager_id: actor.user_id });
+    await table('team_members').insert({ tenant, team_id: teamId, user_id: actor.user_id, role: 'member' });
+    const ticketId = await createAssignedTeamTicket(teamId, 'Removed member original');
+    actor = { ...actor, teams: [{ team_id: teamId }] };
+    await table('team_members').where({ user_id: actor.user_id, team_id: teamId }).delete();
+    actAs(actor);
+
+    const { updateTicketInTransaction } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    await expect(withTransaction(context.db, trx => updateTicketInTransaction(
+      trx, actor, tenant, ticketId, { title: 'Must remain denied' },
+    ))).rejects.toThrow('Permission denied: Cannot access ticket');
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).title).toBe('Removed member original');
+  }, HOOK_TIMEOUT);
+
+  it('same_team ticket reads use current team membership for subresource authorization', async () => {
+    await assignSameTeamBundle(actor.user_id, 'read');
+    const teamId = uuidv4();
+    await table('teams').insert({ tenant, team_id: teamId, team_name: 'Read scoped team', manager_id: actor.user_id });
+    await table('team_members').insert({ tenant, team_id: teamId, user_id: actor.user_id, role: 'member' });
+    const ticketId = await createAssignedTeamTicket(teamId, 'Read scope original');
+    const { authorizeTicketRecordAccess } = await import('@alga-psa/tickets/lib/ticketRecordAuthorization');
+
+    await expect(withTransaction(context.db, trx => authorizeTicketRecordAccess({
+      trx, tenant, user: { ...actor, teams: [] }, ticketId, action: 'read',
+    }))).resolves.toMatchObject({ ticket_id: ticketId });
+
+    await table('team_members').where({ user_id: actor.user_id, team_id: teamId }).delete();
+    await expect(withTransaction(context.db, trx => authorizeTicketRecordAccess({
+      trx, tenant, user: { ...actor, teams: [{ team_id: teamId }] }, ticketId, action: 'read',
+    }))).rejects.toThrow('Permission denied: Cannot access ticket');
   }, HOOK_TIMEOUT);
 
   it('denies out-of-bundle UI and legacy writes without changing ticket, mirror, audit, events, or notifications', async () => {
