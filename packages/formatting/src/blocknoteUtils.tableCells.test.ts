@@ -15,8 +15,8 @@ describe('table cell shapes (alga-2026-0003184)', () => {
     expect(md).toContain('| Host | State |');
     expect(md).toContain('| web01 | DOWN |');
     const { html } = formatBlockNoteContent(blocks as any);
-    expect(html).toContain('<td>web01</td>');
-    expect(html).toContain('<td>DOWN</td>');
+    expect(html).toMatch(/<td\b[^>]*>web01<\/td>/);
+    expect(html).toMatch(/<td\b[^>]*>DOWN<\/td>/);
   });
 
   it('tableCell object cells keep their text in both renditions', () => {
@@ -25,8 +25,8 @@ describe('table cell shapes (alga-2026-0003184)', () => {
     expect(md).toContain('| Host | State |');
     expect(md).toContain('| web01 | DOWN |');
     const { html, text } = formatBlockNoteContent(blocks as any);
-    expect(html).toContain('<td>web01</td>');
-    expect(html).toContain('<td>DOWN</td>');
+    expect(html).toMatch(/<td\b[^>]*>web01<\/td>/);
+    expect(html).toMatch(/<td\b[^>]*>DOWN<\/td>/);
     expect(text).toContain('web01');
   });
 
@@ -41,7 +41,7 @@ describe('table cell shapes (alga-2026-0003184)', () => {
     expect(md).toContain('| a | b |');
     expect(md).toContain('| c | d |');
     const { html } = formatBlockNoteContent(blocks as any);
-    for (const t of ['a', 'b', 'c', 'd']) expect(html).toContain(`<td>${t}</td>`);
+    for (const t of ['a', 'b', 'c', 'd']) expect(html).toMatch(new RegExp(`<td\\b[^>]*>${t}</td>`));
   });
 
   it('empty cells stay structurally empty', () => {
@@ -50,14 +50,16 @@ describe('table cell shapes (alga-2026-0003184)', () => {
     expect(md).toContain('| x |   |');
     expect(md).toContain('|   | y |');
     const { html } = formatBlockNoteContent(blocks as any);
-    expect(html).toContain('<td>x</td><td><br></td>');
-    expect(html).toContain('<td></td><td>y</td>');
+    expect(html).toMatch(/<td\b[^>]*>x<\/td><td\b[^>]*><br><\/td>/);
+    expect(html).toMatch(/<td\b[^>]*><\/td><td\b[^>]*>y<\/td>/);
   });
 
-  it('unrecognised cell shapes render empty, not throw', () => {
+  it('preserves string cells and marks unsupported shapes without throwing', () => {
     const blocks = [table([['str', null, 5, { type: 'tableCell' }]])];
     const { html } = formatBlockNoteContent(blocks as any);
-    expect(html).toContain('<td><br></td><td><br></td><td><br></td><td><br></td>');
+    expect(html).toMatch(/<td\b[^>]*>str<\/td>/);
+    expect(html.match(/\[Unsupported content\]/g)).toHaveLength(2);
+    expect(html).toMatch(/<td\b[^>]*><br><\/td>/);
   });
 
   it('paragraph-only output is unchanged', () => {

@@ -64,3 +64,7 @@ managed-file download failure fails delivery instead of silently omitting the
 file. A single authorized internal recipient may additionally receive a
 time-limited, recipient-bound download link for a managed image that exceeds
 attachment limits.
+
+## Maintainer hotfix compatibility
+
+This change builds on #4401's table-cell extraction helper, board-created HTML template, sanitized description HTML, and plain-text cell spacing. It extends the same helper with string-cell support and explicit unsupported-content markers; the audience-aware rendering policy remains an incremental addition.

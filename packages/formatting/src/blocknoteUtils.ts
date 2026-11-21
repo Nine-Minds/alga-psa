@@ -127,13 +127,13 @@ function unsupportedBlock(type: unknown, options?: RichTextRenderOptions): strin
   return unsupportedPlaceholder(options);
 }
 
-function tableCellContent(cell: unknown, options?: RichTextRenderOptions): unknown[] {
-  if (Array.isArray(cell)) return tableCellInlineContent(cell);
+function tableCellInlineContent(cell: unknown, options?: RichTextRenderOptions): unknown[] {
+  if (Array.isArray(cell)) return cell;
   if (typeof cell === 'string') return [{ type: 'text', text: cell, styles: {} }];
   if (cell && typeof cell === 'object') {
     const content = 'content' in cell ? cell.content : undefined;
     if (content === undefined && 'type' in cell && cell.type === 'tableCell') return [];
-    if (Array.isArray(content)) return tableCellInlineContent(cell);
+    if (Array.isArray(content)) return content;
     if (typeof content === 'string') return [{ type: 'text', text: content, styles: {} }];
   }
   return [{ type: 'text', text: unsupportedBlock('invalid table cell', options), styles: {} }];
@@ -650,20 +650,6 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[], options?: Rich
 }
 
 /**
- * Inline content of one table cell. Legacy tables store a cell as the inline
- * array itself; BlockNote 0.47 stores `{ type: 'tableCell', content: [...] }`.
- * Both email renditions read cells through this so the shapes cannot drift.
- */
-function tableCellInlineContent(cell: unknown): unknown[] {
-  if (Array.isArray(cell)) return cell;
-  if (cell && typeof cell === 'object') {
-    const content = (cell as { content?: unknown }).content;
-    if (Array.isArray(content)) return content;
-  }
-  return [];
-}
-
-/**
  * Converts a table block to markdown format with styling support
  *
  * @param block - The table block to convert
@@ -699,7 +685,7 @@ function convertTableToMarkdown(block: Block | PartialBlock, options?: RichTextR
       // Add cells for this row
       let rowMarkdown = '|';
       for (let colIndex = 0; colIndex < numCols; colIndex++) {
-        const cellInline = tableCellContent(cells[colIndex] ?? [], options);
+        const cellInline = tableCellInlineContent(cells[colIndex] ?? [], options);
         let cellText = ' ';
 
         // Use our styled text extraction function
@@ -990,7 +976,7 @@ export function convertBlockNoteToHTML(blocks: any, options?: RichTextRenderOpti
             tableHTML += '<tr>';
             const cells = Array.isArray(row?.cells) ? row.cells : [];
             cells.forEach((cell, columnIndex) => {
-              const inlineArray = tableCellContent(cell, options);
+              const inlineArray = tableCellInlineContent(cell, options);
               const tag = rowIndex < headerRows || columnIndex < headerCols ? 'th' : 'td';
               const props = !Array.isArray(cell) && cell?.type === 'tableCell' ? cell.props : undefined;
               tableHTML += `<${tag}${tableCellAttributes(props)}>${extractStyledTextToHTML(inlineArray)}</${tag}>`;
@@ -1600,7 +1586,7 @@ function blockTextContent(block: any): string {
     return rows
       .map((row: any) =>
         (Array.isArray(row?.cells) ? row.cells : [])
-          .map((cell: unknown) => inlineContentToPlainText(tableCellContent(cell)))
+          .map((cell: unknown) => inlineContentToPlainText(tableCellInlineContent(cell)))
           .join(' | ')
       )
       .join('\n');
