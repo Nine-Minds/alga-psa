@@ -76,7 +76,14 @@ vi.mock('../../actions/ticketFormActions', () => ({
 
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getContactEffectiveLocation: vi.fn().mockResolvedValue({ locationId: null, locations: [], workArrangement: null }),
+  searchClientsForPicker: vi.fn(),
+  getClientById: vi.fn(async (id: string) => ({
+    client_id: id,
+    client_name: id === 'client-2' ? 'Globex' : id === 'client-1' ? 'Acme' : id,
+    client_type: 'company',
+  })),
 }));
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
@@ -99,9 +106,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, disabled }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, searchClients, disabled }: any) {
     return (
-      <div data-testid="client-picker">
+      <div data-testid="client-picker" data-async={String(typeof searchClients === 'function' && clients === undefined)}>
         <div data-testid="client-picker-value">{selectedClientId}</div>
         <div data-testid="client-picker-disabled">{String(Boolean(disabled))}</div>
         <button
@@ -288,7 +295,12 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
   __esModule: true,
-  default: ({ values }: any) => <div data-testid="additional-agents-value">{(values || []).join(',')}</div>,
+  default: ({ values, onValuesChange }: any) => (
+    <div data-testid="additional-agents-value">
+      {(values || []).join(',')}
+      <button type="button" onClick={() => onValuesChange(['user-9'])}>Select staffing agent</button>
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
@@ -633,6 +645,7 @@ const makeTemplate = (overrides: Record<string, unknown> = {}) => ({
   name: 'Dept change',
   title: 'Employee department change',
   description: 'Steps for the move',
+  client_id: null,
   board_id: 'board-1',
   category_id: 'cat-1',
   subcategory_id: 'subcat-1',
@@ -677,7 +690,7 @@ describe('QuickAddTicket template mode', () => {
     boardSelectSpy.mockReset();
     getTicketTemplateForCreateMock.mockResolvedValue(makeTemplate());
     listTicketTemplatesForCreateMock.mockResolvedValue([
-      { template_id: TEMPLATE_ID, name: 'Dept change', board_id: 'board-1' },
+      { template_id: TEMPLATE_ID, name: 'Dept change', client_id: null, board_id: 'board-1' },
     ]);
     getContactsByClientMock.mockResolvedValue([]);
     getClientLocationsMock.mockResolvedValue([]);
@@ -685,7 +698,6 @@ describe('QuickAddTicket template mode', () => {
       users: [{ user_id: 'user-9', first_name: 'Grace', last_name: 'Hopper' }],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
       priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
-      clients: [{ client_id: 'client-1', client_name: 'Acme', client_type: 'company' }],
       statuses: [{ status_id: 'status-1', name: 'Open' }],
     });
     getTicketStatusesMock.mockResolvedValue([
@@ -714,6 +726,7 @@ describe('QuickAddTicket template mode', () => {
     expect(boardSelectSpy).not.toHaveBeenCalled();
     expect(clientSelectSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('');
+    expect(screen.getByTestId('client-picker')).toHaveAttribute('data-async', 'true');
     expect(screen.queryByTestId('contact-picker-value')?.textContent ?? '').toBe(''); // contact is never taken from a template
     expect(screen.getByTestId('assigned-to-value')).toHaveTextContent('');
 
@@ -725,6 +738,23 @@ describe('QuickAddTicket template mode', () => {
     expect(checklist).toHaveTextContent('Create accounts');
     expect(checklist).toHaveTextContent('Order laptop');
     expect(screen.getByTestId('quick-add-ticket-template-custom-fields')).toBeInTheDocument();
+  });
+
+  it('{{client}} renders the prefilled client name, then follows the picker selection (async picker, no client list)', async () => {
+    getTicketTemplateForCreateMock.mockResolvedValue(makeTemplate({ title: 'Move for {{client}}' }));
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [{ board_id: 'board-1', board_name: 'Support' }],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
+      statuses: [{ status_id: 'status-1', name: 'Open' }],
+      selectedClient: { client_id: 'client-1', client_name: 'Acme', client_type: 'company' },
+    });
+    renderQuickAdd({ prefilledClient: { id: 'client-1', name: 'Acme' } });
+    await pickTemplate();
+    await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Move for Acme'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change client' }));
+    await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Move for Globex'));
   });
 
   it('submit sends ticket_template_id and the checklist opt-in, never a template status or attributes', async () => {
@@ -744,6 +774,23 @@ describe('QuickAddTicket template mode', () => {
     expect(formData.get('title')).toBe('Employee department change');
     expect(formData.has('duplicate_of_ticket_id')).toBe(false);
     expect(formData.has('attributes')).toBe(false);
+  });
+
+  it('submits selected additional agents through addTicket and shows a staffing failure', async () => {
+    renderQuickAdd();
+    await pickTemplate();
+    await waitFor(() => expect((screen.getByTestId('select-ticket-quick-add') as HTMLSelectElement).value).toBe('status-1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change client' }));
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Select staffing agent' }));
+    addTicketMock.mockResolvedValueOnce({ permissionError: 'Unable to assign the selected agent: user is not eligible' });
+
+    fireEvent.click(document.getElementById('ticket-quick-add-submit-btn') as HTMLElement);
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+
+    expect(JSON.parse(submittedFormData().get('additional_agent_ids') as string)).toEqual(['user-9']);
+    expect(await screen.findByText('Unable to assign the selected agent: user is not eligible')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-add-dialog-root')).toBeInTheDocument();
   });
 
   it('sends template_copy_checklist=false when the checklist is unchecked', async () => {
@@ -771,7 +818,7 @@ describe('QuickAddTicket template mode', () => {
     expect(title).toHaveValue('Half typed');
 
     fireEvent.click(within(screen.getByTestId('confirmation-dialog')).getByRole('button', { name: 'Apply template' }));
-    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID));
+    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID, null));
     await waitFor(() => expect(title).toHaveValue('Employee department change'));
   });
 
@@ -788,7 +835,7 @@ describe('QuickAddTicket template mode', () => {
   it('an untouched template draft applies a second template without asking (template prefill is the baseline)', async () => {
     const other = '7c2e8e5f-2d1f-4d1b-8e7b-1d2a3a8b0c21';
     listTicketTemplatesForCreateMock.mockResolvedValue([
-      { template_id: TEMPLATE_ID, name: 'Dept change', board_id: 'board-1' },
+      { template_id: TEMPLATE_ID, name: 'Dept change', client_id: null, board_id: 'board-1' },
       { template_id: other, name: 'Other', board_id: 'board-1' },
     ]);
     getTicketTemplateForCreateMock.mockImplementation(async (id: string) =>
@@ -827,7 +874,7 @@ describe('QuickAddTicket template mode', () => {
       makeTemplate({ board_id: null, category_id: null, subcategory_id: null, warnings: ['Board no longer exists'] })
     );
     renderQuickAdd({ templateId: TEMPLATE_ID });
-    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID));
+    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID, null));
     await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Employee department change'));
     expect(screen.getByTestId('quick-add-ticket-template-warnings')).toHaveTextContent('Board no longer exists');
     expect(screen.getByTestId('quick-add-ticket-template-pill')).toBeInTheDocument();

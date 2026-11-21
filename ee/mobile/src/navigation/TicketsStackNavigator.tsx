@@ -5,7 +5,8 @@ import { DrawerActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TicketsStackParamList } from "./types";
 import type { RootStackParamList } from "./types";
-import { TicketsListScreen } from "../screens/TicketsListScreen";
+import { TicketsListRoute } from "../screens/TicketsSplitScreen";
+import { useWindowLayout } from "../ui/layout";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
@@ -44,6 +45,7 @@ function CreateTicketButton() {
 export function TicketsStackNavigator() {
   const theme = useTheme();
   const { t: tTickets } = useTranslation("tickets");
+  const { permanentSidebar } = useWindowLayout();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -62,10 +64,10 @@ export function TicketsStackNavigator() {
     >
       <Stack.Screen
         name="TicketsList"
-        component={TicketsListScreen}
+        component={TicketsListRoute}
         options={{
           title: tTickets("list.title", "Tickets"),
-          headerLeft: () => <DrawerToggleButton />,
+          headerLeft: permanentSidebar ? undefined : () => <DrawerToggleButton />,
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
               <HeaderTimerChip />

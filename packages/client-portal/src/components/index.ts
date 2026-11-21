@@ -12,6 +12,9 @@ export { RequestAppointmentModal } from './appointments/RequestAppointmentModal'
 
 export { default as BillingOverview } from './billing/BillingOverview';
 export { default as QuoteDetailPage } from './billing/QuoteDetailPage';
+export { default as QuoteLinkDecisionPanel, type QuoteLinkDecisionPanelProps, type QuoteLinkAgreement } from './billing/QuoteLinkDecisionPanel';
+export { QuoteDocumentView } from './billing/QuoteDocumentView';
+export { PublicQuoteReview } from './billing/PublicQuoteReview';
 
 export { default as ClientDocumentsPage } from './documents/ClientDocumentsPage';
 export { PaymentRedirect } from './billing/PaymentRedirect';
@@ -50,3 +53,7 @@ export { ClientKBPage, ClientKBArticleView } from './kb';
 
 // Appliance Licenses (C6)
 export { default as ClientLicensesPage } from './licenses/ClientLicensesPage';
+
+// Requester task thread (L4c): the app supplies the implementation, the package owns the capability gate.
+export { RequesterTaskConversationProvider, RequesterSharedTasksProvider, useRequesterSharedTaskIds } from './projects/RequesterTaskConversation';
+export type { RequesterTaskConversationProps } from './projects/RequesterTaskConversation';

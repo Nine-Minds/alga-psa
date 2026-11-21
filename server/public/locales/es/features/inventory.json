@@ -157,6 +157,8 @@
         "ghost": "uso fantasma",
         "rmaAging": "RMA en demora",
         "rmaClient": "reemplazo",
+        "rmaVendorReturnOverdue": "devolución al proveedor vencida",
+        "rmaVendorReturnApproaching": "devolución al proveedor próxima",
         "priceCreep": "aumento de costo",
         "billCreep": "sobrefacturación",
         "billsOverdue": "facturas vencidas",
@@ -165,7 +167,8 @@
         "stockOut": "sin existencias",
         "poPartial": "OC parcial",
         "warranty": "garantía",
-        "deadStock": "stock inactivo"
+        "deadStock": "stock inactivo",
+        "rmaVendorReturn": "Devolución al proveedor vencida"
       },
       "fact": {
         "unbilledSo": "enviado, aún sin facturar",
@@ -177,6 +180,8 @@
         "ghostTech": "cerró {{count}} tickets de hardware, sin piezas facturadas",
         "rmaVendor": "adeuda crédito — sin respuesta en {{days}} días",
         "rmaClient": "aún se adeuda la unidad de reemplazo",
+        "rmaVendorReturnOverdue": "devolución al proveedor vencida el {{date}} — {{days}} días de retraso",
+        "rmaVendorReturnApproaching": "devolución al proveedor el {{date}} — quedan {{days}} días",
         "priceCreepSo": "aún con el precio del costo anterior",
         "priceCreepQuotes": "{{count}} cotización(es) abierta(s) ahora por debajo del costo actual",
         "priceCreepBill": "la factura supera la OC correspondiente",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} por debajo del punto de reorden",
         "poPartial": "OC parcialmente recibida aún abierta",
         "warranty": "{{count}} unidades con garantía por vencer <30d",
-        "deadStock": "sin movimiento en 90 días"
+        "deadStock": "sin movimiento en 90 días",
+        "rmaVendorReturn": "Devolución al proveedor vence el {{date}} — {{days}} días de retraso"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} líneas · enviado hace {{days}}d",
@@ -207,7 +213,8 @@
         "stockLevel": "disponible {{available}} · punto de reorden {{reorder}}",
         "poPartial": "{{po}} · {{received}} de {{ordered}} recibidas · {{vendor}}",
         "warranty": "{{count}} clientes",
-        "deadStock": "{{locations}} ubicación(es) inmovilizan capital de trabajo"
+        "deadStock": "{{locations}} ubicación(es) inmovilizan capital de trabajo",
+        "rmaVendorReturn": "{{ref}} · fecha límite de devolución al proveedor"
       },
       "metric": {
         "ageDays": "{{days}}d",
@@ -598,6 +605,7 @@
       "warrantyLocationRequired": "Elija dónde está ahora el dispositivo para poder recibirlo de vuelta.",
       "warrantyInvalidTransition": "Ese paso no está disponible en el estado actual del RMA. Actualice e inténtelo de nuevo.",
       "warrantyReviewClose": "Apruebe o rechace la reclamación antes de cerrarla.",
+      "warrantyWrongTrack": "Este paso solo corresponde a reclamaciones con reemplazo anticipado.",
       "duplicateReference": "Esa referencia o número de RMA ya está en uso.",
       "checkViolation": "Ese valor no está permitido para este RMA.",
       "ticketNotFound": "Ticket no encontrado.",
@@ -1324,6 +1332,7 @@
       "replacementReceived": "Reemplazo recibido",
       "replacementDeployed": "Reemplazo desplegado",
       "deadUnitOwed": "Unidad defectuosa pendiente",
+      "deadUnitToVendor": "Unidad averiada al proveedor",
       "deadUnitReturned": "Unidad defectuosa devuelta",
       "replaced": "Reemplazado",
       "credited": "Acreditado",
@@ -1373,6 +1382,12 @@
       "noEvents": "Aún no hay historial.",
       "confirmReceived": "Confirme que el dispositivo está en la oficina. Su custodia debe estar en la oficina.",
       "confirmCredit": "Registre que el proveedor acreditó este dispositivo. El periodo de custodia se cierra como desechado.",
+      "confirmShipDeadUnit": "Envíe la unidad averiada de vuelta al proveedor. El equipo en custodia se registra como en poder del proveedor.",
+      "confirmVendorReceipt": "Confirme que el proveedor recibió la unidad averiada. El caso se cierra como resuelto y la custodia como devuelta al proveedor.",
+      "deadUnitNotShipped": "Unidad averiada aún sin enviar, vencía el {{date}}",
+      "deadUnitApproaching": "Devolución de la unidad averiada próxima: {{date}}",
+      "deadUnitShippedLate": "Unidad averiada enviada tarde, vencía el {{date}}",
+      "returnByHint": "La fecha límite para enviar la unidad averiada al proveedor, contada desde la entrega de este reemplazo. Déjela como está para conservar la fecha de la aprobación.",
       "actions": {
         "approveStandard": "Aprobar (estándar)",
         "approveAdvance": "Aprobar (reemplazo anticipado)",
@@ -1384,7 +1399,10 @@
         "recordRepair": "Registrar reparación",
         "recordCredit": "Registrar crédito del proveedor",
         "returnToClient": "Devolver al cliente",
-        "close": "Cerrar RMA"
+        "shipDeadUnitToVendor": "Enviar unidad averiada al proveedor",
+        "confirmVendorReceipt": "El proveedor recibió la unidad averiada",
+        "close": "Cerrar RMA",
+        "chargeVendorNonReturn": "Registrar cargo por no devolución al proveedor"
       },
       "events": {
         "opened": "Reclamación abierta",
@@ -1397,8 +1415,11 @@
         "repairReceived": "Reparación recibida",
         "vendorCredited": "Acreditado por el proveedor",
         "returnedToClient": "Devuelto al cliente",
+        "deadUnitShipped": "Unidad averiada enviada al proveedor",
+        "vendorReceiptConfirmed": "El proveedor recibió la unidad averiada",
         "closed": "Cerrado",
-        "note": "Nota"
+        "note": "Nota",
+        "vendorNonReturnCharge": "Cargo por no devolución al proveedor registrado"
       },
       "outcome": {
         "covered": "Cubierto",
@@ -1433,7 +1454,10 @@
         "inboundTracking": "Número de seguimiento de entrada",
         "counterparty": "Devuelto a",
         "closeReason": "Motivo de cierre",
-        "note": "Nota"
+        "note": "Nota",
+        "vendorChargeAmount": "Importe del cargo",
+        "vendorChargeCurrency": "Moneda",
+        "selectCurrency": "Seleccionar moneda"
       },
       "claim": {
         "title": "Nueva reclamación de garantía",
@@ -1449,7 +1473,8 @@
         "track": "Rastrear",
         "stockHint": "Los dispositivos vendidos desde el stock no se pueden reclamar aquí. Use Abrir RMA desde la unidad de stock.",
         "submit": "Abrir reclamación"
-      }
+      },
+      "vendorChargeHint": "Al registrar este cargo se cierra la obligación vencida de devolver al proveedor. No registra el envío ni la recepción."
     }
   },
   "salesOrders": {

@@ -13,6 +13,7 @@ import { ActivityActionMenu } from "./ActivityActionMenu";
 import { Tooltip } from "@alga-psa/ui/components/Tooltip";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Repeat } from 'lucide-react';
+import { descriptionPreviewText } from '../lib/descriptionPreviewText';
 
 // Format date to a readable format
 const formatDate = (dateString?: string) => {
@@ -75,6 +76,9 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
 
   const router = useRouter();
 
+  // Synced calendar entries store the provider's HTML body verbatim; show its text only.
+  const descriptionText = descriptionPreviewText(activity.description);
+
   return (
     <div
       className={`p-4 border-l-4 ${typeColorMap[activity.type]} bg-[rgb(var(--color-card))] rounded-md card-elevated card-elevated-hover transition-shadow cursor-pointer`}
@@ -106,7 +110,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
       </div>
       
       <div className="mb-3 text-sm text-gray-500 line-clamp-2">
-        {activity.description || t('card.noDescription', { defaultValue: 'No description provided' })}
+        {descriptionText || t('card.noDescription', { defaultValue: 'No description provided' })}
       </div>
 
       <div className="flex items-center justify-between text-xs">

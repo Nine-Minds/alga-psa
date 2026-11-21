@@ -96,7 +96,8 @@
       "policies": "Policies",
       "apiKeys": "API Keys",
       "webhooks": "Webhooks",
-      "userProvisioning": "User provisioning"
+      "userProvisioning": "User provisioning",
+      "servicePrincipals": "Service principals"
     },
     "loading": {
       "roles": "Loading role configuration...",
@@ -107,7 +108,8 @@
       "webhooks": "Loading webhook configuration...",
       "sso": "Loading SSO management tools...",
       "sessions": "Loading active sessions...",
-      "userProvisioning": "Loading SCIM provisioning..."
+      "userProvisioning": "Loading SCIM provisioning...",
+      "servicePrincipals": "Loading service principals..."
     },
     "scim": {
       "title": "User provisioning",
@@ -830,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Permission denied: API key management is restricted to internal users",
+      "notAvailableForAccount": "API keys are not available for this account.",
       "configInternalOnly": "Permission denied: API key configuration is restricted to internal users",
       "invalidExpiration": "Choose a valid expiration date for this API key.",
       "notFound": "API key not found.",
@@ -843,7 +846,10 @@
       "testNotRetryable": "Test deliveries cannot be retried.",
       "payloadInvalid": "This delivery cannot be retried because the stored payload is invalid.",
       "unsupportedEventType": "Unsupported event type: {{eventTypes}}",
-      "validation": { "unknownEntity": "Unknown webhook entity \"{{entity}}\".", "unknownField": "Unknown field \"{{field}}\" for webhook entity \"{{entity}}\"." }
+      "validation": {
+        "unknownEntity": "Unknown webhook entity \"{{entity}}\".",
+        "unknownField": "Unknown field \"{{field}}\" for webhook entity \"{{entity}}\"."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -862,7 +868,11 @@
       "deliveryNotFound": "Inbound delivery not found.",
       "replayMissingConfig": "Cannot replay an inbound delivery without a webhook config.",
       "notFoundOrInactive": "Inbound webhook not found or inactive.",
-      "validation": { "slugReserved": "This slug is reserved for a bundled integration.", "authTypeMismatch": "The authentication configuration type must match the selected authentication type.", "handlerTypeMismatch": "The handler configuration type must match the selected handler type." }
+      "validation": {
+        "slugReserved": "This slug is reserved for a bundled integration.",
+        "authTypeMismatch": "The authentication configuration type must match the selected authentication type.",
+        "handlerTypeMismatch": "The handler configuration type must match the selected handler type."
+      }
     }
   }
 }

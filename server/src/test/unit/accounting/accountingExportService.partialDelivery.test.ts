@@ -316,4 +316,78 @@ describe('AccountingExportService partial delivery handling', () => {
       publishSpy.mockRestore();
     }
   });
+  it('reports per-entity outcomes: delivered and rejected invoices with the provider message', async () => {
+    const deliveredLine = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
+    const failedLine = makeLine('55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666');
+    const adapter = new PartialFailureAdapter(new Set([deliveredLine.document_id]));
+    const { batch, repository, adapterRegistry } = makeHarness([deliveredLine, failedLine], adapter);
+    const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch')
+      .mockImplementation(async () => { batch.status = 'ready'; });
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const publishSpy = vi.spyOn(publishers, 'publishEvent').mockResolvedValue();
+    try {
+      const result = await new AccountingExportService(repository, adapterRegistry).executeBatch(BATCH_ID);
+      expect(result.deliveredEntityIds).toEqual([deliveredLine.document_id]);
+      expect(result.failedEntities).toEqual([
+        expect.objectContaining({
+          entityId: failedLine.document_id,
+          code: 'QBO_VALIDATION_ERROR',
+          message: expect.stringContaining('Business Validation Error'),
+        }),
+      ]);
+    } finally {
+      validationSpy.mockRestore();
+      publishSpy.mockRestore();
+    }
+  });
+
+  it('reports every entity delivered when nothing failed, and none delivered when all failed', async () => {
+    const lineA = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
+    const lineB = makeLine('55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666');
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const publishSpy = vi.spyOn(publishers, 'publishEvent').mockResolvedValue();
+    try {
+      for (const deliverable of [new Set([lineA.document_id, lineB.document_id]), new Set<string>()]) {
+        const { batch, repository, adapterRegistry } = makeHarness([lineA, lineB], new PartialFailureAdapter(deliverable));
+        const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch')
+          .mockImplementation(async () => { batch.status = 'ready'; });
+        const result = await new AccountingExportService(repository, adapterRegistry).executeBatch(BATCH_ID);
+        validationSpy.mockRestore();
+        expect(result.deliveredEntityIds).toHaveLength(deliverable.size);
+        expect(result.failedEntities).toHaveLength(2 - deliverable.size);
+      }
+    } finally {
+      publishSpy.mockRestore();
+    }
+  });
+
+  it('puts the real validation reasons in the error message and keeps code and details', async () => {
+    const line = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
+    const { batch, repository, adapterRegistry } = makeHarness([line], new PartialFailureAdapter(new Set([line.document_id])));
+    const open = (code: string, message: string) => ({
+      error_id: code, batch_id: BATCH_ID, line_id: line.line_id, code, message, metadata: null, resolution_state: 'open',
+    });
+    repository.listErrors.mockResolvedValue([
+      open('missing_service_mapping', 'Service "Consulting" has no QuickBooks item mapping'),
+      open('missing_tax_mapping', 'Tax code GST has no mapping'),
+      open('missing_service_mapping', 'Service "Consulting" has no QuickBooks item mapping'),
+    ]);
+    const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch')
+      .mockImplementation(async () => { batch.status = 'ready'; });
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const publishSpy = vi.spyOn(publishers, 'publishEvent').mockResolvedValue();
+    try {
+      const error: any = await new AccountingExportService(repository, adapterRegistry)
+        .executeBatch(BATCH_ID).catch((e) => e);
+      expect(error.code).toBe('ACCOUNTING_EXPORT_VALIDATION_FAILED');
+      expect(error.message).toBe(
+        'Export validation failed: Service "Consulting" has no QuickBooks item mapping | Tax code GST has no mapping'
+      );
+      expect(error.message).not.toContain('not ready for delivery');
+      expect(error.details.validationErrors).toHaveLength(3);
+    } finally {
+      validationSpy.mockRestore();
+      publishSpy.mockRestore();
+    }
+  });
 });

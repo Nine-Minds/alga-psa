@@ -8,6 +8,8 @@ export interface RateLimitResult {
   remaining: number;      // Tokens remaining after this request
   retryAfterMs?: number;  // Milliseconds until a token is available (if not allowed)
   reason?: string;
+  /** Infrastructure failure classification; consumers can apply scoped availability policy. */
+  failure?: 'eval-error';
 }
 
 /**
@@ -65,8 +67,7 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * ARGV[1] = maxTokens
  * ARGV[2] = refillRate (tokens/second)
  * ARGV[3] = tokens requested
- * ARGV[4] = now (epoch ms)
- * ARGV[5] = TTL seconds for the bucket key
+ * ARGV[4] = TTL seconds for the bucket key
  *
  * Returns `{1, remaining, 0}` when allowed and `{0, remaining, retryAfterMs}`
  * when denied, so check + consume + refill + TTL management happen in one
@@ -77,9 +78,10 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * - Invalid call parameters (non-finite or non-positive ARGV) deny without
  *   touching the stored bucket.
  * - Corrupt stored state (unparseable JSON, missing/wrong-shape fields,
- *   non-finite or negative tokens, tokens above capacity, absent/future refill
+ *   non-finite or negative tokens, tokens above capacity, or absent refill
  *   timestamps) denies and discards the bucket (`DEL`) so the next request
- *   re-establishes a valid one. The in-flight request is never credited.
+ *   re-establishes a valid one. A future timestamp is normalized without
+ *   changing its token balance.
  * - A computed refill that leaves tokens non-finite or above capacity denies
  *   and discards the bucket.
  */
@@ -88,8 +90,9 @@ local key = KEYS[1]
 local maxTokens = tonumber(ARGV[1])
 local refillRate = tonumber(ARGV[2])
 local tokensNeeded = tonumber(ARGV[3])
-local nowMs = tonumber(ARGV[4])
-local ttlSeconds = tonumber(ARGV[5])
+local ttlSeconds = tonumber(ARGV[4])
+local redisTime = redis.call('TIME')
+local nowMs = tonumber(redisTime[1]) * 1000 + tonumber(redisTime[2]) / 1000
 
 if not maxTokens or not refillRate or not tokensNeeded or not nowMs or not ttlSeconds
    or maxTokens <= 0 or refillRate <= 0 or tokensNeeded <= 0 or nowMs <= 0 or ttlSeconds <= 0
@@ -113,12 +116,15 @@ if state then
     if not storedTokens or not storedLastRefill
        or storedTokens < 0 or storedTokens > maxTokens
        or storedTokens ~= storedTokens
-       or storedLastRefill <= 0 or storedLastRefill > nowMs
+       or storedLastRefill <= 0
        or storedLastRefill ~= storedLastRefill then
       corrupt = true
     else
       tokens = storedTokens
-      lastRefillMs = storedLastRefill
+      -- A future baseline can come from a prior clock anomaly. Preserve the
+      -- consumed balance, grant no refill for the anomalous interval, and
+      -- resume refill from Redis's current clock.
+      lastRefillMs = math.min(storedLastRefill, nowMs)
     end
   end
   if corrupt then
@@ -279,13 +285,16 @@ export class TokenBucketRateLimiter {
    * @param tenantId - The tenant ID
    * @param subjectId - Optional subject ID for per-subject rate limiting
    * @param tokens - Number of tokens to consume (default: 1)
+   * @param configOverride - Optional caller-resolved bucket config; when set it is used
+   *   instead of the namespace config getter. Omitted, behavior is unchanged.
    * @returns RateLimitResult indicating if the request is allowed
    */
   async tryConsume(
     namespace: string,
     tenantId: string,
     subjectId?: string,
-    tokens: number = 1
+    tokens: number = 1,
+    configOverride?: BucketConfig
   ): Promise<RateLimitResult> {
     if (!this.redis) {
       // If Redis is not available, fail open (allow the request)
@@ -294,7 +303,7 @@ export class TokenBucketRateLimiter {
     }
 
     const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
-    const config = await this.getBucketConfig(namespace, tenantId, subjectId);
+    const config = configOverride ?? await this.getBucketConfig(namespace, tenantId, subjectId);
     const now = Date.now();
 
     try {
@@ -389,7 +398,7 @@ export class TokenBucketRateLimiter {
    * @param tenantId - The tenant ID
    * @param subjectId - Optional subject ID for per-subject rate limiting
    * @param tokens - Number of tokens to consume (default: 1)
-   * @returns RateLimitResult indicating if the request is allowed
+   * @returns RateLimitResult; EVAL exceptions are tagged as `eval-error` while remaining denied
    */
   async tryConsumeAtomic(
     namespace: string,
@@ -440,21 +449,20 @@ export class TokenBucketRateLimiter {
           String(config.maxTokens),
           String(config.refillRate),
           String(tokens),
-          String(now),
           String(this.bucketTtlSeconds),
         ],
       });
     } catch (error) {
-      // EVAL threw or Redis returned an error reply: fail closed. Deny the
-      // request and never reset the bucket, which would credit the in-flight
-      // request; the negative `remaining` marks this as an abnormal denial.
+      // Do not reset the bucket on EVAL failure. Keep this as a denied result
+      // for existing atomic consumers; the email gate applies its established
+      // fail-open policy using the explicit infrastructure classification.
       logger.error('[TokenBucketRateLimiter] Atomic EVAL failed; denying (fail closed)', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        errorName: error instanceof Error ? error.name : 'UnknownError',
         namespace,
         tenantId,
         subjectId,
       });
-      return { allowed: false, remaining: -1 };
+      return { allowed: false, remaining: -1, failure: 'eval-error' };
     }
 
     const parsed = this.parseAtomicReply(reply);

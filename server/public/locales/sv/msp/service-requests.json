@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicera",
       "archive": "Arkivera",
-      "unarchive": "Återställ från arkivet"
+      "unarchive": "Återställ från arkivet",
+      "delete": "Ta bort"
     },
     "lifecycleLabels": {
       "published": "Publicerad",
@@ -89,10 +90,21 @@
       "types": {
         "short-text": "Kort text",
         "long-text": "Lång text",
-        "select": "Vallista",
+        "select": "Rullgardinslista",
         "checkbox": "Kryssruta",
         "date": "Datum",
-        "file-upload": "Filuppladdning"
+        "file-upload": "Filuppladdning",
+        "number": "Tal",
+        "email": "E-postadress",
+        "phone": "Telefonnummer",
+        "url": "Webbadress",
+        "radio": "Välj ett",
+        "multi-select": "Välj flera",
+        "date-time": "Datum och tid",
+        "section": "Avsnitt",
+        "text": "Instruktioner",
+        "callout": "Framhävd notis",
+        "divider": "Avdelare"
       },
       "visibility": {
         "title": "Visa när…",
@@ -123,7 +135,13 @@
         },
         "advancedJson": "Avancerat (JSON)",
         "advancedJsonHelp": "Hela den sparade konfigurationen, inklusive kontextstandarder. Synlighetsregler ändras enklast med ”Visa när…” på varje fält. Osparade ändringar här förkastas om en regel ändras där."
-      }
+      },
+      "openBuilder": "Öppna formulärbyggaren",
+      "summary": "{{questions}} frågor · {{required}} obligatoriska",
+      "requiredChip": "Obligatoriskt",
+      "datePlaceholder": "Välj ett datum",
+      "showFields": "Visa frågorna",
+      "hideFields": "Dölj frågorna"
     },
     "execution": {
       "title": "Utförande",
@@ -150,7 +168,12 @@
         "priorityCalculated": "Prioritet (beräknad)",
         "selectImpactAndUrgency": "Välj påverkan och brådska",
         "priorityFormula": "{{label}} (påverkan {{impact}} x brådska {{urgency}})",
-        "titleFieldKey": "Fältnyckel för titel",
+        "ticketSubject": "Ärendets ämne",
+        "ticketSubjectHelp": "Svar fylls i när förfrågan skickas. Lämna tomt för att använda det första svaret.",
+        "insertField": "Infoga fält",
+        "noInsertableFields": "Det här formuläret har inga fält att infoga ännu.",
+        "unknownFields": "Okänt fält: {{fields}}",
+        "unknownFieldsBlocked": "Åtgärda de okända fälten i ärendets ämne eller beskrivningsprefix innan du sparar.",
         "descriptionPrefix": "Beskrivningsprefix",
         "save": "Spara ärendefördelning"
       },
@@ -418,7 +441,8 @@
         "applyFailed": "Det gick inte att tillämpa svarsmappningen",
         "applied": "Svarsmappningen har tillämpats"
       }
-    }
+    },
+    "delete": "Ta bort"
   },
   "icons": {
     "file-text": "Allmän förfrågan",
@@ -461,7 +485,8 @@
       "workflowConfigurationUpdated": "Arbetsflödesinställningarna har uppdaterats",
       "formBehaviorConfigUpdated": "Inställningarna för formulärbeteende har uppdaterats",
       "visibilityConfigUpdated": "Synlighetsinställningarna har uppdaterats",
-      "audienceUpdated": "Målgrupp uppdaterad"
+      "audienceUpdated": "Målgrupp uppdaterad",
+      "definitionDeleted": "Tjänstebegäran-formuläret har tagits bort"
     },
     "error": {
       "loadFailed": "Det gick inte att läsa in tjänsteförfrågningar",
@@ -485,7 +510,343 @@
       "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
       "visibilityInvalid": "Ogiltig JSON för synlighet",
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
-      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
+      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen",
+      "deleteFailed": "Det gick inte att ta bort tjänstebegäran-formuläret"
     }
+  },
+  "designer": {
+    "palette": {
+      "searchPlaceholder": "Sök",
+      "showPalette": "Visa paletten",
+      "hidePalette": "Dölj paletten",
+      "dragHint": "Släpp på formuläret för att lägga till",
+      "noMatches": {
+        "title": "Inga träffar för ”{{query}}”",
+        "tipWords": "Prova ett kortare eller annat ord, till exempel ”datum”, ”val” eller ”fil”.",
+        "tipVerb": "Sök efter vad frågan efterfrågar: namn, datum, belopp, fil.",
+        "tipBrowse": "Rensa sökningen för att bläddra bland alla grupper.",
+        "clear": "Rensa sökningen"
+      },
+      "categories": {
+        "text": "Text",
+        "choices": "Val",
+        "datesAndNumbers": "Datum och tal",
+        "files": "Filer",
+        "layout": "Layout"
+      }
+    },
+    "saveStatus": {
+      "justNow": "nyss",
+      "minutesAgo": "för {{count}} min sedan",
+      "atTime": "kl. {{time}}",
+      "notSavedYet": "Inte sparat ännu",
+      "unsaved": "Osparade ändringar",
+      "savedAgo": "Sparat · {{ago}}",
+      "saved": "Sparat"
+    }
+  },
+  "formBuilder": {
+    "leftPane": {
+      "label": "Lägg till element eller bläddra i dispositionen",
+      "add": "Lägg till",
+      "outline": "Disposition",
+      "insertionHint": "Nästa element hamnar på den markerade platsen."
+    },
+    "toolbar": {
+      "undo": "Ångra",
+      "redo": "Gör om",
+      "mode": "Redigeringsläge",
+      "edit": "Redigera",
+      "tryIt": "Testa",
+      "desktopWidth": "Skrivbordsbredd",
+      "phoneWidth": "Telefonbredd",
+      "formSettings": "Formulärinställningar",
+      "duplicate": "Duplicera",
+      "delete": "Ta bort"
+    },
+    "canvas": {
+      "renameHint": "Klicka för att byta namn",
+      "insertHere": "Lägg till ett element här",
+      "insertAtEnd": "Lägg till ett element sist",
+      "dragHandle": "Dra för att ändra ordning",
+      "ruleChip": "{{count}} synlighetsregler",
+      "validationChip": "Svaret kontrolleras",
+      "datePlaceholder": "Välj ett datum",
+      "emptyHint": "Här finns inget ännu. Använd fliken Lägg till i vänsterpanelen för den första frågan.",
+      "showTemplates": "Visa mallar"
+    },
+    "outline": {
+      "empty": "Inget på formuläret än.",
+      "halfWidthPair": "Delar rad",
+      "requiredChip": "Detta måste besvaras",
+      "ruleChip": "Visas bara ibland"
+    },
+    "gallery": {
+      "title": "Börja från en mall",
+      "subtitle": "Välj en utgångspunkt och ändra sedan vad som helst i den."
+    },
+    "messages": {
+      "saveFailed": "Formuläret kunde inte sparas.",
+      "notFound": "Den här serviceförfrågan finns inte längre.",
+      "loadFailedTitle": "Formulärbyggaren kunde inte öppnas",
+      "loading": "Öppnar formulärbyggaren…",
+      "published": "Publicerad. Kunderna ser den nya versionen.",
+      "publishBlocked": "Åtgärda det som definitionssidan rapporterar och publicera sedan.",
+      "publishFailed": "Den här serviceförfrågan kunde inte publiceras.",
+      "restoreBackup": "Osparade ändringar från ditt förra besök har bevarats i den här webbläsaren.",
+      "restoreBackupApply": "Återställ dem",
+      "restoreBackupDismiss": "Släng"
+    },
+    "types": {
+      "short-text": {
+        "description": "En rad text"
+      },
+      "long-text": {
+        "description": "Ett stycke eller mer"
+      },
+      "email": {
+        "description": "Kontrolleras som e-postadress"
+      },
+      "phone": {
+        "description": "Kontrolleras som telefonnummer"
+      },
+      "url": {
+        "description": "Kontrolleras som länk"
+      },
+      "select": {
+        "description": "Ett svar från en lista"
+      },
+      "radio": {
+        "description": "Ett svar, alla synliga"
+      },
+      "multi-select": {
+        "description": "Valfritt antal svar"
+      },
+      "checkbox": {
+        "description": "Ett ja- eller nej-svar"
+      },
+      "number": {
+        "description": "Ett tal, med gränser"
+      },
+      "date": {
+        "description": "En enda dag"
+      },
+      "date-time": {
+        "description": "En dag och en tid"
+      },
+      "file-upload": {
+        "description": "En bilaga"
+      },
+      "section": {
+        "description": "Grupperar frågorna under den"
+      },
+      "text": {
+        "description": "Ett stycke med vägledning"
+      },
+      "callout": {
+        "description": "En notis som sticker ut"
+      },
+      "divider": {
+        "description": "En linje mellan element"
+      }
+    },
+    "inspector": {
+      "resize": "Ändra panelens bredd",
+      "nothingSelected": "Välj ett element i formuläret för att ändra det.",
+      "basics": "Grunder",
+      "label": "Fråga",
+      "sectionTitle": "Avsnittsrubrik",
+      "calloutTitle": "Notisens rubrik",
+      "helpText": "Tips under frågan",
+      "bodyText": "Text",
+      "calloutTone": "Utseende",
+      "calloutTones": {
+        "info": "Bra att veta",
+        "warning": "Varning",
+        "success": "Goda nyheter"
+      },
+      "sectionCollapsible": "Det här avsnittet går att fälla ihop",
+      "answerKey": "Svarsnyckel (används i rapporter och regler)",
+      "asking": "Frågan",
+      "required": "Detta måste besvaras",
+      "placeholder": "Blek exempeltext",
+      "width": "Bredd",
+      "widthFull": "Hel",
+      "widthHalf": "Halv",
+      "choices": "Valen",
+      "choicesHelp": "En rad per svar som går att välja.",
+      "choiceLabel": "Val {{index}}",
+      "newChoice": "Val {{index}}",
+      "removeChoice": "Ta bort det här valet",
+      "addChoice": "Lägg till ett val",
+      "checkTheAnswer": "Kontrollera svaret",
+      "checkHelp": {
+        "default": "Lämna ett fält tomt för att hoppa över den kontrollen.",
+        "number": "Tal utanför det här intervallet avvisas.",
+        "date": "Datum utanför det här intervallet avvisas."
+      },
+      "rules": {
+        "default": {
+          "minLength": "Kortaste svar (tecken)",
+          "maxLength": "Längsta svar (tecken)",
+          "pattern": "Måste matcha det här mönstret",
+          "min": "Minsta tal",
+          "max": "Största tal",
+          "minDate": "Tidigaste datum",
+          "maxDate": "Senaste datum",
+          "minSelected": "Minsta antal val",
+          "maxSelected": "Största antal val"
+        }
+      },
+      "customMessage": "Vad som visas när det inte stämmer",
+      "customMessagePlaceholder": "Lämna tomt för standardtexten",
+      "onlyShowWhen": "Visa detta bara när…",
+      "onlyShowWhenHelp": "Utan regel visas det alltid.",
+      "onlyShowWhenSectionHelp": "Döljer du ett avsnitt döljs även frågorna i det.",
+      "visibilityNeedsEarlierField": "Lägg till en fråga ovanför som regeln kan utgå från.",
+      "visibilityAlways": "Visas alltid.",
+      "visibilityWhen": "När",
+      "visibilityIs": "är",
+      "visibilityValue": "det här svaret",
+      "visibilityOperators": {
+        "equals": "exakt",
+        "not-equals": "allt utom",
+        "is-true": "ikryssad",
+        "is-false": "inte ikryssad",
+        "has-value": "besvarad",
+        "is-empty": "lämnad tom"
+      },
+      "addVisibilityRule": "Lägg till ett villkor",
+      "formSettings": {
+        "title": "Hela formuläret",
+        "description": "Hur formuläret ser ut och vad som händer efter att det skickats.",
+        "width": "Formulärets bredd",
+        "widthNarrow": "Smal",
+        "widthBoxed": "Bekväm läsbredd",
+        "widthWide": "Bred",
+        "widthFull": "Hela sidan",
+        "submitLabel": "Text på skicka-knappen",
+        "submitLabelPlaceholder": "Skicka förfrågan",
+        "successMessage": "Vad som visas efter att det skickats",
+        "successMessagePlaceholder": "Tack — förfrågan har kommit fram och vi hör av oss."
+      },
+      "startWithThisAnswer": "Börja med det här svaret",
+      "startWithThisAnswerHelp": "Formuläret öppnas med detta ifyllt. Det går att ändra.",
+      "noDefaultAnswer": "Inget svar att börja med",
+      "clearDefaultAnswer": "Börja tomt",
+      "defaultNotAnOption": "Det här svaret är inget av valen ovan.",
+      "defaultFailsRules": "Det här svaret klarar inte kontrollerna nedan.",
+      "legacyRuleOutsideBuilder": "Elementet har även en regel som satts utanför byggaren och fortsätter att gälla.",
+      "renameBreaksTemplates": "Ärendets rubrik eller beskrivning hänvisar fortfarande till ”{{key}}”. Uppdatera det på begärandesidan.",
+      "renameKeyEmpty": "En svarsnyckel kan inte vara tom. Den tidigare nyckeln gäller fortfarande.",
+      "renameKeyTaken": "En annan fråga använder redan svarsnyckeln ”{{key}}”. Den tidigare nyckeln gäller fortfarande."
+    },
+    "tryIt": {
+      "banner": "Svaren på den här skärmen sparas ingenstans. Regler och kontroller fungerar precis som för en kund.",
+      "check": "Kontrollera svaren",
+      "reset": "Börja om",
+      "allGood": "Alla svar godkänns.",
+      "required": "Den här frågan behöver ett svar.",
+      "invalid": "Det här svaret har inte förväntad form.",
+      "validation": {
+        "type": "Det här svaret har inte förväntad form.",
+        "pattern": "Det här svaret har inte förväntad form.",
+        "minLength": "Använd minst {{minLength}} tecken.",
+        "maxLength": "Använd högst {{maxLength}} tecken.",
+        "min": "Ange {{min}} eller mer.",
+        "max": "Ange {{max}} eller mindre.",
+        "minDate": "Välj {{minDate}} eller senare.",
+        "maxDate": "Välj {{maxDate}} eller tidigare.",
+        "minSelected": "Välj minst {{minSelected}}.",
+        "maxSelected": "Välj högst {{maxSelected}}."
+      }
+    },
+    "templates": {
+      "newEmployee": {
+        "name": "Introduktion av ny medarbetare",
+        "description": "Vem som börjar, när, och vad som behövs första dagen.",
+        "callout": {
+          "label": "Ge oss fem arbetsdagar",
+          "help": "Konton och utrustning tar några dagar att ordna, så hör av er så tidigt som möjligt."
+        },
+        "section": {
+          "employee": "Medarbetare",
+          "employeeHelp": "Vem som börjar och när.",
+          "hardware": "Utrustning"
+        },
+        "fullName": "Fullständigt namn",
+        "startDate": "Startdatum",
+        "department": "Avdelning",
+        "departments": {
+          "engineering": "Teknik",
+          "sales": "Försäljning",
+          "operations": "Verksamhet",
+          "finance": "Ekonomi",
+          "customerSuccess": "Kundframgång"
+        },
+        "needsLaptop": "Behövs en bärbar dator?",
+        "needsLaptopHelp": "Vi gör i ordning den före startdatumet.",
+        "laptopModel": "Modell av bärbar dator",
+        "peripherals": "Kringutrustning",
+        "peripheralOptions": {
+          "monitor": "Extern skärm",
+          "dock": "Dockningsstation",
+          "headset": "Hörlurar med mikrofon",
+          "keyboard": "Tangentbord och mus"
+        },
+        "policy": "Undertecknad utrustningspolicy (PDF)",
+        "laptops": {
+          "macbookAir": "MacBook Air 13\"",
+          "latitude": "Dell Latitude 5450",
+          "thinkpad": "Lenovo ThinkPad T14"
+        }
+      },
+      "access": {
+        "name": "Begäran om åtkomst",
+        "description": "Ny, ändrad eller borttagen åtkomst till ett system.",
+        "callout": {
+          "label": "Din chef kommer att tillfrågas om godkännande",
+          "help": "Ändringar av åtkomst kräver ett godkännande innan vi genomför dem."
+        },
+        "section": "Vilken åtkomst som behövs",
+        "requestedFor": "Begärs för",
+        "system": "Program eller system",
+        "requestType": "Typ av begäran",
+        "requestTypes": {
+          "new": "Ny åtkomst",
+          "change": "Ändra befintlig åtkomst",
+          "remove": "Ta bort åtkomst"
+        },
+        "neededBy": "Behövs senast",
+        "justification": "Affärsmässig motivering"
+      },
+      "repair": {
+        "name": "Reparation av utrustning",
+        "description": "En enhet som behöver lagas eller bytas.",
+        "section": {
+          "device": "Enheten",
+          "problem": "Vad som är fel"
+        },
+        "assetTag": "Inventarienummer eller serienummer",
+        "deviceType": "Typ av enhet",
+        "deviceTypes": {
+          "laptop": "Bärbar dator",
+          "desktop": "Stationär dator",
+          "monitor": "Skärm",
+          "phone": "Telefon",
+          "other": "Annat"
+        },
+        "symptoms": "Beskriv problemet",
+        "stillUsable": "Enheten går fortfarande att använda",
+        "photo": "Foto av problemet"
+      },
+      "blank": {
+        "name": "Börja tomt",
+        "description": "Ett tomt formulär som byggs en fråga i taget."
+      }
+    }
+  },
+  "deleteDialog": {
+    "confirmation": "”{{name}}” och alla dess versioner tas bort permanent. Det går inte att ångra."
   }
 }

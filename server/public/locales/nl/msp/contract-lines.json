@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Omschrijving factuurregel",
         "invoiceLineDescriptionPlaceholder": "bijv. Maandelijks onderhoud van de telefooncentrale volgens de overeenkomst van 2019",
         "nameLabel": "Naam contractregel *",
-        "namePlaceholder": "bijv. Beheerde ondersteuning - Goud"
+        "namePlaceholder": "bijv. Beheerde ondersteuning - Goud",
+        "invoiceLineSubtitleLabel": "Ondertitel van factuurregel",
+        "invoiceLineSubtitlePlaceholder": "bijv. Beheerde endpoints en back-up",
+        "invoiceLineSubtitleHelp": "Wordt als gedempte tweede regel onder de titel getoond wanneer deze vaste regel op een factuur staat."
       },
       "cardTitle": "Contractregel bewerken: {{name}} (vast)",
       "errors": {

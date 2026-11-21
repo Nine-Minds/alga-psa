@@ -2,6 +2,7 @@ import { isInboundRetryLaterError } from './inboundRetryLaterError';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
+import { repairUtf8Mojibake } from './inboundEmailMimeHelpers';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type {
@@ -26,6 +27,7 @@ import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automa
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/graphFailure';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
+import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
@@ -227,7 +229,7 @@ export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueue
     throw new SourceMessageUnavailableError('microsoft_provider_not_found');
   }
 
-  const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = getEmailWebhookBaseUrl();
   const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
   const ff = (row as any).mc_folder_filters;
   const folderToMonitor = Array.isArray(ff)
@@ -412,7 +414,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
           name: item?.name || undefined,
         }))
       : undefined,
-    subject: params.parsed.subject || '',
+    subject: repairUtf8Mojibake(params.parsed.subject || ''),
     body: {
       text: params.parsed.text || '',
       html: params.parsed.html ? String(params.parsed.html) : undefined,

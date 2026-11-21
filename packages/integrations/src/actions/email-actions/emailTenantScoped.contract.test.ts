@@ -28,12 +28,13 @@ describe('email action tenant-scoped query contract', () => {
       'statuses',
       'priorities',
       'categories',
-      'clients',
       'users',
       'client_locations',
     ]) {
       expect(text).toContain(`tenantDb(knex, tenant).table('${table}')`);
     }
+    // The field options never list the tenant's clients: client pickers search on the server.
+    expect(text).not.toContain(".table('clients')");
   });
 
   it('uses tenantDb for metadata-backed inbound rule helper roots', () => {

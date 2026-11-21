@@ -6,6 +6,7 @@ import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
+import { resolveGoogleMailboxOAuthClient } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
 
 // make this dynamic
 export const dynamic = 'force-dynamic';
@@ -139,11 +140,15 @@ export async function GET(request: NextRequest) {
     let clientSecret: string | null = null;
 
     // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-    clientId = (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id')) ?? null;
-    clientSecret = (await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret')) ?? null;
-    clientId = clientId?.trim() || null;
-    clientSecret = clientSecret?.trim() || null;
-    
+    try {
+      const resolved = await resolveGoogleMailboxOAuthClient({ tenant: stateData.tenant });
+      clientId = resolved.clientId;
+      clientSecret = resolved.clientSecret;
+    } catch {
+      clientId = null;
+      clientSecret = null;
+    }
+
     // Redirect URI is deployment-derived; stateData.redirectUri should already match the canonical callback.
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL ||
@@ -219,6 +224,10 @@ export async function GET(request: NextRequest) {
             .update({
               access_token: access_token,
               refresh_token: refresh_token || null,
+              // Record which OAuth client issued this refresh token so refresh
+              // can detect a later tenant client change. The secret stays in
+              // tenant secrets.
+              client_id: clientId,
               token_expires_at: expiresAt.toISOString(),
               updated_at: new Date().toISOString()
             });

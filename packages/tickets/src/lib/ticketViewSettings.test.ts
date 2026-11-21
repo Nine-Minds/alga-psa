@@ -289,6 +289,12 @@ describe('validateCapturedFilters (validate-on-read)', () => {
     expect(validated.includeUnassigned).toBe(true);
   });
 
+  it('keeps the "Me" sentinel whatever the known-user universe is', () => {
+    expect(validateCapturedFilters({ assignedToIds: ['me', USER_A] }, { userIds: [USER_B] }).assignedToIds).toEqual(['me']);
+    expect(validateCapturedFilters({ assignedToIds: ['me'] }, { userIds: [] }).assignedToIds).toEqual(['me']);
+    expect(validateCapturedFilters({ assignedToIds: ['me', USER_A] }, {}).assignedToIds).toEqual(['me', USER_A]);
+  });
+
   it('leaves a value alone when its universe is unknown', () => {
     // "Cannot validate" must never mean "drop" — an unloaded option list would
     // otherwise silently erase a perfectly good saved filter.

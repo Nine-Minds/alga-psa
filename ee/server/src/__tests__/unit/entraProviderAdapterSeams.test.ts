@@ -77,6 +77,31 @@ describe('DirectProviderAdapter.listUsersForTenantWithToken', () => {
     expect(hoisted.get.mock.calls[0][0]).toContain('userType,assignedLicenses');
   });
 
+  it('T010: passes ;ext= phone values through untouched (parsing lives in the shared mapper)', async () => {
+    hoisted.get.mockResolvedValueOnce({
+      data: {
+        value: [
+          {
+            id: 'u1',
+            userPrincipalName: 'alice@acme.example',
+            accountEnabled: true,
+            mobilePhone: '+14165550100;ext=12',
+            businessPhones: ['+14165551234;ext=228'],
+          },
+        ],
+      },
+    });
+
+    const result = await new DirectProviderAdapter().listUsersForTenantWithToken({
+      tenant: 't1',
+      managedTenantId: 'managed-1',
+      accessToken: 'tok',
+    });
+
+    expect(result.users[0].businessPhones).toEqual(['+14165551234;ext=228']);
+    expect(result.users[0].mobilePhone).toBe('+14165550100;ext=12');
+  });
+
   it('pages transitive Graph group members and collects user IDs', async () => {
     const adapter = new DirectProviderAdapter() as any;
     const urls: string[] = [];
@@ -119,6 +144,28 @@ describe('CippProviderAdapter seams', () => {
   beforeEach(() => {
     hoisted.get.mockReset();
     hoisted.cipp = { baseUrl: 'https://cipp.test', apiToken: 'api-token' };
+  });
+
+  it('T010: passes ;ext= phone values through untouched (parsing lives in the shared mapper)', async () => {
+    hoisted.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'c1',
+          userPrincipalName: 'alice@acme.example',
+          accountEnabled: true,
+          mobilePhone: '+14165550100;ext=12',
+          businessPhones: ['+14165551234;ext=228'],
+        },
+      ],
+    });
+
+    const users = await new CippProviderAdapter().listUsersForTenant({
+      tenant: 't1',
+      managedTenantId: 'customer-1',
+    });
+
+    expect(users[0].businessPhones).toEqual(['+14165551234;ext=228']);
+    expect(users[0].mobilePhone).toBe('+14165550100;ext=12');
   });
 
   it('normalizes CIPP user rows (id/upn/email) via the adapter', async () => {
