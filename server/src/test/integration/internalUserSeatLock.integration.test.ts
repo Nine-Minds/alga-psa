@@ -21,7 +21,7 @@ import {
 let db: Knex;
 // Stable scratch database: bootstrapping (migrations) takes minutes, so it is
 // created once and reused (recreate:false). Drop it with SEAT_LOCK_TEST_DROP=1.
-const databaseName = 'internal_user_seat_lock_test';
+const databaseName = process.env.SEAT_LOCK_TEST_DATABASE || 'internal_user_seat_lock_test';
 
 beforeAll(async () => {
   db = await createTestDbConnection({ databaseName, runSeeds: false, recreate: false });
@@ -32,13 +32,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db?.destroy();
-  if (process.env.SEAT_LOCK_TEST_DROP !== '1') return;
+  if (process.env.SEAT_LOCK_TEST_DROP !== '1' || !process.env.SEAT_LOCK_TEST_DATABASE) return;
   const admin = knex({ client: 'pg', connection: {
     host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER_ADMIN || 'postgres',
     password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123'), database: 'postgres',
   }, pool: { min: 0, max: 1 } });
-  try { await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]); }
+  try {
+    await admin.raw('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()', [databaseName]);
+    await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]);
+  }
   finally { await admin.destroy(); }
 });
 
@@ -190,6 +193,108 @@ describe('internal user seat lock', () => {
     const finalUser = await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive');
     expect(finalUser.user_type === 'internal' && finalUser.is_inactive === false).toBe(false);
   }, 60_000);
+
+  it.each([
+    ['conversion before activation', ['type', 'active']],
+    ['activation before conversion', ['active', 'type']],
+  ] as const)('composes partial updates at capacity (%s)', async (_label, order) => {
+    const tenant = await seedTenant({ limit: 1 });
+    await seedUser(tenant, 'owner@example.test');
+    const email = 'inactive-client@example.test';
+    await db('users').insert({
+      tenant, user_id: randomUUID(), username: email, email, first_name: 'T', last_name: 'U',
+      user_type: 'client', hashed_password: 'unused', is_inactive: true,
+    });
+    const userId = (await db('users').where({ tenant, email }).first('user_id')).user_id;
+    const patches = {
+      type: { user_type: 'internal' },
+      active: { is_inactive: false },
+    } as const;
+
+    // Queue the service calls behind a known holder, and wait until each
+    // backend is observably blocked before releasing it. The first queued
+    // patch is therefore known for each ordering.
+    const holder = await db.transaction();
+    await lockTenantSeatState(holder, tenant);
+    const invoke = (patch: typeof patches[keyof typeof patches]) =>
+      runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+        new UserService().update(userId, patch as any, createSystemContext(tenant))));
+    const first = invoke(patches[order[0]]);
+    await waitForBlockedBackends(1);
+    const second = invoke(patches[order[1]]);
+    await waitForBlockedBackends(2);
+    await holder.commit();
+
+    const results = await Promise.allSettled([first, second]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(await activeInternal(tenant)).toBe(1);
+    const finalUser = await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive');
+    expect(finalUser.user_type === 'internal' && finalUser.is_inactive === false).toBe(false);
+  }, 60_000);
+
+  it.each([
+    ['conversion before activation', ['type', 'active']],
+    ['activation before conversion', ['active', 'type']],
+  ] as const)('allows both partial updates when one seat is available (%s)', async (_label, order) => {
+    const tenant = await seedTenant({ limit: 2 });
+    await seedUser(tenant, 'owner@example.test');
+    const email = 'inactive-client@example.test';
+    await db('users').insert({
+      tenant, user_id: randomUUID(), username: email, email, first_name: 'T', last_name: 'U',
+      user_type: 'client', hashed_password: 'unused', is_inactive: true,
+    });
+    const userId = (await db('users').where({ tenant, email }).first('user_id')).user_id;
+    const patches = {
+      type: { user_type: 'internal' },
+      active: { is_inactive: false },
+    } as const;
+    const holder = await db.transaction();
+    await lockTenantSeatState(holder, tenant);
+    const invoke = (patch: typeof patches[keyof typeof patches]) =>
+      runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+        new UserService().update(userId, patch as any, createSystemContext(tenant))));
+    const first = invoke(patches[order[0]]);
+    await waitForBlockedBackends(1);
+    const second = invoke(patches[order[1]]);
+    await waitForBlockedBackends(2);
+    await holder.commit();
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+    expect(await activeInternal(tenant)).toBe(2);
+    expect(await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive'))
+      .toMatchObject({ user_type: 'internal', is_inactive: false });
+  }, 60_000);
+
+  it.each(['historical first', 'repaired first'] as const)(
+    'contends with the historical production lock operation in both orders (%s)', async (order) => {
+      const tenant = await seedTenant({ limit: 1 });
+      const historicalLock = (trx: Knex.Transaction) => trx.raw(
+        'SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['internal_user_seats', String(tenant)]
+      );
+      const holder = await db.transaction();
+      const contender = await db.transaction();
+      const hold = order === 'historical first'
+        ? historicalLock(holder)
+        : lockTenantSeatState(holder, tenant);
+      await hold;
+      await contender.raw("SET LOCAL lock_timeout = '750ms'");
+      const waiting = order === 'historical first'
+        ? lockTenantSeatState(contender, tenant)
+        : historicalLock(contender);
+      let wasBlockedByHolder = false;
+      try {
+        await waiting;
+      } catch (error: any) {
+        if (error.code !== '55P03') throw error;
+        wasBlockedByHolder = true;
+      } finally {
+        if (!contender.isCompleted()) await contender.rollback();
+        if (!holder.isCompleted()) await holder.rollback();
+      }
+      expect(wasBlockedByHolder).toBe(true);
+    },
+  );
 
   it('completes seat admission alongside co-managed allocation locking without deadlock', async () => {
     const sponsor = await seedTenant({ limit: null, product: 'psa' });

@@ -39,16 +39,25 @@ export async function countPendingInvitationSeats(
 }
 
 /**
- * Per-tenant transaction-scoped seat lock. Advisory locks serialize seat
- * consumers without joining the tenant-row lock graph used by co-managed
+ * Per-tenant transaction-scoped seat lock. Keep the established two-int4
+ * identity so applications deployed before this repair still contend on it.
+ * Advisory locks serialize seat consumers without joining the tenant-row lock
+ * graph used by co-managed
  * admission (entitlement, sponsor tenant, operation, relationship, customer
  * tenant, then user). PostgreSQL releases this lock at commit or rollback.
  */
+export const INTERNAL_USER_SEAT_LOCK_NAMESPACE = 'internal_user_seats';
+
 export async function lockTenantSeatState(trx: Knex.Transaction, tenant: string): Promise<void> {
   assertTransaction(trx, 'lockTenantSeatState');
-  // hashtext(text) yields the same int4 key for all callers and
-  // pg_advisory_xact_lock is transaction-scoped, including savepoints.
-  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [tenant]);
+  // Historical production protocol (831cc4494e): hash the namespace and
+  // tenant text independently into the two int4 advisory-lock keys. The
+  // one-key overload is a different lock identity and cannot coordinate with
+  // already-deployed seat consumers during a rolling deployment.
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
+    INTERNAL_USER_SEAT_LOCK_NAMESPACE,
+    String(tenant),
+  ]);
 }
 
 /** @deprecated Use lockTenantSeatState; retained for existing seat-admission callers. */

@@ -23,7 +23,7 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
         where: (criteria: Record<string, any>) => ({
           forUpdate: () => ({ first: async (..._fields: any[]) => { lockCalls.push(['tenant-for-update', criteria]); return { tenant: 'tenant-1' }; } }),
         }),
-        first: async (..._fields: any[]) => tenantRow,
+        first: async (..._fields: any[]) => { lockCalls.push(['tenant-read']); return tenantRow; },
       };
     }
 
@@ -37,7 +37,7 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
 
     throw new Error(`Unexpected tenant table ${table}`);
   };
-  trx.raw = async (query: string, bindings: unknown[]) => { lockCalls.push(['advisory-xact-lock', query, bindings]); };
+  trx.raw = async () => { lockCalls.push(['advisory-lock']); };
   return asTransaction(trx);
 }
 
@@ -48,7 +48,7 @@ describe('seat lock and transaction requirement', () => {
       fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 0 }),
       'tenant-1'
     );
-    expect(lockCalls).toEqual([['advisory-xact-lock', 'SELECT pg_advisory_xact_lock(hashtext(?))', ['tenant-1']]]);
+    expect(lockCalls).toEqual([['advisory-lock'], ['tenant-read']]);
   });
 
   it('requires a transaction before locking tenant seat state', async () => {
