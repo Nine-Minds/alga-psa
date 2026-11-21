@@ -201,7 +201,49 @@ export class TimeSheetService extends BaseService<any> {
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const { spec: sortSpec } = resolveTimeSheetListSort(options.sort);
+      const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
+      const filtered = (delegated.value as any[]).filter((row) => {
+        if (effectiveFilters?.user_id && row.user_id !== effectiveFilters.user_id) return false;
+        if (effectiveFilters?.period_id && row.period_id !== effectiveFilters.period_id) return false;
+        if (effectiveFilters?.approval_status && row.approval_status !== effectiveFilters.approval_status) return false;
+        if (effectiveFilters?.approved_by && row.approved_by !== effectiveFilters.approved_by) return false;
+        if (effectiveFilters?.has_entries !== undefined && Boolean(row.time_entries?.length) !== effectiveFilters.has_entries) return false;
+        if (effectiveFilters) {
+          const ranges: Array<[keyof TimeSheetFilterData, unknown]> = [
+            ['submitted_from', row.submitted_at], ['submitted_to', row.submitted_at],
+            ['approved_from', row.approved_at], ['approved_to', row.approved_at],
+            ['period_start_from', row.period_start], ['period_start_to', row.period_start],
+            ['period_end_from', row.period_end], ['period_end_to', row.period_end],
+          ];
+          for (const [key, actual] of ranges) {
+            const expected = effectiveFilters[key];
+            if (expected === undefined || expected === null) continue;
+            const actualValue = actual == null ? '' : String(actual).slice(0, 10);
+            const expectedValue = String(expected).slice(0, 10);
+            if (key.endsWith('_from') && actualValue < expectedValue) return false;
+            if (key.endsWith('_to') && actualValue > expectedValue) return false;
+          }
+          if (effectiveFilters.created_from || effectiveFilters.created_to || effectiveFilters.updated_from || effectiveFilters.updated_to) {
+            throw new ValidationError('Created and updated date filters are not supported for time sheets');
+          }
+        }
+        return true;
+      });
+      const sortField = sortSpec.column.split('.').pop()!;
+      const direction = options.order === 'asc' ? 1 : -1;
+      filtered.sort((a, b) => {
+        const left = a[sortField];
+        const right = b[sortField];
+        const comparison = left == null ? (right == null ? 0 : 1) : right == null ? -1 : String(left).localeCompare(String(right), undefined, { numeric: true });
+        return comparison === 0 ? String(a.id).localeCompare(String(b.id)) * direction : comparison * direction;
+      });
+      const page = options.page || 1;
+      const limit = options.limit || 25;
+      const pageRows = filtered.slice((page - 1) * limit, page * limit).map(({ time_entries: _timeEntries, entries: _entries, comments: _comments, summary: _summary, ...row }) => row);
+      return { data: pageRows, total: filtered.length };
+    }
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
@@ -305,7 +347,7 @@ export class TimeSheetService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getById', [id, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) return (delegated.value as any[]).find((row) => row.id === id) ?? null;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const query = this.buildTenantScopedQuery(knex, context);
@@ -333,7 +375,7 @@ export class TimeSheetService extends BaseService<any> {
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getWithDetails', [id, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) return (delegated.value as any[]).find((row) => row.id === id) ?? null;
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
 
@@ -728,7 +770,10 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetComments', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
+      return sheet ? (sheet.comments ?? []) : [];
+    }
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
@@ -1434,7 +1479,23 @@ export class TimeSheetService extends BaseService<any> {
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'search', [searchData, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const query = (searchData.query ?? '').toLocaleLowerCase();
+      return (delegated.value as any[])
+        .filter((row) => {
+          if (query && !String(row.user_name ?? '').toLocaleLowerCase().includes(query)) return false;
+          if (searchData.approval_statuses?.length && !searchData.approval_statuses.includes(row.approval_status)) return false;
+          if (searchData.user_ids?.length && !searchData.user_ids.includes(row.user_id)) return false;
+          if (searchData.period_ids?.length && !searchData.period_ids.includes(row.period_id)) return false;
+          if (searchData.date_from && String(row.period_start ?? '') < searchData.date_from) return false;
+          if (searchData.date_to && String(row.period_end ?? '') > searchData.date_to) return false;
+          return true;
+        })
+        .slice(0, searchData.limit || 25)
+        .map((row) => searchData.include_entries
+          ? row
+          : (({ time_entries: _entries, entries: _sheetEntries, comments: _comments, summary: _summary, ...sheet }) => sheet)(row));
+    }
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName; // Capture tableName to use in callbacks
@@ -1492,7 +1553,20 @@ export class TimeSheetService extends BaseService<any> {
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getStatistics', [context, filters], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const rows = (delegated.value as any[]).filter((row) => {
+        if (filters?.user_id && row.user_id !== filters.user_id) return false;
+        if (filters?.period_id && row.period_id !== filters.period_id) return false;
+        if (filters?.approval_status && row.approval_status !== filters.approval_status) return false;
+        return true;
+      });
+      return {
+        total_time_sheets: rows.length,
+        total_hours: rows.reduce((total, row) => total + Number(row.total_hours ?? row.hours ?? 0), 0),
+        pending_approval: rows.filter((row) => row.approval_status === 'SUBMITTED').length,
+        approved_this_period: rows.filter((row) => row.approval_status === 'APPROVED').length,
+      };
+    }
     // Implementation would return comprehensive time sheet statistics
     // Similar to other statistics methods in the pattern
     return {
@@ -1667,7 +1741,10 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetEntries', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
+      return sheet ? (sheet.time_entries ?? sheet.entries ?? []) : [];
+    }
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
       await this.authorizeTimeSheetRead(visibleSheet, context, knex);
@@ -1685,7 +1762,10 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetSummary', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
-    if (delegated.handled) return delegated.value;
+    if (delegated.handled) {
+      const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
+      return sheet ? (sheet.summary ?? null) : null;
+    }
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
       await this.authorizeTimeSheetRead(visibleSheet, context, knex);

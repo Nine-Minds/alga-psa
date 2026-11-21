@@ -26,6 +26,7 @@
  *   native function's return value, unchanged.
  */
 import type { Knex } from 'knex';
+import type { TimeSheetReadCollection } from './timeSheetReadCollection';
 
 import type {
   fetchTimeSheet,
@@ -134,8 +135,8 @@ export interface TimeSourceContext {
 /**
  * Service-resolved authorization boundary for time-sheet reads. `subjectUserIds`
  * is the complete set the actor may read in `tenant`; null means tenant-wide
- * access. Callers may further narrow this set, but providers must apply this
- * scope before pagination, counts, exports, or aggregation.
+ * access. The shared collection adapter applies this boundary before caller
+ * filters, pagination, counts, exports, or aggregation.
  */
 export interface TimeSheetReadScope {
   readonly tenant: string;
@@ -327,20 +328,17 @@ export type TimeSourceRestSurface = Readonly<Record<string, TimeSourceRestMethod
 export interface TimeSourceRest {
   readonly entries?: TimeSourceRestSurface;
   readonly sheets?: TimeSourceRestSurface;
-  /** Required to handle any TimeSheetService read method. */
-  readonly authorization?: {
-    readonly timeSheetReadScopeVersion: 1;
-  };
+  /** Raw complete rows only; service authorization and read operations stay centralized. */
+  readonly collectTimeSheetReadRows?: (ctx: TimeSourceContext) => Promise<TimeSheetReadCollection> | TimeSheetReadCollection;
 }
 
 /**
  * AUTHORIZATION CONTRACT. Hooks run before native permission and ownership
- * checks. For TimeSheetService reads, `delegateRest` appends the trusted,
- * service-resolved `TimeSheetReadScope` as the final provider argument. A
- * provider must advertise `rest.authorization.timeSheetReadScopeVersion: 1`
- * and apply that scope in its source query before pagination, counts, exports,
- * or aggregation; `delegateRest` fails closed without the declaration. The
- * scope fixes tenant and authorized subject IDs; caller filters may narrow it.
+ * checks. For TimeSheetService reads, providers expose only an unpaged raw
+ * collection. `delegateRest` applies the service-resolved tenant and subject
+ * scope through the shared adapter before returning rows. Provider-specific
+ * read handlers are never called for these methods. The scope fixes tenant and
+ * authorized subject IDs; caller filters may narrow it.
  * Other handled calls remain the provider's responsibility for authentication,
  * RBAC, and tenancy. Only `{ handled: false }` hands the call to the native
  * body, which applies the same sheet-read policy. A provider must never answer

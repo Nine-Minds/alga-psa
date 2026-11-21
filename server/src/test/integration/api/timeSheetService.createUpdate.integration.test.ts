@@ -22,7 +22,6 @@ import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 import { POST as rejectTimeSheetRoute } from '@/app/api/v1/time-sheets/[id]/reject/route';
 import { reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { registerTimeSource, resetTimeSourcesForTests } from '@alga-psa/scheduling/lib/timeSource';
-import type { TimeSheetReadScope } from '@alga-psa/scheduling/lib/timeSource';
 
 /**
  * REST `POST /api/v1/time-sheets` and `PUT /api/v1/time-sheets/:id` are thin wrappers over
@@ -274,7 +273,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await service.getById(foreignSheet.id, ctx)).toBeNull();
   });
 
-  it('passes the shared tenant/delegate scope to a registered REST source before every read surface', async () => {
+  it('enforces the shared scope over an unfiltered registered provider collection before every read surface', async () => {
     const f = await seed();
     const managed = await seedUser(f.tenantId, 'Managed');
     const unrelated = await seedUser(f.tenantId, 'Unrelated');
@@ -282,52 +281,31 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     await tenantTable(f.tenantId, 'users').where({ user_id: managed }).update({ reports_to: f.actor });
 
     const rows = [
-      { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, hours: 1 },
-      { id: 'provider-managed', tenant: f.tenantId, user_id: managed, hours: 2 },
-      { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, hours: 4 },
-      { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, hours: 8 },
+      { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 1, total_hours: 1, approval_status: 'DRAFT',
+        time_entries: [
+          { time_sheet_id: 'provider-own', tenant: f.tenantId, duration: 60 },
+          { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, duration: 900 },
+        ],
+        comments: [
+          { time_sheet_id: 'provider-own', tenant: f.tenantId, comment: 'own private comment' },
+          { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, comment: 'foreign nested secret' },
+        ], summary: { total_hours: 1 } },
+      { id: 'provider-managed', tenant: f.tenantId, user_id: managed, user_name: 'x', hours: 2, total_hours: 2, approval_status: 'SUBMITTED',
+        time_entries: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, duration: 120 }],
+        comments: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, comment: 'managed comment' }], summary: { total_hours: 2 } },
+      { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, user_name: 'x', hours: 4, total_hours: 4, approval_status: 'APPROVED',
+        time_entries: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, duration: 240 }],
+        comments: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, comment: 'unrelated private comment' }], summary: { total_hours: 4 } },
+      { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, user_name: 'x', hours: 8, total_hours: 8, approval_status: 'APPROVED',
+        time_entries: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, duration: 480 }],
+        comments: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, comment: 'foreign private comment' }], summary: { total_hours: 8 } },
     ];
-    const permitted = (scope: TimeSheetReadScope) => rows.filter((row) =>
-      row.tenant === scope.tenant && (scope.subjectUserIds === null || scope.subjectUserIds.includes(row.user_id))
-    );
-    const comments = (id: string, scope: TimeSheetReadScope) =>
-      permitted(scope).some((row) => row.id === id) ? [{ time_sheet_id: id, comment: 'provider comment' }] : [];
-    const entries = (id: string, scope: TimeSheetReadScope) =>
-      permitted(scope).some((row) => row.id === id) ? [{ time_sheet_id: id, duration: 60 }] : [];
     const provider = {
       kind: 'test-time-source',
       rest: {
-        authorization: { timeSheetReadScopeVersion: 1 as const },
-        sheets: {
-          list: async (_ctx: unknown, options: any, _context: unknown, explicitFilters: any, scope: TimeSheetReadScope) => {
-            const filters = explicitFilters ?? options.filters ?? {};
-            const visible = permitted(scope).filter((row) => !filters.user_id || row.user_id === filters.user_id);
-            const total = visible.length;
-            const offset = ((options.page || 1) - 1) * (options.limit || 25);
-            return { handled: true as const, value: { data: visible.slice(offset, offset + (options.limit || 25)), total } };
-          },
-          getById: async (_ctx: unknown, id: string, _context: unknown, scope: TimeSheetReadScope) => ({
-            handled: true as const, value: permitted(scope).find((row) => row.id === id) ?? null,
-          }),
-          getWithDetails: async (_ctx: unknown, id: string, _context: unknown, scope: TimeSheetReadScope) => {
-            const row = permitted(scope).find((candidate) => candidate.id === id);
-            return { handled: true as const, value: row ? { ...row, time_entries: entries(id, scope), comments: comments(id, scope) } : null };
-          },
-          search: async (_ctx: unknown, input: any, _context: unknown, scope: TimeSheetReadScope) => ({
-            handled: true as const,
-            value: permitted(scope).filter((row) => !input.user_ids?.length || input.user_ids.includes(row.user_id)).slice(0, input.limit || 25),
-          }),
-          getStatistics: async (_ctx: unknown, _context: unknown, _filters: unknown, scope: TimeSheetReadScope) => ({
-            handled: true as const,
-            value: { count: permitted(scope).length, hours: permitted(scope).reduce((sum, row) => sum + row.hours, 0) },
-          }),
-          getTimeSheetEntries: async (_ctx: unknown, id: string, _context: unknown, scope: TimeSheetReadScope) => ({ handled: true as const, value: entries(id, scope) }),
-          getTimeSheetComments: async (_ctx: unknown, id: string, _context: unknown, scope: TimeSheetReadScope) => ({ handled: true as const, value: comments(id, scope) }),
-          getTimeSheetSummary: async (_ctx: unknown, id: string, _context: unknown, scope: TimeSheetReadScope) => ({
-            handled: true as const,
-            value: permitted(scope).some((row) => row.id === id) ? { total_hours: 1 } : null,
-          }),
-        },
+        // Deliberately returns every owner's and every tenant's row. The shared
+        // adapter, not this provider, must apply the security boundary.
+        collectTimeSheetReadRows: async () => rows,
       },
     };
     registerTimeSource('test-time-source', () => provider as any, { servesCapability: 'co-managed' });
@@ -337,13 +315,19 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     // Owners see their own provider row; ordinary readers cannot widen by omitting,
     // explicitly supplying, or conflicting user filters.
     grants.byUser.set(f.actor, new Set());
-    expect((await service.list({ page: 1, limit: 1 } as any, actor)).data.map((row: any) => row.id)).toEqual(['provider-own']);
+    const ownerPage = await service.list({ page: 1, limit: 1 } as any, actor);
+    expect(ownerPage.data.map((row: any) => row.id)).toEqual(['provider-own']);
+    expect(ownerPage.data[0].total_hours).toBe(1);
+    expect(ownerPage.data[0]).not.toHaveProperty('comments');
     expect((await service.list({ page: 1, limit: 1 } as any, actor)).total).toBe(1);
+    expect(await service.list({ page: 2, limit: 1 } as any, actor)).toMatchObject({ data: [], total: 1 });
     expect(await service.getById('provider-own', actor)).toMatchObject({ id: 'provider-own' });
-    expect(await service.getWithDetails('provider-own', actor)).toMatchObject({ id: 'provider-own', comments: [{ comment: 'provider comment' }] });
+    const ownerDetails = await service.getWithDetails('provider-own', actor);
+    expect(ownerDetails).toMatchObject({ id: 'provider-own', comments: [{ comment: 'own private comment' }] });
+    expect(JSON.stringify(ownerDetails)).not.toContain('foreign nested secret');
     expect(await service.getTimeSheetEntries('provider-own', actor)).toHaveLength(1);
-    expect(await service.getTimeSheetSummary('provider-own', actor)).toEqual({ total_hours: 1 });
-    expect(await service.getTimeSheetComments('provider-own', actor)).toEqual([{ time_sheet_id: 'provider-own', comment: 'provider comment' }]);
+    expect(await service.getTimeSheetSummary('provider-own', actor)).toMatchObject({ total_hours: 1, billable_hours: 0, non_billable_hours: 1 });
+    expect(await service.getTimeSheetComments('provider-own', actor)).toEqual([{ time_sheet_id: 'provider-own', tenant: f.tenantId, comment: 'own private comment' }]);
     expect((await service.list({ page: 1, limit: 25, filters: { user_id: unrelated } } as any, actor)).data).toEqual([]);
     expect((await service.list({ page: 1, limit: 25 } as any, actor, { user_id: unrelated } as any)).data).toEqual([]);
     expect(await service.search({ query: 'x', user_ids: [unrelated] } as any, actor)).toEqual([]);
@@ -358,6 +342,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const delegated = await service.list({ page: 1, limit: 1 } as any, actor);
     expect(delegated.data.map((row: any) => row.id)).toEqual(['provider-own']);
     expect(delegated.total).toBe(2); // count was resolved over the scope before pagination
+    expect((await service.list({ page: 2, limit: 1 } as any, actor)).data.map((row: any) => row.id)).toEqual(['provider-managed']);
     expect((await service.list({ page: 1, limit: 25, filters: { user_id: unrelated } } as any, actor)).data).toEqual([]);
     expect(await service.search({ query: 'x' } as any, actor)).toHaveLength(2);
     expect(await service.getWithDetails('provider-managed', actor)).toMatchObject({ id: 'provider-managed' });
@@ -370,7 +355,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     grants.byUser.set(f.actor, new Set(['time_sheet:read_all']));
     expect((await service.list({ page: 1, limit: 25 } as any, actor)).total).toBe(3);
     expect((await service.search({ query: 'x' } as any, actor)).map((row: any) => row.id)).toHaveLength(3);
-    expect(await service.getStatistics(actor)).toEqual({ count: 3, hours: 7 });
+    expect(await service.getStatistics(actor)).toMatchObject({ total_time_sheets: 3, total_hours: 7, pending_approval: 1, approved_this_period: 1 });
     expect(await service.getById('provider-other-tenant', actor)).toBeNull();
     expect(await service.getWithDetails('provider-other-tenant', actor)).toBeNull();
     expect(await service.getTimeSheetEntries('provider-other-tenant', actor)).toEqual([]);
@@ -378,15 +363,20 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await service.getTimeSheetComments('provider-other-tenant', actor)).toEqual([]);
   });
 
-  it('fails closed when a registered sheet reader has not adopted the shared scope contract', async () => {
+  it('fails closed when a registered reader cannot provide the raw collection for shared scoping', async () => {
     const f = await seed();
+    let unsafeHandlerCalled = false;
     registerTimeSource('unscoped-test-time-source', () => ({
       kind: 'unscoped-test-time-source',
-      rest: { sheets: { list: async () => ({ handled: true, value: { data: [], total: 0 } }) } },
+      rest: { sheets: { list: async () => {
+        unsafeHandlerCalled = true;
+        return { handled: true, value: { data: [], total: 0 } };
+      } } },
     } as any), { servesCapability: 'co-managed' });
 
     await expect(serviceFor(f.tenantId).list({ page: 1, limit: 25 } as any, contextFor(f.tenantId, f.actor)))
-      .rejects.toThrow(/time-sheet read scope v1 is required/);
+      .rejects.toThrow(/unpaged time-sheet read collection is required/);
+    expect(unsafeHandlerCalled).toBe(false);
   });
 
   it('lifecycle transitions require their own permission and atomically synchronize entries', async () => {
