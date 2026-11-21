@@ -15,6 +15,8 @@ import {
 import * as recordAuthorization from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { TicketService } from '../../lib/api/services/TicketService';
 import { ForbiddenError } from '../../lib/api/middleware/apiMiddleware';
+import { ApiTicketController } from '../../lib/api/controllers/ApiTicketController';
+import { NextRequest } from 'next/server';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 vi.mock('@alga-psa/auth', async () => {
@@ -278,5 +280,122 @@ describe('ticket update record authorization (real transaction)', () => {
 
     await expect(runWithTenant(tenant, () => service.update(insideId, { title: 'REST authorized' } as any, serviceContext as any)))
       .resolves.toMatchObject({ title: 'REST authorized' });
+
+    // This isolates the controller-to-service handoff with an already-built
+    // context. ApiBaseController.authenticate and buildAuthenticatedApiContext
+    // are exercised separately in apiMiddleware.clientUserRejection.test.ts.
+    const controller = new ApiTicketController();
+    const request = new NextRequest(`http://localhost/api/v1/tickets/${insideId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title: 'REST controller authorized' }),
+      headers: { 'content-type': 'application/json' },
+    }) as any;
+    request.params = { id: insideId };
+    request.context = serviceContext;
+    (controller as any).authenticate = vi.fn(async () => request);
+    (controller as any).assertTicketReadAllowed = vi.fn(async () => ({}));
+    const response = await controller.update()(request);
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ title: 'REST controller authorized' });
+    expect(authorizationObservations).toContainEqual({
+      ticketId: insideId,
+      title: 'REST authorized',
+      apiKeyId,
+    });
+  }, HOOK_TIMEOUT);
+
+  it('does not expose the system actor exemption through public MSP save options', async () => {
+    const ticketId = await insertTicket(clientOutside, 'Forged system option original');
+    const before = await table('tickets').where({ ticket_id: ticketId }).first();
+    const auditCount = Number((await table('ticket_audit_logs').count('* as count').first() as any).count);
+    const notificationCount = Number((await table('internal_notifications').count('* as count').first() as any).count);
+    const { updateTicketWithCache } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+
+    await expect(updateTicketWithCache(ticketId, { title: 'Forged system option changed' }, { systemActor: true } as any))
+      .resolves.toMatchObject({ permissionError: 'Permission denied: Cannot access ticket' });
+
+    const after = await table('tickets').where({ ticket_id: ticketId }).first();
+    expect(after.title).toBe(before.title);
+    expect(after.attributes).toEqual(before.attributes);
+    expect(Number((await table('ticket_audit_logs').count('* as count').first() as any).count)).toBe(auditCount);
+    expect(Number((await table('internal_notifications').count('* as count').first() as any).count)).toBe(notificationCount);
+    expect(workflowEvents).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('keeps forged system actor options out of bulk updates and denies team changes before mutation', async () => {
+    const ticketId = await insertTicket(clientOutside, 'Bulk assignment original');
+    const initialTeamId = uuidv4();
+    const nextTeamId = uuidv4();
+    await table('teams').insert([
+      { tenant, team_id: initialTeamId, team_name: 'Initial team', manager_id: actor.user_id },
+      { tenant, team_id: nextTeamId, team_name: 'Next team', manager_id: actor.user_id },
+    ]);
+    await table('tickets').where({ ticket_id: ticketId }).update({ assigned_team_id: initialTeamId });
+    const before = await table('tickets').where({ ticket_id: ticketId }).first();
+    const auditCount = Number((await table('ticket_audit_logs').count('* as count').first() as any).count);
+    const notificationCount = Number((await table('internal_notifications').count('* as count').first() as any).count);
+    const forgedSystemActor = { systemActor: true } as any;
+    const { bulkAssignTickets, bulkUpdateTicketDueDate, bulkUpdateTicketPriority, bulkUpdateTicketStatus } =
+      await import('@alga-psa/tickets/actions/ticketActions');
+
+    const bulkResults = await Promise.all([
+      bulkAssignTickets([ticketId], { kind: 'user', userId: actor.user_id }, forgedSystemActor),
+      bulkUpdateTicketDueDate([ticketId], '2026-12-01T00:00:00.000Z', forgedSystemActor),
+      bulkUpdateTicketPriority([ticketId], String(priorityId), forgedSystemActor),
+      bulkUpdateTicketStatus([ticketId], nextStatusId, forgedSystemActor),
+    ]);
+
+    for (const result of bulkResults) {
+      expect(result.updatedIds).toEqual([]);
+      expect(result.failed).toEqual([expect.objectContaining({
+        ticketId,
+        message: 'Permission denied: Cannot access ticket',
+      })]);
+    }
+
+    const afterBulk = await table('tickets').where({ ticket_id: ticketId }).first();
+    expect(afterBulk).toMatchObject({
+      assigned_to: before.assigned_to,
+      assigned_team_id: initialTeamId,
+      due_date: before.due_date,
+      priority_id: before.priority_id,
+      status_id: before.status_id,
+    });
+
+    const { assignTeamToTicket, removeTeamFromTicket } = await import('@alga-psa/tickets/actions/teamAssignmentActions');
+    await expect(assignTeamToTicket(ticketId, nextTeamId)).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot access ticket',
+    });
+    await expect(removeTeamFromTicket(ticketId, { mode: 'remove_all' })).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot access ticket',
+    });
+
+    const afterTeamActions = await table('tickets').where({ ticket_id: ticketId }).first();
+    expect(afterTeamActions.assigned_team_id).toBe(initialTeamId);
+    expect(afterTeamActions.assigned_to).toBe(before.assigned_to);
+    expect(Number((await table('ticket_audit_logs').count('* as count').first() as any).count)).toBe(auditCount);
+    expect(Number((await table('internal_notifications').count('* as count').first() as any).count)).toBe(notificationCount);
+    expect(workflowEvents).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('allows in-scope team assignment and removal through their guarded actions', async () => {
+    const ticketId = await insertTicket(clientInScope, 'Scoped team action');
+    const teamId = uuidv4();
+    await table('teams').insert({ tenant, team_id: teamId, team_name: 'Scoped team', manager_id: actor.user_id });
+    const { assignTeamToTicket, removeTeamFromTicket } = await import('@alga-psa/tickets/actions/teamAssignmentActions');
+
+    await expect(assignTeamToTicket(ticketId, teamId)).resolves.toBeUndefined();
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).assigned_team_id).toBe(teamId);
+
+    await expect(removeTeamFromTicket(ticketId, { mode: 'remove_all' })).resolves.toBeUndefined();
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).assigned_team_id).toBeNull();
+
+    await table('tickets').where({ ticket_id: ticketId }).update({ assigned_team_id: teamId });
+    const { bulkAssignTickets } = await import('@alga-psa/tickets/actions/ticketActions');
+    await expect(bulkAssignTickets([ticketId], { kind: 'user', userId: actor.user_id }))
+      .resolves.toMatchObject({ updatedIds: [ticketId], failed: [] });
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).assigned_team_id).toBeNull();
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).assigned_to).toBe(actor.user_id);
   }, HOOK_TIMEOUT);
 });

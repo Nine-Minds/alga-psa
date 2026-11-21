@@ -146,8 +146,31 @@ describe('user API context construction rejects client users', () => {
 
     const context = await buildAuthenticatedApiContext(validKeyRecord());
 
-    expect(context.user.user_id).toBe('internal-user-1');
-    expect(context.kind).toBe('user');
+    expect(context).toMatchObject({
+      userId: 'user-1',
+      tenant: 'tenant-1',
+      apiKeyId: 'key-1',
+      user: { user_id: 'internal-user-1' },
+      kind: 'user',
+    });
+  });
+
+  it('ApiBaseController.authenticate preserves the validated API owner and key id in its request context', async () => {
+    mocks.validateApiKeyForTenant.mockResolvedValue(validKeyRecord());
+    mocks.findUserByIdForApi.mockResolvedValue(INTERNAL_USER);
+    const controller = new TestController();
+
+    const authenticated = await controller.authenticatePublic(apiRequest({
+      'x-api-key': 'valid-api-key',
+      'x-tenant-id': 'tenant-1',
+    }));
+
+    expect(authenticated.context).toMatchObject({
+      userId: 'user-1',
+      tenant: 'tenant-1',
+      apiKeyId: 'key-1',
+      user: { user_id: 'internal-user-1' },
+    });
   });
 
   it('ApiBaseController.authenticate rejects a client user before permission/service execution', async () => {

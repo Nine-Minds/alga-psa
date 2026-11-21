@@ -3362,7 +3362,19 @@ export const updateTicketWithCache = withAuth(async (
         throw new Error('Permission denied: Cannot update ticket');
       }
 
-      return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, options);
+      // Server-action callers can supply extra runtime properties despite the
+      // TypeScript Pick above. Project the public option surface explicitly so
+      // internal transaction capabilities (especially systemActor) cannot be
+      // smuggled through an ordinary MSP save.
+      const transactionOptions = options && {
+        overrideCloseRules: options.overrideCloseRules,
+        overrideCloseRulesReason: options.overrideCloseRulesReason,
+        suppressContactNotifications: options.suppressContactNotifications,
+        suppressInternalNotifications: options.suppressInternalNotifications,
+        propagateToChildren: options.propagateToChildren,
+      };
+
+      return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data, transactionOptions);
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);

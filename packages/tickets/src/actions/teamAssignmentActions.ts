@@ -12,6 +12,8 @@ import {
   type RemoveTeamFromTicketOptions,
 } from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 export type TeamAssignmentNotificationOptions = {
   suppressContactNotifications?: boolean;
@@ -37,6 +39,14 @@ export const assignTeamToTicket = withAuth(async (
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot assign team to ticket');
       }
+
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user: user as IUserWithRoles,
+        ticketId,
+        action: 'update',
+      });
 
       return await assignTeamToTicketCore(trx, tenant, user.user_id, ticketId, teamId);
     });
@@ -78,6 +88,14 @@ export const removeTeamFromTicket = withAuth(async (
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot remove team from ticket');
       }
+
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user: user as IUserWithRoles,
+        ticketId,
+        action: 'update',
+      });
 
       await removeTeamFromTicketCore(trx, tenant, user.user_id, ticketId, options);
     });

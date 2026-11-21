@@ -39,7 +39,7 @@ import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
-import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
+import { assignTeamToTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
@@ -194,6 +194,13 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
     isInternal?: boolean;
   };
 };
+
+function projectTicketNotificationOptions(options: TicketNotificationSuppressionOptions = {}): TicketNotificationSuppressionOptions {
+  return {
+    suppressContactNotifications: options.suppressContactNotifications,
+    suppressInternalNotifications: options.suppressInternalNotifications,
+  };
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -2443,15 +2450,23 @@ export const bulkAssignTickets = withAuth(async (
           throw result;
         }
       } else {
-        // Assigning to a single user clears any team assignment (and its team_member resources)
-        // first so a stale assigned_team_id / team badge isn't left behind.
-        const result = await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
-        if (isTicketActionError(result)) {
-          throw result;
-        }
-        await withTransaction(knex, (trx: Knex.Transaction) =>
-          updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }, options),
-        );
+        // Route the ticket fields through the shared guarded update first so
+        // its assignment event reflects the final state; then remove the
+        // team-created resources in the same transaction. A denial cannot
+        // leave a partially unassigned ticket.
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+          await updateTicketInTransaction(
+            trx,
+            user as IUserWithRoles,
+            tenant,
+            ticketId,
+            { assigned_to: selection.userId, assigned_team_id: null },
+            projectTicketNotificationOptions(options),
+          );
+          await tenantScopedTable(trx, 'ticket_resources', tenant)
+            .where({ ticket_id: ticketId, role: 'team_member' })
+            .delete();
+        });
       }
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -2581,7 +2596,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>, options),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>, projectTicketNotificationOptions(options)),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -2636,7 +2651,11 @@ export const bulkUpdateTicketStatus = withAuth(async (
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }> = [];
 
-  const { resolutionComment, ...statusOptions } = options;
+  const statusOptions = {
+    ...projectTicketNotificationOptions(options),
+    propagateToChildren: options.propagateToChildren,
+  };
+  const { resolutionComment } = options;
 
   // A bulk close may carry one resolution, written per ticket ahead of the
   // status change so boards that gate closing on a resolution comment see it.
@@ -2733,7 +2752,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }, options),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }, projectTicketNotificationOptions(options)),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
