@@ -146,6 +146,7 @@ describe('CollaborativeEditor', () => {
     );
 
     expect(createYjsProviderMock).toHaveBeenCalledWith('document:tenant-99:doc-88', {
+      token: 'user-88',
       parameters: {
         tenantId: 'tenant-99',
         userId: 'user-88',
