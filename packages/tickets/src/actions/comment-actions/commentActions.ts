@@ -652,12 +652,12 @@ async function assertMayChangeComment(
     throw new Error(`Permission denied: Cannot ${operation} comment`);
   }
   // Authorship alone does not preserve access after ticket permissions or
-  // record visibility change. The record kernel currently models mutating
-  // access as `update`; coarse RBAC above still distinguishes deletion.
+  // record visibility change. Pass the requested operation through so
+  // delete-specific ticket rules take precedence over update-rule fallback.
   // Every principal is denied indistinguishably when the ticket is no longer
   // visible, even if the comment author still matches.
   if (existing.ticket_id) {
-    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update', conceal: 'all' });
+    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: operation, conceal: 'all' });
   }
   if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
   if (existing.user_id === user.user_id) return;

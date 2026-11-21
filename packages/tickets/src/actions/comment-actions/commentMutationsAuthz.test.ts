@@ -32,6 +32,7 @@ vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
 
 function makeBuilder(table: string) {
   const builder: any = new Proxy(function () {}, {
@@ -158,6 +159,7 @@ describe('comment mutations: client principals need record access to the owning 
     commentRow = ownComment('ticket-1');
     await updateComment('c-1', { note: 'edited' });
     expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'update' });
   });
 
   it('updateComment: ignores client attempts to change authorship and publication metadata', async () => {
@@ -217,6 +219,43 @@ describe('comment mutations: client principals need record access to the owning 
     expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
     expect(commentDelete).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: denies an author when an exact delete rule denies a ticket allowed by update rules', async () => {
+    currentUser = mspUser;
+    commentRow = mspOwnComment('ticket-1');
+    ticketRow = { ...ownTicket, assigned_to: 'i-1', entered_by: 'another-user' };
+    bundleRules = [
+      { id: 'update-assigned', resource: 'ticket', action: 'update', templateKey: 'assigned' },
+      { id: 'delete-own', resource: 'ticket', action: 'delete', templateKey: 'own' },
+    ];
+
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ actionError: expect.any(String) });
+
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
+    expect(commentRow).toMatchObject({ comment_id: 'c-1', ticket_id: 'ticket-1' });
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: allows an author with delete-specific ticket record access', async () => {
+    currentUser = mspUser;
+    commentRow = mspOwnComment('ticket-1');
+    ticketRow = { ...ownTicket, entered_by: 'i-1' };
+    bundleRules = [
+      { id: 'update-assigned', resource: 'ticket', action: 'update', templateKey: 'assigned' },
+      { id: 'delete-own', resource: 'ticket', action: 'delete', templateKey: 'own' },
+    ];
+
+    await deleteComment('c-1');
+
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
+    expect(commentDelete).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([
+      { table: 'comment_reactions', op: 'delete' },
+      { table: 'email_reply_tokens', op: 'update' },
+      { table: 'comments', op: 'delete' },
+    ]);
   });
 
   it('deleteComment: rejects a client deleting their own comment on a ticket they cannot see', async () => {
