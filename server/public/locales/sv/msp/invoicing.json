@@ -1789,7 +1789,9 @@
           "actual": "100 %",
           "label": "Förhandsgranskningszoom",
           "fitWithScale": "Anpassa ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Sida {{page}} av {{total}}",
+        "frameTitle": "Förhandsgranskning av faktura"
       },
       "tabs": {
         "design": "Design",
@@ -1885,6 +1887,10 @@
       "spacer": {
         "label": "Avståndselement",
         "description": "Tomt utrymme för layoutjustering."
+      },
+      "page-break": {
+        "label": "Sidbrytning",
+        "description": "Startar nästa block på en ny sida."
       },
       "container": {
         "label": "Rutbehållare",
@@ -2208,6 +2214,17 @@
               "label": "Färg"
             }
           }
+        },
+        "pagination": {
+          "title": "Sidbrytning",
+          "fields": {
+            "breakBefore": {
+              "label": "Börja på en ny sida"
+            },
+            "breakInside": {
+              "label": "Håll ihop på en sida"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2338,8 @@
       "signatureLabel": "Underskrift",
       "attachmentsLabel": "Bilagor",
       "spacerLabel": "Avståndselement",
+      "pageBreakLabel": "Sidbrytning",
+      "pageBreakBefore": "Börjar på en ny sida",
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",

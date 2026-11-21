@@ -850,7 +850,14 @@
       "noQuotesFound": "Keine Angebote gefunden.",
       "selectQuote": "Angebot wählen",
       "selectQuoteHint": "Wählen Sie ein Angebot für die datengebundene Vorschau.",
-      "loadingQuoteDetails": "Angebotsdetails werden geladen…"
+      "loadingQuoteDetails": "Angebotsdetails werden geladen…",
+      "frameTitle": "Angebotsvorschau",
+      "zoom": {
+        "fit": "Anpassen",
+        "actual": "100 %",
+        "label": "Vorschauzoom",
+        "fitWithScale": "Anpassen ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendern",

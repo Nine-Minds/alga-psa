@@ -1789,7 +1789,9 @@
           "actual": "⟦100%⟧",
           "label": "⟦Ƥřḗṽīḗẇ ẑȯȯḿ⟧",
           "fitWithScale": "⟦Ƒīŧ ({{percent}}%)⟧"
-        }
+        },
+        "pageCaption": "⟦Ƥȧɠḗ {{page}} ȯƒ {{total}}⟧",
+        "frameTitle": "⟦Īƞṽȯīƈḗ ƥřḗṽīḗẇ⟧"
       },
       "tabs": {
         "design": "⟦Ḓḗşīɠƞ⟧",
@@ -1885,6 +1887,10 @@
       "spacer": {
         "label": "⟦Şƥȧƈḗř⟧",
         "description": "⟦Ḗḿƥŧẏ şƥȧƈḗ ƒȯř ŀȧẏȯŭŧ ȧḓĵŭşŧḿḗƞŧ.⟧"
+      },
+      "page-break": {
+        "label": "⟦Ƥȧɠḗ Ɓřḗȧķ⟧",
+        "description": "⟦Şŧȧřŧş ŧħḗ ƞḗẋŧ ƀŀȯƈķ ȯƞ ȧ ƞḗẇ ƥȧɠḗ.⟧"
       },
       "container": {
         "label": "⟦Ɓȯẋ Ƈȯƞŧȧīƞḗř⟧",
@@ -2208,6 +2214,17 @@
               "label": "⟦Ƈȯŀȯř⟧"
             }
           }
+        },
+        "pagination": {
+          "title": "⟦Ƥȧɠīƞȧŧīȯƞ⟧",
+          "fields": {
+            "breakBefore": {
+              "label": "⟦Şŧȧřŧ ȯƞ ȧ ƞḗẇ ƥȧɠḗ⟧"
+            },
+            "breakInside": {
+              "label": "⟦Ķḗḗƥ ŧȯɠḗŧħḗř ȯƞ ȯƞḗ ƥȧɠḗ⟧"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2338,8 @@
       "signatureLabel": "⟦Şīɠƞȧŧŭřḗ⟧",
       "attachmentsLabel": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
       "spacerLabel": "⟦Şƥȧƈḗř⟧",
+      "pageBreakLabel": "⟦Ƥȧɠḗ ƀřḗȧķ⟧",
+      "pageBreakBefore": "⟦Şŧȧřŧş ȯƞ ȧ ƞḗẇ ƥȧɠḗ⟧",
       "companyLogo": "⟦Ƈȯḿƥȧƞẏ ŀȯɠȯ⟧",
       "insertionMarker": "⟦Ŧħḗ ƞḗẋŧ ƀŀȯƈķ ẏȯŭ ȧḓḓ ɠȯḗş ħḗřḗ⟧",
       "emptyContainer": "⟦Ḗḿƥŧẏ — şḗŀḗƈŧ īŧ ȧƞḓ ȧḓḓ ƀŀȯƈķş ƒřȯḿ ŧħḗ ŀḗƒŧ ƥȧƞḗŀ⟧",

@@ -1826,7 +1826,9 @@
           "actual": "100 %",
           "label": "Zoom de la vista previa",
           "fitWithScale": "Ajustar ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Vista previa de la factura"
       },
       "tabs": {
         "design": "Diseño",
@@ -1922,6 +1924,10 @@
       "spacer": {
         "label": "Espaciador",
         "description": "Espacio vacío para ajustar el diseño."
+      },
+      "page-break": {
+        "label": "Salto de página",
+        "description": "Inicia el siguiente bloque en una página nueva."
       },
       "container": {
         "label": "Contenedor caja",
@@ -2245,6 +2251,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginación",
+          "fields": {
+            "breakBefore": {
+              "label": "Comenzar en una página nueva"
+            },
+            "breakInside": {
+              "label": "Mantener junto en una sola página"
+            }
+          }
         }
       }
     },
@@ -2358,6 +2375,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Adjuntos",
       "spacerLabel": "Espaciador",
+      "pageBreakLabel": "Salto de página",
+      "pageBreakBefore": "Comienza en una página nueva",
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",

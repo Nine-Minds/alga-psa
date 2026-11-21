@@ -1789,7 +1789,9 @@
           "actual": "100%",
           "label": "Zoom voorbeeld",
           "fitWithScale": "Passend ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} van {{total}}",
+        "frameTitle": "Factuurvoorbeeld"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1885,6 +1887,10 @@
       "spacer": {
         "label": "Tussenruimte",
         "description": "Lege ruimte voor lay-outaanpassing."
+      },
+      "page-break": {
+        "label": "Pagina-einde",
+        "description": "Begint het volgende blok op een nieuwe pagina."
       },
       "container": {
         "label": "Box-container",
@@ -2208,6 +2214,17 @@
               "label": "Kleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginering",
+          "fields": {
+            "breakBefore": {
+              "label": "Op een nieuwe pagina beginnen"
+            },
+            "breakInside": {
+              "label": "Bij elkaar houden op één pagina"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2338,8 @@
       "signatureLabel": "Handtekening",
       "attachmentsLabel": "Bijlagen",
       "spacerLabel": "Tussenruimte",
+      "pageBreakLabel": "Pagina-einde",
+      "pageBreakBefore": "Begint op een nieuwe pagina",
       "companyLogo": "Bedrijfslogo",
       "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
       "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",

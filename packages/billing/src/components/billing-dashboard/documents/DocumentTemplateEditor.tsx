@@ -35,10 +35,6 @@ import {
   runAuthoritativeTemplatePreview,
   saveDocumentTemplate,
 } from '../../../actions/documentTemplateActions';
-import {
-  getDocumentTypeRegistryEntry,
-  isDocumentType,
-} from '../../../lib/document-templates/registry';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
@@ -187,9 +183,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   // The preview is drawn on the printed page's sheet; 'fit' enlarges a label to fill the pane.
   const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
   const [previewScale, setPreviewScale] = useState<number | null>(null);
-  // Only labels are drawn on their printed sheet (see resolveTemplatePreviewSheetFromAst), so only they zoom.
-  const previewIsLabelSheet = isDocumentType(documentType)
-    && getDocumentTypeRegistryEntry(documentType).printGeometry === 'label-cell';
   // Standard templates carry translatable labels, so an author can see the
   // document in the language each client will actually receive it in.
   const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
@@ -637,7 +630,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                         })}
                     </p>
                     <div className="flex items-center gap-2">
-                      {previewIsLabelSheet && (
                       <ViewSwitcher
                         aria-label={t('designer.workspace.preview.zoom.label', { defaultValue: 'Preview zoom' })}
                         currentView={previewZoomMode}
@@ -660,7 +652,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                           },
                         ]}
                       />
-                      )}
                       <PreviewLocaleSelect
                         id="document-designer-preview-locale-select"
                         value={previewLocale}

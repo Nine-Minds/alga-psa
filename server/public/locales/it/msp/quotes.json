@@ -850,7 +850,14 @@
       "noQuotesFound": "Nessun preventivo trovato.",
       "selectQuote": "Seleziona preventivo",
       "selectQuoteHint": "Seleziona un preventivo per l'anteprima con dati.",
-      "loadingQuoteDetails": "Caricamento dettagli preventivo…"
+      "loadingQuoteDetails": "Caricamento dettagli preventivo…",
+      "frameTitle": "Anteprima del preventivo",
+      "zoom": {
+        "fit": "Adatta",
+        "actual": "100 %",
+        "label": "Zoom dell’anteprima",
+        "fitWithScale": "Adatta ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendering",

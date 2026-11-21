@@ -1841,7 +1841,9 @@
           "actual": "100%",
           "label": "Powiększenie podglądu",
           "fitWithScale": "Dopasuj ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Strona {{page}} z {{total}}",
+        "frameTitle": "Podgląd faktury"
       },
       "tabs": {
         "design": "Projektowanie",
@@ -1937,6 +1939,10 @@
       "spacer": {
         "label": "Odstęp",
         "description": "Puste miejsce do regulacji układu."
+      },
+      "page-break": {
+        "label": "Podział strony",
+        "description": "Rozpoczyna następny blok na nowej stronie."
       },
       "container": {
         "label": "Kontener",
@@ -2260,6 +2266,17 @@
               "label": "Kolor"
             }
           }
+        },
+        "pagination": {
+          "title": "Podział na strony",
+          "fields": {
+            "breakBefore": {
+              "label": "Rozpocznij na nowej stronie"
+            },
+            "breakInside": {
+              "label": "Utrzymaj razem na jednej stronie"
+            }
+          }
         }
       }
     },
@@ -2373,6 +2390,8 @@
       "signatureLabel": "Podpis",
       "attachmentsLabel": "Załączniki",
       "spacerLabel": "Odstęp",
+      "pageBreakLabel": "Podział strony",
+      "pageBreakBefore": "Rozpoczyna się na nowej stronie",
       "companyLogo": "Logotyp firmy",
       "insertionMarker": "Następny dodany blok trafi tutaj",
       "emptyContainer": "Pusty — zaznacz go i dodaj bloki z lewego panelu",

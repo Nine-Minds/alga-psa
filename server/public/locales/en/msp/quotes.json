@@ -850,7 +850,14 @@
       "noQuotesFound": "No quotes found.",
       "selectQuote": "Select Quote",
       "selectQuoteHint": "Select a quote to preview data-bound output.",
-      "loadingQuoteDetails": "Loading quote details..."
+      "loadingQuoteDetails": "Loading quote details...",
+      "frameTitle": "Quote preview",
+      "zoom": {
+        "fit": "Fit",
+        "actual": "100%",
+        "label": "Preview zoom",
+        "fitWithScale": "Fit ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Render",
