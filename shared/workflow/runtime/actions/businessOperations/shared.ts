@@ -5,7 +5,14 @@ import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 import { coManagedWorkflowTicketSeam } from '../../../../lib/coManagedDelivery';
-import { safeFetch, UnsafeUrlError, UrlFetchError } from '../../../../lib/net/safeFetch';
+import {
+  createHostPolicy,
+  FetchHostNotAllowedError,
+  safeFetch,
+  UnsafeUrlError,
+  UrlFetchError,
+} from '../../../../lib/net/safeFetch';
+import { loadEffectiveFetchHosts } from '../../../../lib/net/fetchHostPolicy';
 
 export type TenantTxContext = {
   tenantId: string;
@@ -437,10 +444,22 @@ export async function attachDocumentToTicket(
     let buffer: Buffer;
     let contentType: string | null = null;
     try {
-      const response = await safeFetch(input.source.url, { maxBytes: MAX_ATTACHMENT_BYTES });
+      const allowedHosts = await loadEffectiveFetchHosts(tx.trx, tx.tenantId);
+      const response = await safeFetch(input.source.url, {
+        maxBytes: MAX_ATTACHMENT_BYTES,
+        hostPolicy: createHostPolicy(allowedHosts),
+      });
       buffer = response.bytes;
       contentType = response.headers.get('content-type');
     } catch (error) {
+      if (error instanceof FetchHostNotAllowedError) {
+        throwActionError(ctx, {
+          category: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: error.message,
+          details: { hostname: error.hostname, via_redirect: error.viaRedirect },
+        });
+      }
       if (error instanceof UnsafeUrlError) {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: error.message });
       }

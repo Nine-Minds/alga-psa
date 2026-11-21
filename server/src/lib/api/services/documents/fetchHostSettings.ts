@@ -19,8 +19,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { BUILTIN_FETCH_HOSTS, isBuiltinFetchHost } from './fetchHosts';
 import { validateHostPattern } from './hostPatternValidator';
+import {
+  computeEffectiveFetchHosts,
+  FETCH_HOSTS_TABLE,
+  loadEffectiveFetchHosts,
+} from '../../../../../../shared/lib/net/fetchHostPolicy';
 
-export const FETCH_HOSTS_TABLE = 'document_fetch_hosts';
+export { FETCH_HOSTS_TABLE, loadEffectiveFetchHosts };
 export const MANAGE_FETCH_HOSTS_PERMISSION = { resource: 'document', action: 'manage_fetch_hosts' } as const;
 
 export type FetchHostKind = 'custom' | 'builtin_disabled';
@@ -74,22 +79,11 @@ async function canManage({ knex, user }: Ctx): Promise<boolean> {
   return hasPermission(user, MANAGE_FETCH_HOSTS_PERMISSION.resource, MANAGE_FETCH_HOSTS_PERMISSION.action, knex);
 }
 
-/** Pure: builtin ∖ disabled ∪ custom. */
-export function computeEffectiveHosts(rows: Pick<FetchHostRow, 'kind' | 'host_pattern'>[]): string[] {
-  const disabled = new Set(rows.filter((r) => r.kind === 'builtin_disabled').map((r) => r.host_pattern));
-  const enabledBuiltins = BUILTIN_FETCH_HOSTS.map((h) => h.pattern).filter((p) => !disabled.has(p));
-  const custom = rows.filter((r) => r.kind === 'custom').map((r) => r.host_pattern);
-  return [...new Set([...enabledBuiltins, ...custom])];
-}
-
 /**
  * The tenant's effective allowlist: one indexed query (PK/unique prefix on `tenant`), no cache.
  * Called once per attach request by `resolveSource`.
  */
-export async function loadEffectiveFetchHosts(knex: Knex | Knex.Transaction, tenant: string): Promise<string[]> {
-  const rows = await tenantDb(knex, tenant).table(FETCH_HOSTS_TABLE).select('kind', 'host_pattern');
-  return computeEffectiveHosts(rows);
-}
+export const computeEffectiveHosts = computeEffectiveFetchHosts;
 
 export async function listFetchHostSettings(ctx: Ctx): Promise<FetchHostResult<{ settings: FetchHostSettingsView }>> {
   const manage = await canManage(ctx);

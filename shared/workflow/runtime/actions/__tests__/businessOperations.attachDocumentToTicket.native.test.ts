@@ -45,7 +45,7 @@ vi.mock('@alga-psa/storage/StorageProviderFactory', async (importOriginal) => {
 });
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: (conn: any, _tenant: string) => conn,
+  tenantDb: (conn: any, tenant: string) => ({ table: (name: string) => conn.table(name, tenant) }),
 }));
 
 type Row = Record<string, any>;
@@ -65,15 +65,19 @@ const state: {
   documents: Row[];
   associations: Row[];
   externalFiles: Row[];
+  fetchHosts: Record<string, Row[]>;
+  fetchHostLookupError: Error | null;
 } = {
   ticket: null,
   file: null,
   documents: [],
   associations: [],
   externalFiles: [],
+  fetchHosts: {},
+  fetchHostLookupError: null,
 };
 
-function makeBuilder(table: string) {
+function makeBuilder(table: string, tenant?: string) {
   return {
     where: vi.fn().mockReturnThis(),
     first: vi.fn(async () => {
@@ -89,10 +93,17 @@ function makeBuilder(table: string) {
     }),
     onConflict: vi.fn().mockReturnThis(),
     ignore: vi.fn().mockResolvedValue(undefined),
+    select: vi.fn(async () => {
+      if (table === 'document_fetch_hosts') {
+        if (state.fetchHostLookupError) throw state.fetchHostLookupError;
+        return state.fetchHosts[tenant ?? ''] ?? [];
+      }
+      return [];
+    }),
   };
 }
 
-const fakeKnex: any = { table: (name: string) => makeBuilder(name) };
+const fakeKnex: any = { table: (name: string, tenant?: string) => makeBuilder(name, tenant) };
 
 const ctx = { stepPath: 'step-1', runId: 'run-1' } as any;
 const tx = { tenantId: 'tenant-1', actorUserId: 'user-1', trx: fakeKnex } as any;
@@ -113,6 +124,10 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     state.documents = [];
     state.associations = [];
     state.externalFiles = [];
+    state.fetchHosts = {
+      'tenant-1': [{ kind: 'custom', host_pattern: 'example.test' }],
+    };
+    state.fetchHostLookupError = null;
     outbound.safeFetch.mockReset();
   });
 
@@ -195,7 +210,237 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     expect(state.externalFiles[0].storage_path).toContain('tenant-1');
     expect(state.documents).toHaveLength(1);
     expect(state.associations).toHaveLength(1);
-    expect(outbound.safeFetch).toHaveBeenCalledWith('https://example.test/voicemail.wav', { maxBytes: expect.any(Number) });
+    const fetchOptions = outbound.safeFetch.mock.calls[0]?.[1] as { maxBytes: number; hostPolicy: (host: string) => boolean };
+    expect(fetchOptions.maxBytes).toEqual(expect.any(Number));
+    expect(fetchOptions.hostPolicy('EXAMPLE.TEST.')).toBe(true);
+    expect(fetchOptions.hostPolicy('other.test')).toBe(false);
+  });
+
+  it('rejects a tenant-prohibited initial host before outbound requests or persistence', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const transport = vi.fn(async () => new Response(wavBytes));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://prohibited.test/file.wav' },
+    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
+  it('uses only built-ins when a tenant has no policy rows and normalizes wildcard hosts', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [];
+    const transport = vi.fn(async (url: string) => {
+      expect(url).toBe('https://files.oaiusercontent.com/builtin.wav');
+      return new Response(wavBytes, { headers: { 'content-type': 'audio/wav' } });
+    });
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://files.oaiusercontent.com/builtin.wav' }, filename: 'builtin.wav',
+    })).resolves.toMatchObject({ filename: 'builtin.wav' });
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://PROHIBITED.example.test/denied.wav' }, filename: 'denied.wav',
+    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).toHaveBeenCalledOnce();
+    expect(state.externalFiles).toHaveLength(1);
+    expect(state.documents).toHaveLength(1);
+    expect(state.associations).toHaveLength(1);
+  });
+
+  it('matches wildcard tenant entries after case and trailing-dot normalization', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [{ kind: 'custom', host_pattern: '*.example.test' }];
+    const transport = vi.fn(async (url: string) => {
+      expect(url).toBe('https://files.example.test./normalized.wav');
+      return new Response(wavBytes, { headers: { 'content-type': 'audio/wav' } });
+    });
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://FILES.EXAMPLE.TEST./normalized.wav' }, filename: 'normalized.wav',
+    })).resolves.toMatchObject({ filename: 'normalized.wav' });
+
+    expect(transport).toHaveBeenCalledOnce();
+    expect(state.documents).toHaveLength(1);
+    expect(state.associations).toHaveLength(1);
+  });
+
+  it('rejects a redirect to a prohibited public host before requesting or persisting it', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const requested: string[] = [];
+    const transport = vi.fn(async (url: string) => {
+      requested.push(url);
+      return new Response(null, { status: 302, headers: { location: 'https://prohibited.test/file.wav' } });
+    });
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://example.test/redirect.wav' },
+    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(requested).toEqual(['https://example.test/redirect.wav']);
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
+  it('follows an allowed redirect chain within the shared redirect limit and persists it', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [
+      { kind: 'custom', host_pattern: 'example.test' },
+      { kind: 'custom', host_pattern: 'files.example.test' },
+      { kind: 'custom', host_pattern: 'cdn.example.test' },
+      { kind: 'custom', host_pattern: 'download.example.test' },
+    ];
+    const requested: string[] = [];
+    const transport = vi.fn(async (url: string) => {
+      requested.push(url);
+      if (url === 'https://example.test/start.wav') {
+        return new Response(null, { status: 302, headers: { location: 'https://files.example.test/end.wav' } });
+      }
+      if (url === 'https://files.example.test/end.wav') {
+        return new Response(null, { status: 302, headers: { location: 'https://cdn.example.test/next.wav' } });
+      }
+      if (url === 'https://cdn.example.test/next.wav') {
+        return new Response(null, { status: 302, headers: { location: 'https://download.example.test/final.wav' } });
+      }
+      return new Response(wavBytes, { status: 200, headers: { 'content-type': 'audio/wav' } });
+    });
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    const result = await attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://example.test/start.wav' }, filename: 'final.wav',
+    });
+
+    expect(requested).toEqual([
+      'https://example.test/start.wav',
+      'https://files.example.test/end.wav',
+      'https://cdn.example.test/next.wav',
+      'https://download.example.test/final.wav',
+    ]);
+    expect(result.filename).toBe('final.wav');
+    expect(state.externalFiles).toHaveLength(1);
+    expect(state.documents).toHaveLength(1);
+    expect(state.associations).toHaveLength(1);
+  });
+
+  it('selects the host policy by tenant so one tenant can allow a host another rejects', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [{ kind: 'custom', host_pattern: 'shared.example.test' }];
+    state.fetchHosts['tenant-2'] = [{ kind: 'custom', host_pattern: 'other.example.test' }];
+    const transport = vi.fn(async () => new Response(wavBytes, { headers: { 'content-type': 'audio/wav' } }));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://shared.example.test/file.wav' }, filename: 'allowed.wav',
+    });
+    await expect(attachDocumentToTicket(ctx, { ...tx, tenantId: 'tenant-2' }, ticketId, {
+      source: { url: 'https://shared.example.test/file.wav' }, filename: 'rejected.wav',
+    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).toHaveBeenCalledOnce();
+    expect(state.externalFiles).toHaveLength(1);
+    expect(state.documents).toHaveLength(1);
+    expect(state.associations).toHaveLength(1);
+  });
+
+  it('fails closed when the tenant policy lookup fails, before transport or persistence', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHostLookupError = new Error('policy store unavailable');
+    const transport = vi.fn(async () => new Response(wavBytes));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://example.test/file.wav' },
+    })).rejects.toMatchObject({ category: 'TransientError', code: 'TRANSIENT_FAILURE' });
+
+    expect(outbound.safeFetch).not.toHaveBeenCalled();
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
+  it('does not let a malformed tenant host pattern authorize an outbound request', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [{ kind: 'custom', host_pattern: '**.example.test' }];
+    const transport = vi.fn(async () => new Response(wavBytes));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, {
+      source: { url: 'https://files.example.test/file.wav' },
+    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
   });
 
   it('does not upload or associate a URL resolving to a private address', async () => {
@@ -268,7 +513,7 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
   it('rejects a redirect to nonpublic IPv6 before fetching or persisting its response', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
-    const transport = vi.fn(async () => new Response(null, {
+    const transport = vi.fn(async (_url: string) => new Response(null, {
       status: 302,
       headers: { location: 'https://[fec0::1]/private.wav' },
     }));
