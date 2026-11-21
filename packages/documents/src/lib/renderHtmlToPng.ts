@@ -45,6 +45,15 @@ interface RemoteAssetReference {
   end: number;
   kind: 'img' | 'css';
   url: string;
+  srcAttributeStart?: number;
+  srcAttributeEnd?: number;
+  nestedCss?: RemoteAssetReference[];
+}
+
+interface TextReplacement {
+  index: number;
+  end: number;
+  value: string;
 }
 
 function escapeHtml(s: string): string {
@@ -56,6 +65,13 @@ function decodeAttr(s: string): string {
 function getAttr(tag: string, name: string): string | undefined {
   const m = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
   return m ? decodeAttr(m[1] ?? m[2] ?? '') : undefined;
+}
+
+function getAttrRange(tag: string, name: string): { value: string; start: number; end: number } | undefined {
+  const m = new RegExp(`\\s(${name}\\s*=\\s*)(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
+  if (!m) return undefined;
+  const start = m.index + m[0].indexOf(m[1]);
+  return { value: decodeAttr(m[2] ?? m[3] ?? ''), start, end: m.index + m[0].length };
 }
 
 async function resolveAssets(
@@ -109,18 +125,47 @@ async function resolveAssets(
 }
 
 function collectRemoteAssetReferences(html: string): RemoteAssetReference[] {
-  const references: RemoteAssetReference[] = [];
+  const imageReferences: RemoteAssetReference[] = [];
+  const cssReferences: RemoteAssetReference[] = [];
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
-    const src = getAttr(match[0], 'src');
-    if (src !== undefined && REMOTE_URL.test(src)) {
-      references.push({ index: match.index!, end: match.index! + match[0].length, kind: 'img', url: src.trim() });
+    const src = getAttrRange(match[0], 'src');
+    if (src !== undefined && REMOTE_URL.test(src.value)) {
+      imageReferences.push({
+        index: match.index!,
+        end: match.index! + match[0].length,
+        kind: 'img',
+        url: src.value.trim(),
+        srcAttributeStart: match.index! + src.start,
+        srcAttributeEnd: match.index! + src.end,
+        nestedCss: [],
+      });
     }
   }
   for (const match of html.matchAll(/url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi)) {
-    references.push({ index: match.index!, end: match.index! + match[0].length, kind: 'css', url: decodeAttr(match[2]).trim() });
+    cssReferences.push({ index: match.index!, end: match.index! + match[0].length, kind: 'css', url: decodeAttr(match[2]).trim() });
+  }
+
+  const references = [...imageReferences];
+  for (const cssReference of cssReferences) {
+    const parentImage = imageReferences.find((image) =>
+      cssReference.index >= image.index && cssReference.end <= image.end
+    );
+    if (parentImage) parentImage.nestedCss!.push(cssReference);
+    else references.push(cssReference);
   }
   references.sort((a, b) => a.index - b.index);
   return references;
+}
+
+function getOrderedAssetUrls(references: RemoteAssetReference[]): string[] {
+  const orderedReferences = references.flatMap((reference) => {
+    if (reference.kind === 'css') return [reference];
+    return [
+      ...reference.nestedCss!,
+      { index: reference.srcAttributeStart!, end: reference.srcAttributeEnd!, kind: 'img' as const, url: reference.url },
+    ].sort((a, b) => a.index - b.index);
+  });
+  return [...new Set(orderedReferences.map(({ url }) => url))];
 }
 
 function dataUriByteLength(image: ResolvedImage): number {
@@ -131,6 +176,21 @@ function dataUriByteLength(image: ResolvedImage): number {
 
 function getDataUri(image: ResolvedImage): string {
   return image.dataUri ??= `data:${image.contentType};base64,${image.bytes.toString('base64')}`;
+}
+
+function applyTextReplacements(input: string, replacements: TextReplacement[]): string {
+  let output = '';
+  let last = 0;
+  for (const replacement of replacements.sort((a, b) => a.index - b.index)) {
+    output += input.slice(last, replacement.index) + replacement.value;
+    last = replacement.end;
+  }
+  return output + input.slice(last);
+}
+
+function imagePlaceholder(tag: string): string {
+  const alt = (getAttr(tag, 'alt') ?? '').slice(0, MAX_PLACEHOLDER_ALT_LENGTH);
+  return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
 }
 
 /**
@@ -147,34 +207,84 @@ export async function resolveRemoteAssets(
   const mode = opts.remoteAssets ?? 'inline';
   const limits = validateRemoteAssetLimits(opts.limits);
   const references = collectRemoteAssetReferences(html);
-  const orderedUrls = [...new Set(references.map(({ url }) => url))];
+  const orderedUrls = getOrderedAssetUrls(references);
   const resolvedAssets = mode === 'inline'
     ? await resolveAssets(opts, orderedUrls, limits)
     : new Map<string, ResolvedImage | null>();
   const outputBudget = createExpandedOutputBudget(limits.maxExpandedOutputBytes);
   let skippedByOutput = 0;
+  const consideredReferences = references.reduce(
+    (count, reference) => count + 1 + (reference.nestedCss?.length ?? 0),
+    0
+  );
   let out = '';
   let last = 0;
 
   for (const reference of references) {
     out += html.slice(last, reference.index);
-    const image = resolvedAssets.get(reference.url);
-    const fits = image !== null && image !== undefined && outputBudget.reserve(dataUriByteLength(image));
-    if (fits) {
-      const dataUri = getDataUri(image);
-      if (reference.kind === 'img') {
-        const tag = html.slice(reference.index, reference.end);
-        out += tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
+    if (reference.kind === 'img') {
+      const tag = html.slice(reference.index, reference.end);
+      const image = resolvedAssets.get(reference.url);
+      if (!image) {
+        out += imagePlaceholder(tag);
       } else {
-        out += `url("${dataUri}")`;
+        const nestedCss = reference.nestedCss ?? [];
+        const events = [
+          ...nestedCss.map((css) => ({ ...css, eventKind: 'css' as const })),
+          {
+            index: reference.srcAttributeStart!,
+            end: reference.srcAttributeEnd!,
+            url: reference.url,
+            eventKind: 'img' as const,
+          },
+        ].sort((a, b) => a.index - b.index);
+        const replacements: TextReplacement[] = [];
+        const reserved: number[] = [];
+        let sourceFits = false;
+
+        for (const event of events) {
+          const eventImage = resolvedAssets.get(event.url);
+          const byteLength = eventImage ? dataUriByteLength(eventImage) : 0;
+          const fits = eventImage !== null && eventImage !== undefined && outputBudget.reserve(byteLength);
+          if (event.eventKind === 'img') {
+            if (!fits) {
+              skippedByOutput += 1;
+              for (const bytes of reserved) outputBudget.release(bytes);
+              reserved.length = 0;
+              break;
+            }
+            sourceFits = true;
+            reserved.push(byteLength);
+            replacements.push({
+              index: event.index - reference.index,
+              end: event.end - reference.index,
+              value: `src="${getDataUri(eventImage)}"`,
+            });
+          } else if (fits) {
+            reserved.push(byteLength);
+            replacements.push({
+              index: event.index - reference.index,
+              end: event.end - reference.index,
+              value: `url(&quot;${getDataUri(eventImage)}&quot;)`,
+            });
+          } else {
+            if (eventImage) skippedByOutput += 1;
+            replacements.push({
+              index: event.index - reference.index,
+              end: event.end - reference.index,
+              value: `url(&quot;${TRANSPARENT_PIXEL}&quot;)`,
+            });
+          }
+        }
+
+        out += sourceFits ? applyTextReplacements(tag, replacements) : imagePlaceholder(tag);
       }
     } else {
-      if (image) skippedByOutput += 1;
-      if (reference.kind === 'img') {
-        const tag = html.slice(reference.index, reference.end);
-        const alt = (getAttr(tag, 'alt') ?? '').slice(0, MAX_PLACEHOLDER_ALT_LENGTH);
-        out += `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
+      const image = resolvedAssets.get(reference.url);
+      if (image && outputBudget.reserve(dataUriByteLength(image))) {
+        out += `url("${getDataUri(image)}")`;
       } else {
+        if (image) skippedByOutput += 1;
         out += `url("${TRANSPARENT_PIXEL}")`;
       }
     }
@@ -187,7 +297,7 @@ export async function resolveRemoteAssets(
 
   if (skippedByOutput) {
     console.warn('[renderHtmlToPng] expanded remote asset output budget exhausted', {
-      considered: references.length,
+      considered: consideredReferences,
       skippedByOutput,
       spentExpandedOutputBytes: outputBudget.spentBytes,
       maxExpandedOutputBytes: limits.maxExpandedOutputBytes,

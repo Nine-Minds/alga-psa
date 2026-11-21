@@ -237,23 +237,18 @@ describe('renderHtmlToPng network policy', () => {
   });
 
   it('bounds expanded output for repeated large img and CSS references deterministically', async () => {
-    const imageBytes = Buffer.alloc(4096, 7);
+    const imageBytes = Buffer.alloc(1024 * 1024, 7);
     const dataUri = `data:image/png;base64,${imageBytes.toString('base64')}`;
     const perReferenceOutput = Buffer.byteLength(dataUri);
-    const outputCap = perReferenceOutput * 2 - 1;
+    const outputCap = 16 * 1024 * 1024;
     const url = `http://127.0.0.1:${port}/large-repeated.png`;
     const smallUrl = `http://127.0.0.1:${port}/small.png`;
-    const html = [
-      `<img src="${url}" alt="img-1">`,
-      `<div style="background-image:url('${url}')">css-1</div>`,
-      `<img src="${url}" alt="img-2">`,
-      `<div style="background-image:url(${url})">css-2</div>`,
-      `<img src="${url}" alt="img-3">`,
-      `<div style="background-image:url(${url})">css-3</div>`,
-      `<img src="${smallUrl}" alt="small">`,
-    ].join('');
+    const repeatedReferences = Array.from({ length: 30 }, (_, index) => index % 2 === 0
+      ? `<img src="${url}" alt="img-${index}">`
+      : `<div style="background-image:url(${url})">css-${index}</div>`);
+    const html = [...repeatedReferences, `<img src="${smallUrl}" alt="small">`].join('');
 
-    const render = async (largeDelayMs: number, smallDelayMs = 0, maxExpandedOutputBytes = outputCap) => {
+    const render = async (largeDelayMs: number, smallDelayMs = 0, maxExpandedOutputBytes?: number) => {
       requests = [];
       completedRequests = [];
       responseBytes = imageBytes;
@@ -263,7 +258,7 @@ describe('renderHtmlToPng network policy', () => {
         limits: {
           maxAssets: 2,
           maxTotalBytes: imageBytes.length + TINY_PNG.length,
-          maxExpandedOutputBytes,
+          ...(maxExpandedOutputBytes === undefined ? {} : { maxExpandedOutputBytes }),
         },
         fetchAsset: async (assetUrl) => {
           const response = await fetch(assetUrl);
@@ -283,34 +278,106 @@ describe('renderHtmlToPng network policy', () => {
     expect(first.completionOrder).toEqual(['/small.png', '/large-repeated.png']);
     expect(second.completionOrder).toEqual(['/large-repeated.png', '/small.png']);
     expect(first.output).toBe(second.output);
-    expect(first.output.split(dataUri).length - 1).toBe(1);
+    expect(first.output.split(dataUri).length - 1).toBe(11);
     expect(first.output).toContain(`<img src="data:image/png;base64,${TINY_PNG.toString('base64')}" alt="small">`);
     expect(Buffer.byteLength(dataUri)).toBe(perReferenceOutput);
-    expect(perReferenceOutput * 2).toBeGreaterThan(outputCap);
-    expect(Buffer.byteLength(dataUri)).toBeLessThanOrEqual(outputCap);
-    expect(first.output.match(/role="img"/g)).toHaveLength(2);
-    expect(first.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(3); // safe CSS pixels
+    expect(perReferenceOutput * 11).toBeLessThanOrEqual(outputCap);
+    expect(perReferenceOutput * 12).toBeGreaterThan(outputCap);
+    expect(first.output.split(`url("${dataUri}")`).length - 1).toBe(5);
+    expect(first.output.match(/role="img"/g)).toHaveLength(9);
+    expect(first.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(15); // all CSS references retain their positions
     expect(first.output).toContain('css-1');
-    expect(first.output).toContain('css-2');
-    expect(first.output).toContain('css-3');
+    expect(first.output).toContain('css-29');
     expect(first.output).toContain('img-2');
-    expect(first.output).toContain('img-3');
-    const referencePositions = ['img-1', 'css-1', 'img-2', 'css-2', 'img-3', 'css-3', 'small']
+    expect(first.output).toContain('img-28');
+    const referenceLabels = repeatedReferences.map((_reference, index) => index % 2 === 0 ? `img-${index}` : `css-${index}`);
+    const referencePositions = [...referenceLabels, 'small']
       .map((label) => first.output.indexOf(label));
     expect(referencePositions.every((position, index) =>
       index === 0 || referencePositions[index - 1] < position
     )).toBe(true);
     expect(Buffer.byteLength(first.output)).toBeLessThan(Buffer.byteLength(html) + outputCap + 3000);
 
-    const override = await render(0, 0, perReferenceOutput * 3);
-    expect(override.output.split(dataUri).length - 1).toBe(3);
+    const override = await render(0, 0, perReferenceOutput * 13);
+    expect(override.output.split(dataUri).length - 1).toBe(13);
     expect(override.output).toContain(`url("${dataUri}")`);
     expect(override.output).toContain('small');
-    expect(override.output.match(/role="img"/g)).toHaveLength(2);
-    expect(override.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(3); // one admitted CSS image and two safe pixels
+    expect(override.output.match(/role="img"/g)).toHaveLength(9);
+    expect(override.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(15);
     responseBytes = null;
     responseDelayMs = 0;
     smallResponseDelayMs = 0;
+  });
+
+  it('composes CSS rewrites nested in retained images and suppresses them for placeholders', async () => {
+    const imageUrl = 'https://assets.example/a.png';
+    const cssUrl = 'https://assets.example/b.png';
+    const imageBytes = Buffer.from([1, 2, 3]);
+    const cssBytes = Buffer.from([4, 5, 6, 7]);
+    const imageUri = `data:image/png;base64,${imageBytes.toString('base64')}`;
+    const cssUri = `data:image/png;base64,${cssBytes.toString('base64')}`;
+    const html = `<img src="${imageUrl}" style="background:url(${cssUrl})" alt="photo">`;
+    const fetched: string[] = [];
+    const fetchAsset = async (url: string) => {
+      fetched.push(url);
+      return { bytes: url === imageUrl ? imageBytes : cssBytes, contentType: 'image/png' };
+    };
+
+    const inlined = await resolveRemoteAssets(html, { fetchAsset });
+    expect(inlined).toBe(`<img src="${imageUri}" style="background:url(&quot;${cssUri}&quot;)" alt="photo">`);
+    expect(fetched).toEqual([imageUrl, cssUrl]);
+
+    fetched.length = 0;
+    const blocked = await resolveRemoteAssets(html, { remoteAssets: 'block', fetchAsset });
+    expect(blocked).toBe(
+      '<span style="display:inline-block;min-width:60px;min-height:30px;padding:4px;background:#e5e7eb;color:#6b7280;font-size:12px;border:1px solid #d1d5db;box-sizing:border-box;" role="img" aria-label="photo">photo</span>'
+    );
+    expect(blocked).not.toContain('url(');
+    expect(blocked).not.toContain('assets.example');
+    expect(fetched).toEqual([]);
+  });
+
+  it('shares output capacity with nested CSS and rolls back suppressed nested reservations', async () => {
+    const imageUrl = 'https://assets.example/budget-image.png';
+    const cssUrl = 'https://assets.example/budget-css.png';
+    const sourceBytes = Buffer.alloc(12, 1);
+    const nestedBytes = Buffer.alloc(12, 2);
+    const sourceUri = `data:image/png;base64,${sourceBytes.toString('base64')}`;
+    const cssUri = `data:image/png;base64,${nestedBytes.toString('base64')}`;
+    const fetchAsset = async (url: string) => ({
+      bytes: url === imageUrl ? sourceBytes : nestedBytes,
+      contentType: 'image/png',
+    });
+
+    const retained = await resolveRemoteAssets(
+      `<img src="${imageUrl}" style="background:url(${cssUrl})" alt="retained">`,
+      { fetchAsset, limits: { maxExpandedOutputBytes: Buffer.byteLength(sourceUri) } }
+    );
+    expect(retained).toBe(
+      `<img src="${sourceUri}" style="background:url(&quot;${'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='}&quot;)" alt="retained">`
+    );
+
+    const beforeSourceCss = 'https://assets.example/css-before-src.png';
+    const tooLargeImage = 'https://assets.example/too-large-image.png';
+    const afterUrl = 'https://assets.example/after.png';
+    const beforeBytes = TINY_PNG;
+    const beforeUri = `data:image/png;base64,${beforeBytes.toString('base64')}`;
+    const afterImageUri = beforeUri;
+    const suppressed = await resolveRemoteAssets(
+      `<img style="background:url(${beforeSourceCss})" src="${tooLargeImage}" alt="suppressed">` +
+        `<img src="${afterUrl}" alt="after">`,
+      {
+        limits: { maxExpandedOutputBytes: Buffer.byteLength(beforeUri), maxTotalBytes: 1024 },
+        fetchAsset: async (url) => ({
+          bytes: url === tooLargeImage ? Buffer.alloc(200, 3) : beforeBytes,
+          contentType: 'image/png',
+        }),
+      }
+    );
+    expect(suppressed).toContain('aria-label="suppressed">suppressed</span><img');
+    expect(suppressed).toContain(`<img src="${afterImageUri}" alt="after">`);
+    expect(suppressed).not.toContain(beforeSourceCss);
+    expect(suppressed).not.toContain(tooLargeImage);
   });
 
   it('forwards the default and overridden per-asset timeout and rejects malformed values', async () => {

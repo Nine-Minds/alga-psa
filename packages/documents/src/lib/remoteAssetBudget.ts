@@ -25,6 +25,7 @@ export interface AssetBudget {
 
 export interface ExpandedOutputBudget {
   reserve(bytes: number): boolean;
+  release(bytes: number): void;
   readonly spentBytes: number;
 }
 
@@ -78,6 +79,12 @@ export function createExpandedOutputBudget(maxBytes: number): ExpandedOutputBudg
       if (bytes > maxBytes - spentBytes) return false;
       spentBytes += bytes;
       return true;
+    },
+    release(bytes) {
+      if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > spentBytes) {
+        throw new TypeError('Expanded output release must be a non-negative reservation already spent');
+      }
+      spentBytes -= bytes;
     },
     get spentBytes() { return spentBytes; },
   };

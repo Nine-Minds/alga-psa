@@ -96,7 +96,10 @@ Reference output is admitted in source order across `<img src>` and CSS `url(...
 of fetch completion order. Reserve capacity before building a base64 string or appending that
 replacement. References that do not fit retain their position using the existing bounded image
 placeholder or CSS transparent pixel. Truncate placeholder alt text so fallback markup cannot
-expand without bound. The same per-call `limits` override can raise or lower this cap.
+expand without bound. CSS references inside an `<img>` are composed as child edits inside the
+retained tag; if the `<img>` source becomes a whole-tag placeholder, suppress those child edits
+and release any provisional output reservations made before the source's position. The same
+per-call `limits` override can raise or lower this cap.
 
 
 ## 3. What we are deliberately NOT doing
