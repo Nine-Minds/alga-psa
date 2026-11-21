@@ -236,6 +236,27 @@ describe('postSafeOutboundForm', () => {
     });
   });
 
+  it('pins credential-bearing form posts to the single public DNS answer it validated', async () => {
+    const lookup = vi
+      .fn<(hostname: string) => Promise<{ address: string; family: number }[]>>()
+      .mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }])
+      .mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+    const request = vi.fn<SafeRequestFn>(async () => response({
+      chunks: [Buffer.from(JSON.stringify({ access_token: 'fresh-token' }))],
+    }));
+
+    const result = await postSafeOutboundForm<{ access_token: string }>(
+      'https://rebind.example.test/token',
+      body,
+      { lookup, request },
+    );
+
+    expect(result.data.access_token).toBe('fresh-token');
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0]).toMatchObject({ address: '93.184.216.34', method: 'POST' });
+  });
+
   it.each([
     'http://idp.example.test/token',
     'https://127.0.0.1/token',

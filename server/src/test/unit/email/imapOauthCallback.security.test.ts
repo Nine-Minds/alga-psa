@@ -129,7 +129,7 @@ describe('IMAP OAuth callback security', () => {
     const token = await signedAttempt();
     const [payload] = token.split('.');
     const tamperedPayload = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload!, 'base64url').toString()), tenant: 'tenant-victim' })).toString('base64url');
-    const response = await GET(request(`${tamperedPayload}.${token.split('.')[1]}`));
+    const response = await GET(request(`${tamperedPayload}.${token.split('.')[1]}`, { 'x-tenant-id': 'tenant-victim' }));
     expect(response.status).toBe(400);
     expect(mocks.createTenantKnex).not.toHaveBeenCalled();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
@@ -161,6 +161,14 @@ describe('IMAP OAuth callback security', () => {
     const token = await signedAttempt();
     expect((await GET(request(token))).status).toBe(307);
     expect((await GET(request(token))).status).toBe(400);
+    expect(mocks.postSafeOutboundForm).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows only one concurrent callback to consume a nonce', async () => {
+    const token = await signedAttempt();
+    const responses = await Promise.all([GET(request(token)), GET(request(token))]);
+    expect(responses.map((response) => response.status).sort()).toEqual([307, 400]);
+    expect(mocks.getTenantSecret).toHaveBeenCalledTimes(1);
     expect(mocks.postSafeOutboundForm).toHaveBeenCalledTimes(1);
   });
 
