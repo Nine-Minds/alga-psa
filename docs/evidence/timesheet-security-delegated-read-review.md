@@ -46,12 +46,14 @@ The delegated list sorting/range repair is [`ceaad14bf1e9379ce071a7a2e0c18b57b1e
 
 The offset-aware query-schema follow-up is [`82a6450383bf63c90d64e406736aede732ae6c32`](https://github.com/Nine-Minds/alga-psa/commit/82a6450383bf63c90d64e406736aede732ae6c32). This revision accepts timestamp bounds with explicit UTC offsets at the API schema, and the full focused suite passed: 7 files and 74 tests.
 
+The final timestamp-sort adjustment is [`de71c103c401014f385754da152ceb052168ff77`](https://github.com/Nine-Minds/alga-psa/commit/de71c103c401014f385754da152ceb052168ff77). It compares `Date` objects by epoch value as well as parsing offset-bearing strings. The complete focused suite passed again at this revision (7 files, 74 tests), and server typecheck exited 0.
+
 ```sh
 cd server
 NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts src/test/unit/api/timeSheetListSort.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-Result at `82a6450383bf63c90d64e406736aede732ae6c32`: the focused set passed 74 tests across 7 files, including 37 real-Postgres tests, 22 route/lifecycle regressions, the registered mixed-data provider tests, and offset-aware query-schema tests. The registered collection test file has 27 passing tests and covers list sorting/ranges. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
+Result at `de71c103c401014f385754da152ceb052168ff77`: the focused set passed 74 tests across 7 files, including 37 real-Postgres tests, 22 route/lifecycle regressions, the registered mixed-data provider tests, and offset-aware query-schema tests. The registered collection test file has 27 passing tests and covers list sorting/ranges. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
 
 The native read-route and lifecycle regression command was:
 
@@ -60,7 +62,7 @@ cd server
 NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts src/test/unit/api/timeSheetListSort.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-The focused run includes these route, lifecycle, and list-sort schema checks. The server typecheck passed at `82a6450383bf63c90d64e406736aede732ae6c32` with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server` (exit 0).
+The focused run includes these route, lifecycle, and list-sort schema checks. The server typecheck passed at `de71c103c401014f385754da152ceb052168ff77` with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server` (exit 0).
 
 The last production build attempt at revision `b32ef96dbc879f800ef4d178e8b89b8027756d0c` compiled the production bundle and generated all 74 static pages, then exited 1 at Next.js's `SecurityFatalError` for installed Next.js 16.4.2. Retrying the same command reached the same security stop. The build remains a failure, not a successful build. Evidence is recorded at `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/server-build-b32ef96.log`; this repair round did not rerun the build. The build recommendation was `next upgrade --agent=security`; that separate dependency upgrade is outside this focused repair.
 
