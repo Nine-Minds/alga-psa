@@ -22,6 +22,7 @@ import {
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
+import { claimTicketChargeSources } from '../lib/billing/ticketChargeClaims';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -150,7 +151,6 @@ import {
   buildProjectBudgetThresholdReachedPayload,
 } from '@alga-psa/workflow-streams';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
-const POSTGRES_UNDEFINED_TABLE = '42P01';
 
 function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
   return Boolean(
@@ -169,15 +169,6 @@ function unwrapBillingHelperResult<T>(value: T | InvoiceGenerationActionError): 
   }
 
   return value;
-}
-
-function isMissingRelationError(error: unknown): boolean {
-  return Boolean(
-    error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE
-  );
 }
 
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
@@ -4115,48 +4106,14 @@ export async function createInvoiceFromBillingResultImpl(
     tax_source: taxSource
   };
 
-  let newInvoice: IInvoice | null = null;
-  const maxRetries = 3;
-  let retryCount = 0;
-
-  while (retryCount < maxRetries) {
-    try {
-      const invoiceNumber = await generateInvoiceNumber(); // Uses local function
-      invoiceData.invoice_number = invoiceNumber;
-      const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Check permissions within transaction
-        if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
-          throw new Error('Permission denied: Cannot create invoices');
-        }
-
-        return await tenantDb(trx, tenant).table('invoices').insert(invoiceData).returning('*');
-      });
-      newInvoice = insertedInvoice;
-      break;
-    } catch (error: unknown) {
-      if (error instanceof Error &&
-        'code' in error &&
-        error.code === '23505' &&
-        'constraint' in error &&
-        error.constraint === 'unique_invoice_number_per_tenant') {
-        retryCount++;
-        if (retryCount >= maxRetries) {
-          throw new Error('Unable to generate a unique invoice number after multiple attempts.');
-        }
-      } else {
-        throw error;
-      }
+  const persistInvoice = async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
+      throw new Error('Permission denied: Cannot create invoices');
     }
-  }
-
-  if (!newInvoice) {
-    throw new Error('Invoice creation completed without returning an invoice.');
-  }
-
-  let persistedCapDeltas: ProjectCapPersistenceDelta[] = [];
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Permission already checked in previous transaction, no need to recheck
-    // Just use currentUser that we already validated
+    const [invoice] = await tenantDb(trx, tenant).table('invoices').insert(invoiceData).returning('*');
+    if (!invoice) {
+      throw new Error('Invoice creation completed without returning an invoice.');
+    }
 
     // Persist all items (including fixed details) using the dedicated service function
     const sessionObject: Session = {
@@ -4188,7 +4145,6 @@ export async function createInvoiceFromBillingResultImpl(
       scopedCharges,
       billingResult.currency_code ?? null,
     );
-    persistedCapDeltas = capDeltas;
     const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
     // One-time mid-period true-ups are owned by the reconcile ledger, not by the
     // engine's supplemental charge, so they keep their revision provenance and
@@ -4199,7 +4155,7 @@ export async function createInvoiceFromBillingResultImpl(
     );
     const standardSubtotal = await persistInvoiceCharges(
       trx,
-      newInvoice!.invoice_id,
+      invoice.invoice_id,
       standardCharges,
       client,
       sessionObject,
@@ -4213,7 +4169,7 @@ export async function createInvoiceFromBillingResultImpl(
     );
     const projectScheduleSubtotal = await persistProjectScheduleCharges(
       trx,
-      newInvoice!.invoice_id,
+      invoice.invoice_id,
       projectScheduleCharges,
       client,
       tenant,
@@ -4225,7 +4181,7 @@ export async function createInvoiceFromBillingResultImpl(
     const reconciledAdjustments = await reconcileContractChangeAdjustmentsForInvoice({
       trx,
       tenant,
-      invoiceId: newInvoice!.invoice_id,
+      invoiceId: invoice.invoice_id,
     });
     const calculatedSubtotal =
       standardSubtotal + projectScheduleSubtotal + reconciledAdjustments.amountCents;
@@ -4238,7 +4194,7 @@ export async function createInvoiceFromBillingResultImpl(
       await claimRecurringServicePeriodsForSelectionInputs({
         tx: trx,
         tenant,
-        invoiceId: newInvoice!.invoice_id,
+        invoiceId: invoice.invoice_id,
         // Unresolved time/usage selections identify source records, not
         // recurring obligations. Their invoice linkage is handled by charges.
         selectorInputs: options.recurringSelectorInputs.filter((selector) => !isNonPeriodSelectorInput(selector)),
@@ -4250,9 +4206,9 @@ export async function createInvoiceFromBillingResultImpl(
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
-    try {
+    {
       const billedAt = Temporal.Now.instant().toString();
-      const materialCharges = billingResult.charges.filter((charge): charge is IProductCharge => (
+      const materialCharges = scopedCharges.filter((charge): charge is IProductCharge => (
         charge.type === 'product'
         && Boolean((charge as IProductCharge).material_source_id)
         && Boolean((charge as IProductCharge).material_source_type)
@@ -4271,33 +4227,37 @@ export async function createInvoiceFromBillingResultImpl(
           .whereIn('project_material_id', uniqueProjectMaterialIds)
           .update({
             is_billed: true,
-            billed_invoice_id: newInvoice!.invoice_id,
+            billed_invoice_id: invoice.invoice_id,
             billed_at: billedAt,
             updated_at: billedAt
           });
         if (updatedCount !== uniqueProjectMaterialIds.length) {
-          throw new Error('A project product changed before the invoice could be committed. Refresh and try again.');
+          throw new ManualInvoiceError('SOURCE_CHANGED', 'A project product changed before the invoice could be committed. Refresh and try again.');
         }
       }
       if (ticketMaterialIds.length > 0) {
-        const uniqueTicketMaterialIds = [...new Set(ticketMaterialIds)];
-        const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
-          .where({ is_billed: false })
-          .whereIn('ticket_material_id', uniqueTicketMaterialIds)
-          .update({
-            is_billed: true,
-            billed_invoice_id: newInvoice!.invoice_id,
-            billed_at: billedAt,
-            updated_at: billedAt
+        const claims = materialCharges
+          .filter((charge) => charge.material_source_type === 'ticket')
+          .map((charge) => {
+            if (!charge.material_source_updated_at) {
+              throw new Error('Ticket material source version is required.');
+            }
+            return {
+              sourceId: charge.material_source_id!,
+              sourceUpdatedAt: charge.material_source_updated_at,
+              expected: {
+                serviceId: charge.service_id,
+                quantity: charge.quantity,
+                rate: charge.rate,
+              },
+            };
           });
-        if (updatedCount !== uniqueTicketMaterialIds.length) {
-          throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
+        const claimedIds = await claimTicketChargeSources(
+          trx, tenant, 'ticket_material', claims, invoice.invoice_id, billedAt,
+        );
+        if (claimedIds.size !== claims.length) {
+          throw new ManualInvoiceError('SOURCE_CHANGED', 'A ticket product changed before the invoice could be committed. Refresh and try again.');
         }
-
-      }
-    } catch (err) {
-      if (!isMissingRelationError(err)) {
-        throw err;
       }
     }
 
@@ -4306,7 +4266,7 @@ export async function createInvoiceFromBillingResultImpl(
     // same scopes, invoice-period eligibility and rounding. Discounts return a
     // positive magnitude.
     const { automaticDiscountAmount } =
-      await reconcileAutomaticInvoiceAdjustments(trx, tenant, newInvoice!.invoice_id);
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoice.invoice_id);
 
     // Use the subtotal returned by persistInvoiceCharges minus the shared
     // automatic discount settlement.
@@ -4315,7 +4275,7 @@ export async function createInvoiceFromBillingResultImpl(
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(
       trx,
-      newInvoice!.invoice_id,
+      invoice.invoice_id,
       client,
       taxService,
       tenant
@@ -4329,7 +4289,7 @@ export async function createInvoiceFromBillingResultImpl(
 
     // Update the invoice with subtotal, tax, and total amount
     await tenantDb(trx, tenant).table('invoices')
-      .where({ invoice_id: newInvoice!.invoice_id })
+      .where({ invoice_id: invoice.invoice_id })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,
@@ -4340,7 +4300,7 @@ export async function createInvoiceFromBillingResultImpl(
     // Corrected call signature: removed finalSubtotal and finalTax as they are recalculated internally
     await updateInvoiceTotalsAndRecordTransaction(
       trx,
-      newInvoice!.invoice_id,
+      invoice.invoice_id,
       client,
       tenant,
       invoiceData.invoice_number
@@ -4350,8 +4310,8 @@ export async function createInvoiceFromBillingResultImpl(
     // Keep the action result aligned with the totals committed above. This is
     // especially important when persistence re-applies a project cap and
     // changes the previewed charge totals.
-    newInvoice = {
-      ...newInvoice!,
+    const persistedInvoice: IInvoice = {
+      ...invoice,
       subtotal: finalSubtotal,
       tax: finalTax,
       total_amount: Math.ceil(totalAmount),
@@ -4361,13 +4321,13 @@ export async function createInvoiceFromBillingResultImpl(
     if (capDeltas.length > 0) {
       const invoiceTransaction = await tenantDb(trx, tenant).table('transactions')
         .where({
-          invoice_id: newInvoice!.invoice_id,
+          invoice_id: invoice.invoice_id,
           type: 'invoice_generated',
         })
         .orderBy('created_at', 'desc')
         .first('transaction_id', 'metadata');
       if (!invoiceTransaction) {
-        throw new Error(`Invoice transaction for ${newInvoice!.invoice_id} was not found`);
+        throw new Error(`Invoice transaction for ${invoice.invoice_id} was not found`);
       }
       const existingMetadata = invoiceTransaction.metadata
         && typeof invoiceTransaction.metadata === 'object'
@@ -4384,24 +4344,39 @@ export async function createInvoiceFromBillingResultImpl(
         });
     }
 
-  }).catch(async (error) => {
-    // The invoice header is allocated separately so unique invoice-number
-    // retries stay small. Compensate a failed content transaction immediately;
-    // callers must never be left with an empty orphan draft.
+    return { invoice: persistedInvoice, capDeltas };
+  };
+
+  let newInvoice: IInvoice | null = null;
+  let persistedCapDeltas: ProjectCapPersistenceDelta[] = [];
+  const maxRetries = 3;
+  let retryCount = 0;
+  while (retryCount < maxRetries) {
     try {
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await tenantDb(trx, tenant).table('invoices')
-          .where({ invoice_id: newInvoice!.invoice_id, status: 'draft' })
-          .delete();
-      });
-    } catch (cleanupError) {
-      console.error(
-        `[createInvoiceFromBillingResult] Failed to remove orphan invoice ${newInvoice.invoice_id}`,
-        cleanupError,
-      );
+      invoiceData.invoice_number = await generateInvoiceNumber();
+      const persisted = await withTransaction(knex, persistInvoice);
+      newInvoice = persisted.invoice;
+      persistedCapDeltas = persisted.capDeltas;
+      break;
+    } catch (error: unknown) {
+      if (error instanceof Error &&
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'unique_invoice_number_per_tenant') {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw new Error('Unable to generate a unique invoice number after multiple attempts.');
+        }
+      } else {
+        throw error;
+      }
     }
-    throw error;
-  });
+  }
+
+  if (!newInvoice) {
+    throw new Error('Invoice creation completed without returning an invoice.');
+  }
 
   const invoicedScheduleRows = await knex('project_billing_schedule_entries as entry')
     .join('project_billing_configs as config', function joinProjectBillingConfig() {

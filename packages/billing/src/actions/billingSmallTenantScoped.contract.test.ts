@@ -47,12 +47,15 @@ describe('low-risk billing tenant-scoped query contract', () => {
     expect(externalTaxImport).toContain("const query = facade.table('invoices as i')");
     expect(externalTaxImport).toContain("facade.tenantJoin(query, 'clients as c'");
 
-    // Material queries moved into @alga-psa/inventory/lib (324c607e57): the
-    // billing action delegates, and the lib scopes by tenant explicitly.
+    // Material queries moved into @alga-psa/inventory/lib: the billing action
+    // delegates, and the lib scopes its list root and joins through the facade.
     expect(material).toContain("import { addMaterial, deleteMaterial, listMaterials } from '@alga-psa/inventory/lib';");
     const inventoryMaterials = readSource('packages/inventory/src/lib/materials.ts');
-    expect(inventoryMaterials).toContain("'m.tenant': tenant");
-    expect(inventoryMaterials).toContain("this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');");
+    expect(inventoryMaterials).toContain('const scoped = tenantDb(trx, tenant);');
+    expect(inventoryMaterials).toContain('scoped.table(`${cfg.table} as m`)');
+    expect(inventoryMaterials).toContain("scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' })");
+    expect(inventoryMaterials).toContain("scoped.tenantJoin(query, 'product_inventory_settings as pis', 'm.service_id', 'pis.service_id', { type: 'left' })");
+    expect(inventoryMaterials).toContain('WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?');
 
     expect(usage).toContain("facade.table('usage_tracking')");
     expect(usage).toContain("facade.tenantJoin(query, 'clients'");

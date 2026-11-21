@@ -31,6 +31,17 @@ describe('manual invoice error translation', () => {
     })).toBe('Two entries still require approval');
   });
 
+  it('localizes a changed invoice source with refresh guidance', () => {
+    const t = vi.fn((_key: string) => 'Localized refresh guidance');
+
+    expect(translateManualInvoiceFailure(t, {
+      code: 'SOURCE_CHANGED', message: 'A source changed.',
+    })).toBe('Localized refresh guidance');
+    expect(t).toHaveBeenCalledWith('manualInvoices.errors.SOURCE_CHANGED', {
+      defaultValue: 'A source changed.',
+    });
+  });
+
   it('renders the support reference for unexpected failures', () => {
     const t = vi.fn((_key: string, options?: Record<string, unknown>) => (
       `Something went wrong generating the invoice. Quote reference ${options?.ref} when contacting support.`

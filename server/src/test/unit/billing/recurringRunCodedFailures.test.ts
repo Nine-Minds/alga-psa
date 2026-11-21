@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { invoiceGenerationActionErrorFrom } from '../../../../../packages/billing/src/actions/invoiceGenerationActionErrors';
+import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 import {
   handledRecurringFailureFromActionError,
   recurringRunFailureFromThrown,
@@ -9,6 +10,7 @@ import {
   NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
   NOTHING_TO_BILL_MESSAGE_KEY,
   RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+  SOURCE_CHANGED_MESSAGE_KEY,
 } from '../../../../../packages/billing/src/actions/invoiceGeneration.constants';
 
 afterEach(() => {
@@ -43,6 +45,16 @@ describe('invoiceGenerationActionErrorFrom: explained engine refusals', () => {
 
   it('does not map an arbitrary exception', () => {
     expect(invoiceGenerationActionErrorFrom(new Error('boom'))).toBeNull();
+  });
+
+  it('maps a changed invoice source to an actionable translation key', () => {
+    expect(invoiceGenerationActionErrorFrom(new ManualInvoiceError(
+      'SOURCE_CHANGED',
+      'A ticket product changed. Refresh and try again.',
+    ))).toMatchObject({
+      actionError: 'A ticket product changed. Refresh and try again.',
+      messageKey: SOURCE_CHANGED_MESSAGE_KEY,
+    });
   });
 });
 
@@ -85,5 +97,19 @@ describe('recurringRunFailureFromThrown', () => {
 
     expect(failure.code).toBe('RECURRING_PERIODS_NOT_MATERIALIZED');
     expect(failure.params).toBeUndefined();
+  });
+
+  it('preserves the changed-source code for localized recurring-run failures', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const failure = recurringRunFailureFromThrown(
+      new ManualInvoiceError('SOURCE_CHANGED', 'A ticket product changed. Refresh and try again.'),
+      ctx,
+    );
+
+    expect(failure).toMatchObject({
+      code: 'SOURCE_CHANGED',
+      errorMessage: 'A ticket product changed. Refresh and try again.',
+    });
   });
 });

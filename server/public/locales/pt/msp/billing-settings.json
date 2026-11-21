@@ -1194,6 +1194,8 @@
         "kit": "Kit",
         "createsAsset": "Cria ativo na entrega",
         "defaultAssetType": "Tipo de ativo padrão",
+        "specDefaults": "Especificações padrão dos ativos entregues",
+        "specDefaultsHint": "Aplicado quando uma unidade serializada entregue cria automaticamente seu ativo.",
         "reorderPoint": "Ponto de reposição",
         "reorderQuantity": "Quantidade de reposição",
         "kitPricingMode": "Modo de preço do kit",

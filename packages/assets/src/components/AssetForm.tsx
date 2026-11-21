@@ -43,6 +43,7 @@ import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/as
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
+import { AssetSpecSelect } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
 import { getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -96,9 +97,6 @@ function emptyBuiltinTypeFields(type: string): Partial<AssetFormData> {
 
 
 
-const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
-const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
-const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
 export default function AssetForm({ assetId, createMode = false, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
@@ -195,48 +193,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
     () => buildAssetStatusOptions(assetStatuses, t, formData.status),
     [assetStatuses, t, formData.status]
   );
-
-  const networkDeviceTypeOptions = useMemo(() => (
-    NETWORK_DEVICE_TYPE_VALUES.map((value) => ({
-      value,
-      label: t(`assetForm.networkDeviceTypes.${value}`, {
-        defaultValue: value === 'access_point'
-          ? 'Access Point'
-          : value === 'load_balancer'
-            ? 'Load Balancer'
-            : value.charAt(0).toUpperCase() + value.slice(1)
-      })
-    }))
-  ), [t]);
-
-  const storageTypeOptions = useMemo(() => (
-    STORAGE_TYPE_VALUES.map((value) => ({
-      value,
-      label: t(`assetForm.storageTypes.${value}`, {
-        defaultValue: value.toUpperCase()
-      })
-    }))
-  ), [t]);
-
-  const osTypeOptions = useMemo(() => (
-    OS_TYPE_VALUES.map((value) => ({
-      value,
-      label: t(`assetForm.osTypes.${value}`, {
-        defaultValue: value === 'macos' ? 'macOS' : value.charAt(0).toUpperCase() + value.slice(1)
-      })
-    }))
-  ), [t]);
-
-  const mobileOsOptions = useMemo(() => ([
-    {
-      value: 'ios',
-      label: t('assetForm.mobileOsTypes.ios', { defaultValue: 'iOS' })
-    },
-    {
-      value: 'android',
-      label: t('assetForm.mobileOsTypes.android', { defaultValue: 'Android' })
-    }
-  ]), [t]);
 
   useEffect(() => {
     if (createMode) {
@@ -692,10 +648,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
-          <CustomSelect
+          <AssetSpecSelect
+            id="asset-workstation-os-type"
             value={formData.workstation.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('workstation', 'os_type', value)}
-            options={osTypeOptions}
+            optionGroup="os"
             className="mt-1"
           />
         </div>
@@ -747,10 +704,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.storageType', { defaultValue: 'Storage Type' })}
           </label>
-          <CustomSelect
+          <AssetSpecSelect
+            id="asset-workstation-storage-type"
             value={formData.workstation.storage_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('workstation', 'storage_type', value)}
-            options={storageTypeOptions}
+            optionGroup="storage"
             className="mt-1"
           />
         </div>
@@ -790,10 +748,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.deviceType', { defaultValue: 'Device Type' })}
           </label>
-          <CustomSelect
+          <AssetSpecSelect
+            id="asset-network-device-type"
             value={formData.network_device.device_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('network_device', 'device_type', value)}
-            options={networkDeviceTypeOptions}
+            optionGroup="network"
             className="mt-1"
           />
         </div>
@@ -864,10 +823,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
-          <CustomSelect
+          <AssetSpecSelect
+            id="asset-server-os-type"
             value={formData.server.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('server', 'os_type', value)}
-            options={osTypeOptions}
+            optionGroup="os"
             className="mt-1"
           />
         </div>
@@ -969,10 +929,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             {t('assetForm.fields.osType', { defaultValue: 'OS Type' })}
           </label>
-          <CustomSelect
+          <AssetSpecSelect
+            id="asset-mobile-os-type"
             value={formData.mobile_device.os_type || ''}
             onValueChange={(value) => handleTypeSpecificChange('mobile_device', 'os_type', value)}
-            options={mobileOsOptions}
+            optionGroup="mobileOs"
             className="mt-1"
           />
         </div>

@@ -20,6 +20,14 @@ const h = vi.hoisted(() => ({
   queryCatalog: vi.fn(),
   queryPrices: vi.fn(),
   queryAvailable: vi.fn(),
+  queryCategories: vi.fn(),
+  updateMaterial: vi.fn(),
+  TicketRecordAccessDeniedError: class extends Error {
+    constructor() {
+      super('Permission denied: Cannot access ticket');
+      this.name = 'TicketRecordAccessDeniedError';
+    }
+  },
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -44,16 +52,19 @@ vi.mock('@alga-psa/inventory/lib/consume', () => ({
   InsufficientStockError: class InsufficientStockError extends Error {},
   stockConflictResultFrom: () => null,
 }));
-vi.mock('../lib/ticketRecordAuthorization', () => ({
+vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
   authorizeTicketRecordAccess: (...args: any[]) => h.authorizeTicket(...args),
+  TicketRecordAccessDeniedError: h.TicketRecordAccessDeniedError,
 }));
 
 import {
   addTicketMaterial,
   deleteTicketMaterial,
+  getTicketCatalogCategories,
   getServicePrices,
   listTicketMaterials,
   searchServiceCatalogForPicker,
+  updateTicketMaterial,
 } from './materialCatalogActions';
 
 const ticketMaterialId = 'material-1';
@@ -68,7 +79,20 @@ function setPermission(resource: string, action: string, allowed: boolean) {
   else h.permissions.delete(key);
 }
 
+function categoryQuery() {
+  const builder: any = {
+    distinct: () => builder,
+    where: () => builder,
+    whereIn: () => builder,
+    orderBy: () => builder,
+    then: (resolve: (rows: unknown) => unknown, reject: (error: unknown) => unknown) =>
+      Promise.resolve(h.queryCategories()).then(resolve, reject),
+  };
+  return builder;
+}
+
 function materialQuery(table: string) {
+  if (table.startsWith('service_categories')) return categoryQuery();
   let tenantFilter: string | undefined;
   let materialFilter: string | undefined;
   const builder: any = {
@@ -111,9 +135,12 @@ beforeEach(() => {
       h.queryTenant = tenant;
       return conn(table);
     },
+    tenantJoin: (query: unknown) => query,
   }));
+  h.queryCategories.mockReset().mockResolvedValue([{ category_id: 'category-1', category_name: 'Hardware', display_order: 1 }]);
+  h.updateMaterial.mockReset();
   h.authorizeTicket.mockReset().mockImplementation(async ({ ticketId }: { ticketId: string }) => {
-    if (!h.visibleTickets.has(ticketId)) throw new Error('Permission denied: Cannot access ticket');
+    if (!h.visibleTickets.has(ticketId)) throw new h.TicketRecordAccessDeniedError();
     return { ticket_id: ticketId };
   });
   h.addMaterial.mockReset().mockResolvedValue({ ticket_material_id: 'material-new' });
@@ -128,30 +155,51 @@ describe('material catalog action authorization', () => {
   it('denies clients catalog and price reads before reaching internal catalog queries', async () => {
     h.currentUser = user('client');
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();
+    expect(h.queryCategories).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed catalog category filter with an actionable error', async () => {
+    await expect(searchServiceCatalogForPicker({ category_id: 'not-a-uuid' }))
+      .rejects.toThrow('Invalid service catalog category filter "not-a-uuid": expected a category UUID.');
+    expect(h.queryCatalog).not.toHaveBeenCalled();
+  });
+
+  it('denies clients ticket material edits before any material lookup', async () => {
+    h.currentUser = user('client');
+    const result = await updateTicketMaterial(ticketMaterialId, { quantity: 2, description: '' });
+    expect(result).toHaveProperty('permissionError', 'Permission denied: MSP ticket access required');
+    expect(h.permission).not.toHaveBeenCalled();
+    expect(h.createTenantKnex).not.toHaveBeenCalled();
   });
 
   it('requires both MSP catalog and inventory read permissions for both catalog entry points', async () => {
     setPermission('inventory', 'read', false);
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();
     setPermission('inventory', 'read', true);
     setPermission('service', 'read', false);
     expect(await searchServiceCatalogForPicker({})).toEqual({ items: [], totalCount: 0 });
+    expect(await getTicketCatalogCategories()).toEqual([]);
     expect(await getServicePrices('service-1')).toEqual([]);
     expect(h.queryCatalog).not.toHaveBeenCalled();
     expect(h.queryPrices).not.toHaveBeenCalled();
+    expect(h.queryCategories).not.toHaveBeenCalled();
   });
 
   it('returns internal catalog results to an MSP principal with both read permissions', async () => {
     await expect(searchServiceCatalogForPicker({})).resolves.toMatchObject({ totalCount: 1 });
     await expect(getServicePrices('service-1')).resolves.toEqual([{ service_id: 'service-1', price: 20 }]);
+    await expect(getTicketCatalogCategories()).resolves.toEqual([{ category_id: 'category-1', category_name: 'Hardware' }]);
     expect(h.queryCatalog).toHaveBeenCalledTimes(1);
     expect(h.queryPrices).toHaveBeenCalledTimes(1);
+    expect(h.queryCategories).toHaveBeenCalledTimes(1);
   });
 
   it('denies clients protected material operations without invoking inventory mutations or reads', async () => {

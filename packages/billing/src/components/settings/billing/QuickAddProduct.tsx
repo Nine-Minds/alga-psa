@@ -58,21 +58,11 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
+import { BuiltinAssetSpecFields, useBuiltinAssetTypeOptions } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
+import { BUILTIN_ASSET_SPEC_FIELDS, normalizeAssetSpecValues, type AssetSpecValues } from '@alga-psa/core/builtinAssetSpecs';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
-
-// Default asset type applied when a delivered serialized unit becomes a managed asset
-// (F027). Mirrors BUILTIN_ASSET_TYPE_SLUGS in @alga-psa/assets (inlined to avoid a
-// cross-package dependency); empty leaves it unset (assetLink falls back to 'unknown').
-const DEFAULT_ASSET_TYPE_OPTIONS = [
-  { value: '', label: 'Unset (unknown)' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'network_device', label: 'Network device' },
-  { value: 'server', label: 'Server' },
-  { value: 'mobile_device', label: 'Mobile device' },
-  { value: 'printer', label: 'Printer' },
-];
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
 
@@ -92,6 +82,7 @@ interface QuickAddProductProps {
 
 export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: QuickAddProductProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const defaultAssetTypeOptions = useBuiltinAssetTypeOptions();
   const { money } = useCurrencyFormat();
   const isEditMode = !!product;
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +136,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_quantity: string;
     kit_pricing_mode: KitPricingMode;
     default_asset_type: string;
+    /** flat spec field map (os_type, model, ...) for the selected default asset type */
+    default_asset_metadata: AssetSpecValues;
   };
   const defaultInvDraft = (): InvDraft => ({
     is_serialized: false,
@@ -154,6 +147,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     reorder_quantity: '',
     kit_pricing_mode: 'sum',
     default_asset_type: '',
+    default_asset_metadata: {},
   });
   const [invSectionOpen, setInvSectionOpen] = useState(false);
   const [trackInventory, setTrackInventory] = useState(false);
@@ -243,6 +237,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               reorder_quantity: s.reorder_quantity != null ? String(s.reorder_quantity) : '',
               kit_pricing_mode: s.kit_pricing_mode ?? 'sum',
               default_asset_type: s.default_asset_type ?? '',
+              default_asset_metadata: normalizeAssetSpecValues(s.default_asset_type ?? '', s.default_asset_metadata),
             });
           } else {
             setInventoryEnabled(false);
@@ -250,7 +245,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             setInv(defaultInvDraft());
           }
         })
-        .catch((e) => console.error('[QuickAddProduct] Failed to load inventory settings:', e));
+        .catch((e) => {
+          handleError(e);
+          setError(getErrorMessage(e));
+        });
     } else if (isOpen && !product) {
       setInventoryEnabled(false);
       setTrackInventory(false);
@@ -258,6 +256,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setInvSectionOpen(false);
     }
   }, [isOpen, product]);
+
+  const cleanSpecMetadata = (metadata: AssetSpecValues): AssetSpecValues | null => {
+    const values = normalizeAssetSpecValues(inv.default_asset_type, metadata);
+    return Object.keys(values).length > 0 ? values : null;
+  };
 
   // Persist a partial inventory patch (edit mode, once a settings row exists).
   const persistInventoryPatch = (patch: Parameters<typeof updateInventorySettings>[1]) => {
@@ -271,6 +274,15 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       .catch((e) => {
         toast.error(e?.message || 'Failed to update inventory settings');
       });
+  };
+
+  const persistSpecMetadata = (values: AssetSpecValues) => {
+    try {
+      persistInventoryPatch({ default_asset_metadata: cleanSpecMetadata(values) });
+    } catch (cause) {
+      handleError(cause);
+      setError(getErrorMessage(cause));
+    }
   };
 
   const handleTrackInventoryChange = async (checked: boolean) => {
@@ -557,10 +569,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             });
             if (isReturnedActionError(inventoryResult)) {
               toast.error(`Product created, but ${getErrorMessage(inventoryResult)}`);
-            } else if (inv.kit_pricing_mode !== 'sum') {
-              const pricingResult = await updateInventorySettings(created.service_id, { kit_pricing_mode: inv.kit_pricing_mode });
-              if (isReturnedActionError(pricingResult)) {
-                toast.error(`Product created, but ${getErrorMessage(pricingResult)}`);
+            } else {
+              const createModePatch: Parameters<typeof updateInventorySettings>[1] = {};
+              if (inv.kit_pricing_mode !== 'sum') createModePatch.kit_pricing_mode = inv.kit_pricing_mode;
+              if (inv.creates_asset_on_delivery && inv.default_asset_type) {
+                createModePatch.default_asset_type = inv.default_asset_type;
+                createModePatch.default_asset_metadata = cleanSpecMetadata(inv.default_asset_metadata);
+              }
+              if (Object.keys(createModePatch).length > 0) {
+                const pricingResult = await updateInventorySettings(created.service_id, createModePatch);
+                if (isReturnedActionError(pricingResult)) {
+                  toast.error(`Product created, but ${getErrorMessage(pricingResult)}`);
+                }
               }
             }
           } catch (invErr: any) {
@@ -739,7 +759,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       )}
     >
       <DialogContent>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {error && <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
@@ -1106,15 +1126,43 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                           </label>
                           <CustomSelect
                             id="quick-add-product-default-asset-type"
-                            options={DEFAULT_ASSET_TYPE_OPTIONS}
+                            options={defaultAssetTypeOptions}
                             value={inv.default_asset_type}
                             onValueChange={(value) => {
-                              setInv((prev) => ({ ...prev, default_asset_type: value }));
-                              persistInventoryPatch({ default_asset_type: value || null });
+                              setInv((prev) => ({ ...prev, default_asset_type: value, default_asset_metadata: {} }));
+                              persistInventoryPatch({ default_asset_type: value || null, default_asset_metadata: null });
                             }}
                           />
                         </div>
                       )}
+
+                      {inv.creates_asset_on_delivery &&
+                        BUILTIN_ASSET_SPEC_FIELDS[inv.default_asset_type] && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                              {t('quickAddProduct.fields.inventory.specDefaults', {
+                                defaultValue: 'Default specs for delivered assets',
+                              })}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              {t('quickAddProduct.fields.inventory.specDefaultsHint', {
+                                defaultValue:
+                                  'Applied when a delivered serialized unit automatically creates its asset.',
+                              })}
+                            </p>
+                            <BuiltinAssetSpecFields
+                              idPrefix="quick-add-product-spec"
+                              assetType={inv.default_asset_type}
+                              values={inv.default_asset_metadata}
+                              onChange={(key, value, commit) => {
+                                const values = { ...inv.default_asset_metadata, [key]: value };
+                                setInv((prev) => ({ ...prev, default_asset_metadata: values }));
+                                if (commit) persistSpecMetadata(values);
+                              }}
+                              onBlur={() => persistSpecMetadata(inv.default_asset_metadata)}
+                            />
+                          </div>
+                        )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1162,12 +1210,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                                 className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-700))]"
                               >
                                 <span className="font-medium">{o.vendor_name || o.vendor_id}</span>
-                                {o.vendor_sku && <span className="font-mono text-xs text-gray-500">{o.vendor_sku}</span>}
+                                {o.vendor_sku && (
+                                  <span className="font-mono text-xs text-[rgb(var(--color-text-600))]">
+                                    {o.vendor_sku}
+                                  </span>
+                                )}
                                 <span className="ml-auto tabular-nums">
                                   {o.unit_cost != null ? money(Number(o.unit_cost), o.cost_currency) : '—'}
                                 </span>
                                 {o.is_preferred && (
-                                  <span className="text-xs rounded bg-green-100 text-green-800 px-1.5 py-0.5">Preferred</span>
+                                  <span className="rounded px-1.5 py-0.5 text-xs border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]">
+                                    Preferred
+                                  </span>
                                 )}
                               </div>
                             ))}
@@ -1186,7 +1240,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                             id="quick-add-product-kit-pricing-mode"
                             value={inv.kit_pricing_mode}
                             onChange={(e) => handleKitPricingChange(e.target.value as KitPricingMode)}
-                            className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm"
                           >
                             <option value="sum">
                               {t('quickAddProduct.fields.inventory.kitPricingSum', {

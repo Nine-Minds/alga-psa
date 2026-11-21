@@ -13,11 +13,11 @@ describe('tenant table manifest scope', () => {
     }
   });
 
-  it('lists the metadata-less entries explicitly (18)', () => {
+  it('lists the metadata-less entries explicitly (17)', () => {
     const declared = TENANT_TABLE_MANIFEST
       .filter(e => e.deletion !== 'excluded' && !tenantTableMetadata[e.table])
       .map(e => e.table);
-    expect(declared).toHaveLength(18);
+    expect(declared).toHaveLength(17);
     for (const table of declared) {
       expect(TENANT_TABLE_MANIFEST.find(e => e.table === table)?.scope).toEqual({ scope: 'tenant' });
     }

@@ -16,6 +16,7 @@ import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainst
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
+import { AssetSpecSelect } from '@alga-psa/ui/components/BuiltinAssetSpecFields';
 import type { CreateAssetRequest, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
@@ -477,12 +478,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               <label className="block text-sm font-medium text-gray-700">
                 {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
               </label>
-              <Input
+              <AssetSpecSelect
                 {...withDataAutomationId({ id: 'workstation-os-type-input' })}
+                optionGroup="os"
                 value={formData.workstation.os_type}
-                onChange={(e) => setFormData(prev => ({
+                onValueChange={(value) => setFormData(prev => ({
                   ...prev,
-                  workstation: { ...prev.workstation, os_type: e.target.value }
+                  workstation: { ...prev.workstation, os_type: value }
                 }))}
                 placeholder={t('quickAddAsset.placeholders.workstationOsType', {
                   defaultValue: 'e.g., Windows, macOS, Linux'
@@ -515,15 +517,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               <label className="block text-sm font-medium text-gray-700">
                 {t('quickAddAsset.fields.deviceType', { defaultValue: 'Device Type' })}
               </label>
-              <CustomSelect
+              <AssetSpecSelect
                 {...withDataAutomationId({ id: 'network-device-type-select' })}
-                options={[
-                  { value: 'switch', label: t('quickAddAsset.networkDeviceTypes.switch', { defaultValue: 'Switch' }) },
-                  { value: 'router', label: t('quickAddAsset.networkDeviceTypes.router', { defaultValue: 'Router' }) },
-                  { value: 'firewall', label: t('quickAddAsset.networkDeviceTypes.firewall', { defaultValue: 'Firewall' }) },
-                  { value: 'access_point', label: t('quickAddAsset.networkDeviceTypes.accessPoint', { defaultValue: 'Access Point' }) },
-                  { value: 'load_balancer', label: t('quickAddAsset.networkDeviceTypes.loadBalancer', { defaultValue: 'Load Balancer' }) }
-                ]}
+                optionGroup="network"
                 value={formData.network_device.device_type}
                 onValueChange={(value) => setFormData(prev => ({
                   ...prev,
@@ -560,12 +556,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               <label className="block text-sm font-medium text-gray-700">
                 {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
               </label>
-              <Input
+              <AssetSpecSelect
                 {...withDataAutomationId({ id: 'server-os-type-input' })}
+                optionGroup="os"
                 value={formData.server.os_type}
-                onChange={(e) => setFormData(prev => ({
+                onValueChange={(value) => setFormData(prev => ({
                   ...prev,
-                  server: { ...prev.server, os_type: e.target.value }
+                  server: { ...prev.server, os_type: value }
                 }))}
                 placeholder={t('quickAddAsset.placeholders.serverOsType', {
                   defaultValue: 'e.g., Windows Server, Ubuntu Server'
@@ -598,12 +595,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               <label className="block text-sm font-medium text-gray-700">
                 {t('quickAddAsset.fields.osType', { defaultValue: 'OS Type' })}
               </label>
-              <CustomSelect
+              <AssetSpecSelect
                 {...withDataAutomationId({ id: 'mobile-device-os-type-select' })}
-                options={[
-                  { value: 'ios', label: t('quickAddAsset.mobileOsTypes.ios', { defaultValue: 'iOS' }) },
-                  { value: 'android', label: t('quickAddAsset.mobileOsTypes.android', { defaultValue: 'Android' }) }
-                ]}
+                optionGroup="mobileOs"
                 value={formData.mobile_device.os_type}
                 onValueChange={(value) => setFormData(prev => ({
                   ...prev,

@@ -315,9 +315,10 @@ export const fulfillSalesOrderLine = withAuth(
 
       const svc = await trx('service_catalog')
         .where({ tenant, service_id: serviceId })
-        .select('service_name')
+        .select('service_name', 'manufacturer')
         .first();
       const serviceName: string = svc?.service_name ?? '';
+      const manufacturer: string | null = (svc as { manufacturer?: string | null } | undefined)?.manufacturer ?? null;
 
       const remaining = Number(line.quantity_ordered) - Number(line.quantity_fulfilled);
       if (remaining <= 0) throw new Error('Sales order line is already fully fulfilled');
@@ -410,7 +411,7 @@ export const fulfillSalesOrderLine = withAuth(
 
           if (settings.creates_asset_on_delivery) {
             // F029: collected now, created only after the stock transaction commits.
-            pendingAssets.push({ unit, serviceId, serviceName, clientId: so.client_id });
+            pendingAssets.push({ unit, serviceId, serviceName, clientId: so.client_id, manufacturer });
           }
         }
         fulfilledQty = picked.length;

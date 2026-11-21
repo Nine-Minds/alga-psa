@@ -84,7 +84,7 @@ function makeQuery(table: string) {
     select: () => builder,
     first: async () => {
       if (table === 'tickets') return { ticket_id: input.parent_id, client_id: 'client-1' };
-      if (table === 'service_catalog') return { service_id: input.service_id };
+      if (table === 'service_catalog') return { service_id: input.service_id, manufacturer: 'Acme Systems' };
       if (table === 'product_inventory_settings') return { track_stock: true, is_serialized: true };
       return undefined;
     },
@@ -114,6 +114,14 @@ beforeEach(() => {
 });
 
 describe('addMaterial post-commit effects', () => {
+  it.each([2, 1.5])('rejects serialized quantity %s before inserting or consuming stock', async (quantity) => {
+    const root = makeRootConnection();
+    await expect(addMaterial(root, TENANT, { ...input, quantity }, 'user-1')).rejects.toThrow('one unit at a time');
+    expect(h.insertedMaterials).toHaveLength(0);
+    expect(h.recordStockConsumption).not.toHaveBeenCalled();
+    expect(h.createAsset).not.toHaveBeenCalled();
+  });
+
   it('keeps effects pending until the outer commit, then runs each once with the root connection', async () => {
     const root = makeRootConnection();
     const result = await withTransaction(root, async (outerTrx: Knex.Transaction) => {
@@ -125,7 +133,14 @@ describe('addMaterial post-commit effects', () => {
     });
 
     expect(result).toMatchObject({ ticket_material_id: 'material-1' });
-    expect(h.createAsset).toHaveBeenCalledExactlyOnceWith(root, TENANT, pendingAsset);
+    expect(h.createAsset).toHaveBeenCalledExactlyOnceWith(root, TENANT, {
+      ...pendingAsset,
+      // The product's make rides along so the delivered asset keeps its manufacturer.
+      manufacturer: 'Acme Systems',
+      parentType: input.parent_type,
+      parentId: input.parent_id,
+      createdBy: 'user-1',
+    });
     expect(root.rootProbeCount).toBe(1);
     expect(h.publishInventoryEvent).toHaveBeenCalledExactlyOnceWith('INVENTORY_STOCK_LOW', pendingStockLow);
   });
