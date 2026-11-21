@@ -32,6 +32,11 @@ vi.mock('@/lib/productAccess', () => ({
   isProductAccessError: () => false,
 }));
 vi.mock('axios', () => ({ default: { post: vi.fn() } }));
+// Keep URL validation real while resolving fixture-only DNS names without
+// depending on public DNS. HTTP and IMAP transports remain mocked below.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) },
+}));
 vi.mock('imapflow', () => ({
   ImapFlow: vi.fn(function ImapFlow() {
     return { connect: vi.fn(async () => undefined), logout: vi.fn(async () => undefined), close: vi.fn() };
@@ -610,7 +615,8 @@ describe('Email Provider Creation', () => {
         access_token: 'stored-access-token',
         token_expires_at: new Date(Date.now() + 60_000).toISOString(),
       } } as any, true);
-      expect(changed).toMatchObject({ setupError: expect.stringContaining('Reconnect the mailbox') });
+      expect(changed.reconnectRequired).toBe(true);
+      expect(changed.setupWarnings).toContainEqual(expect.stringContaining('Reconnect the mailbox'));
       expect(changed.provider.imapConfig).not.toHaveProperty('oauth_client_secret');
       expect(changed.provider.imapConfig).not.toHaveProperty('refresh_token');
       expect(changed.provider.imapConfig).not.toHaveProperty('access_token');
@@ -623,6 +629,51 @@ describe('Email Provider Creation', () => {
       expect(row.refresh_token).toBeNull();
       expect(row.access_token).toBeNull();
       expect(row.token_expires_at).toBeNull();
+    });
+
+    it.each(['in the database', 'in tenant secrets', 'absent'])('invalidates tokens but stages a replacement when the previous client secret is %s', async (storage) => {
+      const endpoint = 'https://93.184.216.34/rotation/token';
+      const original = {
+        tenant: testTenant, providerType: 'imap' as const, providerName: 'IMAP secret rotation',
+        mailbox: `imap-rotation-${uuidv4()}@example.test`, isActive: true,
+        imapConfig: {
+          host: '93.184.216.34', port: 993, secure: true, auth_type: 'oauth2',
+          username: 'imap-rotation@example.test', oauth_token_url: endpoint,
+          oauth_client_id: 'rotation-client', oauth_client_secret: storage === 'absent' ? undefined : 'old-client-secret',
+          refresh_token: 'old-refresh-token', access_token: 'old-access-token',
+        },
+      };
+      const created = await createEmailProvider(original as any, true);
+      expect(created).toHaveProperty('provider.id');
+      const providerId = created.provider.id;
+      const secretProvider = await getSecretProviderInstance();
+      const scoped = getImapOauthSecretNames({ id: providerId, oauth_token_url: endpoint, oauth_credentials_secret_version: 1 });
+      const pending = getImapOauthSecretNames({ id: providerId, oauth_token_url: endpoint, oauth_credentials_secret_version: 0 });
+      try {
+        if (storage === 'in tenant secrets') {
+          await tenantTable('imap_email_provider_config').where({ email_provider_id: providerId })
+            .update({ oauth_client_secret: null, refresh_token: null });
+        }
+        const updated = await updateEmailProvider(providerId, {
+          ...original,
+          imapConfig: { ...original.imapConfig, oauth_client_secret: 'replacement-client-secret' },
+        } as any, true);
+        expect(updated.reconnectRequired).toBe(true);
+        expect(updated.provider.imapConfig).not.toHaveProperty('oauth_client_secret');
+        const row = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
+        expect(row.oauth_client_secret).toBe('replacement-client-secret');
+        expect(row.oauth_credentials_token_url).toBeNull();
+        expect(row.oauth_credentials_secret_version).toBe(0);
+        expect(row.oauth_reauthorization_required).toBe(true);
+        expect(row.refresh_token).toBeNull();
+        expect(row.access_token).toBeNull();
+        expect(await secretProvider.getTenantSecret(testTenant, scoped.refreshToken)).toBeFalsy();
+        expect(await secretProvider.getTenantSecret(testTenant, scoped.clientSecret)).toBeFalsy();
+        expect(await secretProvider.getTenantSecret(testTenant, pending.clientSecret)).toBe('replacement-client-secret');
+      } finally {
+        await Promise.all([scoped.clientSecret, scoped.refreshToken, pending.clientSecret, pending.refreshToken]
+          .map((name) => secretProvider.deleteTenantSecret(testTenant, name)));
+      }
     });
 
     it('migrates legacy same-issuer secrets when saving same-endpoint OAuth credentials', async () => {
@@ -659,10 +710,10 @@ describe('Email Provider Creation', () => {
 
       await updateEmailProvider(providerId, {
         ...original,
-        imapConfig: { ...original.imapConfig, oauth_client_secret: 'new-client-secret', refresh_token: undefined, access_token: undefined },
+        imapConfig: { ...original.imapConfig, oauth_client_secret: 'legacy-secret-store-client', refresh_token: undefined, access_token: undefined },
       } as any, true);
 
-      expect(await secretProvider.getTenantSecret(testTenant, scoped.clientSecret)).toBe('new-client-secret');
+      expect(await secretProvider.getTenantSecret(testTenant, scoped.clientSecret)).toBe('legacy-secret-store-client');
       expect(await secretProvider.getTenantSecret(testTenant, scoped.refreshToken)).toBe('legacy-secret-store-refresh');
       const migrated = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
       expect(migrated.oauth_credentials_token_url).toBe(endpoint);

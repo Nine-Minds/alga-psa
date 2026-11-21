@@ -48,6 +48,7 @@ import {
   assertSafeImapHost,
   assertSafeImapOauthTokenEndpoint,
   getImapOauthSecretNames,
+  isImapOauthCredentialIssuerBound,
 } from '@alga-psa/shared/services/email/imapOutboundTarget';
 
 type EmailProviderActionError = ActionMessageError;
@@ -681,14 +682,33 @@ async function persistImapConfig(
     typeof config.oauth_client_secret === 'string' && config.oauth_client_secret.length > 0
       ? config.oauth_client_secret
       : null;
-  const tokenEndpointChanged = Boolean(
+  const oldSecretNames = getImapOauthSecretNames({
+    id: providerId,
+    oauth_token_url: existing?.oauth_token_url,
+    oauth_credentials_secret_version: existing?.oauth_credentials_secret_version,
+  });
+  const issuerChanged = Boolean(
     existing && (
       existing.oauth_token_url !== (config.oauth_token_url ?? null) ||
       existing.oauth_authorize_url !== (config.oauth_authorize_url ?? null) ||
-      existing.oauth_client_id !== (config.oauth_client_id ?? null) ||
-      (incomingClientSecret !== null && incomingClientSecret !== (existing.oauth_client_secret ?? null))
+      existing.oauth_client_id !== (config.oauth_client_id ?? null)
     )
   );
+  // An empty credential slot accepts a fresh client secret after invalidation.
+  // Legacy bound credentials may live only in the tenant secret provider.
+  const previousClientSecret = incomingClientSecret && existing && !issuerChanged && !existing.oauth_reauthorization_required
+    ? existing.oauth_client_secret || (
+      isImapOauthCredentialIssuerBound(existing)
+        ? await secretProvider.getTenantSecret(tenant, oldSecretNames.clientSecret)
+        : null
+    )
+    : null;
+  const clientSecretChanged = Boolean(
+    incomingClientSecret && existing && !existing.oauth_reauthorization_required &&
+    (previousClientSecret || isImapOauthCredentialIssuerBound(existing)) &&
+    incomingClientSecret !== previousClientSecret
+  );
+  const tokenEndpointChanged = issuerChanged || clientSecretChanged;
   const credentialsInvalidated = Boolean(
     tokenEndpointChanged || (existing?.oauth_reauthorization_required && !config.refresh_token)
   );
@@ -697,8 +717,7 @@ async function persistImapConfig(
     config.oauth_client_secret || config.refresh_token || config.access_token
   );
   const existingIssuerBound = Boolean(
-    existing?.oauth_token_url &&
-    existing.oauth_credentials_token_url === existing.oauth_token_url &&
+    existing && isImapOauthCredentialIssuerBound(existing) &&
     !tokenEndpointChanged
   );
   const shouldMigrateLegacySecrets = Boolean(
@@ -718,11 +737,6 @@ async function persistImapConfig(
     : credentialsWillBeIssuerBound && hasNewOauthCredentials
       ? 1
       : Number(existing?.oauth_credentials_secret_version || 0);
-  const oldSecretNames = getImapOauthSecretNames({
-    id: providerId,
-    oauth_token_url: existing?.oauth_token_url,
-    oauth_credentials_secret_version: existing?.oauth_credentials_secret_version,
-  });
   const currentSecretNames = getImapOauthSecretNames({
     id: providerId,
     oauth_token_url: config.oauth_token_url ?? existing?.oauth_token_url,
@@ -752,7 +766,8 @@ async function persistImapConfig(
         });
       }
     }));
-  } else {
+  }
+  if (!issuerChanged) {
     const clientSecretToPersist = config.oauth_client_secret || legacyClientSecret;
     if (clientSecretToPersist && typeof clientSecretToPersist === 'string') {
       await secretProvider.setTenantSecret(tenant, currentSecretNames.clientSecret, clientSecretToPersist);
@@ -796,7 +811,7 @@ async function persistImapConfig(
       oauth_client_id: config.oauth_client_id || null,
       // The application secret can be supplied before a mailbox grants tokens.
       // Endpoint changes clear it even if a stale form submits it again.
-      oauth_client_secret: tokenEndpointChanged ? null : (config.oauth_client_secret || null),
+      oauth_client_secret: issuerChanged ? null : (incomingClientSecret || null),
       oauth_scopes: config.oauth_scopes || null,
       access_token: credentialsInvalidated ? null : (config.access_token || null),
       refresh_token: credentialsInvalidated ? null : (config.refresh_token || null),
@@ -836,7 +851,9 @@ async function persistImapConfig(
           ? false
           : trx.raw('imap_email_provider_config.oauth_reauthorization_required'),
       oauth_client_id: config.oauth_client_id || null,
-      oauth_client_secret: tokenEndpointChanged ? null : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
+      oauth_client_secret: issuerChanged ? null : clientSecretChanged
+        ? incomingClientSecret
+        : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
       oauth_scopes: config.oauth_scopes || null,
       connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
       socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),

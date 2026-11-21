@@ -1,5 +1,5 @@
 /**
- * Real private/custom-port IMAP ingestion check. This intentionally starts only
+ * Manual private/custom-port IMAP ingestion check. This intentionally starts only
  * the production EmailService listener, an HTTP adapter that invokes the real
  * integrations POST handler, and the production durable queue consumer. It does
  * not start the Next/application server.
