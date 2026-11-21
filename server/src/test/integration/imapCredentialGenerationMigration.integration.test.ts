@@ -6,7 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../migrations/20261103090000_add_imap_credential_generation.cjs');
+const migration = require('../../../migrations/20261121090000_add_imap_credential_generation.cjs');
 
 let db: Knex;
 
