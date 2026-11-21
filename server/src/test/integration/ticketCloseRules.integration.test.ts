@@ -113,7 +113,10 @@ import { TicketService } from '../../lib/api/services/TicketService';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { bulkUpdateTicketStatus, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
-import { updateTicketStatus as portalUpdateTicketStatus } from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
+import {
+  getClientTicketDetails as portalGetClientTicketDetails,
+  updateTicketStatus as portalUpdateTicketStatus,
+} from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
 import {
   createCloseRulesFixture,
   insertTicket,
@@ -730,6 +733,11 @@ describe('ticket close rules', () => {
       is_closed: true,
       closed_at: new Date().toISOString(),
       closed_by: fixture.userId,
+      attributes: {
+        description: 'Customer-visible description',
+        watch_list: [{ email: 'private-watcher@example.test', entity_id: 'private-watcher-id', source: 'internal-rule' }],
+      },
+      email_metadata: { messageId: 'private-message-id', threadId: 'private-thread-id', ruleId: 'private-rule-id' },
     });
     await scopedDb().table('ticket_bundle_settings').insert({
       tenant: fixture.tenantId,
@@ -768,6 +776,22 @@ describe('ticket close rules', () => {
     const mspUser = userRef.user;
     userRef.user = { user_id: portalUserId, user_type: 'client', email: portalEmail };
     try {
+      const detail = await portalGetClientTicketDetails(childId);
+      const serializedDetail = JSON.stringify(detail);
+      expect(detail).toMatchObject({
+        attributes: { description: 'Customer-visible description' },
+        has_original_email: true,
+      });
+      for (const field of ['email_metadata', 'master_ticket_id', 'watch_list']) {
+        expect(detail).not.toHaveProperty(field);
+      }
+      for (const secret of [
+        'private-watcher@example.test', 'private-watcher-id', 'internal-rule',
+        'private-message-id', 'private-thread-id', 'private-rule-id', masterId,
+      ]) {
+        expect(serializedDetail).not.toContain(secret);
+      }
+
       await portalUpdateTicketStatus(childId, fixture.openStatusId);
 
       const reopened = await scopedDb().table('tickets').where({ ticket_id: childId }).first();
