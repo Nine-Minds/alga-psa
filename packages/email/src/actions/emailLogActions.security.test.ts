@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadAuthorizationEvaluationSnapshot } from '@alga-psa/authorization/bundles/service';
 import { getEmailLogsForTicket } from './emailLogActions';
 
 let currentUser: any;
@@ -14,16 +15,12 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => permissionMock(...args),
 }));
 
-// Keep the real ticket authorization helper and kernel. This is a real bundle
-// narrowing rule; the test controls only the rule lookup boundary.
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => [{
-    id: 'assigned-ticket-read',
-    resource: 'ticket',
-    action: 'read',
-    templateKey: 'own_or_assigned',
-  }]),
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>(),
+  loadAuthorizationEvaluationSnapshot: vi.fn(),
 }));
+
+const snapshotMock = vi.mocked(loadAuthorizationEvaluationSnapshot);
 
 function makeBuilder(table: string) {
   const state = { selected: [] as string[] };
@@ -105,6 +102,20 @@ describe('getEmailLogsForTicket security', () => {
     emailLogs = [logWithSensitiveFields];
     emailQueries = [];
     permissionMock.mockReset().mockResolvedValue(true);
+    snapshotMock.mockReset().mockResolvedValue({
+      roleIds: ['support-role'],
+      teamIds: [],
+      managedUserIds: [],
+      portfolioClientIds: [],
+      rules: [{
+        rule_id: 'assigned-ticket-read',
+        resource_type: 'ticket',
+        action: 'read',
+        template_key: 'own_or_assigned',
+        constraint_key: null,
+        config: {},
+      }],
+    });
   });
 
   it('denies a coarse ticket reader narrowed away from the requested ticket before reading correspondence', async () => {
@@ -134,6 +145,13 @@ describe('getEmailLogsForTicket security', () => {
     ticketRow = null;
 
     await expect(getEmailLogsForTicket('missing-ticket')).rejects.toThrow('Ticket not found');
+    expect(emailQueries).toHaveLength(0);
+  });
+
+  it('does not read correspondence when authorization facts cannot be loaded', async () => {
+    snapshotMock.mockRejectedValue(new Error('Authorization context unavailable'));
+
+    await expect(getEmailLogsForTicket('ticket-1')).rejects.toThrow('Authorization context unavailable');
     expect(emailQueries).toHaveLength(0);
   });
 });
