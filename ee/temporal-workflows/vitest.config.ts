@@ -79,7 +79,11 @@ export default defineConfig({
       { find: /^@alga-psa\/notifications\/notifications\/email$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/email.ts') },
       { find: /^@alga-psa\/notifications\/notifications\/emailLocaleResolver$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/emailLocaleResolver.ts') },
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: `${path.resolve(__dirname, './src/typings/notifications')}/$1` },
-      { find: '@/lib/db', replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },
+      { find: /^@\/lib\/db$/, replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },
+      // The worker tsconfig maps @/lib/* to the shared server source tree.
+      // Keep this more-specific than the worker-local @/* mapping so server
+      // modules that use @/lib imports resolve to their own dependencies.
+      { find: /^@\/lib\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib')}/$1` },
       // Match the worker tsconfig's enterprise email-domain entry point.
       { find: '@alga-psa/integrations/email/domains/entry', replacement: path.resolve(__dirname, '../../packages/integrations/src/email/domains/ee/entry.ts') },
       // tsconfig maps @ee/* → ../server/src/*; mirror it here (strip the ESM .js suffix to hit the .ts source)
