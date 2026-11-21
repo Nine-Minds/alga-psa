@@ -401,6 +401,8 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect(tag(bundledWorking)).not.toContain('B:1001');
       expect(bundledWorking.items.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
       expect(bundledWorking.signals).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+      expect(JSON.stringify(bundledWorking)).not.toContain('Queue Tester');
+      expect(JSON.stringify(bundledWorking)).not.toContain('Customer Assignee');
       const bundledAssignment = await getCoManagedTicketAssignment(db, tech, resource(A, 'a4'));
       expect(bundledAssignment).not.toHaveProperty('mspAssignment');
       expect(JSON.stringify(bundledAssignment)).not.toContain('Queue Tester');
@@ -411,7 +413,12 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect((await rq('working', { signal: 'awaiting_reply' })).items).toEqual([]);
       const bundledOversight = await rq('oversight', { state: 'all' });
       expect(bundledOversight.totalCount).toBe(plainOversight.totalCount);
-      expect((await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' })).find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
+      expect(JSON.stringify(bundledOversight)).not.toContain('Queue Tester');
+      expect(JSON.stringify(bundledOversight)).not.toContain('Customer Assignee');
+      const bundledExport = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' });
+      expect(bundledExport.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
+      expect(JSON.stringify(bundledExport)).not.toContain('Queue Tester');
+      expect(JSON.stringify(bundledExport)).not.toContain('Customer Assignee');
       await db('authorization_bundle_assignments').where({ tenant: msp, bundle_id: bundleId }).delete();
       await db('authorization_bundle_rules').where({ tenant: msp, bundle_id: bundleId }).delete();
       await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).update({ published_revision_id: null });
