@@ -44,7 +44,7 @@ function isPublicIPv4Octets([a, b, c]: number[]): boolean {
   if (a === 127) return false; // loopback
   if (a === 169 && b === 254) return false; // link-local / cloud metadata
   if (a === 172 && b >= 16 && b <= 31) return false; // RFC1918
-  if (a === 192 && b === 0) return false; // IETF protocol assignments / TEST-NET-1
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return false; // IETF protocol assignments / TEST-NET-1
   if (a === 192 && b === 168) return false; // RFC1918
   if (a === 198 && (b === 18 || b === 19)) return false; // benchmarking
   if (a === 198 && b === 51 && c === 100) return false; // TEST-NET-2
