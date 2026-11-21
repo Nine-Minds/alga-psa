@@ -15,12 +15,12 @@
     },
     {
       "name": "ticket.list",
-      "statements": 14,
+      "statements": 17,
       "locks": 0
     },
     {
       "name": "ticket.open",
-      "statements": 29,
+      "statements": 31,
       "locks": 0
     },
     {
@@ -95,7 +95,7 @@
     }
   ],
   "totals": {
-    "statements": 503,
+    "statements": 508,
     "locks": 17
   },
   "denylist": [
@@ -119,12 +119,12 @@
         "steps": [
           {
             "name": "ticket.list",
-            "statements": 14,
+            "statements": 17,
             "locks": 0
           },
           {
             "name": "ticket.open",
-            "statements": 29,
+            "statements": 31,
             "locks": 0
           },
           {
@@ -144,12 +144,12 @@
         "steps": [
           {
             "name": "ticket.list",
-            "statements": 14,
+            "statements": 17,
             "locks": 0
           },
           {
             "name": "ticket.open",
-            "statements": 29,
+            "statements": 31,
             "locks": 0
           },
           {

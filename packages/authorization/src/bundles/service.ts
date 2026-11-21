@@ -1129,17 +1129,26 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
-  // Fast path: this request already learned the tenant has no published assignment, so no
-  // subject can have bundle rules. Never taken when retaining locks, and never inferred: only
-  // a probe result the subject resolver cached for this request counts.
+  // This request-local probe proves the tenant has no published assignments.
+  // Locking evaluations bypass it so membership and bundle rows are reloaded under lock.
   if (!options.lock && peekTenantAuthorizationScope(input.requestCache, tenant)?.publishedAssignments === false) {
     return emptyRuleSet();
   }
 
-  const [roleIds, teamIds] = await Promise.all([
-    resolveRoleIdsForUser(knex, tenant, userId, options.lock),
-    resolveTeamIdsForUser(knex, tenant, userId, options.lock),
-  ]);
+  const snapshot = input.trustedMembershipSnapshot;
+  const canReuseSnapshot =
+    !options.lock &&
+    snapshot?.complete === true &&
+    snapshot.tenant === tenant &&
+    snapshot.userId === userId &&
+    Array.isArray(snapshot.roleIds) &&
+    Array.isArray(snapshot.teamIds);
+  const [roleIds, teamIds] = canReuseSnapshot
+    ? [[...snapshot.roleIds], [...snapshot.teamIds]]
+    : await Promise.all([
+        resolveRoleIdsForUser(knex, tenant, userId, options.lock),
+        resolveTeamIdsForUser(knex, tenant, userId, options.lock),
+      ]);
 
   const scopedDb = tenantDb(knex, tenant);
   const assignedBundlesQuery = assignedBundlesForSubjectQuery(knex, input.subject, { roleIds, teamIds })

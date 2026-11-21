@@ -1,5 +1,11 @@
 export { createTicketColumns } from './ticket-columns';
 export {
+  ticketReadFieldHidden,
+  ticketReadMask,
+  ticketRedactionKey,
+  redactTicketReadPayload,
+} from './ticketReadRedaction';
+export {
   hashString,
   statusPillHue,
   relativeDueLabel,

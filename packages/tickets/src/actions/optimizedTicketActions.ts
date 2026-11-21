@@ -119,11 +119,13 @@ import {
   compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationRecord,
   type AuthorizationSubject,
+  type TrustedAuthorizationMembershipSnapshot,
   type RelationshipRule,
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { createTicketReadScopeFromRules, createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { redactTicketReadPayload, ticketReadFieldHidden, ticketReadMask, ticketRedactionKey } from '../lib/ticketReadRedaction';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
@@ -255,6 +257,33 @@ function toIsoTimestamp(value: unknown, fallback: string): string {
   return fallback;
 }
 
+async function loadTrustedMembershipSnapshot(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<TrustedAuthorizationMembershipSnapshot | undefined> {
+  const [roleMemberships, teamMemberships] = await Promise.all([
+    tenantScopedTable(trx, 'user_roles', tenant)
+      .where({ user_id: user.user_id })
+      .select<{ role_id: string }[]>('role_id')
+      .then(
+        (rows) => ({ rows, complete: true as const }),
+        () => ({ rows: [] as Array<{ role_id: string }>, complete: false as const }),
+      ),
+    tenantScopedTable(trx, 'team_members', tenant)
+      .where({ user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id')
+      .then(
+        (rows) => ({ rows, complete: true as const }),
+        () => ({ rows: [] as Array<{ team_id: string }>, complete: false as const }),
+    ),
+  ]);
+
+  if (!roleMemberships.complete || !teamMemberships.complete) return undefined;
+  return { complete: true, tenant, userId: user.user_id,
+    roleIds: roleMemberships.rows.map((row) => row.role_id),
+    teamIds: teamMemberships.rows.map((row) => row.team_id) };
+}
 function toTicketAuthorizationRecord(
   ticket: Partial<ITicket>
 ): AuthorizationRecord {
@@ -306,6 +335,7 @@ async function createTicketAuthorizationContext(
 }> {
   const requestCache = new RequestLocalAuthorizationCache();
   const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
+  const trustedMembershipSnapshot = await loadTrustedMembershipSnapshot(trx, tenant, user);
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
@@ -319,6 +349,7 @@ async function createTicketAuthorizationContext(
     selectedBoardIds,
     contactVisibility,
     requestCache,
+    trustedMembershipSnapshot,
     knex: trx,
   });
 
@@ -338,6 +369,7 @@ async function createTicketAuthorizationContext(
             return await resolveBundleNarrowingRulesForEvaluation(trx, {
               ...input,
               requestCache,
+              trustedMembershipSnapshot,
               knex: trx,
             });
           } catch {
@@ -386,8 +418,9 @@ async function authorizeTicketReads<T extends Partial<ITicket> & { ticket_id?: s
   // A redaction that hides the ticket's identity hides the ticket, as on REST.
   return tickets.flatMap((ticket, index) => {
     const decision = decisions[index];
-    if (!decision?.allowed) return [];
-    const redactedFields = decision.redactedFields ?? [];
+    if (!decision?.allowed || !Array.isArray(decision.redactedFields)) return [];
+    const redactedFields = decision.redactedFields;
+    if (ticketReadMask(redactedFields).dropResource) return [];
     return projectReadableRecord('ticket', ticket, redactedFields) ? [{ ticket, redactedFields }] : [];
   });
 }
@@ -406,7 +439,9 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   const authorized = await authorizeTicketReads(trx, context, tickets);
   return authorized.flatMap(({ ticket, redactedFields }) => {
     const projected = projectReadableRecord('ticket', ticket, redactedFields);
-    return projected ? [projected] : [];
+    return projected
+      ? [redactTicketReadPayload(projected as Record<string, any>, redactedFields) as T]
+      : [];
   });
 }
 
@@ -420,11 +455,88 @@ function readableTicketListItems<T extends Partial<ITicket>>(
   return reads.flatMap(({ ticket, redactedFields }) => {
     const [item] = mapTicketListItems([ticket]);
     const readable = projectReadableRecord('ticket', item, redactedFields);
-    return readable ? [readable] : [];
+    return readable ? [redactTicketReadPayload(readable as Record<string, any>, redactedFields) as ITicketListItem] : [];
   });
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
+
+export interface TicketReadTarget {
+  id: string;
+  redactedFields: string[];
+}
+
+async function decideTicketReadTargets(
+  trx: Knex.Transaction,
+  tenant: string,
+  context: TicketAuthorizationContext,
+  ticketIds: string[]
+): Promise<TicketReadTarget[]> {
+  const ids = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return [];
+  const rows = await tenantScopedTable(trx, 'tickets as t', tenant).whereIn('t.ticket_id', ids)
+    .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes"));
+  return decideTicketReadTargetsFromRows(trx, context, ids, rows);
+}
+
+async function decideTicketReadTargetsFromRows(
+  trx: Knex.Transaction,
+  context: TicketAuthorizationContext,
+  ticketIds: string[],
+  rows: Array<Partial<ITicket> & { ticket_id?: string | null }>
+): Promise<TicketReadTarget[]> {
+  const ids = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return [];
+  const decisions = await Promise.all(rows.map(async (ticket: any) => ({
+    ticket,
+    decision: ticket.ticket_id ? await context.authorizationKernel.authorizeResource({
+      subject: context.authorizationSubject,
+      resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
+      record: toTicketAuthorizationRecord(ticket),
+      selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
+      requestCache: context.requestCache,
+      knex: trx,
+    }) : null,
+  })));
+  const byId = new Map<string, TicketReadTarget>();
+  for (const { ticket, decision } of decisions) {
+    if (!decision?.allowed || !Array.isArray(decision.redactedFields)) continue;
+    const mask = ticketReadMask(decision.redactedFields);
+    if (mask.dropResource) continue;
+    byId.set(ticket.ticket_id, { id: ticket.ticket_id, redactedFields: [...decision.redactedFields] });
+  }
+  return ids.flatMap((id) => byId.has(id) ? [byId.get(id)!] : []);
+}
+
+export async function loadTicketRowsByReadTargets(
+  trx: Knex.Transaction,
+  tenant: string,
+  baseQuery: Knex.QueryBuilder,
+  audience: TagDisplayAudience,
+  targets: TicketReadTarget[],
+  orderedIds: string[],
+  childScope?: TicketReadScope
+): Promise<any[]> {
+  const groups = new Map<string, { redactedFields: string[]; ids: string[] }>();
+  for (const target of targets) {
+    const key = ticketRedactionKey(target.redactedFields);
+    const group = groups.get(key) ?? { redactedFields: target.redactedFields, ids: [] };
+    group.ids.push(target.id);
+    groups.set(key, group);
+  }
+  const loaded: any[] = [];
+  for (const group of groups.values()) {
+    const mask = ticketReadMask(group.redactedFields);
+    if (mask.dropResource) continue;
+    const rows = await buildTicketListItemsQuery(trx, tenant, baseQuery.clone(), audience, group.redactedFields, childScope)
+      .whereIn('t.ticket_id', group.ids)
+      .clearOrder();
+    loaded.push(...rows);
+  }
+  const byId = new Map(loaded.map((row) => [row.ticket_id, row] as const));
+  return orderedIds.flatMap((id) => byId.has(id) ? [byId.get(id)!] : []);
+}
 
 function applyTicketReadAuthorizationSql(
   query: TenantScopedQuery,
@@ -1917,11 +2029,23 @@ function buildTicketListItemsQuery(
   tenant: string,
   baseQuery: Knex.QueryBuilder,
   audience: TagDisplayAudience,
-  childScope: TicketReadScope
+  redactedFields: readonly string[] = [],
+  childScope?: TicketReadScope
 ): Knex.QueryBuilder {
+  const mask = ticketReadMask(redactedFields);
+  const ticketColumn = (name: string, type = 'text') => {
+    if (mask.dropResource) return trx.raw(`NULL::${type} as ??`, [name]);
+    if (!ticketReadFieldHidden(redactedFields, name)) return `t.${name}`;
+    if (name === 'title') return trx.raw('?::text as ??', ['Restricted ticket', name]);
+    return trx.raw('CASE WHEN FALSE THEN ?? END as ??', [`t.${name}`, name]);
+  };
+  const joined = (expression: string, name: string, type = 'text', field?: string) =>
+    mask.dropResource || (field ? ticketReadFieldHidden(redactedFields, field) : mask.redactDerived)
+      ? trx.raw(`NULL::${type} as ??`, [name])
+      : trx.raw(`${expression} as ??`, [name]);
   const db = tenantDb(trx, tenant);
   const latestActivity = ticketLatestActivitySql(tenant);
-  const bundleStats = childScope.apply(db.table('tickets as tc')
+  const rawBundleStats = db.table('tickets as tc')
     .select(
       'tc.master_ticket_id',
       'tc.tenant',
@@ -1929,7 +2053,9 @@ function buildTicketListItemsQuery(
       trx.raw('COUNT(*) FILTER (WHERE tc.closed_at IS NULL)::int as bundle_open_child_count'),
       trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
     )
-    .whereNotNull('tc.master_ticket_id'), 'tc')
+    .whereNotNull('tc.master_ticket_id');
+  const bundleStats = childScope ? childScope.apply(rawBundleStats, 'tc') : rawBundleStats;
+  bundleStats
     .groupBy('tc.master_ticket_id', 'tc.tenant')
     .as('bs');
   const additionalAgents = db.table('ticket_resources as tr')
@@ -1967,50 +2093,51 @@ function buildTicketListItemsQuery(
   return query
     .select(
       // Ticket columns (explicit list avoids fetching large unused columns)
-      't.ticket_id', 't.ticket_number', 't.title', 't.url',
-      't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
-      't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
-      't.entered_by', 't.updated_by', 't.closed_by',
-      't.assigned_to', 't.assigned_team_id', 't.billing_profile_id',
-      't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
-      't.is_closed', 't.attributes',
-      't.master_ticket_id', 't.tenant',
-      't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
-      't.response_state', 't.ticket_origin',
-      't.sla_policy_id', 't.sla_started_at',
-      't.sla_response_due_at', 't.sla_response_at', 't.sla_response_met',
-      't.sla_resolution_due_at', 't.sla_resolution_at', 't.sla_resolution_met',
-      't.sla_paused_at', 't.sla_total_pause_minutes',
+      ticketColumn('ticket_id', 'uuid'), ticketColumn('ticket_number'), ticketColumn('title'), ticketColumn('url'),
+      ticketColumn('board_id', 'uuid'), ticketColumn('client_id', 'uuid'), ticketColumn('location_id', 'uuid'), ticketColumn('contact_name_id', 'uuid'),
+      ticketColumn('status_id', 'uuid'), ticketColumn('category_id', 'uuid'), ticketColumn('subcategory_id', 'uuid'), ticketColumn('priority_id', 'uuid'),
+      ticketColumn('entered_by', 'uuid'), ticketColumn('updated_by', 'uuid'), ticketColumn('closed_by', 'uuid'),
+      ticketColumn('assigned_to', 'uuid'), ticketColumn('assigned_team_id', 'uuid'), ticketColumn('billing_profile_id', 'uuid'),
+      ticketColumn('entered_at', 'timestamptz'), ticketColumn('updated_at', 'timestamptz'), ticketColumn('closed_at', 'timestamptz'), ticketColumn('due_date', 'timestamptz'),
+      ticketColumn('is_closed', 'boolean'), ticketColumn('attributes', 'jsonb'),
+      ticketColumn('master_ticket_id', 'uuid'), ticketColumn('tenant', 'uuid'),
+      ticketColumn('itil_impact', 'integer'), ticketColumn('itil_urgency', 'integer'), ticketColumn('itil_priority_level', 'integer'),
+      ticketColumn('response_state'), ticketColumn('ticket_origin'),
+      ticketColumn('sla_policy_id', 'uuid'), ticketColumn('sla_started_at', 'timestamptz'),
+      ticketColumn('sla_response_due_at', 'timestamptz'), ticketColumn('sla_response_at', 'timestamptz'), ticketColumn('sla_response_met', 'boolean'),
+      ticketColumn('sla_resolution_due_at', 'timestamptz'), ticketColumn('sla_resolution_at', 'timestamptz'), ticketColumn('sla_resolution_met', 'boolean'),
+      ticketColumn('sla_paused_at', 'timestamptz'), ticketColumn('sla_total_pause_minutes', 'integer'),
       // Bundle stats from pre-aggregated JOIN
-      trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
-      trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
-      trx.raw(`COALESCE(
+      mask.redactDerived ? trx.raw('NULL::integer as bundle_child_count') : trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+      mask.redactDerived ? trx.raw('NULL::integer as bundle_open_child_count') : trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
+      mask.redactDerived ? trx.raw('NULL::integer as bundle_distinct_client_count') : trx.raw(`COALESCE(
         (SELECT COUNT(DISTINCT cid) FROM unnest(
           array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
         ) AS cid WHERE cid IS NOT NULL),
         0
       )::int as bundle_distinct_client_count`),
       // Joined display columns
-      'mt.ticket_number as bundle_master_ticket_number',
-      's.name as status_name',
-      'p.priority_name',
-      'p.color as priority_color',
-      'c.board_name',
-      'cat.category_name',
-      'comp.client_name',
-      'cn.full_name as contact_name',
-      'tloc.location_name as ticket_location_name',
-      displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
-      displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
-      trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-      trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-      'tm.team_name as assigned_team_name',
+      joined('mt.ticket_number', 'bundle_master_ticket_number'),
+      joined('s.name', 'status_name', 'text', 'status_name'),
+      joined('p.priority_name', 'priority_name', 'text', 'priority_name'),
+      joined('p.color', 'priority_color', 'text', 'priority_color'),
+      joined('c.board_name', 'board_name', 'text', 'board_name'),
+      joined('cat.category_name', 'category_name', 'text', 'category_name'),
+      joined('comp.client_name', 'client_name', 'text', 'client_name'),
+      joined('cn.full_name', 'contact_name', 'text', 'contact_name'),
+      mask.redactDerived ? trx.raw("'[]'::json as contact_tags") : displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
+      mask.redactDerived ? trx.raw("'[]'::json as client_tags") : displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
+      joined("CONCAT(u.first_name, ' ', u.last_name)", 'entered_by_name', 'text', 'entered_by'),
+      joined("CONCAT(au.first_name, ' ', au.last_name)", 'assigned_to_name', 'text', 'assigned_to'),
+      joined('tm.team_name', 'assigned_team_name', 'text', 'assigned_team_id'),
+      joined('tloc.location_name', 'ticket_location_name', 'text', 'location_name'),
       // Additional agents from pre-aggregated JOIN
-      trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
-      trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+      mask.redactDerived ? trx.raw('NULL::integer as additional_agent_count') : trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
+      mask.redactDerived ? trx.raw("'[]'::json as additional_agents") : trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
       // Same expression the latest_activity_at sort orders by, so the column
       // renders exactly the value the ordering used.
-      trx.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
+      mask.redactDerived ? trx.raw('NULL::timestamptz as latest_activity_at') : trx.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
+      ...(mask.redactDerived ? [trx.raw('TRUE as __ticket_read_has_redactions')] : []),
     );
 }
 
@@ -2040,6 +2167,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_distinct_client_count,
       bundle_master_ticket_number,
       latest_activity_at,
+      __ticket_read_has_redactions,
       // NOTE: Legacy ITIL fields removed - now using unified system
       ...rest
     } = ticket;
@@ -2084,7 +2212,8 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_master_ticket_number: bundle_master_ticket_number ?? null,
       latest_activity_at: latest_activity_at instanceof Date
         ? latest_activity_at.toISOString()
-        : latest_activity_at ?? null
+        : latest_activity_at ?? null,
+      __ticket_read_has_redactions: __ticket_read_has_redactions === true,
     };
   });
 }
@@ -2176,6 +2305,7 @@ async function attachLatestActivityActors(
   }
 
   for (const ticket of ticketListItems) {
+    if ((ticket as any).__ticket_read_has_redactions) continue;
     ticket.latest_activity_actor = resolveLatestActivityActor(
       ticket,
       latestCommentByTicket.get(ticket.ticket_id as string) ?? null,
@@ -2190,12 +2320,13 @@ async function enrichTicketListItems(
   ticketListItems: ITicketListItem[]
 ): Promise<TicketListRowsWithMetadata> {
   // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
-  const ticketIds = ticketListItems
+  const visibleTicketItems = ticketListItems.filter((ticket: any) => !ticket.__ticket_read_has_redactions);
+  const ticketIds = visibleTicketItems
     .map((t: ITicketListItem) => t.ticket_id)
     .filter((id: string | undefined): id is string => id !== undefined);
 
   const agentUserIds = new Set<string>();
-  ticketListItems.forEach((ticket: ITicketListItem) => {
+  visibleTicketItems.forEach((ticket: ITicketListItem) => {
     if (ticket.assigned_to) {
       agentUserIds.add(ticket.assigned_to);
     }
@@ -2205,21 +2336,21 @@ async function enrichTicketListItems(
   });
 
   const teamIds = new Set<string>();
-  ticketListItems.forEach((ticket: ITicketListItem) => {
+  visibleTicketItems.forEach((ticket: ITicketListItem) => {
     if (ticket.assigned_team_id) {
       teamIds.add(ticket.assigned_team_id);
     }
   });
 
   const clientIds = new Set<string>();
-  ticketListItems.forEach((ticket: ITicketListItem) => {
+  visibleTicketItems.forEach((ticket: ITicketListItem) => {
     if (ticket.client_id) {
       clientIds.add(ticket.client_id);
     }
   });
 
   const contactIds = new Set<string>();
-  ticketListItems.forEach((ticket: ITicketListItem) => {
+  visibleTicketItems.forEach((ticket: ITicketListItem) => {
     if (ticket.contact_name_id) {
       contactIds.add(ticket.contact_name_id);
     }
@@ -2262,7 +2393,7 @@ async function enrichTicketListItems(
   ]);
 
   // Attach batched client logo and contact avatar URLs to each row (single query each, no N+1).
-  ticketListItems.forEach((ticket: ITicketListItem) => {
+  visibleTicketItems.forEach((ticket: ITicketListItem) => {
     ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
     ticket.contact_avatar_url = ticket.contact_name_id
       ? (contactAvatarUrlsMap.get(ticket.contact_name_id) ?? null)
@@ -2270,6 +2401,9 @@ async function enrichTicketListItems(
   });
 
   await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
+  for (const ticket of ticketListItems) {
+    delete (ticket as any).__ticket_read_has_redactions;
+  }
 
   // Convert Maps to Records for serialization
   const agentAvatarUrls: Record<string, string | null> = {};
@@ -2343,32 +2477,50 @@ export const getTicketsForList = withAuth(async (
       // The page total is the same count every list view shows (countReadableTickets).
       const countQuery = countReadableTickets(trx, tenant, { builder: baseQuery, scopedQuery, authorizationContext });
 
-      const pageQuery = applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), bundleChildReadScope(authorizationContext)),
+      const pageReadInputsQuery = applyTicketListSort(
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), [], bundleChildReadScope(authorizationContext)),
         tenant,
         validatedFilters
       )
+        .clearSelect()
+        .select(
+          't.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id',
+          't.board_id', 't.assigned_team_id', 't.billing_profile_id',
+          trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes")
+        )
         .limit(normalizedPageSize)
         .offset(offset);
 
-      const [count, pageTickets] = await Promise.all([countQuery, pageQuery]);
+      const [count, pageReadInputs] = await Promise.all([countQuery, pageReadInputsQuery]);
+      const orderedIds = pageReadInputs.map((row: { ticket_id: string }) => row.ticket_id);
+      const targets = await decideTicketReadTargetsFromRows(trx, authorizationContext, orderedIds, pageReadInputs);
+      const pageTickets = await loadTicketRowsByReadTargets(
+        trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), targets, orderedIds, bundleChildReadScope(authorizationContext)
+      );
       totalCount = count;
       ticketListItems = mapTicketListItems(pageTickets);
     } else {
-      // Future ABAC templates/constraints may not be representable in SQL yet.
-      // Fall back to the exact JS kernel path instead of risking overexposure.
-      const tickets = await applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), bundleChildReadScope(authorizationContext)),
+      // The fallback query selects identities only. Authorization inputs are loaded separately, and final
+      // display rows are fetched once per effective redaction set through masked SQL projections.
+      const orderedCandidateIds = await applyTicketListSort(
+        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), [], bundleChildReadScope(authorizationContext)),
         tenant,
         validatedFilters
-      );
-      const authorizedTickets = await authorizeTicketReads(trx, authorizationContext, tickets);
-      totalCount = authorizedTickets.length;
-      const paginatedAuthorizedTickets = authorizedTickets.slice(
+      ).clearSelect().select('t.ticket_id');
+      const candidateIds: string[] = orderedCandidateIds.map((row: { ticket_id: string }) => row.ticket_id);
+      const targets = await decideTicketReadTargets(trx, tenant, authorizationContext, candidateIds);
+      const allowedIds = new Set(targets.map((target) => target.id));
+      const authorizedIds = candidateIds.filter((id) => allowedIds.has(id));
+      totalCount = authorizedIds.length;
+      const paginatedIds = authorizedIds.slice(
         (page - 1) * pageSize,
         (page - 1) * pageSize + pageSize
       );
-      ticketListItems = readableTicketListItems(paginatedAuthorizedTickets);
+      const pageTargets = targets.filter((target) => paginatedIds.includes(target.id));
+      const pageTickets = await loadTicketRowsByReadTargets(
+        trx, tenant, baseQuery, displayAudienceForUser(user), pageTargets, paginatedIds, bundleChildReadScope(authorizationContext)
+      );
+      ticketListItems = mapTicketListItems(pageTickets);
     }
 
     const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
@@ -2459,7 +2611,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes"))
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2472,6 +2624,24 @@ export const getAllMatchingTicketIds = withAuth(async (
       console.error('Failed to fetch matching ticket IDs:', error);
       throw error;
     }
+  });
+});
+
+/** Re-authorize explicit ticket ids and retain each ticket's field redactions for readers that forward data. */
+export const getTicketReadTargetsByIds = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ id: string; redactedFields: string[] }> | TicketActionError> => {
+  const ids = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return [];
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+    const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    return decideTicketReadTargets(trx, tenant, context, ids);
   });
 });
 
@@ -2579,7 +2749,8 @@ export const loadTicketListItemsByIds = withAuth(async (
   user,
   { tenant },
   filters: ITicketListFilters,
-  ticketIds: string[]
+  ticketIds: string[],
+  callerRedactions?: Record<string, readonly string[]>
 ): Promise<TicketListRowsWithMetadata | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
@@ -2602,29 +2773,24 @@ export const loadTicketListItemsByIds = withAuth(async (
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
-      let items: ITicketListItem[];
-      if (authSqlResult.supported) {
-        items = mapTicketListItems(await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), bundleChildReadScope(authorizationContext))
-          .whereIn('t.ticket_id', requestedIds)
-          .clearOrder());
-      } else {
-        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), bundleChildReadScope(authorizationContext))
-          .whereIn('t.ticket_id', requestedIds)
-          .clearOrder();
-        items = readableTicketListItems(await authorizeTicketReads(trx, authorizationContext, candidates));
+      const matchedIds = authSqlResult.supported
+        ? await scopedBaseQuery.builder.clone().clearSelect().clearOrder().whereIn('t.ticket_id', requestedIds).select('t.ticket_id')
+        : await baseQuery.clone().clearSelect().clearOrder().whereIn('t.ticket_id', requestedIds).select('t.ticket_id');
+      const matchingIds = matchedIds.map((row: { ticket_id: string }) => row.ticket_id);
+      let targets = await decideTicketReadTargets(trx, tenant, authorizationContext, matchingIds);
+      if (callerRedactions) {
+        // A supplied map is a complete capability from enumeration; missing metadata fails closed.
+        targets = targets.flatMap((target) => {
+          const callerFields = callerRedactions[target.id];
+          if (!Array.isArray(callerFields)) return [];
+          return [{ ...target, redactedFields: [...target.redactedFields, ...callerFields] }];
+        });
       }
-
-      const byId = new Map<string, ITicketListItem>();
-      for (const item of items) {
-        if (item?.ticket_id) {
-          byId.set(item.ticket_id, item);
-        }
-      }
-      const ordered = requestedIds
-        .map((id) => byId.get(id))
-        .filter((item): item is ITicketListItem => Boolean(item));
-
-      return enrichTicketListItems(trx, tenant, ordered);
+      const effectiveBase = authSqlResult.supported ? scopedBaseQuery.builder : baseQuery;
+      const ordered = await loadTicketRowsByReadTargets(
+        trx, tenant, effectiveBase, displayAudienceForUser(user), targets, requestedIds, bundleChildReadScope(authorizationContext)
+      );
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {
@@ -2682,7 +2848,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes"))
           );
 
       return rows

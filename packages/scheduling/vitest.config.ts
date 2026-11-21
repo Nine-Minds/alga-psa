@@ -86,6 +86,9 @@ export default defineConfig({
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/workflows(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/workflows/src$1') },
+      // Vitest does not consult the TypeScript path aliases; mirror the OSS
+      // entry selected by the workspace package export.
+      { find: /^@product\/service-principals\/entry$/, replacement: path.resolve(__dirname, '../product-service-principals/oss/entry.ts') },
     ],
   },
 });
