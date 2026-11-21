@@ -1,4 +1,9 @@
 import { createClient } from 'redis'
+import jwt from 'jsonwebtoken'
+import { getHocuspocusJwtSecret } from './hocuspocusJwtSecret.js'
+import { parseTicketRoom } from './tenantValidation.js'
+
+const TICKET_ACCESS_RECHECK_MS = 30_000
 
 function parseTicketUpdateChannel(channel, redisPrefix = '') {
   const normalizedChannel = redisPrefix && channel.startsWith(redisPrefix)
@@ -38,6 +43,8 @@ export class TicketUpdatesExtension {
     this.hasPatternSubscription = false
     this.listConnections = new Map()
     this.connectionExpiryTimers = new Map()
+    this.ticketAccessTimer = null
+    this.recheckingTicketRooms = false
     this.handlePatternMessage = this.handlePatternMessage.bind(this)
     this.handleListMessage = this.handleListMessage.bind(this)
   }
@@ -71,6 +78,8 @@ export class TicketUpdatesExtension {
     await this.subscriber.connect()
     console.log('[TicketUpdatesExtension] Connected to Redis for pub/sub')
     await this.ensurePatternSubscription()
+    this.ticketAccessTimer = setInterval(() => void this.recheckTicketRooms(), TICKET_ACCESS_RECHECK_MS)
+    this.ticketAccessTimer.unref()
   }
 
   async ensurePatternSubscription() {
@@ -172,15 +181,56 @@ export class TicketUpdatesExtension {
         return
       }
 
-      const payload = JSON.parse(message)
-      console.log('[TicketUpdatesExtension] Broadcasting ticket update for room:', documentName)
-      document.broadcastStateless(JSON.stringify(payload))
+      const payload = JSON.stringify(JSON.parse(message))
+      await this.recheckTicketConnections(document, room, connection => connection.sendStateless(payload))
     } catch (error) {
       console.error('[TicketUpdatesExtension] Error handling message:', error)
     }
   }
 
+  async recheckTicketConnections(document, { tenantId, ticketId }, onAdmitted) {
+    await Promise.all(document.getConnections().map(async connection => {
+      const access = connection.context?.ticketAccess
+      if (!access?.userId || access.tenantId !== tenantId || access.ticketId !== ticketId) return
+
+      try {
+        const token = jwt.sign({ ticketReader: { tenantId, ticketId, userId: access.userId } }, getHocuspocusJwtSecret(), {
+          algorithm: 'HS256', audience: 'ticket-live-access', expiresIn: 15,
+        })
+        const response = await fetch(this.listChangeAuthorizationUrl, {
+          method: 'HEAD',
+          headers: { 'x-api-key': token },
+          redirect: 'error',
+          signal: AbortSignal.timeout(5000),
+        })
+        if (!document.hasConnection(connection)) return
+        if (response.status === 403) connection.close()
+        // Redis delivers this event to every instance. Sending to the local
+        // connection keeps an approved payload off the room-wide broadcast bus.
+        if (response.status === 204) onAdmitted?.(connection)
+      } catch (error) {
+        console.error('[TicketUpdatesExtension] Unable to check ticket room access:', error)
+      }
+    }))
+  }
+
+  async recheckTicketRooms() {
+    if (this.recheckingTicketRooms || !this.instance) return
+    this.recheckingTicketRooms = true
+    try {
+      for (const [name, document] of this.instance.documents) {
+        const room = parseTicketRoom(name)
+        if (room) await this.recheckTicketConnections(document, room)
+      }
+    } catch (error) {
+      console.error('[TicketUpdatesExtension] Unable to recheck ticket rooms:', error)
+    } finally {
+      this.recheckingTicketRooms = false
+    }
+  }
+
   async onDestroy() {
+    clearInterval(this.ticketAccessTimer)
     this.listConnections.clear()
     for (const timer of this.connectionExpiryTimers.values()) clearTimeout(timer)
     this.connectionExpiryTimers.clear()

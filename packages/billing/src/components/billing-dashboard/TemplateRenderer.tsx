@@ -1,6 +1,6 @@
 // TemplateRenderer.tsx
 'use client'
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 // Removed Buffer import - no longer needed client-side
 // Use the InvoiceViewModel type definition expected by the renderer
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
@@ -8,6 +8,7 @@ import type { IInvoiceTemplate } from '@alga-psa/types'; // Keep this for templa
 // Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
 // Import the new server action
 import { renderTemplateOnServer } from '@alga-psa/billing/actions/invoiceTemplates';
+import { PreviewSheetFrame } from '../invoice-designer/preview/PreviewSheetFrame';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -22,12 +23,32 @@ interface TemplateRendererProps {
     html: string;
     css: string;
   } | null;
+  /**
+   * Show the document as the pages it prints as — one sheet per printed page, so a layout with
+   * page breaks reads as separate sheets instead of one endless roll. Costs a headless chunking
+   * pass on the server, so a surface that only needs the fragment inline leaves it off.
+   */
+  paginated?: boolean;
+  /**
+   * Frames the inline fragment when `paginated` is set but the chunking pass could not run
+   * (no browser available): the caller's own paper shell, so the fallback still looks like a
+   * document rather than loose markup.
+   */
+  fallbackWrapper?: (fragment: React.ReactNode) => React.ReactNode;
 }
 
-export function TemplateRenderer({ template, invoiceData, invoiceId = null, renderOverride = null }: TemplateRendererProps) {
+export function TemplateRenderer({
+  template,
+  invoiceData,
+  invoiceId = null,
+  renderOverride = null,
+  paginated = false,
+  fallbackWrapper,
+}: TemplateRendererProps) {
   const { t } = useTranslation('msp/billing');
   const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
   const [renderedCss, setRenderedCss] = useState<string | null>(null); // Added state for CSS
+  const [documentHtml, setDocumentHtml] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +57,7 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
       // Reset state
       setRenderedHtml(null);
       setRenderedCss(null);
+      setDocumentHtml(null);
       setError(null);
 
       if (renderOverride) {
@@ -82,6 +104,7 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
         const result = await renderTemplateOnServer(templateId, processedInvoiceData, {
           templateAst: (template as any).templateAst ?? null,
           invoiceId,
+          paginate: paginated,
         });
 
         // Expected failures (missing/invalid bindings, template lookup) come
@@ -96,6 +119,7 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
 
         setRenderedHtml(result.html);
         setRenderedCss(result.css);
+        setDocumentHtml(result.documentHtml ?? null);
 
       } catch (err) {
         console.error("Error rendering invoice template:", err);
@@ -108,7 +132,7 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
     };
 
     performRender();
-  }, [template, invoiceData, invoiceId, renderOverride]); // Rerun effect when template/invoice/override changes
+  }, [template, invoiceData, invoiceId, renderOverride, paginated]); // Rerun effect when template/invoice/override changes
 
   if (isLoading) {
     return <div>{t('templateRenderer.loading', { defaultValue: 'Loading template preview...' })}</div>; // Or a Skeleton loader
@@ -142,14 +166,28 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
       );
   }
 
+  // The document drawn as the pages it prints as. Falls back to the inline fragment when the
+  // chunking pass could not run — a single roll beats no preview.
+  if (paginated && documentHtml) {
+    return (
+      <PreviewSheetFrame
+        html={documentHtml}
+        title={t('templateRenderer.frameTitle', { defaultValue: 'Invoice preview' })}
+        zoomMode="fit"
+        automationId="invoice-preview-pages"
+      />
+    );
+  }
+
   // Rendered content
   if (renderedHtml !== null && renderedCss !== null) {
-    return (
+    const fragment = (
       <>
         <style>{renderedCss}</style>
         <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
       </>
     );
+    return <>{fallbackWrapper ? fallbackWrapper(fragment) : fragment}</>;
   }
 
   // Fallback if render hasn't completed but no error/loading (shouldn't usually happen)

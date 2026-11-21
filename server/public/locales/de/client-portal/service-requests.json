@@ -17,7 +17,19 @@
     "datePlaceholder": "Datum auswählen",
     "optionLabel": "Option {{index}}",
     "submit": "Anfrage einreichen",
-    "requiredField": "Dieses Feld ist erforderlich."
+    "requiredField": "Dieses Feld ist erforderlich.",
+    "validation": {
+      "type": "Diese Antwort hat nicht die erwartete Form.",
+      "pattern": "Diese Antwort hat nicht die erwartete Form.",
+      "minLength": "Mindestens {{minLength}} Zeichen verwenden.",
+      "maxLength": "Höchstens {{maxLength}} Zeichen verwenden.",
+      "min": "Mindestens {{min}} eingeben.",
+      "max": "Höchstens {{max}} eingeben.",
+      "minDate": "{{minDate}} oder später wählen.",
+      "maxDate": "{{maxDate}} oder früher wählen.",
+      "minSelected": "Mindestens {{minSelected}} auswählen.",
+      "maxSelected": "Höchstens {{maxSelected}} auswählen."
+    }
   },
   "myRequests": {
     "title": "Meine Anfragen",

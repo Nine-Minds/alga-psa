@@ -14,12 +14,17 @@ const withTransactionMock = vi.fn();
 // here they allow everything so the authorization decision stands alone.
 const assertUserRoleFloorMock = vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true }));
 
+// contacts.is_client_admin is re-derived from the roles by this shared helper;
+// its own decision table is covered in packages/db (clientPortalAdminFlag.test.ts).
+const syncContactClientAdminFlagMock = vi.fn(async (..._args: any[]) => undefined);
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   tenantDb: (conn: any) => ({ table: (table: string) => conn(table) }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  syncContactClientAdminFlag: (...args: any[]) => syncContactClientAdminFlagMock(...args),
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,
@@ -124,6 +129,40 @@ describe('policyActions authorization', () => {
       await expect(assignRoleToUser('target-2', 'role-client')).resolves.toMatchObject({ role_id: 'role-client' });
       expect(insertSpy).toHaveBeenCalledTimes(1);
     });
+
+    // alga-2026-0003317: contacts.is_client_admin is a mirror of the portal
+    // 'Admin' role, so every role write re-derives it in its own transaction.
+    it('re-derives the portal admin flag in the same transaction as the insert', async () => {
+      setPerms({ userUpdate: false, clientUpdate: true });
+      const insertSpy = vi.fn();
+      let seenTrx: any;
+      withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) => {
+        seenTrx = buildAssignTrx(CLIENT_USER, CLIENT_ROLE, insertSpy);
+        return cb(seenTrx);
+      });
+
+      const { assignRoleToUser } = await import('./policyActions');
+
+      await assignRoleToUser('target-2', 'role-client');
+
+      expect(syncContactClientAdminFlagMock).toHaveBeenCalledWith(seenTrx, 'tenant-1', 'target-2');
+      expect(insertSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        syncContactClientAdminFlagMock.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('leaves the portal admin flag alone when the assignment is refused', async () => {
+      setPerms({ userUpdate: false, clientUpdate: false });
+      withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+        cb(buildAssignTrx(CLIENT_USER, CLIENT_ROLE, vi.fn()))
+      );
+
+      const { assignRoleToUser } = await import('./policyActions');
+
+      await assignRoleToUser('target-2', 'role-client');
+
+      expect(syncContactClientAdminFlagMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('removeRoleFromUser', () => {
@@ -154,6 +193,38 @@ describe('policyActions authorization', () => {
 
       await expect(removeRoleFromUser('target-1', 'role-admin')).resolves.toBeUndefined();
       expect(delSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-derives the portal admin flag in the same transaction as the delete', async () => {
+      setPerms({ userUpdate: true });
+      const delSpy = vi.fn(async () => 1);
+      let seenTrx: any;
+      withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) => {
+        seenTrx = buildRemoveTrx(CLIENT_ROLE, delSpy);
+        return cb(seenTrx);
+      });
+
+      const { removeRoleFromUser } = await import('./policyActions');
+
+      await removeRoleFromUser('target-2', 'role-client');
+
+      expect(syncContactClientAdminFlagMock).toHaveBeenCalledWith(seenTrx, 'tenant-1', 'target-2');
+      expect(delSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        syncContactClientAdminFlagMock.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('leaves the portal admin flag alone when the removal is refused', async () => {
+      setPerms({ userUpdate: false, clientUpdate: false });
+      withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+        cb(buildRemoveTrx(CLIENT_ROLE, vi.fn(async () => 1)))
+      );
+
+      const { removeRoleFromUser } = await import('./policyActions');
+
+      await removeRoleFromUser('target-2', 'role-client');
+
+      expect(syncContactClientAdminFlagMock).not.toHaveBeenCalled();
     });
   });
 });

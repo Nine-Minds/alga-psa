@@ -239,7 +239,10 @@
       "detail": {
         "fallbackTitle": "Serviceanfrage"
       },
-      "title": "Serviceanfragen"
+      "title": "Serviceanfragen",
+      "formBuilder": {
+        "title": "Formular-Editor"
+      }
     },
     "surveys": {
       "dashboard": {

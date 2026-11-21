@@ -126,6 +126,10 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('editor.duplicate', 'editor', 'editor', ['mod+d']),
   entry('editor.copyStyle', 'editor', 'editor', ['mod+alt+c']),
   entry('editor.pasteStyle', 'editor', 'editor', ['mod+alt+v']),
+
+  // Page scope, and allowed while typing: focus mode is a layout switch the author
+  // may want mid-edit, and Escape already means "deselect" in the designers.
+  entry('designer.toggleFocusMode', 'editor', 'page', ['mod+.'], { allowInEditable: true }),
 ];
 
 export const OPTIONAL_ALTERNATE_BINDINGS: Readonly<Record<string, readonly string[]>> = {

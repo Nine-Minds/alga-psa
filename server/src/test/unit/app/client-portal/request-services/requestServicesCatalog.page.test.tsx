@@ -17,6 +17,7 @@ type TranslationOptions = {
 
 const listRequestServiceCatalogGroupsActionMock = vi.fn();
 const listMyRecentServiceRequestsActionMock = vi.fn();
+const getMyServiceRequestSubmissionSuccessMessageActionMock = vi.fn();
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
   template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => String(values[key] ?? ''));
@@ -71,6 +72,11 @@ vi.mock('server/src/app/client-portal/request-services/actions', () => ({
     listMyRecentServiceRequestsActionMock(...args),
 }));
 
+vi.mock('server/src/app/client-portal/request-services/submissionSuccessMessage', () => ({
+  getMyServiceRequestSubmissionSuccessMessage: (...args: unknown[]) =>
+    getMyServiceRequestSubmissionSuccessMessageActionMock(...args),
+}));
+
 vi.mock(
   'server/src/app/client-portal/request-services/my-requests/MyRequestsTable',
   () => ({
@@ -87,6 +93,7 @@ describe('/client-portal/request-services catalog', () => {
     vi.clearAllMocks();
     getDateFormatPreferenceMock.mockResolvedValue('system');
     listMyRecentServiceRequestsActionMock.mockResolvedValue([]);
+    getMyServiceRequestSubmissionSuccessMessageActionMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -209,7 +216,47 @@ describe('/client-portal/request-services catalog', () => {
       render(await ServiceRequestsPage({}));
 
       expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
+      expect(getMyServiceRequestSubmissionSuccessMessageActionMock).not.toHaveBeenCalled();
       expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
+    });
+
+    // A submit redirects here, so this banner is the only place the author's own success
+    // message can reach the person who filled the form in.
+    it('says the form author`s success message when a submit lands here', async () => {
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
+      getMyServiceRequestSubmissionSuccessMessageActionMock.mockResolvedValue(
+        'IT will reach out within one business day.'
+      );
+
+      render(
+        await ServiceRequestsPage({
+          searchParams: Promise.resolve({ submitted: 'submission-guid-1' }),
+        })
+      );
+
+      expect(getMyServiceRequestSubmissionSuccessMessageActionMock).toHaveBeenCalledWith(
+        'submission-guid-1'
+      );
+      expect(
+        screen.getByText('IT will reach out within one business day.')
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Access Request, submitted/)).toBeInTheDocument();
+    });
+
+    it('confirms a submit from a form with no success message, and asks for nothing else', async () => {
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
+
+      render(
+        await ServiceRequestsPage({
+          searchParams: Promise.resolve({ submitted: 'submission-guid-1' }),
+        })
+      );
+
+      expect(screen.getByText(t('detail.submitted'))).toBeInTheDocument();
+      expect(screen.getByText(/Access Request, submitted/)).toBeInTheDocument();
+      expect(
+        screen.queryByText('IT will reach out within one business day.')
+      ).not.toBeInTheDocument();
     });
 
     it('renders the banner without a ticket line for a store-only submission', async () => {

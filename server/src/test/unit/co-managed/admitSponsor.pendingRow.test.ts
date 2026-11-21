@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ entitlement: null as any, grants: false, admit: vi.fn(), tables: [] as string[] }));
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: { transaction: async (work: any) => work({}) } }),
+  createTenantKnex: async () => ({ knex: {
+    transaction: async (work: any) => work({ raw: async () => undefined, fn: { now: () => new Date() } }),
+  } }),
   tenantDb: () => ({
     table: (name: string) => {
       mocks.tables.push(name);
@@ -10,7 +12,8 @@ vi.mock('@alga-psa/db', () => ({
         forUpdate: () => q,
         where: () => q,
         first: async () => name === 'co_managed_entitlements' ? mocks.entitlement
-          : name === 'tenants' ? { product_code: 'psa' } : mocks.grants ? { permission_id: 'p' } : undefined,
+          : name === 'tenants' ? { product_code: 'psa' }
+          : name === 'permissions' && mocks.grants ? { permission_id: 'p' } : undefined,
       };
       return q;
     },

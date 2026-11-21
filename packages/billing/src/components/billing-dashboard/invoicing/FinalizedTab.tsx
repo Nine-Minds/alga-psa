@@ -11,7 +11,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight, Banknote } from 'lucide-react';
+import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight, Banknote, Receipt } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration'
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
+import { InvoicePaymentsDialog } from './InvoicePaymentsDialog';
 import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -141,6 +142,8 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   // Record-payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentDialogInvoice, setPaymentDialogInvoice] = useState<{ id: string; number: string } | null>(null);
+  const [paymentsDialogOpen, setPaymentsDialogOpen] = useState(false);
+  const [paymentsDialogInvoice, setPaymentsDialogInvoice] = useState<{ id: string; number: string; currencyCode?: string } | null>(null);
 
   // Ref to track if initial load has happened
   const initialLoadDone = useRef(false);
@@ -416,6 +419,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     setPaymentDialogOpen(true);
   };
 
+  const openPaymentsDialog = (invoice: DbInvoiceViewModel) => {
+    setPaymentsDialogInvoice({
+      id: invoice.invoice_id,
+      number: invoice.invoice_number,
+      currencyCode: invoice.currencyCode || 'USD',
+    });
+    setPaymentsDialogOpen(true);
+  };
+
   const columns: ColumnDefinition<DbInvoiceViewModel>[] = [
     {
       title: (
@@ -561,6 +573,14 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                   {t('finalizedTab.actions.recordPayment', { defaultValue: 'Record Payment' })}
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                id={`finalized-view-payments-${record.invoice_id}`}
+                onClick={() => openPaymentsDialog(record)}
+                className="flex items-center gap-2"
+              >
+                <Receipt className="h-4 w-4" />
+                {t('finalizedTab.actions.viewPayments', { defaultValue: 'Payments' })}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={async () => {
                   setError(null);
@@ -760,6 +780,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         invoiceId={paymentDialogInvoice?.id ?? null}
         invoiceNumber={paymentDialogInvoice?.number}
         onSuccess={async () => {
+          await loadData();
+          onRefreshNeeded();
+        }}
+      />
+
+      <InvoicePaymentsDialog
+        isOpen={paymentsDialogOpen}
+        onClose={() => setPaymentsDialogOpen(false)}
+        invoiceId={paymentsDialogInvoice?.id ?? null}
+        invoiceNumber={paymentsDialogInvoice?.number}
+        currencyCode={paymentsDialogInvoice?.currencyCode}
+        onChanged={async () => {
           await loadData();
           onRefreshNeeded();
         }}

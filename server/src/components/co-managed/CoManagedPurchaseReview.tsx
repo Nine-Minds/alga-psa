@@ -13,8 +13,22 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** The words for a controller error code; unknown values are already text. */
 export function coManagedPurchaseErrorMessage(error: string | null, t: Translate): string | null {
+  const blockedMessages: Record<string, { key: string; fallback: string }> = {
+    customer_unverified: { key: 'billingCustomerUnlinked', fallback: 'We could not verify a Stripe billing account for this workspace. Contact support to have it linked.' },
+    no_current_pro: { key: 'proSubscriptionRequired', fallback: 'Co-managed seats require a current Pro subscription. Check your subscription in Account Management.' },
+    offer_paused: { key: 'offerPaused', fallback: 'New seat purchases are paused. Contact your account manager for an update.' },
+    offer_changed: { key: 'termsChanged', fallback: 'The price changed after you reviewed it. Review the updated terms before confirming.' },
+    misconfigured: { key: 'offerMisconfigured', fallback: 'The co-managed seat offer is not configured correctly. Contact support for help.' },
+    temporarily_unavailable: { key: 'offerTemporarilyUnavailable', fallback: 'Pricing is temporarily unavailable. Please try again shortly.' },
+  };
+  if (error && blockedMessages[error]) {
+    const { key, fallback } = blockedMessages[error];
+    return t(`coManaged.${key}`, { defaultValue: fallback });
+  }
   return error === 'expired' ? t('coManaged.checkoutExpired', { defaultValue: 'The checkout session expired. Review the purchase again.' })
     : error === 'checkoutUnavailable' ? t('coManaged.checkoutUnavailable', { defaultValue: 'Embedded checkout is unavailable. Retry after the payment setup is repaired.' })
+      : error === 'termsChanged' ? t('coManaged.termsChanged', { defaultValue: 'The price changed after you reviewed it. Review the updated terms before confirming.' })
+      : error === 'offerUnavailable' ? t('coManaged.offerUnavailable', { defaultValue: 'New seat purchases are temporarily unavailable. Nothing was charged.' })
       : error === 'preview' ? t('coManaged.previewError', { defaultValue: 'Could not price this change. Refresh and try again.' })
         : error === 'purchase' ? t('coManaged.purchaseError', { defaultValue: 'The purchase could not be completed. Recover the same operation.' })
           : error;

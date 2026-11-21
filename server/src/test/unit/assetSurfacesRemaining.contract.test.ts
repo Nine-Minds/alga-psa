@@ -158,7 +158,7 @@ describe('client portal asset surfaces (FR-E7)', () => {
     // The asset a portal contact files against must pass the same filter the
     // list uses, workspace included, and the check has to happen before the
     // association is written.
-    expect(text).toMatch(/applyAssetVisibilityFilter\([\s\S]{0,400}sharedWorkspace: \{ assetIdColumn: 'assets\.asset_id', tenantColumn: 'assets\.tenant' \}/);
+    expect(text).toMatch(/applyAssetVisibilityFilter\([\s\S]{0,400}sharedWorkspace: \{ sharedWorkspaceIdColumn: 'assets\.asset_id' \}/);
     expect(text).toContain("throw expectedClientTicketActionError('Selected asset does not belong to this client')");
   });
 });

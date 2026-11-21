@@ -398,6 +398,48 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "trial": {
+      "title": "15-tägiger Test eines Co-Managed-Platzes",
+      "description": "Laden Sie einen Techniker des Kunden ein, auf den ausgewählten Boards zu arbeiten. Die 15 Tage beginnen mit seiner ersten Anmeldung. Der Zugriff setzt ein aktives Basisabonnement oder einen laufenden Test des Basisangebots voraus.",
+      "terms": "Ein kostenpflichtiger Platz kostet {{amount}} pro Monat. Der Test endet ohne Kosten, sofern Sie keine kostenpflichtige Kapazität bestätigen.",
+      "status": {
+        "active": "Aktiv",
+        "pending": "Erste Anmeldung steht aus",
+        "base_paused": "Basisabonnement pausiert",
+        "expired": "Test abgelaufen",
+        "paid": "Kostenpflichtiger Platz in Nutzung",
+        "ended": "Test beendet",
+        "checkout_pending": "Zahlung steht aus"
+      },
+      "purchaseAwaitingVerification": "Kauf wird noch geprüft",
+      "conversionFailed": "Der Wechsel zu einem kostenpflichtigen Platz wurde nicht abgeschlossen. Prüfen Sie die verfügbare kostenpflichtige Kapazität oder versuchen Sie den Kauf erneut.",
+      "deadline": "Der Platztest endet am {{date}}.",
+      "baseUntil": "Der aktuelle Basiszugriff endet am {{date}}.",
+      "openSetup": "Platzeinrichtung des Kunden öffnen",
+      "invite": "Techniker für 15 Tage einladen",
+      "resend": "Einladung erneut senden",
+      "replace": "Techniker ersetzen",
+      "cancelInvitation": "Einladung zurückziehen",
+      "restoreBase": "Basiszugriff im Konto wiederherstellen",
+      "resumePurchase": "Kauf fortsetzen",
+      "cancelConversion": "Platzumstellung abbrechen",
+      "spareSeatTerms": "Verwenden Sie jetzt einen verfügbaren kostenpflichtigen Platz. Die Gesamtzahl der Plätze im Pool bleibt gleich.",
+      "confirmSpareSeat": "Nutzung eines kostenpflichtigen Platzes bestätigen",
+      "keepSeat": "Diesen Platz behalten",
+      "refresh": "Teststatus aktualisieren",
+      "returnToTrial": "Zum Platztest des Kunden zurückkehren",
+      "notice": {
+        "invitationSaved": "Einladung gespeichert. Versuchen Sie unten erneut, sie zu senden.",
+        "deliveryFailed": "Der Versand ist fehlgeschlagen. Sie können ihn erneut versuchen.",
+        "replacementSent": "Einladung für den Ersatztechniker gesendet.",
+        "replacementSaved": "Ersatztechniker gespeichert. Versuchen Sie erneut, die Einladung zu senden."
+      },
+      "error": {
+        "boardChoicesFailed": "Die auswählbaren Boards konnten nicht geladen werden.",
+        "actionFailed": "Die Aktion konnte nicht abgeschlossen werden. Aktualisieren Sie den Teststatus und versuchen Sie es erneut.",
+        "paymentFailed": "Die Zahlung konnte nicht abgeschlossen werden. Prüfen Sie den Teststatus."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Dieser Arbeitsbereich hat keinen Co-Managed-Pool. Fügen Sie Co-Managed-Plätze hinzu, um dies zu nutzen.",
@@ -694,6 +736,8 @@
     "proRequired": "Zum Sponsern von Kunden-Workspaces ist ein Pro-PSA-Abonnement erforderlich.",
     "loadError": "Die Kundenplatzkapazität konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "purchaseError": "Der Platzkauf konnte nicht abgeschlossen werden. Sie können ihn sicher fortsetzen.",
+    "termsChanged": "Der Preis hat sich seit Ihrer Prüfung geändert. Prüfen Sie die neuen Konditionen, bevor Sie den Kauf bestätigen.",
+    "offerUnavailable": "Neue Sitzplatzkäufe sind vorübergehend nicht verfügbar. Es wurde nichts berechnet.",
     "checkoutExpired": "Dieser Checkout ist abgelaufen. Starten Sie einen neuen Kauf, um fortzufahren.",
     "grace": "Erneuern Sie Ihre Lizenz oder beheben Sie den Kapazitätsengpass vor dem {{date}}, damit Kunden-Workspaces beschreibbar bleiben.",
     "readOnly": "Die Karenzzeit endete am {{date}}. Stellen Sie die lizenzierte Kapazität wieder her, um Änderungen an Kunden-Workspaces fortzusetzen.",
@@ -709,6 +753,11 @@
       "intro": "Kaufen Sie hier einen Pool von Co-Managed-Plätzen. Nach dem Kauf weisen Sie Plätze über den jeweiligen Kunden zu."
     },
     "previewError": "Diese Änderung konnte nicht bepreist werden. Aktualisieren Sie und versuchen Sie es erneut.",
+    "billingCustomerUnlinked": "Für diesen Arbeitsbereich konnte kein Stripe-Abrechnungskonto verifiziert werden. Wenden Sie sich an den Support, um das Konto zu verknüpfen.",
+    "proSubscriptionRequired": "Für Co-Managed-Plätze ist ein laufendes Pro-Abonnement erforderlich. Überprüfen Sie Ihr Abonnement in der Kontoverwaltung.",
+    "offerPaused": "Neue Sitzplatzkäufe sind pausiert. Wenden Sie sich für ein Update an Ihren Account Manager.",
+    "offerMisconfigured": "Das Angebot für Co-managed-Sitzplätze ist nicht korrekt konfiguriert. Wenden Sie sich an den Support.",
+    "offerTemporarilyUnavailable": "Die Preisermittlung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.",
     "purchaseNeedsAdmin": "Ein Kontoadministrator muss Co-Managed-Kapazität hinzufügen.",
     "purchaseProviderUnconfigured": "Der Zahlungsanbieter ist nicht konfiguriert.",
     "purchaseUnavailable": "Der Kauf von gehostetem Co-Managed ist in dieser Bereitstellung nicht verfügbar.",
