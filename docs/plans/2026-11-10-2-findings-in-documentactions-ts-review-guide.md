@@ -170,3 +170,27 @@ The full server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288 n
 
 - The integration case verifies the corrected billing/opportunities permission resources behaviorally, but does not seed every supported association target type.
 - `getDocumentsByEntity` and `getDocumentCountsForEntities` remain outside this plan's requested read-surface scope, as identified in the approved plan.
+
+## Live review correction — preserve Client Admin task attachments
+
+The 2026-11-21 live review confirmed Technician task upload persistence, then
+found that a default Client Admin could no longer upload to its own task. The
+catalog exposes `project_task` permissions only to MSP roles; Client Admin has
+`project:update` instead. Its real authenticated upload returned a permission
+error even for its own client. The previous mocked client grant set included the
+MSP-only task permission and therefore did not expose this regression.
+
+The task adapter now selects the existing catalog resource by principal:
+`project_task` for MSP users and `project` for client users. Both paths retain
+the owning-project update record policy and client ownership check. No grants
+were added. The persisted-role regression covers both default Technician and
+Client Admin through real RBAC, successful upload/attach/remove persistence, and
+Client Admin cross-client upload/attach/remove denial with unchanged documents,
+associations and folders. The Client Admin case failed before the correction;
+all 20 focused checks (10 PostgreSQL behavioral cases and 10 existing source
+contracts) passed after it. Real-session Client A upload succeeded after the
+correction; its B-task search returned zero, and B-task mutations were denied.
+
+The durable HTML guide and current recordings are served at
+http://100.82.172.57:8681/index.html. It records the final published revision,
+fixtures, development observations, reset procedure, and coverage limits.

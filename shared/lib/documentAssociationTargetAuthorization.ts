@@ -265,7 +265,11 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     permissionResource: 'project',
     scopeSearch: projectTaskSearchScope,
     assertTarget: async (conn, tenant, user, id, action) => {
-      if (!await hasTargetPermission(user, 'project_task', action, conn)) return false;
+      // The catalog exposes task permissions to MSP roles; portal roles manage
+      // tasks through project permissions. Both still require the owning
+      // project's record policy and client scope below.
+      const resource = user.user_type === 'client' ? 'project' : 'project_task';
+      if (!await hasTargetPermission(user, resource, action, conn)) return false;
       const row = await dbTable(conn, tenant, 'project_tasks as pt')
         .leftJoin('project_phases as pp', function joinPhase() {
           this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');

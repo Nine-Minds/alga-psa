@@ -11,6 +11,7 @@ let tenantId: string;
 let mspUserId: string;
 let mspTechnicianUserId: string;
 let mspTechnicianRoleId: string;
+let clientAdminRoleId: string;
 let mspTechnicianPermissions = new Set<string>();
 let clientAId: string;
 let clientBId: string;
@@ -185,6 +186,9 @@ describe('document association cross-client authorization', () => {
     });
     const contactBId = uuidv4();
     await table('contacts').insert({ tenant: tenantId, contact_name_id: contactBId, client_id: clientBId, full_name: 'Client B User' });
+    const clientAdminRole = await table('roles').where({ role_name: 'Admin', msp: false, client: true }).first();
+    clientAdminRoleId = clientAdminRole.role_id;
+    await table('user_roles').insert({ tenant: tenantId, user_id: clientAUserId, role_id: clientAdminRoleId });
     clientBUserId = uuidv4();
     await table('users').insert({
       tenant: tenantId, user_id: clientBUserId, username: `client-${clientBUserId.slice(0, 8)}`,
@@ -273,8 +277,8 @@ describe('document association cross-client authorization', () => {
     if (db && tenantId) {
       await table('document_associations').whereIn('document_id', [documentAId, documentBId]).del();
       await table('documents').whereIn('document_id', [documentAId, documentBId]).del();
-      const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId])
-        .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt']).select('document_id');
+      const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId, clientAUserId])
+        .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt', 'client-admin-task-upload.txt']).select('document_id');
       const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
       if (uploadedIds.length) {
         await table('document_associations').whereIn('document_id', uploadedIds).del();
@@ -309,7 +313,7 @@ describe('document association cross-client authorization', () => {
       if (projects.length) await table('project_status_mappings').whereIn('project_id', projects).del();
       if (projects.length) await table('projects').whereIn('project_id', projects).del();
       await table('statuses').where('created_by', mspUserId).andWhere('status_type', 'project').del();
-      await table('user_roles').where({ user_id: mspTechnicianUserId }).del();
+      await table('user_roles').whereIn('user_id', [mspTechnicianUserId, clientAUserId]).del();
       await table('users').whereIn('user_id', [clientAUserId, clientBUserId, mspTechnicianUserId]).del();
       await table('contacts').whereIn('client_id', [clientAId, clientBId]).del();
       await table('clients').whereIn('client_id', [clientAId, clientBId]).del();
@@ -329,8 +333,8 @@ describe('document association cross-client authorization', () => {
       tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
       entity_type: 'client', entity_id: clientAId, created_at: new Date(),
     });
-    const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId])
-      .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt', 'folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
+    const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId, clientAUserId])
+      .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt', 'client-admin-task-upload.txt', 'folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
       .select('document_id', 'file_id');
     const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
     const uploadedFileIds = [...new Set([
@@ -562,57 +566,68 @@ describe('document association cross-client authorization', () => {
     expect(await table('document_associations').where({ document_id: uploaded.document_id, entity_id: taskBId })).toHaveLength(1);
   });
 
-  it('lets the default MSP Technician upload to an authorized task without project:update', async () => {
-    const technician = createMockUser('internal', {
-      user_id: mspTechnicianUserId, tenant: tenantId,
-      roles: [{ role_id: mspTechnicianRoleId, role_name: 'Technician' }],
+  it.each(['Technician', 'Client Admin'] as const)('lets the default %s persist task uploads with its catalog permission and retains client scope', async (persona) => {
+    const isClient = persona === 'Client Admin';
+    const userId = isClient ? clientAUserId : mspTechnicianUserId;
+    const roleId = isClient ? clientAdminRoleId : mspTechnicianRoleId;
+    const user = createMockUser(isClient ? 'client' : 'internal', {
+      user_id: userId, tenant: tenantId,
+      ...(isClient ? { clientId: clientAId, contact_id: clientAContactId } : {}),
+      roles: [{ role_id: roleId, role_name: isClient ? 'Admin' : 'Technician' }],
     });
-    setMockUser(technician, [...mspTechnicianPermissions]);
-    setupCommonMocks({
-      tenantId, userId: mspTechnicianUserId, user: technician,
-      permissionCheck: (_user, resource, action) => mspTechnicianPermissions.has(`${resource}:${action}`),
-    });
+    setMockUser(user);
+    setupCommonMocks({ tenantId, userId, user });
     const authModule = await import('@alga-psa/auth');
     const { hasPermission: hasPersistedPermission } = await import('@alga-psa/authorization/rbac');
-    vi.mocked(authModule.hasPermission).mockImplementation((user, resource, action, connection) =>
-      hasPersistedPermission(user, resource, action, connection));
+    vi.mocked(authModule.hasPermission).mockImplementation((principal, resource, action, connection) =>
+      hasPersistedPermission(principal, resource, action, connection));
 
-    expect(mspTechnicianPermissions).toContain('document:create');
-    expect(mspTechnicianPermissions).toContain('project_task:update');
-    expect(mspTechnicianPermissions).not.toContain('project:update');
-    expect(await hasPersistedPermission(technician, 'document', 'create', db)).toBe(true);
-    expect(await hasPersistedPermission(technician, 'project_task', 'update', db)).toBe(true);
-    expect(await hasPersistedPermission(technician, 'project', 'update', db)).toBe(false);
+    expect(await hasPersistedPermission(user, 'document', 'create', db)).toBe(true);
+    expect(await hasPersistedPermission(user, 'project_task', 'update', db)).toBe(!isClient);
+    expect(await hasPersistedPermission(user, 'project', 'update', db)).toBe(isClient);
 
+    const fileName = isClient ? 'client-admin-task-upload.txt' : 'technician-task-upload.txt';
     const storageFileId = uuidv4();
     mspStorageProviderId = uuidv4();
     mspStorageConfigurationId = uuidv4();
     await table('storage_providers').insert({
-      tenant: tenantId, provider_id: mspStorageProviderId, provider_type: 'local', provider_name: 'Technician regression storage', config: {},
+      tenant: tenantId, provider_id: mspStorageProviderId, provider_type: 'local', provider_name: 'Role regression storage', config: {},
     });
     await table('storage_configurations').insert({
       tenant: tenantId, configuration_id: mspStorageConfigurationId, provider_id: mspStorageProviderId,
-      name: 'Technician regression storage', path: '/', is_default: true,
+      name: 'Role regression storage', path: '/', is_default: true,
     });
     await table('external_files').insert({
-      tenant: tenantId, file_id: storageFileId, file_name: 'technician-task-upload.txt',
-      original_name: 'technician-task-upload.txt', mime_type: 'text/plain', file_size: 29,
-      storage_path: `test/${storageFileId}`, uploaded_by_id: mspTechnicianUserId,
+      tenant: tenantId, file_id: storageFileId, file_name: fileName,
+      original_name: fileName, mime_type: 'text/plain', file_size: 29,
+      storage_path: `test/${storageFileId}`, uploaded_by_id: userId,
     });
     trackedStorageFileIds.push(storageFileId);
     storageMocks.uploadFile.mockResolvedValueOnce({ file_id: storageFileId, storage_path: `test/${storageFileId}` });
     const form = new FormData();
-    form.set('file', new File(['Technician task attachment'], 'technician-task-upload.txt', { type: 'text/plain' }));
+    form.set('file', new File(['Role-authorized task attachment'], fileName, { type: 'text/plain' }));
 
-    const result = await uploadDocument(form, { userId: mspTechnicianUserId, projectTaskId: taskAId });
-    expect(result).toHaveProperty('success', true);
-    const persisted = await table('documents')
-      .where({ created_by: mspTechnicianUserId, document_name: 'technician-task-upload.txt' }).first();
+    expect(await uploadDocument(form, { userId, projectTaskId: taskAId })).toHaveProperty('success', true);
+    const persisted = await table('documents').where({ created_by: userId, document_name: fileName }).first();
     expect(persisted).toBeDefined();
-    if (!persisted) throw new Error('Expected the Technician document to persist');
+    expect(persisted.is_client_visible).toBe(isClient);
     expect(await table('document_associations').where({
       document_id: persisted.document_id, entity_type: 'project_task', entity_id: taskAId,
     })).toHaveLength(1);
+    expect(await removeDocumentAssociations(taskAId, 'project_task', [persisted.document_id])).toEqual({ success: true });
+    expect(await createDocumentAssociations(taskAId, 'project_task', [persisted.document_id])).toEqual({ success: true });
+
+    if (isClient) {
+      const documentsBefore = await table('documents').count('* as count');
+      const associationsBefore = await table('document_associations').select('*').orderBy('association_id');
+      const foldersBefore = await table('document_folders').select('*').orderBy('folder_id');
+      expect(await uploadDocument(form, { userId, projectTaskId: taskBId })).toHaveProperty('permissionError');
+      expect(await createDocumentAssociations(taskBId, 'project_task', [persisted.document_id])).toHaveProperty('permissionError');
+      expect(await removeDocumentAssociations(taskBId, 'project_task', [documentBId])).toHaveProperty('permissionError');
+      expect(await table('documents').count('* as count')).toEqual(documentsBefore);
+      expect(await table('document_associations').select('*').orderBy('association_id')).toEqual(associationsBefore);
+      expect(await table('document_folders').select('*').orderBy('folder_id')).toEqual(foldersBefore);
+    }
   });
 
   it('requires document:update for association mutations and parent-document uploads even when read/create are granted', async () => {
