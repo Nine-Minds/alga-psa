@@ -206,4 +206,32 @@ describe('time-entry bundle membership authorization (PostgreSQL)', () => {
       await trx.rollback();
     }
   });
+
+  it.each([
+    ['incomplete', { complete: false, tenant: TENANT, userId: ACTOR, roleIds: [], teamIds: [] }],
+    ['tenant-mismatched', { complete: true, tenant: '82000000-0000-4000-8000-000000000099', userId: ACTOR, roleIds: [], teamIds: [] }],
+    ['user-mismatched', { complete: true, tenant: TENANT, userId: SUBJECT, roleIds: [], teamIds: [] }],
+  ])('reloads memberships when the supplied snapshot is %s', async (_label, snapshot) => {
+    const trx = await db.transaction();
+    try {
+      await createAuthorizationFixture(trx, 'role');
+      const input = {
+        subject: { tenant: TENANT, userId: ACTOR, userType: 'internal' as const, roleIds: [], teamIds: [] },
+        resource: { type: 'ticket', action: 'read' },
+        trustedMembershipSnapshot: snapshot as unknown as {
+          complete: true;
+          tenant: string;
+          userId: string;
+          roleIds: readonly string[];
+          teamIds: readonly string[];
+        },
+        knex: trx,
+      };
+
+      const rules = await resolveBundleNarrowingRulesForEvaluation(trx, input);
+      expect(rules).toHaveLength(1);
+    } finally {
+      await trx.rollback();
+    }
+  });
 });
