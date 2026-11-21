@@ -50,3 +50,12 @@ describe('timeSheetListQuerySchema sort', () => {
     expect(() => timeSheetListQuerySchema.parse({ sort: 'bogus' })).toThrow(ZodError);
   });
 });
+
+describe('timeSheetListQuerySchema timestamp ranges', () => {
+  it('accepts explicit timezone offsets for instant bounds', () => {
+    expect(timeSheetListQuerySchema.parse({ submitted_from: '2025-03-10T08:00:00-04:00' }).submitted_from)
+      .toBe('2025-03-10T08:00:00-04:00');
+    expect(timeSheetListQuerySchema.parse({ approved_to: '2025-03-11T12:00:00+02:00' }).approved_to)
+      .toBe('2025-03-11T12:00:00+02:00');
+  });
+});
