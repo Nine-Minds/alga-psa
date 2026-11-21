@@ -261,6 +261,44 @@ describeDb('ticket chip tag hydration (DB)', () => {
     }
   });
 
+  it('keeps built-in title and status while redacting same-named attributes in Smart Search and hydration', async () => {
+    const redactions = ['attributes.title', 'attributes.status_id'];
+    const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+      trx, ids.tenant, authMocks.user, [ids.A], new Map([[ids.A, redactions]])
+    )));
+    expect(candidates).toHaveLength(1);
+
+    // Capture the request at the scorer boundary, after candidate SQL and candidate assembly.
+    let scoreRequest: unknown;
+    await scoreBatch({ systemOne: async (request: unknown) => {
+      scoreRequest = request;
+      return { model: 'db-test', answers: { c0: { type: 'noul', noul: 0.9 } }, usage: { input_tokens: 1 } } as never;
+    } } as never, ticketSmartSearch.relevance, 'incident', candidates, new AbortController().signal);
+
+    const scorerInput = JSON.stringify(scoreRequest);
+    expect(scorerInput).toContain('DB-SECRET-TITLE');
+    expect(scorerInput).toContain('Open');
+    expect(scorerInput).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
+    expect(scorerInput).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
+
+    // Hydration reauthorizes the row and unions these run-time redactions with fresh policy.
+    const hydrated: any = await ticketSmartSearch.hydrateRows(
+      base, [ids.A], new Map([[ids.A, redactions]])
+    );
+    expect(hydrated.rows).toHaveLength(1);
+    const row = hydrated.rows[0];
+    expect(row).toMatchObject({
+      ticket_id: ids.A,
+      title: 'DB-SECRET-TITLE',
+      status_name: 'Open',
+      attributes: { visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' },
+    });
+    expect(row.attributes).not.toHaveProperty('title');
+    expect(row.attributes).not.toHaveProperty('status_id');
+    expect(JSON.stringify(row)).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
+    expect(JSON.stringify(row)).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
+  });
+
   it('by-id loads preserve list rows and metadata, request order, deduplication and filters', async () => {
     const listed: any = await optimized.getTicketsForList(base, 1, 50);
     expect(listed.tickets).toHaveLength(4);
