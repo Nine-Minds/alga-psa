@@ -7,6 +7,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { getAuthorizedDocumentById } from '@shared/lib/documentAccess';
+import { resolveMeetingDocumentBrowserActor } from '@alga-psa/auth/lib/meetingDocumentActor';
 import { canAuthorizeDocumentAssociation, isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -133,7 +134,7 @@ export const getBlockContent = withAuth(async (
   }
 
   const authorizedDocument = await withTransaction(knex, (trx: Knex.Transaction) =>
-    getAuthorizedDocumentById(trx, tenant, user, documentId)
+    getAuthorizedDocumentById(trx, tenant, user, documentId, () => resolveMeetingDocumentBrowserActor(user, tenant))
   );
   if (!authorizedDocument) {
     return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
@@ -166,7 +167,7 @@ export const updateBlockContent = withAuth(async (
   }
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const document = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+    const document = await getAuthorizedDocumentById(trx, tenant, user, documentId, () => resolveMeetingDocumentBrowserActor(user, tenant));
 
     if (!document) {
       return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');

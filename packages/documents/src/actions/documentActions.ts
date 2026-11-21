@@ -63,6 +63,7 @@ import {
   resolveDocumentReadScope,
   type DocumentReadScope,
 } from '@shared/lib/documentAuthorization';
+import { resolveMeetingDocumentBrowserActor } from '@alga-psa/auth/lib/meetingDocumentActor';
 import { authorizeDocumentsForAction, loadAuthorizedDocumentById } from '@shared/lib/documentAccess';
 import { applyDocumentProductReadScope } from '@shared/lib/documentProductReadScope';
 import { getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -210,7 +211,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
+  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', () => resolveMeetingDocumentBrowserActor(user, tenant), verifiedRecipientLifecycleAccess);
 }
 
 export async function getAuthorizedDocumentByFileId(
@@ -238,7 +239,7 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
-  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read');
+  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read', () => resolveMeetingDocumentBrowserActor(user, tenant));
 }
 
 function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
@@ -278,7 +279,8 @@ async function assertAuthorizedDocumentSetForMutation(
     tenant,
     user,
     documents as IDocument[],
-    'update'
+    'update',
+    () => resolveMeetingDocumentBrowserActor(user, tenant)
   );
 
   if (authorizedDocuments.length !== uniqueDocumentIds.length) {
@@ -487,7 +489,7 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const { knex } = await createTenantKnex();
 
     const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update', () => resolveMeetingDocumentBrowserActor(user, tenant));
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -562,7 +564,7 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
     const { knex } = await createTenantKnex();
 
     const outcome = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
+      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update', () => resolveMeetingDocumentBrowserActor(user, tenant));
       if (!target) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -736,7 +738,7 @@ export const deleteDocument = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete')
+      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete', () => resolveMeetingDocumentBrowserActor(user, tenant))
     );
     if (!authorizedDocumentForDelete) {
       return {
@@ -750,7 +752,7 @@ export const deleteDocument = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
-      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete');
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete', () => resolveMeetingDocumentBrowserActor(user, tenantId));
       if (!authorizedDocument) {
         throw new Error('Permission denied: Cannot delete documents');
       }

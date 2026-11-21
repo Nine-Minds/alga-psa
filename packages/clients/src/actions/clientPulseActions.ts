@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { getAuthorizedDocumentById } from '@alga-psa/shared/lib/documentAccess';
+import { resolveMeetingDocumentBrowserActor } from '@alga-psa/auth/lib/meetingDocumentActor';
 import type { IUser } from '@alga-psa/types';
 import { isDocumentFieldRedacted } from '@alga-psa/shared/lib/documentAuthorization';
 import { toCalendarDateString } from '@alga-psa/core';
@@ -372,7 +373,7 @@ async function fetchNotes(
   if (!notesDocumentId) return legacyPreview();
 
   if (!await hasPermission(user, 'document', 'read', trx)) return empty;
-  const document = await getAuthorizedDocumentById(trx, tenant, user, notesDocumentId);
+  const document = await getAuthorizedDocumentById(trx, tenant, user, notesDocumentId, () => resolveMeetingDocumentBrowserActor(user, tenant));
   // A denied or redacted document must not reveal its preview or a legacy copy.
   if (!document || isDocumentFieldRedacted(document, 'content')) return empty;
 

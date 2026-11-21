@@ -104,7 +104,7 @@ describe('block content action authorization', () => {
     const result = await invoke(getBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1');
 
     expect(result).toMatchObject({ content_id: 'content-1', block_data: '{"secret":"stored-payload"}' });
-    expect(mocks.authorizedDocument).toHaveBeenCalledWith(expect.anything(), 'tenant-a', internalUser, 'document-1');
+    expect(mocks.authorizedDocument).toHaveBeenCalledWith(expect.anything(), 'tenant-a', internalUser, 'document-1', expect.any(Function));
   });
 
   it('does not read or disclose stored block content when the authorizer redacts content', async () => {
