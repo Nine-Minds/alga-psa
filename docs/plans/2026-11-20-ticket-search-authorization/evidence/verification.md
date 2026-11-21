@@ -47,12 +47,19 @@ The application server was not started. No fresh browser walkthrough or producti
 ## Index-ACL-only correction at `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6`
 
 - `canCompileSearchVisibility` now distinguishes absent verifier registrations from registered verifiers without SQL compilers. The former use the shared index ACL count/page route; the latter remain on source-verifier fallback. No entity-specific client special case was added.
-- Added a PostgreSQL behavioral growth regression for the index-ACL-only `client` type. It checks permission and user-visibility filtering, exact totals (90/300/900 from 150/500/1,500 candidates), bounded first pages, and a complete 900-result cursor walk at page size 100. It fails on the pre-fix 10/14/24 statement growth and passes with 10 statements at every size.
+- Added a PostgreSQL behavioral growth regression for the index-ACL-only `client` type. It checks permission and user-visibility filtering, exact totals (90/300/900 from 150/500/1,500 candidates), bounded first pages, and a complete 900-result cursor walk at page size 100. It passes with 10 statements at every size. The earlier diagnostic reproduction recorded one request per size at 10/14/24 statements using fully readable candidates, a different fixture from this ACL-filtered regression.
 - Full affected search behavior and PostgreSQL tests passed: eight files, 87 tests. The benchmark file passed seven tests, including its original mixed scenarios, index-ACL growth case, verifier replacement protections, document fallback, and compiled visibility parity.
 - Seven-read ticket authorization regressions passed: four files, 20 tests. Search/tickets TypeScript checks and `npx nx run search:build` plus `npx nx run tickets:build` passed.
-- Mixed benchmark rerun at this revision used PostgreSQL 15.4, one warmup, five sequential samples, concurrency 1. Mixed queries remained at 9/10 statements, project growth at 10/10, and index-ACL-only client growth at 10/10/10 across 150/500/1,500 matches. Raw output is retained at `/tmp/pr4133-9e3d-benchmark.log`; report tables include raw timings and counts.
+- Mixed benchmark rerun at this revision used PostgreSQL 15.4 and five sequential samples at concurrency 1. Mixed request scenarios had one warmup each; project and client growth checks had no separate warmup. Mixed queries remained at 9/10 statements, project growth at 10/10, and index-ACL-only client growth at 10/10/10 across 150/500/1,500 matches. Raw output is retained at `/tmp/pr4133-9e3d-benchmark.log`; report tables include raw timings and counts.
 - The first benchmark attempt overlapped a second database integration invocation, which reset the shared test database and failed with `database "test_database" does not exist`. That attempt was discarded; the recorded benchmark above was rerun alone and passed.
 - No browser smoke or production validation was performed, and no `security-finding-resolved` check is claimed.
+
+## Independent review at `daa867b4f4cd305bbe659215af5da4acdd246ed0`
+
+- Nine focused search/API/ticket unit files passed 96 tests. The production search authorization, ranking-cursor and benchmark files ran in one sequential invocation and passed 15 PostgreSQL tests. Logs: `/tmp/pr4133-lead-round3-unit.log` and `/tmp/pr4133-lead-round3-db.log`.
+- The search TypeScript check passed. The client growth check again measured 10 statements per request at 150/500/1,500 candidates, with five measured requests per size, no separate warmup, and exact visible totals of 90/300/900. Its measurements are preserved in [index-acl-measurements.json](index-acl-measurements.json).
+- During the documentation correction, the tickets TypeScript check also passed. `npx nx run search:build` and `npx nx run tickets:build` passed using cached task outputs. Logs: `/tmp/pr4133-takeover-search-build.log` and `/tmp/pr4133-takeover-tickets-build.log`. No application code changed after the tested revision.
+- Documentation now separates the earlier single-request diagnostic fixture from the later ACL-filtered benchmark. The diagnostic observations are not repeated as five raw samples or used as an identical-fixture latency comparison.
 
 ## Pre-fix behavioral reproductions
 

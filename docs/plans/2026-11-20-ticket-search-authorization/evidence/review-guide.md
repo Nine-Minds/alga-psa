@@ -16,7 +16,7 @@ Index-ACL-only paging correction: `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6`.
 - [Mixed-search benchmark](benchmark.md#mixed-search-repair-round) contains baseline comparisons and follow-up measurements through `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6`, fixture proportions, PostgreSQL version, raw timings and SQL counts, and reproduction commands.
 - [Verification record](verification.md#mixed-search-performance-repair) lists the PostgreSQL behavior suites, seven-read authorization suites, typechecks and Nx builds.
 - The baseline harness was run at `bdca35983cc22c75f9b07ffd797aedc8463b2129` and failed the growth assertion at 160 statements for 150 project matches versus 515 for 500. The corrected revision `46aac638eb6823db6645e81c8a147a78c90a4abd` passed at 10 statements for both sizes. The supplied review reproductions failed at the pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb`.
-- The round-2 PostgreSQL reproduction at `2e4ad092a5d99ac2c443ec15ce27e52b6da1cd0c` measured index-ACL-only client searches at 10, 14 and 24 statements for 150, 500 and 1,500 matches. At `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6`, those fixtures use 10 statements at every size.
+- The round-2 PostgreSQL reproduction at `2e4ad092a5d99ac2c443ec15ce27e52b6da1cd0c` recorded one request each at 10, 14 and 24 statements for 150, 500 and 1,500 fully readable client matches. The committed regression at `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6` uses a different fixture with 40% of index candidates denied by ACL. Five requests at each size use 10 statements, with exact visible totals of 90/300/900. See [sampling and fixture provenance](index-acl-measurements.json); these are not identical-fixture latency comparisons.
 
 ## Authorization and pagination checks
 
