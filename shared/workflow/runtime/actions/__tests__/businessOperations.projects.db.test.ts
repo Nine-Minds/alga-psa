@@ -30,7 +30,30 @@ const runtimeState = vi.hoisted(() => ({
   actorUserId: '',
   deniedPermissions: new Set<string>(),
   useActualPermissions: false,
+  failTicketUpdateBundleResolver: false,
 }));
+
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>();
+
+  return {
+    ...actual,
+    resolveBundleNarrowingRulesForEvaluation: async (
+      trx: Knex.Transaction,
+      input: Parameters<typeof actual.resolveBundleNarrowingRulesForEvaluation>[1],
+      options?: Parameters<typeof actual.resolveBundleNarrowingRulesForEvaluation>[2]
+    ) => {
+      if (
+        runtimeState.failTicketUpdateBundleResolver &&
+        input?.resource?.type === 'ticket' &&
+        input?.resource?.action === 'update'
+      ) {
+        throw new Error('Injected ticket:update bundle resolver failure');
+      }
+      return actual.resolveBundleNarrowingRulesForEvaluation(trx, input, options);
+    },
+  };
+});
 
 vi.mock('../businessOperations/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../businessOperations/shared')>();
@@ -610,6 +633,7 @@ describe('project business operation db actions', () => {
   beforeEach(async () => {
     runtimeState.deniedPermissions.clear();
     runtimeState.useActualPermissions = false;
+    runtimeState.failTicketUpdateBundleResolver = false;
     runtimeState.tenantId = await createTenant(db, 'Project Test Tenant');
     runtimeState.actorUserId = await createUser(db, runtimeState.tenantId, { email: `actor-${Date.now()}@example.com` });
   });
@@ -1959,6 +1983,33 @@ describe('project business operation db actions', () => {
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
 
     expect(await tenantTable(db, tenant, 'project_tasks').where({ phase_id: phaseId, task_name: 'Denied by ticket scope' }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'project_ticket_links').where({ project_id: projectId, ticket_id: ticketId }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'ticket_entity_links').where({ ticket_id: ticketId }).first()).toBeUndefined();
+  });
+
+  it('aborts linked task creation when ticket:update bundle resolution fails before persisting any task or links', async () => {
+    const tenant = runtimeState.tenantId;
+    const projectClient = await createClientOrCompany(db, tenant);
+    const ticketClient = await createClientOrCompany(db, tenant);
+    const projectId = await createProject(db, tenant, {
+      name: 'Ticket resolver failure project',
+      clientOrCompanyId: projectClient.clientId,
+    });
+    const phaseId = await createPhase(db, tenant, projectId, { name: 'Ticket resolver failure phase' });
+    const ticketId = await createTicket(db, tenant, runtimeState.actorUserId, { clientId: ticketClient.clientId });
+    await createTaskTicketScopeBundle(db, tenant, runtimeState.actorUserId, projectClient.clientId, [ticketClient.clientId], [ticketClient.clientId]);
+    await grantPermissions(db, tenant, runtimeState.actorUserId, [['project_task', 'create'], ['ticket', 'update']]);
+    runtimeState.useActualPermissions = true;
+    runtimeState.failTicketUpdateBundleResolver = true;
+
+    await expect(invokeAction('projects.create_task', {
+      project_id: projectId,
+      phase_id: phaseId,
+      title: 'Aborted after ticket resolver failure',
+      link_ticket_id: ticketId,
+    })).rejects.toThrow('Injected ticket:update bundle resolver failure');
+
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ phase_id: phaseId, task_name: 'Aborted after ticket resolver failure' }).first()).toBeUndefined();
     expect(await tenantTable(db, tenant, 'project_ticket_links').where({ project_id: projectId, ticket_id: ticketId }).first()).toBeUndefined();
     expect(await tenantTable(db, tenant, 'ticket_entity_links').where({ ticket_id: ticketId }).first()).toBeUndefined();
   });

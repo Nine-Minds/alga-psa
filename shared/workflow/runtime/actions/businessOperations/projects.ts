@@ -1128,13 +1128,7 @@ async function createTicketAuthorizer(
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(tx.trx, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(tx.trx, input),
     }),
     rbacEvaluator: async () => true,
   });
