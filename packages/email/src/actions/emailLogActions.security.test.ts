@@ -126,6 +126,23 @@ describe('getEmailLogsForTicket security', () => {
     expect(emailQueries).toHaveLength(0);
   });
 
+  it('denies a caller without ticket read permission before loading authorization facts or correspondence', async () => {
+    permissionMock.mockResolvedValue(false);
+
+    await expect(getEmailLogsForTicket('ticket-1')).rejects.toThrow('Permission denied: cannot read ticket');
+    expect(snapshotMock).not.toHaveBeenCalled();
+    expect(emailQueries).toHaveLength(0);
+  });
+
+  it('denies a client caller even when ticket read permission would be granted', async () => {
+    currentUser = { ...internalReader, user_type: 'client' };
+
+    await expect(getEmailLogsForTicket('ticket-1')).rejects.toThrow('Permission denied: email log actions are internal-only');
+    expect(permissionMock).not.toHaveBeenCalled();
+    expect(snapshotMock).not.toHaveBeenCalled();
+    expect(emailQueries).toHaveLength(0);
+  });
+
   it('returns the ticket UI fields only for an authorized reader', async () => {
     const result = await getEmailLogsForTicket('ticket-1');
 
