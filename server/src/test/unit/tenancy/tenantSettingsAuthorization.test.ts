@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  user: { user_id: 'internal-1', user_type: 'internal', roles: [] as any[] },
+  user: { user_id: 'internal-1', user_type: 'internal', tenant: 'tenant-a', roles: [] as any[] },
   tenant: 'tenant-a',
   permissions: new Set<string>(),
   row: {
@@ -19,6 +19,7 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: async (_user: unknown, resource: string, action: string) => state.permissions.has(`${resource}:${action}`),
 }));
 vi.mock('@alga-psa/db', () => ({
+  getConnection: async () => ({}),
   ensureMiscellaneousService: vi.fn(),
   createTenantKnex: async (tenant?: string) => ({ knex: {}, tenant: tenant ?? state.tenant }),
   tenantDb: (_knex: any, tenant: string) => ({
@@ -46,7 +47,7 @@ import { getTenantSettings, getTenantTimezoneAuth, setTenantTimezone, updateExpe
 
 describe('tenant settings action authorization', () => {
   beforeEach(() => {
-    state.user = { user_id: 'internal-1', user_type: 'internal', roles: [] };
+    state.user = { user_id: 'internal-1', user_type: 'internal', tenant: 'tenant-a', roles: [] };
     state.tenant = 'tenant-a';
     state.permissions = new Set();
     state.calls = [];
@@ -70,7 +71,7 @@ describe('tenant settings action authorization', () => {
     await expect(getTenantTimezoneAuth()).rejects.toThrow('Cannot read tenant timezone');
     expect(state.calls).toEqual([]);
 
-    state.user = { user_id: 'internal-1', user_type: 'internal', roles: [] };
+    state.user = { user_id: 'internal-1', user_type: 'internal', tenant: 'tenant-a', roles: [] };
     state.permissions.clear();
     await expect(getTenantTimezoneAuth()).rejects.toThrow('Cannot read tenant timezone');
     expect(state.calls).toEqual([]);
@@ -108,7 +109,7 @@ describe('tenant settings action authorization', () => {
     await expect(setTenantTimezone('America/New_York')).resolves.toHaveProperty('permissionError');
     expect(state.calls).toEqual([]);
 
-    state.user = { user_id: 'internal-1', user_type: 'internal', roles: [] };
+    state.user = { user_id: 'internal-1', user_type: 'internal', tenant: 'tenant-a', roles: [] };
     state.permissions.add('settings:update');
     await expect(setTenantTimezone('EST')).resolves.toHaveProperty('actionError');
     expect(state.calls).toEqual([]);

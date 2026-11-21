@@ -82,17 +82,14 @@ function asCaller(userTenant: string, actionTenant = userTenant): void {
   authMocks.contextTenant = actionTenant;
 }
 
-const update = {
-  branding: { clientName: 'Updated tenant' },
-  theme: { pairId: 'alga' },
-  defaultLocale: 'fr',
-  clientPortal: { defaultLocale: 'fr' },
-  timezone: 'America/New_York',
+const brandingUpdate = {
+  logoUrl: '/test-logo.png',
+  primaryColor: '#112233',
+  secondaryColor: '#445566',
+  clientName: 'Updated tenant',
 };
 
-describe('updateTenantSettings action authorization with PostgreSQL', () => {
-  let updateTenantSettings: typeof import('../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions').updateTenantSettings;
-
+describe('tenant settings action authorization with PostgreSQL', () => {
   beforeAll(async () => {
     wireLocalTestDbEnv();
     db = await createTestDbConnection({
@@ -115,7 +112,6 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     setTenantTimezone = settings.setTenantTimezone;
     getTenantLocaleSettingsAction = locale.getTenantLocaleSettingsAction;
     getTenantClientPortalLocaleAction = portalLocale.getTenantClientPortalLocaleAction;
-    updateTenantSettings = settings.updateTenantSettings;
   }, 600_000);
 
   afterEach(async () => {
@@ -133,14 +129,22 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     await db?.destroy();
   });
 
-  it('persists authorized settings in JSONB and preserves existing values', async () => {
+  it('persists authorized branding in JSONB and preserves existing values', async () => {
     const tenant = await createTenant({ existingSetting: 'preserved' });
     asCaller(tenant);
     authMocks.hasPermission.mockResolvedValue(true);
 
-    await updateTenantSettings(update);
+    await updateTenantBrandingAction(brandingUpdate);
 
-    expect(await readSettings(tenant)).toEqual({ existingSetting: 'preserved', ...update });
+    expect(await readSettings(tenant)).toMatchObject({
+      existingSetting: 'preserved',
+      branding: {
+        logoUrl: brandingUpdate.logoUrl,
+        primaryColor: brandingUpdate.primaryColor,
+        secondaryColor: brandingUpdate.secondaryColor,
+        clientName: brandingUpdate.clientName,
+      },
+    });
     expect(authMocks.hasPermission).toHaveBeenCalledWith(
       authMocks.user,
       'settings',
@@ -187,7 +191,7 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     asCaller(tenant);
     authMocks.hasPermission.mockResolvedValue(false);
 
-    await expect(updateTenantSettings(update)).rejects.toThrow('Permission denied: Cannot update settings');
+    await expect(updateTenantBrandingAction(brandingUpdate)).rejects.toThrow('Permission denied: Cannot update settings');
 
     expect(await readSettings(tenant)).toEqual(before);
   });
@@ -198,7 +202,7 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     asCaller(tenant);
     authMocks.hasPermission.mockRejectedValue(new Error('permission database unavailable'));
 
-    await expect(updateTenantSettings(update)).rejects.toThrow('Permission denied: Cannot update settings');
+    await expect(updateTenantBrandingAction(brandingUpdate)).rejects.toThrow('Permission denied: Cannot update settings');
 
     expect(await readSettings(tenant)).toEqual(before);
   });
@@ -211,7 +215,7 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     asCaller(callerTenant, actionTenant);
     authMocks.hasPermission.mockResolvedValue(true);
 
-    await expect(updateTenantSettings(update)).rejects.toThrow('Permission denied: Cannot update settings');
+    await expect(updateTenantBrandingAction(brandingUpdate)).rejects.toThrow('Permission denied: Cannot update settings');
 
     expect(authMocks.hasPermission).not.toHaveBeenCalled();
     expect(await readSettings(actionTenant)).toEqual(actionBefore);
@@ -225,9 +229,14 @@ describe('updateTenantSettings action authorization with PostgreSQL', () => {
     asCaller(actionTenant);
     authMocks.hasPermission.mockResolvedValue(true);
 
-    await updateTenantSettings({ ...update, tenant: otherTenant });
+    await updateTenantBrandingAction({ ...brandingUpdate, tenant: otherTenant } as any);
 
-    expect(await readSettings(actionTenant)).toEqual({ branding: { clientName: 'Action tenant' }, ...update, tenant: otherTenant });
+    expect(await readSettings(actionTenant)).toMatchObject({
+      branding: {
+        logoUrl: brandingUpdate.logoUrl,
+        clientName: brandingUpdate.clientName,
+      },
+    });
     expect(await readSettings(otherTenant)).toEqual(otherBefore);
   });
 });
