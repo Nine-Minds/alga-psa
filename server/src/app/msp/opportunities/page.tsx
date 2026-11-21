@@ -8,8 +8,7 @@ import { getManagementAvailability } from '@enterprise/lib/opportunities/actions
 import { OpportunityForecastView } from '@/components/opportunities/OpportunityForecastView';
 import { OpportunityMeetingMode } from '@/components/opportunities/OpportunityMeetingMode';
 import { OpportunitiesHubHost } from '@/components/opportunities/OpportunitiesHubHost';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient, IOpportunityListItem, IWorkQueue } from '@alga-psa/types';
+import type { IOpportunityListItem, IWorkQueue } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -31,13 +30,11 @@ export default async function OpportunitiesPage() {
 
   let items: IOpportunityListItem[] = [];
   let total = 0;
-  let clients: IClient[] = [];
   let queue: IWorkQueue | null = null;
   // Load independently so one failure (e.g. a missing opportunities permission)
-  // doesn't blank the others — an empty clients list breaks the create dialog.
-  const [listResult, clientsResult, queueResult] = await Promise.allSettled([
+  // doesn't blank the others.
+  const [listResult, queueResult] = await Promise.allSettled([
     listOpportunities({ status: 'all', page: 1, page_size: DEFAULT_OPPORTUNITY_PAGE_SIZE }),
-    getAllClients(false),
     getWorkQueue(),
   ]);
   if (listResult.status === 'fulfilled') {
@@ -45,11 +42,6 @@ export default async function OpportunitiesPage() {
     total = listResult.value.total;
   } else {
     console.error('opportunities: list load failed', listResult.reason);
-  }
-  if (clientsResult.status === 'fulfilled') {
-    clients = clientsResult.value;
-  } else {
-    console.error('opportunities: clients load failed', clientsResult.reason);
   }
   if (queueResult.status === 'fulfilled') {
     queue = queueResult.value;
@@ -88,7 +80,6 @@ export default async function OpportunitiesPage() {
       initialItems={items}
       initialTotal={total}
       initialQueue={queue}
-      initialClients={clients}
       draftingAvailable={draftingAvailable}
       eeTabs={eeTabs}
       userPreferenceKey={String((session.user as any).user_id ?? session.user.email ?? 'current-user')}

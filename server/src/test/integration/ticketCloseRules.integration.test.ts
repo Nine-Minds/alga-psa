@@ -12,7 +12,9 @@ const userRef = vi.hoisted(() => ({
   user: null as any,
 }));
 
-const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const hasPermissionMock = vi.hoisted(() =>
+  vi.fn<typeof import('@alga-psa/auth').hasPermission>(async () => true)
+);
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() =>
   vi.fn<typeof import('server/src/lib/eventBus/publishers').publishWorkflowEvent>(async () => undefined)
@@ -628,15 +630,35 @@ describe('ticket close rules', () => {
     expect(check.failures.map((f) => f.rule)).toEqual(['time_entry']);
     expect(check.canOverride).toBe(true);
 
-    hasPermissionMock.mockResolvedValue(false);
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      resource === 'ticket' && action === 'read'
+    );
     check = await checkTicketClosure(ticketId, fixture.closedStatusId);
+    expect(check.wouldClose).toBe(true);
+    expect(check.allowed).toBe(false);
+    expect(check.failures.map((f) => f.rule)).toEqual(['time_entry']);
     expect(check.canOverride).toBe(false);
 
-    // A non-closing status change is always allowed
+    // An authorized non-closing status change does not evaluate closure gates.
     check = await checkTicketClosure(ticketId, fixture.waitingStatusId);
     expect(check.wouldClose).toBe(false);
     expect(check.allowed).toBe(true);
   });
+
+  it.each(['closedStatusId', 'waitingStatusId'] as const)(
+    'T019a: checkTicketClosure requires ticket:read for %s even with close_override',
+    async (statusKey) => {
+      const ticketId = await insertTicket(db, fixture);
+      await setBoardCloseRules(db, fixture, { require_time_entry: true });
+      hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+        resource === 'ticket' && action === 'close_override'
+      );
+
+      await expect(checkTicketClosure(ticketId, fixture[statusKey])).rejects.toThrow(
+        'Permission denied: Cannot read tickets'
+      );
+    }
+  );
 
   it('T020: exempt sources bypass with an audited trail through the shared helper', async () => {
     const ticketId = await insertTicket(db, fixture);

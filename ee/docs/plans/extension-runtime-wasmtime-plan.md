@@ -108,6 +108,12 @@ Keep this checklist synchronized with the master metadata plan as we close the r
 
 ### Runtime environment configuration
 
+> **Superseded (2025-12-24, `6919425ba9`):** the UI proxy no longer uses a shared
+> `UI_PROXY_AUTH_KEY` / `x-runner-auth` secret. The runner authenticates UI proxy calls
+> with the extension's own `api_key` secret (sent as `x-api-key`, plus `x-user-id` /
+> `x-user-email` for activity logging), and `UI_PROXY_AUTH_KEY` has been removed from the
+> runner. The description below is kept as a historical record of the original design.
+
 The runner now expects explicit configuration when the UI proxy capability is enabled:
 
 - `UI_PROXY_BASE_URL` (required): Base URL for forwarding `ui_proxy.call_route` requests, e.g. `http://localhost:3000/api/ui-proxy`. The runner appends `/<extensionId>/<route>` to this base when dispatching.

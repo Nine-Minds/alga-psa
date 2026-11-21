@@ -1,0 +1,11 @@
+Current post-restore probe: 2026-11-04T01:16:09Z
+Card project: d4555320-ddb9-46dd-ac25-5ad49bc25721
+Original board service: card-service:d4555320-ddb9-46dd-ac25-5ad49bc25721:dev-server:1
+Serving Ryzen checkout revision: ceea010c606f94bd2fbf504603471cc9e27e812e
+Application source revision under test: 7ed5e379d4fe6d3dfd1158fbd60ec0043b9e8ebb (intervening commits are documentation only)
+
+GET /api/health: HTTP 200
+{"status":"ok","version":"1.0.0"}
+GET /auth/msp/signin: HTTP 200
+
+Additional pre-restore probes and the 2026-11-04T01:04:37Z board lifecycle restart are described in current-mitigation-2026-11-04.md.

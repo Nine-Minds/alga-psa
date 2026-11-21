@@ -74,3 +74,33 @@ composer. Users can still switch an individual reply to Client. In the classic
 view, explicitly selecting the Client, Internal, or Resolution tab keeps that
 tab's existing composer behavior. Replies within existing threads still inherit
 their parent comment's visibility, and client portal replies are unchanged.
+
+## Default for "Don't notify the customer"
+
+Under **Settings > Notifications > Email > Settings**, next to **Enable
+Notifications**, turn on **Start tickets with "Don't notify the customer"
+ticked** to start every such checkbox ticked
+for every team member. This tenant-wide setting is off by default, preserving
+the existing behavior where each action notifies the customer unless the agent
+ticks the box.
+
+It is a notification policy, so it is stored as the
+`notification_settings.default_dont_notify_customer` boolean column (added by
+migration `20261102190256_add_default_dont_notify_customer_to_notification_settings`,
+default `false`) beside the tenant-wide `is_enabled` switch. The settings form
+requires `settings:read` to view and `settings:update` to change it. The MSP
+layout reads it once on the server and hands it to every ticket surface, so
+dialogs open with the right value without a client-side fetch.
+
+The setting covers every place the checkbox appears: comments, status changes
+(including bulk status changes), contact changes, ticket closure and resolution,
+bulk assign / priority / due-date dialogs, and the mobile ticket screens. Only
+the customer box is pre-ticked — "also don't notify agents" always starts off,
+because silencing the internal team is a much larger change in behavior than a
+routine "don't email me" request.
+
+The setting only supplies the starting value. An agent can untick (or tick) the
+box for any single action and that choice is what is saved; the default never
+overwrites a deliberate selection. If the settings read fails, the checkboxes
+fall back to unticked. The mobile app receives the same flag through its
+capabilities endpoint, so an older server simply leaves mobile checkboxes off.

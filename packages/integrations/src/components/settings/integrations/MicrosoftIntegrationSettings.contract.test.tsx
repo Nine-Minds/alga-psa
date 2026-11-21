@@ -157,7 +157,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
     scopes: {
       sso: ['openid', 'profile', 'email'],
       email: ['Mail.Read', 'Mail.Send', 'offline_access'],
-      calendar: ['Calendars.ReadWrite', 'offline_access'],
+      calendar: ['Calendars.ReadWrite', 'MailboxSettings.ReadWrite', 'offline_access'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
     },
     config: {

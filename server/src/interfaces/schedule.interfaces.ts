@@ -5,7 +5,10 @@ import { WorkItemType } from './workItem.interfaces';
 export interface IRecurrencePattern {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
+  /** Monday = 0 … Sunday = 6. */
   daysOfWeek?: number[];
+  /** nth weekday of the month/year, paired with daysOfWeek (-1 = last). */
+  weekOfMonth?: 1 | 2 | 3 | 4 | -1;
   dayOfMonth?: number;
   monthOfYear?: number;
   startDate: Date;
@@ -13,6 +16,8 @@ export interface IRecurrencePattern {
   exceptions?: Date[];
   count?: number;
   workdaysOnly?: boolean;
+  /** IANA zone the series is anchored in; keeps local wall time across DST. */
+  timeZone?: string;
 }
 
 export interface HighlightedSlot {

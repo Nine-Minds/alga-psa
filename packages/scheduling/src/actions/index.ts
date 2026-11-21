@@ -6,6 +6,7 @@ export * from './timeEntryActions';
 export * from './stopwatchActions';
 export * from './workTrailActions';
 export * from './timeEntryChangeRequestActions';
+export * from './operationalTimeEntryActions';
 export * from './timeEntrySchemas';
 export * from './timePeriodsActions';
 // Re-export timeSheetActions but exclude duplicate fetchTimeEntriesForTimeSheet

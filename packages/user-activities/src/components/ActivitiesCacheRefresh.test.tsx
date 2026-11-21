@@ -27,12 +27,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUserPreference: (key: string, opts: any) => {
     if (key === 'activitiesListViewMode') {
-      return { value: 'flat', setValue: mocks.setListViewMode, hasLoadedInitial: true };
+      return { value: 'flat', setValue: mocks.setListViewMode, hasLoadedInitial: true, hasResolved: true };
     }
     if (key === 'activitiesTableFilters') {
-      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: mocks.prefs.filtersLoaded };
+      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: mocks.prefs.filtersLoaded, hasResolved: mocks.prefs.filtersLoaded };
     }
-    return { value: opts.defaultValue, setValue: vi.fn(), hasLoadedInitial: true };
+    return { value: opts.defaultValue, setValue: vi.fn(), hasLoadedInitial: true, hasResolved: true };
   },
 }));
 vi.mock('../actions/activityServerActions', () => ({ fetchActivities: mocks.getActivities }));
@@ -40,7 +40,6 @@ vi.mock('./MyActivityGroupsProvider', () => ({ useMyActivityGroups: () => mocks.
 // Stable ctx: the section's mount effects depend on it, so a fresh object per render would
 // loop once the provider re-renders the section.
 const stableCrossFeature = {
-  getAllClients: async () => [],
   getProjectsWithPhases: async () => [],
 };
 vi.mock('@alga-psa/ui/context', () => ({

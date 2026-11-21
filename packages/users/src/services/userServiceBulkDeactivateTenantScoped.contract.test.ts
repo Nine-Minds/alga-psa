@@ -23,4 +23,26 @@ describe('user service bulk deactivate tenant-scoped query contract', () => {
     expect(section).not.toMatch(/trx\('users'\)\s*\./);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);
   });
+
+  it('clears the deactivated users as board default assignees, as the settings UI does', () => {
+    const section = sectionBetween('async bulkDeactivateUsers', 'private async publishBulkActivationEvents');
+
+    expect(section).toContain("tenantDb(trx, context.tenant).table('boards')");
+    expect(section).toContain(".whereIn('default_assigned_to', changedUserIds)");
+    expect(section).toContain('.update({ default_assigned_to: null })');
+    expect(section).toMatch(/if \(deactivate && changedUserIds\.length > 0\)/);
+  });
+
+  it('publishes USER_UPDATED for the changed users only after the transaction commits', () => {
+    const section = sectionBetween('async bulkDeactivateUsers', 'private async publishBulkActivationEvents');
+    const transactionEnd = section.indexOf('});\n\n    // After commit');
+    const publish = section.indexOf('await this.publishBulkActivationEvents(changedUserIds, context)');
+
+    expect(transactionEnd).toBeGreaterThan(0);
+    expect(publish).toBeGreaterThan(transactionEnd);
+
+    const publisher = sectionBetween('private async publishBulkActivationEvents', 'ANALYTICS & REPORTING');
+    expect(publisher).toContain("eventType: 'USER_UPDATED'");
+    expect(publisher).toContain("changedFields: ['is_inactive']");
+  });
 });

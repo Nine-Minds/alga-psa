@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ColumnDefinition, IClient, IContact, IInteraction, IInteractionType } from '@alga-psa/types';
+import type { ColumnDefinition, IContact, IInteraction, IInteractionType } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { Filter, Plus, XCircle } from 'lucide-react';
 import {
   getAllInteractionTypes,
   getInteractionStatuses,
   getInteractionsPage,
+  getClientById,
 } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { useClientNames } from '@alga-psa/ui/hooks';
 import { useClientDrawer, useDrawer } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
@@ -38,7 +41,6 @@ import { useContactQuickViewDrawer } from '../contacts/bento/useContactQuickView
 interface OverallInteractionsFeedProps {
   users: IUser[];
   contacts: IContact[];
-  clients: IClient[];
   onOpenUser?: (userId: string, onUpdate?: () => void) => void;
 }
 
@@ -129,7 +131,6 @@ function EntityLinkCell({
 export default function OverallInteractionsFeed({
   users,
   contacts,
-  clients,
   onOpenUser,
 }: OverallInteractionsFeedProps) {
   const { t } = useTranslation('msp/clients');
@@ -298,10 +299,12 @@ export default function OverallInteractionsFeed({
     );
   }, [openDrawer, refreshInteractions]);
 
-  const clientsById = useMemo(
-    () => new Map(clients.map((client) => [client.client_id, client])),
-    [clients],
+  // Logos for the clients on the visible page, by id. The tenant's client list is never loaded.
+  const pageClientIds = useMemo(
+    () => Array.from(new Set(interactions.map((interaction) => interaction.client_id).filter((id): id is string => !!id))),
+    [interactions],
   );
+  const { clients: clientsById } = useClientNames(pageClientIds, searchClientsForPicker);
   const contactsById = useMemo(
     () => new Map(allContacts.map((contact) => [contact.contact_name_id, contact])),
     [allContacts],
@@ -317,11 +320,14 @@ export default function OverallInteractionsFeed({
       return;
     }
 
-    const client = clientsById.get(clientId);
-    if (client) {
-      openDrawer(<ClientQuickView client={client} isInDrawer quickView />);
-    }
-  }, [clientDrawer, clientsById, openDrawer]);
+    void getClientById(clientId).then((client) => {
+      if (client) {
+        openDrawer(<ClientQuickView client={client} isInDrawer quickView />);
+      }
+    }).catch((error) => {
+      console.error('Error fetching client details:', error);
+    });
+  }, [clientDrawer, openDrawer]);
 
   const columns = useMemo<ColumnDefinition<InteractionTableRow>[]>(() => [
     {
@@ -372,7 +378,7 @@ export default function OverallInteractionsFeed({
       width: '15%',
       sortable: false,
       render: (_value, interaction) => {
-        const client = interaction.client_id ? clientsById.get(interaction.client_id) : undefined;
+        const client = interaction.client_id ? clientsById[interaction.client_id] : undefined;
         const name = client?.client_name ?? interaction.client_name;
         return (
           <EntityLinkCell
@@ -532,7 +538,7 @@ export default function OverallInteractionsFeed({
             />
             <ClientPicker
               id="overall-interactions-client-filter"
-              clients={clients}
+              searchClients={searchClientsForPicker}
               onSelect={(clientId) => changeFilter(() => {
                 setSelectedClient(clientId || 'all');
                 setSelectedContact('all');
@@ -619,7 +625,6 @@ export default function OverallInteractionsFeed({
           setCurrentPage(1);
           setIsQuickAddContactOpen(false);
         }}
-        clients={clients}
         selectedClientId={selectedClient === 'all' ? undefined : selectedClient}
       />
       <QuickAddInteraction

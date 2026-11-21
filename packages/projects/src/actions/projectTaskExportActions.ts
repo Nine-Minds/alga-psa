@@ -368,7 +368,7 @@ export const exportProjectTasksToCSV = withAuth(async (
   taskIds?: string[],
 ): Promise<{ csv: string; count: number } | ProjectTaskExportActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'project_actions');
+    await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: _user.user_id }, 'project_actions');
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {

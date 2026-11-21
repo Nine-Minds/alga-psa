@@ -7,13 +7,24 @@ import type { Knex } from 'knex';
  * so no extension can fail a native ticket write. `rollback` opts a handler into
  * propagating its error (the caller's transaction then rolls back).
  *
- * No native call site dispatches yet; adoption is a later card.
+ * Dispatched today by extension-owned writers: `handoff`, `firstResponse` and `seatResponsibility`. Not yet dispatched:
+ * resolved, reopened, awaitingClient (native writers; adoption is L0c or a follow-up card).
  */
 
 export type TicketLifecycleEvent =
   | { kind: 'resolved'; tenant: string; ticketId: string; statusId?: string; actorUserId?: string }
   | { kind: 'reopened'; tenant: string; ticketId: string; statusId?: string; actorUserId?: string }
   | { kind: 'awaitingClient'; tenant: string; ticketId: string; previous: string | null; next: string | null }
+  // Additive (L6b): responsibility changes on shared work, and the first reply from the other organization.
+  | { kind: 'handoff'; tenant: string; ticketId: string; relationshipId: string; workId: string; operationId: string;
+      transition: 'escalated' | 'handed_back' | 'access_revoked' | 'reopened'; firstEscalatedAt: string | null; occurredAt: string }
+  // Seat responsibility (seat arrangement): who is responsible for the ticket changed. Distinct
+  // from `handoff`, which belongs to the L6b relationship workflow. `operationId` is the handoff
+  // operation, or null when responsibility returned to the MSP because the ticket left the arrangement's scope.
+  | { kind: 'seatResponsibility'; tenant: string; ticketId: string; arrangementId: string;
+      from: 'client_it' | 'msp'; to: 'client_it' | 'msp'; operationId: string | null; occurredAt: string; actorUserId?: string }
+  | { kind: 'firstResponse'; tenant: string; ticketId: string; relationshipId: string; commentId: string;
+      actorTenant: string; actorUserId: string; actorReferenceId: string }
   | { kind: 'beforeSourceChange'; tenant: string; ticketId: string; fields: Record<string, unknown>; actorUserId?: string };
 
 export type TicketLifecycleKind = TicketLifecycleEvent['kind'];

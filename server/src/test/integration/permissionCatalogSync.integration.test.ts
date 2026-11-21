@@ -212,13 +212,28 @@ describe('permission catalog synchronization integration', () => {
 
   it('rolls the tenant back when a required default role is missing', async () => {
     const tenantId = await provisionTenant('psa');
-    await table(tenantId, 'roles').where({ role_name: 'Dispatcher', msp: true }).del();
+    await table(tenantId, 'roles').where({ role_name: 'Admin', client: true }).del();
     const before = await counts(tenantId);
 
     await expect(syncPermissionCatalog(ctx.db, tenantId, 'psa'))
-      .rejects.toThrow(/has no psa default role \(role_name="Dispatcher"/);
+      .rejects.toThrow(/has no psa default role \(role_name="Admin", msp=false, client=true\)/);
 
     expect(await counts(tenantId)).toEqual(before);
+  }, HOOK_TIMEOUT);
+
+  it('reconciles a tenant that deleted a non-required default role, granting nothing to it', async () => {
+    const tenantId = await provisionTenant('psa');
+    await table(tenantId, 'roles').where({ role_name: 'User', client: true }).del();
+
+    const result = await syncPermissionCatalog(ctx.db, tenantId, 'psa');
+
+    const rows = await table(tenantId, 'permissions').select('resource', 'action', 'msp', 'client');
+    expect(rows.map((row: any) => catalog.permissionIdentity(row)).sort())
+      .toEqual(catalog.getProductPermissions('psa').map(catalog.permissionIdentity).sort());
+    const mspAdmin = await roleId(tenantId, 'Admin', true);
+    expect(Number((await table(tenantId, 'role_permissions').where({ role_id: mspAdmin }).count({ total: '*' }).first() as any).total))
+      .toBe(compileRoleGrants('psa').get('msp:Admin')!.identities.length);
+    expect(result.insertedGrants.some((grant: any) => grant.roleKey === 'client:User')).toBe(false);
   }, HOOK_TIMEOUT);
 
   it('keeps products isolated and refuses a mismatched product catalog', async () => {

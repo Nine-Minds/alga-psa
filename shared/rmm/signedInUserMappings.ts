@@ -43,6 +43,22 @@ export interface RmmSignedInUserRow {
   samples: string[];
 }
 
+export interface RmmUserMappingAuthorizationRequest {
+  assetIds: string[];
+  contactId: string | null;
+  integrationId: string;
+}
+
+/** A policy denial; unexpected failures must still abort the transaction. */
+export class RmmUserMappingAuthorizationError extends Error {
+  constructor() {
+    super('Permission denied: Cannot access this RMM user mapping');
+    this.name = 'RmmUserMappingAuthorizationError';
+  }
+}
+
+export type AuthorizeRmmUserMapping = (request: RmmUserMappingAuthorizationRequest) => Promise<void>;
+
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string): Knex.QueryBuilder<any, any> {
   return tenantDb(conn, tenant).table(name) as Knex.QueryBuilder<any, any>;
 }
@@ -88,7 +104,8 @@ export async function getAssetSignedInUser(
 export async function suggestContactForAsset(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  assetId: string
+  assetId: string,
+  authorize: AuthorizeRmmUserMapping
 ): Promise<RmmSignedInUserSuggestion | null> {
   const asset = await table(conn, tenant, 'assets')
     .where({ asset_id: assetId })
@@ -129,6 +146,10 @@ export async function suggestContactForAsset(
   if (!mapping) return null;
   if ((mapping.contact_assignment_mode ?? 'suggest') === 'off') return null;
 
+  // The shared core is public to multiple server actions. Never expose asset
+  // telemetry or integration details when a caller forgets its policy callback.
+  if (typeof authorize !== 'function') throw new RmmUserMappingAuthorizationError();
+
   try {
     const workspace = await table(conn, tenant, 'asset_group_members as m')
       .join('asset_groups as g', function joinGroups(this: Knex.JoinClause) {
@@ -144,6 +165,13 @@ export async function suggestContactForAsset(
     if (!isMissingAssetGroupTable(error)) throw error;
   }
 
+  // Authorize the asset and integration before reading the signed-in identity.
+  await authorize({
+    assetIds: [assetId],
+    contactId: null,
+    integrationId: mapping.integration_id,
+  });
+
   const rawUser = await getAssetSignedInUser(conn, tenant, assetId);
   const normalized = normalizeRmmUsername(rawUser);
   if (!normalized || !rawUser) return null;
@@ -156,6 +184,12 @@ export async function suggestContactForAsset(
     asset.rmm_provider,
     normalized
   );
+
+  await authorize({
+    assetIds: [assetId],
+    contactId: match?.contactId ?? null,
+    integrationId: mapping.integration_id,
+  });
 
   const contactName = match
     ? (await table(conn, tenant, 'contacts')
@@ -193,24 +227,81 @@ export async function mapSignedInUserToContact(
     contactId: string | null;
     assignAssetId?: string | null;
     actorUserId?: string | null;
+    authorize: AuthorizeRmmUserMapping;
   }
 ): Promise<{ key: string; assignedAssetIds: string[] }> {
+  // Fail closed at the shared mutation boundary. The callback is mandatory
+  // even for calls that only change a mapping and do not assign an asset.
+  if (typeof args.authorize !== 'function') throw new RmmUserMappingAuthorizationError();
+
   const normalized = normalizeRmmUsername(args.rawUser);
   if (!normalized) throw new Error('Signed-in user name is empty');
 
   const integrationType = rmmUserMappingIntegrationType(args.provider);
   const mappings = table(trx, tenant, 'tenant_external_entity_mappings');
 
-  if (args.contactId) {
-    const existing = await table(trx, tenant, 'tenant_external_entity_mappings')
-      .where({
-        integration_type: integrationType,
-        alga_entity_type: 'contact',
-        external_realm_id: args.integrationId,
-        external_entity_id: normalized.key,
-      })
-      .first<{ id: string }>('id');
+  // Resolve and validate caller-supplied scope before the mapping is written.
+  const integration = await table(trx, tenant, 'rmm_integrations')
+    .where({ integration_id: args.integrationId })
+    .first<{ provider: string }>('provider');
+  if (!integration || integration.provider !== args.provider) {
+    throw new Error('Permission denied: RMM integration is unavailable');
+  }
 
+  const contact = args.contactId
+    ? await table(trx, tenant, 'contacts')
+        .where({ contact_name_id: args.contactId })
+        .whereNot({ contact_kind: 'shared_mailbox' })
+        .first<{ client_id: string | null }>('client_id')
+    : null;
+  if (args.contactId && !contact?.client_id) {
+    throw new Error('Permission denied: Contact is unavailable');
+  }
+
+  const scopeMappings = await table(trx, tenant, 'rmm_organization_mappings')
+    .where({ integration_id: args.integrationId, ...(contact?.client_id ? { client_id: contact.client_id } : {}) })
+    .select<Array<{ external_organization_id: string; client_id: string | null; contact_assignment_mode?: string | null }>>(
+      'external_organization_id', 'client_id', 'contact_assignment_mode'
+    );
+  const mappedOrganizations = new Set(scopeMappings.map((row) => String(row.external_organization_id)));
+
+  const target = args.assignAssetId
+    ? await table(trx, tenant, 'assets')
+        .where({ asset_id: args.assignAssetId })
+        .first<{ asset_id: string; client_id: string | null; rmm_provider: string | null; rmm_organization_id: string | null }>(
+          'asset_id', 'client_id', 'rmm_provider', 'rmm_organization_id'
+        )
+    : null;
+  if (args.assignAssetId && (!target || target.rmm_provider !== args.provider || !target.rmm_organization_id || !mappedOrganizations.has(target.rmm_organization_id))) {
+    throw new Error('Permission denied: Asset is not available through this RMM integration');
+  }
+  if (target && contact?.client_id && target.client_id !== contact.client_id) {
+    throw new Error('Selected contact is not available for this client');
+  }
+
+  const mappingKey = {
+    integration_type: integrationType,
+    alga_entity_type: 'contact',
+    external_realm_id: args.integrationId,
+    external_entity_id: normalized.key,
+  };
+  const existing = await mappings.where(mappingKey)
+    .first<{ id: string; alga_entity_id: string }>('id', 'alga_entity_id');
+
+  await args.authorize({
+    assetIds: target ? [String(target.asset_id)] : [],
+    contactId: args.contactId,
+    integrationId: args.integrationId,
+  });
+  if (existing?.alga_entity_id && existing.alga_entity_id !== args.contactId) {
+    await args.authorize({
+      assetIds: target ? [String(target.asset_id)] : [],
+      contactId: existing.alga_entity_id,
+      integrationId: args.integrationId,
+    });
+  }
+
+  if (args.contactId) {
     if (existing?.id) {
       await table(trx, tenant, 'tenant_external_entity_mappings')
         .where({ id: existing.id })
@@ -259,22 +350,9 @@ export async function mapSignedInUserToContact(
   // both wrong and fatal: the assignment helper rejects a contact from another
   // client, and the throw rolled back this whole transaction — losing the
   // explicit mapping and the assignment the operator actually clicked.
-  const contactClient = await table(trx, tenant, 'contacts')
-    .where({ contact_name_id: args.contactId })
-    .first<{ client_id: string | null }>('client_id');
-
-  const organizations = contactClient?.client_id
-    ? await table(trx, tenant, 'rmm_organization_mappings')
-        .where({
-          integration_id: args.integrationId,
-          contact_assignment_mode: 'auto',
-          client_id: contactClient.client_id,
-        })
-        .select<Array<{ external_organization_id: string; client_id: string | null }>>(
-          'external_organization_id',
-          'client_id'
-        )
-    : [];
+  const organizations = scopeMappings.filter((organization) =>
+    organization.client_id === contact?.client_id && organization.contact_assignment_mode === 'auto'
+  );
 
   for (const organization of organizations) {
     if (!organization.client_id) continue;
@@ -292,6 +370,17 @@ export async function mapSignedInUserToContact(
     for (const assetId of candidateIds) {
       const reported = normalizeRmmUsername(signedIn.get(assetId));
       if (!reported || reported.key !== normalized.key) continue;
+
+      try {
+        await args.authorize({
+          assetIds: [assetId],
+          contactId: args.contactId,
+          integrationId: args.integrationId,
+        });
+      } catch (error) {
+        if (error instanceof RmmUserMappingAuthorizationError) continue;
+        throw error;
+      }
 
       const open = await getOpenAssetAssignment(trx, tenant, assetId);
       if (open && open.source !== 'rmm') continue;
