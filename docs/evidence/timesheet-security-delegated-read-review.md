@@ -34,14 +34,14 @@ Mutation evidence removes both tenant and subject filtering from the shared coll
 
 ## Commands and results
 
-The implementation builds on the published repair commit [`74a14f348ea857a402755d3b70698f98421a41b9`](https://github.com/Nine-Minds/alga-psa/commit/74a14f348ea857a402755d3b70698f98421a41b9) and is being committed to the same PR branch.
+The collection-enforcement implementation is [`aaac6d4731`](https://github.com/Nine-Minds/alga-psa/commit/aaac6d4731), following the initially published repair commit [`74a14f348ea857a402755d3b70698f98421a41b9`](https://github.com/Nine-Minds/alga-psa/commit/74a14f348ea857a402755d3b70698f98421a41b9).
 
 ```sh
 cd server
 NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-Result: 4 files passed, 37 tests passed against the configured real Postgres test database. The app server was not started. The route and lifecycle regressions passed 22 tests across 2 files. The registered-collection and missing-collection focused cases passed after the enforcement change; a scope-removal mutation failed, then passed after restoration.
+Result: the combined focused run passed 59 tests across 6 files, including 37 real-Postgres tests and 22 route/lifecycle regressions. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
 
 The native read-route and lifecycle regression command was:
 
@@ -60,4 +60,4 @@ The historical UI/API/database smoke evidence above remains historical. This rep
 
 ## Review first
 
-Inspect `packages/scheduling/src/lib/timeSource/timeSheetReadCollection.ts` first for the enforced tenant/subject and nested-row filter and derived aggregates; then `packages/scheduling/src/lib/timeSource/index.ts` for fail-closed collection dispatch, `server/src/lib/api/services/TimeSheetService.ts` for post-scope filtering/pagination, and the registered-provider Postgres regression.
+Inspect [`timeSheetReadCollection.ts`](https://github.com/Nine-Minds/alga-psa/blob/aaac6d4731/packages/scheduling/src/lib/timeSource/timeSheetReadCollection.ts) first for the enforced tenant/subject and nested-row filter and derived aggregates; then [`index.ts`](https://github.com/Nine-Minds/alga-psa/blob/aaac6d4731/packages/scheduling/src/lib/timeSource/index.ts) for fail-closed collection dispatch, `TimeSheetService.ts` for post-scope filtering/pagination, and the registered-provider Postgres regression.
