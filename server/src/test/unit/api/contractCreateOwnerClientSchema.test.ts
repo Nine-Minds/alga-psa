@@ -13,8 +13,17 @@ describe('contract create schema ownership guardrail', () => {
       contract_name: 'Client Contract',
       owner_client_id: '11111111-1111-4111-8111-111111111111',
       billing_frequency: 'monthly',
+      start_date: '2026-08-01',
       is_active: true,
     });
+
+    // start_date is the client_contracts assignment start, so it is required too.
+    const missingStartResult = createContractSchema.safeParse({
+      contract_name: 'Client Contract',
+      owner_client_id: '11111111-1111-4111-8111-111111111111',
+      billing_frequency: 'monthly',
+    });
+    expect(missingStartResult.success).toBe(false);
 
     expect(missingOwnerResult.success).toBe(false);
     expect(ownedResult.success).toBe(true);

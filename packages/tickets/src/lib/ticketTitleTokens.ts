@@ -15,12 +15,10 @@
  * Client-safe: no server imports. The Quick Add dialog uses it directly.
  */
 
+import { findUnknownTokens, formatCalendarDate, isCalendarDate, hasTokens, substituteTokens } from './titleTokens';
+
 export const TICKET_TITLE_TOKENS = ['client', 'contact', 'due_date', 'month', 'year'] as const;
 export type TicketTitleToken = (typeof TICKET_TITLE_TOKENS)[number];
-
-const TOKEN_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
-
-const KNOWN_TOKENS: ReadonlySet<string> = new Set(TICKET_TITLE_TOKENS);
 
 export interface TitleTokenContext {
   clientName?: string | null;
@@ -33,33 +31,12 @@ export interface TitleTokenContext {
 
 /** Tokens in `template` that are not one of {@link TICKET_TITLE_TOKENS}, in first-seen order. */
 export function findUnknownTitleTokens(template: string): string[] {
-  const unknown: string[] = [];
-  for (const match of template.matchAll(TOKEN_PATTERN)) {
-    const token = match[1];
-    if (!KNOWN_TOKENS.has(token) && !unknown.includes(token)) unknown.push(token);
-  }
-  return unknown;
+  return findUnknownTokens(template, TICKET_TITLE_TOKENS);
 }
 
 /** Whether the template uses any token (known or not). */
 export function titleHasTokens(template: string): boolean {
-  return new RegExp(TOKEN_PATTERN.source).test(template);
-}
-
-function resolveLocale(locale: string | null | undefined): string {
-  if (!locale) return 'en';
-  try {
-    return Intl.DateTimeFormat.supportedLocalesOf([locale])[0] ?? 'en';
-  } catch {
-    return 'en';
-  }
-}
-
-/** The due date is a calendar date, so it is formatted as floating UTC midnight: no server TZ involved. */
-function dueDateAsUtc(dueDate: string): Date {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueDate);
-  if (!match) throw new Error(`Invalid due date "${dueDate}" (expected YYYY-MM-DD)`);
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return hasTokens(template);
 }
 
 export function renderTitleTemplate(template: string, context: TitleTokenContext): string {
@@ -68,10 +45,13 @@ export function renderTitleTemplate(template: string, context: TitleTokenContext
     throw new Error(`Unknown title token${unknown.length > 1 ? 's' : ''}: ${unknown.map((t) => `{{${t}}}`).join(', ')}`);
   }
 
-  const locale = resolveLocale(context.locale);
-  const due = context.dueDate ? dueDateAsUtc(context.dueDate) : null;
+  if (context.dueDate && !isCalendarDate(context.dueDate)) {
+    throw new Error(`Invalid due date "${context.dueDate}" (expected YYYY-MM-DD)`);
+  }
+
+  // The due date is a calendar date, so it is formatted as floating UTC midnight: no server TZ involved.
   const format = (options: Intl.DateTimeFormatOptions) =>
-    due ? new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(due) : '';
+    context.dueDate ? formatCalendarDate(context.dueDate, context.locale, options) : '';
 
   const values: Record<TicketTitleToken, () => string> = {
     client: () => context.clientName ?? '',
@@ -82,11 +62,13 @@ export function renderTitleTemplate(template: string, context: TitleTokenContext
   };
 
   let anyEmpty = false;
-  const rendered = template.replace(TOKEN_PATTERN, (_whole, token: string) => {
-    const value = values[token as TicketTitleToken]();
-    if (value === '') anyEmpty = true;
-    return value;
-  });
+  const rendered = substituteTokens(template, Object.fromEntries(
+    Object.entries(values).map(([token, resolve]) => [token, () => {
+      const value = resolve();
+      if (value === '') anyEmpty = true;
+      return value;
+    }])
+  ));
   // Only a missing token triggers the collapse, so a title without gaps is byte-identical to its template.
   return anyEmpty ? rendered.replace(/\s+/g, ' ').trim() : rendered;
 }

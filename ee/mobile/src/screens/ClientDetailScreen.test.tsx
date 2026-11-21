@@ -202,3 +202,22 @@ describe("ClientDetailScreen editing", () => {
     expect(typeof editable.props.onPress).toBe("function");
   });
 });
+
+describe("ClientDetailScreen display tags", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getClientLocationsMock.mockResolvedValue({ ok: true, data: { data: [] } });
+    getClientContactsMock.mockResolvedValue({ ok: true, data: { data: [], pagination: { total: 0 } } });
+  });
+
+  it("shows the chip tags the server picked by the tenant's display rules under the name", async () => {
+    getClientMock.mockResolvedValue({
+      ok: true,
+      data: { data: { client_id: "client-1", client_name: "Acme", phone_no: null, email: null, url: null, display_tags: [{ tag_id: "d1", tag_text: "VIP" }] } },
+    });
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findAll((n) => typeof n.type === "string" && n.props?.accessibilityLabel === "entityTags.tag")).toHaveLength(1);
+    expect(renderer.root.findAll((n) => typeof n.type === "string" && n.props?.testID === "display-tag-badges")).toHaveLength(1);
+  });
+});

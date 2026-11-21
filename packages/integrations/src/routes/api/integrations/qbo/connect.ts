@@ -138,8 +138,16 @@ export async function GET(): Promise<NextResponse> {
       tenantId: tenant,
       error: message
     });
+    // QBO_CONFIG_MISSING already carries an admin-facing, secret-free reason —
+    // which Intuit app is missing, or that a sandbox needs Development keys.
+    // Flattening it to the generic text leaves nothing actionable on screen.
+    const configCode = (error as { code?: unknown } | null)?.code;
     return NextResponse.json(
-      { error: 'QuickBooks connection is not configured for this workspace.' },
+      {
+        error: configCode === 'QBO_CONFIG_MISSING'
+          ? message
+          : 'QuickBooks connection is not configured for this workspace.'
+      },
       { status: 400 }
     );
   }

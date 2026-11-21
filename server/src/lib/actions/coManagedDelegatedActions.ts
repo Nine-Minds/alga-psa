@@ -4,7 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
-import { CoManagedDelegationError, CoManagedPolicyError, listCoManagedLiveSponsoredRelationships, executeCoManagedDelegatedCommand, getCoManagedDelegatedScreen, isCoManagedSharedWorkError,
+import { CoManagedDelegationError, CoManagedPolicyError, listCoManagedLiveSponsoredRelationships, listCoManagedLiveCustomerRelationships, executeCoManagedDelegatedCommand, getCoManagedDelegatedScreen, isCoManagedSharedWorkError,
   listCoManagedDelegatedWorkspaces, revokeCoManagedDelegatedGrant, saveCoManagedDelegatedGrant, searchCoManagedDelegatedOptions,
   type CoManagedDelegatedCommand, type CoManagedDelegatedGrantInput, type CoManagedDelegatedOperation } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
@@ -37,6 +37,10 @@ async function setup(user: { user_id: string; user_type?: string }, tenant: stri
   return { knex, actor, target: { customerTenant, relationshipId } };
 }
 
+function administrationWorkspaceFor<S extends 'customer' | 'sponsor'>(side: S, relationshipId: string, name: string, effective: boolean, delegated: boolean) {
+  return { relationshipId, name, side, effective, delegated };
+}
+
 /** Workspaces with delegated administration for the signed-in user, keyed by relationship, with display names only. */
 export const listCoManagedAdministrationWorkspacesAction = withAuth(async (user, { tenant }) => {
   await requireCapabilityForAction('co-managed', tenant, 'serves');
@@ -45,25 +49,23 @@ export const listCoManagedAdministrationWorkspacesAction = withAuth(async (user,
   const home = tenantDb(knex, tenant);
   const own = await home.table('tenants').first('product_code');
   if (own?.product_code === 'co_managed') {
-    // The customer administers its own relationships: one entry per live sponsor.
-    const rows = await home.table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').select('relationship_id', 'sponsor_tenant');
-    const result: { relationshipId: string; name: string; side: 'customer'; effective: boolean; delegated: boolean }[] = [];
-    for (const row of rows) {
-      const sponsor = await tenantDb(knex, row.sponsor_tenant).table('tenants').first('client_name');
-      result.push({ relationshipId: row.relationship_id, name: sponsor?.client_name ?? '', side: 'customer', effective: true, delegated: true });
-    }
-    return result.sort((a, b) => a.name.localeCompare(b.name));
+    // The customer administers its own relationships: one entry per live sponsor, only for an actor with co_management:read|manage.
+    // A refusal is an opaque empty list, and the library gates before it reads any relationship or sponsor row.
+    try {
+      const live = await listCoManagedLiveCustomerRelationships(knex, actor);
+      return live.map(item => administrationWorkspaceFor('customer', item.relationshipId, item.name, true, true)).sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) { if (error instanceof CoManagedPolicyError) return []; throw error; }
   }
   // Sponsor: Effective access lists every live sponsored relationship the user may read (co_management:read|manage, checked
   // server-side against current rows); the delegated section is filtered per grant. A user with only delegated grants still
   // sees those workspaces, without the Effective access section.
-  const result: { relationshipId: string; name: string; side: 'sponsor'; effective: boolean; delegated: boolean }[] = [];
+  const result: ReturnType<typeof administrationWorkspaceFor<'sponsor'>>[] = [];
   const byRelationship = new Map<string, (typeof result)[number]>();
   let live: Awaited<ReturnType<typeof listCoManagedLiveSponsoredRelationships>> = [];
   try { live = await listCoManagedLiveSponsoredRelationships(knex, actor); }
   catch (error) { if (!(error instanceof CoManagedPolicyError)) throw error; }
   for (const item of live) {
-    const entry = { relationshipId: item.relationshipId, name: item.name, side: 'sponsor' as const, effective: true, delegated: false };
+    const entry = administrationWorkspaceFor('sponsor', item.relationshipId, item.name, true, false);
     byRelationship.set(item.relationshipId, entry); result.push(entry);
   }
   for (const workspace of await listCoManagedDelegatedWorkspaces(knex, actor)) {
@@ -71,7 +73,7 @@ export const listCoManagedAdministrationWorkspacesAction = withAuth(async (user,
     if (!operation?.relationship_id) continue;
     const existing = byRelationship.get(operation.relationship_id);
     if (existing) existing.delegated = true;
-    else result.push({ relationshipId: operation.relationship_id, name: workspace.name, side: 'sponsor', effective: false, delegated: true });
+    else result.push(administrationWorkspaceFor('sponsor', operation.relationship_id, workspace.name, false, true));
   }
   return result.sort((a, b) => a.name.localeCompare(b.name));
 });

@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // portal-visible comments still notify mentioned client users, and main's
 // `isInteractiveUserType` recipient filter keeps excluding non-interactive users.
 
-const { createNotificationMock, usersByTable } = vi.hoisted(() => ({
+const { createNotificationMock, usersByTable, coManagedStepState } = vi.hoisted(() => ({
   createNotificationMock: vi.fn(async () => undefined),
   usersByTable: { users: [] as Array<Record<string, any>> },
+  coManagedStepState: { step: null as any },
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -26,6 +27,10 @@ vi.mock('@alga-psa/shared/lib/tickets/ticketAssignees', () => ({
 vi.mock('../../../lib/db/db', () => ({ getConnection: vi.fn() }));
 vi.mock('../../../lib/eventBus/index', () => ({ getEventBus: vi.fn() }));
 vi.mock('../../../lib/eventBus', () => ({ getEventBus: vi.fn() }));
+vi.mock('../../../lib/notifications/coManagedCommentDelivery', () => ({
+  resolveCoManagedCommentStep: async () => coManagedStepState.step,
+  audienceRecipients: (step: any) => step.plan.sponsorRecipients,
+}));
 
 // Minimal tenant-scoped query builder: `users` rows are filtered by whereIn/where,
 // every other table resolves to the ticket row.
@@ -84,6 +89,7 @@ const notified = () =>
 describe('ticket comment mentions respect comment audience (N1)', () => {
   beforeEach(() => {
     createNotificationMock.mockClear();
+    coManagedStepState.step = null;
     usersByTable.users = [
       { user_id: 'internal-1', username: 'int', user_type: 'internal', first_name: 'I', last_name: 'U' },
       { user_id: 'client-1', username: 'cli', user_type: 'client', first_name: 'C', last_name: 'U' },
@@ -103,6 +109,23 @@ describe('ticket comment mentions respect comment audience (N1)', () => {
     await internalNotificationSubscriberTestHarness.handleTicketCommentAdded(commentEvent(false), { db: fakeDb });
 
     expect(notified().map((n: any) => n.user_id).sort()).toEqual(['client-1', 'internal-1']);
+  });
+
+  it.each([false, true])('projects persisted sponsor payloads independently of recipient order (reverse=%s)', async reverse => {
+    const redacted = { kind: 'msp_user', principalId: 'sponsor-hidden', redactedFields: ['ticket_number', 'note', 'actor_display_name'] };
+    const visible = { kind: 'msp_user', principalId: 'sponsor-visible', redactedFields: [] };
+    coManagedStepState.step = { plan: { sponsorTenant: 'sponsor-tenant', sponsorRecipients: reverse ? [visible, redacted] : [redacted, visible] } };
+    const event = commentEvent(false);
+    event.payload.comment.content = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Visible sponsor body' }] }]);
+    await internalNotificationSubscriberTestHarness.handleTicketCommentAdded(event, { db: fakeDb });
+    const saved = createNotificationMock.mock.calls.map((call: any[]) => call[1]);
+    const hidden = saved.find((row: any) => row.user_id === 'sponsor-hidden');
+    const allowed = saved.find((row: any) => row.user_id === 'sponsor-visible');
+    expect(hidden).toMatchObject({ data: { ticketId: 'Shared ticket', commentPreview: '', authorName: 'A team member' },
+      metadata: { ticketNumber: 'Shared ticket', comment: { text: '', author: 'A team member', isInternal: false } } });
+    expect(hidden.metadata.comment.authorId).toBeUndefined();
+    expect(allowed).toMatchObject({ data: { ticketId: 'T-1', commentPreview: 'Visible sponsor body' },
+      metadata: { ticketNumber: 'T-1', comment: { text: 'Visible sponsor body', author: 'Author' } } });
   });
   describe('comment edited to add new mentions', () => {
     const oldContent = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'no mentions yet' }] }]);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -14,16 +14,14 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
-import type { IClient } from '@alga-psa/types';
 import { grantCredit } from '@alga-psa/billing/actions/creditActions';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { useBillingClient } from '../../hooks/useBillingClient';
 
 export default function AddCreditButton() {
   const { t, i18n } = useTranslation('msp/credits');
   const router = useRouter();
 
   const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
@@ -32,33 +30,8 @@ export default function AddCreditButton() {
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const currencyCode = clients.find((client) => client.client_id === selectedClient)?.default_currency_code || 'USD';
-
-  useEffect(() => {
-    if (!isAddCreditModalOpen || clients.length > 0) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const result = await getAllClientsForBilling();
-        if (cancelled) return;
-        if (isActionMessageError(result) || isActionPermissionError(result)) {
-          setError(getErrorMessage(result));
-          return;
-        }
-        setClients(result);
-      } catch (loadError) {
-        console.error('Error loading clients for Add Credit dialog:', loadError);
-        if (!cancelled) {
-          setError(t('addCredit.errors.loadClientsFailed', {
-            defaultValue: 'Failed to load clients. Please try again.',
-          }));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAddCreditModalOpen, clients.length, t]);
+  const { client: selectedClientRecord, isLoading: isClientLoading } = useBillingClient(selectedClient);
+  const currencyCode = selectedClientRecord?.default_currency_code || 'USD';
 
   const resetForm = () => {
     setSelectedClient(null);
@@ -155,7 +128,6 @@ export default function AddCreditButton() {
               <div className="mt-1">
                 <ClientPicker
                   id="add-credit-client-picker"
-                  clients={clients}
                   selectedClientId={selectedClient}
                   onSelect={setSelectedClient}
                   filterState={filterState}
@@ -222,7 +194,7 @@ export default function AddCreditButton() {
           <Button
             id="submit-add-credit-button"
             onClick={handleAddCredit}
-            disabled={isSubmitting || !selectedClient || !amount}
+            disabled={isSubmitting || isClientLoading || !selectedClient || !amount}
           >
             {isSubmitting
               ? t('addCredit.submitting', { defaultValue: 'Adding...' })

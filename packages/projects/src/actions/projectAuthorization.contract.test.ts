@@ -21,14 +21,16 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('export const getProjects = withAuth(async (user, { tenant })');
     expect(projectActionsSource).toContain('export const getProject = withAuth(async (user, { tenant }, projectId: string)');
     expect(projectReadAuthorizationSource).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
-    expect(projectReadAuthorizationSource).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
+    // Rules load through the shared fail-closed provider: a load fault denies, it never reads as "no rules".
+    expect(projectReadAuthorizationSource).toContain('bundleProvider: createBundleNarrowingProvider(conn),');
+    expect(projectReadAuthorizationSource).not.toContain('resolveBundleNarrowingRulesForEvaluation');
     expect(projectReadAuthorizationSource).toContain('record: toProjectAuthorizationRecord(project),');
   });
 
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
     expect(projectReadAuthorizationSource).toContain('export async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
-    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
+    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain('async function filterAuthorizedProjects<T extends Partial<IProject>>(');

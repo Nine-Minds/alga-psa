@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
+import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +20,8 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable,
-  seedBillingChargeSources
+  seedBillingChargeSources,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';

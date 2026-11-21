@@ -396,6 +396,12 @@
         "label": "Koppelingstips op nieuw tabblad weergeven",
         "description": "Geef toetsenbordtips weer en open koppelingen waar mogelijk op een nieuw tabblad."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Focusmodus in- of uitschakelen",
+        "description": "Vergroot de lay-outeditor tot het hele venster of ga terug naar de normale indeling."
+      }
     }
   },
   "platform": {

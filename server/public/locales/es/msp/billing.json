@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Cargando vista previa de la plantilla...",
     "errorPrefix": "Error:",
-    "empty": "Seleccione una factura y una plantilla para obtener una vista previa."
+    "empty": "Seleccione una factura y una plantilla para obtener una vista previa.",
+    "frameTitle": "Vista previa de la factura"
   },
   "templateDesigner": {
     "propertyEditor": {

@@ -196,6 +196,7 @@
     "fileError": "Falha ao carregar o arquivo"
   },
   "folders": {
+    "show": "Mostrar pastas",
     "root": "Raiz",
     "loadFailed": "Falha ao carregar a árvore de pastas",
     "deleteConfirm": "Tem certeza de que deseja excluir a pasta \"{{name}}\"? Isso só funcionará se a pasta estiver vazia.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Documentos do ticket",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Imprimir",
+    "edit": "Editar",
+    "upload": "Enviar",
+    "closePreview": "Fechar prévia",
     "save": "Salvar",
     "saving": "Salvando...",
     "cancel": "Cancelar"
@@ -376,6 +382,18 @@
     "altVideoThumbnail": "Miniatura de {{name}}",
     "pageCount_one": "{{count}} página",
     "pageCount_other": "{{count}} páginas"
+  },
+  "fallbackUserName": "Usuário",
+  "selectOrCreate": "Selecione um documento ou crie um novo.",
+  "viewMode": {
+    "grid": "Grade",
+    "list": "Lista"
+  },
+  "unsavedChanges": {
+    "title": "Alterações não salvas",
+    "message": "Tem certeza de que deseja cancelar? Todas as alterações não salvas serão perdidas.",
+    "confirm": "Descartar alterações",
+    "cancel": "Continuar editando"
   },
   "skeleton": {
     "cardLabel": "Cartão de carregamento de documento"

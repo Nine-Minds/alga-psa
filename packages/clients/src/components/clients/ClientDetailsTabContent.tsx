@@ -325,7 +325,6 @@ export function ClientDetailsTabContent({
                 onDefaultContactChange(newContact.contact_name_id);
                 setIsQuickAddContactOpen(false);
               }}
-              clients={[editedClient]}
               selectedClientId={editedClient.client_id}
             />
           </FieldContainer>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 
-import { resolveTemplatePreviewSheetFromAst } from './printSettings';
+import { resolveDocumentPrintGeometryFromAst, resolveTemplatePreviewSheetFromAst } from './printSettings';
 import { getDocumentTypeRegistryEntry } from '../document-templates/registry';
 import { buildPreviewSheetCss, previewSheetSizePx, PREVIEW_SHEET_CLASS, wrapInPreviewSheet } from './previewSheet';
 import { renderTemplateAstHtmlDocument } from './server-render';
@@ -34,14 +34,35 @@ describe('resolveTemplatePreviewSheetFromAst', () => {
     expect(resolveTemplatePreviewSheetFromAst(ast, 'label-cell')).toMatchObject({ widthMm: 62, heightMm: 29 });
   });
 
-  it('leaves full-page documents unframed (their PDF path cannot be matched by a sheet yet)', () => {
-    expect(resolveTemplatePreviewSheetFromAst(astWith({ paperPreset: 'A4', marginMm: 12 }), 'document')).toBeNull();
+  it('frames a page document on the page box it prints onto, with the printed margin as the guide', () => {
+    // One resolver owns the numbers: the sheet an author reads and the PDF a client reads agree by
+    // construction, because both come out of resolveDocumentPrintGeometryFromAst.
+    const ast = astWith({ paperPreset: 'A4', marginMm: 12 });
+    const geometry = resolveDocumentPrintGeometryFromAst(ast);
+    expect(resolveTemplatePreviewSheetFromAst(ast, 'document')).toEqual({
+      widthMm: geometry.pageWidthMm,
+      heightMm: geometry.pageHeightMm,
+      guideMarginMm: geometry.marginMm,
+    });
+    expect(resolveTemplatePreviewSheetFromAst(ast, 'document')).toMatchObject({ widthMm: 210, heightMm: 297, guideMarginMm: 12 });
+  });
+
+  it('frames every registered page kind, and keeps the label on its cell', () => {
+    for (const type of ['sales-order', 'packing-slip', 'pick-list', 'staging-manifest', 'rma-return-slip'] as const) {
+      const entry = getDocumentTypeRegistryEntry(type);
+      if (entry.printGeometry !== 'document') continue;
+      const sheet = resolveTemplatePreviewSheetFromAst(astWith({ paperPreset: 'Letter', marginMm: 16 }), entry.printGeometry);
+      expect(sheet, `${type} is a page document and must be drawn on a page`).toMatchObject({
+        widthMm: 215.9,
+        heightMm: 279.4,
+        guideMarginMm: 16,
+      });
+    }
+    const salesOrder = getStandardSalesOrderTemplateAstByCode(STANDARD_SALES_ORDER_CONFIRMATION_CODE);
     expect(
-      resolveTemplatePreviewSheetFromAst(
-        getStandardSalesOrderTemplateAstByCode(STANDARD_SALES_ORDER_CONFIRMATION_CODE),
-        getDocumentTypeRegistryEntry('sales-order').printGeometry,
-      ),
-    ).toBeNull();
+      resolveTemplatePreviewSheetFromAst(salesOrder, getDocumentTypeRegistryEntry('sales-order').printGeometry),
+    ).toEqual(expect.objectContaining({ widthMm: expect.any(Number), heightMm: expect.any(Number) }));
+    expect(getDocumentTypeRegistryEntry('work-tag').printGeometry).toBe('label-cell');
   });
 });
 

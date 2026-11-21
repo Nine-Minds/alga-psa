@@ -9,8 +9,9 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Building2, Link2, Link2Off, RefreshCw, RotateCcw, Save, Sparkles, X } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
 import {
   clearHuduCompanyMapping,
   getHuduCompanyMappings,
@@ -44,7 +45,8 @@ const HuduCompanyMappingManager: React.FC = () => {
   const { toast } = useToast();
 
   const [rows, setRows] = useState<HuduCompanyMappingView[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // The mapped and suggested clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = useState<PickerClientOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -59,10 +61,7 @@ const HuduCompanyMappingManager: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [mappingsResult, clientsResult] = await Promise.all([
-        getHuduCompanyMappings(),
-        getAllClients(true), // All clients; the picker's state filter defaults to active
-      ]);
+      const mappingsResult = await getHuduCompanyMappings();
       if (isMappingFailure(mappingsResult)) {
         setError(
           mappingsResult.error ||
@@ -73,8 +72,15 @@ const HuduCompanyMappingManager: React.FC = () => {
         setRows([]);
       } else {
         setRows(mappingsResult.data.companies);
+        setKnownClients(
+          await lookupClientsByIds(
+            searchClientsForPicker,
+            mappingsResult.data.companies
+              .map((c) => c.mapping?.client_id ?? c.suggestion?.client_id)
+              .filter((id): id is string => !!id),
+          ),
+        );
       }
-      setClients(clientsResult);
     } catch (err) {
       setError(
         err instanceof Error
@@ -213,6 +219,13 @@ const HuduCompanyMappingManager: React.FC = () => {
     const remainingPending = new Map(pendingSelections);
 
     try {
+      // Names of the clients being saved, read by id (the picker never holds the client list).
+      const namesById = new Map(
+        (await lookupClientsByIds(
+          searchClientsForPicker,
+          dirtyRows.map((row) => effectiveSelection(row)).filter((id): id is string => !!id),
+        )).map((c) => [c.client_id, c.client_name]),
+      );
       for (const row of dirtyRows) {
         const target = effectiveSelection(row);
         try {
@@ -245,7 +258,7 @@ const HuduCompanyMappingManager: React.FC = () => {
             continue;
           }
 
-          const clientName = clients.find((c) => c.client_id === target)?.client_name ?? null;
+          const clientName = (target && namesById.get(target)) || null;
           updateRow(row.hudu_company_id, {
             mapping_id: result.data.mapping_id,
             client_id: target as string,
@@ -439,7 +452,8 @@ const HuduCompanyMappingManager: React.FC = () => {
                         <div className={`flex items-center gap-1 ${isSaving ? 'pointer-events-none opacity-60' : ''}`}>
                           <ClientPicker
                             id={`hudu-client-picker-${row.hudu_company_id}`}
-                            clients={clients}
+                            searchClients={searchClientsForPicker}
+                            knownClients={knownClients}
                             selectedClientId={selectedClientId}
                             onSelect={(clientId) => stageSelection(row, clientId)}
                             filterState={clientFilterState}
