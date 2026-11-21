@@ -193,6 +193,8 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string, tableName
     // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
     joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
+    // fetchTenantParty orders tenant locations billing-address-first.
+    orderByRaw: vi.fn(() => builder),
     insert: vi.fn((row: Record<string, any>) => {
       insertedRows.push({ table: tableName, row });
       return { returning: async () => [{ ...row, invoice_id: 'created-invoice-1' }] };
