@@ -29,7 +29,7 @@ No browser verification of this edit flow was performed during the repair assign
 
 ## Automated checks executed for the repair
 
-Focused behavioral suites passed: 38 tests in four files. They cover the existing read authorization cases, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions for masked fields, persisted base/extension/structured values, readable nullable-field clearing, form payload omission, and custom attribute merge semantics. The trusted fixture database is used to verify persisted values. The assets package build and typecheck passed; the full server typecheck exhausted Node's heap twice (at 4 GB and 8 GB).
+Focused behavioral suites passed: 38 tests in four files. They cover the existing read authorization cases, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions for masked fields, persisted base/extension/structured values, readable nullable-field clearing, form payload omission, and custom attribute merge semantics. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed; the full server typecheck exhausted Node's heap twice (at 4 GB and 8 GB).
 
 Commands:
 
