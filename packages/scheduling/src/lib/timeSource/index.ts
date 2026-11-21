@@ -136,13 +136,31 @@ export async function delegateRest(
   surface: 'entries' | 'sheets',
   method: string,
   args: readonly unknown[],
+  resolveAuthorizationScope?: () => Promise<unknown>,
 ): Promise<TimeSourceResult<{ value: any }>> {
   if (registry.size === 0) return { handled: false };
   const source = await resolveTimeSource(ctx);
   if (source.kind === 'native') return { handled: false };
   const fn = source.rest?.[surface]?.[method];
   if (!fn) return { handled: false };
-  return fn(ctx, ...args);
+  if (surface === 'sheets' && TIME_SHEET_READ_METHODS.has(method) &&
+      source.rest?.authorization?.timeSheetReadScopeVersion !== 1) {
+    // A handled response would otherwise bypass TimeSheetService's shared
+    // tenant/owner/delegate/read_all predicate. Fail closed before calling it.
+    throw new Error(`Time source '${source.kind}' cannot handle ${method}: time-sheet read scope v1 is required`);
+  }
+  if (surface === 'sheets' && TIME_SHEET_READ_METHODS.has(method) && !resolveAuthorizationScope) {
+    throw new Error(`TimeSheetService.${method} must provide its resolved read scope before delegation`);
+  }
+  const scopedArgs = resolveAuthorizationScope && surface === 'sheets' && TIME_SHEET_READ_METHODS.has(method)
+    ? [...args, await resolveAuthorizationScope()]
+    : args;
+  return fn(ctx, ...scopedArgs);
 }
+
+const TIME_SHEET_READ_METHODS = new Set([
+  'list', 'getById', 'getWithDetails', 'search', 'getStatistics',
+  'getTimeSheetComments', 'getTimeSheetEntries', 'getTimeSheetSummary',
+]);
 
 export type { TimeSourceResult };

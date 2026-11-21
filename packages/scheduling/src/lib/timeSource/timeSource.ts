@@ -131,6 +131,18 @@ export interface TimeSourceContext {
   rowMarker?: string | null;
 }
 
+/**
+ * Service-resolved authorization boundary for time-sheet reads. `subjectUserIds`
+ * is the complete set the actor may read in `tenant`; null means tenant-wide
+ * access. Callers may further narrow this set, but providers must apply this
+ * scope before pagination, counts, exports, or aggregation.
+ */
+export interface TimeSheetReadScope {
+  readonly tenant: string;
+  readonly actorUserId: string;
+  readonly subjectUserIds: readonly string[] | null;
+}
+
 /** A native function `F` as a provider method: ctx first, same arguments, explicit-miss result. */
 export type TimeSourceMethod<F extends (...args: any[]) => any> = (
   ctx: TimeSourceContext,
@@ -315,18 +327,24 @@ export type TimeSourceRestSurface = Readonly<Record<string, TimeSourceRestMethod
 export interface TimeSourceRest {
   readonly entries?: TimeSourceRestSurface;
   readonly sheets?: TimeSourceRestSurface;
+  /** Required to handle any TimeSheetService read method. */
+  readonly authorization?: {
+    readonly timeSheetReadScopeVersion: 1;
+  };
 }
 
 /**
- * AUTHORIZATION CONTRACT. Every hook runs BEFORE the native action's own
- * `hasPermission` / ownership checks (those need native SQL, and the native
- * path must stay at zero extra statements). Therefore a provider that answers
- * `{ handled: true }` OWNS authorization for that call: it must authenticate
- * the caller (`ctx.userId`, `ctx.tenant`), enforce its own RBAC and tenancy,
- * and return an error value (never data) when the caller may not act. Only
- * `{ handled: false }` hands the call back to the native body, which then
- * performs its usual checks. A provider must never answer `handled: true` for
- * time it does not own.
+ * AUTHORIZATION CONTRACT. Hooks run before native permission and ownership
+ * checks. For TimeSheetService reads, `delegateRest` appends the trusted,
+ * service-resolved `TimeSheetReadScope` as the final provider argument. A
+ * provider must advertise `rest.authorization.timeSheetReadScopeVersion: 1`
+ * and apply that scope in its source query before pagination, counts, exports,
+ * or aggregation; `delegateRest` fails closed without the declaration. The
+ * scope fixes tenant and authorized subject IDs; caller filters may narrow it.
+ * Other handled calls remain the provider's responsibility for authentication,
+ * RBAC, and tenancy. Only `{ handled: false }` hands the call to the native
+ * body, which applies the same sheet-read policy. A provider must never answer
+ * `handled: true` for time it does not own.
  */
 export interface TimeSource {
   readonly kind: TimeSourceKind;
