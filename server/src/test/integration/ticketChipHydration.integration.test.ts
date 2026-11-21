@@ -299,6 +299,31 @@ describeDb('ticket chip tag hydration (DB)', () => {
     expect(JSON.stringify(row)).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
   });
 
+  it.each(['attributes.*', 'ticket.attributes.*', 'tickets.attributes.*', 'attributes.missing_key'])(
+    'keeps whole-object redaction %s out of scorer inputs and hydrated rows', async (redaction) => {
+      const redactions = new Map([[ids.A, [redaction]]]);
+      const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+        trx, ids.tenant, authMocks.user, [ids.A], redactions
+      )));
+      expect(candidates).toHaveLength(1);
+      let scoreRequest: unknown;
+      await scoreBatch({ systemOne: async (request: unknown) => {
+        scoreRequest = request;
+        return { model: 'db-test', answers: { c0: { type: 'noul', noul: 0.9 } }, usage: { input_tokens: 1 } } as never;
+      } } as never, ticketSmartSearch.relevance, 'incident', candidates, new AbortController().signal);
+
+      const scorerInput = JSON.stringify(scoreRequest);
+      expect(scorerInput).toContain('DB-SECRET-TITLE');
+      expect(scorerInput).toContain('Open');
+      expect(scorerInput).not.toContain('DB-SECRET-DESCRIPTION');
+      expect(scorerInput).not.toContain('DB-SECRET-COMMENT');
+      const hydrated: any = await ticketSmartSearch.hydrateRows(base, [ids.A], redactions);
+      expect(hydrated.rows).toHaveLength(1);
+      expect(hydrated.rows[0]).toMatchObject({ title: 'DB-SECRET-TITLE', status_name: 'Open', attributes: null });
+      expect(JSON.stringify(hydrated)).not.toContain('DB-SECRET-DESCRIPTION');
+    }
+  );
+
   it('by-id loads preserve list rows and metadata, request order, deduplication and filters', async () => {
     const listed: any = await optimized.getTicketsForList(base, 1, 50);
     expect(listed.tickets).toHaveLength(4);

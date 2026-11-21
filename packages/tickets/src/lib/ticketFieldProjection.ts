@@ -149,6 +149,11 @@ export function interpretTicketRedactions(
       throw new Error(`Unsupported ticket redaction: ${name}`);
     }
   }
+  // Whole-object restrictions also cover catalog fields derived from that
+  // object, including description extracted for the external scorer.
+  if (hiddenFields.has('attributes')) {
+    for (const field of hiddenTicketFields(['attributes'])) hiddenFields.add(field);
+  }
   return { hiddenFields, hiddenAttributes };
 }
 
