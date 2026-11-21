@@ -5,6 +5,8 @@ PSA ticket: `alga-2026-0003072` (`5aa3f135-f0b3-4c28-9348-af1754b703c2`)
 Branch: `feature/security-apply-current-redactions-to-remaining-c`
 Follow-up: [PR #3988](https://github.com/Nine-Minds/alga-psa/pull/3988), from the security review of PR #3976.
 
+Current ticket verification and reviewer handoff: [PR #4194 ticket review evidence and walkthrough](2026-11-03-apply-current-redactions-to-remaining-c-review.md).
+
 ## Problem and scope
 
 Reference rows and audit records retain display names captured during assignment or editing. Their contents are historical facts, not permission to disclose those facts. Every response must apply the current reader's redactions, including when the customer tightens relationship redactions after a snapshot was written.
