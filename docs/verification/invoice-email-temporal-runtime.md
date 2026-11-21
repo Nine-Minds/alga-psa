@@ -6,14 +6,25 @@
 
 ### Repeat the persistence regression
 
-Prerequisites: the repository dependencies are installed and the local PostgreSQL test database configured by `server/.env.localtest` is reachable. This check does not start the application. From the worktree root run:
+Prerequisites: the repository dependencies are installed and the local PostgreSQL test database configured by `.env.localtest` is reachable. This check does not start the application. From the worktree root run:
 
 ```sh
 cd server
 npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose
 ```
 
-The integration fixture creates an isolated tenant and job row, records `serverExecution` as failed with a known error, then calls the actual ZIP handler with that `forwardedExecutionId`. It lets the handler create its detail and issue its real progress update, then stops before PDF/storage work and reads the persisted job from PostgreSQL. The expected result is still `failed` with the same execution ID and failure error. The neighboring persistence case also applies late forwarded progress and completion writes to the real `JobService` and checks the same failed outcome; the ordinary-job case verifies normal completion transitions. These are handler/persistence checks, not ZIP artifact delivery evidence.
+The integration fixture creates an isolated tenant and job row with a known failed `serverExecution`, then runs the actual ZIP handler through its progress and completion paths. PDF/archive/document dependencies are isolated in this particular status regression; the real `JobService` writes to PostgreSQL. A wrapper reads persisted status and execution outcome after each of the three ZIP status writes. Every snapshot must remain `failed` with the original execution error. Removing `forwardedExecutionId` from the final completion call makes this regression fail because `jobs.status` becomes `completed`. The neighboring case separately applies late forwarded progress and completion writes to real `JobService`, and the ordinary-job case verifies normal completion transitions. This is persistence evidence, not ZIP artifact delivery evidence.
+
+### Repeat the app-free ZIP artifact delivery check
+
+Prerequisites: use the same repository-root `.env.localtest` local PostgreSQL fixture configuration as the preceding test; install the existing Chromium/Puppeteer and `unzip`, `pdfinfo`, and `pdftotext` dependencies. The test creates its tenant, billing client, finalized invoice, and active internal requester, points the existing local storage provider at a temporary directory, and starts no application or Temporal process. From the worktree root run:
+
+```sh
+cd server
+npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose
+```
+
+The app-free ZIP case invokes `InvoiceZipJobHandler.handleInvoiceZipJob` with the fixture invoice and a failed `serverExecution`, then reads the real `jobs`, `documents`, and `external_files` rows. It checks `unzip -t`, requires exactly `<invoice-number>.pdf` in the archive, extracts it, and uses `pdfinfo` and `pdftotext` to verify a non-empty PDF containing the invoice number and client name. The test prints `INVOICE_ZIP_DELIVERY_EVIDENCE {json}` with the actual tenant, invoice, job, execution, document, and file IDs and the check results. Captured output with exact fixture IDs and assertions: [invoice-zip-delivery-20261121.json](./evidence/invoice-zip-delivery-20261121.json). The captured run passed (1 test file, 1 test). The test removes the ZIP document associations, document, external file row, job details, and job; test teardown removes the temporary storage directory and extracted PDF. The base tenant, billing client, finalized invoice, and requester follow the existing invoice render journey’s retained-fixture policy.
 
 ### Verify actual ZIP delivery when the board permits the app service
 
@@ -21,7 +32,9 @@ Prerequisites: use the active workflow step that declares `dev-server`; use its 
 
 Inspect the uploaded document and its associated stored file row for the same job outcome: require `mime_type=application/zip`, the stored byte size/path, and the `invoice_bundle_*.zip` document. Download those exact bytes through the configured storage provider, then run `unzip -t <downloaded-file>` and `unzip -Z1 <downloaded-file>`. Extract the archive and verify each expected invoice PDF is present using its stored `original_name`; use `pdfinfo` and `pdftotext` to confirm invoice number and intended invoice contents. Capture the output of those commands, the document/file identifiers, and execution correlation as evidence. For a single-client fixture require the document’s client association; for a mixed-client fixture require none. Remove only the downloaded local inspection copy. Retain the application artifact and job history as audit evidence; do not reset unrelated fixture data.
 
-**Evidence boundary for this repair round:** the application server was deliberately stopped and was not started. The PostgreSQL regression exercises actual handler status writes and real persistence but stops before PDF generation, archive creation, storage upload, document insertion, or authenticated UI scheduling. Therefore ZIP artifact validity, expected invoice contents, storage delivery, and authenticated application/Temporal end-to-end delivery remain unverified here. Do not mark ZIP delivery verified until the procedure above has been completed under the board-managed lifecycle.
+The handler and persistence regression modules have a repeatable scoped TypeScript check: `cd server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false`. It passes. The full server typecheck exhausted memory at both 4 GB and 8 GB. The wider invoice render journey typecheck reports three diagnostics: two on the existing invoice-generation result narrowing and one at `test-utils/billingProfileTestHelpers.ts:237`. I independently checked the committed 60a8204b34 baseline and reproduced the same three diagnostics at the original line numbers; these are established baseline failures and do not point to the ZIP handler or the new status regression.
+
+**Evidence boundary for this repair round:** the application server was deliberately stopped and was not started. The app-free handler integration verifies actual PDF generation, ZIP creation, local storage upload, document/file persistence, archive validity, and expected invoice contents. It does not verify authenticated UI scheduling, Temporal dispatch/forwarding, or user-visible application behavior. Do not treat the app-free integration as authenticated application/Temporal end-to-end evidence.
 
 Use this runbook to connect a board-managed Alga PSA worktree and its built Temporal worker to a reachable local Temporal server. Keep the app and worker in board services. Do not launch a separate app server.
 

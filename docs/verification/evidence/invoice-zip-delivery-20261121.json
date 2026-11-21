@@ -1,0 +1,46 @@
+{
+  "testedCommitBase": "60a8204b3469881c1fd235b1e3dc5356a1f64db1",
+  "run": "2026-11-21 app-free invoice ZIP handler integration",
+  "command": "cd server && npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose",
+  "result": "passed; 1 test file, 1 test",
+  "capturedHandlerEvidence": {
+    "evidenceType": "app-free-handler-integration",
+    "tenantId": "7932adbe-3bad-4e70-a469-5a79524dd348",
+    "invoiceId": "8a9bf5c7-bd6a-4ef5-9322-cd2464e86823",
+    "invoiceNumber": "INV-000001",
+    "jobId": "069bc922-a31d-427a-9cf5-b9fef3d4ed76",
+    "executionId": "3b2624bd-7319-475b-bd71-a4f9d78cdabb",
+    "jobStatusAfterHandler": "failed",
+    "executionOutcome": {
+      "error": "verification fixture failure",
+      "status": "failed",
+      "executionId": "3b2624bd-7319-475b-bd71-a4f9d78cdabb"
+    },
+    "documentId": "d4b4fd94-16e5-4cd3-badb-da674f364884",
+    "fileId": "5a4611bc-6b14-4134-a2e7-d364a09e71c6",
+    "mimeType": "application/zip",
+    "storedBytes": 28706,
+    "archiveCheck": "No errors detected in compressed data of /tmp/invoice-render-journey-gs22Vv/7932adbe-3bad-4e70-a469-5a79524dd348/1795245539588-u6ktteqtbsh.zip.",
+    "archiveMembers": [
+      "INV-000001.pdf"
+    ],
+    "pdfInfo": "Pages:           1",
+    "pdfContainsInvoiceNumber": true,
+    "pdfContainsClientName": true
+  },
+  "boundary": "No application server, authenticated UI, or Temporal worker was started. This proves handler, PDF generation, archive creation, local storage upload, and persistence only.",
+  "tests": {
+    "postgresPersistence": "passed; 4 tests using `cd server && npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose`",
+    "completionForwardingNegativeControl": "expected failure after temporarily removing only forwardedExecutionId from the ZIP JobStatus.Completed write; observed `expected completed to be failed`; source field restored before successful final run",
+    "scopedTypecheck": "passed; `cd server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false`"
+  },
+  "cleanup": "The test deletes the ZIP document associations, document, external_files row, job details, and job. Test teardown removes extracted PDFs and the temporary storage directory. Existing tenant/client/invoice fixture rows follow the invoice render journey retention policy.",
+  "validation": {
+    "appFreeArtifactIntegration": "passed; 1 test file, 1 test",
+    "forwardedJobPersistence": "passed; 1 test file, 4 tests",
+    "scopedTypecheck": "passed; NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false",
+    "completionForwardingNegativeControl": "expected failure after removing only forwardedExecutionId from the ZIP JobStatus.Completed write; observed expected completed to be failed; field restored"
+  },
+  "environmentFile": "repository-root .env.localtest; Vitest output resolves /home/robert/alga-copies/feature-security-authz-in-scheduleinvoiceemailaction/.env.localtest",
+  "capturedOutputLine": "INVOICE_ZIP_DELIVERY_EVIDENCE {\"evidenceType\":\"app-free-handler-integration\",\"tenantId\":\"7932adbe-3bad-4e70-a469-5a79524dd348\",\"invoiceId\":\"8a9bf5c7-bd6a-4ef5-9322-cd2464e86823\",\"invoiceNumber\":\"INV-000001\",\"jobId\":\"069bc922-a31d-427a-9cf5-b9fef3d4ed76\",\"executionId\":\"3b2624bd-7319-475b-bd71-a4f9d78cdabb\",\"jobStatusAfterHandler\":\"failed\",\"executionOutcome\":{\"error\":\"verification fixture failure\",\"status\":\"failed\",\"executionId\":\"3b2624bd-7319-475b-bd71-a4f9d78cdabb\"},\"documentId\":\"d4b4fd94-16e5-4cd3-badb-da674f364884\",\"fileId\":\"5a4611bc-6b14-4134-a2e7-d364a09e71c6\",\"mimeType\":\"application/zip\",\"storedBytes\":28706,\"archiveCheck\":\"No errors detected in compressed data of /tmp/invoice-render-journey-gs22Vv/7932adbe-3bad-4e70-a469-5a79524dd348/1795245539588-u6ktteqtbsh.zip.\",\"archiveMembers\":[\"INV-000001.pdf\"],\"pdfInfo\":\"Pages:           1\",\"pdfContainsInvoiceNumber\":true,\"pdfContainsClientName\":true}"
+}

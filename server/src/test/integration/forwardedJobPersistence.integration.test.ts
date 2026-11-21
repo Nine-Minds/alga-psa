@@ -1,11 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
+import { Document as DocumentModel } from '@alga-psa/documents/models';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { JobStatus } from '../../types/job';
 import { InvoiceZipJobHandler } from '../../lib/jobs/handlers/invoiceZipHandler';
-import type { StorageService } from '@alga-psa/storage/StorageService';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 describe('forwarded job persistence', () => {
@@ -36,12 +40,16 @@ describe('forwarded job persistence', () => {
     }
   });
 
-  async function insertJob(metadata: Record<string, unknown>, status: JobStatus): Promise<string> {
+  async function insertJob(
+    metadata: Record<string, unknown>,
+    status: JobStatus,
+    type = 'invoice_email',
+  ): Promise<string> {
     const jobId = uuidv4();
     await tenantTable('jobs').insert({
       tenant,
       job_id: jobId,
-      type: 'invoice_email',
+      type,
       status,
       metadata: JSON.stringify(metadata),
       created_at: new Date(),
@@ -91,27 +99,52 @@ describe('forwarded job persistence', () => {
     const jobId = await insertJob({
       serverExecution: { executionId, status: 'failed', error: 'ZIP delivery outcome is unknown' },
       stepResults: [],
-    }, JobStatus.Failed);
+    }, JobStatus.Failed, 'invoice_zip');
     const handler = new InvoiceZipJobHandler(jobService, {} as StorageService);
-    // Stop after the handler has emitted its real progress update. This leaves
-    // PDF/storage generation outside this persistence regression while the
-    // handler and JobService status path both execute for real.
-    (handler as any).processSingleInvoice = async () => {
+    const zipPath = path.join(os.tmpdir(), `forwarded-zip-${uuidv4()}.zip`);
+    const updateJobStatus = jobService.updateJobStatus.bind(jobService);
+    const persistedSnapshots: Array<{ status: JobStatus; serverExecution: unknown }> = [];
+    const updateStatusSpy = vi.spyOn(jobService, 'updateJobStatus').mockImplementation(async (...args) => {
+      await updateJobStatus(...args);
       const persisted = await getJob(jobId);
       const metadata = typeof persisted.metadata === 'string' ? JSON.parse(persisted.metadata) : persisted.metadata;
-      expect(persisted.status).toBe(JobStatus.Failed);
-      expect(metadata.serverExecution).toEqual({ executionId, status: 'failed', error: 'ZIP delivery outcome is unknown' });
-      throw new Error('stop after progress assertion');
+      persistedSnapshots.push({ status: persisted.status, serverExecution: metadata.serverExecution });
+    });
+    const uploadSpy = vi.spyOn(StorageService, 'uploadFile').mockResolvedValue({
+      file_id: uuidv4(), storage_path: 'test/invoice-bundle.zip', file_size: 4,
+    } as any);
+    const documentInsertSpy = vi.spyOn(DocumentModel, 'insert').mockResolvedValue(undefined as any);
+    (handler as any).zipService.generateZipFromFileRecords = async () => {
+      await fs.writeFile(zipPath, 'test');
+      return zipPath;
     };
-    await expect((handler as any).executeInvoiceZipJob(jobId, {
-      jobServiceId: jobId,
-      forwardedExecutionId: executionId,
-      tenantId: tenant,
-      requesterId: uuidv4(),
-      invoiceIds: [uuidv4()],
-      steps: [{ stepName: 'Generate invoice', type: 'invoice', metadata: { tenantId: tenant } }],
-      metadata: { user_id: uuidv4(), invoice_count: 1, tenantId: tenant },
-    })).rejects.toThrow('stop after progress assertion');
+
+    try {
+      await (handler as any).executeInvoiceZipJob(jobId, {
+        jobServiceId: jobId,
+        forwardedExecutionId: executionId,
+        tenantId: tenant,
+        requesterId: uuidv4(),
+        invoiceIds: [],
+        steps: [{ stepName: 'Create ZIP', type: 'zip', metadata: { tenantId: tenant } }],
+        metadata: { user_id: uuidv4(), invoice_count: 0, tenantId: tenant },
+      });
+
+      expect(uploadSpy).toHaveBeenCalledOnce();
+      expect(documentInsertSpy).toHaveBeenCalledOnce();
+      expect(persistedSnapshots).toHaveLength(3);
+      for (const snapshot of persistedSnapshots) {
+        expect(snapshot.status).toBe(JobStatus.Failed);
+        expect(snapshot.serverExecution).toEqual({ executionId, status: 'failed', error: 'ZIP delivery outcome is unknown' });
+      }
+      const persisted = await getJob(jobId);
+      expect(persisted.status).toBe(JobStatus.Failed);
+    } finally {
+      updateStatusSpy.mockRestore();
+      uploadSpy.mockRestore();
+      documentInsertSpy.mockRestore();
+      await fs.rm(zipPath, { force: true });
+    }
   });
 
   it('merges interleaved handler progress with a persisted execution outcome', async () => {
