@@ -1,4 +1,4 @@
-SOURCE_REVISION=0989431a263ee4708e094782b5c336093bfee434
+SOURCE_REVISION=73f9160f860ca25e2fdd7ade880dacc7fca53be8
 EDITION_SELECTORS=community
 COMMAND=npx vitest run ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts --reporter=verbose
 

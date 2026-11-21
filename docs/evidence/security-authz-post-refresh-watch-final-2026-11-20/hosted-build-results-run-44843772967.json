@@ -1,0 +1,44 @@
+{
+  "runId": 44843772967,
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/44843772967",
+  "event": "workflow_dispatch",
+  "suite": "full",
+  "headSha": "73f9160f860ca25e2fdd7ade880dacc7fca53be8",
+  "builds": [
+    {
+      "edition": "community",
+      "jobId": 136658627949,
+      "job": "browser / build-images (server, community, true, 26.1.0, Dockerfile, alga-e2e-test_server_ce_local:latest, ...)",
+      "status": "completed",
+      "conclusion": "success",
+      "buildStep": "Build the production application on the runner",
+      "buildStepConclusion": "success",
+      "startedAt": "2026-11-21T00:29:48Z",
+      "completedAt": "2026-11-21T00:45:38Z",
+      "compiledSuccessfully": "11.0min",
+      "log": "hosted-build-ce-run-44843772967.log"
+    },
+    {
+      "edition": "enterprise",
+      "jobId": 136658628024,
+      "job": "browser / build-images (server-ee, enterprise, true, 26.1.0, ee/server/Dockerfile, alga-e2e-test_server_ee_...)",
+      "status": "completed",
+      "conclusion": "success",
+      "buildStep": "Build the production application on the runner",
+      "buildStepConclusion": "success",
+      "startedAt": "2026-11-21T00:29:46Z",
+      "completedAt": "2026-11-21T00:47:58Z",
+      "compiledSuccessfully": "12.5min",
+      "log": "hosted-build-ee-run-44843772967.log"
+    }
+  ],
+  "aggregateWorkflowAtCapture": {
+    "status": "in_progress",
+    "conclusion": null,
+    "failuresObserved": [
+      "unit / Nx affected unit tests: could not diff local main against HEAD (fatal: ambiguous argument 'main')",
+      "integration / Workspace database tests",
+      "integration / Integration shard 4"
+    ]
+  }
+}
