@@ -18,12 +18,15 @@ signature validation.
   server configuration passes through that host variable when it is present;
   it does not require or mount a signing-key file. With `SECRET_ENV_PREFIX`,
   inject `<PREFIX>_OAUTH_STATE_SIGNING_KEY` instead and configure that prefix.
+  For prebuilt Compose, add that prefixed variable to the server's environment
+  in a deployment override; the shared configuration passes through only the
+  unprefixed key.
 - **Filesystem provider:** create an application secret file named
   `OAUTH_STATE_SIGNING_KEY` directly in the configured secret root
   (`SECRET_FS_BASE_PATH`; otherwise the provider uses `/run/secrets` when
   mounted, then `<cwd>/secrets`). Application secrets are direct children of
-  the root; `tenants/<tenantId>/` is only for tenant secrets. The prebuilt CE
-  Prebuilt Compose stacks mount this key only when the opt-in overlay
+  the root; `tenants/<tenantId>/` is only for tenant secrets. Prebuilt CE and EE
+  Compose stacks mount this key only when the opt-in overlay
   `docker-compose.prebuilt.oauth-state-signing-key.yaml` is included. Provision
   the file once on the host before bringing up the stack, for example:
 
@@ -43,9 +46,13 @@ signature validation.
 - **Vault provider:** write a string field named `OAUTH_STATE_SIGNING_KEY` to
   the KV v2 application-secret document at `VAULT_APP_SECRET_PATH`. Configure
   `SECRET_READ_CHAIN=env,vault` (or another deliberate chain that includes
-  `vault`) plus `VAULT_ADDR`, `VAULT_TOKEN`, and `VAULT_APP_SECRET_PATH` on
-  every instance. The shared prebuilt server configuration forwards these
-  settings; no signing-key file or filesystem overlay is required.
+  `vault`) plus `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_APP_SECRET_PATH`, and
+  `VAULT_TENANT_SECRET_PATH_TEMPLATE` on every instance. Both paths are
+  required to initialize the provider, including when reading only an
+  application secret. For example, use `kv/data/app/secrets` and
+  `kv/data/tenants/{tenantId}/secrets` for a KV v2 mount named `kv`.
+  The shared prebuilt server configuration forwards these settings; no
+  signing-key file or filesystem overlay is required.
 
 The provider supports `env`, `filesystem`, and `vault`. Composite reads use the
 first provider returning a value, so ensure the intended provider contains the
@@ -88,6 +95,24 @@ host environment has no value. Vault mode is selected through the existing
 configuration check can confirm provider selection without printing the
 Vault token. These are config-resolution checks, not proof that deployment
 secret stores or Vault contain the key.
+
+Check all required Vault settings without displaying their values:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml \
+  -f docker-compose.prebuilt.ce.yaml --env-file server/.env config --format json |
+  jq '.services.server.environment | {
+    readChain: .SECRET_READ_CHAIN,
+    requiredVaultSettingsPresent: ([.VAULT_ADDR, .VAULT_TOKEN, .VAULT_APP_SECRET_PATH,
+      .VAULT_TENANT_SECRET_PATH_TEMPLATE] | all(. != null and . != ""))
+  }'
+```
+
+Repeat for EE. An isolated verification of the rendered CE and EE environment
+initialized the real application secret provider against a local Vault KV v2
+simulator and resolved both the signing key and a tenant secret. It also
+confirmed that omitting the tenant path prevents initialization. This checks
+configuration and provider behavior, not a deployment's Vault access or data.
 
 To verify the actual application filesystem provider against the local secret
 root, without displaying the value or starting the app server:
