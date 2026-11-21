@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
+import { registerCoManagedTaskDisclosureCases } from './helpers/coManagedTaskDisclosureCases';
+import { registerCoManagedRequesterTaskCases } from './helpers/coManagedRequesterTaskCases';
 
 const dbRef = vi.hoisted(() => ({
   knex: null as Knex | null,
@@ -546,3 +548,8 @@ describe('project task comment threading model', () => {
     }
   });
 });
+
+// L4c: the audience truth table for shared task conversations (owns its own DB lifecycle; keep it last).
+registerCoManagedTaskDisclosureCases();
+// L4c: the requester (portal contact) task thread; authors are contacts, never users.
+registerCoManagedRequesterTaskCases();

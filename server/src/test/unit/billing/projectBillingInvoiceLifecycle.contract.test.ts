@@ -40,7 +40,7 @@ describe("project invoice lifecycle contracts", () => {
     const action = section(
       invoiceGeneration,
       "export const generateProjectInvoice",
-      "export const generateInvoice",
+      "export const getSeparateProjectProductInvoiceReview",
     );
     // The auth wrapper is intentionally thin; the invoice header is assembled
     // in the transactional implementation.

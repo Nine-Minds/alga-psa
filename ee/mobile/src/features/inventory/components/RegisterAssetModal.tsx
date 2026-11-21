@@ -20,6 +20,10 @@ export function RegisterAssetModal({
   client,
   apiKey,
   code,
+  clientId,
+  clientName,
+  locationId,
+  locationName,
   onClose,
   onCreated,
 }: {
@@ -27,6 +31,12 @@ export function RegisterAssetModal({
   client: ApiClient | null;
   apiKey: string | null;
   code: string;
+  /** Registering inside a site audit: the scope is already known, so the
+   *  client is fixed and the device is created at the audited location. */
+  clientId?: string | null;
+  clientName?: string | null;
+  locationId?: string | null;
+  locationName?: string | null;
   onClose: () => void;
   onCreated: (assetId: string, name: string) => void;
 }) {
@@ -59,6 +69,12 @@ export function RegisterAssetModal({
     [apiKey, client],
   );
 
+  const fixedClient = useMemo(
+    () => (clientId ? { client_id: clientId, client_name: clientName ?? "" } : null),
+    [clientId, clientName],
+  );
+  const activeClient = fixedClient ?? selectedClient;
+
   useEffect(() => {
     if (!visible) return;
     setSearch("");
@@ -66,8 +82,8 @@ export function RegisterAssetModal({
     setName("");
     setAssetType("workstation");
     setSubmitError(null);
-    void fetchClients("");
-  }, [fetchClients, visible]);
+    if (!fixedClient) void fetchClients("");
+  }, [fetchClients, fixedClient, visible]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -76,7 +92,7 @@ export function RegisterAssetModal({
   }, [clients, search]);
 
   const submit = useCallback(async () => {
-    if (!client || !apiKey || !selectedClient || submitting) return;
+    if (!client || !apiKey || !activeClient || submitting) return;
     const trimmed = name.trim();
     if (!trimmed) {
       setSubmitError(t("registerAsset.nameRequired", "Give the device a name."));
@@ -87,12 +103,15 @@ export function RegisterAssetModal({
     const result = await createAsset(client, {
       apiKey,
       data: {
-        client_id: selectedClient.client_id,
+        client_id: activeClient.client_id,
         asset_type: assetType,
         asset_tag: code,
         serial_number: code,
         name: trimmed,
         status: "active",
+        // Registered during an audit: the device belongs at the audited
+        // location, or the next audit of that site counts it as unexpected.
+        location_id: locationId ?? undefined,
       },
     });
     setSubmitting(false);
@@ -101,7 +120,7 @@ export function RegisterAssetModal({
       return;
     }
     onCreated(result.data.data.asset_id, trimmed);
-  }, [apiKey, assetType, client, code, name, onCreated, selectedClient, submitting, t]);
+  }, [activeClient, apiKey, assetType, client, code, locationId, name, onCreated, submitting, t]);
 
   if (!visible) return null;
 
@@ -119,7 +138,7 @@ export function RegisterAssetModal({
           {t("registerAsset.serialLine", "Serial / tag: {{code}}", { code })}
         </Text>
 
-        {selectedClient === null ? (
+        {activeClient === null ? (
           <>
             <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>
               {t("registerAsset.pickClient", "Whose device is this?")}
@@ -173,15 +192,25 @@ export function RegisterAssetModal({
               <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
                 {t("registerAsset.clientLabel", "Client")}
               </Text>
-              <Badge label={selectedClient.client_name} />
-              <Text
-                onPress={() => setSelectedClient(null)}
-                testID="inventory-register-change-client"
-                style={{ ...theme.typography.caption, color: theme.colors.primary }}
-              >
-                {t("registerAsset.changeClient", "Change")}
-              </Text>
+              <Badge label={activeClient.client_name} />
+              {fixedClient ? null : (
+                <Text
+                  onPress={() => setSelectedClient(null)}
+                  testID="inventory-register-change-client"
+                  style={{ ...theme.typography.caption, color: theme.colors.primary }}
+                >
+                  {t("registerAsset.changeClient", "Change")}
+                </Text>
+              )}
             </View>
+            {locationName ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+                  {t("registerAsset.locationLabel", "Location")}
+                </Text>
+                <Badge label={locationName} />
+              </View>
+            ) : null}
             <TextInput
               value={name}
               onChangeText={setName}

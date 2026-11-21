@@ -6,6 +6,7 @@ const originalLicenseServiceUrl = process.env.ALGA_LICENSE_SERVICE_URL;
 const state = vi.hoisted(() => ({
   user: { user_id: 'user-1', tenant: 'tenant-1' } as any,
   permissions: new Set<string>(),
+  applyCheckInResult: vi.fn(async () => undefined),
   row: {
     id: 1,
     license_token: null,
@@ -31,6 +32,10 @@ vi.mock('node:crypto', () => ({ default: { createHash: () => ({ update: () => ({
 vi.mock('@alga-psa/licensing', () => ({
   getLicenseStateRow,
   upsertLicenseState,
+  applyCheckInResult: state.applyCheckInResult,
+  interpretCheckInResponse: (_status: number, body: any) => body?.status === 'no_change'
+    ? { kind: 'no_change' }
+    : { kind: 'rejected', httpStatus: 200 },
   resolveSelfHostTier,
   isLicenseVerifyFailure: (value: any) => value?.valid === false,
   verifyLicense,
@@ -47,6 +52,7 @@ describe('license management action authorization', () => {
     hasPermission.mockClear();
     getLicenseStateRow.mockClear();
     upsertLicenseState.mockClear();
+    state.applyCheckInResult.mockClear();
     resolveSelfHostTier.mockClear();
     verifyLicense.mockClear();
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => ({
@@ -112,7 +118,7 @@ describe('license management action authorization', () => {
     upsertLicenseState.mockClear();
     expect(await actions.refreshLicenseNow()).toMatchObject({ success: true });
     expect(fetch).toHaveBeenCalledWith(state.row.check_in_url, expect.objectContaining({ method: 'POST' }));
-    expect(upsertLicenseState).toHaveBeenCalled();
+    expect(state.applyCheckInResult).toHaveBeenCalled();
 
     upsertLicenseState.mockClear();
     expect(await actions.connectAppliance('claim-code')).toMatchObject({ success: true });

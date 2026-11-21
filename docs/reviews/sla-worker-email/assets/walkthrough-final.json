@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "title": "SLA worker email: routes, audit outcomes, refusal and notifications",
+  "paneId": "lightweight-review-guide-3d5269d8-fb7c-43a7-b95d-b2ec48600992-ts_robert-X670E-Pro-RS",
+  "startedAt": "2026-11-08T18:01:08.157Z",
+  "finishedAt": "2026-11-08T18:01:57.333Z",
+  "durationMs": 40235,
+  "width": 1725,
+  "height": 951,
+  "bytes": 179795,
+  "frames": 12,
+  "marks": [
+    {
+      "t": 5.864,
+      "label": "Accessible opening and review status"
+    },
+    {
+      "t": 11.256,
+      "label": "Board A route and matching sender header"
+    },
+    {
+      "t": 16.262,
+      "label": "Board B route and distinct sender header"
+    },
+    {
+      "t": 21.351,
+      "label": "Queued observation and final sent audit records"
+    },
+    {
+      "t": 26.376,
+      "label": "SMTP refusal, failed audit and worker IDs"
+    },
+    {
+      "t": 31.39,
+      "label": "In-app notifications remain functional"
+    },
+    {
+      "t": 36.427,
+      "label": "Repeatable setup and exact commands"
+    }
+  ],
+  "files": {
+    "video": "sla-worker-email-repair-walkthrough.webm",
+    "chapters": "sla-worker-email-repair-walkthrough.vtt"
+  }
+}

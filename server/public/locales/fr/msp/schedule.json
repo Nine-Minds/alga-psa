@@ -472,18 +472,37 @@
         "noLimit": "Aucune limite"
       },
       "actions": {
-        "save": "Enregistrer les règles de service"
+        "save": "Enregistrer les règles de service",
+        "savePortalBooking": "Enregistrer les paramètres de réservation du portail"
       },
       "feedback": {
         "selectServiceError": "Veuillez sélectionner un service",
         "saveSuccess": "Règles de service enregistrées",
         "saveError": "Échec de l'enregistrement des règles de service",
         "deleteSuccess": "Règles de service supprimées",
-        "deleteError": "Échec de la suppression des règles de service"
+        "deleteError": "Échec de la suppression des règles de service",
+        "portalBookingSaveSuccess": "Paramètres de réservation du portail client enregistrés"
       },
       "deleteDialog": {
         "title": "Supprimer les règles de service",
         "message": "Êtes-vous sûr de vouloir supprimer les règles pour {{serviceName}} ? Cette action est irréversible."
+      },
+      "portalBooking": {
+        "title": "Réservation dans le portail client",
+        "description": "Ce que les clients voient lorsqu’ils demandent un rendez-vous depuis le portail."
+      },
+      "portalHideContractServices": {
+        "label": "Afficher uniquement les services configurés pour la réservation dans le portail client",
+        "help": "Masque les services que les clients obtiennent via leurs contrats : le portail n’affiche que les services configurés ci-dessus avec « Autoriser la réservation sans contrat »."
+      },
+      "portalDefaultService": {
+        "label": "Service de réservation par défaut",
+        "none": "Aucun service par défaut — le client choisit",
+        "help": "Présélectionné pour les clients afin qu’ils n’aient jamais à choisir un service. Choisissez l’un de vos services configurés — tant que vous ne le faites pas, rien n’est présélectionné."
+      },
+      "portalShowServiceRates": {
+        "label": "Afficher les tarifs des services aux clients",
+        "help": "Lorsque cette option est désactivée, les clients ne voient jamais le prix d’un service lors de la réservation."
       }
     },
     "exceptions": {

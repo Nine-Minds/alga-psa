@@ -57,7 +57,7 @@ const buildStandardRmaReturnSlipAst = (): TemplateAst => ({
               { id: 'issuer-logo', type: 'image', src: { type: 'binding', bindingId: 'tenantLogo' }, alt: { type: 'literal', value: 'logo' }, style: { inline: { width: '160px', maxHeight: '64px', objectFit: 'contain', objectPosition: 'left' } } },
               { id: 'issuer-name', type: 'text', content: { type: 'binding', bindingId: 'tenantName' }, style: { inline: { fontSize: '16px', fontWeight: 700 } } },
               { id: 'title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.rmaReturnSlipTitle', defaultValue: 'RMA RETURN SLIP' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '8px 0 0 0' } } },
-              { id: 'rma-number', type: 'text', content: { type: 'binding', bindingId: 'rmaNumber' }, style: { inline: { fontSize: '20px', fontWeight: 800, fontFamily: 'monospace' } } },
+              { id: 'rma-number', type: 'text', content: { type: 'binding', bindingId: 'rmaNumber' }, style: { inline: { fontSize: '20px', fontWeight: 800, fontFamily: '"JetBrains Mono", monospace' } } },
             ],
           },
           {

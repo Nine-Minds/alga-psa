@@ -33,6 +33,11 @@ describe('workspaceAst roundtrip style matrix', () => {
     { key: 'tableLayout', value: 'fixed' },
     { key: 'whiteSpace', value: 'nowrap' },
     { key: 'overflowWrap', value: 'anywhere' },
+    // Pagination: a keep-together band and forced page breaks must survive a
+    // designer save, or multi-page layouts collapse back into one flow.
+    { key: 'breakInside', value: 'avoid' },
+    { key: 'breakAfter', value: 'page' },
+    { key: 'breakBefore', value: 'page' },
     { key: 'flexDirection', value: 'row' },
     { key: 'flexGrow', value: 1 },
     { key: 'flexShrink', value: 0 },

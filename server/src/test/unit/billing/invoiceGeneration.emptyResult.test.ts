@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
+import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 type Row = Record<string, any>;
 
@@ -71,6 +73,12 @@ function createQueryBuilder(rows: Row[]) {
     }),
     whereNull: vi.fn((column: string) => {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
+      return builder;
+    }),
+    whereRaw: vi.fn((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      resultRows = resultRows.filter(commercialOnly);
       return builder;
     }),
     whereIn: vi.fn((column: string, values: any[]) => {
@@ -279,7 +287,7 @@ vi.mock('../../../../../packages/billing/src/actions/recurringApprovalBlockers',
   ),
 }));
 
-const { generateInvoice } = await import(
+const { generateInvoiceForSelectionInputs } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 
@@ -294,7 +302,15 @@ describe('invoice generation empty recurring selections', () => {
   });
 
   it('T077: recurring invoice generation returns the empty-result path when no due recurring service periods exist', async () => {
-    const result = await generateInvoice('cycle-1');
+    const result = await generateInvoiceForSelectionInputs([
+      buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
+        periodKey: 'period:2025-01-01:2025-02-01',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+    ], {}, { billingCycleId: 'cycle-1' });
 
     expect(
       mocks.selectDueRecurringServicePeriodsForBillingWindow,

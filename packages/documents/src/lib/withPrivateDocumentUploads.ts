@@ -8,7 +8,7 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import type { IDocument, IDocumentAssociationInput, IUser } from '@alga-psa/types';
 import { getDocumentTypeId } from '../actions/documentActions';
-import { generateDocumentPreviews } from './documentPreviewGenerator';
+import { scheduleDocumentPreviews } from './documentPreviewJob';
 
 type Target = Pick<IDocumentAssociationInput, 'entity_id' | 'entity_type'>;
 type UploadedDocument = IDocument & Required<Pick<IDocument, 'file_id' | 'mime_type' | 'file_size' | 'storage_path'>>;
@@ -66,8 +66,6 @@ export async function withPrivateDocumentUploads<T>(
         // Private uploads never inherit a target folder's client visibility.
         is_client_visible: false,
       } as UploadedDocument;
-      const previews = await generateDocumentPreviews(document, buffer);
-      Object.assign(document, previews);
       await db.table('documents').insert(document);
       if (targets.length) {
         await db
@@ -87,15 +85,14 @@ export async function withPrivateDocumentUploads<T>(
     const value = await run(trx, documents);
     return {
       value,
-      fileIds: documents.flatMap((document) =>
-        [document.file_id, document.thumbnail_file_id, document.preview_file_id].filter((id): id is string =>
-          Boolean(id)
-        )
-      ),
+      // Previews are generated after commit by the background job, which stores its own derivatives.
+      fileIds: documents.map((document) => document.file_id),
     };
   });
   // Indexing is a post-commit effect; failure must never turn a committed receive into a failed upload.
   for (const document of documents) {
+    // Never throws; previews are generated from storage once the document row is committed.
+    await scheduleDocumentPreviews(tenant, document.document_id, user.user_id);
     try {
       const occurredAt = new Date().toISOString();
       const ctx = { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: user.user_id } };

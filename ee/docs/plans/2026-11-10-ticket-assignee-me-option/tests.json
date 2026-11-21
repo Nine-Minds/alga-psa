@@ -1,0 +1,48 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration (extend ticketListFilterMatrix.integration.test.ts): acting as agent Y, assignedToIds ['me'] returns only T4 (excludes T1 where Y is an additional agent and T2 where Y is a team member); ['me'] + includeUnassigned returns T4 plus the unassigned set; ['me'] as agent X returns T1; result is the same with project:read granted (no bypass)",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit (ticketFilterPredicates.test.ts): ['me', U(1)] + includeUnassigned + a team compiles to one OR group of assigned_to in [U(99), U(1)], assigned_team_id in [...], assigned_to is_empty; ['me', U(99)] dedupes",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit round-trip: a live state with assignedToIds ['me'] and includeUnassigned survives captureTicketListView -> ticketListViewFiltersSchema.parse -> boardViewSettingsSchema parse -> sanitizeTicketListView (with a known.userIds universe that lacks 'me', no dropped entry) -> applyTicketListView, still holding 'me'",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit (ticketFilterUtils.test.ts / ticketViewSettings.test.ts): normalizeAssignedToIds('me,unassigned,<uuid>,junk') -> { assignedToIds: ['me', uuid], includeUnassigned: true }; normalizeAssignedToIdList keeps 'me'; validateCapturedFilters keeps 'me' when known.userIds is supplied",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Component (MultiUserAndTeamPicker): with a pinned 'me' option and values ['me'] in filter mode, the cleaner does not call onValuesChange to strip it, the trigger shows the 'Me' label, and toggling the pinned row adds/removes 'me'",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  }
+]

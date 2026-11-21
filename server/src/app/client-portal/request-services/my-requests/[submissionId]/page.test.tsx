@@ -49,17 +49,14 @@ describe('MyRequestDetailPage', () => {
   it('renders snapshot-aware answers and linked ticket references for submission history detail', async () => {
     getMyServiceRequestSubmissionDetailAction.mockResolvedValue({
       submission_id: 'submission-1',
-      definition_id: 'definition-1',
-      definition_version_id: 'version-1',
       request_name: 'Access Request',
       submitted_payload: {
         access_level: 'standard',
         needs_manager_approval: true,
       },
       execution_status: 'succeeded',
-      execution_error_summary: null,
       created_ticket_id: 'ticket-123',
-      workflow_execution_id: 'workflow-456',
+      ticket_number: '100150',
       submitted_at: '2026-03-29T14:30:00.000Z',
       form_schema_snapshot: {
         fields: [
@@ -89,11 +86,8 @@ describe('MyRequestDetailPage', () => {
         {
           submission_attachment_id: 'attachment-1',
           field_key: 'supporting_quote',
-          file_id: 'file-1',
           file_name: 'quote.pdf',
           mime_type: 'application/pdf',
-          file_size: '1024',
-          created_at: '2026-03-29T14:30:00.000Z',
         },
       ],
     });
@@ -112,7 +106,39 @@ describe('MyRequestDetailPage', () => {
     expect(submittedAnswersSection).not.toBeNull();
     expect(within(submittedAnswersSection as HTMLElement).getByText('quote.pdf')).toBeInTheDocument();
 
-    const ticketLink = screen.getByRole('link', { name: 'ticket-123' });
+    const ticketLink = screen.getByRole('link', { name: '#100150' });
     expect(ticketLink).toHaveAttribute('href', '/client-portal/tickets/ticket-123');
+    expect(screen.queryByText('submission-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('ticket-123')).not.toBeInTheDocument();
+  });
+
+  it('falls back to a "View ticket" link when the ticket number did not resolve', async () => {
+    getMyServiceRequestSubmissionDetailAction.mockResolvedValue({
+      submission_id: 'submission-1',
+      definition_id: 'definition-1',
+      definition_version_id: 'version-1',
+      definition_version_number: 1,
+      request_name: 'Access Request',
+      submitted_payload: {},
+      execution_status: 'succeeded',
+      execution_error_summary: null,
+      created_ticket_id: 'ticket-123',
+      ticket_number: null,
+      workflow_execution_id: null,
+      submitted_at: '2026-03-29T14:30:00.000Z',
+      form_schema_snapshot: { fields: [] },
+      audit_events: [],
+      attachments: [],
+    });
+
+    render(
+      await MyRequestDetailPage({
+        params: Promise.resolve({ submissionId: 'submission-1' }),
+      })
+    );
+
+    const ticketLink = screen.getByRole('link', { name: /view ticket/i });
+    expect(ticketLink).toHaveAttribute('href', '/client-portal/tickets/ticket-123');
+    expect(screen.queryByText('ticket-123')).not.toBeInTheDocument();
   });
 });

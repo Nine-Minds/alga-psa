@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { CoManagedSharedResource } from './sharedWork';
 import { readCoManagedResourceGrant } from './sharedWork';
 
+// LEVERAGE: pattern co-managed-effective-grant — third spelling of 'explicit escalation grant, else board scope in board_scope mode' (loadCoManagedGrantFacts, ticketQueue.ts can_hand_back SQL).
 /** Effective source disclosure only, inside an already admitted transaction.
  * Callers separately enforce active trust, identity and operation permissions.
  * This is the same grant layer `evaluateCoManagedAccess` consumes: it reuses

@@ -3,12 +3,15 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
-const actions = vi.hoisted(() => ({ billing: vi.fn(), overview: vi.fn() }));
-const capability = vi.hoisted(() => ({ admitted: true }));
+const actions = vi.hoisted(() => ({ billing: vi.fn(), overview: vi.fn(), combined: vi.fn() }));
+const capability = vi.hoisted(() => ({ admitted: true, seat: false }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
-  useCapability: () => ({ enabled: true, admitted: capability.admitted, resolved: true }),
+  useCapability: (key: string) => key === 'co-managed-seat'
+    ? { enabled: capability.seat, admitted: capability.seat, resolved: true }
+    : { enabled: true, admitted: capability.admitted, resolved: true },
 }));
+vi.mock('@/lib/actions/coManagedSeatActions', () => ({ getCoManagedCombinedOverviewAction: actions.combined }));
 
 vi.mock('@/lib/actions/coManagedActions', () => ({
   getCoManagedBillingState: actions.billing,
@@ -29,7 +32,7 @@ const row = (o: any = {}) => ({
   invitationExpired: false, deliveryFailed: false, cleanupFailed: false, ...o,
 });
 
-beforeEach(() => { capability.admitted = true; actions.billing.mockReset().mockResolvedValue({ allocated: 3, capacity: 10 }); actions.overview.mockReset(); });
+beforeEach(() => { capability.admitted = true; capability.seat = false; actions.combined.mockReset(); actions.billing.mockReset().mockResolvedValue({ allocated: 3, capacity: 10 }); actions.overview.mockReset(); });
 afterEach(cleanup);
 
 describe('co-managed overview', () => {
@@ -72,5 +75,40 @@ describe('co-managed overview', () => {
     await waitFor(() => expect(screen.getByText('View details')).toBeInTheDocument());
     expect(screen.getByText('Set up co-managed IT for this client')).toBeInTheDocument();
     expect(screen.queryByText(/read-only for this workspace/)).not.toBeInTheDocument();
+  });
+
+  // Flag-off neutrality: the seat capability closed means the workspace overview as it was, and no seat read.
+  it('seat capability closed: the workspace table, the pool line and no combined read', async () => {
+    actions.overview.mockResolvedValue({ rows: [row()], totalCount: 1 });
+    render(<CoManagedOverview />);
+    await waitFor(() => expect(screen.getByText('2 of 5 technician seats')).toBeInTheDocument());
+    expect(actions.combined).not.toHaveBeenCalled();
+    expect(screen.queryByText('Shape')).not.toBeInTheDocument();
+    expect(screen.getByText('3 of 10 co-managed seats allocated.')).toBeInTheDocument();
+  });
+
+  // F086
+  it('seat capability open: both shapes in one table with seats used and allocated, the pool beside it, no ids', async () => {
+    capability.seat = true;
+    actions.combined.mockResolvedValue({
+      pool: { purchased: 10, allocated: 5, available: 5 }, totalCount: 2,
+      rows: [
+        { shape: 'seat', clientId: '11111111-1111-4111-8111-111111111111', clientName: 'Acme', state: 'active', seats: 3, usedSeats: 1, relationshipId: null, key: 'a-1' },
+        { shape: 'workspace', clientId: '22222222-2222-4222-8222-222222222222', clientName: 'Beta', state: 'active', seats: 2, usedSeats: 2, relationshipId: '33333333-3333-4333-8333-333333333333', key: 'w-1' },
+      ],
+    });
+    const { container } = render(<CoManagedOverview />);
+    await waitFor(() => expect(screen.getByText('Acme')).toBeInTheDocument());
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+    for (const title of ['Client', 'Shape', 'State', 'Seats used', 'Seats allocated']) expect(screen.getAllByText(title).length).toBeGreaterThan(0);
+    expect(screen.getByText('Seat')).toBeInTheDocument();
+    expect(screen.getByText('Workspace')).toBeInTheDocument();
+    expect(screen.getByText('Purchased')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(actions.overview).not.toHaveBeenCalled();
+    expect(actions.billing).not.toHaveBeenCalled();
+    expect((container.textContent ?? '').replace(/href="[^"]*"/g, '')).not.toMatch(UUID);
+    expect(screen.getByRole('link', { name: 'Acme' }).getAttribute('href')).toBe('/msp/clients/11111111-1111-4111-8111-111111111111?tab=co-managed');
+    expect(screen.getByRole('link', { name: 'Beta' }).getAttribute('href')).toContain('relationshipId=33333333');
   });
 });

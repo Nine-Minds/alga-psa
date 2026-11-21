@@ -10,6 +10,7 @@ const merge = vi.fn().mockResolvedValue(undefined);
 vi.mock('@ee/lib/mcp/idpPresets', () => ({
   resolveIdpFromPreset: vi.fn(async () => ({ issuer: 'https://idp.test', jwksUri: 'https://idp.test/jwks', subjectClaim: 'sub' })),
 }));
+vi.mock('@ee/lib/mcp/idpNetwork', () => ({ assertSafeIdpUrl: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   runWithTenant: vi.fn(async (_t: string, fn: () => unknown) => fn()),
@@ -27,6 +28,7 @@ vi.mock('@alga-psa/db', () => ({
 
 import { addTrustedIdp } from '@ee/lib/mcp/agents';
 import { resolveIdpFromPreset } from '@ee/lib/mcp/idpPresets';
+import { assertSafeIdpUrl } from '@ee/lib/mcp/idpNetwork';
 
 beforeEach(() => {
   inserted.length = 0;
@@ -47,6 +49,8 @@ describe('addTrustedIdp audience requirement', () => {
     it(`persists the trimmed audience for ${kind}`, async () => {
       await addTrustedIdp({ ...base, kind, audience: '  api://mcp  ' });
       expect(inserted[0].audience).toBe('api://mcp');
+      expect(assertSafeIdpUrl).toHaveBeenCalledWith('https://idp.test');
+      expect(assertSafeIdpUrl).toHaveBeenCalledWith('https://idp.test/jwks');
     });
   }
 });

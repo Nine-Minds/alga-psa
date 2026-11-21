@@ -79,14 +79,30 @@ vi.mock('server/src/lib/repositories/contractLineRepository', () => ({
   removeContractLine: vi.fn(),
 }));
 
+function attachmentTransaction(liveContractLineId?: string) {
+  return (table: string) => ({
+    where: (column: string, id: string) => ({
+      async first() {
+        if (table === 'contracts' && column === 'contract_id' && id === 'cloned-contract-1') {
+          return { contract_id: id };
+        }
+        if (table === 'contract_lines' && column === 'contract_line_id' && id === liveContractLineId) {
+          return { contract_line_id: id, contract_id: null };
+        }
+        return undefined;
+      },
+    }),
+  });
+}
+
 describe('ContractLineService client-owned mutation paths', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('T044: API/service contract-line mutation paths continue to work for client-owned non-template contracts after cloning and owner enforcement', async () => {
+  it('T044: attaches a template-only line to a client-owned contract and returns the cloned line', async () => {
     const knex = { scope: 'root-knex' };
-    const trx = { scope: 'transaction-knex' };
+    const trx = attachmentTransaction();
     const mapping = {
       tenant: 'tenant-1',
       contract_id: 'cloned-contract-1',
@@ -101,19 +117,13 @@ describe('ContractLineService client-owned mutation paths', () => {
       expect(receivedKnex).toBe(knex);
       return callback(trx);
     });
-    repositoryAddContractLine.mockResolvedValue(mapping);
+    repositoryAddContractLine.mockResolvedValueOnce(mapping);
 
     const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
     const service = new ContractLineService();
-    const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
+    const context = { tenant: 'tenant-1', userId: 'user-1' };
 
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
-    const validateContractExists = vi
-      .spyOn(service as any, 'validateContractExists')
-      .mockResolvedValue(undefined);
-    const getExistingPlan = vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
-      contract_line_id: 'template-line-1',
-    });
 
     const result = await service.addContractLine(
       'cloned-contract-1',
@@ -122,8 +132,6 @@ describe('ContractLineService client-owned mutation paths', () => {
       context
     );
 
-    expect(validateContractExists).toHaveBeenCalledWith('cloned-contract-1', context, trx);
-    expect(getExistingPlan).toHaveBeenCalledWith('template-line-1', context, trx);
     expect(repositoryAddContractLine).toHaveBeenCalledWith(
       trx,
       'tenant-1',
@@ -132,6 +140,38 @@ describe('ContractLineService client-owned mutation paths', () => {
       149.5
     );
     expect(result).toEqual(mapping);
+  });
+
+  it.each([
+    { source: 'a standalone live line', liveLineId: 'requested-line-1', statusCode: 400, code: 'VALIDATION_ERROR' },
+    { source: 'an unknown line', liveLineId: undefined, statusCode: 404, code: 'NOT_FOUND' },
+  ])('rejects attachment of $source with $statusCode', async ({ liveLineId, statusCode, code }) => {
+    const { ContractTemplateLineNotFoundError } = await import('@alga-psa/billing/repositories/contractLineRepository');
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' };
+    const trx = attachmentTransaction(liveLineId);
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    withTransaction.mockImplementation(async (_knex, callback) => callback(trx));
+    repositoryAddContractLine.mockRejectedValueOnce(new ContractTemplateLineNotFoundError('requested-line-1'));
+
+    await expect(service.addContractLine('cloned-contract-1', 'requested-line-1', undefined, context))
+      .rejects.toMatchObject({ statusCode, code });
+  });
+
+  it('rejects attachment to a missing contract before writing a line', async () => {
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' };
+    const trx = attachmentTransaction();
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    withTransaction.mockImplementation(async (_knex, callback) => callback(trx));
+
+    await expect(service.addContractLine('missing-contract-1', 'template-line-1', undefined, context))
+      .rejects.toMatchObject({ statusCode: 404, message: 'Contract not found' });
+    expect(repositoryAddContractLine).not.toHaveBeenCalled();
   });
 
   it('deactivates a client-owned cloned line without touching client_contract_lines', async () => {

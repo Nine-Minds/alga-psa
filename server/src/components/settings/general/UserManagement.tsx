@@ -4,11 +4,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
+import SeatTechnicianUsers from './SeatTechnicianUsers';
+import { useCapability } from '@alga-psa/ui/hooks';
+import { listCoManagedSeatTechniciansAction, type CoManagedSeatTechnicianListing } from '@/lib/actions/coManagedSeatActions';
 import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { addUser } from '@alga-psa/users/actions/user-actions/userActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
@@ -69,7 +73,6 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole, isLicensedUserType, isClientUserType } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -78,8 +81,8 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
-import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
+import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
+import type { LicenseUsage } from '@alga-psa/licensing/server';
 import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -127,7 +130,6 @@ const UserManagement = (): React.JSX.Element => {
   };
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,6 +155,11 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  // Seat technicians are listed apart from staff only while the seat capability is open; closed, this screen is unchanged.
+  const seatCapability = useCapability('co-managed-seat');
+  const seatsListed = portalType === 'msp' && (seatCapability.enabled || seatCapability.admitted);
+  const [seatListings, setSeatListings] = useState<Record<string, CoManagedSeatTechnicianListing> | null>(null);
+  const [seatListingsFailed, setSeatListingsFailed] = useState(false);
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<{
     first_name: string[];
@@ -231,7 +238,6 @@ const UserManagement = (): React.JSX.Element => {
       fetchPendingInvitations();
     }
     if (portalType === 'client') {
-      fetchClients();
       fetchContacts();
     }
   }, [portalType]);
@@ -372,6 +378,24 @@ const UserManagement = (): React.JSX.Element => {
       minute: '2-digit'
     });
 
+  const fetchSeatListings = async (): Promise<void> => {
+    try {
+      const listings = await listCoManagedSeatTechniciansAction();
+      setSeatListings(Object.fromEntries(listings.map((listing) => [listing.userId, listing])));
+      setSeatListingsFailed(false);
+    } catch (err) {
+      // The screen falls back to the single list it had before rather than staying empty.
+      console.error('Error fetching seat technicians:', err);
+      setSeatListings(null);
+      setSeatListingsFailed(true);
+    }
+  };
+
+  useEffect(() => {
+    if (seatsListed) void fetchSeatListings();
+    else { setSeatListings(null); setSeatListingsFailed(false); }
+  }, [seatsListed]);
+
   const fetchUsers = async (): Promise<void> => {
     try {
       const fetchedUsers = await getAllUsers(true);
@@ -417,18 +441,7 @@ const UserManagement = (): React.JSX.Element => {
     }
   };
 
-  const fetchClients = async (): Promise<void> => {
-    try {
-      const fetchedClients = await getAllClients();
-      setClients(fetchedClients);
-    } catch (err) {
-      console.error('Error fetching clients:', err);
-      setError(t('users.messages.error.fetchClients'));
-    }
-  };
-
-  
-const fetchContacts = async (): Promise<void> => {
+  const fetchContacts = async (): Promise<void> => {
     try {
       const invitationMode = portalType === 'client' && !newUser.password;
       if (invitationMode) {
@@ -461,6 +474,14 @@ const fetchContacts = async (): Promise<void> => {
 
     return isStatusMatch && isNameMatch;
   });
+
+  // MSP staff are the users without a live seat; seat technicians are listed in their own section.
+  const seatsSplit = seatsListed && seatListings !== null;
+  // The staff list waits for the split, so seat technicians never flash up as staff.
+  const seatsPending = seatsListed && seatListings === null && !seatListingsFailed;
+  const staffUsers = seatsSplit ? users.filter(user => !seatListings[user.user_id]) : users;
+  const staffFilteredUsers = seatsSplit ? filteredUsers.filter(user => !seatListings[user.user_id]) : filteredUsers;
+  const seatTechnicianUsers = seatsSplit ? filteredUsers.filter(user => seatListings[user.user_id]) : [];
 
   const handleCreateUser = async () => {
     try {
@@ -603,7 +624,7 @@ const fetchContacts = async (): Promise<void> => {
         });
 
         if (!result.success) {
-          const keysByCode: Record<typeof result.code, string> = {
+          const keysByCode: Partial<Record<typeof result.code, string>> = {
             ROLE_REQUIRED: 'users.messages.error.roleRequired',
             INVALID_ROLE: 'users.messages.error.invalidRole',
             ROLE_MSP_NOT_ALLOWED_FOR_CLIENT: 'users.messages.error.selectAppropriateRole',
@@ -614,7 +635,7 @@ const fetchContacts = async (): Promise<void> => {
             PERMISSION_DENIED: 'users.messages.error.permissionDenied',
             USER_CREATE_FAILED: 'users.messages.error.createUser',
           };
-          const message = t(keysByCode[result.code], { defaultValue: result.error });
+          const message = (keysByCode[result.code] ? t(keysByCode[result.code] as string, { defaultValue: result.error }) : result.error);
           toast.error(message);
           setError(message);
           return;
@@ -782,7 +803,7 @@ const fetchContacts = async (): Promise<void> => {
                 </label>
                 <ClientPicker
                   id="new-user-client-picker"
-                  clients={clients}
+                  searchClients={searchClientsForPicker}
                   selectedClientId={newUser.clientId || null}
                   onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
                   filterState={clientFilterState}
@@ -891,7 +912,6 @@ const fetchContacts = async (): Promise<void> => {
                     setContactValidationError(null);
                     setIsQuickAddContactOpen(false);
                   }}
-                  clients={clients}
                   selectedClientId={newUser.clientId || undefined}
                 />
               </div>
@@ -1132,7 +1152,7 @@ const fetchContacts = async (): Promise<void> => {
               </TabsList>
               <TabsContent value="list">
                 <p className="text-sm text-muted-foreground mt-3 mb-4">{t('users.tabs.listDescription')}</p>
-                {loading ? (
+                {loading || seatsPending ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingIndicator
                       layout="stacked"
@@ -1141,12 +1161,17 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                 ) : (
-                  <UserList
-                    users={filteredUsers}
-                    onUpdate={fetchUsers}
-                    onDeleteSuccess={handleDeleteSuccess}
-                    selectedClientId={null}
-                  />
+                  <>
+                    <UserList
+                      users={staffFilteredUsers}
+                      onUpdate={fetchUsers}
+                      onDeleteSuccess={handleDeleteSuccess}
+                      selectedClientId={null}
+                    />
+                    {seatTechnicianUsers.length > 0 && seatListings && (
+                      <SeatTechnicianUsers users={seatTechnicianUsers} listings={seatListings} />
+                    )}
+                  </>
                 )}
               </TabsContent>
               <TabsContent value="org">
@@ -1161,7 +1186,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 ) : (
                   <OrgChart
-                    users={users.filter(u =>
+                    users={staffUsers.filter(u =>
                       filterStatus === 'all' ||
                       (filterStatus === 'active' && !u.is_inactive) ||
                       (filterStatus === 'inactive' && u.is_inactive)
@@ -1199,7 +1224,7 @@ const fetchContacts = async (): Promise<void> => {
                   <div>
                     <ClientPicker
                       id="user-management-client-filter"
-                      clients={clients}
+                      searchClients={searchClientsForPicker}
                       selectedClientId={selectedClientId}
                       onSelect={(clientId) => setSelectedClientId(clientId)}
                       filterState={clientFilterState}
