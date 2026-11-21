@@ -3,7 +3,9 @@ import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOut
 
 const mocks = vi.hoisted(() => ({
   getAdminConnection: vi.fn(),
-  axiosPost: vi.fn(),
+  tokenRequest: vi.fn(),
+  tokenAgentOptions: [] as Array<{ connect: { lookup: Function } }>,
+  tokenBodyDestroyed: vi.fn(),
   dnsLookup: vi.fn(),
   getTenantSecret: vi.fn(),
   imapConstructed: vi.fn(),
@@ -46,7 +48,16 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({ getTenantSecret: mocks.getTenantSecret }),
 }));
-vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
+vi.mock('undici', () => ({
+  request: mocks.tokenRequest,
+  Agent: vi.fn(function Agent(options: { connect: { lookup: Function } }) {
+    mocks.tokenAgentOptions.push(options);
+    return { close: async () => undefined };
+  }),
+}));
+vi.mock('node:dns', () => ({
+  default: { promises: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) } },
+}));
 vi.mock('node:dns/promises', () => ({
   default: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) },
   lookup: (...args: unknown[]) => mocks.dnsLookup(...args),
@@ -143,6 +154,7 @@ describe('email-service IMAP outbound security', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.configUpdates.length = 0;
+    mocks.tokenAgentOptions.length = 0;
     mocks.rows = [];
     mocks.dnsLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     mocks.getTenantSecret.mockImplementation(async (_tenant: string, name: string) => {
@@ -150,7 +162,13 @@ describe('email-service IMAP outbound security', () => {
       if (name.includes('_refresh_token')) return 'endpoint-scoped-refresh-token';
       return 'mailbox-password';
     });
-    mocks.axiosPost.mockResolvedValue({ data: { access_token: 'listener-access-token', expires_in: 3600 } });
+    mocks.tokenRequest.mockImplementation(async () => ({
+      statusCode: 200,
+      headers: { 'content-type': 'application/json' },
+      body: Object.assign((async function* () {
+        yield Buffer.from(JSON.stringify({ access_token: 'listener-access-token', expires_in: 3600 }));
+      })(), { destroy: mocks.tokenBodyDestroyed }),
+    }));
     mocks.imapConnect.mockRejectedValue(new Error('test socket closed after construction'));
     mocks.inboundAuthFailure.mockResolvedValue(undefined);
     mocks.inboundAccessSuccess.mockResolvedValue(undefined);
@@ -186,19 +204,23 @@ describe('email-service IMAP outbound security', () => {
     const service = await startListeners([row]);
     await tick();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-    expect(mocks.axiosPost).not.toHaveBeenCalled();
+    expect(mocks.tokenRequest).not.toHaveBeenCalled();
     expect(mocks.imapConstructed).not.toHaveBeenCalled();
     await service.stop();
   });
 
   it('posts with redirects disabled and never constructs an IMAP socket after a redirect response', async () => {
-    mocks.axiosPost.mockRejectedValue(new Error('Request failed with status code 302'));
+    mocks.tokenRequest.mockResolvedValue({
+      statusCode: 302,
+      headers: { location: 'https://169.254.169.254/token' },
+      body: { destroy: mocks.tokenBodyDestroyed },
+    });
     const service = await startListeners([providerRow()]);
-    await vi.waitFor(() => expect(mocks.axiosPost).toHaveBeenCalledTimes(1));
-    expect(mocks.axiosPost).toHaveBeenCalledWith(
-      'https://login.example.test/token',
-      expect.any(URLSearchParams),
-      expect.objectContaining({ maxRedirects: 0 })
+    await vi.waitFor(() => expect(mocks.tokenBodyDestroyed).toHaveBeenCalledTimes(1));
+    expect(mocks.tokenRequest).toHaveBeenCalledTimes(1);
+    expect(mocks.tokenRequest).toHaveBeenCalledWith(
+      new URL('https://login.example.test/token'),
+      expect.objectContaining({ method: 'POST' })
     );
     expect(mocks.imapConstructed).not.toHaveBeenCalled();
     await service.stop();
@@ -222,7 +244,7 @@ describe('email-service IMAP outbound security', () => {
     const service = await startListeners([row]);
     await tick();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-    expect(mocks.axiosPost).not.toHaveBeenCalled();
+    expect(mocks.tokenRequest).not.toHaveBeenCalled();
     expect(mocks.imapConstructed).not.toHaveBeenCalled();
     await service.stop();
   });
@@ -235,7 +257,8 @@ describe('email-service IMAP outbound security', () => {
     await vi.waitFor(() => expect(mocks.imapConstructed).toHaveBeenCalledTimes(1));
     expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedNames.refreshToken);
     expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedNames.clientSecret);
-    const form = mocks.axiosPost.mock.calls[0][1] as URLSearchParams;
+    expect(mocks.tokenRequest).toHaveBeenCalledTimes(1);
+    const form = new URLSearchParams(mocks.tokenRequest.mock.calls[0][1].body);
     expect(form.get('refresh_token')).toBe('endpoint-scoped-refresh-token');
     expect(form.get('client_secret')).toBe('endpoint-scoped-client-secret');
     expect(mocks.configUpdates).toContainEqual(expect.objectContaining({ access_token: 'listener-access-token' }));
@@ -244,14 +267,13 @@ describe('email-service IMAP outbound security', () => {
       auth: { accessToken: 'listener-access-token' },
     });
     const [clientOptions] = mocks.imapConstructed.mock.calls[0];
-    const tokenRequest = mocks.axiosPost.mock.calls[0][2];
     const resolvePinned = (lookup: Function) => new Promise((resolve, reject) =>
       lookup('imap.example.test', { all: true }, (error: Error | null, addresses: unknown) =>
         error ? reject(error) : resolve(addresses)
       )
     );
     mocks.dnsLookup.mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
-    await expect(resolvePinned(tokenRequest.httpsAgent.options.lookup)).resolves.toEqual([
+    await expect(resolvePinned(mocks.tokenAgentOptions[0].connect.lookup)).resolves.toEqual([
       { address: '93.184.216.34', family: 4 },
     ]);
     await expect(resolvePinned(clientOptions.tls.lookup)).resolves.toEqual([
