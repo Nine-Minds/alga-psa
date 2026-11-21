@@ -31,6 +31,20 @@ columns) because the two are different problems: a test that only flakes under
 one contributor's branch is usually that branch, while the same test flaking on
 a merged revision is a shared defect.
 
+## Why record the first attempt's error
+
+A retry that passes leaves the runner's log green: Vitest's default reporter
+prints only the retry marker and Playwright's report keeps the failed attempt
+out of the summary. Each flaky record therefore carries `error`, the first
+attempt's error message on one bounded line (400 characters), read off the
+Vitest result, which keeps every failed attempt's errors when the retry passes,
+or off the Playwright result with `retry: 0`. The policy line (`::warning::`
+on a pull request, the execution-verification failure elsewhere) appends it
+after the test identity, the weekly report keeps the newest one per test as
+`lastError` (the **Last error** column, `last_error` in the sheet), and a
+record without it stays valid: lanes and artifacts from before this change
+simply leave the column empty.
+
 Documents produced before this decision carry neither field. They aggregate into
 an `unknown` bucket — counted as non-PR — for their thirty-day retention rather
 than being rejected, so the transition never renders as a clean week.

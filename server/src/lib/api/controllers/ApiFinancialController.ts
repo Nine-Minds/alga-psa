@@ -604,7 +604,8 @@ export class ApiFinancialController extends ApiBaseController {
   // ============================================================================
 
   /**
-   * POST /api/v1/financial/bulk/invoices - Bulk invoice operations
+   * POST /api/v1/financial/bulk/invoices - Bulk finalize or cancel operations.
+   * Bulk send is unsupported until canonical recipient delivery is implemented.
    */
   bulkInvoiceOperations() {
     return async (req: NextRequest): Promise<NextResponse> => {

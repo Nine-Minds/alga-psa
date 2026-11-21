@@ -79,7 +79,10 @@ const QUOTE_TOTALS_BINDING_ID = /^(recurring|onetime|service|product)(Subtotal|T
 // Logo bindings drive image sources, not text fields, so they stay out of the field picker.
 const IMAGE_BINDING_ID = /logo/i;
 
-const NUMERIC_RENDER_PATH = /(^|[._])(subtotal|tax|total|amount|version|quantity|price|rate|count)([._]|$)/i;
+// `grossSubtotal` and `discountTotal` are camelCase compounds, so they are listed whole (the
+// boundary-anchored `subtotal` / `total` alternatives do not match inside them).
+const NUMERIC_RENDER_PATH =
+  /(^|[._])(subtotal|grossSubtotal|discountTotal|tax|total|amount|version|quantity|price|rate|count)([._]|$)/i;
 
 const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
   invoice: [

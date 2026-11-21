@@ -21,6 +21,20 @@ describe('where URL v1', () => {
     expect(decodeTicketWhere(encoded)).toEqual({ where, dropped: 0 });
   });
 
+  // The two location paths are a first-release filter contract: a shared link and a saved view both
+  // carry them, so the round trip is pinned here rather than left to the generic clause test.
+  it('round-trips the location paths', () => {
+    const where = group(
+      { path: 'location_id', operator: 'in', value: [ID1] },
+      { path: 'contact.locations', operator: 'not_in', value: [ID1, ID2] },
+      { path: 'location_id', operator: 'is_empty' },
+    );
+    const encoded = encodeTicketWhere(where);
+    expect(encoded).toContain(`location_id:in:${ID1}`);
+    expect(encoded).toContain(`contact.locations:not_in:${ID1},${ID2}`);
+    expect(decodeTicketWhere(encoded)).toEqual({ where, dropped: 0 });
+  });
+
   it('keeps strings that look like literals as strings', () => {
     const where = group({ path: 'status_name', operator: 'equals', value: 'true' }, { path: 'status_name', operator: 'equals', value: '~x' });
     expect(decodeTicketWhere(encodeTicketWhere(where)).where).toEqual(where);

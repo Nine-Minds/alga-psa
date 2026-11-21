@@ -219,6 +219,7 @@ const userB = {
 const adminAccess = {
   canReadSystemSettings: true,
   canManageSystemSettings: true,
+  canDeleteSystemSettings: true,
   canManageUserHours: true,
   users: [userA, userB],
   teams: [{ team_id: 'team-1', team_name: 'team', manager_id: null, member_ids: ['user-a'] }],

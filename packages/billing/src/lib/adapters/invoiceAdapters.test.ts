@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
+  applyInvoiceDiscountSummary,
   buildInvoiceTimeCollections,
   buildLocationAddressBlock,
+  buildInvoiceLocationGroups,
+  enrichWithGroupedItems,
   mapDbInvoiceToWasmViewModel,
   type InvoiceTimeCollectionSource,
 } from './invoiceAdapters';
@@ -786,5 +790,180 @@ describe('buildLocationAddressBlock', () => {
       buildLocationAddressBlock({ address_line1: '1 Main', city: 'Tampa', state_province: '', postal_code: ' ' } as any),
     ).toBe('1 Main\nTampa');
     expect(buildLocationAddressBlock({ address_line1: '', city: '  ' } as any)).toBeNull();
+  });
+});
+
+describe('mapDbInvoiceToWasmViewModel bundle components (T007)', () => {
+  const snapshot = {
+    version: 1 as const,
+    subtitle: 'Seats and backup',
+    components: [
+      { serviceId: 's1', name: 'Seat', quantity: 25, pricingBasis: 'unit' as const, order: 0, servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', detailItemIds: ['d1'], previousQuantity: 22, comparison: 'compared' as const },
+      { serviceId: 's2', name: 'Backup', quantity: null, pricingBasis: 'bundle' as const, order: 1, servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', detailItemIds: ['d2'], previousQuantity: null, comparison: 'no_prior_period' as const },
+    ],
+  };
+  const base = {
+    invoice_number: 'INV-1', invoice_date: '2026-02-01', due_date: '2026-02-15',
+    client: { name: 'Acme', address: '1 Main' }, subtotal: '1000', tax: '0', total: '1000',
+  };
+  const bundleCharge = {
+    item_id: 'bundle-1', description: 'Managed IT', quantity: '1', unit_price: '1000', total_price: '1000', net_amount: '1000',
+    billing_timing: 'arrears', service_period_start: '2026-01-01', service_period_end: '2026-02-01',
+  };
+
+  it('keeps qty 1 / rate = total and attaches subtitle + components without prices by default', () => {
+    const vm = mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [{ ...bundleCharge, bundle_presentation: snapshot }] } as any)!;
+    const item = vm.items[0] as any;
+    expect(item.quantity).toBe(1);
+    expect(item.unitPrice).toBe(1000);
+    expect(item.total).toBe(1000);
+    expect(item.subtitle).toBe('Seats and backup');
+    expect(item.hasComponents).toBe(true);
+    expect(item.components.map((c: any) => [c.name, c.quantity, c.quantityChange])).toEqual([['Seat', 25, 3], ['Backup', null, null]]);
+    expect(item.components.every((c: any) => c.total === undefined && c.unitPrice === undefined)).toBe(true);
+  });
+
+  it('adds component money only when amounts were loaded', () => {
+    const vm = mapDbInvoiceToWasmViewModel({
+      ...base,
+      invoice_charges: [{
+        ...bundleCharge, bundle_presentation: snapshot,
+        bundle_component_amounts: { d1: { allocated_amount: 7, rate: 3 }, d2: { allocated_amount: 3, rate: 0 } },
+      }],
+    } as any)!;
+    const components = (vm.items[0] as any).components;
+    expect(components[0].total).toBeGreaterThan(0);
+    expect(components[1].total).toBeGreaterThan(0);
+  });
+
+  it('leaves snapshot-less invoices unchanged', () => {
+    const vm = mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [bundleCharge] } as any)!;
+    const item = vm.items[0] as any;
+    expect('components' in item).toBe(false);
+    expect('subtitle' in item).toBe(false);
+    expect('hasComponents' in item).toBe(false);
+  });
+
+  it('components ride along into recurringItems and ticketPresentationRows', () => {
+    const vm = enrichWithGroupedItems(
+      mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [{ ...bundleCharge, bundle_presentation: snapshot }] } as any)!,
+    ) as any;
+    expect(vm.recurringItems[0].components).toHaveLength(2);
+    expect(vm.ticketPresentationRows[0].components).toHaveLength(2);
+    expect(vm.ticketPresentationRows[0].subtitle).toBe('Seats and backup');
+    expect((buildInvoiceLocationGroups(vm.items)[0].items[0] as any).components).toHaveLength(2);
+  });
+});
+
+describe('invoice discount summary (alga0002295)', () => {
+  const dbInvoice = (overrides: Record<string, unknown> = {}) => ({
+    invoice_number: 'INV-D1',
+    invoice_date: '2026-07-30',
+    due_date: '2026-08-15',
+    currency_code: 'EUR',
+    client: { name: 'Client', address: '2 Main St' },
+    invoice_charges: [
+      { item_id: 's1', description: 'Service', quantity: 1, unit_price: 10_000, net_amount: 10_000, tax_amount: 0, total_price: 10_000, is_discount: false },
+      { item_id: 'd1', description: 'Discount', quantity: 1, unit_price: -1_000, net_amount: -1_000, tax_amount: 0, total_price: -1_000, is_discount: true },
+      { item_id: 'c1', description: 'Manual credit', quantity: 1, unit_price: -500, net_amount: -500, tax_amount: 0, total_price: -500, is_discount: true },
+      { item_id: 'a1', description: 'Contract adjustment', quantity: 1, unit_price: -200, net_amount: -200, tax_amount: 0, total_price: -200, is_discount: false },
+    ],
+    subtotal: 8_300,
+    tax: 830,
+    total: 9_130,
+    ...overrides,
+  });
+
+  it('maps is_discount to isDiscount on the DB branch', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice());
+    expect(mapped?.items.map((item) => item.isDiscount)).toEqual([false, true, true, false]);
+  });
+
+  it('derives a positive discountTotal from discounts and credits only, and keeps both identities', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice())!;
+    expect(mapped.discountTotal).toBe(1_500);
+    expect(mapped.grossSubtotal).toBe(9_800);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+    expect(mapped.subtotal + mapped.tax).toBe(mapped.total);
+    // Non-discount negative rows stay inside the gross figure; net values are unchanged.
+    expect(mapped.subtotal).toBe(8_300);
+    expect(mapped.tax).toBe(830);
+    expect(mapped.total).toBe(9_130);
+  });
+
+  it('is zero / equal to subtotal when no line is a discount', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(
+      dbInvoice({
+        invoice_charges: [
+          { item_id: 's1', description: 'Service', quantity: 1, unit_price: 10_000, net_amount: 10_000, tax_amount: 0, total_price: 10_000 },
+        ],
+        subtotal: 10_000,
+        tax: 0,
+        total: 10_000,
+      })
+    )!;
+    expect(mapped.discountTotal).toBe(0);
+    expect(Object.is(mapped.discountTotal, 0)).toBe(true);
+    expect(mapped.grossSubtotal).toBe(mapped.subtotal);
+  });
+
+  it('keeps the identity on legacy major-unit payloads', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(
+      dbInvoice({
+        invoice_charges: [
+          { item_id: 's1', description: 'Service', quantity: 1, unit_price: 8000, total_price: 8000 },
+          { item_id: 'd1', description: 'Discount', quantity: 1, unit_price: -500, total_price: -500, is_discount: true },
+        ],
+        subtotal: 0,
+        tax: 0,
+        total: 7500,
+      })
+    )!;
+    expect(mapped.subtotal).toBe(750_000);
+    expect(mapped.discountTotal).toBe(50_000);
+    expect(mapped.grossSubtotal).toBe(800_000);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+  });
+
+  it('uses the computed subtotal fallback when the persisted subtotal is 0', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice({ subtotal: 0, tax: 0, total: 0 }))!;
+    expect(mapped.subtotal).toBe(8_300);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+  });
+
+  it('keeps isDiscount through the pass-through Wasm branch and re-derives idempotently', () => {
+    const wasm = {
+      invoiceNumber: 'INV-W1',
+      issueDate: '2026-01-01',
+      dueDate: '2026-01-31',
+      currencyCode: 'USD',
+      customer: { name: 'C', address: 'A' },
+      tenantClient: null,
+      items: [
+        { id: 'a', description: 'Svc', quantity: '1', unitPrice: '5000', total: '5000' },
+        { id: 'b', description: 'Disc', quantity: '1', unitPrice: '-500', total: '-500', isDiscount: true },
+      ],
+      subtotal: 4_500,
+      tax: 0,
+      total: 4_500,
+    } as unknown as WasmInvoiceViewModel;
+    const once = mapDbInvoiceToWasmViewModel(wasm)!;
+    expect(once.items[1].isDiscount).toBe(true);
+    expect(once.discountTotal).toBe(500);
+    expect(once.grossSubtotal).toBe(5_000);
+    const twice = mapDbInvoiceToWasmViewModel(once)!;
+    expect(twice.discountTotal).toBe(500);
+    expect(twice.grossSubtotal).toBe(5_000);
+  });
+
+  it('is safe on legacy Wasm payloads with no isDiscount flag', () => {
+    const vm = applyInvoiceDiscountSummary({
+      items: [{ id: 'a', description: 'x', quantity: 1, unitPrice: -100, total: -100 }],
+      subtotal: 1_000,
+      tax: 0,
+      total: 1_000,
+    } as unknown as WasmInvoiceViewModel);
+    expect(vm.discountTotal).toBe(0);
+    expect(vm.grossSubtotal).toBe(1_000);
   });
 });

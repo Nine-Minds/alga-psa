@@ -13,7 +13,7 @@ export type { ISecretProvider } from './lib/secrets/ISecretProvider';
 
 // Date/time utilities
 export * from './lib/dateTimeUtils';
-export { parseCalendarDateTime } from './lib/calendarDateTime';
+export { parseCalendarDateTime, toIanaTimeZone } from './lib/calendarDateTime';
 export { formatLocalizedCalendarDate } from './lib/calendarDate';
 
 // Error utilities
@@ -36,6 +36,8 @@ export * from './lib/templateUtils';
 
 // Quote line inclusion rule (required always; optional only while selected)
 export * from './lib/quoteItemInclusion';
+export * from './lib/quoteDiscountAllocation';
+export * from './lib/quoteTotals';
 
 // Formatting utilities
 export * from './lib/formatters';

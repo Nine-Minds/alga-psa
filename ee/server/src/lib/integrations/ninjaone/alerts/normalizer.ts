@@ -42,6 +42,7 @@ export function mapNinjaOneWebhookToAlertEvent(args: {
     sourceType: payload.type ? String(payload.type).toLowerCase() : 'condition',
     severity: mapAlertSeverity((payload.severity || 'NONE') as NinjaOneAlertSeverity) as NormalizedRmmAlertSeverity,
     message: payload.message || payload.statusCode || null,
+    details: payload.subject ?? null,
     deviceName: payload.device?.displayName || payload.device?.systemName || null,
     externalOrganizationId:
       args.externalOrganizationId ?? (payload.organizationId != null ? String(payload.organizationId) : null),

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5: warranty review and RMA for client-owned equipment (real DB). The Dell flow end to end, the approve and
  * deny paths, permission and state refusals, and the hard invariant: no stock or billing row ever changes.
@@ -30,7 +31,15 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async (e: any) => { published.events.push({ eventType: e.eventType, payload: e.payload }); }),
   publishUnregisteredEventType: vi.fn(async () => undefined), reviveStoredWorkflowPayload: () => null,
 }));
-const denied = vi.hoisted(() => ({ assetIds: new Set<string>() }));
+const denied = vi.hoisted(() => ({ assetIds: new Set<string>(), ticketIds: new Set<string>() }));
+// The per-record ticket decision is stubbed (the kernel needs a full principal this suite does not build): listed ids
+// are refused the way the real check refuses, everything else is allowed. The core's use of it is what is under test.
+vi.mock('@alga-psa/authorization/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: async (input: { ticketId: string }) => {
+    if (denied.ticketIds.has(input.ticketId)) throw new Error('Permission denied: Cannot access ticket');
+    return {};
+  },
+}));
 vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
   const actual = await orig<typeof import('@alga-psa/assets/lib/assetReadAuthorization')>();
   return {
@@ -49,6 +58,7 @@ import {
   receiveVendorReplacement, recordVendorCredit, recordVendorRepair, returnDeviceToClient, shipToVendor,
 } from './rmaWarrantyActions';
 import { getRmaCase, listRmaCases, closeRma, openRma, resolveRepair, receiveReturn, sendToVendor, resolveReplacement, resolveCredit, resolveScrap } from './rmaActions';
+import { openWarrantyClaimFlow, openWarrantyClaimForTicketSchema, ticketRecordAuthorizer } from '../lib/rma';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -80,7 +90,7 @@ beforeAll(async () => {
     { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
   ].map((s) => ({ tenant: holder.tenant, ...s, is_builtin: true, is_active: true })));
 });
-beforeEach(() => { holder.grants = null; denied.assetIds.clear(); published.events.length = 0; });
+beforeEach(() => { holder.grants = null; denied.assetIds.clear(); denied.ticketIds.clear(); published.events.length = 0; });
 afterAll(async () => { await knex?.destroy(); });
 
 const ok = (r: any): any => {
@@ -90,7 +100,7 @@ const ok = (r: any): any => {
 
 async function newAsset(over: Record<string, unknown> = {}) {
   const assetId = randomUUID();
-  await knex('assets').insert({
+  await insertTestAssets(knex, {
     tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `T-${assetId.slice(0, 8)}`,
     name: 'Dell WD19 dock', serial_number: 'OLD-SERIAL', model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...over,
@@ -105,6 +115,53 @@ async function inCustody(assetId: string) {
 }
 const rmaRow = (id: string) => knex('rma_cases').where({ tenant: holder.tenant, rma_id: id }).first();
 const events = (id: string) => knex('rma_events').where({ tenant: holder.tenant, rma_id: id }).orderBy('occurred_at').orderBy('recorded_at');
+
+describe('alga-2026-0002941: a claim never links a ticket the caller cannot access', () => {
+  const claimCount = async () => Number((await knex('rma_cases').where({ tenant: holder.tenant }).count('* as c').first())!.c);
+  const eventCount = async () => Number((await knex('rma_events').where({ tenant: holder.tenant }).count('* as c').first())!.c);
+  const NOT_FOUND = { actionError: 'Ticket not found.', messageKey: 'features/inventory:errors.rma.ticketNotFound' };
+
+  it('a ticket supplied through the ticket-aware flow reads as not found: no claim, no event, no ticket data', async () => {
+    const assetId = await newAsset();
+    denied.ticketIds.add(TICKET);
+    const [cases, evts] = [await claimCount(), await eventCount()];
+    const result = await openWarrantyClaimFlow(
+      { user_id: holder.userId }, holder.tenant, { asset_id: assetId, reason: 'x', ticket_id: TICKET },
+      openWarrantyClaimForTicketSchema, ticketRecordAuthorizer({ user_id: holder.userId }, holder.tenant),
+    );
+    expect(result).toEqual(NOT_FOUND);
+    expect(JSON.stringify(result)).not.toContain(TICKET);
+    expect(await claimCount()).toBe(cases);
+    expect(await eventCount()).toBe(evts);
+  });
+
+  it('a ticket derived from open custody reads as not found through the browser-facing action, and nothing is written', async () => {
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    denied.ticketIds.add(TICKET);
+    const [cases, evts] = [await claimCount(), await eventCount()];
+    const result = await openWarrantyClaim({ asset_id: assetId, reason: 'x' });
+    expect(result).toEqual(NOT_FOUND);
+    expect(JSON.stringify(result)).not.toContain(TICKET);
+    expect(await claimCount()).toBe(cases);
+    expect(await eventCount()).toBe(evts);
+  });
+
+  it('the browser-facing action ignores a supplied ticket_id', async () => {
+    const assetId = await newAsset();
+    const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', ticket_id: TICKET }));
+    expect((await rmaRow(claim.rma_id)).ticket_id).toBeNull();
+  });
+
+  it('an authorized ticket links and the reload returns its fields', async () => {
+    const assetId = await newAsset();
+    const claim = ok(await openWarrantyClaimFlow(
+      { user_id: holder.userId }, holder.tenant, { asset_id: assetId, reason: 'x', ticket_id: TICKET },
+      openWarrantyClaimForTicketSchema, ticketRecordAuthorizer({ user_id: holder.userId }, holder.tenant),
+    ));
+    expect(claim).toMatchObject({ ticket_id: TICKET, ticket_number: expect.any(String) });
+  });
+});
 
 describe('warranty claims (C5)', () => {
   it('Dell flow: open → approve (advance) → ship → receive replacement → return, with no stock or billing change', async () => {
@@ -161,6 +218,30 @@ describe('warranty claims (C5)', () => {
     expect(await counts()).toEqual(before);
   });
 
+  it('refuses warranty transitions for a case without an authorizable asset before mutation or publication', async () => {
+    const rmaId = randomUUID();
+    await knex('rma_cases').insert({
+      tenant: holder.tenant,
+      rma_id: rmaId,
+      rma_number: `RMA-${rmaId.slice(0, 8)}`,
+      status: 'warranty_review',
+      asset_id: null,
+      returned_unit_id: null,
+    });
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+
+    const caseBefore = await rmaRow(rmaId);
+    const historyBefore = await events(rmaId);
+    const publishedBefore = [...published.events];
+    const result = await denyWarrantyClaim(rmaId, { denial_reason: 'not authorizable' });
+
+    expect(result).toHaveProperty('actionError');
+    expect(await rmaRow(rmaId)).toEqual(caseBefore);
+    expect(await events(rmaId)).toEqual(historyBefore);
+    expect(historyBefore).toHaveLength(0);
+    expect(published.events).toEqual(publishedBefore);
+  });
+
   it('credit disposes the custody episode; repair comes back through the office', async () => {
     const a1 = await newAsset();
     const { custody } = await inCustody(a1);
@@ -211,14 +292,42 @@ describe('warranty claims (C5)', () => {
     expect(await openWarrantyClaim({ asset_id: assetId, reason: 'x' })).toHaveProperty('permissionError');
     holder.grants = new Set(['warranty:create']);
     expect(await openWarrantyClaim({ asset_id: assetId, reason: 'x' })).toHaveProperty('permissionError');
-    holder.grants = new Set(['warranty:create', 'asset:update']);
+    // The open custody episode carries a ticket, so linking it needs ticket:read too.
+    holder.grants = new Set(['warranty:create', 'asset:update', 'ticket:read']);
     const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x' }));
     holder.grants = new Set(['warranty:read', 'asset:update']);
     expect(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' })).toHaveProperty('permissionError');
     holder.grants = new Set(['inventory:update', 'asset:update']);
     denied.assetIds.add(assetId);
+    const priorEvents = await events(c.rma_id);
     expect(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' })).toHaveProperty('actionError');
     expect((await rmaRow(c.rma_id)).status).toBe('warranty_review');
+    expect(await events(c.rma_id)).toEqual(priorEvents);
+
+    const hiddenAsset = await newAsset();
+    await inCustody(hiddenAsset);
+    denied.assetIds.add(hiddenAsset);
+    const priorCaseCount = await knex('rma_cases').where({ tenant: holder.tenant }).count('* as count').first();
+    const priorCases = Number(priorCaseCount?.count ?? 0);
+    holder.grants = new Set(['inventory:create', 'asset:update']);
+    expect(await openWarrantyClaim({ asset_id: hiddenAsset, reason: 'hidden' })).toHaveProperty('actionError');
+    const currentCaseCount = await knex('rma_cases').where({ tenant: holder.tenant }).count('* as count').first();
+    expect(Number(currentCaseCount?.count ?? 0)).toBe(priorCases);
+
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+    const otherTenant = await createInventoryTestTenant(knex);
+    const foreignRmaId = randomUUID();
+    await knex('rma_cases').insert({
+      tenant: otherTenant,
+      rma_id: foreignRmaId,
+      rma_number: `RMA-${foreignRmaId.slice(0, 8)}`,
+      status: 'warranty_review',
+    });
+    expect(await denyWarrantyClaim(foreignRmaId, { denial_reason: 'cross-tenant attempt' })).toMatchObject({
+      messageKey: 'features/inventory:errors.rma.caseNotFound',
+    });
+    expect(await knex('rma_cases').where({ tenant: otherTenant, rma_id: foreignRmaId }).first()).toMatchObject({ status: 'warranty_review' });
+
     denied.assetIds.clear();
     ok(await denyWarrantyClaim(c.rma_id, { denial_reason: 'n' }));
   });
@@ -247,7 +356,7 @@ describe('warranty claims (C5)', () => {
   it('reads: asset-linked cases honour the record-level check; warranty-only readers see no stock-unit RMAs', async () => {
     const assetId = await newAsset();
     await inCustody(assetId);
-    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', ticket_id: TICKET }));
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x' }));
     const row: any = ok(await getRmaCase(c.rma_id));
     expect(row).toMatchObject({ asset_name: 'Dell WD19 dock', asset_serial_number: 'OLD-SERIAL', ticket_number: expect.any(String) });
     expect((ok(await listRmaCases({ asset_id: assetId })) as any[]).map((r) => r.rma_id)).toEqual([c.rma_id]);

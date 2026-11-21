@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { beforeAll, afterAll, beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -70,7 +71,7 @@ describe('Asset import integration', () => {
     const assetId = overrides.assetId ?? uuidv4();
     const now = new Date().toISOString();
 
-    await ctx.db('assets').insert({
+    await insertTestAssets(ctx.db, {
       tenant: ctx.tenantId,
       asset_id: assetId,
       asset_type: overrides.assetType ?? assetType,

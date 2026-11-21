@@ -14,6 +14,7 @@ import type {
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import { prorateRecurringCoverageByRatio } from "@alga-psa/shared/billingClients/coverageProration";
 import { resolveRecurringMemberRate } from "./recurringMemberRate";
+import { formatCurrencyWithSymbol } from "@alga-psa/core/formatters";
 
 /**
  * Effective pricing selected from a scheduled revision for the covered service
@@ -69,11 +70,8 @@ export interface RecurringQuantityChargeComputeResult {
 }
 
 function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+  return formatCurrencyWithSymbol(cents / 100, "en-US", currencyCode || "USD");
 }
 
 function formatQuantity(quantity: number): string {

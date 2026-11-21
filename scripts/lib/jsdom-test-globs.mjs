@@ -49,7 +49,7 @@ export const NODE_PINNED_FILES = [
   'packages/clients/src/components/clients/ClientDetails.huduDocumentsSection.wiring.test.ts',
   'packages/clients/src/components/clients/ClientDetails.inboundDestination.wiring.test.ts',
   'packages/clients/src/components/clients/ClientDetails.pulseRefresh.wiring.test.ts',
-  'packages/clients/src/components/contacts/ContactDetails.inboundDestination.wiring.test.ts',
+  'packages/clients/src/components/contacts/ContactDetailsEdit.inboundDestination.wiring.test.ts',
 ];
 
 // Compiles the glob dialect the patterns above are written in — `**/`, `*`,

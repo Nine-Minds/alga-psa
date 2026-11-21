@@ -41,6 +41,7 @@ describe('bulk invoice controller lifecycle integration', () => {
     };
 
     await grant(tenant, 'financial', 'update');
+    await grant(tenant, 'invoice', 'update');
     await grant(tenant, 'invoice', 'finalize');
     await grant(tenant, 'invoice', 'void');
     controller = new ApiFinancialController();
@@ -210,7 +211,7 @@ describe('bulk invoice controller lifecycle integration', () => {
     let checks = 0;
     vi.spyOn(service, 'validatePermissions').mockImplementation(async (...args: any[]) => {
       checks += 1;
-      if (checks === 3) await revoke('invoice', 'void');
+      if (checks === 4) await revoke('invoice', 'void');
       return original(...args);
     });
 

@@ -6,9 +6,21 @@ import { getCachedTicketPriorities, setCachedTicketPriorities } from "../../../c
 import type { TicketDetailDeps } from "../types";
 import { getApiErrorMessage, ticketUpdateSuccessMessage } from "../utils";
 
+/**
+ * The priorities a ticket can move to: the same family (ITIL or custom) as its current priority, because the
+ * server refuses a priority of the other family for the ticket's board and the current one already matches it.
+ * Everything when the ticket has no priority, or the server (or cache) carries no ITIL flag.
+ */
+export function prioritiesOfSameFamily(options: TicketPriority[], currentPriorityId: string | null | undefined): TicketPriority[] {
+  const current = options.find((p) => p.priority_id === currentPriorityId);
+  if (current?.is_from_itil_standard === undefined) return options;
+  return options.filter((p) => p.is_from_itil_standard === undefined || p.is_from_itil_standard === current.is_from_itil_standard);
+}
+
 export function useTicketPriority(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
+    currentPriorityId?: string | null;
   },
 ) {
   const { client, session, ticketId, t, showToast, fetchTicket } = deps;
@@ -87,7 +99,7 @@ export function useTicketPriority(
   return {
     priorityPickerOpen,
     setPriorityPickerOpen,
-    priorityOptions,
+    priorityOptions: prioritiesOfSameFamily(priorityOptions, deps.currentPriorityId),
     priorityOptionsLoading,
     priorityOptionsError,
     priorityUpdating,

@@ -34,12 +34,12 @@ Key architecture artifacts come from:
 
 ### Data Model
 - `tenant_external_entity_mappings` (Postgres) stores `integration_type`, `alga_entity_type`, `alga_entity_id`, `external_entity_id`, optional `external_realm_id`, `metadata`, status fields, and timestamps.
-- Unique constraints prevent duplicate mappings per tenant/entity/realm combination: one mapping per Alga entity per realm, and external targets are one-to-one, except Xero revenue-account targets (`metadata.xeroTargetKind = 'account'`), which many services may share (`idx_unique_external_mapping` is a partial index that excludes them).
+- Unique constraints prevent duplicate mappings per tenant/entity/realm combination: one mapping per Alga entity per realm, and external targets are one-to-one, except (1) Xero revenue-account targets (`metadata.xeroTargetKind = 'account'`), which many services may share, and (2) QuickBooks Online tax codes, which many Alga tax regions may share (this is necessary for Automated Sales Tax realms where all taxable regions must map to the same `TAX` or `NON` pseudo-code). (`idx_unique_external_mapping` is a partial index that excludes both cases.)
 - Metadata enables adapter-specific payload data (e.g., Xero tax components).
 
 ### Server Actions (`packages/integrations/src/actions/externalMappingActions.ts`)
 - Expose tenant-scoped CRUD (`getExternalEntityMappings`, `createExternalEntityMapping`, `updateExternalEntityMapping`, `deleteExternalEntityMapping`).
-- Enforce RBAC (`billing_settings` read/update) and wrap operations in transactions via `withTransaction`.
+- Enforce RBAC on the `accounting_integrations` resource (`catalog_read` to list mappings, `mappings_manage` to create, update, or delete them) and wrap operations in transactions via `withTransaction`.
 - Allow filtering by adapter, entity type, entity ID, and realm.
 - Used directly by mapping modules unless overridden (e.g., Playwright harness, specialized metadata handling).
 
@@ -170,7 +170,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
    - **QuickBooks CSV**, **QuickBooks Desktop (IIF)**, and **Xero CSV**: manual import/export, available in every edition.
    - **QuickBooks Online (OAuth)** and **Xero (OAuth)**: Enterprise Edition only.
 3. For an OAuth adapter, complete the connection first — the mapping tabs load their external options from the connected company.
-4. Confirm user role grants `Billing Settings` permissions.
+4. Confirm the user's role grants the needed `accounting_integrations` capabilities: `catalog_read` to view mappings and remote catalogs, `mappings_manage` to edit mappings, `exports_execute` to run exports, and `connections_manage` to connect or disconnect an OAuth adapter. Admin holds all of them; Finance holds all but `connections_manage` and `remote_mutate`.
 
 ### Managing Mappings
 1. Navigate to **Settings → Integrations → Accounting**.
@@ -209,7 +209,7 @@ Exports run from **Billing → Accounting Exports** for every adapter. The adapt
 ---
 
 ## Operational Considerations
-- **Permissions** – `hasPermission(user, 'billing_settings', 'read|update')` gates mapping actions. Support teams need elevated roles to assist tenants.
+- **Permissions** – the `accounting_integrations` resource gates accounting work per capability (`catalog_read`, `connections_manage`, `mappings_manage`, `exports_execute`, `remote_mutate`). Server actions and the QuickBooks REST endpoints check the same capabilities, so UI and API access match. Support teams need a role with the relevant capability to assist tenants.
 - **Feature flags** – Rollout of unified mapping UI may be staged; confirm feature toggle status before enabling for tenants.
 - **Logging** – Server actions log create/update/delete events with tenant context. Export flows log batch lifecycle and adapter responses.
 - **Auditing** – `tenant_external_entity_mappings` retains timestamps; `accounting_export_batches` captures `triggered_by` user id for traceability.

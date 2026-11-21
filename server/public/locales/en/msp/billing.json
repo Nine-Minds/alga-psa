@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Loading template preview...",
     "errorPrefix": "Error:",
-    "empty": "Please select an invoice and a template to preview."
+    "empty": "Please select an invoice and a template to preview.",
+    "frameTitle": "Invoice preview"
   },
   "templateDesigner": {
     "propertyEditor": {

@@ -96,6 +96,17 @@ export function getAuthCallbackRedirectUri(): string {
   return ExpoLinking.createURL("auth/callback");
 }
 
+/** Where the web sign-out returns; not a registered deep link, the app just needs the browser to close. */
+export function getSignedOutRedirectUri(): string {
+  return ExpoLinking.createURL("auth/signed-out");
+}
+
+export function buildWebSignOutUrl({ baseUrl, redirectUri }: { baseUrl: string; redirectUri: string }): string {
+  const signOut = new URL("/auth/mobile/signout", baseUrl);
+  signOut.searchParams.set("redirect", redirectUri);
+  return signOut.toString();
+}
+
 export function buildWebSignInUrl({
   baseUrl,
   redirectUri,
