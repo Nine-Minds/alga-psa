@@ -20,6 +20,7 @@ import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
 import { POST as reverseApprovalRoute } from '@/app/api/v1/time-sheets/[id]/reverse-approval/route';
 import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 import { POST as rejectTimeSheetRoute } from '@/app/api/v1/time-sheets/[id]/reject/route';
+import { GET as exportTimeSheetsRoute } from '@/app/api/v1/time-sheets/export/route';
 import { reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
 import { registerTimeSource, resetTimeSourcesForTests } from '@alga-psa/scheduling/lib/timeSource';
 
@@ -273,6 +274,40 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await service.getById(foreignSheet.id, ctx)).toBeNull();
   });
 
+  it('excludes native entry children whose subject differs from the authorized sheet owner', async () => {
+    const f = await seed();
+    const service = serviceFor(f.tenantId);
+    const ctx = contextFor(f.tenantId, f.actor);
+    const sheet = await service.create({ period_id: f.periodId }, ctx);
+    const start = new Date('2026-01-06T10:00:00.000Z');
+    const end = new Date('2026-01-06T11:00:00.000Z');
+    for (const userId of [f.actor, f.subject]) {
+      await tenantTable(f.tenantId, 'time_entries').insert({
+        tenant: f.tenantId,
+        entry_id: uuidv4(),
+        user_id: userId,
+        time_sheet_id: sheet.id,
+        start_time: start,
+        end_time: end,
+        billable_duration: 60,
+        work_date: '2026-01-06',
+        work_timezone: 'UTC',
+        approval_status: 'DRAFT',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+    }
+
+    const entries = await service.getTimeSheetEntries(sheet.id, ctx);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].user_id).toBe(f.actor);
+    expect(await service.getTimeSheetSummary(sheet.id, ctx)).toMatchObject({
+      total_hours: 1,
+      billable_hours: 1,
+      non_billable_hours: 0,
+    });
+  });
+
   it('enforces the shared scope over an unfiltered registered provider collection before every read surface', async () => {
     const f = await seed();
     const managed = await seedUser(f.tenantId, 'Managed');
@@ -284,8 +319,9 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
       { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 101, total_hours: 101, approval_status: 'DRAFT',
         submitted_at: new Date('2025-03-10T08:00:00Z'), approved_at: new Date('2025-03-11T18:00:00Z'), period_start: '2025-03-10', period_end: '2025-03-16',
         time_entries: [
-          { time_sheet_id: 'provider-own', tenant: f.tenantId, duration: 60 },
-          { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, duration: 900 },
+          { time_sheet_id: 'provider-own', tenant: f.tenantId, user_id: f.actor, duration: 60 },
+          { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, user_id: f.actor, duration: 900 },
+          { time_sheet_id: 'provider-own', tenant: f.tenantId, user_id: unrelated, duration: 36000 },
         ],
         comments: [
           { time_sheet_id: 'provider-own', tenant: f.tenantId, comment: 'own private comment' },
@@ -293,14 +329,14 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
         ], summary: { total_hours: 101 } },
       { id: 'provider-managed', tenant: f.tenantId, user_id: managed, user_name: 'x', hours: 102, total_hours: 102, approval_status: 'SUBMITTED',
         submitted_at: '2025-03-10T16:00:00Z', approved_at: null, period_start: '2025-03-11', period_end: '2025-03-17',
-        time_entries: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, duration: 120 }],
+        time_entries: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, user_id: managed, duration: 120 }],
         comments: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, comment: 'managed comment' }], summary: { total_hours: 102 } },
       { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, user_name: 'x', hours: 104, total_hours: 104, approval_status: 'APPROVED',
         submitted_at: null, approved_at: '2025-03-11T10:00:00Z', period_start: '2025-03-12', period_end: '2025-03-18',
-        time_entries: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, duration: 240 }],
+        time_entries: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, duration: 240 }],
         comments: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, comment: 'unrelated private comment' }], summary: { total_hours: 104 } },
       { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, user_name: 'x', hours: 108, total_hours: 108, approval_status: 'APPROVED',
-        time_entries: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, duration: 480 }],
+        time_entries: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, duration: 480 }],
         comments: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, comment: 'foreign private comment' }], summary: { total_hours: 108 } },
     ];
     const provider = {
@@ -408,6 +444,44 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     rows.splice(0, rows.length);
     await expect(service.list({ page: 1, limit: 25 } as any, actor, { created_from: '2025-03-10T12:00:00Z' } as any))
       .rejects.toThrow(/Created and updated date filters are not supported/);
+  });
+
+  it('exports only rows inside the shared registered-source subject and tenant scope', async () => {
+    const f = await seed();
+    const managed = await seedUser(f.tenantId, 'ExportManaged');
+    const unrelated = await seedUser(f.tenantId, 'ExportUnrelated');
+    const otherTenant = await seed();
+    await tenantTable(f.tenantId, 'users').where({ user_id: managed }).update({ reports_to: f.actor });
+    const rows = [
+      { id: 'export-own', tenant: f.tenantId, user_id: f.actor, time_entries: [], comments: [] },
+      { id: 'export-managed', tenant: f.tenantId, user_id: managed, time_entries: [], comments: [] },
+      { id: 'export-unrelated', tenant: f.tenantId, user_id: unrelated, time_entries: [], comments: [] },
+      { id: 'export-foreign', tenant: otherTenant.tenantId, user_id: otherTenant.actor, time_entries: [], comments: [] },
+    ];
+    registerTimeSource('export-test-time-source', () => ({
+      kind: 'export-test-time-source',
+      rest: { collectTimeSheetReadRows: async () => rows },
+    } as any), { servesCapability: 'co-managed' });
+    configureRouteBoundary(f.tenantId, f.actor);
+    grants.byUser.set(f.actor, new Set(['time_sheet:read']));
+
+    const exportRows = async () => {
+      const response = await exportTimeSheetsRoute(new Request(
+        `http://localhost/api/v1/time-sheets/export?format=json`,
+        { headers: { 'x-api-key': 'route-test-api-key', 'x-tenant-id': f.tenantId } },
+      ));
+      expect(response.status).toBe(200);
+      const body = await response.json() as any;
+      return body.data;
+    };
+
+    expect((await exportRows()).map((row: any) => row.id)).toEqual(['export-own']);
+    grants.byUser.set(f.actor, new Set(['time_sheet:read', 'time_sheet:approve']));
+    expect((await exportRows()).map((row: any) => row.id).sort()).toEqual(['export-managed', 'export-own'].sort());
+    grants.byUser.set(f.actor, new Set(['time_sheet:read', 'time_sheet:read_all']));
+    expect((await exportRows()).map((row: any) => row.id).sort()).toEqual([
+      'export-managed', 'export-own', 'export-unrelated',
+    ].sort());
   });
 
   it.each(['period_start', 'period_end'] as const)('sorts delegated %s calendar dates before pagination for Date and string values', async (sort) => {

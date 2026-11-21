@@ -1,5 +1,15 @@
 # PR #4154: delegated time-sheet read authorization
 
+## Calendar-date sorting verification
+
+The calendar-date sorting correction is `d5fdb48ecc490fe1fae63dbafdcbc6c6ae500c06`. Delegated period sorts normalize local-midnight database `Date` objects and `YYYY-MM-DD` strings through `formatDbDate` before comparison. Timestamp sorts still compare instants, and authorization still runs before filtering and pagination.
+
+The registered `calendar-date-test-source` supplies mixed Date/string period values and an unauthorized subject without filtering them. Its two regression cases cover both period fields, ascending and descending pages, equal-date ID ordering, scoped totals, and date-filtered totals. Both cases failed before the correction. They now pass in UTC and `Pacific/Auckland`.
+
+The focused run passed 76 tests across seven files, including 39 real-Postgres service tests, three approval integration tests, 19 route tests, and 15 list-query tests. Server typecheck passed with a 12 GiB heap. The first full test attempt was interrupted when the shared `test_database` disappeared; the successful rerun used `TEST_DB_NAME=test_timesheet_security_takeover`.
+
+Logs are preserved under `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/takeover-d5fdb48ecc/`: `calendar-red.log`, `tests-isolated-pass.log`, `calendar-auckland-pass.log`, and `typecheck-pass.log`. The production build for this revision is being verified separately; its final result will be recorded before publication. No app server was started, and no current live smoke is claimed.
+
 ## Draft Implementation repair
 
 No task-specific plan was attached. This focused repair was made on the existing PR branch, starting at `13c032cf7d`, after confirming that handled non-native `TimeSheetService` reads returned before the native owner/delegate/read-all predicate and received no shared subject scope.
@@ -37,6 +47,14 @@ The regression covers:
 Mutation evidence removes both tenant and subject filtering from the shared collection adapter. The registered provider regression then returns an unrelated sheet in the ordinary reader’s first page and fails. Restoring the adapter makes the focused regression pass. See `evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `evidence/scoped-collection-adapter-b32ef96-restored-pass.log`.
 
 The list-sorting and range-filter behavioral regressions use the same registered provider collection and assert returned IDs, filtered totals, ordering across pagination, timestamp boundary behavior, timezone-offset equivalence, null exclusion, and rejection against an empty collection.
+
+## Repair round: nested subject validation
+
+At the starting revision `d5fdb48ecc490fe1fae63dbafdcbc6c6ae500c06`, the shared adapter already fixed tenant, authorized sheet subjects, parent-sheet links, and aggregates before service filtering or pagination. Review found that a nested entry linked to an authorized sheet could still carry a different `user_id`; the adapter retained that entry and included it in derived totals. The repair now requires entry child `user_id` to match the sheet owner, in addition to tenant and `time_sheet_id`. Native entry and summary queries also constrain records to the authorized sheet owner. Comment authors are allowed to differ from the sheet owner, while comments remain constrained to the authorized tenant and parent sheet.
+
+The registered-source regression includes a same-tenant, same-sheet entry attributed to an unrelated subject. It verifies that list totals, entries, and summaries exclude it; a native-path regression independently verifies that entry reads and summaries exclude mismatched owners. The export route is invoked directly and verifies owner-only, managed-subject, and tenant-scoped `read_all` results against mixed-owner/mixed-tenant provider rows. The final focused database lane passed 44 tests across five suites with `TEST_DB_NAME=test_timesheet_security_takeover`; the route and sort lane passed 34 tests across two database-free suites. A temporary mutation bypassing the child-subject predicate made the owner total 601 hours instead of 1 and failed; restoring it passed. Logs: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/takeover-d5fdb48ecc/child-subject-mutation-fail.log`, `child-subject-restored-pass.log`, `focused-database-final.log`, and `focused-database-free-pass.log`.
+
+Standalone server typecheck passed with a 12 GiB heap. The repository community build (`npm run build`) completed Next.js compilation and page generation but exited 1 at Next.js 16.4.2 `SecurityFatalError`; this remains a failed build. The full log is `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/takeover-d5fdb48ecc/community-build.log`. No dependency upgrade was run. The app server remained stopped, and no fresh browser or live smoke result is claimed.
 
 ## Commands and results
 

@@ -1798,12 +1798,13 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
       await this.authorizeTimeSheetRead(visibleSheet, context, knex);
-      if (!await visibleSheet.first('time_sheets.id')) return [];
+      const authorizedSheet = await visibleSheet.first('time_sheets.user_id');
+      if (!authorizedSheet) return [];
       
       // work_date is a DATE column; node-pg would turn it into a JS Date (serialized as an
       // ISO datetime), so format it in SQL. The later alias overrides the `*` value.
       return tenantDb(knex, context.tenant).table('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+        .where({ time_sheet_id: timeSheetId, user_id: authorizedSheet.user_id })
         .select('time_entries.*', knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"))
         .orderBy('start_time');
     }
@@ -1819,7 +1820,8 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
       await this.authorizeTimeSheetRead(visibleSheet, context, knex);
-      if (!await visibleSheet.first('time_sheets.id')) return null;
+      const authorizedSheet = await visibleSheet.first('time_sheets.user_id');
+      if (!authorizedSheet) return null;
       
       // worked_minutes is the real duration (end - start); billable_duration is the billed
       // subset in minutes, so non-billable hours are the difference. Billable minutes are
@@ -1827,7 +1829,7 @@ export class TimeSheetService extends BaseService<any> {
       // worked minutes but may still carry a billable_duration), so billable <= total and
       // non-billable >= 0 always hold.
       const rows = await tenantDb(knex, context.tenant).table('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+        .where({ time_sheet_id: timeSheetId, user_id: authorizedSheet.user_id })
         .select([
           knex.raw("COALESCE(work_item_type, 'unknown') as work_item_type"),
           knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"),

@@ -53,10 +53,14 @@ export async function collectScopedTimeSheetRows(
         if (typeof nested.tenant !== 'string' || typeof nested.time_sheet_id !== 'string') {
           throw new Error(`Registered time source ${childKey} records must include tenant and time_sheet_id`);
         }
+        if (childKey !== 'comments' && typeof nested.user_id !== 'string') {
+          throw new Error(`Registered time source ${childKey} records must include user_id`);
+        }
         return nested;
       });
       (scopedRow as Record<string, unknown>)[childKey] = validChildren.filter(
-        (nested) => nested.tenant === scope.tenant && nested.time_sheet_id === row.id,
+        (nested) => nested.tenant === scope.tenant && nested.time_sheet_id === row.id &&
+          (childKey === 'comments' || nested.user_id === row.user_id),
       );
     }
     const summary = summarizeTimeSheetEntries(scopedRow.time_entries);
