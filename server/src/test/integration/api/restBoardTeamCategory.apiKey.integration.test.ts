@@ -1,9 +1,15 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { createRequire } from 'node:module';
 import { NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTenant } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey } from '../../e2e/utils/apiTestHelpers';
+
+const require = createRequire(import.meta.url);
+const { DEFAULT_ROLES } = require('../../../../migrations/utils/permissions/roleGrants.cjs');
+const { syncPermissionCatalog } = require('../../../../migrations/utils/permissions/syncPermissionCatalog.cjs');
 
 const connection = vi.hoisted(() => ({ db: undefined as Knex | undefined, tenant: undefined as string | undefined }));
 
@@ -49,18 +55,23 @@ let apiKey: Awaited<ReturnType<typeof createTestApiKey>>;
 beforeAll(async () => {
   db = await createTestDbConnection({ recreate: false });
   await db.migrate.latest();
-  const tenantFixture = await db('tenants')
-    .whereExists(db('boards').select(db.raw('1')).whereRaw('boards.tenant = tenants.tenant'))
-    .whereExists(db('roles').select(db.raw('1')).whereRaw('roles.tenant = tenants.tenant')
-      .andWhere({ role_name: 'Admin', msp: true, client: false }))
-    .first<{ tenant: string }>('tenant');
-  if (!tenantFixture) throw new Error('The integration database has no seeded PSA tenant with a board and Admin role');
-  tenant = tenantFixture.tenant;
 }, 300_000);
 
 beforeEach(async () => {
-  connection.tenant = tenant;
   connection.db = await db.transaction();
+  tenant = await createTenant(connection.db, 'REST API key integration fixture', { productCode: 'psa' });
+  await connection.db('roles').insert(DEFAULT_ROLES.psa
+    .filter((role: any) => !role.legacy)
+    .map((role: any) => ({
+      tenant,
+      role_name: role.roleName,
+      description: role.roleName,
+      msp: role.msp,
+      client: role.client,
+    })));
+  await syncPermissionCatalog(connection.db, tenant, 'psa');
+  await connection.db('boards').insert({ tenant, board_id: randomUUID(), board_name: 'REST API integration board', is_default: true, is_inactive: false });
+  connection.tenant = tenant;
   userId = randomUUID();
   await connection.db('users').insert({
     tenant, user_id: userId, username: `rest-${userId}`, email: `${userId}@example.test`,
