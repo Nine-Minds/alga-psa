@@ -36,7 +36,7 @@ vi.mock('@alga-psa/db/models/user', () => ({ default: {
 vi.mock('@alga-psa/db/models/userPreferences', () => ({ default: {} }));
 vi.mock('../../../../../packages/user-composition/src/lib/avatarUtils', () => ({ getUserAvatarUrl: vi.fn() }));
 vi.mock('../../../../../packages/user-composition/src/lib/permissions', () => ({ hasPermission: mocks.permission }));
-// Keep the actual current-user resolver behind the actual action re-export.
+// Keep the actual current-user resolver behind the actual public action boundary.
 // Only the unrelated action wrappers are simplified to isolate response behavior.
 vi.mock('@alga-psa/auth', async () => {
   const { getCurrentUser } = await import('../../../../../packages/auth/src/lib/getCurrentUser');
@@ -52,7 +52,8 @@ import {
   getCurrentUser, findUserById, getAllUsers, getAllUsersBasic,
   getUserWithRoles, getMultipleUsersWithRoles, getReportsToSubordinates, getClientUsersForClient,
 } from '../../../../../packages/user-composition/src/actions/userQueryActions';
-import { getCurrentUserWithRevocationCheck } from '../../../../../packages/auth/src/lib/getCurrentUser';
+import { getCurrentUser as getAuthenticatedUser, getCurrentUserWithRevocationCheck } from '../../../../../packages/auth/src/lib/getCurrentUser';
+import { admitCommentAudienceReader } from '@shared/lib/commentAudience';
 import { runWithApiKeyUser } from '../../../../../packages/auth/src/lib/apiKeyUserContext';
 
 const fullUser: IUserWithRoles & { future_credential: string } = {
@@ -61,7 +62,7 @@ const fullUser: IUserWithRoles & { future_credential: string } = {
   hashed_password: 'PRIVATE_PASSWORD_HASH', two_factor_secret: 'PRIVATE_TOTP_SEED',
   future_credential: 'PRIVATE_FUTURE_CREDENTIAL', two_factor_enabled: true,
   roles: [{ role_id: 'role-a', role_name: 'Admin', msp: true, client: false, tenant: 'tenant-a' }],
-  clientId: 'client-a', avatarUrl: '/avatar-a',
+  clientId: 'client-a', avatarUrl: '/avatar-a', seat_reader: false,
 };
 
 function expectPublic(user: any, withRoles = true) {
@@ -100,6 +101,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('public current-user action', () => {
+  it.each([false, true])('keeps seat_reader=%s private at the action boundary', async seat_reader => {
+    mocks.byId.mockResolvedValue({ ...fullUser, seat_reader });
+    const user = await getCurrentUser();
+    expectPublic(user);
+    expect(user).not.toHaveProperty('seat_reader');
+  });
+
   it.each(['internal', 'client'] as const)('excludes credentials for a %s caller resolved by ID', async user_type => {
     mocks.byId.mockResolvedValue({ ...fullUser, user_type });
     const user = await getCurrentUser();
@@ -136,6 +144,33 @@ describe('public current-user action', () => {
     mocks.session.mockResolvedValue({ user: { email: fullUser.email, tenant: 'tenant-a' } });
     expect(await getCurrentUser()).toBeNull();
     expect(mocks.byEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('authenticated user context', () => {
+  it.each([getAuthenticatedUser, getCurrentUserWithRevocationCheck])('admits loaded MSP staff without seat queries', async resolveUser => {
+    const user = await resolveUser();
+    expectPublic(user);
+    const database = vi.fn(() => { throw new Error('staff admission must not query seat tables'); });
+    await expect(admitCommentAudienceReader(database as unknown as Parameters<typeof admitCommentAudienceReader>[0], user!.tenant, {
+      userId: user!.user_id, userType: user!.user_type, seatReader: user!.seat_reader,
+    })).resolves.toEqual({ kind: 'staff', tenant: 'tenant-a' });
+    expect(database).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('preserves seat_reader=%s through session, email and API-key resolution', async seat_reader => {
+    const source = { ...fullUser, seat_reader };
+    mocks.byId.mockResolvedValue(source);
+    mocks.byEmail.mockResolvedValue(source);
+    expect(await getAuthenticatedUser()).toHaveProperty('seat_reader', seat_reader);
+    expect(await getCurrentUserWithRevocationCheck()).toHaveProperty('seat_reader', seat_reader);
+    vi.stubEnv('NODE_ENV', 'development');
+    mocks.session.mockResolvedValue({ user: { email: fullUser.email, tenant: 'tenant-a', user_type: 'internal' } });
+    expect(await getAuthenticatedUser()).toHaveProperty('seat_reader', seat_reader);
+    expect(await runWithApiKeyUser(source, getAuthenticatedUser)).toHaveProperty('seat_reader', seat_reader);
+    const publicUser = await runWithApiKeyUser(source, getCurrentUser);
+    expectPublic(publicUser);
+    expect(publicUser).not.toHaveProperty('seat_reader');
   });
 });
 

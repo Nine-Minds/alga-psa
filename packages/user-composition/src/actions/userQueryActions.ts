@@ -14,9 +14,12 @@ import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
 import { projectedPeopleAsUsers, projectedPeopleForCaller } from '../lib/seatPeople';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { getCurrentUser as getAuthenticatedUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
-export { getCurrentUser };
+export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
+  const user = await getAuthenticatedUser();
+  return user ? sanitizeUserForResponse(user) : null;
+}
 
 function isPermissionDeniedError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Permission denied:');

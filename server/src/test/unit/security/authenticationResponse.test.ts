@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ lookup: vi.fn(), verify: vi.fn() }));
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), verify: vi.fn(), policy: vi.fn(), refusal: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { findUserByEmailTenantAndType: mocks.lookup } }));
 vi.mock('@alga-psa/db', () => ({ getTenantIdBySlug: vi.fn() }));
 vi.mock('@alga-psa/core/encryption', () => ({ verifyPassword: mocks.verify }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/core/features', () => ({ isEnterprise: false }));
+vi.mock('../../../../../packages/auth/src/lib/authPolicyStore', () => ({
+  loadTenantAuthPolicy: mocks.policy,
+  recordLoginRefusal: mocks.refusal,
+}));
 
 import { authenticateUser } from '../../../../../packages/auth/src/actions/auth';
 import { authenticateUserForAuth } from '../../../../../packages/auth/src/lib/authenticateUserForAuth';
+import { DEFAULT_TENANT_AUTH_POLICY } from '../../../../../packages/auth/src/lib/authPolicy';
 
 const fullUser = {
   user_id: 'user-a', username: 'alice', email: 'alice@example.test', tenant: 'tenant-a',
@@ -21,6 +26,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.lookup.mockResolvedValue(fullUser);
   mocks.verify.mockResolvedValue(true);
+  mocks.policy.mockResolvedValue({ ...DEFAULT_TENANT_AUTH_POLICY });
+  mocks.refusal.mockResolvedValue(undefined);
 });
 
 describe('authentication credential boundary', () => {
@@ -48,5 +55,12 @@ describe('authentication credential boundary', () => {
     mocks.lookup.mockResolvedValue({ ...fullUser, is_inactive: true });
     expect(await authenticateUserForAuth(...credentials)).toBeNull();
     expect(await authenticateUser(...credentials)).toBeNull();
+  });
+
+  it('enforces SSO policy through both credential boundaries', async () => {
+    mocks.policy.mockResolvedValue({ ...DEFAULT_TENANT_AUTH_POLICY, requireSsoForInternalUsers: true });
+    await expect(authenticateUserForAuth(...credentials)).rejects.toMatchObject({ code: 'SSO_REQUIRED' });
+    await expect(authenticateUser(...credentials)).rejects.toMatchObject({ code: 'SSO_REQUIRED' });
+    expect(mocks.refusal).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,5 +1,5 @@
-import { sanitizeUserForResponse } from '@alga-psa/types';
-import type { PublicUserWithRoles } from '@alga-psa/types';
+import { sanitizeAuthenticatedUser } from '@alga-psa/types';
+import type { AuthenticatedUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex, noteTenantProductCode } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
@@ -13,7 +13,7 @@ import type { Session } from 'next-auth';
  * request, not merely at the next sign-in, so an inactive user resolves to no
  * caller at all.
  */
-function activeUserOrNull(user: PublicUserWithRoles | null): PublicUserWithRoles | null {
+function activeUserOrNull(user: AuthenticatedUserWithRoles | null): AuthenticatedUserWithRoles | null {
   if (!user) {
     return null;
   }
@@ -23,20 +23,20 @@ function activeUserOrNull(user: PublicUserWithRoles | null): PublicUserWithRoles
     return null;
   }
 
-  return sanitizeUserForResponse(user);
+  return sanitizeAuthenticatedUser(user);
 }
 
 type SessionResolver = () => Promise<Session | null>;
 
 async function resolveCurrentUser(
   resolveSession: SessionResolver
-): Promise<PublicUserWithRoles | null> {
+): Promise<AuthenticatedUserWithRoles | null> {
   try {
     // API-key routes establish the caller's identity explicitly (see
     // apiKeyUserContext); it takes precedence over any ambient session.
     const apiKeyUser = getApiKeyUserOverride();
     if (apiKeyUser) {
-      return sanitizeUserForResponse(apiKeyUser);
+      return sanitizeAuthenticatedUser(apiKeyUser);
     }
 
     const session = await resolveSession();
@@ -118,7 +118,8 @@ async function resolveCurrentUser(
   }
 }
 
-export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
+/** Internal request context. The public user-query action applies the response projection. */
+export async function getCurrentUser(): Promise<AuthenticatedUserWithRoles | null> {
   return resolveCurrentUser(getSession);
 }
 
@@ -130,6 +131,6 @@ export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
  * session gate both reject revoked or untracked sessions; the latter also
  * protects the development-only edge fallback.
  */
-export async function getCurrentUserWithRevocationCheck(): Promise<PublicUserWithRoles | null> {
+export async function getCurrentUserWithRevocationCheck(): Promise<AuthenticatedUserWithRoles | null> {
   return resolveCurrentUser(getSessionWithRevocationCheck);
 }

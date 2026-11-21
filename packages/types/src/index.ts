@@ -34,6 +34,7 @@ export * from './lib/companySync';
 export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/userResponse';
+export * from './lib/authenticatedUser';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';

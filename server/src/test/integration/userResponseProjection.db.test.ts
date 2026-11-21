@@ -86,4 +86,20 @@ describe('role-bearing public user projections (PostgreSQL)', () => {
     expect(await getUserWithRolesByEmail(email, randomUUID(), 'internal')).toBeNull();
     await expect(getUserWithRoles(userId, otherTenant)).rejects.toThrow('Tenant context mismatch');
   });
+
+  it.each([false, true])('retains seat_reader=%s in authentication loaders without loading credentials', async seat_reader => {
+    await context.trx!('users').where({ tenant, user_id: userId }).update({ seat_reader });
+    try {
+      for (const user of [
+        await getUserWithRoles(userId, tenant),
+        await getUserWithRolesByEmail(email, tenant, 'internal'),
+      ]) {
+        expect(user).toMatchObject({ user_id: userId, tenant, seat_reader });
+        expect(user).not.toHaveProperty('hashed_password');
+        expect(user).not.toHaveProperty('two_factor_secret');
+      }
+    } finally {
+      await context.trx!('users').where({ tenant, user_id: userId }).update({ seat_reader: false });
+    }
+  });
 });
