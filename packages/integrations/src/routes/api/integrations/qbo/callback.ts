@@ -11,6 +11,7 @@ import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import {
   getQboRedirectUri,
   resolveQboOAuthCredentials,
+  resolveTenantQboEnvironment,
   upsertStoredQboCredentials,
   QBO_TOKEN_URL
 } from '../../../../lib/qbo/qboClientService';
@@ -267,12 +268,17 @@ export async function GET(request: Request): Promise<NextResponse> {
         : 60 * 60 * 24 * 100;
     const now = Date.now();
 
+    // Stamp the environment the grant was issued in, so this realm keeps
+    // talking to the right Intuit host even if the tenant setting changes.
+    const environment = await resolveTenantQboEnvironment(tenantId);
+
     await upsertStoredQboCredentials(tenantId, {
       accessToken,
       refreshToken,
       realmId,
       accessTokenExpiresAt: new Date(now + expiresInSeconds * 1000).toISOString(),
-      refreshTokenExpiresAt: new Date(now + refreshExpiresInSeconds * 1000).toISOString()
+      refreshTokenExpiresAt: new Date(now + refreshExpiresInSeconds * 1000).toISOString(),
+      environment
     }, { authorizationFlowStartedAt: authz.flowInitiatedAt });
 
     logger.info('[qboOAuth] Completed QuickBooks OAuth callback', {

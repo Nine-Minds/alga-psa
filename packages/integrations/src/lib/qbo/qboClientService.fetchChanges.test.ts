@@ -18,6 +18,31 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
+// ── DB mock (tenant_settings holds the per-tenant Intuit environment) ───────
+const tenantSettingsRow = vi.hoisted(() => ({ current: null as null | { settings: any } }));
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({
+    knex: {
+      fn: { now: () => new Date().toISOString() },
+      raw: async () => ({ rows: [] })
+    },
+    tenant: 'tenant-fetchchanges-test'
+  }),
+  tenantDb: () => ({
+    table: (name: string) => {
+      const builder: any = {
+        select: () => builder,
+        forUpdate: () => builder,
+        where: () => builder,
+        first: async () => (name === 'tenant_settings' ? tenantSettingsRow.current : undefined),
+        delete: async () => {}
+      };
+      return builder;
+    }
+  })
+}));
+
 // ── axios mock ───────────────────────────────────────────────────────────────
 vi.mock('axios', async (importOriginal) => {
   const actual = await importOriginal<typeof import('axios')>();
@@ -63,6 +88,12 @@ function storeCreds(overrides?: Partial<QboTenantCredentials>) {
   return creds;
 }
 
+/** A tenant that chose sandbox must own the Intuit app (Development keys). */
+function setTenantOwnedApp() {
+  setTenantSecret('qbo_client_id', 'tenant-cid');
+  setTenantSecret('qbo_client_secret', 'tenant-csec');
+}
+
 /** Build a QBO CDC response payload with the given entities in the first QueryResponse */
 function buildCdcResponse(entityBuckets: Record<string, any[]>) {
   return {
@@ -78,6 +109,7 @@ describe('QboClientService.fetchChanges — CDC parsing', () => {
   beforeEach(() => {
     tenantSecrets.clear();
     appSecrets.clear();
+    tenantSettingsRow.current = null;
     vi.clearAllMocks();
     delete process.env.QBO_ENVIRONMENT;
   });
@@ -151,6 +183,82 @@ describe('QboClientService.fetchChanges — CDC parsing', () => {
 
     expect(result.truncated).toBe(true);
     expect(result.changes).toHaveLength(1000);
+  });
+
+  it('calls the sandbox host when the stored connection was authorized in sandbox', async () => {
+    storeCreds({ environment: 'sandbox' });
+    vi.stubEnv('QBO_ENVIRONMENT', 'production');
+
+    vi.mocked(axios.request).mockResolvedValueOnce({ data: { QueryResponse: {} } });
+    const client = await QboClientService.create(TENANT_ID, REALM_ID);
+    await client.query('SELECT Id FROM Invoice');
+
+    const [config] = vi.mocked(axios.request).mock.calls.at(-1) as [{ url: string }];
+    expect(config.url).toBe(`https://sandbox-quickbooks.api.intuit.com/v3/company/${REALM_ID}/query`);
+    vi.unstubAllEnvs();
+  });
+
+  it('calls the production host when the stored connection was authorized in production', async () => {
+    storeCreds({ environment: 'production' });
+    // Tenant setting says sandbox, but this realm's tokens are production ones.
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    setTenantOwnedApp();
+
+    vi.mocked(axios.request).mockResolvedValueOnce({ data: { QueryResponse: {} } });
+    const client = await QboClientService.create(TENANT_ID, REALM_ID);
+    await client.query('SELECT Id FROM Invoice');
+
+    const [config] = vi.mocked(axios.request).mock.calls.at(-1) as [{ url: string }];
+    expect(config.url).toBe(`https://quickbooks.api.intuit.com/v3/company/${REALM_ID}/query`);
+  });
+
+  it('falls back to the tenant setting when the stored connection has no environment', async () => {
+    storeCreds();
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    setTenantOwnedApp();
+    vi.stubEnv('QBO_ENVIRONMENT', 'production');
+
+    vi.mocked(axios.request).mockResolvedValueOnce({ data: { QueryResponse: {} } });
+    const client = await QboClientService.create(TENANT_ID, REALM_ID);
+    await client.query('SELECT Id FROM Invoice');
+
+    const [config] = vi.mocked(axios.request).mock.calls.at(-1) as [{ url: string }];
+    expect(config.url).toBe(`https://sandbox-quickbooks.api.intuit.com/v3/company/${REALM_ID}/query`);
+    vi.unstubAllEnvs();
+  });
+
+  it('falls back to the deployment default when neither is set', async () => {
+    storeCreds();
+    vi.stubEnv('QBO_ENVIRONMENT', 'production');
+
+    vi.mocked(axios.request).mockResolvedValueOnce({ data: { QueryResponse: {} } });
+    const client = await QboClientService.create(TENANT_ID, REALM_ID);
+    await client.query('SELECT Id FROM Invoice');
+
+    const [config] = vi.mocked(axios.request).mock.calls.at(-1) as [{ url: string }];
+    expect(config.url).toBe(`https://quickbooks.api.intuit.com/v3/company/${REALM_ID}/query`);
+    vi.unstubAllEnvs();
+  });
+
+  it('QBO_API_BASE_URL still wins over every environment choice', async () => {
+    // The override is read at module load, so re-import with it in place.
+    vi.stubEnv('QBO_API_BASE_URL', 'http://qbo-emulator.localtest.me/v3/company');
+    vi.resetModules();
+    const { QboClientService: FreshClient } = await import('./qboClientService');
+
+    storeCreds({ environment: 'production' });
+    tenantSettingsRow.current = { settings: { qbo: { environment: 'sandbox' } } };
+    setTenantOwnedApp();
+
+    vi.mocked(axios.request).mockResolvedValueOnce({ data: { QueryResponse: {} } });
+    const client = await FreshClient.create(TENANT_ID, REALM_ID);
+    await client.query('SELECT Id FROM Invoice');
+
+    const [config] = vi.mocked(axios.request).mock.calls.at(-1) as [{ url: string }];
+    expect(config.url).toBe(`http://qbo-emulator.localtest.me/v3/company/${REALM_ID}/query`);
+
+    vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
   it('fetchedAt is an ISO string close to now', async () => {

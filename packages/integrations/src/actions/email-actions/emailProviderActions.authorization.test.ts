@@ -94,12 +94,12 @@ describe('email provider action authorization', () => {
     ];
     const results = await Promise.all(calls);
 
-    expect(results[0]).toEqual({ providers: [] });
+    expect(results[0]).toEqual({ providers: [], error: 'Permission denied' });
     expect(results.slice(1, 5)).toEqual(Array.from({ length: 4 }, () =>
       expect.objectContaining({ actionError: expect.any(String), messageKey: 'errors.permissionDenied' })
     ));
-    expect(results[5]).toEqual({ success: false, error: 'Permission denied', errorCode: 'unexpected' });
-    expect(results[6]).toEqual({ success: false, error: 'Permission denied', errorCode: 'unexpected' });
+    expect(results[5]).toEqual({ success: false, error: 'Permission denied', errorCode: 'permission_denied' });
+    expect(results[6]).toEqual({ success: false, error: 'Permission denied', errorCode: 'permission_denied' });
     expect(results[7]).toEqual({ success: false, message: 'Permission denied' });
     expect(results[8]).toEqual({ success: false, error: 'Permission denied' });
     expect(results[9]).toEqual({ success: false, error: 'Permission denied' });
@@ -126,9 +126,9 @@ describe('email provider action authorization', () => {
       actions.runMicrosoft365Diagnostics('provider-1'),
     ]);
 
-    expect(results[0]).toEqual({ providers: [] });
+    expect(results[0]).toEqual({ providers: [], error: 'Permission denied: Cannot view email providers' });
     expect(results.slice(1, 5).every((result: any) => result.messageKey === 'errors.permissionDenied')).toBe(true);
-    expect(results.slice(5, 7).every((result: any) => result.errorCode === 'unexpected')).toBe(true);
+    expect(results.slice(5, 7).every((result: any) => result.errorCode === 'permission_denied')).toBe(true);
     expect(results[7]).toEqual({ success: false, message: 'Permission denied: Cannot manage outbound email' });
     expect(results[8]).toEqual({ success: false, error: 'Permission denied: Cannot manage outbound email' });
     expect(results[9]).toEqual({ success: false, error: 'Permission denied: Cannot manage outbound email' });

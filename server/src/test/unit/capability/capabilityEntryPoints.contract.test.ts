@@ -3,6 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 import { REPO, closure, isForbiddenForWorkers } from './importGraph';
+import { isUiSlotSurface } from '@alga-psa/types';
+import type { CapabilityKey } from '@alga-psa/core/capability';
 
 /**
  * AST gate-coverage contract (plan 2.7, acceptance A7).
@@ -45,7 +47,11 @@ export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
   { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
   { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
   // The Temporal files are kebab-case; the camelCase globs above do not match them.
-  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed*', ruleA: true },
+  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', ruleA: true },
+  { id: 'independent-upgrade-activity', glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', ruleA: true },
+  // Tenant deletion is a cross-capability lifecycle hook: it must clean up existing co-managed state even after
+  // the capability lapses, so it is deliberately not gated by the current capability resolver.
+  { id: 'tenant-deletion-cleanup', glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', ruleA: false },
   // A workflow sandbox cannot import the adapter: its activities carry the gate.
   { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', ruleA: false },
   { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', ruleA: true },
@@ -66,27 +72,113 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 10 },
-  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 16 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 17 },
+  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 3 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 28 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
   'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
-  jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
-  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
+  jobs: { glob: 'packages/jobs/**/coManaged*', files: 1 },
+  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
-  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
-  'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
-  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
+  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', files: 1 },
+  'independent-upgrade-activity': { glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', files: 1 },
+  'tenant-deletion-cleanup': { glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', files: 1 },
+  'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 2 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 6 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 36 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 94 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
+/**
+ * Seat UI families (S37, plan F090 / T047). Every user-visible seat entry point. `gate` records how the
+ * family is held shut while `co-managed-seat` is closed:
+ *  - 'hook':  the file itself reads `useCapability('co-managed-seat')` or `useServedCapabilities()`.
+ *  - 'mount': presentational; its only mount is a gated file of this registry (a hook file, a slot or the
+ *             client-tab seam), so it is not a second place that decides.
+ *  - 'slot':  a `registerUiSlot` contribution naming `co-managed-seat`.
+ * Later cards (S26, S29, S35, S36) add their own family and count in their own diff; nobody deletes one.
+ * Rule C (no raw release-flag read) applies to every file of every family.
+ */
+export interface SeatUiFamily {
+  id: string;
+  glob: string;
+  gate: 'hook' | 'mount' | 'slot';
+}
+
+export const SEAT_UI_FAMILIES: readonly SeatUiFamily[] = [
+  // Client record, Co-managed IT tab (S34). The tab reaches the host through the ClientCoManagedSlots seam.
+  { id: 'seat-client-integration', glob: 'server/src/components/co-managed/CoManagedClientIntegration.tsx', gate: 'hook' },
+  { id: 'seat-shape-chooser', glob: 'server/src/components/co-managed/CoManagedShapeChooser.tsx', gate: 'mount' },
+  { id: 'seat-components', glob: 'server/src/components/co-managed/CoManagedSeat*', gate: 'mount' },
+  { id: 'seat-arrangement-end', glob: 'server/src/components/co-managed/CoManagedSeatArrangementEnd.tsx', gate: 'hook' },
+  // Overview rows (S34).
+  { id: 'seat-overview', glob: 'server/src/components/co-managed/CoManagedOverview.tsx', gate: 'hook' },
+  { id: 'seat-combined-overview', glob: 'server/src/components/co-managed/CoManagedCombinedOverview.tsx', gate: 'mount' },
+  // Ticket screen and list (S19, S24, S25).
+  { id: 'seat-ticket-slots', glob: 'packages/tickets/src/config/seatTicketSlots.ts', gate: 'slot' },
+  { id: 'seat-ticket-responsibility', glob: 'packages/tickets/src/components/ticket/TicketResponsibilityControl.tsx', gate: 'mount' },
+  { id: 'seat-ticket-slot-mount', glob: 'packages/tickets/src/components/ticket/SeatResponsibilitySlot.tsx', gate: 'hook' },
+  { id: 'seat-ticket-screen', glob: 'packages/tickets/src/components/ticket/TicketDetails.tsx', gate: 'mount' },
+  // The three-audience composer and the Client IT assignee group: both come from useSeatTicket.
+  { id: 'seat-ticket-hook', glob: 'packages/tickets/src/hooks/useSeatTicket.ts', gate: 'hook' },
+  { id: 'seat-ticket-container', glob: 'packages/tickets/src/components/ticket/TicketDetailsContainer.tsx', gate: 'mount' },
+  { id: 'seat-ticket-comment', glob: 'packages/tickets/src/components/ticket/CommentItem.tsx', gate: 'hook' },
+  { id: 'seat-ticket-list', glob: 'packages/tickets/src/components/TicketingDashboard.tsx', gate: 'hook' },
+  // The client tab seam itself: a typed prop the host renders, contributed only by the gated integration above.
+  { id: 'seat-client-seam', glob: 'packages/clients/src/context/ClientCrossFeatureContext.tsx', gate: 'mount' },
+];
+
+/** Literal, like EXPECTED_FAMILY_FILE_COUNTS: dropping, swapping or narrowing a seat family fails. */
+export const EXPECTED_SEAT_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
+  'seat-client-integration': { glob: 'server/src/components/co-managed/CoManagedClientIntegration.tsx', files: 1 },
+  'seat-shape-chooser': { glob: 'server/src/components/co-managed/CoManagedShapeChooser.tsx', files: 1 },
+  'seat-components': { glob: 'server/src/components/co-managed/CoManagedSeat*', files: 9 },
+  'seat-arrangement-end': { glob: 'server/src/components/co-managed/CoManagedSeatArrangementEnd.tsx', files: 1 },
+  'seat-overview': { glob: 'server/src/components/co-managed/CoManagedOverview.tsx', files: 1 },
+  'seat-combined-overview': { glob: 'server/src/components/co-managed/CoManagedCombinedOverview.tsx', files: 1 },
+  'seat-ticket-slots': { glob: 'packages/tickets/src/config/seatTicketSlots.ts', files: 1 },
+  'seat-ticket-responsibility': { glob: 'packages/tickets/src/components/ticket/TicketResponsibilityControl.tsx', files: 1 },
+  'seat-ticket-slot-mount': { glob: 'packages/tickets/src/components/ticket/SeatResponsibilitySlot.tsx', files: 1 },
+  'seat-ticket-screen': { glob: 'packages/tickets/src/components/ticket/TicketDetails.tsx', files: 1 },
+  'seat-ticket-hook': { glob: 'packages/tickets/src/hooks/useSeatTicket.ts', files: 1 },
+  'seat-ticket-container': { glob: 'packages/tickets/src/components/ticket/TicketDetailsContainer.tsx', files: 1 },
+  'seat-ticket-comment': { glob: 'packages/tickets/src/components/ticket/CommentItem.tsx', files: 1 },
+  'seat-ticket-list': { glob: 'packages/tickets/src/components/TicketingDashboard.tsx', files: 1 },
+  'seat-client-seam': { glob: 'packages/clients/src/context/ClientCrossFeatureContext.tsx', files: 1 },
+};
+
+const SEAT_FAMILY_RES = SEAT_UI_FAMILIES.map((f) => [f, globToRegExp(f.glob)] as const);
+export const isSeatUiPath = (path: string): boolean => SEAT_FAMILY_RES.some(([, re]) => re.test(path));
+
+const SEAT_GATE_READ = /useCapability\(\s*'co-managed-seat'\s*\)|useServedCapabilities\(\s*\)/;
+
+/** Every 'hook' family file reads the seat capability (or the served set); every 'slot' file registers it. */
+export function seatGateRule(families: readonly SeatUiFamily[], files: SourceFile[]): string[] {
+  const out: string[] = [];
+  for (const fam of families) {
+    const re = globToRegExp(fam.glob);
+    for (const f of files.filter((x) => re.test(x.path))) {
+      if (fam.gate === 'hook' && !SEAT_GATE_READ.test(f.source)) {
+        out.push(`capabilityEntryPoints: seat UI file ${f.path} (${fam.id}) never reads useCapability('co-managed-seat') or useServedCapabilities()`);
+      }
+      if (fam.gate === 'slot' && !/capability:\s*'co-managed-seat'/.test(f.source)) {
+        out.push(`capabilityEntryPoints: seat slot file ${f.path} (${fam.id}) does not contribute capability 'co-managed-seat'`);
+      }
+    }
+  }
+  return out;
+}
+
 /** The six adapters (plus the three Next-free guard names they export). */
 export const ADAPTER_EXPORTS = new Set([
+  // Customer upgrade guard includes completed former customers; its authenticated action is the page adapter.
+  'requireCoManagedUpgradeAccess',
+  'requireCoManagedUpgradeCustomer',
+  'getCoManagedUpgradeAccessAction',
   'requireCapabilityForAction', // 1 server action
   'requireCapabilityEitherMode', // 1 server action, two-sided (admits else serves)
   'capabilityRouteGuard', //       2 REST
@@ -98,6 +190,12 @@ export const ADAPTER_EXPORTS = new Set([
   // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
   // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
   'isCoManagedPurchaseSurfaceOpen',
+  // 8 first-purchase discovery: the commercial decision for an actor with no entitlement yet. It opens with
+  // the purchase surface (7) and then account permissions and the hosted-Pro tenant row; it grants only the
+  // pool view and never co-managed operational access.
+  'resolveCoManagedPurchaseDiscovery',
+  // Trial discovery checks intake for new trials and client scope for existing-trial recovery.
+  'canDiscoverSeatTrial',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
@@ -260,8 +358,16 @@ export function ruleA(files: SourceFile[]): string[] {
 // Rule A2: the tenant handed to a Next-bound adapter comes from the session
 // ---------------------------------------------------------------------------
 
-/** Adapters 1-3 take `(capability, tenantId, mode?)`; the tenant is argument 1. */
-export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'requireCapabilityEitherMode', 'capabilityRouteGuard', 'requireCapabilityForPage']);
+/** Tenant argument positions for adapters that must use authenticated session provenance. */
+export const SESSION_TENANT_ADAPTERS = new Map([
+  ['requireCoManagedUpgradeAccess', 0],
+  ['requireCoManagedUpgradeCustomer', 0],
+  ['requireCapabilityForAction', 1],
+  ['requireCapabilityEitherMode', 1],
+  ['capabilityRouteGuard', 1],
+  ['requireCapabilityForPage', 1],
+  ['canDiscoverSeatTrial', 1],
+]);
 /** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
 const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);
 /** Zero-argument calls that return the session tenant itself. */
@@ -363,7 +469,7 @@ export function ruleA2(files: SourceFile[]): string[] {
       if (ts.isCallExpression(n)) {
         const name = calleeName(n);
         if (name && SESSION_TENANT_ADAPTERS.has(name)) {
-          const tenant = n.arguments[1];
+          const tenant = n.arguments[SESSION_TENANT_ADAPTERS.get(name)!];
           if (!tenant || !isSessionTenant(tenant)) {
             out.push(
               `capabilityEntryPoints: ${name} at ${f.path}:${lineOf(sf, n)} takes a tenant that does not come from the authenticated session (${tenant ? tenant.getText(sf) : 'missing'})`,
@@ -398,10 +504,10 @@ export function ruleB(files: SourceFile[]): string[] {
 }
 
 /** Rule C: raw flag reads inside co-managed entry points. */
-export function ruleC(files: SourceFile[]): string[] {
+export function ruleC(files: SourceFile[], inScope: (path: string) => boolean = (p) => matchesEntryPointGlob(p) !== null): string[] {
   const out: string[] = [];
   for (const f of files) {
-    if (f.path in ALLOWLIST || !matchesEntryPointGlob(f.path) || !isSourcePath(f.path) || isTestPath(f.path)) continue;
+    if (f.path in ALLOWLIST || !inScope(f.path) || !isSourcePath(f.path) || isTestPath(f.path)) continue;
     const sf = parse(f);
     const visit = (n: ts.Node) => {
       if (ts.isCallExpression(n) && calleeName(n) === 'useFeatureFlag') {
@@ -506,15 +612,19 @@ export function ruleD(
 }
 
 /** Registry sanity: the registry must equal the literal expectation, family by family. */
-export function registrySanity(families: readonly EntryPointFamily[], files: SourceFile[]): string[] {
+export function registrySanity(
+  families: readonly { id: string; glob: string }[],
+  files: SourceFile[],
+  expectedCounts: Readonly<Record<string, { glob: string; files: number }>> = EXPECTED_FAMILY_FILE_COUNTS,
+): string[] {
   const out: string[] = [];
-  const expectedIds = Object.keys(EXPECTED_FAMILY_FILE_COUNTS).sort();
+  const expectedIds = Object.keys(expectedCounts).sort();
   const actualIds = families.map((f) => f.id).sort();
   if (JSON.stringify(expectedIds) !== JSON.stringify(actualIds)) {
     out.push(`capabilityEntryPoints: registry families [${actualIds.join(', ')}] != expected [${expectedIds.join(', ')}]`);
   }
   for (const fam of families) {
-    const expected = EXPECTED_FAMILY_FILE_COUNTS[fam.id];
+    const expected = expectedCounts[fam.id];
     if (!expected) continue;
     if (fam.glob !== expected.glob) out.push(`capabilityEntryPoints: family ${fam.id} glob ${fam.glob} != expected ${expected.glob}`);
     let re: RegExp;
@@ -537,6 +647,15 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
+/**
+ * Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. The
+ * cold walk timed out at 120 s on a unit shard sharing four forks with v8 coverage (run 41148754710, shard 1), and
+ * even the warm retry took 39 s, so the walk reads nothing from disk that scanRepo already holds and the ceiling
+ * sits well above the slowest measured run.
+ */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 300_000;
+const scannedSource = new Map(repoFiles.map((f) => [join(REPO, f.path), f.source]));
+const readScannedSource = (file: string) => scannedSource.get(file);
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -571,8 +690,8 @@ describe('capability gate coverage (AST) — branch is green', () => {
     for (const e of ['ee/temporal-workflows/src/worker.ts', 'services/email-service/src/index.ts', 'services/workflow-worker/src/index.ts']) {
       expect(workerEntries).toContain(e);
     }
-    expect(ruleD(workerEntries)).toEqual([]);
-  });
+    expect(ruleD(workerEntries, readScannedSource)).toEqual([]);
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
     expect(ruleE(repoFiles)).toEqual([]);
@@ -583,9 +702,9 @@ describe('capability gate coverage (AST) — branch is green', () => {
   });
 
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
-    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
+    const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts', readScannedSource).bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
     expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);
@@ -767,7 +886,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     const narrowed = ENTRY_POINT_FAMILIES.map((f) => (f.id === 'server-actions' ? { ...f, glob: 'server/src/lib/actions/coManagedX*' } : f));
     expect(registrySanity(narrowed, repoFiles).some((m) => m.includes('family server-actions glob'))).toBe(true);
 
-    const withFile = [...repoFiles, file('server/src/lib/actions/coManagedProviders.ts', 'export {}')];
+    const withFile = [...repoFiles, file('server/src/lib/actions/coManagedRegistryFixture.ts', 'export {}')];
     expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
       `capabilityEntryPoints: family server-actions matches ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files + 1} production files, expected ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files}`,
     ]);
@@ -818,36 +937,120 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 // diff, with its test.
 // ---------------------------------------------------------------------------
 
-const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
-  'server/src/components/layout/SidebarWithFeatureFlags.tsx': 'msp.navigation.group',
+const UI_SLOT_MOUNTS: Readonly<Record<string, readonly string[]>> = {
+  'server/src/components/layout/SidebarWithFeatureFlags.tsx': ['msp.navigation.group'],
+  'server/src/components/co-managed/CoManagedConversationFiles.tsx': ['ticket.conversation.comment-attachments', 'ticket.conversation.thread-header'],
+  'packages/tickets/src/components/ticket/SeatResponsibilitySlot.tsx': ['ticket.details.responsibility'],
 };
-const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
-  'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
+/** Every contribution file: its surfaces and the one capability it must name. Seat contributions name 'co-managed-seat'. */
+const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, { surfaces: readonly string[]; capability: CapabilityKey }>> = {
+  'server/src/config/coManagedMenu.ts': { surfaces: ['msp.navigation.group'], capability: 'co-managed' },
+  'server/src/config/coManagedConversationSlots.ts': {
+    surfaces: ['ticket.conversation.comment-attachments', 'ticket.conversation.thread-header'], capability: 'co-managed' },
+  'packages/tickets/src/config/seatTicketSlots.ts': { surfaces: ['ticket.details.responsibility'], capability: 'co-managed-seat' },
 };
+/** Seat surfaces: any contribution to one of these must name 'co-managed-seat'. */
+const SEAT_SURFACES: readonly string[] = ['ticket.details.responsibility'];
+const CAPABILITY_KEYS_REGISTERED: readonly string[] = ['co-managed', 'co-managed-seat'];
+const MOUNT_SERVED_SET = /useServedCapabilities\(\s*\)|useCapability\(\s*'co-managed(-seat)?'\s*\)/;
 
 describe('UI-slot mounts (A8)', () => {
-  const mounts = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bresolveUiSlots\s*[<(]/.test(f.source)
-    && !f.path.endsWith('uiSlotRegistry.ts'));
+  const sourceFiles = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && !f.path.endsWith('uiSlotRegistry.ts'));
+  const mounts = sourceFiles.filter((f) => /\bresolveUiSlots\s*[<(]/.test(f.source));
+  const contributions = sourceFiles.filter((f) => /\bregisterUiSlot\s*[<(]/.test(f.source));
 
   it('enumerates every resolveUiSlots mount', () => {
     expect(mounts.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_MOUNTS).sort());
   });
 
-  it("each mount serves slots from useCapability('co-managed') and names its surface", () => {
+  it('each mount derives its served set from the capability hook and names its surfaces', () => {
     for (const f of mounts) {
-      expect(f.source, f.path).toContain("useCapability('co-managed')");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      expect(f.source, f.path).toMatch(MOUNT_SERVED_SET);
+      for (const surface of UI_SLOT_MOUNTS[f.path]) expect(f.source, f.path).toContain(`'${surface}'`);
       expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*'release-v2-0-feature'/);
     }
   });
 
-  it('every registerUiSlot contribution is enumerated and gated on the co-managed capability', () => {
-    const contributions = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bregisterUiSlot\s*[<(]/.test(f.source)
-      && !f.path.endsWith('uiSlotRegistry.ts'));
+  it('a mount never hand-builds its served set', () => {
+    for (const f of mounts) expect(f.source, f.path).not.toMatch(/new Set\(\s*\w+\s*\?\s*\[/);
+  });
+
+  it('every registerUiSlot contribution is enumerated and names a registered capability', () => {
     expect(contributions.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_CONTRIBUTIONS).sort());
     for (const f of contributions) {
-      expect(f.source, f.path).toContain("capability: 'co-managed'");
-      expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+      const expected = UI_SLOT_CONTRIBUTIONS[f.path];
+      expect(CAPABILITY_KEYS_REGISTERED, f.path).toContain(expected.capability);
+      const named = [...f.source.matchAll(/capability:\s*'([^']+)'/g)].map((m) => m[1]);
+      expect(named.length, f.path).toBeGreaterThan(0);
+      for (const key of named) expect(key, f.path).toBe(expected.capability);
+      for (const surface of expected.surfaces) expect(f.source, f.path).toContain(`'${surface}'`);
     }
+  });
+
+  it("a contribution to a seat surface names 'co-managed-seat' and no other file does", () => {
+    for (const f of contributions) {
+      const seatSurface = SEAT_SURFACES.some((surface) => f.source.includes(`'${surface}'`));
+      if (seatSurface) expect(f.source, f.path).toMatch(/capability:\s*'co-managed-seat'/);
+      else expect(f.source, f.path).not.toMatch(/capability:\s*'co-managed-seat'/);
+    }
+  });
+
+  it('every seat surface is a declared UI slot surface', () => {
+    for (const surface of SEAT_SURFACES) expect(isUiSlotSurface(surface), surface).toBe(true);
+  });
+
+  it('a mount that hand-builds its served set, or a contribution naming an unregistered capability, is caught', () => {
+    expect("const served = useMemo(() => new Set(enabled ? ['co-managed' as const] : []), [enabled]);").toMatch(/new Set\(\s*\w+\s*\?\s*\[/);
+    expect("registerUiSlot('x', { id: 'a', capability: 'co-managed-seats', order: 1 })").not.toMatch(/capability:\s*'(co-managed|co-managed-seat)'/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Seat UI (S37 / T047, plan F090): the seat entry points are gated by the capability, never the raw flag.
+// ---------------------------------------------------------------------------
+
+describe('Seat UI entry points (T047)', () => {
+  const seatFiles = repoFiles.filter((f) => isSeatUiPath(f.path));
+  const file = (path: string, source: string): SourceFile => ({ path, source });
+
+  it('registry sanity: exactly the expected seat families, globs and per-family file counts', () => {
+    expect(registrySanity(SEAT_UI_FAMILIES, repoFiles, EXPECTED_SEAT_FAMILY_FILE_COUNTS)).toEqual([]);
+  });
+
+  it('seat registry sanity fails when a family is dropped, narrowed or gains a file', () => {
+    const dropped = SEAT_UI_FAMILIES.filter((f) => f.id !== 'seat-ticket-list');
+    expect(registrySanity(dropped, repoFiles, EXPECTED_SEAT_FAMILY_FILE_COUNTS).some((m) => m.includes('!= expected ['))).toBe(true);
+    const narrowed = SEAT_UI_FAMILIES.map((f) => (f.id === 'seat-components' ? { ...f, glob: 'server/src/components/co-managed/CoManagedSeatX*' } : f));
+    expect(registrySanity(narrowed, repoFiles, EXPECTED_SEAT_FAMILY_FILE_COUNTS).some((m) => m.includes('family seat-components glob'))).toBe(true);
+    const withFile = [...repoFiles, file('server/src/components/co-managed/CoManagedSeatFixture.tsx', 'export {}')];
+    expect(registrySanity(SEAT_UI_FAMILIES, withFile, EXPECTED_SEAT_FAMILY_FILE_COUNTS)).toEqual([
+      `capabilityEntryPoints: family seat-components matches ${EXPECTED_SEAT_FAMILY_FILE_COUNTS['seat-components'].files + 1} production files, expected ${EXPECTED_SEAT_FAMILY_FILE_COUNTS['seat-components'].files}`,
+    ]);
+  });
+
+  it('Rule C: no seat UI file reads the raw release flag', () => {
+    expect(seatFiles.length).toBeGreaterThan(0);
+    expect(ruleC(seatFiles, isSeatUiPath)).toEqual([]);
+  });
+
+  it("Rule C for seat files fails on a raw useFeatureFlag('release-v2-0-feature') in a seat file", () => {
+    const f = file(
+      'packages/tickets/src/components/ticket/TicketResponsibilityControl.tsx',
+      `export default function C() {\n  const { enabled } = useFeatureFlag('release-v2-0-feature');\n  return enabled ? null : null;\n}`,
+    );
+    expect(ruleC([f], isSeatUiPath)).toHaveLength(1);
+    // Outside the seat registry (and any co-managed glob) the same read is not this rule's business.
+    expect(ruleC([file('packages/projects/src/components/ProjectDetail.tsx', `useFeatureFlag('release-v2-0-feature');`)], isSeatUiPath)).toEqual([]);
+  });
+
+  it("every gated seat family reads the seat capability, and the gate check fails without it", () => {
+    expect(seatGateRule(SEAT_UI_FAMILIES, repoFiles)).toEqual([]);
+    const stripped = repoFiles.map((f) => (f.path.endsWith('TicketingDashboard.tsx') && f.path.includes('packages/tickets')
+      ? { ...f, source: f.source.replace(/useCapability\(\s*'co-managed-seat'\s*\)/g, '') } : f));
+    expect(seatGateRule(SEAT_UI_FAMILIES, stripped)).toHaveLength(1);
+  });
+
+  it('seat UI names no raw release flag anywhere, including strings in the slot contributions', () => {
+    for (const f of seatFiles) expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*['"](release-v2-0-feature|capability:)/);
   });
 });

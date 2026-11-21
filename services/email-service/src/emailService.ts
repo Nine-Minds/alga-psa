@@ -1,6 +1,7 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from '@alga-psa/shared/services/email/inboundMimeParseOptions';
+import { repairUtf8Mojibake } from '@alga-psa/shared/services/email/inboundEmailMimeHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
@@ -977,7 +978,7 @@ class ImapFolderListener {
         email: entry.address || '',
         name: entry.name,
       })) : undefined,
-      subject: parsed.subject || '',
+      subject: repairUtf8Mojibake(parsed.subject || ''),
       body: {
         text: parsed.text || '',
         html: parsed.html || undefined,

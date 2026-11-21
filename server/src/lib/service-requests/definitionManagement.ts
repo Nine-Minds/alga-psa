@@ -12,6 +12,8 @@ import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
 import { audienceTagIds, isEditorAudience, validateAudienceReferences } from './definitionAudience';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { predicateGroupSchema } from '@alga-psa/predicates';
+import { deleteEntityWithValidation, getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
+import type { DeletionValidationResult } from '@alga-psa/types';
 import { deleteTagReferences, replaceTagReferences } from '@alga-psa/tags/lib/tagReferences';
 
 /**
@@ -569,29 +571,76 @@ export async function unarchiveServiceRequestDefinitionFromManagement(
   );
 }
 
+export type ServiceRequestDefinitionDeleteResult = DeletionValidationResult & { deleted: boolean };
+
+/**
+ * Permanently deletes a never-submitted definition via the platform deletion
+ * engine. The engine validates (submissions, checklist apply rules) and deletes
+ * in one transaction; versions and answer mappings cascade through their FKs.
+ * A submission landing between validation and delete trips the RESTRICT FK
+ * (23503); that is re-validated and returned as a normal blocked result.
+ */
 export async function deleteServiceRequestDefinitionFromManagement(
   knex: Knex,
   tenant: string,
   definitionId: string,
   deletedBy?: string | null
-): Promise<boolean> {
-  const db = tenantDb(knex, tenant);
-  const existing = await db.table('service_request_definitions')
+): Promise<ServiceRequestDefinitionDeleteResult> {
+  const existing = await tenantDb(knex, tenant).table('service_request_definitions')
     .where({ definition_id: definitionId })
     .select('lifecycle_state')
     .first<{ lifecycle_state: string }>();
 
   if (!existing) {
-    return false;
+    return {
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Service request definition not found.',
+      dependencies: [],
+      alternatives: [],
+      deleted: false,
+    };
   }
 
-  const deleted = await knex.transaction(async (trx) => {
-    await deleteTagReferences(trx, tenant, 'service_request_audience', definitionId);
-    const count = await tenantDb(trx, tenant).table('service_request_definitions').where({ definition_id: definitionId }).delete();
-    return Number(count);
-  });
+  let result: DeletionValidationResult & { deleted?: boolean };
+  try {
+    result = await deleteEntityWithValidation(
+      'service_request_definition',
+      definitionId,
+      knex,
+      tenant,
+      async (trx) => {
+        await deleteTagReferences(trx, tenant, 'service_request_audience', definitionId);
+        await tenantDb(trx, tenant).table('service_request_definitions')
+          .where({ definition_id: definitionId })
+          .delete();
+      },
+    );
+  } catch (error) {
+    if ((error as { code?: string } | null)?.code !== '23503') {
+      throw error;
+    }
+    // The failed transaction rolled back (tag cleanup included). Re-validate on
+    // a fresh connection and report what blocks the delete.
+    const config = getDeletionConfig('service_request_definition');
+    const revalidated = config
+      ? await validateDeletion(knex, config, definitionId, tenant)
+      : null;
+    if (revalidated && !revalidated.canDelete) {
+      return { ...revalidated, deleted: false };
+    }
+    return {
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'This service request definition is still referenced by other records and cannot be deleted.',
+      dependencies: [],
+      alternatives: [],
+      deleted: false,
+    };
+  }
 
-  if (deleted > 0) {
+  const deleted = result.deleted === true;
+  if (deleted) {
     await publishServiceRequestDefinitionSearchEvent(
       'SERVICE_REQUEST_DEFINITION_DELETED',
       tenant,
@@ -603,7 +652,7 @@ export async function deleteServiceRequestDefinitionFromManagement(
     );
   }
 
-  return deleted > 0;
+  return { ...result, deleted };
 }
 
 export interface SaveServiceRequestDefinitionAudienceInput {

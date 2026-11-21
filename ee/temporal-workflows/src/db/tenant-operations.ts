@@ -40,6 +40,32 @@ export interface InsertStripeSubscriptionForTenantInput {
   quantity?: number;
 }
 
+/**
+ * Claim a Stripe customer id for a tenant in the global stripe_customer_bindings table
+ * (alga-2026-0002926). Must run in the same transaction as the stripe_customers insert.
+ * Idempotent for the same tenant; throws if another tenant already holds the id.
+ */
+export async function bindStripeCustomerToTenant(
+  trx: Knex.Transaction,
+  tenantId: string,
+  stripeCustomerId: string,
+): Promise<void> {
+  const scoped = tenantDb(trx, tenantId);
+  const claimed = await scoped.table('stripe_customer_bindings')
+    .insert({ stripe_customer_external_id: stripeCustomerId, tenant: tenantId })
+    .onConflict('stripe_customer_external_id')
+    .ignore()
+    .returning('stripe_customer_external_id');
+  if (claimed.length > 0) return;
+  const existing = await scoped
+    .unscoped('stripe_customer_bindings', 'Global uniqueness check: which tenant already holds this Stripe customer id')
+    .where({ stripe_customer_external_id: stripeCustomerId })
+    .first();
+  if (existing?.tenant !== tenantId) {
+    throw new Error(`Stripe customer ${stripeCustomerId} is already bound to another tenant`);
+  }
+}
+
 export async function insertStripeSubscriptionForTenant(
   trx: Knex.Transaction,
   input: InsertStripeSubscriptionForTenantInput,
@@ -255,6 +281,7 @@ export async function createTenantInDB(
           stripeCustomerId: input.stripeCustomerId
         });
 
+        await bindStripeCustomerToTenant(trx, tenantId, input.stripeCustomerId);
         const [stripeCustomer] = await tenantScopedDb.table('stripe_customers')
           .insert({
             tenant: tenantId,

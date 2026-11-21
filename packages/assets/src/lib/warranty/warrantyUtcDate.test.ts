@@ -24,6 +24,7 @@ vi.mock('../assetReadAuthorization', () => ({
   createAssetReadContext: async () => ({}),
   filterReadableAssets: async (_k: any, _t: any, _c: any, a: any) => a,
   isAssetReadAllowed: async () => true,
+  isAssetActionAllowed: async () => true,
 }));
 
 import { getAssetWarrantySummary } from './warrantyReads';

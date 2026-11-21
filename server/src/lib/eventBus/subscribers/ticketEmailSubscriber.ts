@@ -10,7 +10,17 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
-import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { sendEventEmail, resolveEventEmailLocale, SendEmailParams } from '../../notifications/sendEventEmail';
+import {
+  buildTicketEmailDetailBlocksFromRows,
+  emptyTicketEmailDetailBlocks,
+  fetchTicketEmailDetailRows,
+  type TicketEmailDetailBlocks,
+  type TicketDetailRows,
+  type HourBlockMinutesResolver,
+} from '../../notifications/ticketEmailDetailBlocks';
+import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -23,10 +33,12 @@ import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import {
-  resolveBoardNotificationRecipients,
+  resolveBoardNotificationAudience,
+  type AddressRecipient,
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
@@ -39,6 +51,7 @@ import {
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
@@ -54,6 +67,25 @@ import {
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
 import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipients';
+import {
+  NOTIFICATION_AUDIENCE_TOKEN_KEY,
+  TICKET_FACTS_AUDIENCE,
+  lazyAudience,
+  readTicketCommentAudience,
+  planTicketEnvelope,
+  selectAudienceContent,
+  recipientInScope,
+  recipientRendering,
+  type AudienceContent,
+  type TicketNotificationRecipient,
+  type TicketRendering,
+} from '@shared/lib/notificationAudience';
+import {
+  projectTicketEmailContext,
+  resolveTicketEmailTemplate,
+  ticketEmailRecipientVariables,
+} from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { optionalEmailData } from '../../notifications/optionalEmailData';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
 import {
@@ -62,7 +94,23 @@ import {
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 
-type TicketNotificationParams = Omit<SendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
+/**
+ * What a ticket email quotes, richest rendering first (`selectAudienceContent`). Every handler
+ * says it for every send: a message that does not is never mailed to a seat technician.
+ */
+type TicketEmailAudience = ReadonlyArray<AudienceContent<Record<string, unknown>>>;
+/**
+ * `addressedAs` is who the send path addressed: `client` (requester contact, external watcher,
+ * copied address) or `msp` (staff). A send names the internal template and the person; the
+ * template, the variables and `recipient.isInternal` follow in `sendTicketEmailMessage`.
+ */
+type TicketDetailsForLocale = (locale: SupportedLocale) => Promise<TicketEmailDetailBlocks>;
+type AudiencedSendEmailParams = SendEmailParams & {
+  audienceContent?: TicketEmailAudience;
+  addressedAs: TicketRendering;
+  detailBlocksForLocale?: TicketDetailsForLocale;
+};
+type TicketNotificationParams = Omit<AudiencedSendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
 
 /** Stable ledger consumer id for the ticket email subscriber. */
 const INBOUND_OUTBOX_EMAIL_CONSUMER = 'ticket-email';
@@ -585,24 +633,163 @@ function selectOneOffEmailRecipients(
  *          or an invalid address silently skipped the send. Callers that need
  *          to know whether a recipient was reached — the per-comment Cc/Bcc
  *          fallback — depend on this being truthful.
+ *
+ * Recipient boundary (S33): the whole envelope is authorized, To, Cc and Bcc alike
+ * (`planTicketEnvelope`). With no seat technician on it, it is sent as built. Otherwise every
+ * seat technician is taken off the shared message and decided alone by `sendTicketEmailMessage`;
+ * a refused one drops out without holding back anyone else.
  */
 async function sendNotificationIfEnabled(
-  params: SendEmailParams,
+  audiencedParams: AudiencedSendEmailParams,
   subtypeName: string,
   recipientUserId?: string
 ): Promise<boolean> {
-  try {
-    if (!isValidEmail(params.to)) {
-      logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
-        recipient: params.to,
+  if (!isValidEmail(audiencedParams.to)) {
+    logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
+      recipient: audiencedParams.to,
+      subtypeName,
+      tenantId: audiencedParams.tenantId
+    });
+    return false;
+  }
+
+  const { knex } = await createTenantKnex();
+  const { cc, bcc, ...unaddressed } = audiencedParams;
+  const messages = await planTicketEnvelope(
+    knex,
+    audiencedParams.tenantId,
+    { ticketId: audiencedParams.entityType === 'ticket' ? audiencedParams.entityId : audiencedParams.replyContext?.ticketId },
+    { to: { userId: recipientUserId, email: audiencedParams.to }, cc, bcc },
+  );
+
+  let handedOff = false;
+  for (const message of messages) {
+    const copies = {
+      ...(message.cc.length > 0 ? { cc: message.cc } : {}),
+      ...(message.bcc.length > 0 ? { bcc: message.bcc } : {}),
+    };
+    let sent: boolean;
+    if (message.original) {
+      sent = await sendTicketEmailMessage(knex, { ...unaddressed, ...copies }, subtypeName, message.recipient, recipientUserId);
+    } else {
+      // A different person than the caller addressed: nothing that names the original `To`
+      // (their contact, their delivery claim, their sponsor identity) travels with it.
+      const { contactId: _contactId, delivery: _delivery, coManagedRecipient: _coManagedRecipient, ...shared } = unaddressed;
+      sent = await sendTicketEmailMessage(
+        knex,
+        { ...shared, to: message.to, ...copies },
         subtypeName,
-        tenantId: params.tenantId
+        message.recipient,
+        message.recipient.seat ? message.recipient.userId : undefined,
+      );
+    }
+    handedOff = sent || handedOff;
+  }
+  return handedOff;
+}
+
+/**
+ * One message of an authorized envelope: admits its `To` (`recipient`, already resolved), then
+ * applies the notification gates and sends. Everyone but a seat technician is untouched. A seat
+ * technician gets the first rendering their audience admits, with the audience recorded on the
+ * reply token so their reply is stored with it, or gets nothing: ticket out of scope, private
+ * content, or a message that does not declare what it quotes.
+ *
+ * Then the rendering is settled for everyone (`recipientRendering`): a `client` rendering gets
+ * the client template where one exists and a context holding client-safe variables only, and
+ * every context carries `recipient.isInternal`.
+ */
+async function sendTicketEmailMessage(
+  knex: Knex,
+  audiencedParams: AudiencedSendEmailParams,
+  subtypeName: string,
+  recipient: TicketNotificationRecipient,
+  recipientUserId?: string
+): Promise<boolean> {
+  // `audienceContent` and `addressedAs` are read here and never travel further (email service, retry queue).
+  const { audienceContent, addressedAs, detailBlocksForLocale, ...unaudienced } = audiencedParams;
+  let params: SendEmailParams = unaudienced;
+  try {
+    const scopedDb = tenantDb(knex, params.tenantId);
+
+    const admission = await selectAudienceContent(recipient, audienceContent);
+    if (!admission.admitted) {
+      logger.info('[TicketEmailSubscriber] Skipping email outside the recipient audience:', {
+        subtypeName,
+        tenantId: params.tenantId,
+        recipientUserId: recipient.seat ? recipient.userId : recipientUserId,
       });
       return false;
     }
+    // An external party (a seat technician outside the ticket's scope) is never handed the MSP
+    // link, whichever path built the message (watcher, assignee, agent): it is swapped for the
+    // portal link here, where every recipient passes.
+    const externalTicketId = recipient.seat && !recipientInScope(recipient)
+      ? params.replyContext?.ticketId : undefined;
+    const externalLinks = externalTicketId ? await resolveTicketLinks(knex, params.tenantId, externalTicketId) : null;
+    const toPortal = <V,>(value: V): V => {
+      if (!externalLinks) return value;
+      const swap = (node: unknown): unknown => {
+        if (typeof node === 'string') return node.split(externalLinks.internalUrl).join(externalLinks.portalUrl);
+        if (Array.isArray(node)) return node.map(swap);
+        if (node && typeof node === 'object') {
+          return Object.fromEntries(Object.entries(node as Record<string, unknown>).map(([k, v]) => [k, swap(v)]));
+        }
+        return node;
+      };
+      return swap(value) as V;
+    };
+    if (externalLinks) params = { ...params, context: toPortal(params.context) };
+    if (admission.selected) {
+      params = {
+        ...params,
+        context: toPortal(admission.selected.content ?? params.context),
+        ...(params.replyContext ? {
+          replyContext: {
+            ...params.replyContext,
+            tokenMetadata: {
+              ...params.replyContext.tokenMetadata,
+              [NOTIFICATION_AUDIENCE_TOKEN_KEY]: admission.selected.audience,
+            },
+          },
+        } : {}),
+      };
+    }
 
-    const { knex } = await createTenantKnex();
-    const scopedDb = tenantDb(knex, params.tenantId);
+    if (detailBlocksForLocale) {
+      const locale = await resolveEventEmailLocale({ ...params, recipientUserId });
+      const details = await detailBlocksForLocale(locale);
+      const ticketContext = params.context.ticket;
+      if (!ticketContext || typeof ticketContext !== 'object' || Array.isArray(ticketContext)) {
+        throw new Error('Ticket email details require a ticket context');
+      }
+      params = {
+        ...params,
+        locale,
+        recipientUserId,
+        context: {
+          ...params.context,
+          ticket: { ...ticketContext, ...toPortal(details) },
+        },
+      };
+    }
+
+    const rendering = recipientRendering(recipient, addressedAs);
+    const resolvedTemplate = resolveTicketEmailTemplate(params.template, subtypeName, rendering);
+    subtypeName = resolvedTemplate.subtype;
+    const projection = projectTicketEmailContext(params.context, rendering);
+    if (projection.dropped.length > 0) {
+      logger.debug('[TicketEmailSubscriber] Variables left out of the client rendering:', {
+        tenantId: params.tenantId,
+        template: resolvedTemplate.template,
+        dropped: projection.dropped,
+      });
+    }
+    params = {
+      ...params,
+      template: resolvedTemplate.template,
+      context: { ...projection.context, ...ticketEmailRecipientVariables(rendering) },
+    };
 
     const gate = await resolveNotificationGate(knex, params.tenantId, subtypeName);
 
@@ -735,7 +922,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
-    logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
+    logger.error('[TicketEmailSubscriber] Error in sendTicketEmailMessage:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
       recipient: params.to,
@@ -759,9 +946,9 @@ function escapeHtml(value: string): string {
 
 const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
 const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
-const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
-const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
-const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-size:13px;font-weight:600;color:#475467;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#667085;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#1f2933;font-weight:600;word-break:break-word;';
 const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
 const CHANGE_SECTION_STYLE = 'margin:0 0 14px 0;padding:0 0 12px 0;border-bottom:1px solid rgba(146,64,14,0.15);';
 const CHANGE_SECTION_LAST_STYLE = 'margin:0;padding:0;';
@@ -769,42 +956,79 @@ const CHANGE_SECTION_HEADER_STYLE = 'font-size:13px;color:#92400e;font-weight:60
 const CHANGE_SECTION_TIMESTAMP_STYLE = 'color:#9a6c1f;font-weight:500;';
 
 /**
- * Render a single field change (old → new) as an HTML <li>.
+ * One field change, as stock templates lay it out with {{#each ticket.changeItems}}.
+ * Templates own the colors, so a tenant's email branding restyles the list; the
+ * pre-rendered `ticket.changes` HTML is kept for templates customized before this.
  */
-function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
-  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
-  if (oldValue === null) {
-    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
-  }
-  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+interface EmailChangeItem {
+  label: string;
+  /** '' when the change carries no previous value: shown as a single value. */
+  oldValue: string;
+  newValue: string;
+  /** Bundled updates only: the updater on the first item of each update, '' otherwise. */
+  updatedBy: string;
+  /** Bundled updates only: when that update happened, on the same item as updatedBy. */
+  updatedAt: string;
+}
+
+interface EmailChangeGroup {
+  updatedBy: string;
+  updatedAt: string;
+  items: EmailChangeItem[];
+}
+
+function changeItem(label: string, oldValue: string | null, newValue: string): EmailChangeItem {
+  return { label, oldValue: oldValue ?? '', newValue, updatedBy: '', updatedAt: '' };
 }
 
 /**
- * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ * Render a single field change (old → new) as an HTML <li>.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
-  const items = await Promise.all(
-    Object.entries(changes).map(async ([field, value]): Promise<string> => {
+function renderChangeItemHtml(item: EmailChangeItem): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(item.label)}</div>`;
+  if (!item.oldValue) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(item.oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+}
+
+/** The legacy `ticket.changes` fragment for one update. */
+function renderChangeItemsHtml(items: EmailChangeItem[]): string {
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.map(renderChangeItemHtml).join('')}</ul>`;
+}
+
+/**
+ * Resolve a changes record (ids → names, dates → local time) into change items.
+ */
+async function resolveChangeItems(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<EmailChangeItem[]> {
+  return Promise.all(
+    Object.entries(changes).map(async ([field, value]): Promise<EmailChangeItem> => {
       const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-          return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
+          return changeItem(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
         const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+        return changeItem(fieldLabel, null, resolvedValue);
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+      return changeItem(fieldLabel, null, resolvedValue);
     })
   );
-  if (items.length === 0) {
-    return '';
-  }
-  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
+}
+
+/**
+ * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ */
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
+  return renderChangeItemsHtml(await resolveChangeItems(db, changes, tenantId, timeZone, locale));
 }
 
 /**
@@ -1248,29 +1472,52 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // teams. Never assigns and never touches the watch list. Skipped for the assignee and the
     // actor, and for active internal watchers (who already get the standard ticket-created email).
     let boardRuleRecipients: ResolvedRecipient[] = [];
+    // Plain addresses (e.g. a distribution list) are not Alga principals: they are never passed to
+    // the visibility filter. They skip the primary contact/client, the assignee and every active
+    // watcher, because those audiences already get their standard email.
+    let boardRuleAddresses: AddressRecipient[] = [];
     if (ticket.board_id && shouldSendInternalTicketEmail(suppression)) {
-      const resolved = await resolveBoardNotificationRecipients(
+      const { users: resolved, addresses } = await resolveBoardNotificationAudience(
         db,
         tenantId,
         { kind: 'created', boardId: ticket.board_id },
         { excludeUserIds: [ticket.assigned_to, creatorUserId] }
       );
       if (resolved.length > 0) {
-        const internalWatchers = await resolveInternalWatcherEmails(
-          db,
-          tenantId,
-          extractActiveWatcherEmails(ticket.attributes)
-        );
+        // Dedupe against EVERY active watcher, whatever their rendering: an out-of-scope seat
+        // technician who watches is mailed by the watcher block and must not get this one too.
+        const watchingEmails = new Set(extractActiveWatcherEmails(ticket.attributes).map(normalizeRecipientEmail));
         const notWatchers = resolved.filter(
-          (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+          (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
         );
         boardRuleRecipients = notWatchers.length > 0
           ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
           : [];
       }
+      if (addresses.length > 0) {
+        const alreadyAddressed = new Set<string>(
+          [
+            safeString(ticket.contact_email),
+            safeString(ticket.client_email),
+            assignedEmail || safeString(ticket.assigned_to_email),
+            ...extractActiveWatcherEmails(ticket.attributes),
+          ]
+            .filter(Boolean)
+            .map(normalizeRecipientEmail)
+        );
+        boardRuleAddresses = addresses.filter(
+          (address) => !alreadyAddressed.has(normalizeRecipientEmail(address.email))
+        );
+      }
     }
 
-    if (!primaryEmail && !assignedEmail && !hasActiveWatchers && boardRuleRecipients.length === 0) {
+    if (
+      !primaryEmail &&
+      !assignedEmail &&
+      !hasActiveWatchers &&
+      boardRuleRecipients.length === 0 &&
+      boardRuleAddresses.length === 0
+    ) {
       logger.warn('Could not send ticket created email - missing contact, client, assigned user, and watcher emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
@@ -1323,7 +1570,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
@@ -1334,11 +1581,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         ...emailEntityContext,
         contactId: primaryContactId,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: emailSubject,
-        template: 'ticket-created-client',
+        template: 'ticket-created',
         context: buildContext(portalUrl),
         replyContext,
-      }, 'Ticket Created Client');
+      }, 'Ticket Created');
     }
 
     // Send to assigned user if different from primary recipient
@@ -1347,6 +1595,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
+        addressedAs: 'msp',
         subject: emailSubject,
         template: 'ticket-created',
         context: buildContext(internalUrl),
@@ -1359,6 +1608,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         to: recipient.email,
+        addressedAs: 'msp',
         subject: `New Ticket on ${boardName} • ${ticket.title} (${priorityName})`,
         template: 'ticket-board-created',
         context: buildContext(internalUrl),
@@ -1366,7 +1616,33 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }, 'Board Ticket Created', recipient.userId);
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // Address recipients: same template and subtype as users, no recipientUserId (no principal, so
+    // no per-user preference). `issueReplyToken: false` keeps the thread headers but mints no
+    // reply token, so a reply is matched by thread headers, which check the sender.
+    for (const address of boardRuleAddresses) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: address.email,
+        addressedAs: 'msp',
+        subject: `New Ticket on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-created',
+        context: buildContext(internalUrl),
+        replyContext: { ...replyContext, issueReplyToken: false },
+      }, 'Board Ticket Created');
+    }
+    if (boardRuleAddresses.length > 0) {
+      // Never log the addresses themselves.
+      logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (ticket created)', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        boardId: ticket.board_id,
+        addressCount: boardRuleAddresses.length,
+      });
+    }
+
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -1384,11 +1660,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
+          addressedAs: isInternalWatcher ? 'msp' : 'client',
           subject: emailSubject,
-          template: isInternalWatcher ? 'ticket-created' : 'ticket-created-client',
+          template: 'ticket-created',
           context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext,
-        }, isInternalWatcher ? 'Ticket Created' : 'Ticket Created Client');
+        }, 'Ticket Created');
       },
       {
         excludeEmails: sentEmails,
@@ -1428,26 +1705,44 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     const enteredStatusId: string = payload.newStatusId ?? ticket.status_id;
     const assignees = await getAllTicketAssignees(db, tenantId, payload.ticketId);
-    const resolved = await resolveBoardNotificationRecipients(
+    const { users: resolved, addresses } = await resolveBoardNotificationAudience(
       db,
       tenantId,
       { kind: 'status_entered', statusId: enteredStatusId },
       { excludeUserIds: [...assignees, actorUserId] }
     );
-    if (resolved.length === 0) {
+    if (resolved.length === 0 && addresses.length === 0) {
       return;
     }
 
-    // Active internal watchers already follow the ticket and get the standard update emails.
+    // Active watchers already follow the ticket and get the standard update emails.
     const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
-    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
+    // Dedupe against every active watcher, whatever their rendering (see handleTicketCreated).
+    const watchingEmails = new Set(watcherEmails.map(normalizeRecipientEmail));
     const notWatchers = resolved.filter(
-      (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+      (recipient) => !watchingEmails.has(normalizeRecipientEmail(recipient.email))
     );
+    // Only principals go through the visibility filter. Plain addresses have no principal to check.
     const recipients = notWatchers.length > 0
       ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
       : [];
-    if (recipients.length === 0) {
+
+    // Plain addresses skip any active watcher (internal or external) and the actor and assignees.
+    const excludedEmails = new Set<string>(watcherEmails.map(normalizeRecipientEmail));
+    const excludedUserIds = [...assignees, actorUserId].filter(Boolean) as string[];
+    if (addresses.length > 0 && excludedUserIds.length > 0) {
+      const excludedUsers = await tenantDb(db, tenantId)
+        .table('users')
+        .select('email')
+        .whereIn('user_id', excludedUserIds);
+      for (const row of excludedUsers) {
+        if (row.email) excludedEmails.add(normalizeRecipientEmail(row.email));
+      }
+    }
+    const recipientAddresses = addresses.filter(
+      (address) => !excludedEmails.has(normalizeRecipientEmail(address.email))
+    );
+    if (recipients.length === 0 && recipientAddresses.length === 0) {
       return;
     }
 
@@ -1473,6 +1768,7 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
       },
     };
     const sentEmails = new Set<string>();
+    const statusSubject = `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`;
     for (const recipient of recipients) {
       const key = normalizeRecipientEmail(recipient.email);
       if (!isValidEmail(recipient.email) || sentEmails.has(key)) continue;
@@ -1482,12 +1778,51 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
         entityType: 'ticket',
         entityId: ticket.ticket_id || payload.ticketId,
         to: recipient.email,
-        subject: `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`,
+        addressedAs: 'msp',
+        subject: statusSubject,
         template: 'ticket-board-status-entered',
         context,
+        audienceContent: TICKET_FACTS_AUDIENCE,
         mailClass: 'ticket',
         boardId: ticket.board_id,
       }, 'Board Ticket Status Entered', recipient.userId);
+    }
+
+    // Address recipients: immediate, no recipientUserId (no principal, no per-user preference).
+    // Thread headers are kept so a reply is checked against the sender; no reply token is issued.
+    let addressesSent = 0;
+    for (const address of recipientAddresses) {
+      const key = normalizeRecipientEmail(address.email);
+      if (!isValidEmail(address.email) || sentEmails.has(key) || excludedEmails.has(key)) continue;
+      sentEmails.add(key);
+      await sendNotificationIfEnabled({
+        tenantId,
+        entityType: 'ticket',
+        entityId: ticket.ticket_id || payload.ticketId,
+        to: address.email,
+        addressedAs: 'msp',
+        subject: statusSubject,
+        template: 'ticket-board-status-entered',
+        context,
+        audienceContent: TICKET_FACTS_AUDIENCE,
+        mailClass: 'ticket',
+        boardId: ticket.board_id,
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId,
+          issueReplyToken: false,
+        },
+      }, 'Board Ticket Status Entered');
+      addressesSent += 1;
+    }
+    if (addressesSent > 0) {
+      // Never log the addresses themselves.
+      logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (status entered)', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        boardId: ticket.board_id,
+        addressCount: addressesSent,
+      });
     }
   } catch (error) {
     logger.error('Error handling ticket status changed email:', {
@@ -1666,7 +2001,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const changeItems = await resolveChangeItems(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const formattedChanges = renderChangeItemsHtml(changeItems);
 
     // Get updater's name
     const updater = updaterUserId
@@ -1700,6 +2036,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : 'System'
     };
 
@@ -1732,7 +2069,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Send to primary recipient (contact or client) - external user, no userId
@@ -1748,14 +2085,15 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         ...emailEntityContext,
         contactId: primaryContactId,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: `Ticket Updated: ${ticket.title}`,
-        template: 'ticket-updated-client',
+        template: 'ticket-updated',
         context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-      }, 'Ticket Updated Client');
+      }, 'Ticket Updated');
     }
 
     // Send to assigned user if different from primary recipient
@@ -1770,6 +2108,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
+        addressedAs: 'msp',
         subject: `Ticket Updated: ${ticket.title}`,
         template: 'ticket-updated',
         context: buildContext(internalUrl),
@@ -1791,6 +2130,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
             tenantId,
             ...emailEntityContext,
             to: resource.email ?? '',
+            addressedAs: 'msp',
             subject: `Ticket Updated: ${ticket.title}`,
             template: 'ticket-updated',
             context: buildContext(internalUrl),
@@ -1803,7 +2143,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -1822,14 +2163,15 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
+          addressedAs: isInternalWatcher ? 'msp' : 'client',
           subject: `Ticket Updated: ${ticket.title}`,
-          template: isInternalWatcher ? 'ticket-updated' : 'ticket-updated-client',
+          template: 'ticket-updated',
           context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-        }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
+        }, 'Ticket Updated');
       },
       {
         excludeEmails: sentEmails,
@@ -1847,31 +2189,30 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 }
 
 /**
- * Format multiple accumulated changes into an HTML fragment.
- * Each updater gets a header (name · timestamp) followed by a list of field changes.
+ * Resolve bundled updates into one group per update: the updater (never a raw id),
+ * the local timestamp, and that update's change items.
  */
-async function formatAccumulatedChanges(
+async function resolveAccumulatedChangeGroups(
   db: any,
   accumulatedChanges: AccumulatedChange[],
   tenantId: string,
   timeZone: string = 'UTC',
   locale: string = 'en'
-): Promise<string> {
-  const formattedSections: string[] = [];
+): Promise<EmailChangeGroup[]> {
+  const groups: EmailChangeGroup[] = [];
 
-  for (let i = 0; i < accumulatedChanges.length; i += 1) {
-    const changeSet = accumulatedChanges[i];
+  for (const changeSet of accumulatedChanges) {
     const updater = changeSet.userId
       ? await tenantDb(db, tenantId).table('users')
           .where({ user_id: changeSet.userId })
           .first()
       : null;
     // Never render a raw id: no user row (or no userId at all) reads as System.
-    const updaterName = updater
+    const updatedBy = updater
       ? `${updater.first_name} ${updater.last_name}`
       : 'System';
 
-    const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
+    const updatedAt = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
@@ -1881,33 +2222,48 @@ async function formatAccumulatedChanges(
       timeZoneName: 'short'
     });
 
-    const items = await Promise.all(
-      Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
-        const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
-          const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
-          if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-            return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
-          }
-          const presentVal = newVal !== undefined ? newVal : oldVal;
-          const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
-          return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-        }
-        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-      })
-    );
-
-    const isLast = i === accumulatedChanges.length - 1;
-    const sectionStyle = isLast ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
-    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(updaterName)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(timestamp)}</span></div>`;
-    const list = items.length > 0 ? `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>` : '';
-    formattedSections.push(`<div style="${sectionStyle}">${header}${list}</div>`);
+    const items = await resolveChangeItems(db, changeSet.changes, tenantId, timeZone, locale);
+    groups.push({ updatedBy, updatedAt, items });
   }
 
-  return formattedSections.join('');
+  return groups;
+}
+
+/**
+ * Flatten bundled updates for {{#each ticket.changeItems}}: the first item of each
+ * update carries its updater and time so a template can print a heading there.
+ */
+function flattenChangeGroups(groups: EmailChangeGroup[]): EmailChangeItem[] {
+  return groups.flatMap((group) =>
+    group.items.map((item, index) =>
+      index === 0 ? { ...item, updatedBy: group.updatedBy, updatedAt: group.updatedAt } : item
+    )
+  );
+}
+
+/**
+ * The legacy `ticket.changes` fragment for bundled updates: each updater gets a
+ * header (name · timestamp) followed by a list of field changes.
+ */
+function renderChangeGroupsHtml(groups: EmailChangeGroup[]): string {
+  return groups.map((group, i) => {
+    const sectionStyle = i === groups.length - 1 ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
+    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(group.updatedBy)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(group.updatedAt)}</span></div>`;
+    return `<div style="${sectionStyle}">${header}${renderChangeItemsHtml(group.items)}</div>`;
+  }).join('');
+}
+
+/**
+ * Format multiple accumulated changes into the legacy `ticket.changes` HTML fragment.
+ */
+async function formatAccumulatedChanges(
+  db: any,
+  accumulatedChanges: AccumulatedChange[],
+  tenantId: string,
+  timeZone: string = 'UTC',
+  locale: string = 'en'
+): Promise<string> {
+  return renderChangeGroupsHtml(await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, timeZone, locale));
 }
 
 /** Display string for the "Updated By" row of an accumulated-update email. */
@@ -2095,7 +2451,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const emailLocale = await getTenantDefaultLocale(tenantId);
 
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeGroups = await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeItems = flattenChangeGroups(changeGroups);
+    const formattedChanges = renderChangeGroupsHtml(changeGroups);
 
     const updatedByDisplay = await resolveUpdatedByDisplay(db, tenantId, accumulatedChanges);
 
@@ -2124,6 +2482,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updatedByDisplay,
       updateCount: accumulatedChanges.length,
     };
@@ -2159,7 +2518,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Build subject line indicating multiple updates if applicable
@@ -2176,14 +2535,15 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         ...emailEntityContext,
         contactId: primaryContactId,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-        template: 'ticket-updated-client',
+        template: 'ticket-updated',
         context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-      }, 'Ticket Updated Client');
+      }, 'Ticket Updated');
     }
 
     if (!shouldSendInternalTicketEmail(suppression)) {
@@ -2196,6 +2556,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
+        addressedAs: 'msp',
         subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
         template: 'ticket-updated',
         context: buildContext(internalUrl),
@@ -2215,6 +2576,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
             tenantId,
             ...emailEntityContext,
             to: resource.email ?? '',
+            addressedAs: 'msp',
             subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
             template: 'ticket-updated',
             context: buildContext(internalUrl),
@@ -2227,7 +2589,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -2245,14 +2608,15 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
+          addressedAs: isInternalWatcher ? 'msp' : 'client',
           subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-          template: isInternalWatcher ? 'ticket-updated' : 'ticket-updated-client',
+          template: 'ticket-updated',
           context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext: {
             ticketId: ticket.ticket_id || ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-        }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
+        }, 'Ticket Updated');
       },
       {
         excludeEmails: sentEmails,
@@ -2306,12 +2670,11 @@ async function sendTicketAssignedNotifications(
       return;
     }
 
-    const assignerName = assignerUserId
-      ? await tenantDb(db, tenantId).table('users')
-          .where({ user_id: assignerUserId })
-          .first()
-          .then((user: any) => user ? `${user.first_name} ${user.last_name}` : 'System')
-      : 'System';
+    const assignerName = await optionalEmailData('the assigner name', 'System', async () => {
+      if (!assignerUserId) return 'System';
+      const user = await tenantDb(db, tenantId).table('users').where({ user_id: assignerUserId }).first();
+      return user ? `${user.first_name} ${user.last_name}` : 'System';
+    }, { tenantId, ticketId: payload.ticketId });
 
     const safeString = (value?: unknown) => {
       if (typeof value === 'string') {
@@ -2462,7 +2825,7 @@ async function sendTicketAssignedNotifications(
       }
       sentEmails.add(key);
       await sendNotificationIfEnabled(
-        { ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id },
+        { ...params, audienceContent: TICKET_FACTS_AUDIENCE, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id },
         subtypeName,
         recipientUserId ?? undefined
       );
@@ -2480,6 +2843,7 @@ async function sendTicketAssignedNotifications(
         tenantId,
         ...emailEntityContext,
         to: ticket.assigned_to_email,
+        addressedAs: 'msp',
         subject: `You have been assigned to ticket: ${ticket.title}`,
         template: 'ticket-assigned',
         context: buildContext(internalUrl),
@@ -2524,6 +2888,7 @@ async function sendTicketAssignedNotifications(
         ...emailEntityContext,
         contactId: primaryContactId,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: `Team Assigned to Your Ticket: ${ticket.title}`,
         template: 'ticket-team-assigned',
         context: teamContext,
@@ -2574,6 +2939,7 @@ async function sendTicketAssignedNotifications(
           ...emailEntityContext,
           contactId: primaryContactId,
           to: primaryEmail,
+          addressedAs: 'client',
           subject: `Your Ticket Is Being Worked On: ${ticket.title}`,
           template: 'ticket-agent-assigned-client',
           context: clientContext,
@@ -2593,6 +2959,7 @@ async function sendTicketAssignedNotifications(
             tenantId,
             ...emailEntityContext,
             to: resource.email ?? '',
+            addressedAs: 'msp',
             subject: `You have been added as additional resource to ticket: ${ticket.title}`,
             template: 'ticket-assigned',
             context: buildContext(internalUrl),
@@ -2608,23 +2975,21 @@ async function sendTicketAssignedNotifications(
     // ticket-updated / comment-added events, so we skip the assignment-time
     // email rather than sending the assignee-perspective ticket-assigned copy.
     if (teamName && shouldSendContactFacingTicketEmail(suppression)) {
-      const watcherTeamContext = {
-        ticket: {
-          ...baseTicketContext,
-          teamName,
-          url: portalUrl
-        }
-      };
+      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
+          const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
           await sendIfUnique({
             tenantId,
             ...emailEntityContext,
             to: watcherEmail,
+            addressedAs: isInternalWatcher ? 'msp' : 'client',
             subject: `Team Assigned to Ticket: ${ticket.title}`,
             template: 'ticket-team-assigned',
-            context: watcherTeamContext,
+            context: {
+              ticket: { ...baseTicketContext, teamName, url: isInternalWatcher ? internalUrl : portalUrl },
+            },
             replyContext
           }, 'Ticket Team Assigned');
         },
@@ -2854,12 +3219,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
     const commentFormatting = formatBlockNoteContent(payload.comment?.content);
-    const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({
-      db,
-      tenantId,
-      ticketId: payload.ticketId,
-      html: commentFormatting.html,
-    });
+    // Inline images are optional: without them the comment still goes out with its own HTML.
+    const inlineCommentImageRewrite = await optionalEmailData(
+      'the comment inline images',
+      { html: commentFormatting.html, attachments: [], outcomes: [] },
+      () => rewriteTicketCommentImagesToCid({
+        db,
+        tenantId,
+        ticketId: payload.ticketId,
+        html: commentFormatting.html,
+      }),
+      { tenantId, ticketId: payload.ticketId, commentId: payload.comment?.id },
+    );
 
     inlineCommentImageRewrite.outcomes.forEach((outcome) => {
       logger.info('[TicketEmailSubscriber] Comment inline image processing outcome', {
@@ -2914,7 +3285,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         ...baseTicketContext,
         url
       },
-      comment: commentContext
+      comment: { ...commentContext }
     });
 
     // Determine primary email (contact first, then client)
@@ -2929,6 +3300,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const emailMetadata = ticket.email_metadata || {};
     // TenantEmailService applies the board-name From fallback centrally.
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
+
+    // Every copy of this message quotes the comment, so the comment's stored audience is the
+    // message's. Read from the rows, and only if a seat technician is among the recipients.
+    const commentEmailAudience: TicketEmailAudience = [{
+      audience: lazyAudience(() => readTicketCommentAudience(db, tenantId, payload.comment?.id)),
+    }];
 
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
@@ -2951,7 +3328,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       // The returned flag reports whether a message really went out: a
       // notification gate can skip the send silently, and the Cc/Bcc fallback
       // must not treat that as "the requester was reached".
-      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      return sendNotificationIfEnabled({ ...params, audienceContent: commentEmailAudience, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
@@ -3017,6 +3394,90 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       ? { headers: commentThreadHeaders }
       : {};
 
+    // CM L5: a comment on a shared ticket is delivered by the audience-aware co-managed step INSTEAD of
+    // the native recipient step below (one send per recipient). The served decision is made once, here,
+    // before any co_management_* SQL; an unserved tenant gets null at zero SQL and falls through untouched.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, payload.ticketId, payload.comment?.id);
+    if (coManagedStep) {
+      const toRecipient = (kind: 'customer_user' | 'requester_contact', principalId: string | null | undefined, email: string | null | undefined) =>
+        email && isValidEmail(email) ? { kind, principalId: principalId || email, email } : null;
+      const customerUsers = [
+        toRecipient('customer_user', ticket.assigned_to, assignedEmail),
+        ...additionalResources.map((r) => toRecipient('customer_user', r.user_id, r.email)),
+      ].filter((r): r is NonNullable<typeof r> => r !== null);
+      const requester = toRecipient('requester_contact', primaryContactId, primaryEmail);
+      const recipients = audienceRecipients(coManagedStep, { customerUsers, requester });
+      const sourceId = payload.comment!.id!;
+      for (const recipient of recipients) {
+        const internal = recipient.kind !== 'requester_contact';
+        if (!shouldSendTicketCommentNotification(suppression, internal ? 'internal' : 'contact')) continue;
+        const fields = coManagedSendFields(coManagedStep, 'ticket_comment_email', sourceId, recipient);
+        const sponsorRecipient = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        const projectedContext = buildContext(internal ? internalUrl : portalUrl);
+        const projection = sponsorRecipient ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], {
+          ticketTitle: projectedContext.ticket.title,
+          ticketNumber: projectedContext.ticket.id,
+          requesterName: projectedContext.ticket.requesterName, requesterEmail: projectedContext.ticket.requesterEmail,
+          requesterPhone: projectedContext.ticket.requesterPhone, requesterContact: projectedContext.ticket.requesterContact,
+          requesterDetails: projectedContext.ticket.requesterDetails, assignedToName: projectedContext.ticket.assignedToName,
+          assignedToEmail: projectedContext.ticket.assignedToEmail, assignedDetails: projectedContext.ticket.assignedDetails,
+          clientName: projectedContext.ticket.clientName, locationSummary: projectedContext.ticket.locationSummary,
+          commentContent: projectedContext.comment.content, commentHtml: projectedContext.comment.html,
+          commentPreview: projectedContext.comment.text, commentRawContent: projectedContext.comment.rawContent,
+          authorName: projectedContext.comment.author,
+          priority: projectedContext.ticket.priority, priorityColor: projectedContext.ticket.priorityColor,
+          status: projectedContext.ticket.status, metaLine: projectedContext.ticket.metaLine,
+          board: projectedContext.ticket.board, categoryDetails: projectedContext.ticket.categoryDetails,
+          category: projectedContext.ticket.category, subcategory: projectedContext.ticket.subcategory,
+          ticketUrl: projectedContext.ticket.url, description: projectedContext.ticket.description,
+        }) : null;
+        if (projection) {
+          Object.assign(projectedContext.ticket, {
+            title: projection.ticketTitle ?? 'Shared ticket', id: projection.ticketNumber ?? 'Shared ticket', requesterName: projection.requesterName,
+            requesterEmail: projection.requesterEmail, requesterPhone: projection.requesterPhone,
+            requesterContact: projection.requesterContact, requesterDetails: projection.requesterDetails,
+            assignedToName: projection.assignedToName, assignedToEmail: projection.assignedToEmail,
+            assignedDetails: projection.assignedDetails, clientName: projection.clientName,
+            locationSummary: projection.locationSummary, priority: projection.priority,
+            priorityColor: projection.priorityColor, status: projection.status,
+            metaLine: projection.metaLine, board: projection.board,
+            categoryDetails: projection.categoryDetails, category: projection.category,
+            subcategory: projection.subcategory, url: projection.ticketUrl, description: projection.description,
+          });
+          if (projection.authorName === null) projectedContext.comment.author = 'A team member';
+          if (projection.conversationSuppressed) Object.assign(projectedContext.comment, { content: '', html: '', text: '', plainText: '', rawContent: null });
+        }
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          ...(recipient.kind === 'requester_contact' && primaryContactId ? { contactId: primaryContactId } : {}),
+          to: recipient.email!,
+          addressedAs: internal ? 'msp' : 'client',
+          subject: `New Comment on Ticket: ${projectedContext.ticket.title}`,
+          template: 'ticket-comment-added',
+          // Keep canonical source content in the queued params; sendEventEmail reauthorizes and
+          // projects this context on every attempt, including after policy changes.
+          context: sponsorRecipient ? buildContext(internal ? internalUrl : portalUrl) : projectedContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: coManagedStep.plan.threadId ?? ticket.email_metadata?.threadId,
+            conversationToken: fields.conversationToken,
+            tokenMetadata: fields.tokenMetadata,
+          },
+          delivery: fields.delivery,
+          ...(sponsorRecipient ? { coManagedRecipient: {
+            tenant: tenantId, ticketId: payload.ticketId, commentId: sourceId,
+            relationshipId: coManagedStep.plan.relationshipId, sponsorTenant: coManagedStep.plan.sponsorTenant,
+            principalId: recipient.principalId,
+          } } : {}),
+          attachments: projection?.conversationSuppressed ? [] : inlineCommentImageAttachments,
+          ...commentThreadHeaderParams,
+        }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);
+      }
+      return;
+    }
+
     // Send to primary email if available - external user, no userId
     let requesterEmailSent = false;
     if (
@@ -3032,6 +3493,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         ...emailEntityContext,
         contactId: primaryContactId,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
         context: buildContext(portalUrl),
@@ -3077,6 +3539,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         ...emailEntityContext,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
+        addressedAs: 'client' as const,
         context: buildContext(portalUrl),
         replyContext: fallbackReplyContext,
         attachments: inlineCommentImageAttachments,
@@ -3140,6 +3603,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             entityType: 'ticket',
             entityId: child.ticket_id,
             to: childPrimaryEmail,
+            addressedAs: 'client',
             subject: `New Comment on Ticket: ${ticket.title}`,
             template: 'ticket-comment-added',
             context: {
@@ -3166,7 +3630,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         }
       }
 
-      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+      // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+      const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
@@ -3188,6 +3653,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             tenantId,
             ...emailEntityContext,
             to: watcherEmail,
+            addressedAs: isInternalWatcher ? 'msp' : 'client',
             subject: `New Comment on Ticket: ${ticket.title}`,
             template: 'ticket-comment-added',
             context: buildContext(watcherUrl),
@@ -3220,6 +3686,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
+        addressedAs: 'msp',
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
         context: buildContext(internalUrl),
@@ -3247,6 +3714,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           tenantId,
           ...emailEntityContext,
           to: resource.email ?? '',
+          addressedAs: 'msp',
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
           context: buildContext(internalUrl),
@@ -3411,15 +3879,16 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
-    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const optionalMeta = { tenantId, ticketId: payload.ticketId };
+    const changes = await optionalEmailData('the close change list', '',
+      () => formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale), optionalMeta);
 
     // Get closer's name
-    const closer = closerUserId
-      ? await tenantDb(db, tenantId).table('users')
-          .where({ user_id: closerUserId })
-          .first()
-      : null;
-    const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : 'System';
+    const closedBy = await optionalEmailData('the closer name', 'System', async () => {
+      if (!closerUserId) return 'System';
+      const closer = await tenantDb(db, tenantId).table('users').where({ user_id: closerUserId }).first();
+      return closer ? `${closer.first_name} ${closer.last_name}` : 'System';
+    }, optionalMeta);
 
     // Resolution bodies for the close email, split by recipient visibility: the
     // latest resolution of any visibility for internal recipients, the latest
@@ -3449,6 +3918,55 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
+    // One hour-block lookup per client per event, shared by the master ticket
+    // and every bundled child (bundle children normally share the master's client).
+    const hourBlockByClient = new Map<string, Promise<number>>();
+    const resolveHourBlockMinutes: HourBlockMinutesResolver = (clientId) => {
+      let lookup = hourBlockByClient.get(clientId);
+      if (!lookup) {
+        lookup = getAvailableHourBlockMinutes(db, tenantId, clientId);
+        hourBlockByClient.set(clientId, lookup);
+      }
+      return lookup;
+    };
+
+    // Fetch each ticket's data once; format it after the actual recipient and locale are known.
+    const masterDetailRows = await fetchTicketEmailDetailRows(
+      db, tenantId, [ticket.ticket_id],
+    ).catch((error): Map<string, TicketDetailRows> | null => {
+      logger.warn('[TicketEmailSubscriber] Failed to fetch ticket email detail rows; sending without details:', {
+        ticketId: ticket.ticket_id,
+        tenantId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    });
+    const detailBlocksByTicketAndLocale = new Map<string, Promise<TicketEmailDetailBlocks>>();
+    const detailsForTicket = (
+      ticketId: string,
+      clientId: string | null | undefined,
+      rows: Map<string, TicketDetailRows> | null,
+    ): TicketDetailsForLocale => (locale) => {
+      const key = JSON.stringify([ticketId, locale]);
+      let blocks = detailBlocksByTicketAndLocale.get(key);
+      if (!blocks) {
+        blocks = rows
+          ? buildTicketEmailDetailBlocksFromRows(
+            ticketId, clientId, rows, emailTimeZone, locale, resolveHourBlockMinutes,
+          ).catch((error) => {
+            logger.warn('[TicketEmailSubscriber] Failed to build ticket email detail blocks; sending without details:', {
+              ticketId,
+              tenantId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            return emptyTicketEmailDetailBlocks(locale);
+          })
+          : Promise.resolve(emptyTicketEmailDetailBlocks(locale));
+        detailBlocksByTicketAndLocale.set(key, blocks);
+      }
+      return blocks;
+    };
+    const masterDetailsForLocale = detailsForTicket(ticket.ticket_id, ticket.client_id, masterDetailRows);
     const baseTicketContext = {
       id: ticket.ticket_number,
       title: ticket.title,
@@ -3473,6 +3991,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       locationSummary,
       changes,
       closedBy,
+      ...emptyTicketEmailDetailBlocks(emailLocale),
       // Client-safe by default: every context that spreads this base is
       // external except internalContext, which overrides the body below.
       resolution: externalResolutionHtml
@@ -3491,6 +4010,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         url: internalUrl
       }
     };
+
+    // The internal rendering quotes the latest resolution of any visibility, so its audience is
+    // that comment's. A recipient whose audience does not admit it gets the client-visible
+    // resolution instead, still with the MSP link. Every other rendering is client-safe already.
+    const internalCloseAudience: TicketEmailAudience = [
+      {
+        audience: latestResolutionComment?.comment_id
+          ? lazyAudience(() => readTicketCommentAudience(db, tenantId, latestResolutionComment.comment_id))
+          : 'requester',
+      },
+      { audience: 'requester', content: { ticket: { ...externalContext.ticket, url: internalUrl } } },
+    ];
 
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
@@ -3520,7 +4051,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       sentEmails.add(key);
       // The flag reports whether a message really went out, so the Cc/Bcc
       // fallback below never treats a gated send as "the requester was reached".
-      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      return sendNotificationIfEnabled({
+        ...params,
+        detailBlocksForLocale: params.detailBlocksForLocale ?? masterDetailsForLocale,
+        audienceContent: params.context === internalContext ? internalCloseAudience : TICKET_FACTS_AUDIENCE,
+        mailClass: 'ticket',
+        boardId: params.boardId ?? ticket.board_id,
+      }, subtypeName, recipientUserId ?? undefined);
     };
 
     // The requester is the `To` of the close message, so they never belong in
@@ -3564,7 +4101,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
+        recipientClientId: ticket.client_id || undefined,
         to: primaryEmail,
+        addressedAs: 'client',
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
         context: externalContext,
@@ -3590,6 +4129,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         ...emailEntityContext,
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
+        addressedAs: 'client' as const,
         context: externalContext,
         replyContext: closeReplyContext,
         ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
@@ -3627,6 +4167,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
+        // Same supplemental rule as the master: one batched fetch for every
+        // child; if it fails, children are still sent without details.
+        const childDetailRows = await fetchTicketEmailDetailRows(
+          db, tenantId, bundleChildren.map((child) => child.ticket_id),
+        ).catch((error): Map<string, TicketDetailRows> | null => {
+          logger.warn('[TicketEmailSubscriber] Failed to fetch bundled child detail rows; sending without details:', {
+            ticketIds: bundleChildren.map((child) => child.ticket_id),
+            tenantId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return null;
+        });
         for (const child of bundleChildren) {
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
@@ -3641,12 +4193,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           }
 
           const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
-
           await sendIfUnique({
             tenantId,
             entityType: 'ticket',
             entityId: child.ticket_id,
+            detailBlocksForLocale: detailsForTicket(child.ticket_id, child.client_id, childDetailRows),
             to: childPrimaryEmail,
+            addressedAs: 'client',
             subject: `Ticket Closed: ${ticket.title}`,
             template: 'ticket-closed',
             context: {
@@ -3683,6 +4236,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
+        addressedAs: 'msp',
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
         context: internalContext,
@@ -3704,6 +4258,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
             tenantId,
             ...emailEntityContext,
             to: resource.email ?? '',
+            addressedAs: 'msp',
             subject: `Ticket Closed: ${ticket.title}`,
             template: 'ticket-closed',
             context: internalContext,
@@ -3716,7 +4271,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     }
 
-    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
+    // LEVERAGE: pattern watcher-block-classification — internal-watcher classification and the per-watcher send loop are repeated at each ticket event handler.
+    const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails, { ticketId: payload.ticketId });
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
@@ -3738,6 +4294,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           tenantId,
           ...emailEntityContext,
           to: watcherEmail,
+          addressedAs: isInternalWatcher ? 'msp' : 'client',
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
           context: watcherContext,
@@ -3878,6 +4435,9 @@ export const ticketEmailSubscriberTestHarness = {
   handleTicketClosed,
   handleTicketEvent,
   formatAccumulatedChanges,
+  resolveChangeItems,
+  resolveAccumulatedChangeGroups,
+  flattenChangeGroups,
   resolveUpdatedByDisplay,
 };
 

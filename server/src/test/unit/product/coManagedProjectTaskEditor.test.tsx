@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), statuses: vi.fn(), edit: vi
 vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({
   getCoManagedProjectTaskSnapshotAction: mocks.snapshot, listCoManagedProjectTaskStatusOptionsAction: mocks.statuses,
   editCoManagedProjectTaskAction: mocks.edit, assignCoManagedProjectTaskAction: mocks.assign, listCoManagedProjectTaskHistoryAction: mocks.history }));
+vi.mock('../../../components/co-managed/CoManagedProjectTaskConversation', () => ({ default: () => <section id="conversation-stub" /> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, options, onValueChange }: any) =>
   <label>{label}<select id={id} aria-label={label} value={value} onChange={event => onValueChange(event.target.value)}>
     {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
@@ -73,6 +74,20 @@ describe('co-managed project task editor', () => {
     render(<CoManagedProjectTaskEditor customerTenant="c1" relationshipId="r1" taskId="t1" userId="u1" />);
     await screen.findByText('Assigned to Quinn Tech');
     expect(document.body.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}/);
+  });
+
+  it('shows an assigned task with a hidden assignee name as assigned, not as unassigned', async () => {
+    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: { kind: 'user', name: null } });
+    render(<CoManagedProjectTaskEditor {...props} />);
+    await screen.findByText('Assigned (name hidden)');
+    expect(screen.queryByText('Not assigned')).toBeNull();
+  });
+
+  it('still shows Not assigned when the snapshot has no assignee', async () => {
+    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: null });
+    render(<CoManagedProjectTaskEditor {...props} />);
+    await screen.findByText('Not assigned');
+    expect(screen.queryByText('Assigned (name hidden)')).toBeNull();
   });
 
   it('explains a task without an MSP reference and offers assignment', async () => {

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseExpression } from 'cron-parser';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantHandlerMock = vi.fn();
 const systemHandlerMock = vi.fn();
@@ -46,6 +46,7 @@ vi.mock('@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler', () => ({ workf
 vi.mock('@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler', () => ({ cleanupAiSessionKeysHandler: (...a: unknown[]) => systemHandlerMock('cleanup-ai-session-keys', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemporaryFormsJob: (...a: unknown[]) => systemHandlerMock('cleanup-temporary-workflow-forms', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: (...a: unknown[]) => systemHandlerMock('cleanup-webhook-deliveries', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/cleanupInboundEmailQuarantineJob', () => ({ cleanupInboundEmailQuarantineJob: (...a: unknown[]) => systemHandlerMock('cleanup-inbound-email-quarantine', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETING_SWEEP_JOB: 'sweep-teams-online-meetings', teamsMeetingSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-teams-online-meetings', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
@@ -68,7 +69,14 @@ import { runMaintenanceJobExclusive } from '../../../lib/jobs/runMaintenanceJobE
 import { CE_MAINTENANCE_JOBS } from '../../../lib/jobs/serverMaintenanceJobNames';
 
 const repoRoot = resolve(__dirname, '../../../../..');
-const catalog = resolveCeMaintenanceSchedules({});
+// Descriptor-declared jobs (defineJob) register their schedule row process-globally, so the catalog is only
+// deterministic once the server's own registrations have run. Resolve it after them, not at import time.
+let catalog: ReturnType<typeof resolveCeMaintenanceSchedules> = [];
+beforeAll(() => {
+  registerServerMaintenanceJobs();
+  registerCeMaintenanceJobs();
+  catalog = resolveCeMaintenanceSchedules({});
+});
 const cronOf = (jobName: string) => catalog.find((e) => e.jobName === jobName)?.cron;
 
 function firesBetween(cron: string, start: string, end: string, tz = 'UTC'): number {
@@ -103,7 +111,9 @@ describe('CE maintenance schedule catalog', () => {
     for (const jobName of CE_SHARED_MAINTENANCE_JOBS) {
       expect(cronOf(jobName)).toBe(MAINTENANCE_FANOUT_SCHEDULES.find((s) => s.jobName === jobName)?.cron);
     }
-    expect(catalog).toHaveLength(CE_SHARED_MAINTENANCE_JOBS.length + CE_ONLY_MAINTENANCE_SCHEDULES.length);
+    // The co-managed SLA observation job is a CE global maintenance schedule contributed by its descriptor.
+    expect(catalog).toHaveLength(CE_SHARED_MAINTENANCE_JOBS.length + CE_ONLY_MAINTENANCE_SCHEDULES.length + 1);
+    expect(cronOf('co-managed-sla-observation')).toBe('*/1 * * * *');
     expect(new Set(catalog.map((e) => e.jobName)).size).toBe(catalog.length);
     expect(catalog.map((e) => e.jobName)).not.toContain('renew-microsoft-calendar-webhooks');
   });

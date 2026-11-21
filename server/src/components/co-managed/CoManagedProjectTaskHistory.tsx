@@ -52,7 +52,7 @@ export default function CoManagedProjectTaskHistory({ customerTenant, relationsh
     {entries && entries.length > 0 && <ul className="space-y-2">{entries.map(entry => <li key={entry.auditId} className="rounded border border-[rgb(var(--color-border-200))] p-2 text-sm">
       <div className="font-medium">{entry.authorName}{entry.organizationName ? ` (${entry.organizationName})` : ''}
         <span className="ml-2 font-normal text-[rgb(var(--color-text-500))]">{formatDate(new Date(entry.at), { dateStyle: 'medium', timeStyle: 'short' })}</span></div>
-      <ul>{Object.entries(entry.changes).map(([field, change]) => <li key={field}>{describe(field, change)}</li>)}</ul>
+      {Object.keys(entry.changes).length > 0 && <ul>{Object.entries(entry.changes).map(([field, change]) => <li key={field}>{describe(field, change)}</li>)}</ul>}
     </li>)}</ul>}
   </section>;
 }

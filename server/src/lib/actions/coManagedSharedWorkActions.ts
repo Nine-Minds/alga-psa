@@ -1,5 +1,6 @@
 'use server';
 
+import { publishCoManagedRouting } from '../co-managed/routingPublisher';
 import { withAuth } from '@alga-psa/auth';
 import { requireCapabilityForAction, CapabilityUnavailableError } from '@alga-psa/core/capability/server';
 import { coManagedBrowserActor as browserActor } from '../co-managed/browserActor';
@@ -8,6 +9,7 @@ import { getCoManagedSharedTicketDetails, getCoManagedTicketEditor, searchCoMana
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { buildSharedTicketData } from '../co-managed/sharedTicketData';
 import type { SharedTicketDetailsResult, SharedTicketOptionPage } from '../co-managed/sharedTicketDataTypes';
+import { getCoManagedTicketSlaDisplay } from '@alga-psa/co-managed';
 import { getCoManagedSharedWorkSummary, getCoManagedTicketScreen, getCoManagedTicketHandoffHistory, getCoManagedExplicitTicketGrants, escalateCoManagedTicket, handBackCoManagedTicket, revokeCoManagedTicketGrant, CoManagedSharedWorkError, CoManagedTicketHandoffError, isCoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketHandoffRequest, type CoManagedTicketHandoffReceipt, type CoManagedTicketHandoffErrorCode } from '@alga-psa/co-managed';
 
 
@@ -16,6 +18,14 @@ export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, reso
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return getCoManagedSharedWorkSummary(knex, actor, resource);
+});
+
+/** Timing outcomes only (state, elapsed, due): policy, mapping, calendar and pause reasons stay with their owner. */
+export const getSharedTicketSlaAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  const actor = await browserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  return getCoManagedTicketSlaDisplay(knex, actor, resource);
 });
 
 /**
@@ -54,7 +64,9 @@ export const escalateSharedTicketAction = withAuth(async (user, { tenant }, reso
     const actor = await browserActor(user, tenant);
     const { knex } = await createTenantKnex(tenant);
     // LEVERAGE: friction shared-ticket-sla — the SLA setup-required result returns with L6b.
-    return { ok: true, receipt: await escalateCoManagedTicket(knex, actor, resource, request) };
+    const receipt = await escalateCoManagedTicket(knex, actor, resource, request);
+    await publishCoManagedRouting('CO_MANAGED_ESCALATION_RECEIVED', resource, receipt.operationId);
+    return { ok: true, receipt };
   } catch (error) { return handoffRefusal(error); }
 });
 
@@ -65,7 +77,9 @@ export const handBackSharedTicketAction = withAuth(async (user, { tenant }, reso
     await requireCapabilityForAction('co-managed', tenant, isCustomerSide(tenant, resource) ? 'serves' : 'admits');
     const actor = await browserActor(user, tenant);
     const { knex } = await createTenantKnex(tenant);
-    return { ok: true, receipt: await handBackCoManagedTicket(knex, actor, resource, request) };
+    const receipt = await handBackCoManagedTicket(knex, actor, resource, request);
+    await publishCoManagedRouting('CO_MANAGED_ESCALATION_RETURNED', resource, receipt.operationId);
+    return { ok: true, receipt };
   } catch (error) { return handoffRefusal(error); }
 });
 
@@ -75,7 +89,9 @@ export const revokeSharedTicketGrantAction = withAuth(async (user, { tenant }, r
     await requireCapabilityForAction('co-managed', tenant, 'serves');
     const actor = await browserActor(user, tenant);
     const { knex } = await createTenantKnex(tenant);
-    return { ok: true, receipt: await revokeCoManagedTicketGrant(knex, actor, resource, request) };
+    const receipt = await revokeCoManagedTicketGrant(knex, actor, resource, request);
+    await publishCoManagedRouting('CO_MANAGED_ESCALATION_RETURNED', resource, receipt.operationId);
+    return { ok: true, receipt };
   } catch (error) { return handoffRefusal(error); }
 });
 

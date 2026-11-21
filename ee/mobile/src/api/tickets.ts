@@ -43,6 +43,9 @@ export type TicketListItem = {
   entered_at?: string | null;
   closed_at?: string | null;
   tags?: TicketListTag[] | null;
+  /** Chip tags for the requester / client, already filtered by the tenant's tag display rules. */
+  contact_tags?: TicketListTag[] | null;
+  client_tags?: TicketListTag[] | null;
   /** Set on bundle children; the master's number rides along for the badge. */
   master_ticket_id?: string | null;
   bundle_master_ticket_number?: string | null;
@@ -81,6 +84,11 @@ export type TicketDetail = TicketListItem & {
   description_html?: string | null;
   priority_id?: string | null;
   assigned_to?: string | null;
+  board_id?: string | null;
+  category_id?: string | null;
+  subcategory_id?: string | null;
+  category_name?: string | null;
+  subcategory_name?: string | null;
   due_date?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
@@ -147,6 +155,17 @@ export type TicketStatus = {
 export type TicketPriority = {
   priority_id: string;
   priority_name: string;
+  /** Absent on older servers. */
+  is_from_itil_standard?: boolean;
+};
+
+/** Parents have parent_category null; subcategories point at their parent. */
+export type TicketCategory = {
+  category_id: string;
+  category_name: string;
+  parent_category?: string | null;
+  board_id?: string | null;
+  display_order?: number | null;
 };
 
 export type ListTicketsParams = {
@@ -260,6 +279,8 @@ export function addTicketComment(
     /** One-off Cc/Bcc for this comment's email; rejected on internal notes. */
     cc?: string[];
     bcc?: string[];
+    /** Who a new thread is for, on a ticket whose client has a co-managed seat arrangement. */
+    collaboration_audience?: "requester" | "shared_it";
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -281,6 +302,7 @@ export function addTicketComment(
       // Older servers reject unknown keys, so send these only when used.
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),
+      ...(params.collaboration_audience ? { collaboration_audience: params.collaboration_audience } : {}),
     },
   });
 }
@@ -320,6 +342,24 @@ export function getTicketPriorities(
   return client.request<SuccessResponse<TicketPriority[]>>({
     method: "GET",
     path: "/api/v1/tickets/priorities",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+/**
+ * Board-scoped categories behind ticket:read. The /categories/ticket CRUD
+ * surface needs ticket_settings:read, which agents do not always hold.
+ */
+export function getTicketCategories(
+  client: ApiClient,
+  params: { apiKey: string; board_id?: string | null },
+): Promise<ApiResult<SuccessResponse<TicketCategory[]>>> {
+  return client.request<SuccessResponse<TicketCategory[]>>({
+    method: "GET",
+    path: "/api/v1/tickets/categories",
+    query: params.board_id ? { board_id: params.board_id } : undefined,
     headers: {
       "x-api-key": params.apiKey,
     },
@@ -407,6 +447,36 @@ export function updateTicketPriority(
     },
     body: {
       priority_id: params.priority_id,
+      ...params.notificationSuppression,
+    },
+  });
+}
+
+/**
+ * Category and subcategory travel together: a category with no subcategory
+ * selected clears the old parent's child, which the v1 route accepts as null.
+ */
+export function updateTicketCategory(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    ticketId: string;
+    category_id: string | null;
+    subcategory_id: string | null;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
+    auditHeaders?: Record<string, string | undefined>;
+  },
+): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
+  return client.request<SuccessResponse<TicketDetail>>({
+    method: "PUT",
+    path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    body: {
+      category_id: params.category_id,
+      subcategory_id: params.subcategory_id,
       ...params.notificationSuppression,
     },
   });
@@ -520,6 +590,8 @@ export type CreateTicketParams = {
   contact_name_id?: string;
   category_id?: string;
   assigned_to?: string;
+  /** Devices the ticket is raised against; linked in the ticket's own transaction. */
+  asset_ids?: string[];
   attributes?: Record<string, unknown>;
   auditHeaders?: Record<string, string | undefined>;
 };

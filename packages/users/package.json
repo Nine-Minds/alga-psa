@@ -18,6 +18,10 @@
       "import": "./src/actions/*.ts",
       "types": "./src/actions/*.ts"
     },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
+    },
     "./components": {
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"

@@ -108,10 +108,13 @@
     "ticketsTemplates": "Ärendemallar",
     "assetsCustody": "Utrustning i förvar",
     "ticketsCannedResponses": "Färdiga svar",
+    "ticketsCustomer": "Kundärenden",
     "profile": "Profil",
     "signOut": "Logga ut",
     "coManaged": "Samförvaltad IT",
-    "coManagedAdministration": "Åtkomst och administration"
+    "coManagedArchive": "Arkiv för samförvaltning",
+    "coManagedAdministration": "Åtkomst och administration",
+    "assetsAudits": "Platsgranskningar"
   },
   "marketing": {
     "dialogs": {
@@ -591,6 +594,7 @@
       "descriptionPlaceholder": "Ange vad du förväntade dig, vad som hände och vilken kund eller faktura det gäller.",
       "replyTo": "Svar skickas till {{email}}",
       "success": "Skickat till Nine Minds support. Svar skickas till {{email}}.",
+      "successWithTicket": "Skickat till Nine Minds support som ärende {{ticketNumber}}. Svar skickas till {{email}}.",
       "submit": "Skicka till Nine Minds",
       "sending": "Skickar…",
       "cancel": "Avbryt",

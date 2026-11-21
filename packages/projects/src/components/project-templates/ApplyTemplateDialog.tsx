@@ -11,14 +11,13 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IProjectTemplate, IStatus } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
-import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
+import { getProjectStatuses } from '../../actions/projectActions';
 import { createStatus as createStatusAction } from '@alga-psa/reference-data/actions';
 import {
   getErrorMessage,
@@ -47,7 +46,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   const { toast } = useToast();
   const { renderQuickAddClient } = useQuickAddClient();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
@@ -118,9 +116,8 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
   async function loadData() {
     try {
-      const [templatesData, clientsData, projectStatusesResult] = await Promise.all([
+      const [templatesData, projectStatusesResult] = await Promise.all([
         getTemplates(),
-        getAllClientsForProjects(),
         getProjectStatuses()
       ]);
 
@@ -133,7 +130,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         return;
       }
       setTemplates(templatesData);
-      setClients(clientsData);
       if (!isActionPermissionError(projectStatusesResult)) {
         setStatuses(projectStatusesResult);
       }
@@ -317,7 +313,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             </label>
             <ClientPicker
               id="apply-template-client"
-              clients={clients}
               selectedClientId={formData.client_id || null}
               onSelect={(clientId) => setFormData({ ...formData, client_id: clientId || '' })}
               filterState={clientFilterState}
@@ -458,15 +453,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
       open: isQuickAddClientOpen,
       onOpenChange: setIsQuickAddClientOpen,
       onClientAdded: (newClient) => {
-        setClients((currentClients) => {
-          const existingIndex = currentClients.findIndex(
-            (client) => client.client_id === newClient.client_id,
-          );
-          if (existingIndex === -1) return [...currentClients, newClient];
-          const nextClients = [...currentClients];
-          nextClients[existingIndex] = newClient;
-          return nextClients;
-        });
         setFormData((current) => ({ ...current, client_id: newClient.client_id }));
       },
       skipSuccessDialog: true,

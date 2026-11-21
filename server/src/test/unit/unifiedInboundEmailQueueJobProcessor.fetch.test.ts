@@ -431,6 +431,27 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     );
   });
 
+  it('repairs sender-side double-encoded UTF-8 subjects before processing', async () => {
+    const { db } = createDbMock({
+      microsoftRow: { id: 'provider-ms-1', tenant: 'tenant-1', mailbox: 'support@example.com', is_active: true },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+    microsoftDownloadMessageSourceMock.mockResolvedValue(Buffer.from('raw mime with mojibake subject'));
+    simpleParserMock.mockResolvedValue({
+      messageId: '<mojibake@example.com>', date: new Date('2026-03-01T00:00:00.000Z'),
+      from: { value: [{ address: 'sender@example.com' }] }, to: { value: [] }, cc: { value: [] },
+      subject: '[MICT Support] Claude fÃ¼r mich', text: 'Body', attachments: [],
+    });
+
+    const { processUnifiedInboundEmailQueueJob } = await import('../../services/email/unifiedInboundEmailQueueJobProcessor');
+    await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-mojibake', schemaVersion: 1, tenantId: 'tenant-1', providerId: 'provider-ms-1', provider: 'microsoft',
+      pointer: { subscriptionId: 'sub-1', messageId: 'ms-msg-mojibake' }, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(processInboundEmailInAppMock.mock.calls[0][0].emailData.subject).toBe('[MICT Support] Claude für mich');
+  });
+
   it('binds the V1 processing record to provider identity and raw MIME bytes, not the RFC Message-ID', async () => {
     const { db, emailProcessedInsertMock } = createDbMock({
       microsoftRow: { id: 'provider-ms-1', tenant: 'tenant-1', mailbox: 'support@example.com', is_active: true },

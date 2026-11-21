@@ -20,13 +20,15 @@ interface WorkflowTasksSectionProps {
   targetUserId?: string;
   /** Viewing another user: no action menus. */
   readOnly?: boolean;
+  /** False while the saved filters are still resolving: hold the first query. */
+  filtersReady?: boolean;
 }
 
-export function WorkflowTasksSection({ limit = 5, onViewAll, filters, targetUserId = '', readOnly = false }: WorkflowTasksSectionProps) {
+export function WorkflowTasksSection({ limit = 5, onViewAll, filters, targetUserId = '', readOnly = false, filtersReady = true }: WorkflowTasksSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const drawer = useDrawer();
-  const feed = useActivitySectionFeed<WorkflowTaskActivity>(ActivityType.WORKFLOW_TASK, filters, targetUserId, limit);
+  const feed = useActivitySectionFeed<WorkflowTaskActivity>(ActivityType.WORKFLOW_TASK, filters, targetUserId, limit, undefined, { enabled: filtersReady });
   const { activities, loading } = feed;
   const error = feed.error
     ? t('sections.workflowTasks.errors.loadFailed', { defaultValue: 'Failed to load workflow task activities. Please try again later.' })

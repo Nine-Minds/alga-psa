@@ -306,6 +306,13 @@ describe('Level.io automation path: placeholders and identity', () => {
     expect(normalized.conditionIdentity).toBe('Level alert');
     expect(normalized.deviceName).toBeNull();
     expect(normalized.message).toBe('Level alert');
+    expect(normalized.details).toBeNull();
+  });
+
+  it('preserves the automation payload as normalized details', async () => {
+    const body = { ...payload(), payload: 'The Sentinel Agent service terminated unexpectedly.' };
+    expect((await POST(request('tenant-a', 'secret-a', body))).status).toBe(200);
+    expect(await processCall()).toMatchObject({ details: 'The Sentinel Agent service terminated unexpectedly.' });
   });
 
   it('derives a deterministic id from device + name: distinct alerts differ, repeats match', async () => {
@@ -463,6 +470,7 @@ describe('Level.io native webhook (X-Level-Signature)', () => {
       conditionIdentity: 'CPU',
       severity: 'major',
       message: 'CPU: CPU above 90%',
+      details: '95%',
       occurredAt: '2026-10-15T09:55:00.000Z',
       externalOrganizationId: 'g-1',
     });

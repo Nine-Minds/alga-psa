@@ -10,11 +10,15 @@ export const SERVER_MAINTENANCE_JOBS = {
   accountingSyncCycle: 'accounting-sync-cycle',
   huduAutoSync: 'hudu-auto-sync',
   recoverFileUploads: 'recover-file-uploads',
+  // Expires resumable document uploads past their expiry and aborts their provider write sessions.
+  expireDocumentUploadSessions: 'expire-document-upload-sessions',
   recoverCommentPublications: 'recover-comment-publications',
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',
   rmmPollingReconcile: 'rmm-polling-reconcile',
   generateRecurringTickets: 'generate-recurring-tickets',
+  // Registered by registerCoManagedUploadCleanup (gated on the `co-managed` capability); inert when it is off.
+  coManagedUploadCleanup: 'co-managed-upload-cleanup',
 } as const;
 
 // CE-only fan-out definitions (registerCeMaintenanceJobs.ts). Kept apart from

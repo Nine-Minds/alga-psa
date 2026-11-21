@@ -4,7 +4,7 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 
 const getEmailProvidersMock = vi.hoisted(() => vi.fn());
 const resyncImapProviderMock = vi.hoisted(() => vi.fn());
@@ -74,9 +74,9 @@ vi.mock('./EmailProviderList', () => ({
     reconnectingProviderIds,
     onResyncProvider,
   }: {
-    providers: EmailProvider[];
+    providers: PublicEmailProvider[];
     reconnectingProviderIds: ReadonlySet<string>;
-    onResyncProvider: (provider: EmailProvider) => Promise<void>;
+    onResyncProvider: (provider: PublicEmailProvider) => Promise<void>;
   }) => {
     const provider = providers[0];
     if (!provider) {
@@ -108,7 +108,7 @@ vi.mock('./EmailProviderList', () => ({
 import { EmailProviderCard } from './EmailProviderCard';
 import { EmailProviderConfiguration } from './EmailProviderConfiguration';
 
-const connectedProvider: EmailProvider = {
+const connectedProvider: PublicEmailProvider = {
   id: 'imap-provider-1',
   tenant: 'tenant-1',
   providerType: 'imap',
@@ -132,10 +132,13 @@ const connectedProvider: EmailProvider = {
     max_emails_per_sync: 100,
     created_at: '2026-08-01T12:00:00.000Z',
     updated_at: '2026-08-01T12:00:00.000Z',
+    has_client_secret: false,
+    has_access_token: false,
+    has_refresh_token: false,
   },
 };
 
-const disconnectedProvider: EmailProvider = {
+const disconnectedProvider: PublicEmailProvider = {
   ...connectedProvider,
   status: 'disconnected',
 };

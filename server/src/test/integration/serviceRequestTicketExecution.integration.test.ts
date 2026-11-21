@@ -30,6 +30,39 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+/**
+ * The ticket description is serialized rich-text blocks; the configured prefix,
+ * when present, is the first paragraph. Returns that paragraph's plain text.
+ */
+function descriptionPrefixParagraph(ticket: { attributes?: unknown }): string | undefined {
+  const description = (ticket.attributes as { description?: string } | null)?.description;
+  if (!description) return undefined;
+  const [first] = JSON.parse(description) as Array<{ type?: string; content?: Array<{ text?: string }> }>;
+  if (first?.type !== 'paragraph' || !Array.isArray(first.content)) return undefined;
+  return first.content.map((inline) => inline.text ?? '').join('');
+}
+
+/**
+ * The description's blocks in reading order: a section heading paragraph as `{ heading }`,
+ * an answer table as `{ table: [[label, value], ...] }`.
+ */
+function describedBlocks(
+  ticket: { attributes?: unknown }
+): Array<{ heading: string } | { table: string[][] }> {
+  const description = (ticket.attributes as { description?: string } | null)?.description;
+  if (!description) return [];
+  const blocks = JSON.parse(description) as any[];
+  return blocks.map((block) =>
+    block?.type === 'table'
+      ? {
+          table: (block.content?.rows ?? []).map((row: any) =>
+            row.cells.map((cell: any) => cell.map((inline: any) => inline.text ?? '').join(''))
+          ),
+        }
+      : { heading: (block?.content ?? []).map((inline: any) => inline.text ?? '').join('') }
+  );
+}
+
 function tenantTable(tenant: string, table: string) {
   return tenantDb(db, tenant).table(table);
 }
@@ -61,6 +94,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
   await tenantTable(tenant, 'boards').del();
   await tenantTable(tenant, 'clients').del();
   await tenantTable(tenant, 'users').del();
+  await tenantTable(tenant, 'tenant_settings').del();
   await tenantRows().where({ tenant }).del();
 }
 
@@ -160,7 +194,15 @@ async function createPublishedDefinition(args: {
   versionId: string;
   executionConfig: Record<string, unknown>;
   linkedServiceId?: string | null;
+  /** The published snapshot; defaults to the two-field v1 form the older cases expect. */
+  formSchemaSnapshot?: Record<string, unknown>;
 }) {
+  const formSchemaSnapshot = args.formSchemaSnapshot ?? {
+    fields: [
+      { key: 'request_title', type: 'short-text', label: 'Request Title', required: true },
+      { key: 'notes', type: 'long-text', label: 'Notes', required: false },
+    ],
+  };
   await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
     definition_id: args.definitionId,
@@ -182,12 +224,7 @@ async function createPublishedDefinition(args: {
     definition_id: args.definitionId,
     version_number: 1,
     name: 'Employee Onboarding',
-    form_schema_snapshot: {
-      fields: [
-        { key: 'request_title', type: 'short-text', label: 'Request Title', required: true },
-        { key: 'notes', type: 'long-text', label: 'Notes', required: false },
-      ],
-    },
+    form_schema_snapshot: formSchemaSnapshot,
     execution_provider: 'ticket-only',
     execution_config: args.executionConfig,
     form_behavior_provider: 'basic',
@@ -305,8 +342,180 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket.priority_id).toBe(fixture.priorityId);
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
     expect(ticketDescription).toContain('Portal Service Request');
-    expect(ticketDescription).toContain('request_title: New Hire Laptop');
-    expect(ticketDescription).toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Request Title"');
+    expect(ticketDescription).toContain('"text":"New Hire Laptop"');
+    expect(ticketDescription).toContain('"text":"Ship before Monday"');
+    expect(ticketDescription).not.toContain('request_title');
+  });
+
+  it('renders the ticket subject template and description prefix by field type', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          {
+            key: 'hardware',
+            type: 'select',
+            label: 'Hardware',
+            options: [{ value: 'laptop', label: 'Laptop' }, { value: 'desktop', label: 'Desktop' }],
+          },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}} ({{hardware}})',
+        descriptionPrefix: 'Requested for {{employee_name}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', hardware: 'laptop' },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)');
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('Requested for Jane Doe');
+  });
+
+  it('formats dates and checkboxes in the tenant default locale', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    await tenantTable(fixture.tenant, 'tenant_settings').insert({
+      tenant: fixture.tenant,
+      settings: { defaultLocale: 'de' },
+    });
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          { key: 'needs_vpn', type: 'checkbox', label: 'Needs VPN access' },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}}',
+        descriptionPrefix: 'VPN: {{needs_vpn}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', needs_vpn: true },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, 2. März 2026');
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('VPN: Ja');
+  });
+
+  it('T032: a sectioned form reaches the technician grouped by section, and its rules are enforced at submit', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleFieldKey: 'request_title',
+      },
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'lead_time', type: 'callout', label: 'Give us five working days' },
+          { key: 'request_title', type: 'short-text', label: 'Request Title', required: true },
+          { key: 'employee', type: 'section', label: 'Employee' },
+          { key: 'full_name', type: 'short-text', label: 'Full name', required: true, layout: { width: 'half' } },
+          { key: 'start_date', type: 'date', label: 'Start date', layout: { width: 'half' } },
+          { key: 'hardware', type: 'section', label: 'Hardware' },
+          { key: 'quantity', type: 'number', label: 'Quantity', validation: { min: 1, max: 5 } },
+        ],
+        settings: { layout: { width: 'boxed' }, submitLabel: 'Send it' },
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: {
+        request_title: 'New employee setup',
+        full_name: 'Maya Lindqvist',
+        start_date: '2026-11-18',
+        quantity: '2',
+      },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    const ticketDescription =
+      (createdTicket.attributes as { description?: string } | null)?.description ?? '';
+
+    // Section headings open their own labelled table, and display blocks carry no answer at all.
+    expect(ticketDescription).not.toContain('lead_time');
+    expect(ticketDescription).not.toContain('full_name');
+    expect(describedBlocks(createdTicket)).toEqual([
+      { table: [['Request Title', 'New employee setup']] },
+      { heading: 'Employee' },
+      { table: [['Full name', 'Maya Lindqvist'], ['Start date', 'November 18, 2026']] },
+      { heading: 'Hardware' },
+      { table: [['Quantity', '2']] },
+    ]);
+
+    // The same rules the browser enforced are enforced again here.
+    await expect(
+      submitPortalServiceRequest({
+        knex: db,
+        tenant: fixture.tenant,
+        definitionId,
+        requesterUserId: fixture.requesterUserId,
+        clientId: fixture.clientId,
+        payload: {
+          request_title: 'Too many',
+          full_name: 'Maya Lindqvist',
+          quantity: '9',
+        },
+      })
+    ).rejects.toThrow('"Quantity" must be 5 or less');
   });
 
   it('T027: ticket-only execution failure keeps submission persisted with failed status and error summary', async () => {
@@ -506,8 +715,8 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.title).toBe('New Hire Setup: Laptop Provisioning');
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
-    expect(ticketDescription).toBe('Starter Template Request');
-    expect(ticketDescription).not.toContain('request_title: Laptop Provisioning');
-    expect(ticketDescription).not.toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Starter Template Request"');
+    expect(ticketDescription).not.toContain('Laptop Provisioning');
+    expect(ticketDescription).not.toContain('Ship before Monday');
   });
 });

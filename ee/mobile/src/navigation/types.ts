@@ -1,5 +1,7 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 import type { ProjectTaskActivity } from "../api/activities";
+import type { InventorySegment } from "../features/inventory/segments";
 
 export type RootStackParamList = {
   SignIn: undefined;
@@ -17,18 +19,22 @@ export type RootStackParamList = {
         qaScenario?: TicketRichTextQaScenario;
       }
     | undefined;
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<DrawerParamList> | undefined;
   TicketDetail: {
     ticketId: string;
     qaScenario?: TicketRichTextQaScenario;
   };
-  CreateTicket: undefined;
+  /** Opened from an asset: that client and device start the form's selection. */
+  CreateTicket:
+    | { clientId?: string; clientName?: string; assets?: { asset_id: string; name: string }[] }
+    | undefined;
   AccountDeletion: undefined;
   MutedUsers: undefined;
   ClientDetail: { clientId: string; clientName?: string };
   ContactDetail: { contactId: string; contactName?: string };
   /** Push and deep links only know the id; the activity row seeds the first paint when present. */
   ProjectTaskDetail: { taskId: string; activity?: ProjectTaskActivity };
+  ProjectDetail: { projectId: string; projectName?: string };
   WorkflowTaskDetail: { taskId: string };
   StockProductDetail: { serviceId: string; serviceName?: string };
   StockUnitDetail: { unitId: string };
@@ -37,22 +43,40 @@ export type RootStackParamList = {
   CountSession: { sessionId: string; locationName?: string };
   PurchaseOrderDetail: { poId: string; poNumber?: string };
   AssetDetail: { assetId: string; assetName?: string };
+  /** The inventory scanner pushed from Home or Assets; never restored on relaunch. */
+  Scan: undefined;
+  Search: undefined;
+  AuditSetup: undefined;
+  AuditSession: { auditId: string };
+  AuditSummary: { auditId: string };
   OpportunityDetail: { opportunityId: string; title?: string };
 };
 
 export type TicketsStackParamList = {
-  TicketsList: { clientId?: string; clientName?: string; contactId?: string; contactName?: string } | undefined;
+  TicketsList:
+    | {
+        clientId?: string;
+        clientName?: string;
+        contactId?: string;
+        contactName?: string;
+        /** Preset for the assignee filter; Home's My tickets card sends "me". */
+        assignee?: "any" | "me" | "unassigned";
+      }
+    | undefined;
 };
 
 export type DrawerParamList = {
-  TicketsTab: undefined;
+  HomeTab: undefined;
+  TicketsTab: NavigatorScreenParams<TicketsStackParamList> | undefined;
+  ProjectsTab: undefined;
   UserActivitiesTab: undefined;
   ScheduleTab: undefined;
   InteractionsTab: undefined;
   TimeEntriesTab: undefined;
   ClientsTab: undefined;
   ContactsTab: undefined;
-  InventoryTab: undefined;
+  InventoryTab: { segment?: InventorySegment } | undefined;
+  AssetsTab: undefined;
   OpportunitiesTab: undefined;
   SettingsTab: undefined;
 };
