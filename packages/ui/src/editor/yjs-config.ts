@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { HocuspocusProvider } from '@hocuspocus/provider';
+import { HocuspocusProvider, HocuspocusProviderWebsocket, type HocuspocusProviderWebsocketConfiguration } from '@hocuspocus/provider';
 
 /**
  * Build the Hocuspocus WebSocket URL.
@@ -46,12 +46,21 @@ type YjsProviderOptions = {
   maxAttempts?: number;
   maxDelay?: number;
   jitter?: boolean;
+  websocketOptions?: Partial<HocuspocusProviderWebsocketConfiguration>;
 };
 
 export const createYjsProvider = (roomName: string, options: YjsProviderOptions = {}) => {
   const ydoc = new Y.Doc();
+  const url = getHocuspocusUrl();
+  const websocketProvider = options.websocketOptions
+    ? new HocuspocusProviderWebsocket({
+      url,
+      parameters: options.parameters ?? {},
+      ...options.websocketOptions,
+    })
+    : undefined;
   const provider = new HocuspocusProvider({
-    url: getHocuspocusUrl(),
+    url,
     name: roomName,
     document: ydoc,
     parameters: options.parameters ?? {},
@@ -64,6 +73,7 @@ export const createYjsProvider = (roomName: string, options: YjsProviderOptions 
     maxAttempts: options.maxAttempts,
     maxDelay: options.maxDelay,
     jitter: options.jitter,
+    ...(websocketProvider ? { websocketProvider } : {}),
   } as any);
 
   return { ydoc, provider };

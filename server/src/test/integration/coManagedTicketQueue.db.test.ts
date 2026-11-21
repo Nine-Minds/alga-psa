@@ -532,5 +532,21 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
         await restore();
       }
     }, 180_000);
+
+    it('redacting hand-back fields removes write capability from projected rows while visible authorized rows retain it', async () => {
+      try {
+        const baseline = await all();
+        expect(rowsOf(baseline, A).some(item => item.canHandBack)).toBe(true);
+        await redactFor(A, ['*']);
+        const projected = await all();
+        expect(rowsOf(projected, A).length).toBeGreaterThan(0);
+        expect(rowsOf(projected, A).every(item => item.canHandBack === false)).toBe(true);
+        expect(rowsOf(projected, B).some(item => item.canHandBack)).toBe(true);
+        expect(projected.totalCount).toBe(baseline.totalCount);
+        const exported = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' });
+        expect(rowsOf({ items: exported }, A).every(item => item.canHandBack === false)).toBe(true);
+        expect(rowsOf({ items: exported }, B).some(item => item.canHandBack)).toBe(true);
+      } finally { await restore(); }
+    });
   });
 });

@@ -2,6 +2,7 @@ import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerInspectorField, DesignerInspectorVisibleWhen } from '../schema/inspectorSchema';
 import type { DesignerNode } from '../state/designerStore';
 import { resolveNewNodeBaseStyle } from '../state/designerStore';
+import type { DesignerDocumentKind } from '../utils/documentKind';
 
 /**
  * Reading inspector fields against a node: their values, whether they apply to it,
@@ -69,9 +70,14 @@ export const isFieldSetOnNode = (node: DesignerNode, field: DesignerInspectorFie
 export const isRuleVisible = (
   rule: DesignerInspectorVisibleWhen | undefined,
   node: DesignerNode,
-  parent: DesignerNode | null
+  parent: DesignerNode | null,
+  documentKind?: DesignerDocumentKind
 ): boolean => {
   if (!rule || rule.kind === 'always') return true;
+  if (rule.kind === 'documentKindIn') {
+    // An unknown kind cannot rule a control out; callers resolve it from the store.
+    return documentKind === undefined || rule.kinds.includes(documentKind);
+  }
   if (rule.kind === 'nodeIsContainer') {
     return Array.isArray(node.allowedChildren) && node.allowedChildren.length > 0;
   }

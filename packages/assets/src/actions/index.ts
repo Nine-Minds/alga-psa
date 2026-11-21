@@ -9,4 +9,5 @@ export * from './assetDrawerActions';
 export * from './assetNoteActions';
 export * from './softwareActions';
 export * from './assetCustodyActions';
+export * from './assetAuditActions';
 export * from './assetWarrantyActions';

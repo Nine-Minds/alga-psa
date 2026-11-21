@@ -333,6 +333,16 @@
       "addLocation": "+ Lägg till plats",
       "fromTemplate": "+ Från mall"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Ta bort den här platsen?",
+        "message": "Den här platsen har fortfarande {{count}} rad(er). Välj vad som ska hända med dem.",
+        "moveOption": "Flytta dessa rader till {{location}}",
+        "ungroupOption": "Behåll dessa rader och sluta gruppera efter plats",
+        "deleteOption": "Ta bort dessa rader",
+        "confirm": "Ta bort plats"
+      }
+    },
     "clientFacing": {
       "title": "Text till kunden",
       "subtitle": "Visas i PDF-filen, under summorna.",
@@ -499,6 +509,13 @@
     },
     "availability": {
       "onHand": "I lager: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Offert visad via e-postlänk",
+        "descriptionWithRecipient": "Offert visad av {{email}} via e-postlänk",
+        "type": "Visad via e-postlänk"
+      }
     }
   },
   "quoteLineItems": {
@@ -537,6 +554,7 @@
       "recurring": "Återkommande",
       "service": "tjänst",
       "setPrice": "Ange pris",
+      "taxable": "Skattepliktig",
       "ungroupedItems": "Ogrupperade rader"
     },
     "placeholders": {
@@ -580,10 +598,13 @@
       "groupHeading": "Plats {{index}}",
       "pickerPlaceholder": "Välj en plats",
       "unassigned": "Rader utan plats visas här tills en plats har valts.",
+      "quoteWide": "Hela offerten",
+      "quoteWideHint": "Rabatter gäller hela offerten och är därför inte kopplade till någon plats.",
       "removeGroup": "Ta bort plats",
       "subtotal": "Delsumma för platsen",
       "addLocationButton": "+ Lägg till plats",
       "needMoreLocations": "Den här kunden har bara en aktiv plats. Lägg till en andra plats i kundinställningarna för att kunna skapa offerter för flera platser.",
+      "allLocationsInUse": "Varje aktiv plats för den här kunden har redan en grupp i den här offerten.",
       "emptyGroup": "Inga rader för den här platsen ännu."
     }
   },
@@ -721,6 +742,12 @@
       "draftDescription": "Du är den enda användaren som kan godkänna offerter. När du har skickat in offerten för godkännande kan du godkänna den själv och sedan skicka den.",
       "pendingDescription": "Du är den enda användaren som kan godkänna offerter, så du kan godkänna offerten själv. Välj Godkänn för att göra den klar att skicka.",
       "dialogNote": "Du är den enda som kan godkänna, så det är tillåtet att godkänna din egen offert. Godkännandet registreras som ett självgodkännande."
+    },
+    "emailLinkReview": {
+      "label": "Låt kunder granska och godkänna offerter via länken i e-postmeddelandet utan att logga in",
+      "lifetimeLabel": "Länkens giltighetstid (timmar)",
+      "lifetimePlaceholder": "Standard: tills offerten går ut",
+      "lifetimeHelp": "Mellan 24 och 2160 timmar. Lämna tomt för att använda offertens utgångsdatum (30 dagar om det saknas)."
     }
   },
   "quoteTemplates": {
@@ -769,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Tillbaka till layouter",
+      "back": "Tillbaka till offertlayouter",
       "rerun": "Kör igen",
       "saveLayout": "Spara layout"
     },
@@ -778,8 +805,6 @@
       "copyOf": "Kopia av {{name}}",
       "standardTemplate": "Standardmall"
     },
-    "title": "Offertlayoutredigerare",
-    "description": "Utforma offertlayouten i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
     "errors": {
       "exportAst": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
       "load": "Det gick inte att läsa in redigeraren för offertmallar",
@@ -792,16 +817,13 @@
       "quoteDetailLoad": "Det gick inte att läsa in offertdetaljerna."
     },
     "fields": {
-      "layoutDetails": "Layoutdetaljer",
+      "created": "Skapad {{time}}",
+      "notSaved": "Inte sparad än",
+      "savedAt": "Sparad {{time}}",
       "templateName": "Mallnamn",
       "version": "Version"
     },
-    "footer": {
-      "created": "Skapad:",
-      "lastUpdated": "Senast uppdaterad:"
-    },
     "headings": {
-      "editLayout": "Redigera offertlayout",
       "newLayout": "Ny offertlayout"
     },
     "placeholders": {
@@ -823,7 +845,14 @@
       "noQuotesFound": "Inga offerter hittades.",
       "selectQuote": "Välj offert",
       "selectQuoteHint": "Välj en offert för att förhandsgranska resultatet med offertens uppgifter.",
-      "loadingQuoteDetails": "Läser in offertdetaljer…"
+      "loadingQuoteDetails": "Läser in offertdetaljer…",
+      "frameTitle": "Förhandsgranskning av offert",
+      "zoom": {
+        "fit": "Anpassa",
+        "actual": "100 %",
+        "label": "Förhandsgranskningszoom",
+        "fitWithScale": "Anpassa ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendera",
@@ -838,6 +867,9 @@
       "preview": "Förhandsgranskning",
       "transforms": "Transformeringar",
       "visual": "Visuell"
+    },
+    "titles": {
+      "edit": "Redigera layout: {{name}}"
     }
   },
   "templatesPage": {
@@ -890,6 +922,21 @@
       "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}.",
       "templateCannotBeAccepted": "Offertmallar kan inte markeras som accepterade",
       "onlySentCanBeAccepted": "Endast skickade offerter kan markeras som accepterade"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Länkens giltighetstid måste vara ett heltal timmar mellan 24 och 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Godkänd av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Godkänd av {{signer}} via kundportalen, {{date}}",
+      "mspMarked": "Markerad som godkänd av MSP på kundens vägnar, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Avvisad av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Avvisad av {{signer}} via kundportalen, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

@@ -23,6 +23,23 @@ export const MICROSOFT_EMAIL_OAUTH_SCOPES = [
   'offline_access',
 ] as const;
 
+/**
+ * Delegated permissions the Outlook Calendar authorize request asks for. The
+ * authorize URL, the Providers app-registration guidance and the Calendar
+ * connect form all read this list, so what a customer is told to grant is what
+ * the request actually asks for.
+ *
+ * Calendar reads no mail: no `/messages`, `mailFolders` or `Mail.*` call exists
+ * on any Calendar path (adapter, sync, webhook, subscription), so there is no
+ * mail scope here.
+ */
+export const MICROSOFT_CALENDAR_OAUTH_SCOPES = [
+  'https://graph.microsoft.com/Calendars.ReadWrite',
+  // Owning-calendar category (`/me/outlook/masterCategories`).
+  'https://graph.microsoft.com/MailboxSettings.ReadWrite',
+  'offline_access',
+] as const;
+
 function withoutTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }

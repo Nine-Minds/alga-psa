@@ -189,6 +189,8 @@ vi.mock('@alga-psa/workflows/runtime', async () => ({
   didYouMean: vi.fn(() => [])
 }));
 
+import { getExpressionAdmissionStats, resetExpressionAdmission } from '../runtime/expressionEngine';
+import { WORKFLOW_SIMULATE_USER_POINTS, resetWorkflowSimulationRateLimits } from '../lib/workflowSimulationRateLimit';
 import { exportWorkflowRunDetailAction, listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
 
 const definition = {
@@ -467,5 +469,29 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
       nodePath: 'root.steps[0]',
       at: '2026-07-16T12:00:00.000Z',
     });
+  });
+});
+
+describe('simulateWorkflowDefinitionDraftAction rate limiting', () => {
+  beforeEach(() => {
+    vi.mocked(hasPermission).mockResolvedValue(true);
+    fixture.tenant = 'tenant-a';
+    fixture.events = [];
+    fixture.simulatedCalls = [];
+    resetWorkflowSimulationRateLimits();
+    resetExpressionAdmission({ maxConcurrency: 2, queueTimeoutMs: 20 });
+  });
+
+  it('answers 429 with retryAfterSeconds to the (bucket+1)th call per user, before simulating or taking a slot', async () => {
+    const run = () => simulateWorkflowDefinitionDraftAction({ definition, payload: { ticketId: 't-1' } }) as Promise<any>;
+    for (let i = 0; i < WORKFLOW_SIMULATE_USER_POINTS; i += 1) {
+      expect((await run()).status).toBe('completed');
+    }
+    const acquiredBefore = getExpressionAdmissionStats().acquired;
+    const rejection = await run().catch((error) => error);
+    expect(rejection).toMatchObject({ status: 429 });
+    expect(rejection.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    expect(fixture.simulatedCalls).toHaveLength(WORKFLOW_SIMULATE_USER_POINTS);
+    expect(getExpressionAdmissionStats()).toMatchObject({ active: 0, acquired: acquiredBefore, rateLimited: 1 });
   });
 });

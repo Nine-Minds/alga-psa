@@ -566,6 +566,17 @@
       "projectStatus": "Initiële status",
       "projectTemplate": "Maak een onboardingproject aan (optioneel)",
       "title": "Markeren als gewonnen"
+    },
+    "declare": {
+      "title": "Verplaats naar {{stage}}",
+      "sourceLabel": "Ondersteunende bron",
+      "noSource": "Geen bron",
+      "sourceHelp": "Optioneel. Verwijs naar een interactie of document van deze deal. Voeg een document eerst aan de deal toe als het niet in de lijst staat.",
+      "submit": "Vastleggen",
+      "source": "Bron",
+      "sourceRemoved": "Bron verwijderd",
+      "interactionFallback": "Interactie",
+      "documentFallback": "Document"
     }
   }
 }

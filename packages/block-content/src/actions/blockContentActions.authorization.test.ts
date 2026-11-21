@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   authorizedDocument: vi.fn(),
   authorizeAssociation: vi.fn(),
+  documentAssociationCreateAllowed: vi.fn(),
   table: vi.fn(),
   writes: [] as Array<{ table: string; operation: string; value: unknown; tenant: string }>,
   contentReads: 0,
@@ -24,6 +25,10 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
 vi.mock('@shared/lib/documentAuthorization', () => ({
   canAuthorizeDocumentAssociation: mocks.authorizeAssociation,
   isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
+}));
+
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({
+  isDocumentAssociationCreateAllowed: mocks.documentAssociationCreateAllowed,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -83,6 +88,7 @@ describe('block content action authorization', () => {
       return authorizedDocument;
     });
     mocks.authorizeAssociation.mockResolvedValue(true);
+    mocks.documentAssociationCreateAllowed.mockResolvedValue(true);
   });
 
   it('denies reads when the document authorizer rejects an internal user', async () => {

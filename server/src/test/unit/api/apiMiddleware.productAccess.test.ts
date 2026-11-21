@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { handleApiError } from '../../../lib/api/middleware/apiMiddleware';
 
@@ -55,8 +55,27 @@ describe('api middleware undefined-column (42703) mapping', () => {
       code: 'INTERNAL_CONFIGURATION',
       message: 'The server is misconfigured for this operation. Please contact support.',
     });
-    // Never leak relation/column identifiers into the public response.
-    expect(JSON.stringify(payload)).not.toMatch(/created_by|contracts/);
-    expect(payload.error.details).toBeUndefined();
+    expect(payload.error.details).toMatchObject({ table: 'contracts', column: 'created_by' });
+  });
+
+  it('keeps schema diagnostics out of production responses while logging column context', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const response = handleApiError({
+        name: 'error', message: 'column "created_by" of relation "contracts" does not exist',
+        code: '42703',
+      });
+      const payload = await response.json();
+      expect(response.status).toBe(500);
+      expect(payload.error.details).toBeUndefined();
+      expect(JSON.stringify(payload)).not.toMatch(/created_by|contracts/);
+      expect(errorLog).toHaveBeenCalledWith('Undefined database column (42703):', expect.objectContaining({
+        table: 'contracts', column: 'created_by',
+      }));
+    } finally {
+      errorLog.mockRestore();
+      vi.unstubAllEnvs();
+    }
   });
 });

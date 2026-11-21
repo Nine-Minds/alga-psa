@@ -11,6 +11,7 @@ import {
   EmailProviderError,
 } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
+import { bindLegacyProviderSecrets } from '@alga-psa/core/providerConnectionIdentity';
 import {
   ITemplateProcessor
 } from './templateProcessors';
@@ -337,7 +338,7 @@ export class TenantEmailService extends BaseEmailService {
   /**
    * Shared token-bucket check for any tenant-scoped outbound send (regular
    * sends and the diagnostics live-send both go through this). Fails open if
-   * the limiter is unavailable.
+   * the limiter is unavailable or Redis EVAL fails; valid quota denials block.
    */
   static async checkEmailRateLimit(
     tenantId: string,
@@ -353,7 +354,17 @@ export class TenantEmailService extends BaseEmailService {
     }
 
     try {
-      const result = await rateLimiter.tryConsume('email', tenantId, userId);
+      const result = await rateLimiter.tryConsumeAtomic('email', tenantId, userId);
+
+      if (result.failure === 'eval-error') {
+        // Preserve the pre-atomic availability policy for infrastructure
+        // errors. Quota denials still have a valid remaining value and block.
+        logger.error(`[${serviceName}] Atomic email rate-limit EVAL failed; allowing send`, {
+          tenantId,
+          failure: result.failure,
+        });
+        return { allowed: true };
+      }
 
       if (!result.allowed) {
         return {
@@ -366,7 +377,10 @@ export class TenantEmailService extends BaseEmailService {
       return { allowed: true };
     } catch (error) {
       // Fail open on error
-      logger.error(`[${serviceName}] Rate limit check failed, allowing request:`, error);
+      logger.error(`[${serviceName}] Rate limit check failed, allowing request`, {
+        tenantId,
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      });
       return { allowed: true };
     }
   }
@@ -396,6 +410,15 @@ export class TenantEmailService extends BaseEmailService {
         logger.error(`[${this.getServiceName()}] Failed to initialize tenant provider:`, error);
         if (settings) {
           this.tenantSettings = settings;
+        }
+
+        // A changed credential scope is a security rejection, not an
+        // initialization outage. Never route it through the Enterprise
+        // system-provider fallback, which would hide the rejected tenant config.
+        if (error instanceof EmailProviderError && error.errorCode === 'SECRET_IDENTITY_MISMATCH') {
+          this.providerManager = null;
+          this.providerInitError = error.message;
+          throw error;
         }
 
         // Preserve the real cause (e.g. "SMTP initialization failed: ...") so it
@@ -808,11 +831,29 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     const db = tenantDb(knex, tenantId);
-    const [settings, outboundSenders, outboundRoutes] = await Promise.all([
-      db.table('tenant_email_settings').first(),
+    const [outboundSenders, outboundRoutes] = await Promise.all([
       db.table('email_sender_addresses').select('*'),
       db.table('email_sender_routes').select('*'),
     ]);
+
+    // Hold the row lock from trusted snapshot read through binding. A settings
+    // writer must either commit first (and its fingerprint is observed here),
+    // or wait until this legacy identity has been durably bound. This makes the
+    // first binding a single serialized transition across all application nodes.
+    const settings = await knex.transaction(async (trx) => {
+      const lockedDb = tenantDb(trx, tenantId);
+      const row = await lockedDb.table('tenant_email_settings').forUpdate().first();
+      if (!row) return null;
+
+      const persistedConfigs = TenantEmailService.normalizeProviderConfigs(row.provider_configs);
+      const boundConfigs = bindLegacyProviderSecrets(persistedConfigs);
+      if (JSON.stringify(boundConfigs) !== JSON.stringify(persistedConfigs)) {
+        await lockedDb.table('tenant_email_settings')
+          .update({ provider_configs: JSON.stringify(boundConfigs) });
+        return { ...row, provider_configs: JSON.stringify(boundConfigs) };
+      }
+      return row;
+    });
 
     if (!settings) {
       logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);

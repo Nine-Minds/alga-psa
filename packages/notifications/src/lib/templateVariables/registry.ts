@@ -1,5 +1,9 @@
 import { normalizeVariableType, sharedVariableBlocks } from "./blocks";
 import { templateVariableSeed } from "./seed";
+import {
+  CLIENT_TICKET_EMAIL_TEMPLATES,
+  ticketVariableAudience,
+} from "./ticketEmailAudience";
 import type {
   TemplateVariableRegistry,
   VariableAvailability,
@@ -99,6 +103,41 @@ function correctedVariables(
     .map(registryVariable);
 }
 
+const TICKET_CATEGORY = "tickets";
+
+/** Set per recipient at send time on every ticket email, so it is not in any template's seed. */
+function ticketRecipientVariables(templateName: string): InventoryVariable[] {
+  return [
+    {
+      path: "recipient.isInternal",
+      type: "boolean",
+      description:
+        "True when this copy goes to MSP staff, false when it goes to the client side. Branch on it with {{#if recipient.isInternal}}…{{else}}…{{/if}}.",
+      example: CLIENT_TICKET_EMAIL_TEMPLATES.has(templateName) ? "false" : "true",
+      availability: "available-unused",
+      notes:
+        "Client side: the requester contact, external watchers, copied addresses, and a seat technician outside the ticket's scope.",
+    },
+  ];
+}
+
+function ticketVariables(
+  templateName: string,
+  variables: InventoryVariable[],
+): VariableDef[] {
+  const classified = correctedVariables(templateName, [
+    ...variables,
+    ...ticketRecipientVariables(templateName),
+  ]).map((variable) => ({
+    ...variable,
+    audience: ticketVariableAudience(variable.path),
+  }));
+  // A client template is rendered from client-safe variables only, so it lists nothing else.
+  return CLIENT_TICKET_EMAIL_TEMPLATES.has(templateName)
+    ? classified.filter((variable) => variable.audience === "client")
+    : classified;
+}
+
 export const templateVariableRegistry: TemplateVariableRegistry =
   Object.fromEntries(
   templateVariableSeed.flatMap((category) =>
@@ -106,10 +145,16 @@ export const templateVariableRegistry: TemplateVariableRegistry =
         template.templateName,
         {
           category: category.category,
-          variables: correctedVariables(
-            template.templateName,
-            template.variables as InventoryVariable[],
-          ),
+          variables:
+            category.category === TICKET_CATEGORY
+              ? ticketVariables(
+                  template.templateName,
+                  template.variables as InventoryVariable[],
+                )
+              : correctedVariables(
+                  template.templateName,
+                  template.variables as InventoryVariable[],
+                ),
           contractInferred: INFERRED_CONTRACTS.has(template.templateName),
         },
       ]),

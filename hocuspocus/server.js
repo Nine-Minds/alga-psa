@@ -5,6 +5,7 @@ import { NotificationExtension } from './NotificationExtension.js'
 import { TicketUpdatesExtension } from './TicketUpdatesExtension.js'
 import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { CollabPersistenceExtension } from './CollabPersistenceExtension.js'
+import { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } from './ticketChangeConnectionContext.js'
 import { parseDocumentRoom, validateDocumentRoomAccess, validateDocumentRoomToken } from './tenantValidation.js'
 
 // Helper function to get required env var or fail in production
@@ -57,7 +58,11 @@ const server = Server.configure({
             redisPort: process.env.REDIS_PORT || 6379,
             redisUsername: process.env.REDIS_USERNAME || 'default',
             redisPassword: getEnvOrFail('REDIS_PASSWORD', 'sebastian123'),
-            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:'
+            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:',
+            listChangeAuthorizationUrl: process.env.TICKET_LIST_CHANGE_AUTHORIZATION_URL ||
+                process.env.COLLAB_PERSIST_API_URL?.replace('/collab/persist', '/tickets/live-change') ||
+                'http://server:3000/api/internal/tickets/live-change',
+            listChangeApiKey: process.env.COLLAB_PERSIST_API_KEY || '',
         }),
         new AiParticipantExtension({
             aiApiUrl: process.env.AI_DOCUMENT_API_URL || 'http://localhost:3000/api/v1/ai/document-assist',
@@ -67,19 +72,26 @@ const server = Server.configure({
             level: 'debug', // Set to 'debug' for maximum verbosity
           }),
     ],
-    async onAuthenticate({ documentName, token }) {
-        if (!parseDocumentRoom(documentName)) return undefined
-        const admission = validateDocumentRoomToken(documentName, token)
-        if (!await persistenceExtension.authorizeWriter(documentName, token)) {
-            throw new Error('Document edit authorization denied')
-        }
-        return { ...admission, documentRoomToken: token }
-    },
     async onConnect(data) {
-        await validateDocumentRoomAccess(data.documentName, data.request, {
-            credential: data.context?.documentRoomToken,
-            allowPendingAuthentication: true,
-        });
+        if (parseDocumentRoom(data.documentName)) {
+            await validateDocumentRoomAccess(data.documentName, data.request, {
+                credential: data.context?.documentRoomToken,
+                allowPendingAuthentication: true,
+            });
+            return undefined;
+        }
+        return resolveDocumentConnectionContext(data);
+    },
+    async onAuthenticate(data) {
+        const { documentName, token } = data;
+        if (parseDocumentRoom(documentName)) {
+            const admission = validateDocumentRoomToken(documentName, token)
+            if (!await persistenceExtension.authorizeWriter(documentName, token)) {
+                throw new Error('Document edit authorization denied')
+            }
+            return { ...admission, documentRoomToken: token }
+        }
+        return resolveDocumentAuthenticationContext(data);
     },
     })
 

@@ -1,5 +1,6 @@
 import { bootstrapInboundWebhookActions } from './actions/bootstrap';
 import { evaluateFieldMapping } from './actions/mappingEvaluator';
+import { EvaluationBusyError } from '@alga-psa/workflows/runtime/expressionEngine';
 import {
   getAction,
   type InboundActionDefinition,
@@ -95,6 +96,8 @@ async function dispatchDirectAction(input: DispatchInboundWebhookHandlerInput): 
   try {
     mappedValues = validateMappedValues(action, await evaluateFieldMapping(input.body, fieldMapping));
   } catch (error) {
+    // Admission fails closed: a busy evaluator is a retryable 429, not a mapping failure.
+    if (error instanceof EvaluationBusyError) throw error;
     const message = error instanceof Error ? error.message : 'Inbound webhook field mapping failed';
     throw new InboundWebhookMappingError(message);
   }

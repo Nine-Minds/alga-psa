@@ -1,5 +1,6 @@
 'use server';
 
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
@@ -7,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 import { canAuthorizeDocumentAssociation, isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -59,6 +61,11 @@ export const createBlockDocument = withAuth(async (
         .where(associationTarget.idColumn, input.entityId)
         .first(associationTarget.idColumn);
       if (!targetExists || !await hasPermission(user, associationTarget.permission, 'read', trx) ||
+        !await isDocumentAssociationCreateAllowed(trx, {
+          tenant,
+          user,
+          targets: [{ entityType: input.entityType, entityId: input.entityId }],
+        }) ||
         !await canAuthorizeDocumentAssociation(trx, tenant, user, input.entityId, input.entityType)) {
         return permissionError('Permission denied: Cannot associate documents with this record', 'documents:errors.permissions.create');
       }

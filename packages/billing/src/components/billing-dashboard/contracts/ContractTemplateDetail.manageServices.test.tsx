@@ -23,9 +23,7 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
   getDefaultBillingSettings: (...args: unknown[]) => actions.getDefaultBillingSettings(...args),
 }));
-vi.mock('@alga-psa/billing/actions/contractSimulationActions', () => ({
-  listContractSimulationClients: vi.fn().mockResolvedValue([]),
-}));
+vi.mock('@alga-psa/billing/actions/contractSimulationActions', () => ({}));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useOptionalI18n: () => null,
   useTranslation: () => ({

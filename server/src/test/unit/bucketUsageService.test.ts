@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { commercialTimeEntryRowFilter } from "../../../test-utils/commercialTimeEntryMock";
 
 import {
   findOrCreateCurrentBucketUsageRecord,
@@ -292,6 +293,13 @@ function buildBucketUsageUpdateTransaction(config: {
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
     builder.sum = vi.fn().mockImplementation(() => builder);
+    const rowFilters: Array<(row: Record<string, any>) => boolean> = [];
+    builder.whereRaw = vi.fn().mockImplementation((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      rowFilters.push(commercialOnly);
+      return builder;
+    });
 
     // List reads are awaited directly (`await q.select(...)`): make the
     // builder thenable. `.first()` still works because chainable methods keep
@@ -301,7 +309,7 @@ function buildBucketUsageUpdateTransaction(config: {
         reject(new Error(`${tableName} aggregation failed`));
         return;
       }
-      resolve(listRowsFor(tableName));
+      resolve(listRowsFor(tableName).filter((row) => rowFilters.every((keep) => keep(row as Record<string, any>))));
     };
 
     builder.first = vi.fn().mockImplementation(async () => {

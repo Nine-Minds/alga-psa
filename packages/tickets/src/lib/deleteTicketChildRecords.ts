@@ -97,7 +97,7 @@ export async function deleteTicketChildRecords(
   // makes the alert's later reset try to note against the deleted ticket.
   await tenantScopedTable(trx, 'rmm_alerts', tenant)
     .where({ ticket_id: ticketId })
-    .update({ ticket_id: null });
+    .update({ ticket_id: null, updated_at: new Date().toISOString() });
 
   // Delete ticket activity/audit log rows (CitusDB doesn't support ON DELETE
   // CASCADE). Unlike sla_audit_log, ticket_audit_logs.ticket_id is NOT NULL
