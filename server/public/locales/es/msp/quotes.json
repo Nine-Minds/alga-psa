@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Volver a diseños",
+      "back": "Volver a diseños de cotizaciones",
       "rerun": "Repetición",
       "saveLayout": "Guardar diseño"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Copia de {{name}}",
       "standardTemplate": "Plantilla estándar"
     },
-    "title": "Editor de diseño de cotización",
-    "description": "Diseñe el diseño de la cotización utilizando el editor visual y luego obtenga una vista previa con datos de muestra.",
     "errors": {
       "exportAst": "No se pudo exportar la plantilla AST desde el espacio de trabajo visual: {{message}}",
       "load": "No se pudo cargar el editor de plantillas de cotización",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Error al cargar los detalles de la cotización."
     },
     "fields": {
-      "layoutDetails": "Detalles de diseño",
+      "created": "Creado {{time}}",
+      "notSaved": "Aún no guardado",
+      "savedAt": "Guardado {{time}}",
       "templateName": "Nombre de la plantilla",
       "version": "Versión"
     },
-    "footer": {
-      "created": "Creado:",
-      "lastUpdated": "Última actualización:"
-    },
     "headings": {
-      "editLayout": "Editar diseño de cotización",
       "newLayout": "Nuevo diseño de cotización"
     },
     "placeholders": {
@@ -872,6 +867,9 @@
       "preview": "Avance",
       "transforms": "Transforma",
       "visual": "Visual"
+    },
+    "titles": {
+      "edit": "Editar diseño: {{name}}"
     }
   },
   "templatesPage": {

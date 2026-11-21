@@ -2822,29 +2822,24 @@
     "editor": {
       "titles": {
         "create": "Neues Layout für {{type}}",
-        "edit": "Layout für {{type}} bearbeiten"
-      },
-      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
-      "errorTitle": "Layout-Editor für {{type}}",
-      "sections": {
-        "details": "Layoutdetails"
+        "edit": "Layout bearbeiten: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Erstellt {{time}}",
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
-        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
+        "notSaved": "Noch nicht gespeichert",
+        "savedAt": "Gespeichert {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
       },
       "actions": {
-        "back": "Zurück zu den Layouts",
+        "back": "Zurück zu {{type}}-Layouts",
+        "labelSettings": "Etiketteneinstellungen",
         "save": "Layout speichern"
-      },
-      "labels": {
-        "created": "Erstellt: {{date}}",
-        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
       },
       "preview": {
         "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",

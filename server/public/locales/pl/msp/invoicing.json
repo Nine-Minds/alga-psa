@@ -2874,29 +2874,24 @@
     "editor": {
       "titles": {
         "create": "Nowy układ dokumentu typu „{{type}}”",
-        "edit": "Edytuj układ dokumentu typu „{{type}}”"
-      },
-      "description": "Zaprojektuj układ dokumentu typu „{{type}}” w edytorze wizualnym, a następnie wyświetl podgląd z danymi przykładowymi.",
-      "errorTitle": "Edytor układu dokumentu typu „{{type}}”",
-      "sections": {
-        "details": "Szczegóły układu"
+        "edit": "Edytuj układ: {{name}}"
       },
       "fields": {
-        "version": "Wersja",
+        "created": "Utworzono {{time}}",
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
-        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
+        "notSaved": "Jeszcze nie zapisano",
+        "savedAt": "Zapisano {{time}}",
+        "version": "Wersja"
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
       },
       "actions": {
-        "back": "Wróć do układów",
+        "back": "Powrót do układów: {{type}}",
+        "labelSettings": "Ustawienia etykiety",
         "save": "Zapisz układ"
-      },
-      "labels": {
-        "created": "Utworzono: {{date}}",
-        "lastUpdated": "Ostatnia aktualizacja: {{date}}"
       },
       "preview": {
         "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",

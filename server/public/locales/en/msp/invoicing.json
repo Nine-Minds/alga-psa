@@ -2822,29 +2822,24 @@
     "editor": {
       "titles": {
         "create": "New {{type}} Layout",
-        "edit": "Edit {{type}} Layout"
-      },
-      "description": "Design the {{type}} layout using the visual editor, then preview with sample data.",
-      "errorTitle": "{{type}} Layout Editor",
-      "sections": {
-        "details": "Layout Details"
+        "edit": "Edit Layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Created {{time}}",
         "labelClass": "Label class",
         "labelFields": "Fields shown on the label",
-        "labelFieldsHint": "The record link (QR code) and the identifier are always shown."
+        "labelFieldsHint": "The record link (QR code) and the identifier are always shown.",
+        "notSaved": "Not saved yet",
+        "savedAt": "Saved {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "{{type}} Template"
       },
       "actions": {
-        "back": "Back to Layouts",
+        "back": "Back to {{type}} Layouts",
+        "labelSettings": "Label settings",
         "save": "Save Layout"
-      },
-      "labels": {
-        "created": "Created: {{date}}",
-        "lastUpdated": "Last Updated: {{date}}"
       },
       "preview": {
         "sampleNote": "Rendered against representative {{type}} sample data.",

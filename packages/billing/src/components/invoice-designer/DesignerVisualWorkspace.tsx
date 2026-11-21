@@ -48,6 +48,8 @@ type DesignerVisualWorkspaceProps = {
   visualWorkspaceTab: VisualWorkspaceTab;
   onVisualWorkspaceTabChange: (tab: VisualWorkspaceTab) => void;
   previewPaused?: boolean;
+  /** Focus mode: pass the height the host has taken down to the designer shell. */
+  fillHeight?: boolean;
 };
 
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
@@ -68,6 +70,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
   previewPaused = false,
+  fillHeight = false,
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -317,11 +320,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     visualWorkspaceTab,
   ]);
 
+  const fill = fillHeight ? 'flex min-h-0 flex-1 flex-col' : '';
+
   return (
     <Tabs
       value={visualWorkspaceTab}
       onValueChange={(value) => onVisualWorkspaceTabChange(value as VisualWorkspaceTab)}
       data-automation-id="invoice-designer-visual-workspace-tabs"
+      className={fill || undefined}
     >
       <TabsList>
         <TabsTrigger value="design" data-automation-id="invoice-designer-design-tab">
@@ -335,13 +341,16 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="design" className="pt-3">
+      <TabsContent value="design" className={`pt-3 ${fill}`.trim()}>
         <CanvasDocumentPreviewContext.Provider value={{ data: previewData, presentationLabels: authoritativePreview?.presentationLabels, locale: authoritativePreview?.effectiveLocale ?? previewState.selectedLocale }}>
           <DesignerShell />
         </CanvasDocumentPreviewContext.Provider>
       </TabsContent>
 
-      <TabsContent value="transforms" className="pt-3">
+      <TabsContent
+        value="transforms"
+        className={`pt-3 ${fillHeight ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+      >
         <TransformsWorkspace
           previewState={previewState}
           previewData={previewData}
@@ -354,7 +363,10 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         />
       </TabsContent>
 
-      <TabsContent value="preview" className="pt-3 space-y-3">
+      <TabsContent
+        value="preview"
+        className={`pt-3 space-y-3 ${fillHeight ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+      >
         <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <ViewSwitcher

@@ -2859,29 +2859,24 @@
     "editor": {
       "titles": {
         "create": "Nuevo diseño de {{type}}",
-        "edit": "Editar diseño de {{type}}"
-      },
-      "description": "Diseñe el formato de {{type}} con el editor visual y luego obtenga una vista previa con datos de ejemplo.",
-      "errorTitle": "Editor de diseños de {{type}}",
-      "sections": {
-        "details": "Detalles del diseño"
+        "edit": "Editar diseño: {{name}}"
       },
       "fields": {
-        "version": "Versión",
+        "created": "Creado {{time}}",
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
-        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
+        "notSaved": "Aún no guardado",
+        "savedAt": "Guardado {{time}}",
+        "version": "Versión"
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
       },
       "actions": {
-        "back": "Volver a los diseños",
+        "back": "Volver a diseños de {{type}}",
+        "labelSettings": "Ajustes de etiqueta",
         "save": "Guardar diseño"
-      },
-      "labels": {
-        "created": "Creado: {{date}}",
-        "lastUpdated": "Última actualización: {{date}}"
       },
       "preview": {
         "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",

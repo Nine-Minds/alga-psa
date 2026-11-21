@@ -2822,29 +2822,24 @@
     "editor": {
       "titles": {
         "create": "Nuovo layout per {{type}}",
-        "edit": "Modifica layout per {{type}}"
-      },
-      "description": "Progetta il layout per {{type}} usando l’editor visuale, quindi visualizzane l’anteprima con dati di esempio.",
-      "errorTitle": "Editor di layout per {{type}}",
-      "sections": {
-        "details": "Dettagli del layout"
+        "edit": "Modifica layout: {{name}}"
       },
       "fields": {
-        "version": "Versione",
+        "created": "Creato {{time}}",
         "labelClass": "Classe di etichetta",
         "labelFields": "Campi mostrati sull'etichetta",
-        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati.",
+        "notSaved": "Non ancora salvato",
+        "savedAt": "Salvato {{time}}",
+        "version": "Versione"
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
       },
       "actions": {
-        "back": "Torna ai layout",
+        "back": "Torna ai layout di {{type}}",
+        "labelSettings": "Impostazioni etichetta",
         "save": "Salva layout"
-      },
-      "labels": {
-        "created": "Creato: {{date}}",
-        "lastUpdated": "Ultimo aggiornamento: {{date}}"
       },
       "preview": {
         "sampleNote": "Generato usando dati di esempio rappresentativi per {{type}}.",

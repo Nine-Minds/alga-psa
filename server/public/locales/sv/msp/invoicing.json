@@ -2822,29 +2822,24 @@
     "editor": {
       "titles": {
         "create": "Ny layout ({{type}})",
-        "edit": "Redigera layout ({{type}})"
-      },
-      "description": "Utforma layouten för dokumenttypen {{type}} i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
-      "errorTitle": "Layoutredigerare ({{type}})",
-      "sections": {
-        "details": "Layoutdetaljer"
+        "edit": "Redigera layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Skapad {{time}}",
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
-        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
+        "notSaved": "Inte sparad än",
+        "savedAt": "Sparad {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
       },
       "actions": {
-        "back": "Tillbaka till layouter",
+        "back": "Tillbaka till layouter ({{type}})",
+        "labelSettings": "Etikettinställningar",
         "save": "Spara layout"
-      },
-      "labels": {
-        "created": "Skapad: {{date}}",
-        "lastUpdated": "Senast uppdaterad: {{date}}"
       },
       "preview": {
         "sampleNote": "Renderad med representativa exempeldata för dokumenttypen {{type}}.",

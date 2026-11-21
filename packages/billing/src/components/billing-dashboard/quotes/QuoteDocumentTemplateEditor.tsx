@@ -3,12 +3,14 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Editor } from '@monaco-editor/react';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -19,6 +21,7 @@ import { runAuthoritativeQuoteTemplatePreview } from '../../../actions/quoteTemp
 import { getTenantBrandingForDocumentPreview } from '../../../actions/tenantBrandingPreview';
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
+import { DESIGNER_AREA_MIN_HEIGHT, useFitToAvailableHeight } from '../../invoice-designer/useFitToAvailableHeight';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
 import {
@@ -83,6 +86,10 @@ const buildPreviewSourceOptions = (
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
   const { t, i18n } = useTranslation('msp/quotes');
   const { formatDate } = useFormatters();
+  const focus = useDesignerFocusPreference('quote_layout');
+  // In focus mode every level between the card and the designer shell passes the
+  // remaining height down, so the shell fills the window.
+  const fillHeight = focus.isFocused ? 'flex min-h-0 flex-1 flex-col' : '';
   const router = useRouter();
   const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
   const isNewTemplate = !templateId;
@@ -94,6 +101,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<VisualWorkspaceTab>('design');
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState<string | number>('320px');
+  const designerAreaRef = useRef<HTMLDivElement>(null);
+  // In the normal layout the Design view takes the room left under the header instead of
+  // guessing at the page chrome, so it ends where the page ends and nothing scrolls.
+  const designerAreaHeight = useFitToAvailableHeight(designerAreaRef, {
+    enabled: !focus.isFocused && editorTab === 'visual' && visualWorkspaceTab === 'design',
+    minHeight: DESIGNER_AREA_MIN_HEIGHT,
+  });
+  const designerFill = focus.isFocused || designerAreaHeight !== null ? 'flex min-h-0 flex-1 flex-col' : '';
 
   // Designer store
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
@@ -405,7 +420,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     calculateHeight();
     window.addEventListener('resize', calculateHeight);
     return () => window.removeEventListener('resize', calculateHeight);
-  }, [isLoading]);
+  }, [isLoading, focus.isFocused]);
 
   // Preview pipeline
   useEffect(() => {
@@ -528,80 +543,130 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     }
   };
 
+  // One compact header row (back, title, name, version, saved status, actions) leaves the rest
+  // of the window to the designer, exactly as the invoice layout editor does, so the page never
+  // scrolls while editing and nothing the job needs sits below the fold.
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
+    <DesignerFocusSurface
+      id="quote-template-editor-surface"
+      focused={focus.isFocused}
+      onFocusedChange={focus.setFocused}
+    >
+    <Card
+      className={fillHeight ? `${fillHeight} rounded-none border-0` : undefined}
+      style={focus.isFocused ? { boxShadow: 'none' } : undefined}
+    >
+      <CardHeader className="pb-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button id="quote-template-editor-back" variant="soft" onClick={() => handleBack()}>
+            {t('templateEditor.actions.back', { defaultValue: 'Back to Quote Layouts' })}
+          </Button>
+          <h2 className="min-w-0 max-w-[20rem] truncate text-lg font-semibold">
             {isNewTemplate
               ? t('templateEditor.headings.newLayout', { defaultValue: 'New Quote Layout' })
-              : t('templateEditor.headings.editLayout', { defaultValue: 'Edit Quote Layout' })}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('templateEditor.description', {
-              defaultValue: 'Design the quote layout using the visual editor, then preview with sample data.',
-            })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button id="quote-template-editor-back" variant="outline" onClick={() => handleBack()}>
-            {t('templateEditor.actions.backToLayouts', { defaultValue: 'Back to Layouts' })}
-          </Button>
-          <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
-            {isSaving
-              ? t('common.states.saving', { defaultValue: 'Saving...' })
-              : t('templateEditor.actions.saveLayout', { defaultValue: 'Save Layout' })}
-          </Button>
-        </div>
-      </div>
-
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t('templateEditor.title', { defaultValue: 'Quote Layout Editor' })}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('templateEditor.fields.layoutDetails', { defaultValue: 'Layout Details' })}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+              : t('templateEditor.titles.edit', {
+                defaultValue: 'Edit Layout: {{name}}',
+                name: template?.name || templateId,
+              })}
+          </h2>
+          <div className="flex min-w-[260px] flex-1 items-center gap-2">
+            <label
+              htmlFor="quote-template-name-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+            </label>
             <Input
+              id="quote-template-name-input"
               value={template?.name || ''}
               onChange={(event) => setTemplate((current) => ({ ...(current ?? {}), name: event.target.value }))}
               placeholder={t('templateEditor.placeholders.templateName', { defaultValue: 'Quote Template' })}
               disabled={isLoading}
+              containerClassName="flex-1"
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('templateEditor.fields.version', { defaultValue: 'Version' })}
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="quote-template-version-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('templateEditor.fields.version', { defaultValue: 'Version' })}
+            </label>
             <Input
+              id="quote-template-version-input"
               type="number"
               min="1"
               step="1"
               value={String(template?.version || 1)}
               onChange={(event) => setTemplate((current) => ({ ...(current ?? {}), version: Math.max(1, Number(event.target.value) || 1) }))}
               disabled={isLoading}
+              containerClassName="w-20"
             />
-          </label>
-        </CardContent>
-      </Card>
-
-      <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              id="quote-template-save-status"
+              className="text-xs text-muted-foreground"
+              aria-live="polite"
+              title={template?.created_at
+                ? t('templateEditor.fields.created', {
+                  defaultValue: 'Created {{time}}',
+                  time: formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : undefined}
+            >
+              {template?.updated_at
+                ? t('templateEditor.fields.savedAt', {
+                  defaultValue: 'Saved {{time}}',
+                  time: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : t('templateEditor.fields.notSaved', { defaultValue: 'Not saved yet' })}
+            </span>
+            <DesignerFocusToggle id="quote-template-editor-focus-toggle" />
+            <Button
+              id="quote-template-editor-close"
+              variant="outline"
+              onClick={() => handleBack()}
+              disabled={isLoading}
+            >
+              {t('common.actions.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
+              {isSaving
+                ? t('common.states.saving', { defaultValue: 'Saving...' })
+                : t('templateEditor.actions.saveLayout', { defaultValue: 'Save Layout' })}
+            </Button>
+          </div>
+        </div>
+        {error ? (
+          <Alert variant="destructive" className="mt-2" id="quote-template-editor-error-alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardHeader>
+      <CardContent className={`pt-0 ${fillHeight}`.trim()}>
+      <Tabs
+        value={editorTab}
+        onValueChange={(value) => setEditorTab(value as EditorTab)}
+        className={`space-y-4 ${fillHeight}`.trim()}
+      >
         <TabsList>
           <TabsTrigger value="visual" data-automation-id="quote-template-editor-visual-tab">{t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}</TabsTrigger>
           <TabsTrigger value="code" data-automation-id="quote-template-editor-code-tab">{t('templateEditor.tabs.code', { defaultValue: 'Code' })}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visual" className="pt-4 space-y-3">
-          <div className="border rounded overflow-hidden bg-card" id="quote-template-visual-designer">
+        <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
+          <div
+            ref={designerAreaRef}
+            className={`border rounded overflow-hidden bg-card ${designerFill}`.trim()}
+            style={designerAreaHeight === null ? undefined : { height: designerAreaHeight }}
+            id="quote-template-visual-designer"
+          >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="quote-designer-visual-workspace-tabs"
+              className={designerFill || undefined}
             >
               <TabsList>
                 <TabsTrigger value="design" data-automation-id="quote-designer-design-tab">{t('templateEditor.tabs.design', { defaultValue: 'Design' })}</TabsTrigger>
@@ -609,11 +674,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <TabsTrigger value="preview" data-automation-id="quote-designer-preview-tab">{t('templateEditor.tabs.preview', { defaultValue: 'Preview' })}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className="pt-3">
-                <DesignerShell />
+              <TabsContent value="design" className={`pt-3 ${designerFill}`.trim()}>
+                <DesignerShell fillParent={designerAreaHeight !== null} />
               </TabsContent>
 
-              <TabsContent value="transforms" className="pt-3">
+              <TabsContent
+                value="transforms"
+                className={`pt-3 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+              >
                 <TransformsWorkspace
                   previewState={previewState}
                   previewData={previewData}
@@ -626,7 +694,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 />
               </TabsContent>
 
-              <TabsContent value="preview" className="pt-3 space-y-3">
+              <TabsContent
+                value="preview"
+                className={`pt-3 space-y-3 ${focus.isFocused ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+              >
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <ViewSwitcher
@@ -843,7 +914,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           </div>
         </TabsContent>
 
-        <TabsContent value="code" className="pt-4">
+        <TabsContent
+          value="code"
+          className={`pt-4 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+        >
           <Alert variant="info" className="mb-3">
             <AlertDescription>
               {t('templateEditor.codeReadonly', {
@@ -869,18 +943,9 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           </div>
         </TabsContent>
       </Tabs>
-
-      <CardFooter className="flex justify-between items-center gap-2 px-0">
-        <div className="text-sm text-muted-foreground">
-          {template?.created_at && (
-            <p>{t('templateEditor.footer.created', { defaultValue: 'Created:' })} {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          )}
-          {template?.updated_at && (
-            <p>{t('templateEditor.footer.lastUpdated', { defaultValue: 'Last Updated:' })} {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          )}
-        </div>
-      </CardFooter>
-    </div>
+      </CardContent>
+    </Card>
+    </DesignerFocusSurface>
   );
 };
 
