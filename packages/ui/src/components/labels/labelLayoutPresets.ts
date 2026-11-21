@@ -1,14 +1,22 @@
 /**
  * Layout presets for the label print dialog, in the shape POST /api/labels/pdf accepts as `layout`.
  * A `null` layout means "send no layout": the server then prints one label per page at the size the
- * template itself declares, whatever thermal label that is.
+ * template itself declares, whatever thermal label or worksheet paper that is.
  */
-export type LabelLayoutPresetId = 'template-preferred' | 'roll-4x2' | 'letter-2x5' | 'a4-2x7';
+export type LabelLayoutPresetId =
+  | 'template-preferred'
+  | 'roll-4x2'
+  | 'letter-2x5'
+  | 'a4-2x7'
+  | 'letter-full'
+  | 'a4-full';
 
 export const LABEL_LAYOUT_STORAGE_KEY = 'alga.labels.layout';
 export const DEFAULT_LABEL_LAYOUT_PRESET: LabelLayoutPresetId = 'template-preferred';
 
-export const LABEL_LAYOUT_PRESETS: Record<LabelLayoutPresetId, { defaultLabel: string; layout: unknown }> = {
+export const LABEL_LAYOUT_PRESETS: Record<LabelLayoutPresetId, { defaultLabel: string; layout: unknown | null }> = {
+  // `null` sends no layout at all: the server prints on the page size the template itself declares
+  // (an A4 or Letter worksheet), falling back to the 4 x 2 in roll when the templates do not agree on one.
   'template-preferred': {
     defaultLabel: 'Match template size',
     layout: null,
@@ -30,6 +38,14 @@ export const LABEL_LAYOUT_PRESETS: Record<LabelLayoutPresetId, { defaultLabel: s
       kind: 'grid', paper: 'A4', columns: 2, rows: 7, unit: 'mm',
       labelWidth: 99.1, labelHeight: 38.1, marginTop: 15.15, marginLeft: 4.65, gutterX: 2.5, gutterY: 0,
     },
+  },
+  'letter-full': {
+    defaultLabel: 'Letter sheet, one per page',
+    layout: { kind: 'one-per-page', pageSize: { width: 8.5, height: 11, unit: 'in' } },
+  },
+  'a4-full': {
+    defaultLabel: 'A4 sheet, one per page',
+    layout: { kind: 'one-per-page', pageSize: { width: 210, height: 297, unit: 'mm' } },
   },
 };
 

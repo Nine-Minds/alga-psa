@@ -317,6 +317,9 @@ export interface TemplateStyleToken {
 
 export interface TemplateStyleDeclaration {
   display?: string;
+  // Part of the runtime contract since the AST cutover: the zod styleDeclarationSchema accepts it and
+  // the renderer passes inline declarations straight through as CSS.
+  flexDirection?: string;
   width?: string;
   height?: string;
   minWidth?: string;

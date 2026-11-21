@@ -5,12 +5,15 @@ import {
   isLabelClass,
   type IUserWithRoles,
   type LabelClass,
+  type LabelLinkedAssetInfo,
   type LabelRequestContext,
   type LabelPrintFailure,
+  type LabelPrintErrorCode,
   type LabelViewModel,
   type LabelViewModelProvider,
 } from '@alga-psa/types';
-import { getStandardLabelTemplateAstByCode, resolveCommonTemplatePageSize } from '@alga-psa/billing/services';
+import { isWorksheetLabelTemplate, resolveCommonTemplatePageSize } from '@alga-psa/billing/lib/label-batch/layout';
+import { getStandardLabelTemplateAstByCode, resolveLabelTemplateAst } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 import type {
   LabelBatchLayout,
   LabelLayoutErrorCode,
@@ -48,17 +51,16 @@ const DEFAULT_LAYOUT: LabelBatchLayout = {
 
 /**
  * No layout in the request means "print at the size the templates declare": one label per page of the
- * template's own `customPageSize`, for any thermal label size. Templates that declare no size, or that
+ * template's own `customPageSize`, or - for a full-page worksheet whose author chose a paper preset
+ * rather than a custom size - the worksheet's own paper. Templates that declare no page, or that
  * disagree in a mixed batch, keep the 4 x 2 in default (the standard templates declare exactly that).
  */
-function layoutForTemplates(
-  templates: Iterable<Extract<ResolvedLabelTemplate, { ok: true }>>
-): LabelBatchLayout {
-  const sizes = Array.from(templates, (template) => {
+function layoutForTemplates(templates: ReadonlyMap<LabelClass, Extract<ResolvedLabelTemplate, { ok: true }>>): LabelBatchLayout {
+  const sources = Array.from(templates, ([labelClass, template]) => {
     const ast = template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);
-    return ast?.metadata?.printSettings?.customPageSize;
+    return { labelClass, metadata: ast?.metadata };
   });
-  const pageSize = resolveCommonTemplatePageSize(sizes);
+  const pageSize = resolveCommonTemplatePageSize(sources);
   return pageSize ? { kind: 'one-per-page', pageSize } : DEFAULT_LAYOUT;
 }
 
@@ -110,14 +112,26 @@ export function sanitizeLabelOverride(value: string): string | null {
 }
 
 export type PrintLabelsResult =
-  | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number }
+  | {
+      ok: true;
+      pdf: Buffer;
+      labels: number;
+      sheets: number;
+      skipped: number;
+      /** Description images printed as a marker because the file is missing or not an inlinable image. */
+      missingImages: number;
+      /** Description images printed as a marker because reading them from storage failed. */
+      unavailableImages: number;
+    }
   | {
       ok: false;
       status: 400 | 404 | 422 | 500;
       message: string;
       failures?: LabelPrintFailure[];
-      /** Machine-readable refusal reason, so a client never matches on the message text. */
+      /** Machine-readable layout refusal reason, so a client never matches on the message text. */
       code?: LabelLayoutErrorCode;
+      /** Machine-readable worksheet refusal reason, reported apart from the layout code. */
+      errorCode?: LabelPrintErrorCode;
     };
 
 export interface PrintLabelsDeps {
@@ -125,8 +139,9 @@ export interface PrintLabelsDeps {
   renderPdf: (
     tenant: string,
     items: readonly LabelPrintItem[],
-    layout: LabelBatchLayout
-  ) => Promise<{ pdf: Buffer; labels: number; sheets: number }>;
+    layout: LabelBatchLayout,
+    options: { baseUrl: string }
+  ) => Promise<{ pdf: Buffer; labels: number; sheets: number; missingImages?: number; unavailableImages?: number }>;
   /**
    * Describes a layout / render error that is the caller's fault (422) rather than ours (500), with the
    * records that could not print when the renderer names them; null for anything else (rethrown).
@@ -134,8 +149,8 @@ export interface PrintLabelsDeps {
   /** Resolves explicit templateId -> tenant class default -> class standard. Read-only. */
   resolveTemplate: (tenant: string, labelClass: LabelClass, templateId: string | null) => Promise<ResolvedLabelTemplate>;
   /**
-   * Linked-asset tag + serial suffix per ticket, behind the asset kernel check (assets package). Tickets
-   * never import assets, so the composition root merges this into ticket view models.
+   * Linked-asset tag + serial suffix per ticket, and the full serial for a Letter worksheet, behind
+   * the asset kernel check. Tickets never import assets, so this root merges the parts.
    */
   getLinkedAssetParts: (
     context: LabelRequestContext,
@@ -145,13 +160,18 @@ export interface PrintLabelsDeps {
       assetId: string;
       assetTag: string | null;
       serialSuffix: string | null;
+      assetSerialNumber?: string | null;
       custodyLocation?: string | null;
       nextAction?: string | null;
+      linkedAssetInfo?: LabelLinkedAssetInfo | null;
     } | null>
   >;
-  describeClientError: (
-    error: unknown
-  ) => { message: string; failures?: LabelPrintFailure[]; code?: LabelLayoutErrorCode } | null;
+  describeClientError: (error: unknown) => {
+    message: string;
+    failures?: LabelPrintFailure[];
+    code?: LabelLayoutErrorCode;
+    errorCode?: LabelPrintErrorCode;
+  } | null;
 }
 
 const NOT_FOUND: PrintLabelsResult = { ok: false, status: 404, message: 'Not found.' };
@@ -270,7 +290,16 @@ export async function printLabels(
     templates.set(cls, template);
   }
 
-  const context: LabelRequestContext = { tenant: caller.tenant, user: caller.user, baseUrl: caller.baseUrl };
+  // Each template's AST is resolved once and reused for the worksheet check and the default layout.
+  const templateAsts = new Map<LabelClass, ReturnType<typeof resolveLabelTemplateAst>>();
+  for (const [cls, template] of templates) templateAsts.set(cls, resolveLabelTemplateAst(template));
+  const ticketAst = templateAsts.get('ticket-work-tag') ?? null;
+  const context: LabelRequestContext = {
+    tenant: caller.tenant,
+    user: caller.user,
+    baseUrl: caller.baseUrl,
+    includeWorksheetDetails: isWorksheetLabelTemplate('ticket-work-tag', ticketAst?.metadata),
+  };
   // One provider call per class (unique ids), then the results are put back in request order per subject.
   const byRecord = new Map<string, LabelViewModel>();
   for (const cls of classes) {
@@ -309,8 +338,10 @@ export async function printLabels(
             ...vm,
             secondaryIdentifier: linked.assetTag,
             serialSuffix: linked.serialSuffix,
+            ...(context.includeWorksheetDetails ? { assetSerialNumber: linked.assetSerialNumber ?? null } : {}),
             custodyLocation: linked.custodyLocation ?? null,
             nextAction: linked.nextAction ?? null,
+            ...(context.includeWorksheetDetails ? { linkedAsset: linked.linkedAssetInfo ?? null } : {}),
           }
         : vm;
     });
@@ -335,12 +366,17 @@ export async function printLabels(
 
   const layout =
     request.layout === undefined || request.layout === null
-      ? layoutForTemplates(templates.values())
+      ? layoutForTemplates(templates)
       : (request.layout as LabelBatchLayout);
 
   try {
-    const { pdf, labels, sheets } = await deps.renderPdf(caller.tenant, items, layout);
-    return { ok: true, pdf, labels, sheets, skipped };
+    const { pdf, labels, sheets, missingImages = 0, unavailableImages = 0 } = await deps.renderPdf(
+      caller.tenant,
+      items,
+      layout,
+      { baseUrl: caller.baseUrl }
+    );
+    return { ok: true, pdf, labels, sheets, skipped, missingImages, unavailableImages };
   } catch (error) {
     const clientError = deps.describeClientError(error);
     if (clientError) {
@@ -350,6 +386,7 @@ export async function printLabels(
         message: clientError.message,
         ...(clientError.failures?.length ? { failures: clientError.failures } : {}),
         ...(clientError.code ? { code: clientError.code } : {}),
+        ...(clientError.errorCode ? { errorCode: clientError.errorCode } : {}),
       };
     }
     throw error;

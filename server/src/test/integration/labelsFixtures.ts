@@ -309,7 +309,12 @@ export async function buildRealLabelDeps(overrides: { renderPdf?: unknown } = {}
       'asset-identity': assetLabelViewModelProvider,
       'stock-unit-identity': undefined,
     },
-    renderPdf: (overrides.renderPdf as never) ?? ((tenant: string, items: never, layout: never) => renderLabelBatchPdf(tenant, items, layout)),
+    renderPdf: (overrides.renderPdf as never) ?? ((tenant: string, items: never, layout: never, options: { baseUrl: string }) =>
+      renderLabelBatchPdf(tenant, items, layout, {
+        missingImageText: (name: string | null) => (name ? `[Image not included: ${name}]` : '[Image not included]'),
+        unsupportedContentText: '[Content not included in this printout]',
+        baseUrl: options.baseUrl,
+      })),
     resolveTemplate: (tenant: string, labelClass: never, templateId: string | null) =>
       resolveLabelTemplateForTenant(tenant, labelClass, templateId),
     getLinkedAssetParts: (context: never, subjects: ReadonlyArray<{ recordId: string; linkedAssetId?: string }>) =>

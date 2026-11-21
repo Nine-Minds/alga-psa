@@ -27,7 +27,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
-import { convertBlockContentToHTML, flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML, type RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -58,6 +58,8 @@ type RenderContext = {
    * without an entry is a bug and throws.
    */
   barcodes?: Record<string, string>;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
   /**
    * Node ids that nothing drawing ink follows: the document's last inked child,
    * its own last inked child, and so on, plus the inkless blocks trailing each
@@ -73,11 +75,22 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 /**
  * True when a resolved value is authored structured content (a non-empty
  * BlockNote block array or a ProseMirror doc). A plain string — the legacy
- * terms projection — is not structured and renders as pre-line text.
+ * terms projection — is not structured and renders as pre-line text, and so
+ * does a JSON array that is not made of typed blocks (`["see appendix"]`).
  */
 const isStructuredBlockContent = (value: unknown): boolean => {
-  if (Array.isArray(value)) return value.length > 0;
-  return isRecord(value) && value.type === 'doc';
+  let content = value;
+  if (typeof content === 'string') {
+    try {
+      content = JSON.parse(content);
+    } catch {
+      return false;
+    }
+  }
+  if (Array.isArray(content)) {
+    return content.length > 0 && content.every((block) => isRecord(block) && typeof block.type === 'string');
+  }
+  return isRecord(content) && content.type === 'doc';
 };
 
 /**
@@ -821,9 +834,9 @@ const nodeHasVisibleContent = (
       return !isBlankText(resolveExpressionValue(node.content, evaluation, scope, ctx));
     case 'richText': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
-      return isStructuredBlockContent(content)
-        ? !isBlankText(flattenBlockContentToPlainText(content))
-        : !isBlankText(content);
+      if (!isStructuredBlockContent(content)) return !isBlankText(content);
+      const html = convertBlockContentToHTML(content, ctx.richText);
+      return !isBlankText(html.replace(/<[^>]*>/g, '')) || /<(?:img|table|hr)\b/.test(html);
     }
     case 'image':
       return normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope, ctx)) !== null;
@@ -943,7 +956,7 @@ const renderNode = (
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
 
       if (isStructuredBlockContent(content)) {
-        const html = convertBlockContentToHTML(content);
+        const html = convertBlockContentToHTML(content, ctx.richText);
         return (
           <div
             key={node.id}
@@ -1245,6 +1258,8 @@ export interface TemplateReactRendererProps {
    */
   dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
 }
 
 export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
@@ -1253,6 +1268,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   locale: localeOverride,
   dateFormat,
   barcodes,
+  richText,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -1274,6 +1290,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
           locale,
           dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
           barcodes,
+          richText,
           trailingNodeIds: collectTrailingNodeIds(ast.layout),
         },
         rootDocumentStyleOverride
@@ -1295,6 +1312,8 @@ export interface TemplateRenderOptions {
   t?: TemplateLabelTranslator;
   /** Output of renderBarcodeSvgs (barcode/prepass.server.ts). */
   barcodes?: Record<string, string>;
+  /** Placeholders and diagnostics for rich-text content the converter cannot render. */
+  richText?: RichTextRenderOptions;
 }
 
 /** Resolve a value expression outside a render (used by the barcode prepass). */
@@ -1333,6 +1352,7 @@ export const renderEvaluatedTemplateAst = async (
         locale={options.locale}
         dateFormat={options.dateFormat}
         barcodes={options.barcodes}
+        richText={options.richText}
       />
     ),
     css: buildAstCss(normalizedAst),
