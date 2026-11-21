@@ -51,19 +51,30 @@ export async function countPendingInvitationSeats(
 }
 
 /**
- * Per-tenant seat lock. `pg_advisory_xact_lock` is transaction-scoped: it is
- * held until the caller's transaction commits or rolls back, so it covers the
- * seat check *and* the user insert / reactivation / invitation write that
- * follows. Two int4 keys (namespace, tenant) keep it clear of other advisory
- * locks and make tenants independent of one another.
+ * Per-tenant transaction-scoped seat lock. Keep the established two-int4
+ * identity so applications deployed before this repair still contend on it.
+ * Advisory locks serialize seat consumers without joining the tenant-row lock
+ * graph used by co-managed
+ * admission (entitlement, sponsor tenant, operation, relationship, customer
+ * tenant, then user). PostgreSQL releases this lock at commit or rollback.
  */
 export const INTERNAL_USER_SEAT_LOCK_NAMESPACE = 'internal_user_seats';
 
-export async function lockInternalUserSeats(trx: Knex.Transaction, tenant: string): Promise<void> {
+export async function lockTenantSeatState(trx: Knex.Transaction, tenant: string): Promise<void> {
+  assertTransaction(trx, 'lockTenantSeatState');
+  // Historical production protocol (831cc4494e): hash the namespace and
+  // tenant text independently into the two int4 advisory-lock keys. The
+  // one-key overload is a different lock identity and cannot coordinate with
+  // already-deployed seat consumers during a rolling deployment.
   await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
     INTERNAL_USER_SEAT_LOCK_NAMESPACE,
     String(tenant),
   ]);
+}
+
+/** @deprecated Use lockTenantSeatState; retained for existing seat-admission callers. */
+export async function lockInternalUserSeats(trx: Knex.Transaction, tenant: string): Promise<void> {
+  await lockTenantSeatState(trx, tenant);
 }
 
 function assertTransaction(trx: Knex.Transaction | Knex, caller: string): asserts trx is Knex.Transaction {
@@ -179,9 +190,9 @@ export async function admitInternalUserSeat(
  * the EE appliance/signed seat claim) for any path that can occupy a seat:
  * direct creation, reactivation, invitation send (reservation) and acceptance.
  *
- * REQUIRES a transaction. The first statement takes a per-tenant transaction
- * advisory lock (see `lockInternalUserSeats`) before any read, and the lock is
- * held until the caller's transaction ends — so the caller MUST perform the
+ * REQUIRES a transaction. The first statement locks the tenant seat state
+ * before any admission read, and the lock is held until the caller's
+ * transaction ends — so the caller MUST perform the
  * seat-consuming write in that same transaction, and concurrent checks for the
  * same tenant are serialized end to end. Passing a non-transaction throws.
  *

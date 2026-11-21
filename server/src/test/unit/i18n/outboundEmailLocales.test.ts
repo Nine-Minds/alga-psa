@@ -22,6 +22,31 @@ function leaves(value: Record<string, unknown>, prefix: string): Array<[string, 
 }
 
 describe('outbound email locale resolution', () => {
+  it.each(locales)('%s localizes the missing-secret error after a connection change', async (locale) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: locale,
+      fallbackLng: 'en',
+      ns: namespaces,
+      resources: {
+        en: { 'msp/email-providers': readPack('en', 'msp/email-providers') },
+        [locale]: { 'msp/email-providers': readPack(locale, 'msp/email-providers') },
+      },
+      interpolation: { escapeValue: false },
+    });
+
+    const result = i18n.t('errors.settings.secretRequiredAfterConnectionChange', {
+      ns: 'msp/email-providers',
+      provider: 'Support SMTP',
+      returnDetails: true,
+    });
+
+    expect(result.usedLng, `${locale} fell back to English`).toBe(locale);
+    expect(result.res).toContain('Support SMTP');
+    expect(result.res).not.toMatch(/\{\{provider\}\}/);
+    if (locale === 'xx' || locale === 'yy') expect(result.res).toMatch(pseudoPattern(locale));
+  });
+
   it.each(['en', ...locales])('%s resolves sender identities only from the admin namespace', async (locale) => {
     const i18n = createInstance();
     await i18n.init({

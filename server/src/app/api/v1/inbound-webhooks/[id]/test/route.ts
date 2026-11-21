@@ -11,6 +11,7 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const input = await request.json();
-    const delivery = await sendInboundWebhookTest(id, input);
+    const delivery = await runWithApiKeyOrSession(request, () => sendInboundWebhookTest(id, input));
     if (isServerActionErrorResult(delivery)) {
       return createServerActionErrorResponse(delivery);
     }

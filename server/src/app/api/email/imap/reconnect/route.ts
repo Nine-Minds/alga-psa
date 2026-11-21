@@ -26,6 +26,12 @@ export async function POST(request: NextRequest) {
       allowedProducts: ['psa', 'algadesk'],
     });
 
+    const { knex, tenant } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
+
     let body: { providerId?: unknown };
     try {
       body = await request.json();

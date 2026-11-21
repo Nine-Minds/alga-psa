@@ -11,10 +11,11 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const actions = await listInboundWebhookActions();
+    const actions = await runWithApiKeyOrSession(request, () => listInboundWebhookActions());
     if (isServerActionErrorResult(actions)) {
       return createServerActionErrorResponse(actions);
     }
