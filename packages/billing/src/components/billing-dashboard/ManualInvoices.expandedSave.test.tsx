@@ -421,6 +421,7 @@ describe('expanded invoice adjustment global save', () => {
       invoice_charges: [...invoice.invoice_charges, existingCharge],
     });
     renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] });
+    await screen.findByText('Existing manual row');
     await fillCharge('Collapsed pending row');
     fireEvent.click(document.getElementById('collapse-line-item-button')!);
 
