@@ -1,26 +1,26 @@
 {
-  "testedCommitBase": "b952abed0a570b6f2d6f2c678fdf6037ae6b88a3",
-  "run": "2026-11-21 app-free invoice ZIP handler integration rerun",
-  "command": "cd server && npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose",
+  "testedCommitBase": "da179ed0aa6db630fbd3896a45dcda0fb9c570d4",
+  "run": "2026-11-21 app-free invoice ZIP handler integration with isolated worktree database",
+  "command": "cd server && TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose",
   "result": "passed; 1 test file, 1 test",
   "capturedHandlerEvidence": {
     "evidenceType": "app-free-handler-integration",
     "tenantId": "7932adbe-3bad-4e70-a469-5a79524dd348",
-    "invoiceId": "78e59e04-47b7-44af-8af9-b2e99835492c",
+    "invoiceId": "2d94d578-3297-40e8-8428-85092865be15",
     "invoiceNumber": "INV-000001",
-    "jobId": "d0643a51-66a5-4701-9214-e500d4b88396",
-    "executionId": "ba1ce97d-b651-4187-8882-bcfe9677603d",
+    "jobId": "149c4570-7c95-42b0-953c-a0108de0bb2a",
+    "executionId": "1a75a93a-4f9a-4dc5-bc40-5ac406584dab",
     "jobStatusAfterHandler": "failed",
     "executionOutcome": {
       "error": "verification fixture failure",
       "status": "failed",
-      "executionId": "ba1ce97d-b651-4187-8882-bcfe9677603d"
+      "executionId": "1a75a93a-4f9a-4dc5-bc40-5ac406584dab"
     },
-    "documentId": "8e36aa01-3ced-4bbd-ad09-401f3f99e346",
-    "fileId": "036684fc-89ef-4802-809f-6538857600ac",
+    "documentId": "0c15f0e0-6e6e-4ddb-b3be-d31c202f7dd8",
+    "fileId": "c88ee5d4-d474-4dc7-b3a2-d677f25f9740",
     "mimeType": "application/zip",
-    "storedBytes": 28761,
-    "archiveCheck": "No errors detected in compressed data of /tmp/invoice-render-journey-7fLYPz/7932adbe-3bad-4e70-a469-5a79524dd348/1795245885693-u3c1lenhgy.zip.",
+    "storedBytes": 28657,
+    "archiveCheck": "No errors detected in compressed data of /tmp/invoice-render-journey-3KvRoK/7932adbe-3bad-4e70-a469-5a79524dd348/1795247948112-yrsqlagvds.zip.",
     "archiveMembers": [
       "INV-000001.pdf"
     ],
@@ -30,17 +30,18 @@
   },
   "boundary": "No application server, authenticated UI, or Temporal worker was started. This proves real handler execution, PDF generation, archive creation, local storage upload, external_files/documents persistence, archive integrity, and invoice/client content only.",
   "tests": {
-    "postgresPersistence": "passed; 4 tests using `cd server && npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose`; ZIP test verifies persisted failed status, original serverExecution, ZIP started/completed stepResults including file_id and storage_path, after each status write",
+    "postgresPersistence": "passed; 4 tests using `cd server && TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose`; ZIP test verifies persisted failed status, original serverExecution, and ZIP started/completed stepResults including file_id and storage_path after each status write",
     "completionForwardingNegativeControl": "expected failure after temporarily removing only forwardedExecutionId from the ZIP JobStatus.Completed write; observed `expected 'completed' to be 'failed'`; field restored before final validation",
     "scopedTypecheck": "passed; `cd server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false`"
   },
-  "cleanup": "The journey removes ZIP document associations, documents, external_files rows, job details, and jobs. Test teardown removes extracted PDFs and the temporary storage directory. Existing tenant/client/invoice fixture rows follow the invoice render journey retention policy.",
+  "cleanup": "The journey removes ZIP document associations, documents, external_files rows, job details, and jobs. Test teardown removes extracted PDFs and the temporary storage directory. Existing tenant/client/invoice fixture rows follow the invoice render journey retention policy. The disposable worktree test database remains available and is dropped/recreated by the next test run.",
   "validation": {
-    "appFreeArtifactIntegration": "passed; 1 test file, 1 test",
-    "forwardedJobPersistence": "passed; 1 test file, 4 tests",
+    "appFreeArtifactIntegration": "passed; isolated TEST_DB_NAME; 1 test file, 1 test",
+    "forwardedJobPersistence": "passed; isolated TEST_DB_NAME; 1 test file, 4 tests",
     "scopedTypecheck": "passed; NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false",
     "completionForwardingNegativeControl": "expected failure observed; final completion removed workflow-owned status protection (expected completed to be failed), then forwardedExecutionId was restored"
   },
-  "environmentFile": "repository-root .env.localtest; Vitest output resolves /home/robert/alga-copies/feature-security-authz-in-scheduleinvoiceemailaction/.env.localtest",
-  "capturedOutputLine": "INVOICE_ZIP_DELIVERY_EVIDENCE {\"evidenceType\":\"app-free-handler-integration\",\"tenantId\":\"7932adbe-3bad-4e70-a469-5a79524dd348\",\"invoiceId\":\"78e59e04-47b7-44af-8af9-b2e99835492c\",\"invoiceNumber\":\"INV-000001\",\"jobId\":\"d0643a51-66a5-4701-9214-e500d4b88396\",\"executionId\":\"ba1ce97d-b651-4187-8882-bcfe9677603d\",\"jobStatusAfterHandler\":\"failed\",\"executionOutcome\":{\"error\":\"verification fixture failure\",\"status\":\"failed\",\"executionId\":\"ba1ce97d-b651-4187-8882-bcfe9677603\"},\"documentId\":\"8e36aa01-3ced-4bbd-ad09-401f3f99e346\",\"fileId\":\"036684fc-89ef-4802-809f-6538857600ac\",\"mimeType\":\"application/zip\",\"storedBytes\":28761,\"archiveCheck\":\"No errors detected in compressed data of /tmp/invoice-render-journey-7fLYPz/7932adbe-3bad-4e70-a469-5a79524dd348/1795245885693-u3c1lenhgy.zip.\",\"archiveMembers\":[\"INV-000001.pdf\"],\"pdfInfo\":\"Pages:           1\",\"pdfContainsInvoiceNumber\":true,\"pdfContainsClientName\":true}"
+  "environmentFile": "repository-root .env.localtest; Vitest output resolves /home/robert/alga-copies/feature-security-authz-in-scheduleinvoiceemailaction/.env.localtest; PostgreSQL at 127.0.0.1:5472; TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction. The shared default test_database was missing in the review environment.",
+  "capturedOutputLine": "INVOICE_ZIP_DELIVERY_EVIDENCE {\"evidenceType\":\"app-free-handler-integration\",\"tenantId\":\"7932adbe-3bad-4e70-a469-5a79524dd348\",\"invoiceId\":\"2d94d578-3297-40e8-8428-85092865be15\",\"invoiceNumber\":\"INV-000001\",\"jobId\":\"149c4570-7c95-42b0-953c-a0108de0bb2a\",\"executionId\":\"1a75a93a-4f9a-4dc5-bc40-5ac406584dab\",\"jobStatusAfterHandler\":\"failed\",\"executionOutcome\":{\"error\":\"verification fixture failure\",\"status\":\"failed\",\"executionId\":\"1a75a93a-4f9a-4dc5-bc40-5ac406584dab\"},\"documentId\":\"0c15f0e0-6e6e-4ddb-b3be-d31c202f7dd8\",\"fileId\":\"c88ee5d4-d474-4dc7-b3a2-d677f25f9740\",\"mimeType\":\"application/zip\",\"storedBytes\":28657,\"archiveCheck\":\"No errors detected in compressed data of /tmp/invoice-render-journey-3KvRoK/7932adbe-3bad-4e70-a469-5a79524dd348/1795247948112-yrsqlagvds.zip.\",\"archiveMembers\":[\"INV-000001.pdf\"],\"pdfInfo\":\"Pages:           1\",\"pdfContainsInvoiceNumber\":true,\"pdfContainsClientName\":true}",
+  "testDatabase": "test_db_feature_security_authz_scheduleinvoiceemailaction"
 }

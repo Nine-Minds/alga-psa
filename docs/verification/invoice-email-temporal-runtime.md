@@ -6,25 +6,25 @@
 
 ### Repeat the persistence regression
 
-Prerequisites: the repository dependencies are installed and the local PostgreSQL test database configured by `.env.localtest` is reachable. This check does not start the application. From the worktree root run:
+Prerequisites: repository dependencies are installed and the local PostgreSQL test server configured by the repository-root `.env.localtest` is reachable. This check does not start the application. The shared default database `test_database` was missing in the review environment. Set `TEST_DB_NAME` to this worktree-specific disposable database for repeat runs. The test bootstrap drops and recreates its target database, so do not point it at an application or shared persistent database. From the worktree root run:
 
 ```sh
 cd server
-npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose
+TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose
 ```
 
 The integration fixture creates an isolated tenant and job row with a persisted failed `serverExecution`, then runs the actual ZIP handler through progress, archive completion, and final status writes. It reads PostgreSQL after each write and requires `jobs.status` and the original failure outcome to remain unchanged. It also requires the ZIP `started` and `completed` entries, including `file_id` and `storage_path`, to remain in `metadata.stepResults`. Removing `forwardedExecutionId` from the final completion call makes this regression fail because `jobs.status` becomes `completed`; this negative control was rerun and failed with `expected 'completed' to be 'failed'`, then the identity was restored. The neighboring cases cover late forwarded progress/completion and normal status transitions for non-forwarded jobs.
 
 ### Repeat the app-free ZIP artifact delivery check
 
-Prerequisites: use the same repository-root `.env.localtest` local PostgreSQL fixture configuration as the preceding test; install the existing Chromium/Puppeteer and `unzip`, `pdfinfo`, and `pdftotext` dependencies. The test creates its tenant, billing client, finalized invoice, and active internal requester, points the existing local storage provider at a temporary directory, and starts no application or Temporal process. From the worktree root run:
+Prerequisites: use the same repository-root `.env.localtest` PostgreSQL configuration and the same worktree-specific disposable `TEST_DB_NAME` as the preceding test. The shared default `test_database` was missing in the review environment. The test bootstrap drops and recreates the named database; never target an application or shared persistent database. Install the existing Chromium/Puppeteer and `unzip`, `pdfinfo`, and `pdftotext` dependencies. The test creates its tenant, billing client, finalized invoice, and active internal requester, points the existing local storage provider at a temporary directory, and starts no application or Temporal process. From the worktree root run:
 
 ```sh
 cd server
-npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose
+TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose
 ```
 
-The app-free ZIP case invokes the real `InvoiceZipJobHandler.handleInvoiceZipJob` with the fixture invoice and a persisted failed `serverExecution`, then reads the real `jobs`, `documents`, and `external_files` rows. It checks `unzip -t`, requires exactly `<invoice-number>.pdf` in the archive, extracts it, and uses `pdfinfo` and `pdftotext` to verify a non-empty PDF containing the invoice number and client name. The test prints `INVOICE_ZIP_DELIVERY_EVIDENCE {json}` with the actual tenant, invoice, job, execution, document, and file IDs and the check results. The repeatable run passed (1 test file, 1 test); output and current run IDs are recorded in [invoice-zip-delivery-20261121.json](./evidence/invoice-zip-delivery-20261121.json). The test removes the ZIP document associations, document, external file row, job details, and job; test teardown removes the temporary storage directory and extracted PDF. The base tenant, billing client, finalized invoice, and requester follow the existing invoice render journey’s retained-fixture policy.
+The app-free ZIP case invokes the real `InvoiceZipJobHandler.handleInvoiceZipJob` with the fixture invoice and a persisted failed `serverExecution`, then reads the real `jobs`, `documents`, and `external_files` rows. It checks `unzip -t`, requires exactly `<invoice-number>.pdf` in the archive, extracts it, and uses `pdfinfo` and `pdftotext` to verify a non-empty PDF containing the invoice number and client name. The test prints `INVOICE_ZIP_DELIVERY_EVIDENCE {json}` with the actual tenant, invoice, job, execution, document, and file IDs and the check results. The isolated run passed (1 test file, 1 test) with `TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction`; the authentic output and current run IDs are recorded in [invoice-zip-delivery-20261121.json](./evidence/invoice-zip-delivery-20261121.json). The test removes the ZIP document associations, document, external file row, job details, and job; test teardown removes the temporary storage directory and extracted PDF. The base tenant, billing client, finalized invoice, and requester follow the existing invoice render journey’s retained-fixture policy.
 
 ### Verify actual ZIP delivery when the board permits the app service
 
