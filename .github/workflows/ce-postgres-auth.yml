@@ -9,6 +9,8 @@ on:
       - 'postgres/**'
       - 'setup/entrypoint.sh'
       - 'pgbouncer/**'
+      - 'scripts/check-pgbouncer-auth.sh'
+      - 'scripts/runtime-permissions.sh'
       - 'scripts/tests/ce-postgres-auth.test.sh'
       - '.github/workflows/ce-postgres-auth.yml'
   push:
@@ -21,6 +23,8 @@ on:
       - 'postgres/**'
       - 'setup/entrypoint.sh'
       - 'pgbouncer/**'
+      - 'scripts/check-pgbouncer-auth.sh'
+      - 'scripts/runtime-permissions.sh'
       - 'scripts/tests/ce-postgres-auth.test.sh'
       - '.github/workflows/ce-postgres-auth.yml'
   workflow_dispatch:
@@ -46,6 +50,7 @@ jobs:
         run: |
           bash -n postgres/alga-postgres-entrypoint.sh
           bash -n setup/entrypoint.sh
+          bash -n scripts/check-pgbouncer-auth.sh
           bash -n scripts/tests/ce-postgres-auth.test.sh
 
       # Uses the real postgres service from docker-compose.prebuilt.base.yaml and

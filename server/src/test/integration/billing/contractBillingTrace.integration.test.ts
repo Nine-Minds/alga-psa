@@ -13,6 +13,7 @@ import {
   ensureDefaultBillingSettings,
   setupClientTaxConfiguration,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import {
   assignContractToProfile,
@@ -117,7 +118,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 const transactionControl = vi.hoisted(() => ({ useRealTransactions: false }));
 let userId: string;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -253,7 +253,6 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     setupCommonMocks({ tenantId, userId, permissionCheck: () => true });
     await ensureDefaultBillingSettings({ db, tenantId } as any);
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
     ));
@@ -716,7 +715,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     });
     enableRealTransactions();
 
-    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const charges = await table('invoice_charges').where({ invoice_id: result.invoice_id }).select('billing_profile_id');
     const invoiceDate = dateOnly(invoice.invoice_date);
@@ -752,7 +751,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     });
     enableRealTransactions();
 
-    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const charges = await table('invoice_charges')
       .where({ invoice_id: result.invoice_id, billing_profile_source: 'work_item' })
@@ -813,7 +812,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: null, workDate: '2024-12-16', minutes: 60,
     });
     enableRealTransactions();
-    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const workItemCharges = await table('invoice_charges')
       .where({ invoice_id: result.invoice_id, billing_profile_source: 'work_item' })
@@ -871,7 +870,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     });
     enableRealTransactions();
 
-    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(profileCycleId));
+    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(profileCycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const trace = await traceOf(hourly.contractId, { asOf: dateOnly(invoice.invoice_date) });
     const profile = trace!.profiles[0];

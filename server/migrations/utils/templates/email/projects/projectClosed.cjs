@@ -6,6 +6,7 @@
  */
 
 const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
+const { buildChangesBoxHtml, buildChangesText } = require('../../_shared/changesBox.cjs');
 const {
   BRAND_PRIMARY,
   INFO_BOX_BG,
@@ -167,10 +168,7 @@ function buildBodyHtml(c) {
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{project.closedBy}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:${INFO_BOX_BG};border:1px solid ${INFO_BOX_BORDER};">
-                  <div style="font-weight:600;color:${BRAND_DARK};margin-bottom:8px;">${c.changes}</div>
-                  <div style="color:#475467;line-height:1.5;">{{{project.changes}}}</div>
-                </div>
+                ${buildChangesBoxHtml({ label: c.changes, itemsPath: 'project.changeItems' })}
                 <a href="{{project.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">${c.viewButton}</a>`;
 }
 
@@ -182,7 +180,7 @@ ${c.textIntro}
 ${c.projectName}: {{project.name}}
 ${c.status}: {{project.status}}
 ${c.changes}:
-{{project.changes}}
+${buildChangesText({ itemsPath: 'project.changeItems' })}
 ${c.closedBy}: {{project.closedBy}}
 
 ${c.textView}: {{project.url}}`;

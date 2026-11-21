@@ -25,7 +25,7 @@ export const recordCustodyEventWithPhotos = withAuth(
       if (parsed.document_ids.length)
         throw new CustodyError('permission_denied', 'Existing documents cannot be submitted as custody uploads.');
       const { knex } = await createTenantKnex();
-      const custody = await authorizeCustodyEpisode(knex, tenant, user, custodyId);
+      const custody = await authorizeCustodyEpisode(knex, tenant, user, custodyId, 'update');
       const result = await withCustodyPhotos(
         knex,
         tenant,

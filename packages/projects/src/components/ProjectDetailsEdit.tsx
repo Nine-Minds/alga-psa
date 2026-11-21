@@ -17,7 +17,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { releaseAllProjectStaging } from '../actions/stagingActions';
 import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
-import { getServices } from '../actions/serviceCatalogActions';
+import { loadServiceOptions } from '../lib/serviceOptions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
@@ -89,10 +89,10 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           getAllUsersBasic(),
           getProjectStatuses(),
           initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
-          getServices(1, 999)
+          loadServiceOptions()
         ]);
         setUsers(allUsers);
-        setServices(servicesResponse.services);
+        setServices(servicesResponse);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;

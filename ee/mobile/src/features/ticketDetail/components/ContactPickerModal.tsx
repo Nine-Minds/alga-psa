@@ -4,13 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
+import { DisplayTagBadges } from "../../../ui/components/DisplayTagBadges";
 import { listContacts, type ContactListItem } from "../../../api/referenceData";
+import { contactPrimaryLocationLabel } from "../../../api/contacts";
 import type { ApiClient } from "../../../api/client";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function ContactPickerModal({
   visible,
@@ -45,13 +47,14 @@ export function ContactPickerModal({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
+  const remoteLabel = t("contactPicker.remote", { defaultValue: "Remote" });
 
   const [contacts, setContacts] = useState<ContactListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<{ id: string | null; name: string | null } | null>(null);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -97,7 +100,7 @@ export function ContactPickerModal({
     if (visible) {
       setSearch("");
       setSelectedContact(preselect ? { id: preselect.id, name: preselect.name } : null);
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
       void fetchContacts("");
     } else {
       abortRef.current?.abort();
@@ -258,9 +261,17 @@ export function ContactPickerModal({
                 >
                   <Avatar name={contact.full_name} imageUri={avatarUri} size="sm" />
                   <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-                    <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+                      <Text style={{ ...typography.body, color: colors.text }}>{contact.full_name}</Text>
+                      <DisplayTagBadges tags={contact.display_tags} />
+                    </View>
                     {contact.email ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{contact.email}</Text>
+                    ) : null}
+                    {contactPrimaryLocationLabel(contact, remoteLabel) ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                        {contactPrimaryLocationLabel(contact, remoteLabel)}
+                      </Text>
                     ) : null}
                   </View>
                   {busy ? <ActivityIndicator size="small" /> : null}
@@ -278,6 +289,7 @@ export function ContactPickerModal({
             </Text>
           ) : null}
           <TicketUpdateFooter
+            idPrefix="ticket-contact-update"
             suppression={suppression}
             onSuppressionChange={setSuppression}
             onCancel={onClose}

@@ -220,6 +220,10 @@
       "title": "Assets",
       "custody": {
         "title": "Equipment in custody"
+      },
+      "audits": {
+        "title": "Site audits",
+        "detailTitle": "Site audit"
       }
     },
     "billing": {
@@ -448,7 +452,10 @@
       "detail": {
         "fallbackTitle": "Service Request"
       },
-      "title": "Service Requests"
+      "title": "Service Requests",
+      "formBuilder": {
+        "title": "Form builder"
+      }
     },
     "settings": {
       "extensions": {
@@ -603,7 +610,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "Co-Managed IT"
+      "title": "Co-Managed IT",
+      "archive": {
+        "title": "Co-Managed Archive"
+      }
     },
     "coManagement": {
       "title": "Co-Managed Access",
@@ -624,8 +634,17 @@
         "taskTitle": "Shared Task",
         "projectTitle": "Shared Project"
       },
+      "departure": {
+        "title": "End Co-Managed IT"
+      },
+      "sla": {
+        "title": "Co-Managed SLA Priorities"
+      },
       "export": {
         "title": "Export Workspace"
+      },
+      "upgrade": {
+        "title": "Upgrade to AlgaPSA"
       }
     }
   },

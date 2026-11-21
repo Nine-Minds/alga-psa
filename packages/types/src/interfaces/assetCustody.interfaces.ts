@@ -18,7 +18,7 @@ export type CustodyPurpose = (typeof CUSTODY_PURPOSES)[number];
 export const CUSTODY_NEXT_ACTION_PARTIES = ['msp', 'client', 'vendor'] as const;
 export type CustodyNextActionParty = (typeof CUSTODY_NEXT_ACTION_PARTIES)[number];
 
-export const CUSTODY_CLOSE_REASONS = ['returned_to_client', 'disposed', 'transferred_to_rma'] as const;
+export const CUSTODY_CLOSE_REASONS = ['returned_to_client', 'disposed', 'transferred_to_rma', 'returned_to_vendor'] as const;
 export type CustodyCloseReason = (typeof CUSTODY_CLOSE_REASONS)[number];
 
 export const CUSTODY_EVENT_TYPES = ['received', 'moved', 'handed_off', 'shipped', 'returned'] as const;

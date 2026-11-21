@@ -16,10 +16,13 @@ describe('ticketCreateExtrasSchema', () => {
     expect(ticketCreateExtrasSchema.parse({})).toEqual({});
   });
 
-  it('accepts the two extras fields', () => {
+  it('accepts the supported extras fields', () => {
     expect(ticketCreateExtrasSchema.parse({ asset_ids: [A1], watcher_ids: [U1] })).toEqual({
       asset_ids: [A1],
       watcher_ids: [U1],
+    });
+    expect(ticketCreateExtrasSchema.parse({ additional_agent_ids: [U1] })).toEqual({
+      additional_agent_ids: [U1],
     });
   });
 
@@ -34,7 +37,9 @@ describe('ticketCreateExtrasSchema', () => {
 
 describe('parseTicketCreateExtras', () => {
   it('returns empty extras when the form sends none (existing callers)', () => {
-    expect(parseTicketCreateExtras(form({ title: 't' }))).toEqual({ assetIds: [], watcherIds: [] });
+    expect(parseTicketCreateExtras(form({ title: 't' }))).toEqual({
+      assetIds: [], watcherIds: [], additionalAgentIds: [],
+    });
   });
 
   it('parses and dedupes ids', () => {
@@ -44,12 +49,18 @@ describe('parseTicketCreateExtras', () => {
         watcher_ids: JSON.stringify([U1, U1]),
       })
     );
-    expect(parsed).toEqual({ assetIds: [A1, A2], watcherIds: [U1] });
+    expect(parsed).toEqual({ assetIds: [A1, A2], watcherIds: [U1], additionalAgentIds: [] });
+  });
+
+  it('parses and deduplicates additional agent ids from ticket creation', () => {
+    expect(parseTicketCreateExtras(form({
+      additional_agent_ids: JSON.stringify([U1, U1]),
+    }))).toEqual({ assetIds: [], watcherIds: [], additionalAgentIds: [U1] });
   });
 
   it('ignores a custom_fields value entirely (neither parsed, validated nor returned)', () => {
-    expect(parseTicketCreateExtras(form({ custom_fields: JSON.stringify({ a: '1', A: '2' }) }))).toEqual({ assetIds: [], watcherIds: [] });
-    expect(parseTicketCreateExtras(form({ custom_fields: '{not json' }))).toEqual({ assetIds: [], watcherIds: [] });
+    expect(parseTicketCreateExtras(form({ custom_fields: JSON.stringify({ a: '1', A: '2' }) }))).toEqual({ assetIds: [], watcherIds: [], additionalAgentIds: [] });
+    expect(parseTicketCreateExtras(form({ custom_fields: '{not json' }))).toEqual({ assetIds: [], watcherIds: [], additionalAgentIds: [] });
   });
 
   it('throws before any write on malformed or invalid input', () => {

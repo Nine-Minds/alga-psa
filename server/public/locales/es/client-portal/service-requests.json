@@ -9,10 +9,7 @@
     "newRequestHeading": "Enviar una nueva solicitud"
   },
   "detail": {
-    "version": "Versión {{version}}",
     "submitted": "Solicitud enviada",
-    "requestIdLabel": "ID de la solicitud: ",
-    "ticketIdLabel": "ID del ticket: ",
     "unableToSubmit": "No se puede enviar la solicitud",
     "formTitle": "Formulario de solicitud",
     "noFields": "No hay campos configurados.",
@@ -21,8 +18,18 @@
     "optionLabel": "Opción {{index}}",
     "submit": "Enviar solicitud",
     "requiredField": "Este campo es obligatorio.",
-    "initialValuesTitle": "Valores iniciales",
-    "noInitialValues": "No hay valores predeterminados estáticos configurados."
+    "validation": {
+      "type": "Esta respuesta no tiene el formato esperado.",
+      "pattern": "Esta respuesta no tiene el formato esperado.",
+      "minLength": "Use al menos {{minLength}} caracteres.",
+      "maxLength": "Use {{maxLength}} caracteres o menos.",
+      "min": "Introduzca {{min}} o más.",
+      "max": "Introduzca {{max}} o menos.",
+      "minDate": "Elija {{minDate}} o posterior.",
+      "maxDate": "Elija {{maxDate}} o anterior.",
+      "minSelected": "Elija al menos {{minSelected}}.",
+      "maxSelected": "Elija {{maxSelected}} como máximo."
+    }
   },
   "myRequests": {
     "title": "Mis solicitudes",
@@ -46,19 +53,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Volver a Mis solicitudes",
-    "requestIdLabel": "ID de la solicitud:",
     "statusSection": "Estado",
     "submittedAt": "Enviada: {{date}}",
-    "executionStatus": "Estado de ejecución: {{status}}",
-    "ticketLabel": "Ticket:",
-    "workflowLabel": "Flujo de trabajo: {{id}}",
     "submittedAnswersTitle": "Respuestas enviadas",
     "noResponse": "Sin respuesta",
     "attachmentsTitle": "Archivos adjuntos",
     "noAttachments": "No se incluyeron archivos adjuntos.",
-    "fileIdLabel": "ID del archivo: {{id}}",
     "fileTypeLabel": "Tipo: {{mime}}",
-    "versionLabel": "Versión {{version}}",
     "historyTitle": "Historial",
     "historyEmpty": "Aún no se ha registrado ningún historial.",
     "historyActor": "por {{actor}}",
@@ -66,7 +67,8 @@
       "service_request_submission_created": "Solicitud enviada",
       "service_request_submission_execution_succeeded": "Procesamiento completado",
       "service_request_submission_execution_failed": "Error en el procesamiento"
-    }
+    },
+    "unnamedAttachment": "Archivo adjunto"
   },
   "recent": {
     "title": "Sus solicitudes recientes",
@@ -77,5 +79,12 @@
   },
   "myRequestsAll": {
     "title": "Sus solicitudes"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, enviada el {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ver ticket"
   }
 }

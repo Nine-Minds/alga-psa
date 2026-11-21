@@ -384,6 +384,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
                 currentTags={tags}
                 onAddTag={handleAddTag}
                 size={size}
+                allowCreate={permissions.canCreateNew}
               />
             ) : (
               <TagInput
@@ -392,6 +393,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
                 currentTags={tags}
                 onAddTag={handleAddTag}
                 size={size}
+                allowCreate={permissions.canCreateNew}
               />
             )}
           </div>

@@ -41,7 +41,7 @@ describe('provider setup allow/deny matrix (L9 A1)', () => {
     expect(rule.staticPrefixes).toEqual(['/msp/co-management/providers']);
   });
 
-  it('the removed /msp/co-management root stays unruled; only administration, customer-tickets, shared projects/tasks, providers and export are opened beneath it', () => {
+  it('the removed /msp/co-management root stays unruled; only administration, customer-tickets, shared projects/tasks, departure, SLA priorities, providers and export are opened beneath it', () => {
     for (const product of ['psa', 'algadesk', 'co_managed'] as ProductCode[]) {
       expect(resolveProductRouteBehavior(product, '/msp/co-management'), product)
         .toBe(resolveProductRouteBehavior(product, '/msp/not-a-real-route'));
@@ -50,10 +50,15 @@ describe('provider setup allow/deny matrix (L9 A1)', () => {
       rule.staticPrefixes?.some((prefix) => prefix.startsWith('/msp/co-management')));
     expect(opened.map((rule) => rule.group)).toEqual([
       'msp_co_managed_administration',
+      'msp_co_managed_upgrade',
       'msp_co_managed_customer_tickets',
       'msp_co_managed_shared_projects',
+      'msp_co_managed_sla',
       'msp_co_management_providers',
+      'msp_co_management_departure',
       'msp_co_management_export',
     ]);
+    const archive = MSP_ROUTE_RULES.find((rule) => rule.group === 'msp_co_managed_archive');
+    expect(archive?.staticPrefixes).toEqual(['/msp/co-managed/archive']);
   });
 });

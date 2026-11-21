@@ -31,6 +31,7 @@ import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
+import { contactLocationSuggestion, requesterLocationLine } from '../../lib/requesterLocation';
 import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
@@ -105,6 +106,8 @@ interface TicketPropertiesProps {
   allContactsForWatchListLoading?: boolean;
   onLoadAllContactsForWatchList?: () => Promise<void>;
   surveySummaryCard?: React.ReactNode;
+  /** Effort by organization on a seat arrangement's ticket (S28); built for this viewer by the server. */
+  seatEffortCard?: React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
   timeEntriesRefreshKey?: number;
@@ -181,6 +184,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allContactsForWatchListLoading = false,
   onLoadAllContactsForWatchList,
   surveySummaryCard,
+  seatEffortCard,
   onRemoveTeamAssignment,
   onAssignTeam,
   timeEntriesRefreshKey = 0,
@@ -242,6 +246,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingSwitchTeamId, setPendingSwitchTeamId] = useState<string | null>(null);
 
+  // Where the ticket's requester works, shown under their name.
+  const requesterLocation = requesterLocationLine(contactInfo, t('bento.tiles.remote', 'Remote'));
+
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
   const hasUnsavedContactChanges = showContactPicker && selectedContactId !== null && selectedContactId !== (contactInfo?.contact_name_id ?? '');
@@ -280,11 +287,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     return frozenFieldSet.has(field) || Boolean(liveFieldConflicts[field]);
   }, [frozenFieldSet, liveFieldConflicts]);
 
+  // The ticket sits somewhere the requester does not work: offer their site, never take it. Same
+  // rule and same one click as the grid layout's contact tile.
+  const suggestedContactLocationId = onChangeLocation && !isFieldFrozen('location_id')
+    ? contactLocationSuggestion(contactInfo, ticket.location_id)
+    : null;
+
   const getFieldContainerClassName = React.useCallback((field: string) => {
     const classes = ['rounded-lg transition-colors duration-[600ms]'];
 
     if (isFieldHighlighted(field)) {
-      classes.push('bg-sky-50 ring-1 ring-sky-200 px-3 py-2');
+      classes.push('chip-primary px-3 py-2');
     }
 
     if (isFieldFrozen(field)) {
@@ -565,7 +578,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               onTimeEntryLogged={onTimeEntryLogged}
             />
           )}
-          <Button
+          {dataSource.capabilities.timeEntryCreate && <Button
             {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
             type="button"
             className={`w-full mt-4 flex items-center justify-center`}
@@ -580,7 +593,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
             )}
-          </Button>
+          </Button>}
 
           {ticket.ticket_id && userId && (
             <TicketTimeEntries
@@ -708,6 +721,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {/* Where this person works, the same line the grid layout's contact tile shows. */}
+            {requesterLocation ? (
+              <p id={`${id}-contact-location`} className="mt-1 text-sm text-gray-600">
+                {requesterLocation.name}
+              </p>
+            ) : null}
+            {suggestedContactLocationId ? (
+              <button
+                {...withDataAutomationId({ id: `${id}-contact-use-location` })}
+                type="button"
+                className="mt-1 text-xs text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={() => onChangeLocation?.(suggestedContactLocationId)}
+              >
+                {t('bento.tiles.useContactLocation', 'Use contact\'s location')}
+              </button>
+            ) : null}
             {getEditingCaption('contact_name_id') ? (
               <p className="mt-2 text-xs text-slate-500">{getEditingCaption('contact_name_id')}</p>
             ) : null}
@@ -888,7 +917,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     size="sm"
                     onClick={() => setShowLocationPicker(!showLocationPicker)}
                     className="p-1 h-auto"
-                    disabled={isFieldFrozen('location_id')}
+                    disabled={isFieldFrozen('location_id') || !dataSource.capabilities.locationEdit}
                   >
                     <Edit2 className="h-3 w-3" />
                   </Button>
@@ -964,7 +993,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             required: a technician who leaves it alone still gets a correctly
             attributed charge from the contract or the client default.
           */}
-          {client && onChangeBillingProfile && (
+          {client && onChangeBillingProfile && dataSource.capabilities.billing && (
             <BillingProfilePicker
               id={`${id}-billing-profile-picker`}
               clientId={ticket.client_id}
@@ -1345,6 +1374,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       )}
 
       {surveySummaryCard}
+
+      {seatEffortCard}
 
     </div>
       {ticket.assigned_team_id && (() => {

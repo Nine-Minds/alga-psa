@@ -10,7 +10,13 @@ import {
   type LabelViewModel,
   type LabelViewModelProvider,
 } from '@alga-psa/types';
-import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@alga-psa/billing/services';
+import { getStandardLabelTemplateAstByCode, resolveCommonTemplatePageSize } from '@alga-psa/billing/services';
+import type {
+  LabelBatchLayout,
+  LabelLayoutErrorCode,
+  LabelPrintItem,
+  ResolvedLabelTemplate,
+} from '@alga-psa/billing/services';
 
 /**
  * Composition root for label printing: the one place that knows the record owners (through their
@@ -40,6 +46,22 @@ const DEFAULT_LAYOUT: LabelBatchLayout = {
   pageSize: { width: 4, height: 2, unit: 'in' },
 };
 
+/**
+ * No layout in the request means "print at the size the templates declare": one label per page of the
+ * template's own `customPageSize`, for any thermal label size. Templates that declare no size, or that
+ * disagree in a mixed batch, keep the 4 x 2 in default (the standard templates declare exactly that).
+ */
+function layoutForTemplates(
+  templates: Iterable<Extract<ResolvedLabelTemplate, { ok: true }>>
+): LabelBatchLayout {
+  const sizes = Array.from(templates, (template) => {
+    const ast = template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);
+    return ast?.metadata?.printSettings?.customPageSize;
+  });
+  const pageSize = resolveCommonTemplatePageSize(sizes);
+  return pageSize ? { kind: 'one-per-page', pageSize } : DEFAULT_LAYOUT;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface PrintLabelsRequest {
@@ -58,6 +80,7 @@ export interface PrintLabelsRequest {
   templateId?: unknown;
   /** Alias of `templateId` for standard codes (C1 request shape). */
   templateCode?: unknown;
+  /** Absent (or null) prints one label per page at the size the templates themselves declare. */
   layout?: unknown;
   /** One distinct record only: print-time edits of the item and reason lines. Never persisted. */
   overrides?: unknown;
@@ -88,7 +111,14 @@ export function sanitizeLabelOverride(value: string): string | null {
 
 export type PrintLabelsResult =
   | { ok: true; pdf: Buffer; labels: number; sheets: number; skipped: number }
-  | { ok: false; status: 400 | 404 | 422 | 500; message: string; failures?: LabelPrintFailure[] };
+  | {
+      ok: false;
+      status: 400 | 404 | 422 | 500;
+      message: string;
+      failures?: LabelPrintFailure[];
+      /** Machine-readable refusal reason, so a client never matches on the message text. */
+      code?: LabelLayoutErrorCode;
+    };
 
 export interface PrintLabelsDeps {
   providers: Record<LabelClass, LabelViewModelProvider | undefined>;
@@ -119,7 +149,9 @@ export interface PrintLabelsDeps {
       nextAction?: string | null;
     } | null>
   >;
-  describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
+  describeClientError: (
+    error: unknown
+  ) => { message: string; failures?: LabelPrintFailure[]; code?: LabelLayoutErrorCode } | null;
 }
 
 const NOT_FOUND: PrintLabelsResult = { ok: false, status: 404, message: 'Not found.' };
@@ -301,12 +333,13 @@ export async function printLabels(
     };
   });
 
+  const layout =
+    request.layout === undefined || request.layout === null
+      ? layoutForTemplates(templates.values())
+      : (request.layout as LabelBatchLayout);
+
   try {
-    const { pdf, labels, sheets } = await deps.renderPdf(
-      caller.tenant,
-      items,
-      (request.layout as LabelBatchLayout | undefined) ?? DEFAULT_LAYOUT
-    );
+    const { pdf, labels, sheets } = await deps.renderPdf(caller.tenant, items, layout);
     return { ok: true, pdf, labels, sheets, skipped };
   } catch (error) {
     const clientError = deps.describeClientError(error);
@@ -316,6 +349,7 @@ export async function printLabels(
         status: 422,
         message: clientError.message,
         ...(clientError.failures?.length ? { failures: clientError.failures } : {}),
+        ...(clientError.code ? { code: clientError.code } : {}),
       };
     }
     throw error;

@@ -62,7 +62,7 @@ export class EmailProviderService {
    * Uses dynamic URL resolution that checks ngrok file in development mode
    */
   private generateWebhookUrl(path: string): string {
-    const baseUrl = getWebhookBaseUrl();
+    const baseUrl = getWebhookBaseUrl(undefined, 'https://algapsa.com');
     return `${baseUrl}${path}`;
   }
 

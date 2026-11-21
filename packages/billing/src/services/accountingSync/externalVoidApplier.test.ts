@@ -36,6 +36,8 @@ interface HarnessOptions {
   finalizedAt?: string | null;
   paymentTotal?: number;
   creditApplied?: number;
+  /** Rows returned by `select()` per table (payment-source classification). */
+  rows?: Record<string, any[]>;
 }
 
 /**
@@ -65,7 +67,11 @@ function makeHarness(options: HarnessOptions = {}) {
     builder.forUpdate = chain();
     builder.sum = chain();
     builder.increment = chain();
-    builder.select = vi.fn(async () => []);
+    builder.select = vi.fn(async () => options.rows?.[tableName] ?? []);
+    builder.whereNull = chain();
+    builder.whereRaw = chain();
+    builder.orWhereRaw = chain();
+    builder.orWhereIn = chain();
     builder.first = vi.fn(async () => {
       if (tableName === 'invoices') return invoiceRow;
       if (tableName === 'invoice_payments') return { total: options.paymentTotal ?? 0 };
@@ -141,13 +147,52 @@ describe('applyExternalVoidToInvoice', () => {
     expect(notifyInvoiceTerminalStatus).not.toHaveBeenCalled();
   });
 
-  it('recorded payments block the void with the shared reason', async () => {
+  it('recorded payments block the void with the shared code and reason', async () => {
     const { knex, log } = makeHarness({ paymentTotal: 2500 });
 
     const outcome = await applyExternalVoidToInvoice(params(knex));
 
-    expect(outcome).toEqual({ status: 'blocked', reason: 'Unwind payments before voiding.' });
+    expect(outcome).toEqual({
+      status: 'blocked',
+      reasonCode: 'payments_recorded',
+      reason: 'Unwind payments before voiding.'
+    });
     expect(log).toHaveLength(0);
+  });
+
+  // The operator could not act on the bare sentence: it never said which
+  // payment, or whose (alga-2026-0003364).
+  it('names the QuickBooks payment that blocks the void', async () => {
+    const { knex } = makeHarness({
+      paymentTotal: 2500,
+      rows: {
+        invoice_payments: [
+          {
+            payment_id: 'pay-1',
+            amount: 2500,
+            payment_method: 'quickbooks',
+            reference_number: 'REF-9',
+            status: 'completed'
+          }
+        ],
+        tenant_external_entity_mappings: [
+          {
+            id: 'map-1',
+            integration_type: 'quickbooks_online',
+            external_entity_id: '3547',
+            external_realm_id: 'realm-1',
+            alga_entity_id: 'pay-1',
+            metadata: {}
+          }
+        ]
+      }
+    });
+
+    const outcome = await applyExternalVoidToInvoice(params(knex));
+
+    expect(outcome.status).toBe('blocked');
+    expect((outcome as { reasonCode?: string }).reasonCode).toBe('payments_recorded');
+    expect((outcome as { reason: string }).reason).toContain('QuickBooks payment 3547');
   });
 
   it('a draft is never voided', async () => {

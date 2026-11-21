@@ -22,6 +22,7 @@ export class FileStoreModel {
         original_name: data.original_name,
         mime_type: data.mime_type,
         file_size: data.file_size,
+        content_sha256: data.content_sha256 ?? null,
         storage_path: data.storage_path,
         uploaded_by_id: data.uploaded_by_id,
         metadata: data.metadata,

@@ -24,7 +24,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs scripts/tests/unit-lane-hocuspocus-deps.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -88,6 +88,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install locked collaboration server for relay authorization tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
+
       - name: Verify workflow worker build workspace inputs
         run: npm run check:build-workspaces --workspace=workflow-worker
 
@@ -125,7 +128,15 @@ jobs:
             echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           else
-            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+            # Manual dispatches have no github.event.before. Use the fetched
+            # default-branch commit rather than letting Nx fall back to `main`
+            # as a local revision (which checkout does not create).
+            base="${{ github.event.before }}"
+            if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin main
+              base="$(git rev-parse refs/remotes/origin/main^{commit})"
+            fi
+            echo "NX_BASE=${base}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
@@ -184,7 +195,9 @@ jobs:
     # remapping. 45 left under a minute of headroom, and shard 1 of PR 4015 was
     # cancelled at 45m27s twice in a row, again with every one of its 1036
     # files green. scripts/tests/server-unit-shard-timeout.test.mjs keeps this
-    # ceiling above the measured peak.
+    # ceiling above the measured peak. Part of those silent minutes was the
+    # untested-file crawl, which every shard ran over the whole include tree;
+    # scripts/lib/vitest-coverage-provider.mjs now leaves it to the merge job.
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -209,6 +222,11 @@ jobs:
         env:
           FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
         run: node scripts/install-api-test-dependencies.mjs
+      # The ticket live-update relay suites drive the real installed Hocuspocus
+      # server from hocuspocus/node_modules, which is not a workspace.
+      # scripts/tests/unit-lane-hocuspocus-deps.test.mjs keeps this in place.
+      - name: Install locked collaboration server for relay authorization tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.
@@ -337,14 +355,16 @@ jobs:
         id: shards
         if: always()
         run: node scripts/merge-server-unit-shards.mjs
+      # The custom provider is the one the shards ran: it adds the four maps
+      # and crawls the files no shard loaded once, here, before rendering.
       - name: Merge shard reports and render coverage
         id: merge
         if: always()
         working-directory: ./server
-        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.provider=custom --coverage.customProviderModule=../scripts/lib/vitest-coverage-provider.mjs --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
         env:
-          # AST-aware remapping of the merged package/shared/server map still
-          # needs the headroom the single full run had.
+          # AST-aware remapping of the merged package/shared/server map and the
+          # untested-file crawl still need the headroom the single full run had.
           NODE_OPTIONS: '--max-old-space-size=14336'
           SKIP_DB_TESTS: '1'
           DB_USER_ADMIN: ''

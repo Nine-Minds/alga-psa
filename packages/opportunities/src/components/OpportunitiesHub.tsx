@@ -44,7 +44,6 @@ export function OpportunitiesHub({
   initialItems,
   initialTotal,
   initialQueue,
-  clients,
   draftingAvailable = false,
   eeTabs = [],
   renderClientCreator,
@@ -53,7 +52,6 @@ export function OpportunitiesHub({
   initialItems: IOpportunityListItem[];
   initialTotal: number;
   initialQueue: IWorkQueue;
-  clients: IClient[];
   draftingAvailable?: boolean;
   renderClientCreator?: (props: {
     open: boolean;
@@ -416,7 +414,6 @@ export function OpportunitiesHub({
       <CreateOpportunityDialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        clients={clients}
         renderClientCreator={renderClientCreator}
         onSubmit={handleCreate}
       />

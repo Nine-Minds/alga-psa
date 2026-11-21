@@ -5,6 +5,7 @@ import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/c
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String, type ILateHourlyTimeNotice } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
@@ -36,6 +37,7 @@ import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa
 import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
 import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import { TaxService } from '../services/taxService';
+import { calculatePreviewTaxAfterDiscounts, type AutomaticDiscountInput, type TaxableChargeInput } from '../lib/billing/taxAfterDiscounts';
 import { fetchStrandedArrearsOnlyLineGaps } from './arrearsOnlyLineGaps';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import {
@@ -1010,6 +1012,7 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
         potentialTimeEntriesQuery
             .where('time_entries.tenant', tenant)
             .where('time_entries.invoiced', false)
+            .whereRaw(commercialTimeEntrySql('time_entries'))
             .whereNull('time_entries.contract_line_id')
             .whereNotNull('time_entries.service_id')
             .where('time_entries.approval_status', 'APPROVED')
@@ -2381,7 +2384,12 @@ export async function calculatePreviewTax(
     clientId: string,
     cycleEnd: ISO8601String,
     defaultTaxRegion: string,
-    currencyCode: string
+    currencyCode: string,
+    adjustments?: {
+        discounts: AutomaticDiscountInput[];
+        /** Line id each charge's discount allocation resolves to (by charge index). */
+        chargeItemIds: string[];
+    }
 ): Promise<number> {
     const { getCurrentUserAsync } = await import('../lib/authHelpers');
     const currentUser = await getCurrentUserAsync();
@@ -2389,25 +2397,14 @@ export async function calculatePreviewTax(
         throw new Error('Permission denied');
     }
 
-    const taxService = new TaxService();
-    let totalTax = 0;
-
-    // Calculate tax only on positive taxable amounts before discounts
-    for (const charge of charges) {
-        if (charge.is_taxable && charge.total > 0) {
-            const taxResult = await taxService.calculateTax(
-                clientId,
-                charge.total,
-                cycleEnd,
-                charge.tax_region || defaultTaxRegion,
-                true,
-                currencyCode
-            );
-            totalTax += taxResult.taxAmount;
-        }
-    }
-
-    return totalTax;
+    return calculatePreviewTaxAfterDiscounts(
+        charges as unknown as TaxableChargeInput[],
+        clientId,
+        cycleEnd,
+        defaultTaxRegion,
+        currencyCode,
+        adjustments
+    );
 }
 
 export async function calculateChargeDetails(

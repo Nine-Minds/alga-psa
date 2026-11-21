@@ -11,12 +11,14 @@ const getUserByContactIdMock = vi.fn();
 const getClientPortalVisibilityBoardsByClientMock = vi.fn();
 const getClientPortalVisibilityGroupByIdMock = vi.fn();
 const getClientPortalVisibilityGroupsForContactMock = vi.fn();
+const getClientPortalVisibilityGroupAssignmentForContactMock = vi.fn();
 const assignClientPortalVisibilityGroupToContactMock = vi.fn();
 const createClientPortalVisibilityGroupForContactMock = vi.fn();
 const updateClientPortalVisibilityGroupForContactMock = vi.fn();
 const deleteClientPortalVisibilityGroupForContactMock = vi.fn();
 const getRolesMock = vi.fn();
 const getPortalInvitationsMock = vi.fn();
+const sendPortalInvitationMock = vi.fn();
 const toastMock = vi.fn();
 
 vi.mock('@alga-psa/ui', () => ({
@@ -150,6 +152,8 @@ vi.mock('../../actions/contact-actions/contactActions', () => ({
     getClientPortalVisibilityGroupByIdMock(...args),
   getClientPortalVisibilityGroupsForContact: (...args: any[]) =>
     getClientPortalVisibilityGroupsForContactMock(...args),
+  getClientPortalVisibilityGroupAssignmentForContact: (...args: any[]) =>
+    getClientPortalVisibilityGroupAssignmentForContactMock(...args),
   assignClientPortalVisibilityGroupToContact: (...args: any[]) =>
     assignClientPortalVisibilityGroupToContactMock(...args),
   createClientPortalVisibilityGroupForContact: (...args: any[]) =>
@@ -167,7 +171,7 @@ vi.mock('@alga-psa/auth/actions', () => ({
 }));
 
 vi.mock('../../actions/contact-actions/portalInvitationBridgeActions', () => ({
-  sendPortalInvitation: vi.fn(),
+  sendPortalInvitation: (...args: any[]) => sendPortalInvitationMock(...args),
   getPortalInvitations: (...args: any[]) => getPortalInvitationsMock(...args),
   revokePortalInvitation: vi.fn(),
   updateClientUser: vi.fn(),
@@ -188,6 +192,10 @@ describe('ContactPortalTab visibility groups', () => {
     getUserByContactIdMock.mockResolvedValue({ user: null });
     getRolesMock.mockResolvedValue([]);
     getPortalInvitationsMock.mockResolvedValue([]);
+    sendPortalInvitationMock.mockResolvedValue({ success: true });
+    getClientPortalVisibilityGroupAssignmentForContactMock.mockResolvedValue({
+      group_id: contact.portal_visibility_group_id,
+    });
     getClientPortalVisibilityBoardsByClientMock.mockResolvedValue([
       { board_id: 'board-1', board_name: 'Support' },
       { board_id: 'board-2', board_name: 'HR' },
@@ -222,6 +230,47 @@ describe('ContactPortalTab visibility groups', () => {
 
     await waitFor(() => {
       expect(assignClientPortalVisibilityGroupToContactMock).toHaveBeenCalledWith('contact-1', 'group-2');
+    });
+  });
+
+  it('keeps the newly assigned visibility group when the tab reloads its data', async () => {
+    getClientPortalVisibilityGroupsForContactMock.mockResolvedValue([
+      { group_id: 'group-1', name: 'Standard', description: null, board_count: 1 },
+      { group_id: 'group-2', name: 'HR', description: null, board_count: 2 },
+    ]);
+    assignClientPortalVisibilityGroupToContactMock.mockResolvedValue(undefined);
+
+    render(
+      <ContactPortalTab
+        contact={contact}
+        currentUserPermissions={{ canInvite: true, canUpdateRoles: true, canRead: true }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('visibility-group-assignment')).toHaveValue('group-1');
+    });
+
+    fireEvent.change(screen.getByTestId('visibility-group-assignment'), {
+      target: { value: 'group-2' },
+    });
+
+    await waitFor(() => {
+      expect(assignClientPortalVisibilityGroupToContactMock).toHaveBeenCalledWith('contact-1', 'group-2');
+    });
+
+    // The `contact` prop keeps the group it was rendered with; only the server
+    // knows about the new assignment.
+    getClientPortalVisibilityGroupAssignmentForContactMock.mockResolvedValue({ group_id: 'group-2' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Send Portal Invitation/ }));
+
+    await waitFor(() => {
+      expect(sendPortalInvitationMock).toHaveBeenCalledWith('contact-1');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('visibility-group-assignment')).toHaveValue('group-2');
     });
   });
 

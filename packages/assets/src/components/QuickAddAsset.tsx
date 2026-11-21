@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { createAsset } from '../actions/assetActions';
+import { previewAssetNumber } from '../actions/assetNumberingActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { parseMoneyToMinorUnits } from '../lib/money';
@@ -78,9 +79,12 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [automaticTag, setAutomaticTag] = useState(true);
+  const [tagPreview, setTagPreview] = useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
@@ -101,6 +105,16 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   // their existing labels, then custom types by registry name).
   const registryEntries = useAssetTypeRegistry(open);
   const assetTypeOptions: SelectOption[] = buildAssetTypeOptions(registryEntries, t);
+  const effectiveClientForPreview = clientId || selectedClientId;
+
+  useEffect(() => {
+    let active = true;
+    if (!open || !effectiveClientForPreview || !automaticTag) { setTagPreview(null); return; }
+    void previewAssetNumber(effectiveClientForPreview)
+      .then((preview) => { if (active) setTagPreview(preview.tag); })
+      .catch(() => { if (active) setTagPreview(null); });
+    return () => { active = false; };
+  }, [open, effectiveClientForPreview, automaticTag]);
 
   const handleClose = () => {
     setOpen(false);
@@ -258,7 +272,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     const validationErrors: string[] = [];
     if (!effectiveClientId) validationErrors.push(t('quickAddAsset.validation.client', { defaultValue: 'Client' }));
     if (!formData.name.trim()) validationErrors.push(t('quickAddAsset.validation.assetName', { defaultValue: 'Asset Name' }));
-    if (!formData.asset_tag.trim()) validationErrors.push(t('quickAddAsset.validation.assetTag', { defaultValue: 'Asset Tag' }));
+    if (!automaticTag && !formData.asset_tag.trim()) validationErrors.push(t('quickAddAsset.validation.assetTag', { defaultValue: 'Asset Tag' }));
     if (!formData.asset_type) validationErrors.push(t('quickAddAsset.validation.assetType', { defaultValue: 'Asset Type' }));
     return validationErrors;
   };
@@ -266,6 +280,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError(null);
+      setValidationErrors([]);
     }
   };
 
@@ -279,9 +294,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       : [];
     setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
 
-    const validationErrors = [...validateForm(), ...attributeIssues.map((issue) => issue.message)];
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join('\n'));
+    const missingFields = [...validateForm(), ...attributeIssues.map((issue) => issue.message)];
+    setValidationErrors(missingFields);
+    if (missingFields.length > 0) {
+      setError(null);
       return;
     }
 
@@ -302,7 +318,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       const assetData: CreateAssetRequest = {
         asset_type: formData.asset_type,
         client_id: effectiveClientId,
-        asset_tag: formData.asset_tag,
+        asset_tag: automaticTag ? '' : formData.asset_tag,
         name: formData.name,
         status: formData.status,
         ownership: formData.ownership,
@@ -410,6 +426,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         attributes: {}
       });
       setAttributeErrors({});
+      setAutomaticTag(true);
       if (!clientId) {
         setSelectedClientId(null);
       }
@@ -651,7 +668,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         type="button"
         onClick={() => (document.getElementById('quick-add-asset-form') as HTMLFormElement | null)?.requestSubmit()}
         disabled={isSubmitting}
-        className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
+        className={(!formData.name.trim() || (!automaticTag && !formData.asset_tag.trim()) || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
       >
         {isSubmitting
           ? t('quickAddAsset.actions.creating', { defaultValue: 'Creating...' })
@@ -675,7 +692,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         footer={quickAddAssetFooter}
       >
         <DialogContent>
-          {hasAttemptedSubmit && error && (
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 <p className="font-medium mb-2">
@@ -684,11 +701,17 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </p>
                 <ul className="list-disc list-inside space-y-1">
-                  {error.split('\n').map((err, index) => (
+                  {validationErrors.map((err, index) => (
                     <li key={index}>{err}</li>
                   ))}
                 </ul>
               </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive" className="mb-4" data-testid="quick-add-asset-error">
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           
@@ -791,22 +814,24 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-tag-container' })}>
-              <label className="block text-sm font-medium text-gray-700">
-                {t('quickAddAsset.fields.assetTagRequired', { defaultValue: 'Asset Tag *' })}
-              </label>
-              <Input
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-gray-700">{t('quickAddAsset.fields.assetTagRequired', { defaultValue: 'Asset Tag' })}</label>
+                <label className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-600))]">
+                  <input id="quick-add-asset-auto-tag" type="checkbox" checked={automaticTag} onChange={(event) => setAutomaticTag(event.target.checked)} />
+                  {t('quickAddAsset.fields.autoAssetTag', { defaultValue: 'Assign automatically' })}
+                </label>
+              </div>
+              {automaticTag ? <p className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 font-mono text-sm" aria-live="polite">
+                {tagPreview ?? t('quickAddAsset.fields.assetTagPreviewLoading', { defaultValue: 'Select a client to preview the next tag' })}
+                <span className="ml-2 font-sans text-xs text-[rgb(var(--color-text-500))]">{t('quickAddAsset.fields.previewNotReserved', { defaultValue: 'Preview only; assigned on save' })}</span>
+              </p> : <Input
                 {...withDataAutomationId({ id: 'asset-tag-input' })}
                 value={formData.asset_tag}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, asset_tag: e.target.value }));
-                  clearErrorIfSubmitted();
-                }}
-                placeholder={t('quickAddAsset.placeholders.assetTag', {
-                  defaultValue: 'Enter asset tag'
-                })}
+                onChange={(e) => { setFormData(prev => ({ ...prev, asset_tag: e.target.value })); clearErrorIfSubmitted(); }}
+                placeholder={t('quickAddAsset.placeholders.assetTag', { defaultValue: 'Enter existing or scanned tag' })}
                 className={hasAttemptedSubmit && !formData.asset_tag.trim() ? 'border-red-500' : ''}
                 required
-              />
+              />}
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-type-container' })}>

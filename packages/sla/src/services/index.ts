@@ -52,6 +52,9 @@ export {
   type PauseResult
 } from './slaPauseService';
 
+// Answers `reevaluateSlaPause` for packages that contribute a pause condition (registers on load)
+export { reevaluateSlaPauseState } from './slaPauseReevaluation';
+
 // SLA notification service
 export {
   sendSlaNotification,
@@ -74,9 +77,11 @@ export {
 // Escalation service
 export {
   escalateTicket,
+  ensureEscalationManagerOnTicket,
   getEscalationManagerForTicket,
   checkEscalationNeeded,
-  type EscalationResult
+  type EscalationResult,
+  type EscalationManagerTicketResourceResult
 } from './escalationService';
 
 // SLA backend interface and factory

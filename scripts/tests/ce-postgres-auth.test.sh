@@ -497,6 +497,60 @@ t8_through_pgbouncer() {
         out="$(sibling_psql pgbouncer 6432 "$user" "wrong-password" server -tAc 'select 1')"
         auth_rejected "$out" && ok "PgBouncer rejects $user with a wrong password" || nok "PgBouncer rejects $user with a wrong password" "$out"
     done
+
+    # The production browser probe must work after the permission init hands
+    # secrets to uid 1000, even when the host runner has another uid (1001 on
+    # GitHub). Exercise the same stdin invocation as the browser workflow in an
+    # image that does not contain /app/scripts, like the production EE image.
+    local hardened="$SANDBOX/hardened-secrets" rc
+    mkdir -p "$hardened"
+    cp "$SANDBOX/secrets/db_password_server" "$SANDBOX/secrets/postgres_password" "$hardened/"
+    out="$(docker run --rm --user 0:0 --cap-drop ALL \
+        --cap-add CHOWN --cap-add FOWNER --cap-add DAC_OVERRIDE --cap-add SETUID --cap-add SETGID \
+        --security-opt "no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}" \
+        -v "$REPO_ROOT/scripts:/scripts:ro" -v "$hardened:/run/secrets" \
+        -e SECRETS_DIR=/run/secrets --entrypoint bash "$PG_IMAGE" /scripts/runtime-permissions.sh 2>&1)"; rc=$?
+    [ "$rc" -eq 0 ] || { nok "runtime-permissions initializes the probe secrets" "$out"; return 1; }
+    local before
+    before="$(stat -c '%u:%g %a' "$hardened/db_password_server" "$hardened/postgres_password")"
+    [ "$before" = $'1000:1000 600\n1000:1000 600' ] \
+        && ok "probe secrets are private to uid 1000" || nok "probe secrets are private to uid 1000" "$before"
+    docker run --rm --user 1001:1001 --cap-drop ALL \
+        -v "$hardened:/run/secrets:ro" --entrypoint bash "$PG_IMAGE" \
+        -c '! cat /run/secrets/db_password_server >/dev/null 2>&1' \
+        && ok "original host-side secret read fails for runner uid 1001" || nok "original host-side secret read fails for runner uid 1001"
+
+    cat > "$SANDBOX/probe.compose.yaml" <<YAML
+services:
+  server:
+    image: "$PG_IMAGE"
+    user: '1000:1000'
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}']
+    volumes:
+      - "$hardened:/run/secrets:ro"
+    networks: [app-network]
+networks:
+  app-network:
+    external: true
+    name: "$NETWORK"
+YAML
+    production_probe() {
+        compose_quiet docker compose -p "$PROJECT" -f "$SANDBOX/probe.compose.yaml" \
+            run --rm --no-deps -T --entrypoint /bin/bash "$@" server -s \
+            < "$REPO_ROOT/scripts/check-pgbouncer-auth.sh"
+    }
+    out="$(production_probe 2>&1)"; rc=$?
+    [ "$rc" -eq 0 ] && grep -q 'ok   - app_user authenticates' <<<"$out" \
+        && ok "production authentication probe runs from stdin with private mounted secrets" \
+        || nok "production authentication probe runs from stdin with private mounted secrets" "$out"
+    [ "$(stat -c '%u:%g %a' "$hardened/db_password_server" "$hardened/postgres_password")" = "$before" ] \
+        && ok "probe preserves secret ownership and modes" || nok "probe preserves secret ownership and modes"
+
+    out="$(production_probe -e PGBOUNCER_PORT=1 2>&1)"; rc=$?
+    [ "$rc" -ne 0 ] && grep -q 'expected an authentication failure' <<<"$out" \
+        && ok "production probe rejects connection failures instead of counting them as authentication refusals" \
+        || nok "production probe rejects connection failures instead of counting them as authentication refusals" "$out"
 }
 
 # auth_rejected <psql output>: true when the output is an authentication refusal.

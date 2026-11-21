@@ -1,6 +1,7 @@
 import type { IInteraction, IInteractionType } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import type { ClientReadScope } from '@alga-psa/authorization/clientReadScope';
 import OnlineMeetingModel from './onlineMeeting';
 
 type DbOrTransaction = Knex | Knex.Transaction;
@@ -63,7 +64,8 @@ class InteractionModel {
     );
   }
 
-  static async getForEntity(entityId: string, entityType: 'contact' | 'client' | 'ticket' | 'opportunity', tenantId: string): Promise<IInteraction[]> {
+  /** `readScope` (built for the `interactions` alias) hides interactions of clients the reader may not see. */
+  static async getForEntity(entityId: string, entityType: 'contact' | 'client' | 'ticket' | 'opportunity', tenantId: string, readScope?: ClientReadScope): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = tenant ?? tenantId;
     const facade = tenantDb(db, scopedTenant);
@@ -100,6 +102,7 @@ class InteractionModel {
       facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
       facade.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
       query.orderBy('interactions.interaction_date', 'desc');
+      readScope?.apply(query);
 
       if (entityType === 'contact') {
         query.where('interactions.contact_name_id', entityId);
@@ -133,7 +136,7 @@ class InteractionModel {
     dateTo?: Date;
     typeId?: string;
     limit?: number;
-  }, tenantId: string): Promise<IInteraction[]> {
+  }, tenantId: string, readScope?: ClientReadScope): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = tenant ?? tenantId;
 
@@ -141,6 +144,7 @@ class InteractionModel {
       let interactions: any[] = [];
       const query = tenantScopedTable(db, scopedTenant, 'interactions')
         .select('*');
+      readScope?.apply(query);
 
       if (filters.userId) {
         query.where('user_id', filters.userId);
@@ -273,6 +277,7 @@ class InteractionModel {
     filters: InteractionPageFilters,
     tenantId: string,
     trx?: DbOrTransaction,
+    readScope?: ClientReadScope,
   ): Promise<InteractionPageResult> {
     const { db, tenant } = await resolveDb(tenantId, trx);
     const facade = tenantDb(db, tenant);
@@ -287,6 +292,7 @@ class InteractionModel {
       facade.tenantJoin(query, 'clients as cl', 'i.client_id', 'cl.client_id', { type: 'left' });
       facade.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left' });
       facade.tenantJoin(query, 'statuses as s', 'i.status_id', 's.status_id', { type: 'left' });
+      readScope?.apply(query);
       return query;
     };
 
@@ -424,6 +430,7 @@ class InteractionModel {
     interactionId: string,
     tenantId: string,
     trx?: DbOrTransaction,
+    readScope?: ClientReadScope,
   ): Promise<IInteraction | null> {
     const { db, tenant } = await resolveDb(tenantId, trx);
     const facade = tenantDb(db, tenant);
@@ -447,6 +454,7 @@ class InteractionModel {
       facade.tenantJoin(query, 'users', 'interactions.user_id', 'users.user_id', { type: 'left' });
       facade.tenantJoin(query, 'statuses', 'interactions.status_id', 'statuses.status_id', { type: 'left' });
 
+      readScope?.apply(query);
       const result = (await query
         .where('interactions.interaction_id', interactionId)
         .first()) as any | undefined;

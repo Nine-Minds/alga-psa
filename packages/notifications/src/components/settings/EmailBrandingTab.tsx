@@ -25,9 +25,8 @@ export function EmailBrandingTab() {
   useEffect(() => {
     async function init() {
       try {
-        const tenant = (session?.user as any)?.tenant as string | undefined;
-        if (!tenant) return;
-        const templates = await getTemplatesAction(tenant);
+        if (!(session?.user as any)?.tenant) return;
+        const templates = await getTemplatesAction();
         setSystemTemplates(templates.systemTemplates);
       } catch (err) {
         console.error('Failed to load templates for email branding:', err);

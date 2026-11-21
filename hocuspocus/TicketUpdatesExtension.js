@@ -1,4 +1,9 @@
 import { createClient } from 'redis'
+import jwt from 'jsonwebtoken'
+import { getHocuspocusJwtSecret } from './hocuspocusJwtSecret.js'
+import { parseTicketRoom } from './tenantValidation.js'
+
+const TICKET_ACCESS_RECHECK_MS = 30_000
 
 function parseTicketUpdateChannel(channel, redisPrefix = '') {
   const normalizedChannel = redisPrefix && channel.startsWith(redisPrefix)
@@ -29,11 +34,19 @@ export class TicketUpdatesExtension {
     this.redisUsername = config.redisUsername || 'default'
     this.redisPassword = config.redisPassword
     this.redisPrefix = config.redisPrefix || ''
+    this.listChangeAuthorizationUrl = config.listChangeAuthorizationUrl || 'http://server:3000/api/internal/tickets/live-change'
+    this.listChangeApiKey = config.listChangeApiKey || ''
     this.pattern = `${this.redisPrefix}ticket-updates:*`
+    this.listPattern = `${this.redisPrefix}ticket-list-changes:*`
     this.subscriber = null
     this.instance = null
     this.hasPatternSubscription = false
+    this.listConnections = new Map()
+    this.connectionExpiryTimers = new Map()
+    this.ticketAccessTimer = null
+    this.recheckingTicketRooms = false
     this.handlePatternMessage = this.handlePatternMessage.bind(this)
+    this.handleListMessage = this.handleListMessage.bind(this)
   }
 
   async onConfigure({ instance }) {
@@ -65,6 +78,8 @@ export class TicketUpdatesExtension {
     await this.subscriber.connect()
     console.log('[TicketUpdatesExtension] Connected to Redis for pub/sub')
     await this.ensurePatternSubscription()
+    this.ticketAccessTimer = setInterval(() => void this.recheckTicketRooms(), TICKET_ACCESS_RECHECK_MS)
+    this.ticketAccessTimer.unref()
   }
 
   async ensurePatternSubscription() {
@@ -73,8 +88,84 @@ export class TicketUpdatesExtension {
     }
 
     await this.subscriber.pSubscribe(this.pattern, this.handlePatternMessage)
+    await this.subscriber.pSubscribe(this.listPattern, this.handleListMessage)
     this.hasPatternSubscription = true
     console.log(`[TicketUpdatesExtension] Pattern subscribed to ${this.pattern}`)
+  }
+
+  async handleListMessage(message, channel) {
+    try {
+      const prefix = `${this.redisPrefix}ticket-list-changes:`
+      if (!channel.startsWith(prefix)) return
+      const tenantId = channel.slice(prefix.length)
+      if (!tenantId || tenantId.includes(':')) return
+      const roomName = `tenant:${tenantId}:ticket-changes`
+      const document = this.instance?.documents?.get(roomName)
+      if (!document || !this.listChangeApiKey) return
+      const event = JSON.parse(message)
+      if (typeof event.ticketId !== 'string' || typeof event.updatedAt !== 'string') return
+      const roomConnections = this.listConnections.get(roomName)
+      if (!roomConnections?.size) return
+      const users = new Map()
+      for (const connection of roomConnections) {
+        const access = connection.context?.ticketChangesAccess
+        if (access?.tenantId === tenantId && access.expiresAt > Date.now()) users.set(access.userId, access)
+      }
+      for (const access of users.values()) {
+        try {
+          const response = await fetch(this.listChangeAuthorizationUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': this.listChangeApiKey },
+            body: JSON.stringify({ tenantId, userId: access.userId, ticketId: event.ticketId, event }),
+          })
+          if (!response.ok) continue
+          const result = await response.json()
+          if (!result?.change) continue
+          // Each instance consumes the trusted activity feed independently.
+          // Document.broadcastStateless invokes extension-redis before applying
+          // its local filter, which would leak this recipient's payload to all
+          // room connections on other instances. Send only on authorized local
+          // connections; never put enriched payloads on the room broadcast bus.
+          const payload = JSON.stringify(result.change)
+          for (const connection of roomConnections) {
+            const recipient = connection.context?.ticketChangesAccess
+            if (recipient?.tenantId === tenantId && recipient.userId === access.userId && recipient.expiresAt > Date.now()) {
+              connection.sendStateless(payload)
+            }
+          }
+        } catch (error) {
+          console.error(`[TicketUpdatesExtension] Unable to authorize ticket change for ${access.userId}:`, error)
+        }
+      }
+    } catch (error) {
+      console.error('[TicketUpdatesExtension] Error handling ticket list change:', error)
+    }
+  }
+
+  async connected(data) {
+    if (!data.documentName?.startsWith('tenant:') || !data.documentName.endsWith(':ticket-changes')) return
+    const access = data.context?.ticketChangesAccess
+    const connection = data.connectionInstance
+    if (!access || !connection || access.expiresAt <= Date.now()) return
+    let connections = this.listConnections.get(data.documentName)
+    if (!connections) { connections = new Set(); this.listConnections.set(data.documentName, connections) }
+    connections.add(connection)
+    this.connectionExpiryTimers.set(connection, setTimeout(() => connection.close(), Math.max(0, access.expiresAt - Date.now()) + 1))
+  }
+
+  async onDisconnect(data) {
+    if (!data.documentName?.startsWith('tenant:') || !data.documentName.endsWith(':ticket-changes')) return
+    const connections = this.listConnections.get(data.documentName)
+    if (!connections) return
+    // Hocuspocus's disconnect hook supplies socketId, not connectionInstance.
+    for (const connection of connections) {
+      if (connection !== data.connectionInstance && (!data.socketId || connection.socketId !== data.socketId)) continue
+      const timer = this.connectionExpiryTimers.get(connection)
+      if (timer) clearTimeout(timer)
+      this.connectionExpiryTimers.delete(connection)
+      connections.delete(connection)
+    }
+    if (connections.size === 0) this.listConnections.delete(data.documentName)
   }
 
   async handlePatternMessage(message, channel) {
@@ -90,15 +181,59 @@ export class TicketUpdatesExtension {
         return
       }
 
-      const payload = JSON.parse(message)
-      console.log('[TicketUpdatesExtension] Broadcasting ticket update for room:', documentName)
-      document.broadcastStateless(JSON.stringify(payload))
+      const payload = JSON.stringify(JSON.parse(message))
+      await this.recheckTicketConnections(document, room, connection => connection.sendStateless(payload))
     } catch (error) {
       console.error('[TicketUpdatesExtension] Error handling message:', error)
     }
   }
 
+  async recheckTicketConnections(document, { tenantId, ticketId }, onAdmitted) {
+    await Promise.all(document.getConnections().map(async connection => {
+      const access = connection.context?.ticketAccess
+      if (!access?.userId || access.tenantId !== tenantId || access.ticketId !== ticketId) return
+
+      try {
+        const token = jwt.sign({ ticketReader: { tenantId, ticketId, userId: access.userId } }, getHocuspocusJwtSecret(), {
+          algorithm: 'HS256', audience: 'ticket-live-access', expiresIn: 15,
+        })
+        const response = await fetch(this.listChangeAuthorizationUrl, {
+          method: 'HEAD',
+          headers: { 'x-api-key': token },
+          redirect: 'error',
+          signal: AbortSignal.timeout(5000),
+        })
+        if (!document.hasConnection(connection)) return
+        if (response.status === 403) connection.close()
+        // Redis delivers this event to every instance. Sending to the local
+        // connection keeps an approved payload off the room-wide broadcast bus.
+        if (response.status === 204) onAdmitted?.(connection)
+      } catch (error) {
+        console.error('[TicketUpdatesExtension] Unable to check ticket room access:', error)
+      }
+    }))
+  }
+
+  async recheckTicketRooms() {
+    if (this.recheckingTicketRooms || !this.instance) return
+    this.recheckingTicketRooms = true
+    try {
+      for (const [name, document] of this.instance.documents) {
+        const room = parseTicketRoom(name)
+        if (room) await this.recheckTicketConnections(document, room)
+      }
+    } catch (error) {
+      console.error('[TicketUpdatesExtension] Unable to recheck ticket rooms:', error)
+    } finally {
+      this.recheckingTicketRooms = false
+    }
+  }
+
   async onDestroy() {
+    clearInterval(this.ticketAccessTimer)
+    this.listConnections.clear()
+    for (const timer of this.connectionExpiryTimers.values()) clearTimeout(timer)
+    this.connectionExpiryTimers.clear()
     if (this.subscriber) {
       await this.subscriber.quit()
     }

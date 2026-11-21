@@ -5,8 +5,10 @@ import {
   EMPTY_FEATURE_CAPABILITIES,
   getMyCapabilities,
   parseFeatureCapabilities,
+  parseOperationalScope,
   type DateFormatCapability,
   type FeatureCapabilities,
+  type OperationalScope,
 } from "../api/capabilities";
 import {
   getDateTimeLocale,
@@ -22,6 +24,8 @@ import { parseMobileTheme, type MobileTheme } from "../ui/themeTokens";
 
 export type CapabilitiesContextValue = {
   features: FeatureCapabilities;
+  /** Set for an operational-only session (a co-managed seat technician); null otherwise. */
+  operationalScope: OperationalScope | null;
   /** Tenant theme pair from the server; null on older servers and after sign-out. */
   theme: MobileTheme | null;
   /** ISO country the tenant's dates and addresses default to; null when unknown. */
@@ -58,9 +62,32 @@ export function useCapabilities(): CapabilitiesContextValue {
   return value;
 }
 
+/**
+ * Tenant "don't notify the customer" default without the provider requirement.
+ *
+ * The suppression checkboxes in the ticket sheet read this through
+ * `useTicketNotificationSuppression`; rendering outside a provider (tests,
+ * future surfaces) must degrade to the historical unticked default rather than
+ * crash a ticket edit.
+ */
+export function useDontNotifyCustomerDefault(): boolean {
+  const value = useContext(CapabilitiesContext);
+  return value?.features.dontNotifyCustomerDefault ?? false;
+}
+
+/**
+ * Whether the session is operational-only (a co-managed seat technician), without the provider requirement.
+ * Its time is operational: no service is chosen or sent, and the server rejects one.
+ */
+export function useOperationalOnly(): boolean {
+  const value = useContext(CapabilitiesContext);
+  return value?.features.operationalOnly ?? false;
+}
+
 export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const { session, refreshSession, baseUrl } = useAuth();
   const [features, setFeatures] = useState<FeatureCapabilities>(EMPTY_FEATURE_CAPABILITIES);
+  const [operationalScope, setOperationalScope] = useState<OperationalScope | null>(null);
   const [theme, setTheme] = useState<MobileTheme | null>(null);
   const [defaultCountry, setDefaultCountry] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -82,7 +109,9 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
       });
       const result = await getMyCapabilities(client, { apiKey: accessToken });
       if (result.ok) {
-        setFeatures(parseFeatureCapabilities(result.data.data?.features));
+        const parsedFeatures = parseFeatureCapabilities(result.data.data?.features);
+        setFeatures(parsedFeatures);
+        setOperationalScope(parsedFeatures.operationalOnly ? parseOperationalScope(result.data.data?.operationalScope) : null);
         applyServerDateFormat(result.data.data?.formatting);
         const country = result.data.data?.formatting?.country;
         setDefaultCountry(typeof country === "string" && country.trim() ? country.trim().toUpperCase() : null);
@@ -99,6 +128,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         // Older servers have no endpoint (404) — every feature stays off.
         // The theme is left alone: a flaky network should not repaint the app.
         setFeatures(EMPTY_FEATURE_CAPABILITIES);
+        setOperationalScope(null);
         applyServerDateFormat(null);
         if (result.error.kind !== "http" && result.error.kind !== "network") {
           logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
@@ -113,6 +143,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!signedIn) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
+      setOperationalScope(null);
       applyServerDateFormat(null);
       setTheme(null);
       setDefaultCountry(null);
@@ -129,8 +160,8 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ features, theme, defaultCountry, loaded, refresh }),
-    [features, theme, defaultCountry, loaded, refresh],
+    () => ({ features, operationalScope, theme, defaultCountry, loaded, refresh }),
+    [features, operationalScope, theme, defaultCountry, loaded, refresh],
   );
 
   return (

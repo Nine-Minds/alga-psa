@@ -23,7 +23,7 @@ describe('AvailabilitySettings UX contracts', () => {
     expect(component).toContain("from '@alga-psa/ui/components/SearchableSelect'");
     expect(component).not.toContain('<CustomSelect');
     const dropdownCount = (component.match(/<SearchableSelect/g) || []).length;
-    expect(dropdownCount).toBe(5);
+    expect(dropdownCount).toBe(6);
     expect((component.match(/dropdownMode="overlay"/g) || []).length).toBe(dropdownCount);
   });
 

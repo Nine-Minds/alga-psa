@@ -31,6 +31,21 @@
       "import": "./dist/lib/index.mjs",
       "require": "./dist/lib/index.js"
     },
+    "./lib/ticketLifecycleHooks": {
+      "types": "./dist/lib/ticketLifecycleHooks.d.ts",
+      "import": "./dist/lib/ticketLifecycleHooks.mjs",
+      "require": "./dist/lib/ticketLifecycleHooks.js"
+    },
+    "./lib/ticketResponsibility": {
+      "types": "./dist/lib/ticketResponsibility.d.ts",
+      "import": "./dist/lib/ticketResponsibility.mjs",
+      "require": "./dist/lib/ticketResponsibility.js"
+    },
+    "./lib/ticketListViews": {
+      "types": "./dist/lib/ticketListViews.d.ts",
+      "import": "./dist/lib/ticketListViews.mjs",
+      "require": "./dist/lib/ticketListViews.js"
+    },
     "./lib/liveUpdates": {
       "types": "./dist/lib/liveUpdates.d.ts",
       "import": "./dist/lib/liveUpdates.mjs",

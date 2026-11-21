@@ -77,6 +77,15 @@ describe('ticket origin create-path persistence contracts', () => {
           });
           return chain;
         }
+        if (table === 'boards') {
+          // This fixture tests origin persistence on a board without routing defaults.
+          // Ticket creation still resolves board-level routing before building the insert.
+          const query: any = {
+            where: vi.fn(() => query),
+            first: vi.fn().mockResolvedValue(undefined),
+          };
+          return query;
+        }
 
         throw new Error(`Unexpected table: ${table}`);
       },

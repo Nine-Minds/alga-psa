@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /opt/alga-appliance
-RUN apk add --no-cache bash curl kubectl util-linux \
+RUN apk add --no-cache bash curl kubectl util-linux tini \
   && curl -s https://fluxcd.io/install.sh | bash
 ENV NODE_ENV=production
 ENV ALGA_APPLIANCE_PORT=8080
@@ -36,4 +36,5 @@ RUN addgroup -S alga && adduser -S -G alga -u 10001 alga \
 
 USER 10001:10001
 EXPOSE 8080
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/opt/alga-appliance/scripts/control-plane-entrypoint.sh"]

@@ -70,6 +70,7 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getContactEffectiveLocation: vi.fn().mockResolvedValue({ locationId: null, locations: [], workArrangement: null }),
   searchClientsForPicker: vi.fn(),
   getClientById: vi.fn(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' })),
 }));
@@ -640,6 +641,12 @@ const makeSource = (overrides: Record<string, unknown> = {}) => ({
   itil_urgency: null,
   assigned_to: 'user-9',
   assigned_team_id: null,
+  board_name: 'Support',
+  category_name: 'Hardware',
+  subcategory_name: 'Laptops',
+  priority_name: 'High',
+  assignee_name: 'Grace Hopper',
+  assigned_team_name: null,
   additional_agents: [
     { user_id: 'user-2', first_name: 'Ada', last_name: 'Lovelace' },
     { user_id: 'user-3', first_name: 'Alan', last_name: 'Turing' },

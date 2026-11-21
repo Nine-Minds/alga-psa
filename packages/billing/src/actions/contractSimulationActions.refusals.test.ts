@@ -21,9 +21,14 @@ const guards = vi.hoisted(() => {
     hasPermission: vi.fn(async (..._args: unknown[]) => true),
     resolveTenantTier: vi.fn(async (_tenant: string) => "pro"),
     createTenantKnex: vi.fn(async () => ({ knex: {} })),
+    tenantDb: vi.fn(),
+    currentUser: { user_id: "u", user_type: "internal" as string } as any,
   };
 });
-vi.mock("@alga-psa/db", () => ({ createTenantKnex: guards.createTenantKnex }));
+vi.mock("@alga-psa/db", () => ({
+  createTenantKnex: guards.createTenantKnex,
+  tenantDb: guards.tenantDb,
+}));
 vi.mock("@alga-psa/auth/rbac", () => ({ hasPermission: guards.hasPermission }));
 // Run the real shared tier policy; only the tenant-tier lookup is stubbed.
 vi.mock("@alga-psa/licensing/lib/tenant-tier", () => ({
@@ -36,7 +41,7 @@ vi.mock("@alga-psa/auth/withAuth", () => ({
   withAuth:
     (fn: (...args: any[]) => unknown) =>
     (...args: unknown[]) =>
-      fn({ user_id: "u" }, { tenant: "t" }, ...args),
+      fn(guards.currentUser, { tenant: "t" }, ...args),
 }));
 
 const refusal = () =>
@@ -61,6 +66,8 @@ describe("contractSimulationActions refusals", () => {
     guards.hasPermission.mockReset().mockResolvedValue(true);
     guards.resolveTenantTier.mockReset().mockResolvedValue("pro");
     guards.createTenantKnex.mockClear();
+    guards.tenantDb.mockReset();
+    guards.currentUser = { user_id: "u", user_type: "internal" };
   });
 
   it("resolves with a blocking result, not a rejection, when a coded refusal escapes a run", async () => {
@@ -119,7 +126,6 @@ const actionCalls: Array<[string, (a: any) => Promise<unknown>]> = [
   ["runContractSimulation", (a) => a.runContractSimulation(scenario)],
   ["getRecentContractSimulationAssumptions", (a) => a.getRecentContractSimulationAssumptions(scenario)],
   ["getContractSimulationReplayAssumptions", (a) => a.getContractSimulationReplayAssumptions(scenario, "a", "b")],
-  ["listContractSimulationClients", (a) => a.listContractSimulationClients()],
 ];
 
 describe("contractSimulationActions access guard", () => {
@@ -129,6 +135,8 @@ describe("contractSimulationActions access guard", () => {
     guards.hasPermission.mockReset().mockResolvedValue(true);
     guards.resolveTenantTier.mockReset().mockResolvedValue("pro");
     guards.createTenantKnex.mockClear();
+    guards.tenantDb.mockReset();
+    guards.currentUser = { user_id: "u", user_type: "internal" };
   });
 
   it.each(actionCalls)("%s throws TierAccessError below Pro without loading the simulator or the database", async (_name, call) => {
@@ -145,6 +153,37 @@ describe("contractSimulationActions access guard", () => {
     await expect(call(actions)).rejects.toThrow(/Permission denied/);
     expect(guards.resolveTenantTier).not.toHaveBeenCalled();
     expect(guards.createTenantKnex).not.toHaveBeenCalled();
+  });
+
+  it.each(["Client Admin", "Finance"]) (
+    "%s portal principal with billing:read is denied before simulator or database access",
+    async (roleName) => {
+      guards.currentUser = { user_id: `portal-${roleName}`, user_type: "client", roleName };
+      const actions = await import("./contractSimulationActions");
+
+      for (const [, call] of actionCalls) {
+        await expect(call(actions)).rejects.toThrow(/internal users/);
+      }
+
+      expect(guards.hasPermission).not.toHaveBeenCalled();
+      expect(guards.resolveTenantTier).not.toHaveBeenCalled();
+      expect(guards.createTenantKnex).not.toHaveBeenCalled();
+      Object.values(simulator).forEach((fn) => expect(fn).not.toHaveBeenCalled());
+    },
+  );
+
+  it("rejects portal replay assumptions carrying another client's scenario before protected reads", async () => {
+    guards.currentUser = { user_id: "portal-finance", user_type: "client" };
+    const actions: any = await import("./contractSimulationActions");
+    const foreignScenario = {
+      ...scenario,
+      client_binding: { kind: "client", client_id: "another-client", client_name: "Another Client" },
+    };
+
+    await expect(actions.getContractSimulationReplayAssumptions(foreignScenario, "2026-01-01", "2026-02-01"))
+      .rejects.toThrow(/internal users/);
+    expect(guards.createTenantKnex).not.toHaveBeenCalled();
+    expect(simulator.loadReplayAssumptions).not.toHaveBeenCalled();
   });
 
   it("lets a Pro tenant through", async () => {

@@ -174,6 +174,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 vi.mock('@/lib/productAccess', () => ({
   getCurrentTenantProduct: async () => 'psa',
+  getCurrentProductPrincipal: async () => ({ productCode: 'psa', surfaceKind: null }),
 }));
 
 vi.mock('@/context/ProductContext', () => ({

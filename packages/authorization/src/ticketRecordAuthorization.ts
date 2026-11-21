@@ -1,7 +1,9 @@
+import { assembleAuthorizationSubject } from './subject/assemble';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from './rbac';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -10,9 +12,14 @@ import {
   type AuthorizationRecord,
   type AuthorizationSubject,
   type RelationshipRule,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
+} from './kernel';
+import type { AuthorizationKernel } from './kernel';
+import {
+  authorizationEvaluationSnapshotQuery, bundleNarrowingRuleFromRow, loadAuthorizationEvaluationSnapshot,
+  type AuthorizationEvaluationSnapshot,
+} from './bundles/service';
+import { builtinResolverSubjectsExistExpression, loadBuiltinResolverFacts, resolveAppliedBuiltinResolvers } from './kernel/builtinRuleResolvers';
+import { extractActiveWatcherContactIds } from './portal/visibility';
 import type { ContactVisibilityContext } from './portal/visibility';
 import { getClientContactVisibilityContext } from './portal/visibility.server';
 
@@ -27,78 +34,15 @@ import { getClientContactVisibilityContext } from './portal/visibility.server';
  * and evaluates the same policy before reading or mutating it.
  *
  * Server-only: imports the authorization kernel and client-portal visibility.
+ *
+ * Lives in `@alga-psa/authorization` (not `@alga-psa/tickets`) so layers below tickets, such as inventory,
+ * can run the same record check; `@alga-psa/tickets/lib/ticketRecordAuthorization` re-exports it.
  */
 
 type Conn = Knex | Knex.Transaction;
 
 function tenantScopedTable(conn: Conn, tenant: string, table: string): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;
-}
-
-function extractRoleIdsFromUser(user: unknown): string[] {
-  const roles = (user as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      if (role && typeof role === 'object' && 'role_id' in role) {
-        const roleId = (role as { role_id?: unknown }).role_id;
-        return typeof roleId === 'string' ? roleId : null;
-      }
-      return null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Conn,
-  tenant: string,
-  user: IUserWithRoles,
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, tenant, 'user_roles')
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, tenant, 'team_members')
-      .where({ user_id: user.user_id })
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, tenant, 'users')
-      .where({ reports_to: user.user_id })
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: [],
-  };
 }
 
 export function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
@@ -121,7 +65,7 @@ export function toTicketAuthorizationRecord(ticket: Partial<ITicket>): Authoriza
   };
 }
 
-async function resolveClientVisibility(
+export async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
@@ -145,13 +89,52 @@ interface TicketAuthorizationContext {
   requestCache: RequestLocalAuthorizationCache;
 }
 
+/**
+ * The evaluation snapshot and, when a built-in rule resolver may have a subject in the tenant, its facts for the
+ * subject. The snapshot statement carries the resolvers' tenant gate (the same one the subject resolver's tenant
+ * probe asks), so a tenant with no resolver subject issues that one statement and never reads a resolver's
+ * feature tables. Only a tenant the gate does not rule out pays a second statement for the facts. With no fact
+ * source registered this is exactly the snapshot load.
+ */
+async function loadSnapshotWithResolverFacts(
+  trx: Conn,
+  subject: Pick<AuthorizationSubject, 'tenant' | 'userId' | 'apiKeyId'>,
+): Promise<{ snapshot: AuthorizationEvaluationSnapshot; resolverFacts?: Record<string, unknown> }> {
+  const subjectsExist = builtinResolverSubjectsExistExpression(trx, subject.tenant);
+  if (!subjectsExist) return { snapshot: await loadAuthorizationEvaluationSnapshot(trx, subject) };
+  const row = await trx.queryBuilder()
+    .select(authorizationEvaluationSnapshotQuery(trx, subject).as('snapshot'), trx.raw('? as "resolverSubjects"', [subjectsExist]))
+    .first();
+  // A missing part is a failed load, never "no facts": the subject gets no decision.
+  if (!row?.snapshot || typeof row.resolverSubjects !== 'boolean') throw new Error('Authorization context unavailable');
+  const snapshot = row.snapshot as AuthorizationEvaluationSnapshot;
+  if (!row.resolverSubjects) return { snapshot };
+  return { snapshot, resolverFacts: await loadBuiltinResolverFacts(trx, subject) };
+}
+
 // LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.
 export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const { snapshot, resolverFacts } = await loadSnapshotWithResolverFacts(trx, {
+    tenant,
+    userId: user.user_id,
+    apiKeyId: (user as IUserWithRoles & { api_key_id?: string | null }).api_key_id ?? null,
+  });
+  // The snapshot is the loaded facts; the subject is assembled by the shared resolver step.
+  const authorizationSubject: AuthorizationSubject = assembleAuthorizationSubject({
+    tenant,
+    user,
+    facts: {
+      roleIds: snapshot.roleIds,
+      teamIds: snapshot.teamIds,
+      managedUserIds: snapshot.managedUserIds,
+      storedPortfolioClientIds: snapshot.portfolioClientIds ?? [],
+      resolverFacts,
+    },
+  });
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -166,13 +149,8 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
+      // A policy lookup failure must not become an empty rule set that grants access.
+      resolveRules: async () => snapshot.rules.map(bundleNarrowingRuleFromRow),
     }),
     rbacEvaluator: async () => true,
   });
@@ -227,14 +205,52 @@ async function resolveTicketRecord(
  * when the principal is not allowed to access this specific ticket (mapped to
  * 403). Returns the resolved row so callers can reuse it.
  */
+/** The columns of a ticket that decide where it sits: its client, its board and the contact it is for. */
+export type TicketProposedPlacement = Pick<Partial<ITicket>, 'client_id' | 'board_id' | 'contact_name_id'>;
+
+async function assertProposedPlacementAllowed(
+  trx: Conn,
+  tenant: string,
+  context: TicketAuthorizationContext,
+  evaluation: Parameters<AuthorizationKernel['authorizeMutation']>[0],
+  current: TicketRecordRow,
+  proposed: TicketProposedPlacement,
+): Promise<void> {
+  const next: TicketRecordRow = { ...current };
+  for (const key of ['client_id', 'board_id', 'contact_name_id'] as const) {
+    if (proposed[key] !== undefined) next[key] = proposed[key] as never;
+  }
+  const record = toTicketAuthorizationRecord(next as Partial<ITicket>);
+  const postImage = { ...evaluation, record };
+  if (resolveAppliedBuiltinResolvers(postImage).length === 0) return;
+  const decision = await context.authorizationKernel.authorizeMutation(postImage);
+  let allowed = decision.allowed;
+  const contactSet = proposed.contact_name_id !== undefined && proposed.contact_name_id !== null
+    && proposed.contact_name_id !== current.contact_name_id;
+  if (allowed && contactSet) {
+    const contact = await tenantScopedTable(trx, tenant, 'contacts')
+      .where({ contact_name_id: proposed.contact_name_id }).first('client_id');
+    allowed = Boolean(contact && record.clientId && contact.client_id === record.clientId);
+  }
+  if (!allowed) throw new Error('Permission denied: Cannot access ticket');
+}
+
 export async function authorizeTicketRecordAccess(input: {
   trx: Conn;
   tenant: string;
   user: IUserWithRoles;
   ticketId: string;
-  action: 'read' | 'update';
+  action: 'read' | 'update' | 'delete';
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
+  /**
+   * The placement an `update` would leave the ticket in. For a subject a built-in rule resolver governs (a
+   * co-managed seat technician) the ticket as the write leaves it must also be allowed, and a contact the write
+   * sets must belong to the ticket's client (read from the database). The decision above reads the stored row,
+   * so without this a subject could move a ticket they may work to a board or client they may not. Nothing
+   * else is evaluated, and no statement is issued, for any subject no resolver governs.
+   */
+  proposed?: TicketProposedPlacement;
 }): Promise<TicketRecordRow> {
   const ticket =
     input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId));
@@ -243,7 +259,7 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
-  const decision = await context.authorizationKernel.authorizeResource({
+  const evaluation = {
     subject: context.authorizationSubject,
     resource: {
       type: 'ticket',
@@ -255,16 +271,103 @@ export async function authorizeTicketRecordAccess(input: {
     contactVisibility: context.contactVisibility,
     requestCache: context.requestCache,
     knex: input.trx as Knex,
-  });
+  };
+  // A write goes through the kernel's mutation path, which refuses a ticket the
+  // principal's read rules do not allow before it evaluates the write rules.
+  const decision = input.action === 'read'
+    ? await context.authorizationKernel.authorizeResource(evaluation)
+    : await context.authorizationKernel.authorizeMutation(evaluation);
 
   if (!decision.allowed) {
     throw new Error('Permission denied: Cannot access ticket');
   }
 
+  if (input.action === 'update' && input.proposed) {
+    await assertProposedPlacementAllowed(input.trx, input.tenant, context, evaluation, ticket, input.proposed);
+  }
+
+  if (input.action === 'delete' && !(await hasPermission(
+    { ...input.user, tenant: input.tenant },
+    'ticket',
+    'delete',
+    input.trx,
+  ))) {
+    throw new Error('Permission denied: Cannot delete ticket');
+  }
+
   return ticket;
 }
 
-// LEVERAGE: pattern ticket-read-authorization — the ticketActions.ts / optimizedTicketActions.ts copies of this kernel construction should converge on this module
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The actor passed the coarse permission but not the per-record update decision. */
+export class TicketWatcherPermissionError extends Error {
+  constructor() {
+    super('Permission denied: Cannot update ticket watchers');
+    this.name = 'TicketWatcherPermissionError';
+  }
+}
+
+/** Missing ticket result for watcher authorization, kept independent of the shared service layer. */
+export class TicketWatcherTicketNotFoundError extends Error {
+  constructor() {
+    super('Ticket not found');
+    this.name = 'TicketWatcherTicketNotFoundError';
+  }
+}
+
+export type TicketWatcherWritePrincipal =
+  | { user: IUserWithRoles }
+  | { subject: AuthorizationSubject; kernel: AuthorizationKernel };
+
+/** Authorize ticket:update before a shared watcher write touches watcher rows. */
+export async function runAuthorizedTicketWatcherWrite<T>(input: {
+  trx: Knex.Transaction;
+  tenant: string;
+  ticketId: string;
+  principal: TicketWatcherWritePrincipal;
+  write: (trx: Knex.Transaction) => Promise<T>;
+}): Promise<T> {
+  const { trx, tenant, ticketId, principal } = input;
+  const ticket = UUID_PATTERN.test(ticketId)
+    ? ((await tenantScopedTable(trx, tenant, 'tickets')
+        .where({ ticket_id: ticketId })
+        .forUpdate()
+        .first()) as (Partial<ITicket> & { ticket_id: string }) | undefined)
+    : undefined;
+  if (!ticket) {
+    throw new TicketWatcherTicketNotFoundError();
+  }
+
+  let subject: AuthorizationSubject;
+  let kernel: AuthorizationKernel;
+  let selectedBoardIds: string[] | undefined;
+  if ('user' in principal) {
+    const context = await createTicketAuthorizationContext(trx, tenant, principal.user);
+    subject = context.authorizationSubject;
+    kernel = context.authorizationKernel;
+    selectedBoardIds = context.selectedBoardIds;
+  } else {
+    subject = { ...principal.subject, tenant };
+    kernel = principal.kernel;
+  }
+
+  const record = toTicketAuthorizationRecord(ticket);
+  const decision = await kernel.authorizeMutation({
+    subject,
+    resource: { type: 'ticket', action: 'update', id: ticketId },
+    record,
+    mutation: { kind: 'update_watchers', record },
+    selectedBoardIds,
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: trx,
+  });
+  if (!decision.allowed) {
+    throw new TicketWatcherPermissionError();
+  }
+
+  return input.write(trx);
+}
 
 /**
  * Same policy as {@link authorizeTicketRecordAccess}, but conceals whether a ticket exists so a

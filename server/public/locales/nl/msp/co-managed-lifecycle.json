@@ -1,0 +1,94 @@
+{
+  "departure": {
+    "loading": "Laden…",
+    "titleCustomer": "Gezamenlijk beheerde IT met {{name}} beëindigen",
+    "titleSponsor": "Gezamenlijk beheerde IT voor {{name}} beëindigen",
+    "keepCustomer": "U behoudt uw werkruimte, tickets, gebruikers en bestanden. Uw MSP verliest direct toegang en bewaart alleen een overzicht van het werk waaraan het heeft deelgenomen.",
+    "keepSponsor": "U behoudt een alleen-lezen archief van het werk waaraan u hebt deelgenomen. Uw toegang tot de werkruimte van de klant eindigt direct en de licenties gaan terug naar uw pool.",
+    "warnHandoffs_one": "{{count}} gedeeld ticket ligt nog bij de MSP. Het blijft open en de MSP verliest er de toegang toe.",
+    "warnHandoffs_other": "{{count}} gedeelde tickets liggen nog bij de MSP. Ze blijven open en de MSP verliest er de toegang toe.",
+    "seats_one": "{{count}} licentie wordt vrijgegeven.",
+    "seats_other": "{{count}} licenties worden vrijgegeven.",
+    "end": "Relatie beëindigen",
+    "confirmTitle": "Deze relatie beëindigen?",
+    "confirmMessage": "Dit kan hier niet ongedaan worden gemaakt. De toegang eindigt direct voor beide partijen.",
+    "confirmEnd": "Relatie beëindigen",
+    "cancel": "Annuleren",
+    "done": "De relatie is beëindigd. De geschiedenis van gedeeld werk blijft bewaard en is alleen-lezen.",
+    "endedOn": "Deze relatie is beëindigd op {{date}}.",
+    "errors": {
+      "notFound": "Deze relatie is niet gevonden.",
+      "denied": "U hebt geen toestemming om deze relatie te beëindigen.",
+      "changed": "De relatie is gewijzigd tijdens uw beoordeling. Beoordeel haar opnieuw voordat u haar beëindigt.",
+      "alreadyClosed": "Deze relatie is al beëindigd.",
+      "invalid": "Het verzoek kon niet worden verwerkt."
+    }
+  },
+  "archive": {
+    "loading": "Laden…",
+    "denied": "U hebt geen toestemming om dit archief te bekijken.",
+    "empty": "Nog geen archieven. Er wordt er een gemaakt wanneer een relatie eindigt.",
+    "unknownClient": "Naamloze klant",
+    "columns": {
+      "client": "Klant",
+      "sealed": "Gearchiveerd",
+      "evidence": "Records",
+      "files": "Bestanden",
+      "actions": "Acties"
+    },
+    "open": "Openen",
+    "back": "Terug",
+    "cutoff": "Records tot {{date}}. Dit archief is alleen-lezen.",
+    "entry": {
+      "when": "Datum",
+      "author": "Auteur",
+      "content": "Inhoud",
+      "deleted": "Verwijderd door de auteur",
+      "empty": "Er zijn geen records bewaard."
+    },
+    "more": "Meer laden",
+    "filesHeading": "Bestanden",
+    "fileUnnamed": "Bestand downloaden",
+    "exclusionsHeading": "Niet bewaard",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Geen onderdeel van het bewaarde dossier",
+      "audience": "Privé voor de klant",
+      "afterCutoff": "Na het einde van de relatie",
+      "downloadFailed": "De oorspronkelijke bijlage kon niet worden gedownload",
+      "integrityFailed": "De integriteitscontrole van de oorspronkelijke bijlage is mislukt"
+    },
+    "retentionFailuresHeading": "Niet bewaarde bijlagen",
+    "retentionFailed": "Bijlage niet bewaard: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "De zetelovereenkomst voor {{name}} beëindigen?",
+    "intro": "Het einde gaat in bij het volgende verzoek van elke technicus en kan hier niet ongedaan worden gemaakt.",
+    "effectTechnicians": "Gedeactiveerde technici: {{count}}",
+    "effectInvitations": "Ingetrokken openstaande uitnodigingen: {{count}}",
+    "effectTickets": "Aan uw team teruggegeven tickets: {{count}}",
+    "effectSeats": "Aan de pool vrijgegeven zetels: {{count}}",
+    "effectNotes": "Gedeelde notities blijven leesbaar voor uw medewerkers.",
+    "confirm": "Overeenkomst beëindigen",
+    "cancel": "Annuleren",
+    "start": "Zetelovereenkomst beëindigen",
+    "done": "De zetelovereenkomst is beëindigd.",
+    "errorDenied": "U hebt geen toestemming om deze overeenkomst te beëindigen.",
+    "errorNotFound": "Deze overeenkomst is niet gevonden.",
+    "errorGeneric": "Het verzoek kon niet worden verwerkt.",
+    "loading": "Laden…"
+  },
+  "seatProjects": {
+    "errorDenied": "U hebt geen toestemming om projecten te delen.",
+    "errorProject": "Alleen een project van deze klant kan worden gedeeld.",
+    "errorNotFound": "Deze overeenkomst is niet gevonden.",
+    "errorGeneric": "Het verzoek kon niet worden verwerkt.",
+    "columnProject": "Project",
+    "columnShared": "Gedeeld met technici",
+    "inactive": "Inactief",
+    "shareLabel": "{{name}} delen met technici",
+    "intro": "Technici zien alleen de projecten die u deelt. Stoppen met delen geldt vanaf hun volgende verzoek.",
+    "loading": "Projecten laden…",
+    "empty": "Deze klant heeft geen projecten om te delen."
+  }
+}

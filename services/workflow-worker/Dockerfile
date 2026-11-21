@@ -21,6 +21,7 @@ COPY package.json package-lock.json ./
 # Copy all workspace package.json files to set up the dependency tree
 COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY ee/temporal-workflows/package.json ./ee/temporal-workflows/
+COPY ee/server/package.json ./ee/server/
 COPY packages/ee/package.json ./packages/ee/
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
@@ -74,6 +75,7 @@ COPY packages/workflow-streams/package.json ./packages/workflow-streams/
 RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --include-workspace-root \
   --workspace=@alga-psa/workflows \
   --workspace=temporal-workflows \
+  --workspace=sebastian-ee \
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/shared \
   --workspace=workflow-worker \
@@ -92,8 +94,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/email \
   --workspace=@alga-psa/opportunities \
   --workspace=@alga-psa/predicates \
-  --workspace=@alga-psa/ui \
-  && npm install --no-save openai@^4.104.0
+  --workspace=@alga-psa/ui
 
 # Copy source code for shared + server workspaces
 COPY ee/packages/workflows/ ./ee/packages/workflows/
@@ -201,4 +202,14 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 ENV NODE_ENV=production
+
+# Run as the unprivileged node user (uid 1000). The /app tree stays root-owned
+# and read-only to the process. /run/secrets must be owned by the running uid so
+# the filesystem secret provider can write tenant secrets below it, and
+# /data/files is the local file-storage root (mount the files volume here).
+RUN install -d -o 1000 -g 1000 -m 0700 /run/secrets && \
+    install -d -o 1000 -g 1000 -m 0755 /data/files
+
+USER 1000:1000
+
 ENTRYPOINT ["/app/entrypoint.sh"]
