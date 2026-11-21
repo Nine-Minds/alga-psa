@@ -66,6 +66,31 @@ import { initializeJobHandlersForWorker, executeJobHandler } from '../job-activi
 // covered in server/src/test/unit/jobs; the shared event schema is the contract.
 describe('recover-comment-publications worker forwarding', () => {
   afterEach(() => vi.clearAllMocks());
+  it('forwards scheduled RMM device syncs to the application server', async () => {
+    await initializeJobHandlersForWorker();
+    const tenantId = randomUUID(), jobId = randomUUID(), executionId = randomUUID();
+    const integrationId = randomUUID();
+    mocks.jobs.set(jobId, { metadata: '{}' });
+    mocks.publish.mockResolvedValue(undefined);
+
+    expect(await executeJobHandler({
+      jobName: 'rmm-device-sync', jobId, tenantId, jobExecutionId: executionId,
+      data: { tenantId, integrationId, provider: 'ninjaone' },
+    })).toEqual({ success: true });
+
+    expect(mocks.publish).toHaveBeenCalledOnce();
+    const [event, options] = mocks.publish.mock.calls[0];
+    expect(options).toBeUndefined();
+    const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse({
+      id: randomUUID(), timestamp: new Date().toISOString(), ...event,
+    });
+    expect(validated.payload).toMatchObject({
+      tenantId, jobId, executionId, jobName: 'rmm-device-sync',
+      data: { tenantId, integrationId, provider: 'ninjaone' },
+    });
+    expect(mocks.wait).toHaveBeenCalledOnce();
+  });
+
   it('forwards the job to the server as a strict MAINTENANCE_JOB_REQUESTED event and reports publish failures', async () => {
     await initializeJobHandlersForWorker();
     const tenantId = randomUUID(), jobId = randomUUID();
