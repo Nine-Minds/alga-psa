@@ -44,21 +44,23 @@ The collection-enforcement implementation is [`aaac6d4731`](https://github.com/N
 
 The delegated list sorting/range repair is [`ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0`](https://github.com/Nine-Minds/alga-psa/commit/ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0). The complete focused suite passed on this revision: 6 files and 59 tests, including the registered mixed-data provider regression, 37 real-Postgres tests, and route/lifecycle regressions.
 
+The offset-aware query-schema follow-up is [`82a6450383bf63c90d64e406736aede732ae6c32`](https://github.com/Nine-Minds/alga-psa/commit/82a6450383bf63c90d64e406736aede732ae6c32). This revision accepts timestamp bounds with explicit UTC offsets at the API schema, and the full focused suite passed: 7 files and 74 tests.
+
 ```sh
 cd server
-NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts --coverage.enabled=false --maxWorkers=1
+NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts src/test/unit/api/timeSheetListSort.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-Result at `ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0`: the combined focused run passed 59 tests across 6 files, including 37 real-Postgres tests and 22 route/lifecycle regressions. The registered collection test file has 27 passing tests and now includes sorting/range behavior coverage. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
+Result at `82a6450383bf63c90d64e406736aede732ae6c32`: the focused set passed 74 tests across 7 files, including 37 real-Postgres tests, 22 route/lifecycle regressions, the registered mixed-data provider tests, and offset-aware query-schema tests. The registered collection test file has 27 passing tests and covers list sorting/ranges. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
 
 The native read-route and lifecycle regression command was:
 
 ```sh
 cd server
-NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts --coverage.enabled=false --maxWorkers=1
+NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts src/test/unit/api/timeSheetListSort.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-The combined six-file run includes both commands above. The server typecheck passed in this repair round with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server` (exit 0).
+The focused run includes these route, lifecycle, and list-sort schema checks. The server typecheck passed at `82a6450383bf63c90d64e406736aede732ae6c32` with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server` (exit 0).
 
 The last production build attempt at revision `b32ef96dbc879f800ef4d178e8b89b8027756d0c` compiled the production bundle and generated all 74 static pages, then exited 1 at Next.js's `SecurityFatalError` for installed Next.js 16.4.2. Retrying the same command reached the same security stop. The build remains a failure, not a successful build. Evidence is recorded at `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/server-build-b32ef96.log`; this repair round did not rerun the build. The build recommendation was `next upgrade --agent=security`; that separate dependency upgrade is outside this focused repair.
 
