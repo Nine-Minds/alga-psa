@@ -220,9 +220,10 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
     const transport = vi.fn(async () => new Response(wavBytes));
+    const lookup = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
     outbound.safeFetch.mockImplementation((url, options) =>
       outbound.actualSafeFetch(url, options, {
-        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        lookup,
         fetch: transport,
       })
     );
@@ -230,8 +231,12 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
     await expect(attachDocumentToTicket(ctx, tx, ticketId, {
       source: { url: 'https://prohibited.test/file.wav' },
-    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+    })).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      details: { hostname: 'prohibited.test', via_redirect: false },
+    });
 
+    expect(lookup).not.toHaveBeenCalled();
     expect(transport).not.toHaveBeenCalled();
     expect(uploadMock).not.toHaveBeenCalled();
     expect(state.externalFiles).toHaveLength(0);
@@ -239,7 +244,7 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     expect(state.associations).toHaveLength(0);
   });
 
-  it('uses only built-ins when a tenant has no policy rows and normalizes wildcard hosts', async () => {
+  it('uses only built-ins when a tenant has no policy rows', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
     state.fetchHosts['tenant-1'] = [];
@@ -293,17 +298,58 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     expect(state.associations).toHaveLength(1);
   });
 
-  it('rejects a redirect to a prohibited public host before requesting or persisting it', async () => {
+  it('honors a tenant disabling a built-in without affecting other tenants', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
+    state.fetchHosts['tenant-1'] = [{ kind: 'builtin_disabled', host_pattern: 'files.oaiusercontent.com' }];
+    state.fetchHosts['tenant-2'] = [];
+    const lookup = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
+    const transport = vi.fn(async () => new Response(wavBytes, { headers: { 'content-type': 'audio/wav' } }));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, { lookup, fetch: transport })
+    );
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    const input = { source: { url: 'https://files.oaiusercontent.com/builtin.wav' }, filename: 'builtin.wav' };
+
+    await expect(attachDocumentToTicket(ctx, tx, ticketId, input)).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      details: { hostname: 'files.oaiusercontent.com', via_redirect: false },
+    });
+    expect(lookup).not.toHaveBeenCalled();
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+
+    await expect(attachDocumentToTicket(ctx, { ...tx, tenantId: 'tenant-2' }, ticketId, input))
+      .resolves.toMatchObject({ filename: 'builtin.wav' });
+    expect(transport).toHaveBeenCalledOnce();
+    expect(uploadMock).toHaveBeenCalledOnce();
+    expect(state.externalFiles).toHaveLength(1);
+    expect(state.documents).toHaveLength(1);
+    expect(state.associations).toHaveLength(1);
+  });
+
+  it.each([1, 2, 3])('rejects a prohibited public host at redirect %i before DNS, requests or persistence', async (deniedHop) => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const allowedHosts = ['example.test', 'files.example.test', 'cdn.example.test'];
+    state.fetchHosts['tenant-1'] = allowedHosts.map((host_pattern) => ({ kind: 'custom', host_pattern }));
+    const allowedUrls = allowedHosts.slice(0, deniedHop).map((host) => `https://${host}/redirect.wav`);
+    const lookup = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
     const requested: string[] = [];
     const transport = vi.fn(async (url: string) => {
       requested.push(url);
-      return new Response(null, { status: 302, headers: { location: 'https://prohibited.test/file.wav' } });
+      if (url === 'https://prohibited.test/file.wav') {
+        return new Response(wavBytes, { headers: { 'content-type': 'audio/wav' } });
+      }
+      const location = allowedUrls[requested.length] ?? 'https://prohibited.test/file.wav';
+      return new Response(null, { status: 302, headers: { location } });
     });
     outbound.safeFetch.mockImplementation((url, options) =>
       outbound.actualSafeFetch(url, options, {
-        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        lookup,
         fetch: transport,
       })
     );
@@ -311,9 +357,13 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
     await expect(attachDocumentToTicket(ctx, tx, ticketId, {
       source: { url: 'https://example.test/redirect.wav' },
-    })).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+    })).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      details: { hostname: 'prohibited.test', via_redirect: true },
+    });
 
-    expect(requested).toEqual(['https://example.test/redirect.wav']);
+    expect(lookup.mock.calls).toEqual(allowedHosts.slice(0, deniedHop).map((host) => [host]));
+    expect(requested).toEqual(allowedUrls);
     expect(uploadMock).not.toHaveBeenCalled();
     expect(state.externalFiles).toHaveLength(0);
     expect(state.documents).toHaveLength(0);
@@ -478,7 +528,10 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
     await expect(
       attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://[fec0::1]/private.wav' } })
-    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+    ).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      details: { hostname: 'fec0::1', via_redirect: false },
+    });
 
     expect(transport).not.toHaveBeenCalled();
     expect(uploadMock).not.toHaveBeenCalled();
@@ -490,6 +543,7 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
   it('rejects a DNS answer in the local-use translation prefix before persistence', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
+    state.fetchHosts['tenant-1'].push({ kind: 'custom', host_pattern: 'dns.example.test' });
     const transport = vi.fn(async () => new Response(wavBytes));
     outbound.safeFetch.mockImplementation((url, options) =>
       outbound.actualSafeFetch(url, options, {
@@ -501,7 +555,10 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
     await expect(
       attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://dns.example.test/private.wav' } })
-    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+    ).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      message: 'URL resolved to a private or reserved address',
+    });
 
     expect(transport).not.toHaveBeenCalled();
     expect(uploadMock).not.toHaveBeenCalled();
@@ -510,16 +567,19 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     expect(state.associations).toHaveLength(0);
   });
 
-  it('rejects a redirect to nonpublic IPv6 before fetching or persisting its response', async () => {
+  it('rejects an allowed redirect host resolving to nonpublic IPv6 before fetching or persisting its response', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();
+    state.fetchHosts['tenant-1'].push({ kind: 'custom', host_pattern: 'ipv6.example.test' });
     const transport = vi.fn(async (_url: string) => new Response(null, {
       status: 302,
-      headers: { location: 'https://[fec0::1]/private.wav' },
+      headers: { location: 'https://ipv6.example.test/private.wav' },
     }));
     outbound.safeFetch.mockImplementation((url, options) =>
       outbound.actualSafeFetch(url, options, {
-        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        lookup: async (host: string) => host === 'ipv6.example.test'
+          ? [{ address: 'fec0::1', family: 6 }]
+          : [{ address: '93.184.216.34', family: 4 }],
         fetch: transport,
       })
     );
@@ -527,7 +587,10 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
     await expect(
       attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://example.test/redirect.wav' } })
-    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+    ).rejects.toMatchObject({
+      category: 'ValidationError', code: 'VALIDATION_ERROR',
+      message: 'URL resolved to a private or reserved address',
+    });
 
     expect(transport).toHaveBeenCalledOnce();
     expect(transport.mock.calls[0]![0]).toBe('https://example.test/redirect.wav');
