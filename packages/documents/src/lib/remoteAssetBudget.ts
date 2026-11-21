@@ -2,6 +2,8 @@ export interface RemoteAssetLimits {
   maxAssets: number;
   concurrency: number;
   maxTotalBytes: number;
+  /** Maximum combined byte length of all emitted remote data URIs in the rendered HTML. */
+  maxExpandedOutputBytes: number;
   perAssetTimeoutMs: number;
 }
 
@@ -9,6 +11,7 @@ export const DEFAULT_REMOTE_ASSET_LIMITS: RemoteAssetLimits = Object.freeze({
   maxAssets: 64,
   concurrency: 6,
   maxTotalBytes: 16 * 1024 * 1024,
+  maxExpandedOutputBytes: 16 * 1024 * 1024,
   perAssetTimeoutMs: 5000,
 });
 
@@ -18,6 +21,11 @@ export interface AssetBudget {
   readonly spentBytes: number;
   readonly admitted: number;
   readonly skipped: number;
+}
+
+export interface ExpandedOutputBudget {
+  reserve(bytes: number): boolean;
+  readonly spentBytes: number;
 }
 
 export function validateRemoteAssetLimits(limits: Partial<RemoteAssetLimits> = {}): RemoteAssetLimits {
@@ -54,6 +62,24 @@ export function createAssetBudget(limits: Partial<RemoteAssetLimits> = {}): Asse
     get spentBytes() { return spentBytes; },
     get admitted() { return admitted; },
     get skipped() { return skipped; },
+  };
+}
+
+export function createExpandedOutputBudget(maxBytes: number): ExpandedOutputBudget {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new TypeError('Expanded output limit must be a positive safe integer');
+  }
+  let spentBytes = 0;
+  return {
+    reserve(bytes) {
+      if (!Number.isSafeInteger(bytes) || bytes < 0) {
+        throw new TypeError('Expanded output reservation must be a non-negative safe integer');
+      }
+      if (bytes > maxBytes - spentBytes) return false;
+      spentBytes += bytes;
+      return true;
+    },
+    get spentBytes() { return spentBytes; },
   };
 }
 

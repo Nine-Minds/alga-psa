@@ -68,7 +68,8 @@ Defaults (call them out in the PR body, they are the policy): `maxAssets: 64`,
 `makeResolver` takes the budget: it admits by position, charges on success, and returns `null`
 (placeholder / transparent pixel) when either bound is hit — the *same* failure mode the code
 already has for a refused asset, so the preview degrades instead of failing. The cache stays, keyed
-by URL, because a repeated URL costs nothing and must not consume the budget twice.
+by URL, avoiding duplicate fetch and decoded-byte charges; repeated output references consume the
+separate expanded-output budget in section 2.4.
 
 Every existing caller (`BlockNoteDocumentHandler:79`, `MarkdownDocumentHandler:67`,
 `TextDocumentHandler:69`, `GenericFileDocumentHandler:59`, `OfficeDocumentHandler:81`)
@@ -80,6 +81,23 @@ optional `limits` so a caller that legitimately needs more can raise it delibera
 When the budget bites, the renderer logs once per render (asset count considered, admitted,
 skipped by count, skipped by bytes) at warn. A silent cap turns "my images vanished" into a
 support mystery; a one-line log makes the policy visible.
+
+### 2.4 Follow-up: bound repeated-reference output expansion (2026-11-21)
+
+The decoded-byte budget above is charged once per distinct URL. It does not bound the HTML
+retained by Chromium when a document repeats one large URL, because every `<img>` and CSS
+reference receives a complete base64 data URI. Add `maxExpandedOutputBytes` to the same limits
+object, defaulting to **16 MiB of emitted data-URI bytes per render**. The accounting uses the
+UTF-8 byte length of the complete URI (`data:<content-type>;base64,` plus the padded base64
+length, `4 * ceil(decodedBytes / 3)`) for every emitted occurrence. The cached URL is fetched
+and charged to `maxTotalBytes` once, while each output occurrence reserves its own full URI size.
+
+Reference output is admitted in source order across `<img src>` and CSS `url(...)`, independent
+of fetch completion order. Reserve capacity before building a base64 string or appending that
+replacement. References that do not fit retain their position using the existing bounded image
+placeholder or CSS transparent pixel. Truncate placeholder alt text so fallback markup cannot
+expand without bound. The same per-call `limits` override can raise or lower this cap.
+
 
 ## 3. What we are deliberately NOT doing
 

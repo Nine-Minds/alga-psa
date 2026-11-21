@@ -14,12 +14,22 @@ let server: http.Server;
 let port = 0;
 let connections = 0;
 let requests: string[] = [];
+let completedRequests: string[] = [];
+let responseBytes: Buffer | null = null;
+let responseDelayMs = 0;
+let smallResponseDelayMs = 0;
 
 beforeAll(async () => {
   server = http.createServer((req, res) => {
     requests.push(req.url ?? '');
-    res.writeHead(200, { 'content-type': 'image/png' });
-    res.end(TINY_PNG);
+    const send = () => {
+      completedRequests.push(req.url ?? '');
+      res.writeHead(200, { 'content-type': 'image/png' });
+      res.end(req.url?.startsWith('/large-repeated.png') ? responseBytes ?? TINY_PNG : TINY_PNG);
+    };
+    const delay = req.url?.startsWith('/large-repeated.png') ? responseDelayMs : smallResponseDelayMs;
+    if (delay) setTimeout(send, delay);
+    else send();
   });
   server.on('connection', () => {
     connections += 1;
@@ -224,6 +234,83 @@ describe('renderHtmlToPng network policy', () => {
     expect(overrideCalls).toHaveLength(1);
     expect(out).toContain('one');
     expect(out).toContain('two');
+  });
+
+  it('bounds expanded output for repeated large img and CSS references deterministically', async () => {
+    const imageBytes = Buffer.alloc(4096, 7);
+    const dataUri = `data:image/png;base64,${imageBytes.toString('base64')}`;
+    const perReferenceOutput = Buffer.byteLength(dataUri);
+    const outputCap = perReferenceOutput * 2 - 1;
+    const url = `http://127.0.0.1:${port}/large-repeated.png`;
+    const smallUrl = `http://127.0.0.1:${port}/small.png`;
+    const html = [
+      `<img src="${url}" alt="img-1">`,
+      `<div style="background-image:url('${url}')">css-1</div>`,
+      `<img src="${url}" alt="img-2">`,
+      `<div style="background-image:url(${url})">css-2</div>`,
+      `<img src="${url}" alt="img-3">`,
+      `<div style="background-image:url(${url})">css-3</div>`,
+      `<img src="${smallUrl}" alt="small">`,
+    ].join('');
+
+    const render = async (largeDelayMs: number, smallDelayMs = 0, maxExpandedOutputBytes = outputCap) => {
+      requests = [];
+      completedRequests = [];
+      responseBytes = imageBytes;
+      responseDelayMs = largeDelayMs;
+      smallResponseDelayMs = smallDelayMs;
+      const output = await resolveRemoteAssets(html, {
+        limits: {
+          maxAssets: 2,
+          maxTotalBytes: imageBytes.length + TINY_PNG.length,
+          maxExpandedOutputBytes,
+        },
+        fetchAsset: async (assetUrl) => {
+          const response = await fetch(assetUrl);
+          return {
+            bytes: Buffer.from(await response.arrayBuffer()),
+            contentType: response.headers.get('content-type') ?? '',
+          };
+        },
+      });
+      return { output, fetched: [...requests], completionOrder: [...completedRequests] };
+    };
+
+    const first = await render(20, 0);
+    const second = await render(0, 20);
+    expect(first.fetched.sort()).toEqual(['/large-repeated.png', '/small.png']);
+    expect(second.fetched.sort()).toEqual(['/large-repeated.png', '/small.png']);
+    expect(first.completionOrder).toEqual(['/small.png', '/large-repeated.png']);
+    expect(second.completionOrder).toEqual(['/large-repeated.png', '/small.png']);
+    expect(first.output).toBe(second.output);
+    expect(first.output.split(dataUri).length - 1).toBe(1);
+    expect(first.output).toContain(`<img src="data:image/png;base64,${TINY_PNG.toString('base64')}" alt="small">`);
+    expect(Buffer.byteLength(dataUri)).toBe(perReferenceOutput);
+    expect(perReferenceOutput * 2).toBeGreaterThan(outputCap);
+    expect(Buffer.byteLength(dataUri)).toBeLessThanOrEqual(outputCap);
+    expect(first.output.match(/role="img"/g)).toHaveLength(2);
+    expect(first.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(3); // safe CSS pixels
+    expect(first.output).toContain('css-1');
+    expect(first.output).toContain('css-2');
+    expect(first.output).toContain('css-3');
+    expect(first.output).toContain('img-2');
+    expect(first.output).toContain('img-3');
+    const referencePositions = ['img-1', 'css-1', 'img-2', 'css-2', 'img-3', 'css-3', 'small']
+      .map((label) => first.output.indexOf(label));
+    expect(referencePositions.every((position, index) =>
+      index === 0 || referencePositions[index - 1] < position
+    )).toBe(true);
+    expect(Buffer.byteLength(first.output)).toBeLessThan(Buffer.byteLength(html) + outputCap + 3000);
+
+    const override = await render(0, 0, perReferenceOutput * 3);
+    expect(override.output.split(dataUri).length - 1).toBe(3);
+    expect(override.output).toContain(`url("${dataUri}")`);
+    expect(override.output).toContain('small');
+    expect(override.output.match(/role="img"/g)).toHaveLength(2);
+    expect(override.output.match(/url\("data:image\/png;base64,/g)).toHaveLength(3); // one admitted CSS image and two safe pixels
+    responseBytes = null;
+    responseDelayMs = 0;
+    smallResponseDelayMs = 0;
   });
 
   it('forwards the default and overridden per-asset timeout and rejects malformed values', async () => {

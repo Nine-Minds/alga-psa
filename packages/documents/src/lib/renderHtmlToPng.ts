@@ -1,6 +1,12 @@
 import puppeteer from 'puppeteer';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
-import { createAssetBudget, mapWithConcurrency, validateRemoteAssetLimits, type RemoteAssetLimits } from './remoteAssetBudget';
+import {
+  createAssetBudget,
+  createExpandedOutputBudget,
+  mapWithConcurrency,
+  validateRemoteAssetLimits,
+  type RemoteAssetLimits,
+} from './remoteAssetBudget';
 
 export interface RenderHtmlToPngOptions {
   width?: number;
@@ -26,6 +32,20 @@ const TRANSPARENT_PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 const REMOTE_URL = /^\s*https?:\/\//i;
+const MAX_PLACEHOLDER_ALT_LENGTH = 128;
+
+interface ResolvedImage {
+  bytes: Buffer;
+  contentType: string;
+  dataUri?: string;
+}
+
+interface RemoteAssetReference {
+  index: number;
+  end: number;
+  kind: 'img' | 'css';
+  url: string;
+}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -42,7 +62,7 @@ async function resolveAssets(
   opts: RenderHtmlToPngOptions,
   orderedUrls: string[],
   limits: RemoteAssetLimits
-): Promise<Map<string, string | null>> {
+): Promise<Map<string, ResolvedImage | null>> {
   const budget = createAssetBudget(limits);
   let skippedByBytes = 0;
   let chargeQueue = Promise.resolve();
@@ -67,7 +87,7 @@ async function resolveAssets(
         skippedByBytes += 1;
         return null;
       }
-      return `data:${result.contentType};base64,${result.bytes.toString('base64')}`;
+      return { bytes: result.bytes, contentType: result.contentType };
     } finally {
       releaseCharge();
     }
@@ -88,32 +108,29 @@ async function resolveAssets(
   return new Map(orderedUrls.map((url, index) => [url, results[index]]));
 }
 
-function collectRemoteAssetUrls(html: string): string[] {
-  const references: Array<{ index: number; url: string }> = [];
+function collectRemoteAssetReferences(html: string): RemoteAssetReference[] {
+  const references: RemoteAssetReference[] = [];
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const src = getAttr(match[0], 'src');
-    if (src !== undefined && REMOTE_URL.test(src)) references.push({ index: match.index!, url: src.trim() });
+    if (src !== undefined && REMOTE_URL.test(src)) {
+      references.push({ index: match.index!, end: match.index! + match[0].length, kind: 'img', url: src.trim() });
+    }
   }
   for (const match of html.matchAll(/url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi)) {
-    references.push({ index: match.index!, url: decodeAttr(match[2]).trim() });
+    references.push({ index: match.index!, end: match.index! + match[0].length, kind: 'css', url: decodeAttr(match[2]).trim() });
   }
   references.sort((a, b) => a.index - b.index);
-  return [...new Set(references.map(({ url }) => url))];
+  return references;
 }
 
-function replaceReferences(
-  input: string,
-  re: RegExp,
-  fn: (match: RegExpExecArray) => string
-): string {
-  const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  let out = '';
-  let last = 0;
-  matches.forEach((m) => {
-    out += input.slice(last, m.index) + fn(m);
-    last = m.index! + m[0].length;
-  });
-  return out + input.slice(last);
+function dataUriByteLength(image: ResolvedImage): number {
+  const prefix = `data:${image.contentType};base64,`;
+  const base64Length = 4 * Math.ceil(image.bytes.length / 3);
+  return Buffer.byteLength(prefix) + base64Length;
+}
+
+function getDataUri(image: ResolvedImage): string {
+  return image.dataUri ??= `data:${image.contentType};base64,${image.bytes.toString('base64')}`;
 }
 
 /**
@@ -129,32 +146,53 @@ export async function resolveRemoteAssets(
 ): Promise<string> {
   const mode = opts.remoteAssets ?? 'inline';
   const limits = validateRemoteAssetLimits(opts.limits);
-  const orderedUrls = collectRemoteAssetUrls(html);
+  const references = collectRemoteAssetReferences(html);
+  const orderedUrls = [...new Set(references.map(({ url }) => url))];
   const resolvedAssets = mode === 'inline'
     ? await resolveAssets(opts, orderedUrls, limits)
-    : new Map<string, string | null>();
+    : new Map<string, ResolvedImage | null>();
+  const outputBudget = createExpandedOutputBudget(limits.maxExpandedOutputBytes);
+  let skippedByOutput = 0;
+  let out = '';
+  let last = 0;
 
-  // <img ... src="http...">
-  let out = replaceReferences(html, /<img\b[^>]*>/gi, (m) => {
-    const tag = m[0];
-    const src = getAttr(tag, 'src');
-    if (src === undefined || !REMOTE_URL.test(src)) return tag;
-    const dataUri = resolvedAssets.get(src.trim());
-    if (dataUri) {
-      return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
+  for (const reference of references) {
+    out += html.slice(last, reference.index);
+    const image = resolvedAssets.get(reference.url);
+    const fits = image !== null && image !== undefined && outputBudget.reserve(dataUriByteLength(image));
+    if (fits) {
+      const dataUri = getDataUri(image);
+      if (reference.kind === 'img') {
+        const tag = html.slice(reference.index, reference.end);
+        out += tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
+      } else {
+        out += `url("${dataUri}")`;
+      }
+    } else {
+      if (image) skippedByOutput += 1;
+      if (reference.kind === 'img') {
+        const tag = html.slice(reference.index, reference.end);
+        const alt = (getAttr(tag, 'alt') ?? '').slice(0, MAX_PLACEHOLDER_ALT_LENGTH);
+        out += `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
+      } else {
+        out += `url("${TRANSPARENT_PIXEL}")`;
+      }
     }
-    const alt = getAttr(tag, 'alt') ?? '';
-    return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
-  });
+    last = reference.end;
+  }
+  out += html.slice(last);
 
   // srcset can also load remote images; drop it when it references remote URLs.
   out = out.replace(/(<img\b[^>]*?)\s(?:srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '$1');
 
-  // CSS url(http...)
-  out = replaceReferences(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, (m) => {
-    const dataUri = resolvedAssets.get(decodeAttr(m[2]).trim());
-    return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  });
+  if (skippedByOutput) {
+    console.warn('[renderHtmlToPng] expanded remote asset output budget exhausted', {
+      considered: references.length,
+      skippedByOutput,
+      spentExpandedOutputBytes: outputBudget.spentBytes,
+      maxExpandedOutputBytes: limits.maxExpandedOutputBytes,
+    });
+  }
 
   return out;
 }
