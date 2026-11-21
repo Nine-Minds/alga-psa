@@ -162,6 +162,8 @@ async function seedCoManagedSeatWorld() {
 }
 
 async function acceptCoManagedInvitation(email: string, invitationToken: string, roleId: string) {
+  // Two duplicate pending invitations reserve one distinct seat before acceptance.
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, context.tenant))).toBe(1);
   return runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () => db.transaction(trx =>
     new UserService().createFromInvitation({ username: email, email, password: 'Passw0rd!x', first_name: 'Seat',
       last_name: 'Member', user_type: 'internal', is_inactive: false, role_ids: [roleId] },
@@ -169,9 +171,11 @@ async function acceptCoManagedInvitation(email: string, invitationToken: string,
 }
 
 async function expectAcceptedReservationState(userId: string, duplicateInvitationId: string) {
-  expect(await db('user_invitations').where({ tenant: context.tenant, invitation_id: duplicateInvitationId })
-    .first('invited_user_id', 'used_at')).toMatchObject({ invited_user_id: userId, used_at: null });
+  const invitation = await db('user_invitations').where({ tenant: context.tenant, invitation_id: duplicateInvitationId })
+    .first('invited_user_id', 'used_at', 'email_normalized');
+  expect(invitation).toMatchObject({ invited_user_id: userId, used_at: null });
   expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, context.tenant))).toBe(1);
+  return invitation.email_normalized as string;
 }
 
 it('refuses to reactivate an internal user when the seat limit is reached', async () => {
@@ -195,7 +199,12 @@ it('reactivates an accepted member through the action while its retained duplica
   const { email, invitationToken, duplicateInvitationId, roleId } = await seedCoManagedSeatWorld();
   const accepted = await acceptCoManagedInvitation(email, invitationToken, roleId);
   context.userId = accepted.user.user_id;
-  await expectAcceptedReservationState(context.userId, duplicateInvitationId);
+  const reservedIdentity = await expectAcceptedReservationState(context.userId, duplicateInvitationId);
+
+  const changedEmail = `renamed-${randomUUID()}@example.test`;
+  await expect(updateUser(context.userId, { email: changedEmail })).resolves.toMatchObject({ success: true });
+  expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('email'))
+    .toEqual({ email: changedEmail });
 
   await expect(updateUser(context.userId, { is_inactive: true })).resolves.toMatchObject({ success: true });
   expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('is_inactive')).toEqual({ is_inactive: true });
@@ -204,9 +213,10 @@ it('reactivates an accepted member through the action while its retained duplica
   await expect(updateUser(context.userId, { is_inactive: false })).resolves.toMatchObject({ success: true });
   expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('is_inactive')).toEqual({ is_inactive: false });
   await expectAcceptedReservationState(context.userId, duplicateInvitationId);
-  const outsiderEmail = `outsider-${randomUUID()}@example.test`;
+  // The duplicate's immutable snapshot still reserves capacity even after the
+  // linked member changes their live email. An unrelated create cannot claim it.
   await expect(runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
-    new UserService().create({ username: outsiderEmail, email: outsiderEmail, password: 'Passw0rd!x',
+    new UserService().create({ username: reservedIdentity, email: reservedIdentity, password: 'Passw0rd!x',
       first_name: 'Outside', last_name: 'Member', user_type: 'internal' }, createSystemContext(context.tenant))))).rejects.toMatchObject({
     code: 'CO_MANAGED_SEAT_LIMIT',
   });
@@ -216,7 +226,13 @@ it('reactivates an accepted member through UserService at full allocation and re
   const { email, invitationToken, duplicateInvitationId, roleId } = await seedCoManagedSeatWorld();
   const accepted = await acceptCoManagedInvitation(email, invitationToken, roleId);
   const userId = accepted.user.user_id;
-  await expectAcceptedReservationState(userId, duplicateInvitationId);
+  const reservedIdentity = await expectAcceptedReservationState(userId, duplicateInvitationId);
+
+  const changedEmail = `renamed-${randomUUID()}@example.test`;
+  await runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
+    new UserService().update(userId, { email: changedEmail } as any, createSystemContext(context.tenant))));
+  expect(await db('users').where({ tenant: context.tenant, user_id: userId }).first('email'))
+    .toEqual({ email: changedEmail });
 
   await runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
     new UserService().update(userId, { is_inactive: true } as any, createSystemContext(context.tenant))));
@@ -227,9 +243,10 @@ it('reactivates an accepted member through UserService at full allocation and re
   expect(await db('users').where({ tenant: context.tenant, user_id: userId }).first('is_inactive')).toEqual({ is_inactive: false });
   await expectAcceptedReservationState(userId, duplicateInvitationId);
 
-  const outsiderEmail = `outsider-${randomUUID()}@example.test`;
+  // Admission remains tied to the tenant-scoped immutable member ID; the old
+  // invitation address cannot grant this unrelated user the member's seat.
   await expect(runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
-    new UserService().create({ username: outsiderEmail, email: outsiderEmail, password: 'Passw0rd!x',
+    new UserService().create({ username: reservedIdentity, email: reservedIdentity, password: 'Passw0rd!x',
       first_name: 'Outside', last_name: 'Member', user_type: 'internal' }, createSystemContext(context.tenant))))).rejects.toMatchObject({
     code: 'CO_MANAGED_SEAT_LIMIT',
   });
