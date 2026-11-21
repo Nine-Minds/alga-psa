@@ -282,7 +282,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     const rows = [
       { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 101, total_hours: 101, approval_status: 'DRAFT',
-        submitted_at: '2025-03-10T08:00:00Z', approved_at: '2025-03-11T18:00:00Z', period_start: '2025-03-10', period_end: '2025-03-16',
+        submitted_at: new Date('2025-03-10T08:00:00Z'), approved_at: new Date('2025-03-11T18:00:00Z'), period_start: '2025-03-10', period_end: '2025-03-16',
         time_entries: [
           { time_sheet_id: 'provider-own', tenant: f.tenantId, duration: 60 },
           { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, duration: 900 },

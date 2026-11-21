@@ -271,8 +271,9 @@ export class TimeSheetService extends BaseService<any> {
           if (left == null && right != null) return 1;
           if (right == null && left != null) return -1;
         }
-        const leftValue = (sortField === 'submitted_at' || sortField === 'approved_at') && left != null ? Date.parse(String(left)) : left;
-        const rightValue = (sortField === 'submitted_at' || sortField === 'approved_at') && right != null ? Date.parse(String(right)) : right;
+        const isTimestampSort = sortField === 'submitted_at' || sortField === 'approved_at';
+        const leftValue = isTimestampSort && left != null ? (left instanceof Date ? left.getTime() : Date.parse(String(left))) : left;
+        const rightValue = isTimestampSort && right != null ? (right instanceof Date ? right.getTime() : Date.parse(String(right))) : right;
         const comparison = leftValue == null ? 0 : rightValue == null ? 0 : typeof leftValue === 'number' && typeof rightValue === 'number'
           ? leftValue - rightValue
           : String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true });
