@@ -17,15 +17,17 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { it } from 'vitest';
 
-const root = process.cwd();
-dotenv.config({ path: path.join(root, 'server/.env.local'), override: false });
+const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = path.resolve(moduleDirectory, '../../../..');
+const optedIn = process.env.RUN_PRIVATE_IMAP_INGESTION_TEST === '1';
 
 const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
 const dbName = `imap_private_ingest_${suffix}`;
 const redisPrefix = `imap-review-${suffix}`;
-const scratchStorage = await fs.mkdtemp(path.join(os.tmpdir(), 'alga-imap-ingest-'));
+let scratchStorage: string | undefined;
 const privateGateway = '172.17.0.1';
 const greenMailAddress = '172.17.0.31';
 const customImapPort = 1143;
@@ -50,7 +52,31 @@ let providerId: string | undefined;
 let defaultsId: string | undefined;
 let imapFlowModule: any;
 let redisClient: any;
-let greenMailMessageUid: number | undefined;
+let queueKeys: string[] | undefined;
+let messageMayExist = false;
+let relayConnectionCount = 0;
+const originalEnvironment = new Map<string, string | undefined>();
+
+function rememberEnvironmentVariable(name: string): void {
+  if (!originalEnvironment.has(name)) originalEnvironment.set(name, process.env[name]);
+}
+
+function setEnvironmentVariable(name: string, value: string): void {
+  rememberEnvironmentVariable(name);
+  process.env[name] = value;
+}
+
+function unsetEnvironmentVariable(name: string): void {
+  rememberEnvironmentVariable(name);
+  delete process.env[name];
+}
+
+function restoreEnvironment(): void {
+  for (const [name, value] of originalEnvironment) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,6 +93,41 @@ async function waitFor<T>(label: string, read: () => Promise<T>, done: (value: T
   throw new Error(`Timed out waiting for ${label}; last=${JSON.stringify(last)}`);
 }
 
+async function drainDurableQueue(consumer: any, redis: any, label: string): Promise<void> {
+  if (!queueKeys) throw new Error('durable queue keys were not initialized');
+  let consecutiveEmptyPolls = 0;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const processed = await consumer.runOnce();
+    const [ready, processing, inflight, leases, delayed, delayedData, deadLetters] = await Promise.all([
+      redis.lLen(queueKeys[0]),
+      redis.lLen(queueKeys[1]),
+      redis.hLen(queueKeys[2]),
+      redis.zCard(queueKeys[3]),
+      redis.zCard(queueKeys[4]),
+      redis.hLen(queueKeys[5]),
+      redis.lLen(queueKeys[6]),
+    ]);
+    assert.equal(deadLetters, 0, `${label} left no durable queue dead letters`);
+    const queueIsIdle = ready + processing + inflight + leases + delayed + delayedData === 0;
+    if (!processed && queueIsIdle) {
+      consecutiveEmptyPolls += 1;
+      if (consecutiveEmptyPolls >= 2) return;
+    } else {
+      consecutiveEmptyPolls = 0;
+    }
+    if (!processed) await sleep(50);
+  }
+  throw new Error(`Timed out draining durable inbound queue after ${label}`);
+}
+
+async function cleanupSafely(label: string, cleanup: () => Promise<void>): Promise<void> {
+  try {
+    await cleanup();
+  } catch (error) {
+    console.warn(`${label} cleanup failed:`, (error as Error).message);
+  }
+}
+
 async function listen(server: Server | NetServer, port = 0, host = '127.0.0.1'): Promise<number> {
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -77,7 +138,6 @@ async function listen(server: Server | NetServer, port = 0, host = '127.0.0.1'):
 
 async function closeServer(server?: Server | NetServer): Promise<void> {
   if (!server) return;
-  for (const socket of relaySockets) socket.destroy();
   await new Promise<void>((resolve) => server.close(() => resolve()));
 }
 
@@ -95,16 +155,15 @@ async function createImapClient(host: string, port: number) {
 }
 
 async function removeGreenMailMessage(): Promise<void> {
-  if (!imapFlowModule) return;
+  if (!imapFlowModule || !messageMayExist) return;
   try {
     const client = await createImapClient(privateGateway, customImapPort);
     try {
       await client.mailboxOpen('INBOX');
       const matchingUids: number[] = [];
       for await (const item of client.fetch('1:*', { uid: true, envelope: true }, { uid: true })) {
-        const id = item.envelope?.messageId || '';
-        const itemSubject = item.envelope?.subject || '';
-        if (id.startsWith('<private-imap-') && itemSubject.startsWith('Private custom-port ingestion ')) {
+        const id = String(item.envelope?.messageId || '').replace(/^<|>$/g, '');
+        if (id === messageId) {
           matchingUids.push(item.uid);
         }
       }
@@ -116,6 +175,7 @@ async function removeGreenMailMessage(): Promise<void> {
           lock.release();
         }
       }
+      messageMayExist = false;
       await client.logout();
     } catch (error) {
       try { await client.logout(); } catch { /* cleanup best effort */ }
@@ -127,38 +187,63 @@ async function removeGreenMailMessage(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const readSecret = async (name: string) => (await readFile(path.join(root, 'secrets', name), 'utf8')).trim();
-  process.env.NODE_ENV = 'test';
-  process.env.APP_ENV = 'development';
-  process.env.DB_HOST = '127.0.0.1';
-  process.env.DB_HOST_ADMIN = '127.0.0.1';
-  process.env.DB_PORT = String(postgresPort);
-  process.env.DB_PORT_ADMIN = String(postgresPort);
-  process.env.DB_NAME_SERVER = dbName;
-  process.env.DB_USER_ADMIN = 'postgres';
-  process.env.DB_USER_SERVER = 'app_user';
-  process.env.DB_PASSWORD_ADMIN = await readSecret('postgres_password');
-  process.env.DB_PASSWORD_SERVER = await readSecret('db_password_server');
-  process.env.REDIS_HOST = '127.0.0.1';
-  process.env.REDIS_PORT = String(redisPort);
-  process.env.REDIS_PASSWORD = '';
-  process.env.SECRET_READ_CHAIN = 'env';
-  process.env.STORAGE_DEFAULT_PROVIDER = 'local';
-  process.env.STORAGE_LOCAL_BASE_PATH = scratchStorage;
-  process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_READY_KEY = `${redisPrefix}:ready`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_PROCESSING_KEY = `${redisPrefix}:processing`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_HASH_KEY = `${redisPrefix}:inflight`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_LEASE_KEY = `${redisPrefix}:leases`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_KEY = `${redisPrefix}:delayed`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_DATA_KEY = `${redisPrefix}:delayed-data`;
-  process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DLQ_KEY = `${redisPrefix}:dead`;
-  process.env.IMAP_STARTUP_STAGGER_MS = '0';
-  process.env.IMAP_PROVIDER_REFRESH_MS = '60000';
-  process.env.IMAP_IDLE_POLL_MS = '500';
-  process.env.IMAP_POLL_INTERVAL_MS = '500';
-  process.env.IMAP_CONNECTION_TIMEOUT_MS = '3000';
-  process.env.IMAP_WEBHOOK_SECRET = webhookSecret;
+  const dotenvPath = path.join(repositoryRoot, 'server/.env.local');
+  try {
+    const dotenvContent = await fs.readFile(dotenvPath, 'utf8');
+    for (const name of Object.keys(dotenv.parse(dotenvContent))) rememberEnvironmentVariable(name);
+    dotenv.config({ path: dotenvPath, override: false });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+
+  const readSecret = async (name: string) => (await readFile(path.join(repositoryRoot, 'secrets', name), 'utf8')).trim();
+  const adminPassword = await readSecret('postgres_password');
+  const serverPassword = await readSecret('db_password_server');
+  scratchStorage = await fs.mkdtemp(path.join(os.tmpdir(), 'alga-imap-ingest-'));
+
+  const environment = {
+    NODE_ENV: 'test',
+    APP_ENV: 'development',
+    DB_HOST: '127.0.0.1',
+    DB_HOST_ADMIN: '127.0.0.1',
+    DB_PORT: String(postgresPort),
+    DB_PORT_ADMIN: String(postgresPort),
+    DB_NAME_SERVER: dbName,
+    DB_USER_ADMIN: 'postgres',
+    DB_USER_SERVER: 'app_user',
+    DB_PASSWORD_ADMIN: adminPassword,
+    DB_PASSWORD_SERVER: serverPassword,
+    REDIS_HOST: '127.0.0.1',
+    REDIS_PORT: String(redisPort),
+    REDIS_PASSWORD: '',
+    SECRET_READ_CHAIN: 'env',
+    STORAGE_DEFAULT_PROVIDER: 'local',
+    STORAGE_LOCAL_BASE_PATH: scratchStorage!,
+    UNIFIED_INBOUND_EMAIL_DURABLE_MODE: 'enforce',
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_READY_KEY: `${redisPrefix}:ready`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_PROCESSING_KEY: `${redisPrefix}:processing`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_HASH_KEY: `${redisPrefix}:inflight`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_LEASE_KEY: `${redisPrefix}:leases`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_KEY: `${redisPrefix}:delayed`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_DATA_KEY: `${redisPrefix}:delayed-data`,
+    UNIFIED_INBOUND_EMAIL_QUEUE_V2_DLQ_KEY: `${redisPrefix}:dead`,
+    IMAP_STARTUP_STAGGER_MS: '0',
+    IMAP_PROVIDER_REFRESH_MS: '60000',
+    IMAP_IDLE_POLL_MS: '500',
+    IMAP_POLL_INTERVAL_MS: '500',
+    IMAP_CONNECTION_TIMEOUT_MS: '3000',
+    IMAP_WEBHOOK_SECRET: webhookSecret,
+  };
+  for (const [name, value] of Object.entries(environment)) setEnvironmentVariable(name, value);
+  queueKeys = [
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_READY_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_PROCESSING_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_HASH_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_LEASE_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_DATA_KEY,
+    environment.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DLQ_KEY,
+  ];
 
   const { createTestDbConnection } = await import('../../../test-utils/dbConfig');
   db = await createTestDbConnection({ databaseName: dbName, runSeeds: true });
@@ -222,7 +307,7 @@ async function main(): Promise<void> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
-  process.env[`TENANT_${tenantId}_imap_password_${providerId}`] = mailboxPassword;
+  setEnvironmentVariable(`TENANT_${tenantId}_imap_password_${providerId}`, mailboxPassword);
 
   // The only reachable app-facing listener is an adapter which calls the real
   // route function. No Next or application server is started.
@@ -245,9 +330,10 @@ async function main(): Promise<void> {
     }
   });
   adapterPort = await listen(adapter);
-  process.env.IMAP_WEBHOOK_URL = `http://127.0.0.1:${adapterPort}/api/email/webhooks/imap`;
+  setEnvironmentVariable('IMAP_WEBHOOK_URL', `http://127.0.0.1:${adapterPort}/api/email/webhooks/imap`);
 
   relay = net.createServer((socket) => {
+    relayConnectionCount += 1;
     relaySockets.add(socket);
     socket.on('close', () => relaySockets.delete(socket));
     const upstream = net.connect(143, greenMailAddress);
@@ -258,8 +344,8 @@ async function main(): Promise<void> {
   });
   await listen(relay, customImapPort, privateGateway);
   imapFlowModule = await import('imapflow');
-  await removeGreenMailMessage();
 
+  unsetEnvironmentVariable('EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST');
   const { assertSafeImapHost } = await import('@alga-psa/shared/services/email/imapOutboundTarget');
   await assert.rejects(() => assertSafeImapHost(privateGateway, customImapPort), /not allowed|private/i,
     'private custom-port target is denied with no deployment allowlist');
@@ -274,7 +360,7 @@ async function main(): Promise<void> {
 
   // This is the deployment operator's exact-target authorization. The worker
   // receives it through the same environment variable used by OAuth refresh.
-  process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST = privateGateway;
+  setEnvironmentVariable('EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST', privateGateway);
   service = new (await import('../../../../services/email-service/src/emailService')).EmailService();
   await service.start();
   await waitFor('custom-port listener login', async () => db('email_providers').where({ tenant: tenantId, id: providerId }).first('status'),
@@ -294,18 +380,20 @@ async function main(): Promise<void> {
     '',
   ].join('\r\n'));
   await deliveryClient.mailboxOpen('INBOX');
+  messageMayExist = true;
   const appendResult = await deliveryClient.append('INBOX', rawMime, { flags: [] });
-  greenMailMessageUid = appendResult?.uid;
+  assert.ok(appendResult?.uid, 'GreenMail APPEND returned a UID for this message');
   await deliveryClient.logout();
 
-  const { destroyAdminConnection, destroyTenantConnection } = await import('@alga-psa/db');
   const { EmailService } = await import('../../../../services/email-service/src/emailService');
   const { UnifiedInboundEmailQueueConsumerV2 } = await import('@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumerV2');
   const { processUnifiedInboundEmailDurableJob, renewPostgresLeaseForV2Job } = await import('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2');
   const { getInboundEmailDurableRedisClient } = await import('@alga-psa/shared/services/email/unifiedInboundEmailQueueV2');
+  redisClient = await getInboundEmailDurableRedisClient();
   const consumer = new UnifiedInboundEmailQueueConsumerV2({
     consumerId: `imap-review-${suffix}`,
     pollDelayMs: 50,
+    blockSeconds: 0,
     renewPostgresLease: renewPostgresLeaseForV2Job,
     handleJob: processUnifiedInboundEmailDurableJob,
   });
@@ -316,14 +404,7 @@ async function main(): Promise<void> {
   assert.equal(inboxRow.status, 'received');
   assert.match(inboxRow.source_object_key, new RegExp(`inbound-email/${tenantId}/${providerId}/`));
 
-  let processed = false;
-  for (let i = 0; i < 20; i += 1) {
-    const latest = await db('inbound_email_inbox').where({ tenant: tenantId, inbox_id: inboxRow.inbox_id }).first('status');
-    if (['succeeded', 'skipped', 'terminal_failed'].includes(latest?.status)) break;
-    processed = (await consumer.runOnce()) || processed;
-    if (!processed) await sleep(100);
-  }
-  assert.ok(processed, 'production durable consumer claimed an enqueued job');
+  await drainDurableQueue(consumer, redisClient, 'initial delivery');
   const terminalInbox = await waitFor('durable inbox terminal state', async () => db('inbound_email_inbox')
     .where({ tenant: tenantId, inbox_id: inboxRow.inbox_id }).first('status', 'outcome_kind', 'ticket_id'),
   (row: any) => ['succeeded', 'skipped', 'terminal_failed'].includes(row?.status));
@@ -341,66 +422,91 @@ async function main(): Promise<void> {
   const providerAssociation = await db('email_providers').where({ tenant: tenantId, id: providerId }).first('tenant', 'id');
   assert.equal(providerAssociation.tenant, tenantId);
   assert.equal(providerAssociation.id, providerId);
-  const ticketCountBeforeReplay = await db('tickets').where({ tenant: tenantId })
-    .whereRaw("email_metadata->>'messageId' = ?", [messageId]).count('* as count').first();
-
+  const folderState = await db('imap_email_provider_config')
+    .where({ tenant: tenantId, email_provider_id: providerId }).first('uid_validity', 'last_uid');
+  assert.ok(folderState?.uid_validity, 'listener persisted the mailbox UIDVALIDITY');
+  const ingressIdentity = {
+    mailbox: 'INBOX',
+    uid: String(appendResult.uid),
+    uidValidity: String(folderState.uid_validity),
+  };
   // Replay the production webhook pointer and restart the listener (which must
   // resume at its persisted UID cursor); neither may produce duplicate effects.
   const pointer = await db('inbound_email_ingress').where({ tenant: tenantId, provider_id: providerId, provider_type: 'imap' })
+    .whereRaw("provider_pointer->>'mailbox' = ?", [ingressIdentity.mailbox])
+    .whereRaw("provider_pointer->>'uid' = ?", [ingressIdentity.uid])
+    .whereRaw("provider_pointer->>'uidValidity' = ?", [ingressIdentity.uidValidity])
     .first('ingress_id', 'ingress_key', 'provider_pointer');
   assert.ok(pointer, 'webhook pointer persisted with tenant/provider association');
+  const ingressCountBeforeReplay = await db('inbound_email_ingress')
+    .where({ tenant: tenantId, provider_id: providerId, provider_type: 'imap' })
+    .whereRaw("provider_pointer->>'mailbox' = ?", [ingressIdentity.mailbox])
+    .whereRaw("provider_pointer->>'uid' = ?", [ingressIdentity.uid])
+    .whereRaw("provider_pointer->>'uidValidity' = ?", [ingressIdentity.uidValidity])
+    .count('* as count').first();
+  assert.equal(Number(ingressCountBeforeReplay?.count), 1);
+  assert.equal(String(pointer.provider_pointer.uid), ingressIdentity.uid);
+  assert.equal(String(pointer.provider_pointer.uidValidity), ingressIdentity.uidValidity);
   const replay = await POST(new Request('http://local/api/email/webhooks/imap', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-imap-webhook-secret': webhookSecret },
     body: JSON.stringify({ providerId, tenant: tenantId, tenantId, pointer: { mailbox: 'INBOX', uid: pointer.provider_pointer.uid, uidValidity: pointer.provider_pointer.uidValidity, messageId } }),
   }) as any);
   assert.equal(replay.status, 200, 'same production webhook pointer is safely replayable');
-  await consumer.runOnce();
+  await drainDurableQueue(consumer, redisClient, 'webhook replay');
+
+  const relayConnectionsBeforeRestart = relayConnectionCount;
+  const providerBeforeRestart = await db('email_providers').where({ tenant: tenantId, id: providerId })
+    .first('last_sync_at');
+  const lastSyncBeforeRestart = providerBeforeRestart?.last_sync_at
+    ? new Date(providerBeforeRestart.last_sync_at).getTime()
+    : 0;
   await service.stop();
   service = new EmailService();
   await service.start();
-  await sleep(1800);
+  const reconnected = await waitFor('listener reconnection after restart', async () => {
+    const provider = await db('email_providers').where({ tenant: tenantId, id: providerId }).first('status', 'last_sync_at');
+    const config = await db('imap_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).first('last_uid');
+    return {
+      status: provider?.status,
+      lastSyncAt: provider?.last_sync_at ? new Date(provider.last_sync_at).getTime() : 0,
+      lastUid: Number(config?.last_uid || 0),
+      relayConnections: relayConnectionCount,
+    };
+  }, (state) => state.status === 'connected'
+    && state.relayConnections > relayConnectionsBeforeRestart
+    && state.lastSyncAt > lastSyncBeforeRestart
+    && state.lastUid >= Number(appendResult.uid));
+  assert.ok(reconnected.relayConnections > relayConnectionsBeforeRestart, 'listener opened a new custom-port connection after restart');
+  assert.ok(reconnected.lastSyncAt > lastSyncBeforeRestart, 'restarted listener completed mailbox synchronization before teardown');
+  assert.ok(reconnected.lastUid >= Number(appendResult.uid), 'listener cursor remains past the delivered message');
+  await drainDurableQueue(consumer, redisClient, 'listener reconnection');
   await service.stop();
 
   const finalInboxCount = await db('inbound_email_inbox').where({ tenant: tenantId, provider_id: providerId, rfc_message_id: messageId }).count('* as count').first();
   const finalTickets = await db('tickets').where({ tenant: tenantId })
     .whereRaw("email_metadata->>'messageId' = ?", [messageId]).count('* as count').first();
-  const finalIngressCount = await db('inbound_email_ingress').where({ tenant: tenantId, ingress_id: pointer.ingress_id }).count('* as count').first();
+  const finalIngressCount = await db('inbound_email_ingress')
+    .where({ tenant: tenantId, provider_id: providerId, provider_type: 'imap' })
+    .whereRaw("provider_pointer->>'mailbox' = ?", [ingressIdentity.mailbox])
+    .whereRaw("provider_pointer->>'uid' = ?", [ingressIdentity.uid])
+    .whereRaw("provider_pointer->>'uidValidity' = ?", [ingressIdentity.uidValidity])
+    .count('* as count').first();
   assert.equal(Number(finalInboxCount?.count), 1, 'listener reconnect and webhook replay retain one inbox row');
   assert.equal(Number(finalTickets?.count), 1, 'listener reconnect and webhook replay retain one ticket');
   assert.equal(Number(finalIngressCount?.count), 1, 'webhook replay retains one ingress row');
-  assert.ok(Number(ticketCountBeforeReplay?.count) <= 1);
-
-  redisClient = await getInboundEmailDurableRedisClient();
-  const queueKeys = [
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_READY_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_PROCESSING_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_HASH_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_INFLIGHT_LEASE_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DELAYED_DATA_KEY!,
-    process.env.UNIFIED_INBOUND_EMAIL_QUEUE_V2_DLQ_KEY!,
-  ];
-  await redisClient.del(queueKeys);
+  assert.equal(Number(finalIngressCount?.count), Number(ingressCountBeforeReplay?.count), 'replay and reconnect retain one provider/message ingress');
 
   console.log(JSON.stringify({
     result: 'passed',
     productionComponents: ['services/email-service EmailService/ImapFolderListener', 'stageReadyInboundSource', 'packages/integrations POST', 'UnifiedInboundEmailQueueConsumerV2', 'processUnifiedInboundEmailDurableJob'],
     configuration: { allowlist: privateGateway, host: privateGateway, port: customImapPort, secure: false, postgres: `127.0.0.1:${postgresPort}`, redis: `127.0.0.1:${redisPort}`, storage: 'isolated local storage', database: 'unique seeded scratch database', queue: 'unique Redis key namespace' },
     defaultDeny: 'private custom-port target rejected with allowlist unset; listener persisted denial before connect',
-    persisted: { tenant: tenantId.slice(0, 8), providerId: providerId.slice(0, 8), messageId, inboxCount: Number(finalInboxCount?.count), ingressCount: Number(finalIngressCount?.count), ticketCount: Number(finalTickets?.count), ticketId: String(ticketId).slice(0, 8), outcome: terminalInbox.outcome_kind, mimeSha256: inboxRow.source_sha256, storedMimeBytes: inboxRow.source_object_key ? Number((await fs.stat(path.join(scratchStorage, inboxRow.source_object_key))).size) : null },
-    replayAndReconnect: 'same webhook pointer replayed, listener restarted; counts remained 1/1/1',
+    persisted: { tenant: tenantId.slice(0, 8), providerId: providerId.slice(0, 8), messageId, inboxCount: Number(finalInboxCount?.count), ingressCount: Number(finalIngressCount?.count), ticketCount: Number(finalTickets?.count), ticketId: String(ticketId).slice(0, 8), outcome: terminalInbox.outcome_kind, mimeSha256: inboxRow.source_sha256, storedMimeBytes: inboxRow.source_object_key ? Number((await fs.stat(path.join(scratchStorage!, inboxRow.source_object_key))).size) : null },
+    replayAndReconnect: { queueDrained: true, listenerConnectionsBefore: relayConnectionsBeforeRestart, listenerConnectionsAfter: reconnected.relayConnections, mailboxSyncCompleted: true, cursorUid: reconnected.lastUid, countsRemained: '1/1/1' },
     applicationServerStarted: false,
   }, null, 2));
 
-  await removeGreenMailMessage();
-  greenMailMessageUid = undefined;
-  await destroyAdminConnection();
-  await destroyTenantConnection();
-  await db.destroy();
-  db = undefined;
-  await dropDatabase();
-  await fs.rm(scratchStorage, { recursive: true, force: true });
 }
 
 async function dropDatabase(): Promise<void> {
@@ -424,29 +530,41 @@ async function dropDatabase(): Promise<void> {
   }
 }
 
-it('validates private custom-port IMAP ingestion through production components', async () => {
+it.skipIf(!optedIn)('validates private custom-port IMAP ingestion through production components', async () => {
   try {
     await main();
   } finally {
-    try { await service?.stop(); } catch { /* process cleanup */ }
-    await closeServer(adapter);
-    await removeGreenMailMessage();
-    await closeServer(relay);
-    try { await redisClient?.quit(); } catch { /* unique queue keys are isolated */ }
-    if (db) {
-      try { await db.destroy(); } catch { /* cleanup */ }
-    }
-    try {
+    await cleanupSafely('email service', async () => { await service?.stop(); });
+    await cleanupSafely('webhook adapter', async () => { await closeServer(adapter); });
+    if (messageMayExist) setEnvironmentVariable('EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST', privateGateway);
+    await cleanupSafely('fixture message', removeGreenMailMessage);
+    await cleanupSafely('IMAP relay', async () => {
+      for (const socket of relaySockets) socket.destroy();
+      await closeServer(relay);
+    });
+    await cleanupSafely('Redis queue', async () => {
+      if (queueKeys?.length) {
+        if (!redisClient) {
+          const { getInboundEmailDurableRedisClient } = await import('@alga-psa/shared/services/email/unifiedInboundEmailQueueV2');
+          redisClient = await getInboundEmailDurableRedisClient();
+        }
+        await redisClient.del(queueKeys);
+      }
+      await redisClient?.quit();
+    });
+    await cleanupSafely('scratch database', async () => {
+      if (db) {
+        await db.destroy();
+        db = undefined;
+      }
       const { destroyAdminConnection, destroyTenantConnection } = await import('@alga-psa/db');
       await destroyAdminConnection();
       await destroyTenantConnection();
       await dropDatabase();
-    } catch (error) {
-      console.warn('scratch database cleanup failed:', (error as Error).message);
-    }
-    try { await fs.rm(scratchStorage, { recursive: true, force: true }); } catch { /* cleanup */ }
-    delete process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST;
-    delete process.env.IMAP_WEBHOOK_SECRET;
-    if (tenantId && providerId) delete process.env[`TENANT_${tenantId}_imap_password_${providerId}`];
+    });
+    await cleanupSafely('temporary storage', async () => {
+      if (scratchStorage) await fs.rm(scratchStorage, { recursive: true, force: true });
+    });
+    restoreEnvironment();
   }
 }, 300_000);
