@@ -54,9 +54,19 @@ vi.mock('@alga-psa/ui/components/BackNav', () => ({
   default: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
 }));
 
+// The page reads two namespaces: its own copy, and `common` for the words an answer is read
+// back with (a checked box). The second one is what the reader's language reaches.
+const common = vi.hoisted(() => ({ catalog: { yes: 'Yes', no: 'No' } as Record<string, string> }));
+
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
   getServerLocale: vi.fn().mockResolvedValue('en'),
-  getServerTranslation: vi.fn().mockResolvedValue({ t }),
+  getServerTranslation: vi.fn(async (_locale: unknown, namespace: string) => ({
+    t:
+      namespace === 'common'
+        ? (key: string, options: TranslationOptions = {}) =>
+            common.catalog[key] ?? options.defaultValue ?? key
+        : t,
+  })),
   formatDate: (date: Date) => date.toISOString(),
 }));
 
@@ -75,15 +85,11 @@ const { default: MyRequestDetailPage } = await import(
 function buildDetail(overrides: Record<string, unknown> = {}) {
   return {
     submission_id: 'submission-1',
-    definition_id: 'definition-1',
-    definition_version_id: 'version-1',
-    definition_version_number: 1,
     request_name: 'Onboarding Questionnaire',
     submitted_payload: { request_title: 'New Hire Onboarding' },
     execution_status: 'succeeded',
-    execution_error_summary: null,
     created_ticket_id: null,
-    workflow_execution_id: null,
+    ticket_number: null,
     submitted_at: new Date('2026-09-02T12:00:00Z'),
     form_schema_snapshot: {
       fields: [
@@ -107,19 +113,106 @@ async function renderDetailPage() {
 describe('/client-portal/request-services/my-requests/[submissionId]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    common.catalog = { yes: 'Yes', no: 'No' };
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('renders the immutable captured form version for a store-only submission', async () => {
+  it('renders submitted answers against the captured form snapshot', async () => {
     getMyServiceRequestSubmissionDetailActionMock.mockResolvedValue(buildDetail());
 
     await renderDetailPage();
 
-    expect(screen.getByText('Version 1')).toBeInTheDocument();
+    expect(screen.getByText('Request Title')).toBeInTheDocument();
     expect(screen.getByText('New Hire Onboarding')).toBeInTheDocument();
+  });
+
+  it('renders a translated status badge, attachment names and no internal data', async () => {
+    const namedId = '11111111-1111-4111-8111-111111111111';
+    getMyServiceRequestSubmissionDetailActionMock.mockResolvedValue(
+      buildDetail({
+        execution_status: 'failed',
+        form_schema_snapshot: {
+          fields: [{ key: 'upload', type: 'file-upload', label: 'Upload' }],
+        },
+        submitted_payload: {},
+        attachments: [
+          {
+            submission_attachment_id: namedId,
+            field_key: 'upload',
+            file_name: 'report.pdf',
+            mime_type: 'application/pdf',
+          },
+          {
+            submission_attachment_id: '22222222-2222-4222-8222-222222222222',
+            field_key: 'upload',
+            file_name: null,
+            mime_type: null,
+          },
+        ],
+        audit_events: [
+          {
+            audit_id: 'audit-1',
+            operation: 'service_request_submission_execution_failed',
+            actor_name: null,
+            timestamp: new Date('2026-09-02T12:00:00Z'),
+          },
+        ],
+      })
+    );
+
+    await renderDetailPage();
+
+    expect(screen.getByText(t('myRequests.statuses.failed'))).toBeInTheDocument();
+    expect(screen.getAllByText('report.pdf').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(t('submissionDetail.unnamedAttachment')).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(t('submissionDetail.historyOperations.service_request_submission_execution_failed'))
+    ).toBeInTheDocument();
+
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/Execution status/i);
+    expect(text).not.toMatch(/Version/i);
+    expect(text).not.toMatch(/Workflow/i);
+    expect(text).not.toMatch(/File ID/i);
+    expect(text).not.toContain(namedId);
+    expect(text).not.toContain('22222222-2222-4222-8222-222222222222');
+  });
+
+  it('reads a checkbox answer back in the reader’s language', async () => {
+    common.catalog = { yes: 'Ja', no: 'Nein' };
+    getMyServiceRequestSubmissionDetailActionMock.mockResolvedValue(
+      buildDetail({
+        form_schema_snapshot: {
+          fields: [{ key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' }],
+        },
+        submitted_payload: { needs_laptop: true },
+      })
+    );
+
+    await renderDetailPage();
+
+    const answers = Array.from(document.querySelectorAll('dd')).map((el) => el.textContent);
+    expect(answers).toEqual(['Ja']);
+  });
+
+  it('renders the payload as label/value rows when the snapshot has no fields', async () => {
+    getMyServiceRequestSubmissionDetailActionMock.mockResolvedValue(
+      buildDetail({
+        form_schema_snapshot: {},
+        submitted_payload: { legacy_answer: 'Blue', count: 3 },
+      })
+    );
+
+    await renderDetailPage();
+
+    const terms = Array.from(document.querySelectorAll('dt')).map((el) => el.textContent);
+    expect(terms).toEqual(['legacy_answer', 'count']);
+    const definitions = Array.from(document.querySelectorAll('dd')).map((el) => el.textContent);
+    expect(definitions).toEqual(['Blue', '3']);
+    expect(document.querySelector('pre')).toBeNull();
   });
 
   it('renders timestamped, actor-attributed audit history entries', async () => {
@@ -129,18 +222,14 @@ describe('/client-portal/request-services/my-requests/[submissionId]', () => {
           {
             audit_id: 'audit-1',
             operation: 'service_request_submission_created',
-            user_id: 'user-1',
             actor_name: 'Casey Client',
             timestamp: new Date('2026-09-02T12:00:00Z'),
-            details: {},
           },
           {
             audit_id: 'audit-2',
             operation: 'service_request_submission_execution_succeeded',
-            user_id: 'user-1',
             actor_name: 'Casey Client',
             timestamp: new Date('2026-09-02T12:00:05Z'),
-            details: {},
           },
         ],
       })

@@ -3,10 +3,10 @@ import {
   getExternalEntityMappings, getServices, getTaxRegions,
 } from '../../actions';
 import type { ExternalEntityMapping } from '../../actions';
-import type { AccountingMappingModule, AccountingMetadataField } from './types';
+import type { AccountingMappingAlgaSearch, AccountingMappingModule, AccountingMetadataField } from './types';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
-import { getIntegrationClients } from '../../actions/clientLookupActions';
+import { createClientAlgaSearch } from './clientAlgaSearch';
 import { PAYMENT_TERMS } from '../csv/csvMappingModules';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -32,7 +32,11 @@ function unwrap<T>(result: T): Exclude<T, { success: false }> {
  * its metadata.qbdSalesTaxItem the sales tax item. Discounts use the same
  * per-realm discount mapping every other adapter reads.
  */
-export function createQuickBooksDesktopMappingModule(entity: DesktopEntity, t?: Translate): AccountingMappingModule {
+export function createQuickBooksDesktopMappingModule(
+  entity: DesktopEntity,
+  t?: Translate,
+  clients: AccountingMappingAlgaSearch = createClientAlgaSearch(undefined)
+): AccountingMappingModule {
   const id = `${ADAPTER_TYPE}-${entity}-mapping`;
   const label = (key: string, fallback: string) => t?.(`integrations.accounting.adjustmentMappings.${key}`, { defaultValue: fallback }) ?? fallback;
   const tab = (key: string, fallback: string) => t?.(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) ?? fallback;
@@ -81,6 +85,7 @@ export function createQuickBooksDesktopMappingModule(entity: DesktopEntity, t?: 
     },
     ...(fields.length > 0 ? { metadata: { fields } } : {}),
     elements: { addButton: `${id}-add`, table: `${id}-table`, dialog: `${id}-dialog` },
+    ...(entity === 'client' ? { algaSearch: clients } : {}),
     async load(context) {
       const mappings = unwrap(await getExternalEntityMappings({ integrationType: ADAPTER_TYPE, algaEntityType: entity, externalRealmId: context.realmId ?? null }));
       const algaEntities = entity === 'tax_code'
@@ -88,7 +93,7 @@ export function createQuickBooksDesktopMappingModule(entity: DesktopEntity, t?: 
         : entity === 'service'
         ? (await getServices(1, 999, { item_kind: 'any' })).services.map(service => ({ id: service.service_id, name: service.service_name }))
         : entity === 'client'
-        ? (await getIntegrationClients(true)).map(client => ({ id: client.client_id, name: client.client_name }))
+        ? [] // searched on the server (algaSearch); the engine names the mapped clients
         : entity === 'payment_term'
         ? PAYMENT_TERMS.map(term => ({ id: term.id, name: term.name }))
         : [{ id: AUTOMATIC_DISCOUNT_MAPPING_ID, name: title }];
@@ -110,6 +115,9 @@ export function createQuickBooksDesktopMappingModule(entity: DesktopEntity, t?: 
   };
 }
 
-export function createQuickBooksDesktopMappingModules(t?: Translate): AccountingMappingModule[] {
-  return QUICKBOOKS_DESKTOP_MAPPING_ENTITIES.map((entity) => createQuickBooksDesktopMappingModule(entity, t));
+export function createQuickBooksDesktopMappingModules(
+  t?: Translate,
+  clients: AccountingMappingAlgaSearch = createClientAlgaSearch(undefined)
+): AccountingMappingModule[] {
+  return QUICKBOOKS_DESKTOP_MAPPING_ENTITIES.map((entity) => createQuickBooksDesktopMappingModule(entity, t, clients));
 }

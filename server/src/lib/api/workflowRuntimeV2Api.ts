@@ -5,7 +5,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithApiKeyUser } from '@alga-psa/auth';
 import { authenticateApiKeyRequest } from 'server/src/lib/api/middleware/apiAuthMiddleware';
 
-type StatusError = Error & { status?: number; statusCode?: number; details?: unknown };
+type StatusError = Error & { status?: number; statusCode?: number; details?: unknown; retryAfterSeconds?: number };
 
 /**
  * Run a workflow-surface route action with dual authentication: browser/MSP
@@ -38,7 +38,12 @@ export function handleWorkflowV2ApiError(error: unknown) {
   const message = err instanceof Error ? err.message : 'Unexpected error';
 
   if (typeof status === 'number') {
-    return NextResponse.json({ error: message, ...(err.details ? { details: err.details } : {}) }, { status });
+    // 429s from the rate limiters and from EvaluationBusyError carry retryAfterSeconds.
+    const retryAfter = status === 429 && typeof err.retryAfterSeconds === 'number' ? Math.max(1, Math.ceil(err.retryAfterSeconds)) : undefined;
+    return NextResponse.json(
+      { error: message, ...(err.details ? { details: err.details } : {}) },
+      { status, ...(retryAfter !== undefined ? { headers: { 'Retry-After': String(retryAfter) } } : {}) }
+    );
   }
 
   if (

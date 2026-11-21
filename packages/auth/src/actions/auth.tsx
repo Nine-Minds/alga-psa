@@ -18,7 +18,7 @@ export async function authenticateUser(
 
 export async function have_two_factor_enabled( password: string, email: string, userType: 'internal' | 'client'): Promise<boolean> {
     logger.system(`Checking if user has 2FA enabled for email ${email}`);
-    const user = await authenticateUser(email, password, userType);
+    const user = await authenticateUser(email, password, userType, { purpose: 'reauthenticate' });
     if (!user || !user.two_factor_enabled) { return false; }
     return true;
 }

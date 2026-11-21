@@ -3,7 +3,7 @@ import path from 'path';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(path.resolve(__dirname, 'queryActions.ts'), 'utf8');
-const searchSqlSource = readFileSync(path.resolve(__dirname, '../lib/listSearchSql.ts'), 'utf8');
+const searchSqlSource = readFileSync(path.resolve(__dirname, '../../../../shared/ticketClients/listSearchSql.ts'), 'utf8');
 
 function sectionOf(content: string, startMarker: string, endMarker: string): string {
   const start = content.indexOf(startMarker);

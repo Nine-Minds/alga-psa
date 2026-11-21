@@ -17,6 +17,8 @@ export interface AuthenticateUserOptions {
     /** Vanity client-portal host the attempt arrived on, when no slug came with it. */
     portalDomain?: string;
     requireTenantMatch?: boolean;
+    /** Login enforces tenant policy; reauthentication only verifies an existing user's password. */
+    purpose?: 'login' | 'reauthenticate';
 }
 
 async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
@@ -203,6 +205,13 @@ export async function authenticateUserForAuth(
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
         return null;
+    }
+
+    // Enforce tenant policy only after the password is verified. Reauthentication
+    // never creates a session and therefore does not apply sign-in policy.
+    if ((options.purpose ?? 'login') === 'login') {
+        const { enforcePasswordLoginPolicy, surfaceForUserType } = await import('./passwordLoginGate');
+        await enforcePasswordLoginPolicy(user, surfaceForUserType(user.user_type));
     }
 
     return user;

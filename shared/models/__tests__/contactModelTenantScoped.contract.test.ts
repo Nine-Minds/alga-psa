@@ -13,6 +13,10 @@ function sectionBetween(start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
+const deleteCascadeSection = sectionBetween(
+  'export async function deleteContactCascade',
+  'export async function assertValidContactManager'
+);
 const createUpdateSection = sectionBetween(
   'static async checkEmailExists',
   'static async getAdditionalEmailAddressesForContact'
@@ -39,6 +43,27 @@ describe('contact model tenant-scoped query contract', () => {
     expect(source).not.toMatch(/\.where\(['"][^'"]*\.tenant['"],\s*tenant\)/);
     expect(source).not.toMatch(/\.andOn\(['"][^'"]*tenant['"]/);
     expect(source).not.toMatch(/\.andOn\(['"][^'"]*\.tenant['"]/);
+  });
+
+  it('uses structural tenant scoping across the shared contact delete cascade', () => {
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'contact_phone_numbers', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'comments', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'portal_invitations', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'document_block_content', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'documents', tenant)");
+    expect(deleteCascadeSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    // manager_contact_id / assets.contact_name_id are NO ACTION FKs: cleared before the row delete.
+    expect(deleteCascadeSection).toContain('clearContactLinksBeforeDelete(trx, tenant, contactId)');
+    expect(deleteCascadeSection).toContain('cleanupEntraReferencesBeforeContactDelete(trx, tenant, contactId)');
+    expect(deleteCascadeSection.indexOf('clearContactLinksBeforeDelete(trx, tenant, contactId)')).toBeLessThan(
+      deleteCascadeSection.lastIndexOf("tenantScopedTable(trx, 'contacts', tenant)")
+    );
+    expect(source).toContain("tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenant)");
+    expect(deleteCascadeSection).not.toContain("trx('contacts')");
+    expect(deleteCascadeSection).not.toContain("trx('comments')");
   });
 
   it('uses structural tenant scoping for create/update roots', () => {

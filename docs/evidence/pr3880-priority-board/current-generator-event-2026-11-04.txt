@@ -1,0 +1,7 @@
+Current event attempt on 2026-11-04 against the original board-managed service registration and isolated database `server_card_d4555320`.
+
+The dossier publisher `tools/smoke-sim/publish-maintenance.mjs generate-recurring-tickets` published a real bare `MAINTENANCE_JOB_REQUESTED` event through the card's Redis event bus. The publisher returned success with event ID `dfe1f990-6c49-4caf-aed2-753d848c81b0` on stream `workflow:events:global` (also the `MAINTENANCE_JOB_REQUESTED` stream). The target fixtures were d10 and d20; other active definitions were temporarily paused. Definitions d10/d20 were temporarily active with a November 5 start and two lead days; their client evaluation watermarks were moved back to November 2.
+
+No new November 5 occurrence rows were visible after the event. The existing November 4 `created`/`failed` rows shown in [the read-only schedule DB snapshot](current-schedule-db-2026-11-04.txt) predated this attempt and are historical evidence, not results of this event. The board lifecycle suspended the service at `2026-11-04T01:18:45Z` because its registration's `wantedUntil` (`2026-11-04T01:18:34.482Z`) had expired; the event's completion therefore was not verified.
+
+Fixture state was restored after the attempt: d10 and d20 are inactive, their start date and lead days returned to November 4 / 1, their `evaluated_through` values returned to `2026-11-03T18:47:36.926Z`, and the four originally active definitions were reactivated. The shared `server` database was never selected.

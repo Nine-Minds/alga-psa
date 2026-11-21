@@ -1,3 +1,11 @@
+/**
+ * Single source of truth for which `users` columns may leave the server in a response.
+ *
+ * Lives in @alga-psa/types (not @alga-psa/users) so lower-layer packages such as
+ * @alga-psa/tickets can project and sanitize user rows without a dependency on
+ * @alga-psa/users, which itself depends on @alga-psa/tickets. @alga-psa/users re-exports
+ * this module unchanged.
+ */
 import type { IRole, IUserWithRoles } from '../interfaces/user.interfaces';
 
 const USER_RESPONSE_FIELD_NAMES_TUPLE = [
@@ -77,7 +85,6 @@ export function sanitizeUserForResponse<T extends Record<string, any>>(
   user: T
 ): PublicUserWithRoles {
   const sanitized: PublicUserWithRoles = { ...sanitizeUserFields(user), roles: [] };
-
   if ('roles' in user && Array.isArray(user.roles)) {
     sanitized.roles = user.roles;
   }

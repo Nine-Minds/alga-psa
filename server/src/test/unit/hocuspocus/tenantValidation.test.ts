@@ -96,6 +96,14 @@ describe('ticket room validation', () => {
     ).toThrow('room ticket mismatch');
   });
 
+  it('rejects a ticket room credential without a recipient identity', () => {
+    const token = jwt.sign({ tenantId: 'tenant-1', ticketId: 'ticket-1' }, 'tenant-validation-secret', { expiresIn: '5m' });
+    expect(() => validateDocumentRoomAccess(
+      'ticket:tenant-1:ticket-1',
+      new Request(`http://localhost/hocuspocus?token=${token}`)
+    )).toThrow('missing user');
+  });
+
   it('T016: notifications rooms are refused by default instead of bypassing validation', () => {
     delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
     return expect(
@@ -136,6 +144,30 @@ describe('ticket room validation', () => {
         new Request(`http://localhost/hocuspocus?token=${token}`)
       )
     ).toThrow('room tenant mismatch');
+  });
+});
+
+describe('tenant ticket change room validation', () => {
+  const tenantId = '11111111-1111-4111-8111-111111111111';
+  const userId = '22222222-2222-4222-8222-222222222222';
+  const sessionId = '33333333-3333-4333-8333-333333333333';
+  const secret = 'tenant-validation-secret';
+  const now = 1_800_000_000;
+  const tokenFor = (claims: Record<string, unknown> = {}) => jwt.sign({ scope: 'ticket-changes', tenantId, userId, sessionId,
+    iat: now, exp: now + 300, ...claims }, secret, { algorithm: 'HS256', audience: 'ticket-changes' });
+
+  beforeEach(() => { process.env.HOCUSPOCUS_JWT_SECRET = secret; process.env.NODE_ENV = 'test'; });
+
+  it('accepts only a short lived token bound to its tenant room and returns its user identity', () => {
+    const access = validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost/hocuspocus'), { token: tokenFor(), now: now * 1000 });
+    expect(access).toMatchObject({ status: 'ok', tenantId, userId, sessionId, expiresAt: (now + 300) * 1000 });
+  });
+
+  it('rejects missing, wrong-scope, wrong-tenant, and overlong tokens', () => {
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request(`http://localhost?token=${tokenFor()}`))).toThrow('missing token');
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost'), { token: tokenFor({ scope: 'notification-signals' }) })).toThrow();
+    expect(() => validateDocumentRoomAccess(`tenant:44444444-4444-4444-8444-444444444444:ticket-changes`, new Request('http://localhost'), { token: tokenFor() })).toThrow();
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost'), { token: tokenFor({ exp: now + 301 }), now: now * 1000 })).toThrow();
   });
 });
 

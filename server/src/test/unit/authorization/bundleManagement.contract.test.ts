@@ -34,19 +34,16 @@ describe('EE bundle management contracts', () => {
   });
 
   it('T025: UI and action payloads include human-readable rule/revision summaries by resource section', () => {
-    expect(uiSource).toContain('const RESOURCE_SECTIONS: Array<{ labelKey: string; resourceType: string }> = [');
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.tickets', resourceType: 'ticket' }");
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.documents', resourceType: 'document' }");
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.time', resourceType: 'time_entry' }");
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.projects', resourceType: 'project' }");
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.assets', resourceType: 'asset' }");
-    expect(uiSource).toContain("{ labelKey: 'policyManagement.resourceSections.billing', resourceType: 'billing' }");
-    expect(policyLocale.resourceSections).toEqual({
-      tickets: 'Tickets',
-      documents: 'Documents',
-      time: 'Time',
-      projects: 'Projects',
-      assets: 'Assets',
+    // The sections come from the kernel catalog (listAuthorizationResourceTypesAction), not a list in the UI.
+    expect(uiSource).not.toContain('RESOURCE_SECTIONS');
+    expect(uiSource).toContain('buildResourceSections(resourceTypes)');
+    expect(uiSource).toContain('listAuthorizationResourceTypesAction()');
+    expect(policyLocale.resourceTypes).toMatchObject({
+      ticket: 'Tickets',
+      document: 'Documents',
+      time_entry: 'Time',
+      project: 'Projects',
+      asset: 'Assets',
       billing: 'Billing',
     });
     expect(uiSource).toContain('function summarizeRule(rule: {');
@@ -59,7 +56,8 @@ describe('EE bundle management contracts', () => {
     expect(actionSource).toContain('selectedClientIds: string[];');
     expect(actionSource).toContain('selectedBoardIds: string[];');
     expect(actionSource).toContain('redactedFields: string[];');
-    expect(actionSource).toContain('availableClients: Array<{');
+    // Client scopes are picked by server search, so the editor payload never lists the tenant's clients.
+    expect(actionSource).not.toContain('availableClients');
     expect(actionSource).toContain('availableBoards: Array<{');
     expect(actionSource).toContain('const revisionChangeSummary = bundle.published_revision_id');
   });

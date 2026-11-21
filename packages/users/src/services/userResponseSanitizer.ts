@@ -1,4 +1,8 @@
-// Keep existing imports working; the projection belongs below db/auth/users.
+/**
+ * The user response allow-list lives in @alga-psa/types so lower-level packages
+ * (tickets, ...) can share it without a dependency cycle through @alga-psa/users.
+ * This module keeps the original import path working.
+ */
 export {
   USER_RESPONSE_FIELD_NAMES,
   USER_RESPONSE_COLUMNS,

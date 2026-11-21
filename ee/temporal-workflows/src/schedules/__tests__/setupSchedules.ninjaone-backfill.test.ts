@@ -51,7 +51,7 @@ vi.mock('@alga-psa/db/admin.js', () => ({
       }),
     };
 
-    return vi.fn(() => builder);
+    return Object.assign(vi.fn(() => builder), { schema: { hasTable: vi.fn(async () => false) } });
   }),
 }));
 

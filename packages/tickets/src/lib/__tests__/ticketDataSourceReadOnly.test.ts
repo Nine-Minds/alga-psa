@@ -17,7 +17,7 @@ describe('read-only ticket screen capabilities', () => {
     for (const key of ['delete', 'duplicate', 'createTemplate', 'createWorkflow', 'createProjectTask', 'quickInvoice', 'categoryCreate'] as const) {
       expect(source.capabilities[key]).toBe(false);
     }
-    expect([...TICKET_WRITE_ACTION_CAPABILITIES].sort()).toEqual(['categoryCreate', 'createProjectTask', 'createTemplate', 'createWorkflow', 'delete', 'duplicate', 'quickInvoice']);
+    expect([...TICKET_WRITE_ACTION_CAPABILITIES].sort()).toEqual(['assetAdd', 'categoryCreate', 'commentOwnEdit', 'createProjectTask', 'createTemplate', 'createWorkflow', 'delete', 'duplicate', 'locationEdit', 'quickInvoice', 'reactionToggle', 'timeEntryCreate', 'timerStart']);
     // Sections that display data stay; they gate their own edits on screen.readOnly.
     expect(source.capabilities).toMatchObject({ documents: true, checklist: true, materials: true, externalLinks: true, tags: true, timeEntry: false });
   });
@@ -26,5 +26,14 @@ describe('read-only ticket screen capabilities', () => {
     const source = composeTicketDataSource(nativeTicketDataSource, { capabilities: { ...NATIVE_TICKET_CAPABILITIES } });
     expect(source.capabilities).toEqual(NATIVE_TICKET_CAPABILITIES);
     expect(composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: false } }).capabilities.duplicate).toBe(true);
+  });
+
+  const DETAIL_WRITES = ['timerStart', 'timeEntryCreate', 'locationEdit', 'assetAdd', 'commentOwnEdit', 'reactionToggle'] as const;
+
+  it.each(DETAIL_WRITES)('%s: on for a writable screen, off for a read-only one', (key) => {
+    expect(NATIVE_TICKET_CAPABILITIES[key]).toBe(true);
+    expect(TICKET_WRITE_ACTION_CAPABILITIES).toContain(key);
+    expect(composeTicketDataSource(nativeTicketDataSource, {}).capabilities[key]).toBe(true);
+    expect(composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } }).capabilities[key]).toBe(false);
   });
 });

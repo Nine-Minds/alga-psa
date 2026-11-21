@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds } from '@alga-psa/ui/hooks/useClientNames';
 import { getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
 
 import type { WorkflowStatusRef } from './workflowStatusGroups';
@@ -42,7 +44,6 @@ const loadEntityLabels = async (): Promise<WorkflowEntityLabelData> => {
       options.statuses,
       options.priorities,
       options.categories,
-      options.clients,
       options.users,
       options.locations,
     ]) {
@@ -59,6 +60,21 @@ const loadEntityLabels = async (): Promise<WorkflowEntityLabelData> => {
   }
 
   return { labels, statuses };
+};
+
+// Client names are not part of the shared map: the tenant's client list is never loaded. The ids a
+// screen shows are looked up once (batched, sized by those ids) and remembered here.
+const clientNames = new Map<string, string>();
+const clientIdsAsked = new Set<string>();
+
+export const resolveWorkflowClientNames = async (ids: readonly string[]): Promise<ReadonlyMap<string, string>> => {
+  const pending = Array.from(new Set(ids.filter((id) => id && !clientIdsAsked.has(id))));
+  if (pending.length > 0) {
+    pending.forEach((id) => clientIdsAsked.add(id));
+    const rows = await lookupClientsByIds(searchClientsForPicker, pending);
+    for (const row of rows) clientNames.set(row.client_id, row.client_name);
+  }
+  return clientNames;
 };
 
 export const loadWorkflowEntityLabels = (): Promise<WorkflowEntityLabelData> => {
@@ -92,7 +108,11 @@ const toState = (data: WorkflowEntityLabelData): WorkflowEntityLabelsState => ({
   loaded: true,
 });
 
-export const useWorkflowEntityLabels = (enabled = true): WorkflowEntityLabelsState => {
+/**
+ * `clientIds` are the ids on screen that may be clients (e.g. the id literals of a condition); their
+ * names are looked up by id and merged into `labels`.
+ */
+export const useWorkflowEntityLabels = (enabled = true, clientIds: readonly string[] = []): WorkflowEntityLabelsState => {
   const [state, setState] = useState<WorkflowEntityLabelsState>(() =>
     loadedEntityLabels ? toState(loadedEntityLabels) : { labels: EMPTY_LABELS, loaded: false }
   );
@@ -113,5 +133,26 @@ export const useWorkflowEntityLabels = (enabled = true): WorkflowEntityLabelsSta
     };
   }, [enabled]);
 
-  return state;
+  const clientIdsKey = clientIds.join(',');
+  const [resolvedClients, setResolvedClients] = useState<ReadonlyMap<string, string>>(clientNames);
+  useEffect(() => {
+    if (!enabled || clientIds.length === 0) return;
+    let active = true;
+    resolveWorkflowClientNames(clientIds)
+      .then((names) => {
+        if (active) setResolvedClients(new Map(names));
+      })
+      .catch((error) => console.error('Failed to load workflow client names:', error));
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, clientIdsKey]);
+
+  return useMemo(() => {
+    if (resolvedClients.size === 0) return state;
+    const merged = new Map(resolvedClients);
+    state.labels.forEach((name, id) => merged.set(id, name));
+    return { ...state, labels: merged };
+  }, [state, resolvedClients]);
 };

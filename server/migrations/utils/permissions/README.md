@@ -1,5 +1,8 @@
 # Permission catalog
 
+For how the permissions system works end to end, including the default roles and
+their grants, see [Permissions System](../../../../docs/security/permissions-system.md).
+
 The single source of truth for system permissions and the default-role grants
 that ship with them. Every path that provisions or repairs tenant RBAC consumes
 this directory: PSA and AlgaDesk onboarding seeds, developer seeds, the
@@ -26,8 +29,13 @@ directly, and callers always pass a Knex instance plus an explicit tenant id.
   and it never touches anything outside the catalog.
 - **Custom roles are invisible.** A role is a grant target only when its exact
   `(role_name, msp, client)` identity is in `DEFAULT_ROLES`. Zero or multiple
-  matches for a required role fails the tenant transaction with an actionable
-  error — roles are never created or guessed here.
+  matches for a *required* role (MSP `Admin` and client-portal `Admin`, the two
+  the product protects from deletion and renaming) fails the tenant transaction
+  with an actionable error — roles are never created or guessed here. Any other
+  default role the tenant deleted or renamed is reported as unresolved and
+  receives no grants; the permission rows and the remaining roles' grants are
+  still applied, so one missing `Technician` or client `User` role never stalls
+  a rollout for the whole tenant.
 - **MSP Admin** receives every MSP-scoped catalog permission for its product.
   Other default roles receive only the keys declared on each catalog entry.
 - **Dual scope.** A permission with `msp` *and* `client` is addressable from both
@@ -97,6 +105,35 @@ so those endpoints denied every caller. The name is fixed at the source instead:
    automatically.
 
 Never edit a historical migration to repair production; ship a forward one.
+
+## Changing a description
+
+The description is the tooltip on each checkbox in Settings > Security >
+Permissions, and it is the main thing an admin reads to decide what to grant.
+Write it from what the code checks, not from the resource name:
+
+- Name the screens and tasks the permission unlocks ("Edit draft invoices, and
+  finalize or unfinalize invoices").
+- Name a second permission the task also needs when it lives on another
+  resource ("Logging time on a ticket also needs Client > Read").
+- Say so when nothing in the app checks it ("REST API only. In the app,
+  finalizing needs Invoice > Update.").
+
+Refer to other permissions the way the matrix labels them: `Resource > Action`.
+
+To roll new wording out to existing tenants, ship a description-only migration
+(see `20261119120000_refresh_permission_descriptions.cjs`). It updates
+`permissions.description` where the row exists and differs from the catalog,
+and writes nothing else.
+
+**Do not use `reconcileAllTenants` for a wording change.** Besides refreshing
+descriptions, it inserts missing permissions and re-adds missing default-role
+grants. On a tenant whose admin removed a default grant on purpose, that
+silently grants it back. Self-hosted and appliance databases are not visible
+to us, so "production is already reconciled" does not make it safe.
+
+Historical migrations that replay against a seeded tenant can see the new
+wording. Fix the test, not the migration (see *Adding a permission*).
 
 ## Removing a permission
 

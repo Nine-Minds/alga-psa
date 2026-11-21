@@ -220,11 +220,18 @@ function fakeStorageModule() {
     }
   };
 
+  // A write-session provider: persisted artifacts reach it through the streaming ingest.
   const createProvider = async () => ({
-    upload: async (file: Buffer, path: string, options?: { mime_type?: string }) => {
-      h.uploads.push({ path, size: file.length, mime: options?.mime_type });
-      return { path, size: file.length };
+    beginWrite: async (path: string, options?: { mimeType?: string }) => ({ provider: 'local', path, partialPath: path, mimeType: options?.mimeType, written: 0 }),
+    writePart: async (handle: any, partNumber: number, part: Buffer, size: number, opts?: { final?: boolean }) => {
+      handle.written += size;
+      return { partNumber, size, final: Boolean(opts?.final) };
     },
+    completeWrite: async (handle: any) => {
+      h.uploads.push({ path: handle.path, size: handle.written, mime: handle.mimeType });
+      return { path: handle.path, size: handle.written, mime_type: handle.mimeType };
+    },
+    abortWrite: async () => undefined,
   });
 
   const generateStoragePath = (tenant: string, _base: string, filename: string) =>
@@ -325,14 +332,12 @@ async function run(overrides: Partial<any> = {}) {
 describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () => {
   beforeEach(() => {
     seedTables();
-    delete process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES;
-    delete process.env.STORAGE_LOCAL_MAX_FILE_SIZE;
+    vi.unstubAllEnvs();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES;
-    delete process.env.STORAGE_LOCAL_MAX_FILE_SIZE;
+    vi.unstubAllEnvs();
   });
 
   it('persists an audio attachment as a downloadable ticket document under the default policy', async () => {
@@ -360,7 +365,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('skips a disallowed audio attachment and posts exactly one internal system comment', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
 
@@ -387,7 +392,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('skips a genuinely oversized attachment as attachment_too_large and lists it in the trail', async () => {
-    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '10';
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '10');
 
     await run({ attachments: [wavAttachment()] });
 
@@ -400,6 +405,49 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     expect(h.comments).toHaveLength(1);
     expect(h.comments[0].content).toContain('voicemail.wav');
     expect(h.comments[0].content).toContain('attachment_too_large:12');
+  });
+
+  it('skips an attachment over the named inbound cap even though the provider max is larger', async () => {
+    // Provider max is 500 MB here; the inbound cap (MAX_ATTACHMENT_BYTES, 100 MiB) is what applies.
+    const { MAX_ATTACHMENT_BYTES } = await import('../inboundEmailArtifactHelpers');
+    const oversize = MAX_ATTACHMENT_BYTES + 1;
+
+    await run({ attachments: [{ ...wavAttachment(), size: oversize }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('skipped');
+    expect(processed.error_message).toBe(`attachment_too_large:${oversize}`);
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(0);
+    expect(h.comments[0].content).toContain('voicemail.wav');
+  });
+
+  it('keeps a MIME-wrapped base64 attachment just under the cap (whitespace is not counted)', async () => {
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '12');
+    const wrapped = Buffer.from('RIFF....WAVE').toString('base64').replace(/(.{4})/g, '$1\r\n');
+
+    await run({ attachments: [{ ...wavAttachment(), size: 12, content: wrapped }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('success');
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(1);
+  });
+
+  it('skips an attachment whose real bytes exceed the cap although its declared size was small', async () => {
+    vi.stubEnv('STORAGE_LOCAL_MAX_FILE_SIZE', '8');
+
+    // Declared 4 bytes, actually 12: the provider max (8) is the effective cap, checked on the decoded byte count.
+    await run({ attachments: [{ ...wavAttachment(), size: 4 }] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('skipped');
+    expect(processed.error_message).toBe('attachment_too_large:12');
+    expect(h.uploads.filter((u) => u.path.endsWith('voicemail.wav'))).toHaveLength(0);
   });
 
   it('marks an arbitrary validator failure as failed (not skipped, not too_large) and reports the real error', async () => {
@@ -436,7 +484,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('does not duplicate the trail comment when the same email is processed again', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
     await run({ attachments: [wavAttachment()] });
@@ -445,7 +493,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
   });
 
   it('never suppresses the original .eml archive for a restrictive user allow-list', async () => {
-    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'application/pdf';
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', 'application/pdf');
 
     await run({ attachments: [wavAttachment()] });
 
@@ -483,5 +531,92 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     expect(String(base.error_message)).toContain('Inline/CID');
 
     expect(h.comments).toHaveLength(0);
+  });
+  it('serves a body-embedded image to the readers of that body, but not the sender\'s file attachments', async () => {
+    const { processInboundEmailArtifactsBestEffort } = await import('../processInboundEmailArtifacts');
+    await processInboundEmailArtifactsBestEffort({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      ticketId: 'ticket-1',
+      scopeLabel: 'new-ticket',
+      clientVisibleAttachments: false,
+      clientVisibleEmbeddedImages: true,
+      emailData: buildEmailData({
+        body: { text: '', html: '<p><img src="cid:inline-image-1" /></p>' },
+        attachments: [
+          {
+            id: 'attachment-inline-1',
+            name: 'screenshot.png',
+            contentType: 'image/png',
+            size: 3,
+            contentId: '<inline-image-1>',
+            isInline: true,
+            content: Buffer.from('abc').toString('base64'),
+          },
+          wavAttachment(),
+        ],
+      }),
+    });
+
+    const documents = h.getTable('documents');
+    expect(documents.find((doc) => doc.mime_type === 'image/png')?.is_client_visible).toBe(true);
+    expect(documents.find((doc) => doc.mime_type === 'audio/wav')?.is_client_visible).toBe(false);
+
+    const embedded = h.getTable('email_processed_attachments').find(
+      (row) => String(row.attachment_id).startsWith('embedded-cid-')
+    );
+    expect(embedded.content_id).toBe('inline-image-1');
+  });
+
+  it('never asks who may read an embedded image when the body embeds none', async () => {
+    const { processInboundEmailArtifactsBestEffort } = await import('../processInboundEmailArtifacts');
+    const whoMayRead = vi.fn(async () => true);
+
+    await processInboundEmailArtifactsBestEffort({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      ticketId: 'ticket-1',
+      scopeLabel: 'reply',
+      clientVisibleEmbeddedImages: whoMayRead,
+      emailData: buildEmailData({ attachments: [wavAttachment()] }),
+    });
+
+    expect(whoMayRead).not.toHaveBeenCalled();
+  });
+
+  it('keeps an embedded image staff-only when its visibility cannot be read', async () => {
+    const { processInboundEmailArtifactsBestEffort } = await import('../processInboundEmailArtifacts');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processInboundEmailArtifactsBestEffort({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      ticketId: 'ticket-1',
+      scopeLabel: 'reply',
+      clientVisibleEmbeddedImages: async () => {
+        throw new Error('comment read failed');
+      },
+      emailData: buildEmailData({
+        body: { text: '', html: '<p><img src="cid:inline-image-1" /></p>' },
+        attachments: [
+          {
+            id: 'attachment-inline-1',
+            name: 'screenshot.png',
+            contentType: 'image/png',
+            size: 3,
+            contentId: '<inline-image-1>',
+            isInline: true,
+            content: Buffer.from('abc').toString('base64'),
+          },
+        ],
+      }),
+    });
+
+    const pngDocument = h.getTable('documents').find((doc) => doc.mime_type === 'image/png');
+    expect(pngDocument).toBeTruthy();
+    expect(pngDocument.is_client_visible).toBeFalsy();
+    expect(
+      warn.mock.calls.some(([message]) => String(message).includes('embedded image visibility lookup failed'))
+    ).toBe(true);
   });
 });

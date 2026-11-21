@@ -21,6 +21,19 @@ vi.mock('@alga-psa/db', () => ({
   getTenantIdBySlug: (...args: unknown[]) => getTenantIdBySlugMock(...args),
 }));
 
+// No tenant login policy is configured in these tests; the policy gate must be a no-op.
+vi.mock('../lib/authPolicyStore', () => ({
+  loadTenantAuthPolicy: async () => ({
+    requireSsoForInternalUsers: false,
+    require2faForInternalUsers: false,
+    require2faForClientUsers: false,
+    allowKnownDevice2faSkip: false,
+    passwordBreakGlassUserIds: [],
+    passwordAuthDisabledAt: null,
+  }),
+  recordLoginRefusal: vi.fn(),
+}));
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => ({}),
 }));

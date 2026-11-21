@@ -467,7 +467,7 @@ export class EmailWebhookMaintenanceService {
           tenant: config.tenant,
           success: true,
           action: 'renewed',
-          newExpiration: config.webhook_expires_at // adapter updates the config object in place
+          newExpiration: adapter.getConfig().webhook_expires_at,
         };
       } catch (error: any) {
         if (this.isResourceNotFoundError(error)) {

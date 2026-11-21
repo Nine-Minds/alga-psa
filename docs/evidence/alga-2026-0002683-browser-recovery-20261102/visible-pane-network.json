@@ -1,0 +1,20 @@
+{
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "success": true,
+  "result": {
+    "events": [
+      {
+        "timestamp": 1793640730677,
+        "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin",
+        "method": "GET",
+        "id": 1,
+        "durationMs": 1,
+        "errorText": "net::ERR_CONNECTION_REFUSED",
+        "ok": false
+      }
+    ],
+    "total": 1,
+    "returned": 1,
+    "nextSince": 1
+  }
+}

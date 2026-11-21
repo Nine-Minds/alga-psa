@@ -101,7 +101,14 @@ const storedUser = vi.hoisted(() => ({ row: undefined as undefined | { user_type
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(async () => ({})),
   tenantDb: vi.fn(() => ({
-    table: () => ({ where: () => ({ select: () => ({ first: async () => storedUser.row }) }) }),
+    table: (tableName: string) => {
+      const query: any = {
+        where: () => query,
+        select: () => query,
+        first: async () => tableName === 'tenant_settings' ? { settings: null } : storedUser.row,
+      };
+      return query;
+    },
   })),
 }));
 vi.mock('./PortalDomainModel', () => ({
@@ -146,7 +153,7 @@ describe.each(['internal', 'client'])('credentials TOTP verification: %s', (user
   });
 
   it('rejects a missing code without recording success or creating a session', async () => {
-    expect(await authorize('correct-password')).toBeNull();
+    await expect(authorize('correct-password')).rejects.toMatchObject({ code: 'TWO_FACTOR_REQUIRED' });
     expect(authenticate).toHaveBeenCalledWith(user.email, 'correct-password', userType,
       expect.objectContaining({ tenantSlug: 'tenant-slug', requireTenantMatch: true }));
     expect(protection.success).not.toHaveBeenCalled();
@@ -164,14 +171,14 @@ describe.each(['internal', 'client'])('credentials TOTP verification: %s', (user
   it('rejects an invalid code and counts the failure', async () => {
     const validCode = speakeasy.totp({ secret: seed, encoding: 'base32' });
     const invalidCode = `${(Number(validCode[0]) + 1) % 10}${validCode.slice(1)}`;
-    expect(await authorize('correct-password', invalidCode)).toBeNull();
+    await expect(authorize('correct-password', invalidCode)).rejects.toMatchObject({ code: 'credentials' });
     expect(protection.failure).toHaveBeenCalledOnce();
     expect(protection.success).not.toHaveBeenCalled();
     expect(userSessionCreateMock).not.toHaveBeenCalled();
   });
 
   it('accepts a valid code on resubmission and returns only public identity', async () => {
-    expect(await authorize('correct-password')).toBeNull();
+    await expect(authorize('correct-password')).rejects.toMatchObject({ code: 'TWO_FACTOR_REQUIRED' });
     const code = speakeasy.totp({ secret: seed, encoding: 'base32' });
     const result = await authorize('correct-password', code);
     expect(result).toMatchObject({ id: 'user-1', user_type: userType });

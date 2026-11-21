@@ -40,6 +40,7 @@ describe('FinalizedTab i18n wiring contract', () => {
       'finalizedTab.status.finalized',
       'finalizedTab.actions.downloadPdf',
       'finalizedTab.actions.sendEmail',
+      'finalizedTab.actions.recordPayment',
       'finalizedTab.actions.unfinalize',
       'finalizedTab.loading',
       'finalizedTab.errors.loadFailed',
@@ -92,6 +93,62 @@ describe('FinalizedTab i18n wiring contract', () => {
     }
 
     for (const key of localeKeyChecks) {
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+  });
+
+  it('T018: the Record Payment row action and dialog resolve through msp/invoicing', () => {
+    const tab = read('../src/components/billing-dashboard/invoicing/FinalizedTab.tsx');
+    const dialog = read('../src/components/billing-dashboard/invoicing/RecordPaymentDialog.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../server/public/locales/en/msp/invoicing.json',
+    );
+
+    expect(tab).toContain('finalizedTab.actions.recordPayment');
+    expect(dialog).toContain("useTranslation('msp/invoicing')");
+
+    const dialogKeyChecks = [
+      'recordPayment.title',
+      'recordPayment.titleForInvoice',
+      'recordPayment.loading',
+      'recordPayment.summary.balanceDue',
+      'recordPayment.summary.alreadyPaid',
+      'recordPayment.fields.amount',
+      'recordPayment.fields.paymentDate',
+      'recordPayment.fields.method',
+      'recordPayment.fields.reference',
+      'recordPayment.fields.notes',
+      'recordPayment.placeholders.reference',
+      'recordPayment.overpayment.warning',
+      'recordPayment.overpayment.confirm',
+      'recordPayment.actions.cancel',
+      'recordPayment.actions.record',
+      'recordPayment.toasts.recorded',
+    ];
+
+    for (const key of dialogKeyChecks) {
+      expect(dialog).toContain(key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    // Method labels are keyed off the shared method list, so only the prefix is literal.
+    expect(dialog).toContain('recordPayment.methods.');
+    for (const method of ['manual', 'check', 'bank_transfer', 'cash', 'other']) {
+      expect(getLeaf(en, `recordPayment.methods.${method}`)).toBeDefined();
+    }
+
+    // Every action refusal carries a localized key, not raw English.
+    for (const key of [
+      'errors.recordPayment.permissionDenied',
+      'errors.recordPayment.invoiceNotFound',
+      'errors.recordPayment.amountPositive',
+      'errors.recordPayment.methodRequired',
+      'errors.recordPayment.invalidDate',
+      'errors.recordPayment.noBalanceDue',
+      'errors.recordPayment.statusNotPayable',
+      'errors.recordPayment.overpaymentNotConfirmed',
+      'errors.recordPayment.recordFailed',
+    ]) {
       expect(getLeaf(en, key)).toBeDefined();
     }
   });

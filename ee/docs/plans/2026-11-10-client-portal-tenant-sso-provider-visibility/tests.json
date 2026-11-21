@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "Pure policy unit (extend packages/auth/src/lib/authPolicy.test.ts): normalize maps absent/non-array to null and filters+dedupes+orders arrays; applyPolicyChange keeps the previous list on undefined and replaces on explicit []; validatePolicyChange rejects ['google','okta'] with client_portal_sso_provider_invalid; offeredClientPortalSsoProviders returns available for null, the intersection for ['azure-ad'], and [] for [].",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F004", "F005", "F006"]
+  },
+  {
+    "id": "T002",
+    "description": "Availability matrix unit (extend packages/auth/src/lib/sso/clientPortalSsoResolution.test.ts, credential helpers and policy loader mocked): EE with app Google+Microsoft and no policy offers both; tenant-only Keycloak realm is offered; policy ['azure-ad'] offers only azure-ad even though Google app creds exist; CE offers [].",
+    "implemented": true,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration (server/src/test/integration, real tenant_settings + audit_logs): happy path - saveTenantAuthPolicy with clientPortalSsoProviders ['azure-ad'] persists under settings.sso without dropping other sso keys (e.g. autoLinkClient), writes a LOGIN_POLICY_CHANGED row whose after contains the list, and loadTenantAuthPolicy round-trips it; guard path - an update carrying an unsupported id is rejected by validatePolicyChange and tenant_settings is unchanged.",
+    "implemented": true,
+    "featureIds": ["F002", "F005", "F007"]
+  },
+  {
+    "id": "T004",
+    "description": "SsoProviderButtons component (jsdom, EE edition): authSurface client_portal with offeredProviders ['azure-ad'] renders only the Microsoft button on first render and never fetches /api/auth/providers; offeredProviders [] renders nothing; omitting the prop on the MSP surface still renders the registry-driven set (regression).",
+    "implemented": true,
+    "featureIds": ["F011", "F012"]
+  },
+  {
+    "id": "T005",
+    "description": "LoginPolicySettings component (jsdom, actions mocked, alongside loginPolicySettings.staleBreakGlass.test.tsx): with availableClientPortalSsoProviders [google, azure-ad] and a null list both boxes are checked; unchecking Google calls updateLoginPolicyAction with { clientPortalSsoProviders: ['azure-ad'] }; a failed save reverts the checkbox and shows the error alert; an empty available list shows the none-available note.",
+    "implemented": true,
+    "featureIds": ["F013", "F014", "F015"]
+  },
+  {
+    "id": "T006",
+    "description": "Edition wiring: editionSwapping.test.ts asserts @alga-psa/auth/sso/entry resolves to packages/auth/src/components/SsoProviderButtons.tsx for both CE and EE webpack configs, and ssoProviderEditionGate.unit.test.tsx keeps the CE (Keycloak on MSP, nothing on client portal) / EE (all three) gate using the single component.",
+    "implemented": true,
+    "featureIds": ["F017", "F018"]
+  }
+]
