@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authorizeTicketRecordAccess, createTicketAuthorizationContext } from './ticketRecordAuthorization';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed, createTicketAuthorizationContext } from './ticketRecordAuthorization';
 
 const getVisibilityMock = vi.fn();
 
@@ -38,6 +38,22 @@ const scope = (o: Record<string, unknown> = {}) => ({
   ...o,
 });
 const client = { user_id: 'u1', user_type: 'client', contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'r' }] } as any;
+
+describe('ticket record authorization requires a principal', () => {
+  it.each([undefined, null, {}, { user_id: '', user_type: 'internal' }])(
+    'refuses an absent identity (%j) before looking up records or memberships',
+    async (user) => {
+      const trx = vi.fn(() => { throw new Error('Unauthenticated callers must not query records'); });
+      for (const authorize of [authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed]) {
+        for (const action of ['read', 'update'] as const) {
+          await expect(authorize({ trx: trx as any, tenant: 'tenant-1', user: user as any, ticketId: 't1', action }))
+            .rejects.toThrow('Permission denied: Cannot access ticket');
+        }
+      }
+      expect(trx).not.toHaveBeenCalled();
+    },
+  );
+});
 
 describe('createTicketAuthorizationContext', () => {
   beforeEach(() => { getVisibilityMock.mockReset(); });

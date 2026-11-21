@@ -1837,9 +1837,6 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
-      if (!context.user) {
-        throw new ForbiddenError('Permission denied: Cannot update ticket');
-      }
       try {
         await authorizeTicketRecordAccess({
           trx,

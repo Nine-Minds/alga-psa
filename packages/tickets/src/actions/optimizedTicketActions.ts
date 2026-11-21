@@ -2630,7 +2630,8 @@ export async function updateTicketInTransaction(
         suppressContactNotifications || suppressInternalNotifications)) {
       throw new Error('Shared ticket edits cannot override closure or notification policy');
     }
-    if (!collaboration && !isSystemActor && user.tenant !== tenant) {
+    // Missing native identities are refused by the record authorizer below.
+    if (!collaboration && !isSystemActor && user?.user_id && user.tenant !== tenant) {
       throw new Error('A foreign ticket actor requires a collaboration context');
     }
     const collaborator = collaboration ? await resolveTicketMutationCollaborator(trx, tenant, user, collaboration) : null;

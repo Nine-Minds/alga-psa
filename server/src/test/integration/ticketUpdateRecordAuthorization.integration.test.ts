@@ -254,6 +254,60 @@ describe('ticket update record authorization (real transaction)', () => {
     expect(workflowEvents).toHaveLength(0);
   }, HOOK_TIMEOUT);
 
+  it('applies selected-client narrowing to public saves and quick-add description follow-up updates', async () => {
+    const { updateTicketWithCache, updateTicketWithCacheForCurrentUser } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    const { updateTicket } = await import('@alga-psa/tickets/actions/ticketActions');
+    const description = '[{"type":"paragraph","content":"Finalized description"}]';
+    const saves = [
+      { run: (id: string) => updateTicketWithCache(id, { title: 'Scoped UI save' }), changed: { title: 'Scoped UI save' } },
+      { run: (id: string) => updateTicketWithCacheForCurrentUser(id, { title: 'Scoped current-user save' }), changed: { title: 'Scoped current-user save' } },
+      // QuickAddTicket finalizes uploaded image URLs through this legacy action.
+      { run: (id: string) => updateTicket(id, { attributes: { description } }), changed: { attributes: { description } } },
+    ];
+
+    for (const { run, changed } of saves) {
+      const outsideId = await insertTicket(clientOutside, 'Public save outside');
+      const insideId = await insertTicket(clientInScope, 'Public save inside');
+      const before = await table('tickets').where({ ticket_id: outsideId }).first();
+      const eventCount = workflowEvents.length;
+      await expect(run(outsideId)).resolves.toMatchObject({ permissionError: 'Permission denied: Cannot access ticket' });
+      expect(await table('tickets').where({ ticket_id: outsideId }).first()).toEqual(before);
+      expect(workflowEvents).toHaveLength(eventCount);
+      await expect(run(insideId)).resolves.toBe('success');
+      const after = await table('tickets').where({ ticket_id: insideId }).first();
+      expect(after).toMatchObject(changed);
+    }
+  }, HOOK_TIMEOUT);
+
+  it('keeps mixed bulk assignment, due date, priority, status, and board moves scoped per ticket', async () => {
+    const { bulkAssignTickets, bulkUpdateTicketDueDate, bulkUpdateTicketPriority, bulkUpdateTicketStatus, moveTicketsToBoard } =
+      await import('@alga-psa/tickets/actions/ticketActions');
+    const destinationBoardId = uuidv4();
+    const destinationStatusId = uuidv4();
+    await table('boards').insert({ tenant, board_id: destinationBoardId, board_name: 'Bulk destination' });
+    await table('statuses').insert({ tenant, status_id: destinationStatusId, name: 'Open', board_id: destinationBoardId, status_type: 'ticket', is_closed: false, is_default: true, order_number: 5001 });
+
+    const updates = [
+      { run: (ids: string[]) => bulkAssignTickets(ids, { kind: 'user', userId: actor.user_id }), changed: { assigned_to: actor.user_id } },
+      { run: (ids: string[]) => bulkUpdateTicketDueDate(ids, '2026-12-01T00:00:00.000Z'), changed: { due_date: '2026-12-01' } },
+      { run: (ids: string[]) => bulkUpdateTicketPriority(ids, String(priorityId)), changed: { priority_id: priorityId } },
+      { run: (ids: string[]) => bulkUpdateTicketStatus(ids, nextStatusId), changed: { status_id: nextStatusId } },
+      { run: (ids: string[]) => moveTicketsToBoard(ids, destinationBoardId, destinationStatusId), changed: { board_id: destinationBoardId, status_id: destinationStatusId } },
+    ];
+    for (const { run, changed } of updates) {
+      const outsideId = await insertTicket(clientOutside, 'Bulk outside');
+      const insideId = await insertTicket(clientInScope, 'Bulk inside');
+      const before = await table('tickets').where({ ticket_id: outsideId }).first();
+      const result = await run([outsideId, insideId]);
+      expect('movedIds' in result ? result.movedIds : result.updatedIds).toEqual([insideId]);
+      expect(result.failed).toEqual([{ ticketId: outsideId, message: 'Permission denied: Cannot access ticket' }]);
+      expect(await table('tickets').where({ ticket_id: outsideId }).first()).toEqual(before);
+      const after = await table('tickets').where({ ticket_id: insideId }).first();
+      if ('due_date' in changed) after.due_date = new Date(after.due_date).toISOString().slice(0, 10);
+      expect(after).toMatchObject(changed);
+    }
+  }, HOOK_TIMEOUT);
+
   it('enforces the same selected-client bundle on REST TicketService.update and permits an in-scope REST update', async () => {
     const outsideId = await insertTicket(clientOutside, 'REST outside original');
     const insideId = await insertTicket(clientInScope, 'REST inside original');
@@ -261,14 +315,6 @@ describe('ticket update record authorization (real transaction)', () => {
     const apiKeyId = uuidv4();
     const serviceContext = { tenant, userId: actor.user_id, user: actor, apiKeyId, db: context.db };
     const notificationCount = Number((await table('internal_notifications').count('* as count').first() as any).count);
-
-    const missingPrincipal = await runWithTenant(tenant, () => service.update(
-      insideId,
-      { title: 'REST missing principal' } as any,
-      { tenant, userId: actor.user_id, apiKeyId, db: context.db } as any,
-    )).then(() => null, (error) => error);
-    expect(missingPrincipal).toBeInstanceOf(ForbiddenError);
-    expect((await table('tickets').where({ ticket_id: insideId }).first()).title).toBe('REST inside original');
 
     const restDenial = await runWithTenant(tenant, () => service.update(outsideId, { title: 'REST unauthorized' } as any, serviceContext as any))
       .then(() => null, (error) => error);
@@ -303,6 +349,77 @@ describe('ticket update record authorization (real transaction)', () => {
       title: 'REST authorized',
       apiKeyId,
     });
+
+    const deniedRequest = new NextRequest(`http://localhost/api/v1/tickets/${outsideId}`, {
+      method: 'PUT', body: JSON.stringify({ title: 'REST controller unauthorized' }),
+      headers: { 'content-type': 'application/json' },
+    }) as any;
+    deniedRequest.params = { id: outsideId };
+    deniedRequest.context = serviceContext;
+    (controller as any).authenticate = vi.fn(async () => deniedRequest);
+    expect((await controller.update()(deniedRequest)).status).toBe(403);
+    expect((await table('tickets').where({ ticket_id: outsideId }).first()).title).toBe('REST outside original');
+  }, HOOK_TIMEOUT);
+
+  it('routes absent REST principals through record authorization and refuses them before any side effects', async () => {
+    const ticketId = await insertTicket(clientInScope, 'REST missing principal original');
+    await table('ticket_watchers').insert({ tenant, ticket_id: ticketId, email: 'watcher@example.test', active: true });
+    const before = await table('tickets').where({ ticket_id: ticketId }).first();
+    const watchers = await table('ticket_watchers').where({ ticket_id: ticketId }).select('*');
+    const auditCount = await table('ticket_audit_logs').count('* as count').first();
+    const notificationCount = await table('internal_notifications').count('* as count').first();
+    const service = new TicketService();
+    const apiKeyId = uuidv4();
+
+    // A userId/API key alone must not stand in for the authenticated principal.
+    for (const user of [undefined, null, {}, { ...actor, user_id: '' }]) {
+      const serviceContext = { tenant, userId: actor.user_id, user, apiKeyId, db: context.db };
+      vi.mocked(recordAuthorization.authorizeTicketRecordAccess).mockClear();
+      const denial = await runWithTenant(tenant, () => service.update(ticketId, {
+        title: 'REST unauthorized', attributes: { description: 'Unauthorized description', watch_list: [] },
+      } as any, serviceContext)).then(() => null, (error) => error);
+
+      expect(denial).toBeInstanceOf(ForbiddenError);
+      expect(denial.message).toBe('Permission denied: Cannot update ticket');
+      expect(recordAuthorization.authorizeTicketRecordAccess).toHaveBeenCalledWith(expect.objectContaining({
+        user, apiKeyId, ticketId, action: 'update', ticketRow: expect.objectContaining({ title: before.title }),
+      }));
+      expect(await table('tickets').where({ ticket_id: ticketId }).first()).toEqual(before);
+      expect(await table('ticket_watchers').where({ ticket_id: ticketId }).select('*')).toEqual(watchers);
+      expect(await table('ticket_audit_logs').count('* as count').first()).toEqual(auditCount);
+      expect(await table('internal_notifications').count('* as count').first()).toEqual(notificationCount);
+      expect(workflowEvents).toHaveLength(0);
+
+      if (user != null) continue;
+      const controller = new ApiTicketController();
+      const request = new NextRequest(`http://localhost/api/v1/tickets/${ticketId}`, {
+        method: 'PUT', body: JSON.stringify({ title: 'Controller unauthorized' }),
+        headers: { 'content-type': 'application/json' },
+      }) as any;
+      request.params = { id: ticketId };
+      request.context = serviceContext;
+      // The controller rejects a missing authenticated user before service dispatch.
+      (controller as any).authenticate = vi.fn(async () => request);
+      (controller as any).assertTicketReadAllowed = vi.fn(async () => ({}));
+      const response = await controller.update()(request);
+      expect(response.status).toBe(401);
+      expect(await table('tickets').where({ ticket_id: ticketId }).first()).toEqual(before);
+    }
+  }, HOOK_TIMEOUT);
+
+  it('refuses an absent native transaction principal through the shared record guard', async () => {
+    const ticketId = await insertTicket(clientInScope, 'Native missing principal original');
+    const before = await table('tickets').where({ ticket_id: ticketId }).first();
+    const { updateTicketInTransaction } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    for (const user of [undefined, null, {}]) {
+      vi.mocked(recordAuthorization.authorizeTicketRecordAccess).mockClear();
+      await expect(withTransaction(context.db, (trx) => updateTicketInTransaction(
+        trx, user as any, tenant, ticketId, { title: 'Native unauthorized' },
+      ))).rejects.toThrow('Permission denied: Cannot access ticket');
+      expect(recordAuthorization.authorizeTicketRecordAccess).toHaveBeenCalledWith(expect.objectContaining({ user, ticketId, action: 'update' }));
+      expect(await table('tickets').where({ ticket_id: ticketId }).first()).toEqual(before);
+      expect(workflowEvents).toHaveLength(0);
+    }
   }, HOOK_TIMEOUT);
 
   it('does not expose the system actor exemption through public MSP save options', async () => {

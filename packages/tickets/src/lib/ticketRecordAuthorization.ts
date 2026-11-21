@@ -200,7 +200,7 @@ async function resolveTicketRecord(
 export async function authorizeTicketRecordAccess(input: {
   trx: Conn;
   tenant: string;
-  user: IUserWithRoles;
+  user: IUserWithRoles | null | undefined;
   ticketId: string;
   action: 'read' | 'update';
   /** API key identity remains part of the subject for REST record checks. */
@@ -208,6 +208,12 @@ export async function authorizeTicketRecordAccess(input: {
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
+  // Every native caller, including REST contexts carrying only a userId or API
+  // key, needs an authenticated principal before any record can be disclosed.
+  if (!input.user?.user_id) {
+    throw new Error('Permission denied: Cannot access ticket');
+  }
+
   const ticket =
     input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId));
   if (!ticket) {
@@ -248,7 +254,7 @@ export async function authorizeTicketRecordAccessConcealed(
   try {
     return await authorizeTicketRecordAccess(input);
   } catch (error) {
-    if (isClientUserType(input.user.user_type) && error instanceof Error && error.message === 'Ticket not found') {
+    if (isClientUserType(input.user?.user_type) && error instanceof Error && error.message === 'Ticket not found') {
       throw new Error('Permission denied: Cannot access ticket');
     }
     throw error;
