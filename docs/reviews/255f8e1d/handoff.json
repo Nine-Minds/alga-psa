@@ -4,21 +4,26 @@
   "currentRevisionRuntimeRequired": true,
   "reviewDocumentPath": "docs/reviews/255f8e1d/index.html",
   "reviewDocumentUrl": "http://100.109.101.64:4394/index.html",
-  "reviewHeadSha": "04bbb5627289509a3ef71826edfbaaa943f599a4",
+  "reviewHeadSha": "60645bd2464d3db92ac65a91e8b7f79360e5dddd",
   "smokeHeadSha": "d17622d44fc011c45061041f61d221e113223e6b",
-  "reviewPreparedAt": "2026-11-21T00:05:10Z",
-  "reviewEnvironment": "Existing evidence directory /home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05; committed copies under docs/reviews/255f8e1d/evidence. Live development walkthrough exercised d17622d44fc011c45061041f61d221e113223e6b, not current PR head 04bbb5627289509a3ef71826edfbaaa943f599a4. The app server remains stopped; current-head runtime validation is required.",
+  "reviewPreparedAt": "2026-11-21T00:59:33Z",
+  "reviewEnvironment": "Application server remained stopped; optional review app remains unbuilt/stopped. The review guide service is separate. Current-checkout automated tests used the configured test PostgreSQL database and test-owned ephemeral SMTP sinks; fixture prerequisites were checked read-only.",
   "evidenceDirectory": "docs/reviews/255f8e1d/evidence",
   "sourceEvidenceDirectory": "/home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence",
   "evidenceLinks": [
+    "evidence/validation-60645bd.md",
     "evidence/head-walkthrough.webm",
     "evidence/head-walkthrough.vtt",
     "evidence/head-assertions.txt",
-    "evidence/head-routing-completed.json",
-    "evidence/head-redacted-mail.txt",
-    "evidence/head-visible-mail.txt"
+    "evidence/head-routing-completed.json"
   ],
   "boardStateUpdated": true,
   "approvalGranted": false,
-  "reviewReport": "Historical live demonstration and artifacts are exact to d17622d44fc011c45061041f61d221e113223e6b. PR #4094 merged at 04bbb5627289509a3ef71826edfbaaa943f599a4. Current revision runtime validation remains required; focused tests do not establish runtime equivalence. No merge approval remains."
+  "reviewReport": "At PR checkout 60645bd2464d3db92ac65a91e8b7f79360e5dddd, rerun checks passed: 51 co-managed projection/routing tests, 12 fixture behavioral tests, read-only notification fixture verification, 68 PostgreSQL/SMTP integration tests, 6 persisted in-app payload tests, and co-managed typecheck. Server typecheck exhausted the 12 GiB heap; the 16 GiB retry was stopped during severe host paging. Details are recorded in evidence/validation-60645bd.md. The code under review is unchanged from PR base 4ef99e75d5d0535fa815a0daf51e9e76fe87ba9f. Browser walkthrough is historical at d17622d44fc011c45061041f61d221e113223e6b. Board event 2026-11-21T00:05:53Z records only the instruction to keep the app server stopped; it does not authorize waiving the committed current-revision runtime requirement. Current-revision browser/runtime validation remains unmet. No security-finding-resolved mechanism was found; no human approval or security acceptance is claimed.",
+  "liveRuntimeCaptureWaived": false,
+  "liveRuntimeCaptureWaiver": null,
+  "securityCodeRevision": "4ef99e75d5d0535fa815a0daf51e9e76fe87ba9f",
+  "checksRevision": "60645bd2464d3db92ac65a91e8b7f79360e5dddd",
+  "currentRevisionRuntimeStatus": "unmet",
+  "securityFindingResolvedStatus": "unverified-unavailable"
 }
