@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
-import { createTestDbConnection } from '../../../../server/test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createAuthorizationKernel, BundleAuthorizationKernelProvider, BuiltinAuthorizationKernelProvider, RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 
@@ -9,9 +9,10 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
-vi.mock('./timeEntryDelegationAuth', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./timeEntryDelegationAuth')>()),
-  resolveManagedSubjectUserIds: vi.fn(async () => []),
+vi.mock('../../../../packages/scheduling/src/actions/timeEntryDelegationAuth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../packages/scheduling/src/actions/timeEntryDelegationAuth')>()),
+  // Management makes the subject readable absent the bundle's own-only rule.
+  resolveManagedSubjectUserIds: vi.fn(async () => ['82000000-0000-4000-8000-000000000003']),
 }));
 
 vi.mock('@shared/services/productAccessGuard', () => ({
@@ -32,7 +33,7 @@ type MembershipKind = 'role' | 'team';
 async function createAuthorizationFixture(
   trx: Knex.Transaction,
   kind: MembershipKind,
-  action = kind === 'role' ? 'read' : 'approve',
+  action = 'read',
 ) {
   await trx.raw(`
     CREATE TEMP TABLE users (tenant uuid, user_id uuid, reports_to uuid, first_name text, last_name text) ON COMMIT DROP;
@@ -126,7 +127,7 @@ describe('time-entry bundle membership authorization (PostgreSQL)', () => {
           },
         ]);
 
-        const { fetchTimeEntriesForTicketCore } = await import('./timeEntryTicketActions');
+        const { fetchTimeEntriesForTicketCore } = await import('../../../../packages/scheduling/src/actions/timeEntryTicketActions');
         const result = await fetchTimeEntriesForTicketCore(
           { user_id: ACTOR, user_type: 'internal', clientId: null } as never,
           TENANT,
@@ -135,6 +136,16 @@ describe('time-entry bundle membership authorization (PostgreSQL)', () => {
         );
         expect(result.entries.map((entry) => entry.user_id)).toEqual([ACTOR]);
         expect(result.othersHiddenCount).toBe(1);
+
+        await trx('authorization_bundle_rules').where({ tenant: TENANT, rule_id: RULE }).delete();
+        const withoutBundleRestriction = await fetchTimeEntriesForTicketCore(
+          { user_id: ACTOR, user_type: 'internal', clientId: null } as never,
+          TENANT,
+          trx,
+          '82000000-0000-4000-8000-000000000010',
+        );
+        expect(withoutBundleRestriction.entries.map((entry) => entry.user_id).sort()).toEqual([ACTOR, SUBJECT].sort());
+        expect(withoutBundleRestriction.othersHiddenCount).toBe(0);
       } finally {
         await trx.rollback();
       }
@@ -147,7 +158,7 @@ describe('time-entry bundle membership authorization (PostgreSQL)', () => {
       const trx = await db.transaction();
       try {
         await createAuthorizationFixture(trx, kind, 'approve');
-        const { assertCanApproveSubject } = await import('./timeEntryDelegationAuth');
+        const { assertCanApproveSubject } = await import('../../../../packages/scheduling/src/actions/timeEntryDelegationAuth');
         await expect(assertCanApproveSubject(
           { user_id: ACTOR, user_type: 'internal', clientId: null } as never,
           TENANT,
