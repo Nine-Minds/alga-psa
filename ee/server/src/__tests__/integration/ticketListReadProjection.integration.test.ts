@@ -14,6 +14,7 @@ const DENIED = '72000000-0000-4000-8000-000000000013';
 const WILDCARD = '72000000-0000-4000-8000-000000000014';
 const PRIORITY_COLOR_CANONICAL = '72000000-0000-4000-8000-000000000015';
 const PRIORITY_COLOR_ALIAS = '72000000-0000-4000-8000-000000000016';
+const LOCATION_RESTRICTED = '72000000-0000-4000-8000-000000000017';
 
 describe('ticket list and hydration SQL projection', () => {
   let db: Knex;
@@ -62,6 +63,7 @@ describe('ticket list and hydration SQL projection', () => {
         status: '72000000-0000-4000-8000-000000000023',
         category: '72000000-0000-4000-8000-000000000024',
         priority: '72000000-0000-4000-8000-000000000025',
+        location: '72000000-0000-4000-8000-000000000030',
         contact: '72000000-0000-4000-8000-000000000026',
         enteredBy: '72000000-0000-4000-8000-000000000027',
         assignee: '72000000-0000-4000-8000-000000000028',
@@ -71,6 +73,7 @@ describe('ticket list and hydration SQL projection', () => {
       await trx('priorities').insert({ tenant: TENANT, priority_id: ids.priority, item_type: 'ticket', priority_name: 'SECRET PRIORITY', color: 'SECRET PRIORITY COLOR' });
       await trx('boards').insert({ tenant: TENANT, board_id: ids.board, board_name: 'SECRET BOARD' });
       await trx('categories').insert({ tenant: TENANT, category_id: ids.category, category_name: 'SECRET CATEGORY' });
+      await trx('client_locations').insert({ tenant: TENANT, location_id: ids.location, location_name: 'SECRET LOCATION' });
       await trx('clients').insert({ tenant: TENANT, client_id: ids.client, client_name: 'SECRET CLIENT' });
       await trx('contacts').insert({ tenant: TENANT, contact_name_id: ids.contact, full_name: 'SECRET CONTACT' });
       await trx('users').insert([
@@ -78,7 +81,7 @@ describe('ticket list and hydration SQL projection', () => {
         { tenant: TENANT, user_id: ids.assignee, first_name: 'SECRET', last_name: 'ASSIGNEE' },
       ]);
       await trx('teams').insert({ tenant: TENANT, team_id: ids.team, team_name: 'SECRET TEAM' });
-      await trx('tickets').insert([RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS].map((ticket_id, index) => ({
+      await trx('tickets').insert([RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED].map((ticket_id, index) => ({
         ticket_id,
         tenant: TENANT,
         ticket_number: `SECRET NUMBER ${index}`,
@@ -86,6 +89,7 @@ describe('ticket list and hydration SQL projection', () => {
         url: `SECRET URL ${index}`,
         board_id: ids.board,
         client_id: ids.client,
+        location_id: ids.location,
         contact_name_id: ids.contact,
         status_id: ids.status,
         category_id: ids.category,
@@ -119,13 +123,14 @@ describe('ticket list and hydration SQL projection', () => {
         base,
         'internal',
         [
-          { id: RESTRICTED, redactedFields: ['ticket_number', 'url', 'entered_by', 'attributes.private_value', 'client_name', 'status_name', 'assigned_to', 'priority_name'] },
+          { id: RESTRICTED, redactedFields: ['tickets.category_id', 'ticket_number', 'url', 'entered_by', 'attributes.private_value', 'client_name', 'status_name', 'assigned_to', 'priority_name'] },
           { id: VISIBLE, redactedFields: [] },
           { id: WILDCARD, redactedFields: ['*'] },
           { id: PRIORITY_COLOR_CANONICAL, redactedFields: ['priority_color'] },
           { id: PRIORITY_COLOR_ALIAS, redactedFields: ['priorities.color'] },
+          { id: LOCATION_RESTRICTED, redactedFields: ['location_id'] },
         ],
-        [RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS]
+        [RESTRICTED, VISIBLE, DENIED, WILDCARD, PRIORITY_COLOR_CANONICAL, PRIORITY_COLOR_ALIAS, LOCATION_RESTRICTED]
       );
       const byId = new Map(rows.map((row: any) => [row.ticket_id, row]));
       const restricted = byId.get(RESTRICTED);
@@ -136,6 +141,8 @@ describe('ticket list and hydration SQL projection', () => {
         title: 'SECRET TITLE 0',
         attributes: null,
         client_name: null,
+        category_name: null,
+        ticket_location_name: 'SECRET LOCATION',
         status_name: null,
         is_closed: null,
         assigned_to: null,
@@ -156,6 +163,8 @@ describe('ticket list and hydration SQL projection', () => {
         entered_by: ids.enteredBy,
         attributes: { description: 'SECRET DESCRIPTION 1', private_value: 'SECRET ATTRIBUTE 1' },
         client_name: 'SECRET CLIENT',
+        category_name: 'SECRET CATEGORY',
+        ticket_location_name: 'SECRET LOCATION',
         status_name: 'SECRET STATUS',
         assigned_to_name: 'SECRET ASSIGNEE',
       });
@@ -168,6 +177,11 @@ describe('ticket list and hydration SQL projection', () => {
       expect(byId.get(PRIORITY_COLOR_ALIAS)).toMatchObject({
         priority_color: null,
         priority_name: 'SECRET PRIORITY',
+      });
+      expect(byId.get(LOCATION_RESTRICTED)).toMatchObject({
+        category_name: 'SECRET CATEGORY',
+        location_id: null,
+        ticket_location_name: null,
       });
     } finally {
       await trx.rollback();

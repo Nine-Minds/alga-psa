@@ -1,3 +1,5 @@
+import { isRecordFieldHidden } from '@alga-psa/authorization/recordProjection';
+
 /** Canonical ticket fields exposed by list and smart-search readers. */
 const FIELD_ALIASES: Record<string, readonly string[]> = {
   ticket_id: ['ticket_id', 'tickets.ticket_id', 'id'],
@@ -18,7 +20,7 @@ const FIELD_ALIASES: Record<string, readonly string[]> = {
   status_id: ['status_id', 'tickets.status_id'],
   status_name: ['status', 'status_name', 'statuses.name'],
   is_closed: ['is_closed', 'tickets.is_closed'],
-  category_id: ['category_id', 'tickets.category_id'],
+  category_id: ['category_id', 'tickets.category_id', 'categories.category_id'],
   category_name: ['category_name', 'categories.category_name'],
   subcategory_id: ['subcategory_id', 'tickets.subcategory_id'],
   priority_id: ['priority_id', 'tickets.priority_id'],
@@ -33,7 +35,8 @@ const FIELD_ALIASES: Record<string, readonly string[]> = {
   updated_at: ['updated_at', 'tickets.updated_at'],
   closed_at: ['closed_at', 'tickets.closed_at'],
   due_date: ['due_date', 'tickets.due_date'],
-  location_id: ['location_id', 'tickets.location_id'],
+  location_id: ['location_id', 'tickets.location_id', 'locations.location_id', 'client_locations.location_id'],
+  location_name: ['location_name', 'ticket_location_name', 'tickets.location_name', 'locations.location_name', 'client_locations.location_name'],
   billing_profile_id: ['billing_profile_id', 'tickets.billing_profile_id'],
   master_ticket_id: ['master_ticket_id', 'tickets.master_ticket_id'],
   itil_impact: ['itil_impact', 'tickets.itil_impact'],
@@ -114,6 +117,16 @@ export function ticketReadMask(redactedFields: readonly string[]): TicketReadMas
 export function ticketReadFieldHidden(redactedFields: readonly string[], field: string): boolean {
   const mask = ticketReadMask(redactedFields);
   if (mask.dropResource || mask.fields.has(field)) return true;
+  // These ticket-list labels are derived from foreign-key-backed shared fields.
+  // Ask the shared projection policy so SQL and payload redaction follow the same
+  // dependency graph as REST and other ticket readers.
+  const sharedDependencyFields = [...mask.fields].filter((redactedField) => redactedField !== 'ticket_number');
+  if (
+    (field === 'category_name' || field === 'location_name') &&
+    isRecordFieldHidden('ticket', field, sharedDependencyFields)
+  ) {
+    return true;
+  }
   const related: Record<string, readonly string[]> = {
     client_id: ['client_name'],
     client_name: ['client_id'],

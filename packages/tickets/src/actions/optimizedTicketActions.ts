@@ -440,7 +440,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   return authorized.flatMap(({ ticket, redactedFields }) => {
     const projected = projectReadableRecord('ticket', ticket, redactedFields);
     return projected
-      ? [redactTicketReadPayload(ticket as Record<string, any>, redactedFields) as T]
+      ? [redactTicketReadPayload(projected as Record<string, any>, redactedFields) as T]
       : [];
   });
 }
@@ -2491,13 +2491,13 @@ export const getTicketsForList = withAuth(async (
         .limit(normalizedPageSize)
         .offset(offset);
 
-      const [countRow, pageReadInputs] = await Promise.all([countQuery, pageReadInputsQuery]);
+      const [count, pageReadInputs] = await Promise.all([countQuery, pageReadInputsQuery]);
       const orderedIds = pageReadInputs.map((row: { ticket_id: string }) => row.ticket_id);
       const targets = await decideTicketReadTargetsFromRows(trx, authorizationContext, orderedIds, pageReadInputs);
       const pageTickets = await loadTicketRowsByReadTargets(
         trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), targets, orderedIds, bundleChildReadScope(authorizationContext)
       );
-      totalCount = Number((countRow as { count?: string | number } | undefined)?.count ?? 0);
+      totalCount = count;
       ticketListItems = mapTicketListItems(pageTickets);
     } else {
       // The fallback query selects identities only. Authorization inputs are loaded separately, and final
