@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
@@ -230,6 +231,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      serverOnlyAlias,
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,
