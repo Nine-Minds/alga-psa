@@ -1,0 +1,19 @@
+SOURCE_REVISION=0989431a263ee4708e094782b5c336093bfee434
+COMMAND=npx vitest run src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts --reporter=verbose
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1795220614800"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the configured resolver aliases with production tsconfig context for 'community' 4165ms 14 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the configured resolver aliases with production tsconfig context for 'enterprise via EDITION=enterprise' 5786ms 14 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the configured resolver aliases with production tsconfig context for 'enterprise via NEXT_PUBLIC_EDITION' 5906ms 15 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the configured resolver aliases with production tsconfig context for 'enterprise via EDITION=ee' 5955ms 15 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  00:23:40
+   Duration  22.84s (transform 58ms, setup 101ms, import 12ms, tests 22.62s, environment 0ms)
+
+EXIT_STATUS=0

@@ -1,0 +1,7 @@
+SOURCE_REVISION=0989431a263ee4708e094782b5c336093bfee434
+COMMAND=NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck
+
+> server@1.6.17 typecheck
+> tsc --noEmit -p tsconfig.json
+
+EXIT_STATUS=0

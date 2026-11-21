@@ -60,6 +60,10 @@ function createFixture(): { fixtureRoot: string; fixtureServer: string } {
   fs.mkdirSync(path.join(fixtureRoot, 'packages/product-service-principals/oss'), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, 'packages/product-service-principals/ee'), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, 'ee/server/src/lib/service-principals'), { recursive: true });
+  // Preserve the repository's tsconfig inheritance and path aliases. The
+  // fixture app must exercise the same @ee fallback context as production.
+  fs.copyFileSync(path.join(repoRoot, 'tsconfig.base.json'), path.join(fixtureRoot, 'tsconfig.base.json'));
+  fs.copyFileSync(path.join(serverDir, 'tsconfig.json'), path.join(fixtureServer, 'tsconfig.json'));
   for (const source of [
     'packages/product-service-principals/types.ts',
     'packages/product-service-principals/oss/entry.ts',
@@ -151,18 +155,12 @@ describe('service-principals Turbopack entry alias', () => {
     { name: 'enterprise via EDITION=enterprise', editionEnvironment: { EDITION: 'enterprise' }, implementation: 'ee' },
     { name: 'enterprise via EDITION=ee', editionEnvironment: { EDITION: 'ee' }, implementation: 'ee' },
     { name: 'enterprise via NEXT_PUBLIC_EDITION', editionEnvironment: { NEXT_PUBLIC_EDITION: 'enterprise' }, implementation: 'ee' },
-  ])('compiles the actual ordered resolver aliases for $name', ({ name, editionEnvironment, implementation }) => {
+  ])('compiles the configured resolver aliases with production tsconfig context for $name', ({ name, editionEnvironment, implementation }) => {
     const edition = implementation === 'ee' ? 'enterprise' : 'community';
     const configuredAliases = loadConfiguredAliases(editionEnvironment);
     const configuredEntry = configuredAliases.find(([key]) => key === '@product/service-principals/entry')?.[1];
     const expectedEntry = `../packages/product-service-principals/${implementation}/entry.ts`;
     expect(configuredEntry).toBe(expectedEntry);
-    if (edition === 'enterprise') {
-      const aliasKeys = configuredAliases.map(([key]) => key);
-      expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeGreaterThanOrEqual(0);
-      expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeLessThan(aliasKeys.indexOf('@ee'));
-    }
-
     const fixtureAliases: ResolverAlias[] = [
       ...configuredAliases,
       // Test-fixture plumbing: the production config gets this target from
@@ -180,9 +178,27 @@ describe('service-principals Turbopack entry alias', () => {
     expect(brokenBuild.status, brokenOutput).not.toBe(0);
     expect(brokenOutput).toMatch(/@product\/service-principals\/entry|service-principals\/.*entry\.ts/);
 
-    const repairedBuild = compileFixture(fixtureServer, fixtureAliases, `.next-configured-${name.replaceAll(/[^a-z0-9]+/gi, '-')}`, edition);
-    const repairedOutput = `${repairedBuild.stdout ?? ''}\n${repairedBuild.stderr ?? ''}`;
-    expect(repairedBuild.error, repairedOutput).toBeUndefined();
-    expect(repairedBuild.status, repairedOutput).toBe(0);
+    const configuredBuild = compileFixture(fixtureServer, fixtureAliases, `.next-configured-${name.replaceAll(/[^a-z0-9]+/gi, '-')}`, edition);
+    const configuredOutput = `${configuredBuild.stdout ?? ''}\n${configuredBuild.stderr ?? ''}`;
+    expect(configuredBuild.error, configuredOutput).toBeUndefined();
+    expect(configuredBuild.status, configuredOutput).toBe(0);
+
+    if (edition === 'enterprise') {
+      // Compile again after swapping only the relative order of the EE-specific
+      // and broad aliases. This captures Turbopack's resolution behavior and
+      // guards against claiming object insertion order changes resolution.
+      const reversedAliases = [...fixtureAliases];
+      const specificIndex = reversedAliases.findIndex(([key]) => key === '@ee/lib/service-principals');
+      const broadIndex = reversedAliases.findIndex(([key]) => key === '@ee');
+      if (specificIndex >= 0 && broadIndex >= 0) {
+        [reversedAliases[specificIndex], reversedAliases[broadIndex]] = [
+          reversedAliases[broadIndex], reversedAliases[specificIndex],
+        ];
+      }
+      const reversedBuild = compileFixture(fixtureServer, reversedAliases, `.next-reversed-${name.replaceAll(/[^a-z0-9]+/gi, '-')}`, edition);
+      const reversedOutput = `${reversedBuild.stdout ?? ''}\n${reversedBuild.stderr ?? ''}`;
+      expect(reversedBuild.error, reversedOutput).toBeUndefined();
+      expect(reversedBuild.status, reversedOutput).toBe(0);
+    }
   }, 360_000);
 });
