@@ -8,9 +8,11 @@ import {
   publishBundleRevision,
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
+import { canCompileSearchVisibility, registerSearchVisibilityVerifier, resolveSearchAclPrincipal, verifyResultVisibility } from '@alga-psa/search/acl';
 import { runAppSearch } from '@alga-psa/search/runAppSearch';
 import { TestContext } from '../../../test-utils/testContext';
 import { createCloseRulesFixture, insertResolutionComment } from './helpers/closeRulesFixture';
+import { createUser } from '../../../test-utils/testDataFactory';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 900_000;
@@ -385,4 +387,157 @@ describe('production search authorization PostgreSQL benchmark', () => {
       }));
     });
   }, 900_000);
+
+  it('uses fallback when a verifier replaces a built-in project verifier', async () => {
+    const restoreVerifier = registerSearchVisibilityVerifier('project', async () => false);
+    try {
+      await runWithTenant(ctx.tenantId, async () => {
+        const projectId = projectIds[0];
+        await db('app_search_index').where({ tenant: ctx.tenantId, object_type: 'project', object_id: projectId }).delete();
+        await db('app_search_index').insert({
+          tenant: ctx.tenantId, object_type: 'project', object_id: projectId,
+          title: 'Replacement verifier candidate', body: 'replacementonly', url: `/msp/projects/${projectId}`,
+          source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'project:read',
+          search_vector: db.raw("to_tsvector('english', 'replacementonly')"),
+        });
+        const acl = await resolveSearchAclPrincipal(db, ctx.user);
+        expect(canCompileSearchVisibility('project')).toBe(false);
+        await expect(verifyResultVisibility(db, acl, [{ type: 'project', id: projectId }])).resolves.toEqual([]);
+
+        const result = await runAppSearch(db, ctx.tenantId, ctx.user, {
+          query: 'replacementonly', types: ['project'] as any, limit: 5,
+        });
+        expect(result.results).toEqual([]);
+        expect(result.groups.project).toBe(0);
+        expect(result.totalCount).toBe(0);
+      });
+    } finally {
+      restoreVerifier();
+    }
+  }, 60_000);
+
+  it('keeps document association decisions on fallback when SQL cannot match first-row semantics', async () => {
+    await runWithTenant(ctx.tenantId, async () => {
+      const portalUserId = await createUser(db, ctx.tenantId, { user_type: 'client', contact_id: fixture.contactId });
+      const roleId = randomUUID();
+      const permissionId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('roles').insert({ tenant: ctx.tenantId, role_id: roleId, role_name: `Document parity reader ${roleId}`, msp: false, client: true });
+      await tenantDb(db, ctx.tenantId).table('permissions').insert({ tenant: ctx.tenantId, permission_id: permissionId, resource: 'document', action: 'read', msp: false, client: true });
+      await tenantDb(db, ctx.tenantId).table('role_permissions').insert({ tenant: ctx.tenantId, role_id: roleId, permission_id: permissionId });
+      await tenantDb(db, ctx.tenantId).table('user_roles').insert({ tenant: ctx.tenantId, user_id: portalUserId, role_id: roleId });
+
+      const portalUser = { ...ctx.user, user_id: portalUserId, user_type: 'client', contact_id: fixture.contactId, clientId: fixture.clientId, roles: [] } as any;
+      const documentType = await tenantDb(db, ctx.tenantId).table('document_types').first('type_id');
+      const documentId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('documents').insert({
+        tenant: ctx.tenantId, document_id: documentId, document_name: 'Needle first association document',
+        type_id: documentType.type_id, user_id: ctx.user.user_id, created_by: ctx.user.user_id,
+      });
+      await tenantDb(db, ctx.tenantId).table('document_associations').insert([
+        { tenant: ctx.tenantId, document_id: documentId, entity_type: 'client', entity_id: deniedClient },
+        { tenant: ctx.tenantId, document_id: documentId, entity_type: 'client', entity_id: fixture.clientId },
+      ]);
+      await db('app_search_index').insert({
+        tenant: ctx.tenantId, object_type: 'document', object_id: documentId,
+        title: 'Needle first association document', body: 'needle association', url: `/msp/documents/${documentId}`,
+        source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'document:read',
+        search_vector: db.raw("to_tsvector('english', 'needle association')"),
+      });
+
+      const acl = await resolveSearchAclPrincipal(db, portalUser, { mode: 'scoped', clientIds: [fixture.clientId] });
+      expect(canCompileSearchVisibility('document')).toBe(false);
+      await expect(verifyResultVisibility(db, acl, [{ type: 'document', id: documentId }])).resolves.toEqual([]);
+      const result = await runAppSearch(db, ctx.tenantId, portalUser, { query: 'needle association', types: ['document'] as any, limit: 5 });
+      expect(result.results).toEqual([]);
+      expect(result.groups.document).toBe(0);
+      expect(result.totalCount).toBe(0);
+    });
+  }, 60_000);
+
+  it('matches PostgreSQL source verifiers for every remaining compiled visibility predicate', async () => {
+    await runWithTenant(ctx.tenantId, async () => {
+      const workflowRoleId = randomUUID();
+      const workflowPermissionId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('roles').insert({ tenant: ctx.tenantId, role_id: workflowRoleId, role_name: `Workflow search reader ${workflowRoleId}`, msp: true, client: false });
+      await tenantDb(db, ctx.tenantId).table('permissions').insert({ tenant: ctx.tenantId, permission_id: workflowPermissionId, resource: 'workflow_task', action: 'read', msp: true, client: false });
+      await tenantDb(db, ctx.tenantId).table('role_permissions').insert({ tenant: ctx.tenantId, role_id: workflowRoleId, permission_id: workflowPermissionId });
+      await tenantDb(db, ctx.tenantId).table('user_roles').insert({ tenant: ctx.tenantId, user_id: ctx.user.user_id, role_id: workflowRoleId });
+
+      const projectStatus = await tenantDb(db, ctx.tenantId).table('statuses').where({ status_type: 'project' }).first('status_id');
+      const projectId = randomUUID();
+      const phaseId = randomUUID();
+      const taskId = randomUUID();
+      const taskCommentId = randomUUID();
+      const taskThreadId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('projects').insert({
+        tenant: ctx.tenantId, project_id: projectId, client_id: fixture.clientId,
+        project_name: 'Needle parity project', project_number: `PARITY-${projectId.slice(0, 8)}`,
+        status: projectStatus.status_id, wbs_code: `PARITY-${projectId}`, is_inactive: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('project_phases').insert({
+        tenant: ctx.tenantId, phase_id: phaseId, project_id: projectId, phase_name: 'Needle parity phase',
+        order_number: 1, status: 'active', wbs_code: 'PARITY.1',
+      });
+      await tenantDb(db, ctx.tenantId).table('project_tasks').insert({
+        tenant: ctx.tenantId, task_id: taskId, phase_id: phaseId, task_name: 'Needle parity task', wbs_code: 'PARITY.1.1',
+      });
+      await tenantDb(db, ctx.tenantId).table('comment_threads').insert({
+        tenant: ctx.tenantId, thread_id: taskThreadId, project_task_id: taskId, root_comment_id: taskCommentId, is_internal: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('project_task_comments').insert({
+        tenant: ctx.tenantId, task_comment_id: taskCommentId, task_id: taskId, thread_id: taskThreadId,
+        user_id: ctx.user.user_id, note: '[]', author_type: 'internal',
+      });
+
+      const systemTaskType = await db('system_workflow_task_definitions').first('task_type');
+      expect(systemTaskType?.task_type).toBeTruthy();
+      const workflowRows = [
+        { id: randomUUID(), assigned_users: JSON.stringify([ctx.user.user_id]) },
+        { id: randomUUID(), assigned_users: JSON.stringify([randomUUID()]) },
+        { id: randomUUID(), assigned_users: JSON.stringify([]) },
+        { id: randomUUID(), assigned_users: JSON.stringify([42]) },
+      ];
+      for (const workflow of workflowRows) {
+        await tenantDb(db, ctx.tenantId).table('workflow_tasks').insert({
+          tenant: ctx.tenantId, task_id: workflow.id, execution_id: randomUUID(),
+          task_definition_type: 'system', system_task_definition_task_type: systemTaskType.task_type,
+          tenant_task_definition_id: null, title: 'Needle parity workflow task', status: 'pending', priority: 'medium',
+          assigned_users: workflow.assigned_users,
+        });
+      }
+
+      const ticketStatus = await tenantDb(db, ctx.tenantId).table('statuses').where({ status_id: fixture.openStatusId }).first('name');
+      const cases: Array<{ type: string; id: string; permission: string }> = [
+        { type: 'project', id: projectId, permission: 'project:read' },
+        { type: 'project_phase', id: phaseId, permission: 'project:read' },
+        { type: 'project_task', id: taskId, permission: 'project:read' },
+        { type: 'project_task_comment', id: taskCommentId, permission: 'project:read' },
+        ...workflowRows.map(({ id }) => ({ type: 'workflow_task', id, permission: 'workflow_task:read' })),
+        { type: 'status', id: ticketStatus.name, permission: 'ticket:read' },
+        { type: 'status', id: `Missing parity status ${randomUUID()}`, permission: 'ticket:read' },
+      ];
+      await db('app_search_index').insert(cases.map(({ type, id, permission }) => ({
+        tenant: ctx.tenantId, object_type: type, object_id: id, title: `Needle parity ${type}`,
+        body: 'needle parity', url: `/search/${type}/${id}`, source_updated_at: FIXED_RANKING,
+        metadata: JSON.stringify({}), required_permission: permission,
+        search_vector: db.raw("to_tsvector('english', 'needle parity')"),
+      })));
+
+      const acl = await resolveSearchAclPrincipal(db, ctx.user);
+      const grouped = new Map<string, Array<{ type: any; id: string }>>();
+      for (const candidate of cases) {
+        const rows = grouped.get(candidate.type) ?? [];
+        rows.push({ type: candidate.type, id: candidate.id });
+        grouped.set(candidate.type, rows);
+      }
+      for (const [type, candidates] of grouped) {
+        expect(canCompileSearchVisibility(type as any), type).toBe(true);
+        const expected = await verifyResultVisibility(db, acl, candidates);
+        const result = await runAppSearch(db, ctx.tenantId, ctx.user, { query: 'needle parity', types: [type] as any, limit: 100 });
+        expect(result.results.map(({ id }) => id).sort(), type).toEqual(expected.map(({ id }) => id).sort());
+        expect(result.groups[type as keyof typeof result.groups]).toBe(expected.length);
+        expect(result.totalCount).toBe(expected.length);
+      }
+    });
+  }, 60_000);
 });

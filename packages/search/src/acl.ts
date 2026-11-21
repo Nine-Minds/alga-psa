@@ -59,19 +59,22 @@ export interface SqlFragment {
 
 /**
  * Source-record checks that can be expressed as correlated predicates over the
- * indexed candidate. These predicates are shared by ranked pages and exact
- * counts so authorized candidates never need to be materialized in JS.
+ * indexed candidate. A compiler is attached to its verifier registration, so
+ * replacing a verifier without a matching compiler automatically selects the
+ * verified fallback path.
  */
-const compiledVisibilityTypes = new Set<SearchObjectType>([
-  'project', 'project_phase', 'project_task', 'project_task_comment',
-  'document', 'workflow_task', 'status',
-]);
-
-export function canCompileSearchVisibility(type: SearchObjectType): boolean {
-  return !visibilityVerifiers.has(type) || compiledVisibilityTypes.has(type);
+type SearchVisibilitySqlCompiler = (user: SearchAclPrincipal) => SqlFragment;
+interface SearchVisibilityRegistration {
+  verifier: SearchVisibilityVerifier;
+  sqlCompiler?: SearchVisibilitySqlCompiler;
 }
 
-function compileRecordVisibilitySql(user: SearchAclPrincipal): SqlFragment {
+export function canCompileSearchVisibility(type: SearchObjectType): boolean {
+  const registration = visibilityVerifiers.get(type);
+  return Boolean(registration?.sqlCompiler);
+}
+
+function compileRecordVisibilitySql(user: SearchAclPrincipal, onlyType: SearchObjectType): SqlFragment {
   if (!user.tenant) return { sql: 'FALSE', bindings: [] };
   const scopedClientIds = user.clientAccess.mode === 'scoped' ? user.clientAccess.clientIds : undefined;
   const clientAllowed = (alias: string) => scopedClientIds
@@ -117,20 +120,6 @@ function compileRecordVisibilitySql(user: SearchAclPrincipal): SqlFragment {
       WHERE ptc.tenant = ?::uuid AND ptc.task_comment_id::text = s.object_id
         AND ptc.deleted_at IS NULL AND ${projectJoin}
     )`, clientBinding: true },
-    { type: 'document', sql: `EXISTS (
-      SELECT 1 FROM documents d
-      WHERE d.tenant = ?::uuid AND d.document_id::text = s.object_id
-        AND (
-          ?::boolean OR NOT EXISTS (
-            SELECT 1 FROM document_associations da
-            WHERE da.tenant = d.tenant AND da.document_id = d.document_id AND da.entity_type = 'client'
-          ) OR EXISTS (
-            SELECT 1 FROM document_associations da
-            WHERE da.tenant = d.tenant AND da.document_id = d.document_id AND da.entity_type = 'client'
-              AND da.entity_id::text = ANY(?::text[])
-          )
-        )
-    )`, clientBinding: true },
     { type: 'workflow_task', sql: `EXISTS (
       SELECT 1 FROM workflow_tasks wt
       WHERE wt.tenant = ?::uuid AND wt.task_id::text = s.object_id
@@ -150,20 +139,17 @@ function compileRecordVisibilitySql(user: SearchAclPrincipal): SqlFragment {
     )` },
   ];
   const bindings: unknown[] = [];
-  const predicates = types.map(({ type, sql, clientBinding }) => {
-    bindings.push(type);
+  const predicates = types.filter(({ type }) => type === onlyType).map(({ type, sql, clientBinding }) => {
     bindings.push(user.tenant);
-    if (type === 'document') {
-      bindings.push(user.clientAccess.mode === 'all', scopedClientIds ?? []);
-    } else if (type === 'workflow_task') {
+    if (type === 'workflow_task') {
       bindings.push(user.userId);
     } else {
       if (['project_phase', 'project_task', 'project_task_comment'].includes(type)) bindings.push(user.tenant);
       if (clientBinding && scopedClientIds) bindings.push(scopedClientIds);
     }
-    return `(s.object_type <> ? OR ${sql})`;
+    return `(${sql})`;
   });
-  return { sql: predicates.join(' AND '), bindings };
+  return { sql: predicates[0] ?? 'FALSE', bindings };
 }
 
 export interface SearchVisibilityRow {
@@ -178,7 +164,7 @@ export type SearchVisibilityVerifier<TRow extends SearchVisibilityRow = SearchVi
   row: TRow,
 ) => Promise<boolean>;
 
-const visibilityVerifiers = new Map<SearchObjectType, SearchVisibilityVerifier>();
+const visibilityVerifiers = new Map<SearchObjectType, SearchVisibilityRegistration>();
 const SEARCH_ACL_MISSING_TENANT = '__search_acl_missing_tenant__';
 const SEARCH_ACL_MISSING_TENANT_REASON =
   'search ACL verifier has no tenant principal and must fail closed';
@@ -281,7 +267,16 @@ export async function resolveSearchAclPrincipal(
     clientAccess,
     authorizationUser: user,
   };
-  principal.recordVisibilitySql = compileRecordVisibilitySql(principal);
+  const compiledRecordPredicates = [...visibilityVerifiers.entries()]
+    .filter(([, registration]) => registration.sqlCompiler)
+    .map(([type, registration]) => {
+      const fragment = registration.sqlCompiler!(principal);
+      return { sql: `(s.object_type <> ? OR ${fragment.sql})`, bindings: [type, ...fragment.bindings] };
+    });
+  principal.recordVisibilitySql = {
+    sql: compiledRecordPredicates.map(({ sql }) => sql).join(' AND ') || 'TRUE',
+    bindings: compiledRecordPredicates.flatMap(({ bindings }) => bindings),
+  };
 
   if (user.tenant && [...permissions].includes('ticket:read')) {
     let context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -347,8 +342,27 @@ export async function resolveSearchAclPrincipal(
 export function registerSearchVisibilityVerifier(
   objectType: SearchObjectType,
   verifier: SearchVisibilityVerifier,
+  sqlCompiler?: SearchVisibilitySqlCompiler,
+): () => void {
+  const previous = visibilityVerifiers.get(objectType);
+  const registration: SearchVisibilityRegistration = { verifier, sqlCompiler };
+  visibilityVerifiers.set(objectType, registration);
+  return () => {
+    if (visibilityVerifiers.get(objectType) !== registration) return;
+    if (previous) visibilityVerifiers.set(objectType, previous);
+    else visibilityVerifiers.delete(objectType);
+  };
+}
+
+function registerCompiledSearchVisibilityVerifier(
+  objectType: SearchObjectType,
+  verifier: SearchVisibilityVerifier,
 ): void {
-  visibilityVerifiers.set(objectType, verifier);
+  registerSearchVisibilityVerifier(
+    objectType,
+    verifier,
+    (user) => compileRecordVisibilitySql(user, objectType),
+  );
 }
 
 export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
@@ -415,13 +429,13 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
       else emitAclDrift(row, user);
       continue;
     }
-    const verifier = visibilityVerifiers.get(row.type);
-    if (!verifier) {
+    const registration = visibilityVerifiers.get(row.type);
+    if (!registration) {
       visibleRows.push(row);
       continue;
     }
 
-    if (await verifier(knex, user, row)) {
+    if (await registration.verifier(knex, user, row)) {
       visibleRows.push(row);
     } else {
       emitAclDrift(row, user);
@@ -486,12 +500,12 @@ async function projectClientIdForProject(
   return row?.client_id;
 }
 
-registerSearchVisibilityVerifier('project', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('project', async (knex, user, row) => {
   const clientId = await projectClientIdForProject(knex, user, row.id);
   return clientId !== undefined && hasClientAccess(user, clientId);
 });
 
-registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
   const phase = await tenantScopedRoot<{ project_id: string }>(knex, user, 'project_phases')
     .select('project_id')
     .where('phase_id', row.id)
@@ -501,7 +515,7 @@ registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
   return clientId !== undefined && hasClientAccess(user, clientId);
 });
 
-registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('project_task', async (knex, user, row) => {
   if (!user.tenant) return false;
 
   const db = tenantDb(knex, user.tenant);
@@ -517,7 +531,7 @@ registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
   return clientId !== undefined && hasClientAccess(user, clientId);
 });
 
-registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
   if (!user.tenant) return false;
 
   const db = tenantDb(knex, user.tenant);
@@ -542,19 +556,21 @@ registerSearchVisibilityVerifier('document', async (knex, user, row) => {
     .first();
   if (!document) return false;
 
-  const association = await tenantScopedRoot<{ entity_id: string }>(
+  const associations = await tenantScopedRoot<{ entity_id: string }>(
     knex,
     user,
     'document_associations',
   )
     .select('entity_id')
     .where('document_id', row.id)
-    .andWhere('entity_type', 'client')
-    .first();
-  return hasClientAccess(user, association?.entity_id ?? null);
+    .andWhere('entity_type', 'client');
+  // Treat every client association as a visibility constraint. Using any()
+  // grants access when one linked client is allowed but another is denied;
+  // the old first-row check had no deterministic database ordering either.
+  return associations.length === 0 || associations.every(({ entity_id }) => hasClientAccess(user, entity_id));
 });
 
-registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
   const task = await tenantScopedRoot<{ assigned_users: unknown }>(knex, user, 'workflow_tasks')
     .select('assigned_users')
     .where('task_id', row.id)
@@ -569,7 +585,7 @@ registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
 // required_permission gate; this record-level check drops rows whose source
 // status was removed (defence-in-depth against a missed STATUS_DELETED event,
 // e.g. from a bulk seeding path that does not publish per-status events).
-registerSearchVisibilityVerifier('status', async (knex, user, row) => {
+registerCompiledSearchVisibilityVerifier('status', async (knex, user, row) => {
   // Status search rows are keyed by name (ticket statuses only, deduped
   // across boards), so the existence check matches on name, not status_id.
   const status = await tenantScopedRoot<{ name: string }>(knex, user, 'statuses')

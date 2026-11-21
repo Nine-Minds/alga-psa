@@ -520,7 +520,7 @@ describe('search ACL SQL predicate', () => {
       return query;
     };
     const documentQuery = makeQuery({ document_id: 'document-1' });
-    const associationQuery = makeQuery({ entity_id: 'client-x' });
+    const associationQuery = makeQuery([{ entity_id: 'client-x' }]);
     const knex = vi.fn((table: string) => {
       if (table === 'documents') return documentQuery;
       if (table === 'document_associations') return associationQuery;
@@ -565,7 +565,7 @@ describe('search ACL SQL predicate', () => {
     };
     const ticketQuery = makeQuery(authorizedTicketRow());
     const documentQuery = makeQuery({ document_id: 'document-1' });
-    const associationQuery = makeQuery({ entity_id: 'client-1' });
+    const associationQuery = makeQuery([{ entity_id: 'client-1' }]);
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') return ticketQuery;
       if (table === 'team_members' || table === 'users') return emptyQuery();
