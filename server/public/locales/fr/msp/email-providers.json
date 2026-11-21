@@ -418,6 +418,7 @@
         "oauthStatus": "Statut OAuth",
         "connected": "Connecté",
         "notConnected": "Non connecté",
+        "reauthorizationRequired": "Nouvelle autorisation requise",
         "reconnectOauth": "Reconnecter OAuth",
         "authorizeUrl": "Autoriser l'URL",
         "tokenUrl": "URL du jeton",
@@ -574,6 +575,7 @@
       "statusLabel": "Statut OAuth",
       "connected": "Connecté",
       "notConnected": "Non connecté",
+      "reauthorizationRequired": "Nouvelle autorisation requise",
       "authorizing": "Autorisation...",
       "reconnect": "Reconnecter OAuth"
     },

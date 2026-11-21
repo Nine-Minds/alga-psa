@@ -501,8 +501,9 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
       email_providers: { first: { id: 'prov-1', provider_type: 'imap' } },
       imap_email_provider_config: {
         first: {
-          auth_type: 'oauth2', username: 'u', host: 'imap.example.test', port: 993, secure: true,
+          email_provider_id: 'prov-1', auth_type: 'oauth2', username: 'u', host: 'imap.example.test', port: 993, secure: true,
           access_token: null, oauth_token_url: tokenUrl, oauth_client_id: 'client-1',
+          oauth_credentials_token_url: tokenUrl, oauth_credentials_secret_version: 0,
         },
       },
     });

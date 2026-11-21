@@ -1,3 +1,4 @@
+import { assertSafeOutboundTarget, UnsafeOutboundTargetError } from '@alga-psa/shared/lib/net/outboundTarget';
 import dns from 'node:dns/promises';
 import { isIP } from 'node:net';
 export { isGlobalUnicastAddress } from '../net/publicAddress';
@@ -111,12 +112,17 @@ export function assertSafeWebhookUrl(
 
 export async function assertSafeWebhookTarget(
   targetUrl: string,
-  isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
+  _isAddressAllowed: AddressPolicy = isGlobalUnicastAddress,
 ): Promise<void> {
-  if (isPrivateTargetAllowed()) {
-    return;
+  try {
+    await assertSafeOutboundTarget(targetUrl, {
+      schemes: ['http', 'https'],
+      allowPrivateTargets: isPrivateTargetAllowed(),
+    });
+  } catch (error) {
+    if (error instanceof UnsafeOutboundTargetError) {
+      throw new UnsafeWebhookTargetError(error.message.replace(/^Outbound target/, 'Webhook target'));
+    }
+    throw error;
   }
-
-  const parsedUrl = assertSafeWebhookUrl(targetUrl, isAddressAllowed);
-  await resolveValidatedAddresses(normalizeHostname(parsedUrl.hostname), isAddressAllowed);
 }

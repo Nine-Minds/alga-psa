@@ -6,6 +6,8 @@ x-hardening: &hardening
     - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
 
 x-provider-environment: &provider-environment
+  # Only the owned GreenMail host may use a private IMAP address in this stack.
+  EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: imap-test-server
   # The login base is used for both browser authorization and server token
   # exchange. CI maps this name on the host; Docker resolves the network alias.
   MICROSOFT_LOGIN_BASE_URL: http://algasim.test:4010
