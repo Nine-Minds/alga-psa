@@ -71,7 +71,10 @@ interface SearchVisibilityRegistration {
 
 export function canCompileSearchVisibility(type: SearchObjectType): boolean {
   const registration = visibilityVerifiers.get(type);
-  return Boolean(registration?.sqlCompiler);
+  // Types with no source-record verifier rely on the shared index ACL, which
+  // already supports exact counts and bounded pages in SQL. A registered
+  // verifier must have a matching compiler or it stays on the verifier scan.
+  return registration ? Boolean(registration.sqlCompiler) : true;
 }
 
 function compileRecordVisibilitySql(user: SearchAclPrincipal, onlyType: SearchObjectType): SqlFragment {

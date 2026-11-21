@@ -388,6 +388,101 @@ describe('production search authorization PostgreSQL benchmark', () => {
     });
   }, 900_000);
 
+  it('uses SQL counts and bounded pages for index-ACL-only clients as matches grow', async () => {
+    await runWithTenant(ctx.tenantId, async () => {
+      const roleId = randomUUID();
+      const permissionId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('roles').insert({
+        tenant: ctx.tenantId, role_id: roleId, role_name: `Index ACL client reader ${roleId}`, msp: true, client: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('permissions').insert({
+        tenant: ctx.tenantId, permission_id: permissionId, resource: 'client', action: 'read', msp: true, client: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('role_permissions').insert({ tenant: ctx.tenantId, role_id: roleId, permission_id: permissionId });
+      await tenantDb(db, ctx.tenantId).table('user_roles').insert({ tenant: ctx.tenantId, user_id: ctx.user.user_id, role_id: roleId });
+
+      const clients = Array.from({ length: 1500 }, (_, offset) => {
+        const sequence = offset + 1;
+        return {
+          tenant: ctx.tenantId, client_id: uuidAt(30_000 + sequence), client_name: `Index ACL client ${sequence}`,
+          created_at: db.fn.now(), updated_at: db.fn.now(),
+        };
+      });
+      await db.batchInsert('clients', clients, 500);
+      const indexRows = clients.map((client, offset) => {
+        const sequence = offset + 1;
+        const segment = sequence <= 150 ? 'narrow medium massive'
+          : sequence <= 500 ? 'medium massive' : 'massive';
+        return {
+          tenant: ctx.tenantId, object_type: 'client', object_id: client.client_id,
+          title: client.client_name, body: `aclindex ${segment}`, url: `/msp/clients/${client.client_id}`,
+          source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}),
+          required_permission: sequence % 5 === 0 ? 'client:secret' : 'client:read',
+          visible_to_user_ids: sequence % 5 === 1 ? [randomUUID()] : [],
+          visible_to_roles: [], is_internal_only: false, is_private: false, client_scope_id: null,
+          search_vector: db.raw(`to_tsvector('english', 'aclindex ${segment}')`),
+        };
+      });
+      await db.batchInsert('app_search_index', indexRows, 500);
+
+      expect(canCompileSearchVisibility('client')).toBe(true);
+      const growth = [
+        { query: 'narrow', candidates: 150, authorized: 90 },
+        { query: 'medium', candidates: 500, authorized: 300 },
+        { query: 'massive', candidates: 1500, authorized: 900 },
+      ];
+      const measurements: Array<Record<string, unknown>> = [];
+      let stableStatementCount: number | undefined;
+      for (const scenario of growth) {
+        const statements: number[] = [];
+        const latencies: number[] = [];
+        for (let sample = 0; sample < SAMPLES; sample += 1) {
+          let count = 0;
+          const onQuery = () => { count += 1; };
+          db.on('query', onQuery);
+          const started = performance.now();
+          const result = await runAppSearch(db, ctx.tenantId, ctx.user, {
+            query: scenario.query, types: ['client'] as any, limit: 5,
+          }, SEARCH_INDEX);
+          latencies.push(performance.now() - started);
+          db.removeListener('query', onQuery);
+          statements.push(count);
+          expect(result.totalCount).toBe(scenario.authorized);
+          expect(result.groups.client).toBe(scenario.authorized);
+          expect(result.results).toHaveLength(5);
+        }
+        const sortedLatencies = [...latencies].sort((a, b) => a - b);
+        const medianStatements = [...statements].sort((a, b) => a - b)[Math.floor(SAMPLES / 2)];
+        stableStatementCount ??= medianStatements;
+        expect(medianStatements).toBe(stableStatementCount);
+        measurements.push({
+          matching_clients: scenario.candidates, authorized_clients: scenario.authorized,
+          raw_query_count_samples: statements, median_statements: medianStatements,
+          raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
+          p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
+        });
+      }
+
+      const expectedAuthorizedIds = new Set(indexRows
+        .filter((row) => row.required_permission === 'client:read' && row.visible_to_user_ids.length === 0)
+        .map((row) => row.object_id));
+      const seen = new Set<string>();
+      let cursor: string | undefined;
+      do {
+        const page = await runAppSearch(db, ctx.tenantId, ctx.user, {
+          query: 'massive', types: ['client'] as any, limit: 100, cursor,
+        }, SEARCH_INDEX);
+        expect(page.totalCount).toBe(900);
+        expect(page.groups.client).toBe(900);
+        page.results.forEach(({ id }) => seen.add(id));
+        cursor = page.nextCursor;
+      } while (cursor);
+      expect(seen.size).toBe(900);
+      expect(seen).toEqual(expectedAuthorizedIds);
+      console.log(JSON.stringify({ index_acl_client_growth: measurements, page_size: 100, authorized_ids: seen.size }));
+    });
+  }, 900_000);
+
   it('uses fallback when a verifier replaces a built-in project verifier', async () => {
     const restoreVerifier = registerSearchVisibilityVerifier('project', async () => false);
     try {
