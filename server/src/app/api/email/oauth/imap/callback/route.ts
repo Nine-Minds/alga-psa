@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { verifyImapOAuthState } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
+import {
+  assertSafeImapOauthTokenEndpoint,
+  getImapOauthSecretNames,
+} from '@alga-psa/shared/services/email/imapOutboundTarget';
+import { getImapOauthAuthorizationCredentials } from '@alga-psa/shared/services/email/imapOauthToken';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { knex, tenant } = await createTenantKnex();
+    if (tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
+
     const url = request.nextUrl;
     const code = url.searchParams.get('code');
     const stateParam = url.searchParams.get('state');
@@ -22,8 +42,7 @@ export async function GET(request: NextRequest) {
     }
     // State signature authenticates the tenant/provider bindings. Consume the
     // nonce atomically before looking up provider data or retrieving secrets.
-    const { knex, tenant } = await createTenantKnex(state.tenant);
-    if (tenant !== state.tenant) {
+    if (state.tenant !== user.tenant || state.userId !== user.user_id || tenant !== state.tenant) {
       return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
     }
     const db = tenantDb(knex, tenant);
@@ -40,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'OAuth state expired or already used' }, { status: 400 });
     }
     await assertTenantProductAccess({
-      tenantId: state.tenant,
+      tenantId: user.tenant,
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });
@@ -73,12 +92,17 @@ export async function GET(request: NextRequest) {
     // saving settings and cannot protect configurations that predate that check.
     try {
       await assertPublicHttpsUrl(imapConfig.oauth_token_url);
+      await assertSafeImapOauthTokenEndpoint(imapConfig.oauth_token_url);
     } catch {
       return NextResponse.json({ error: 'IMAP OAuth token URL is not allowed' }, { status: 400 });
     }
 
     const secretProvider = await getSecretProviderInstance();
-    const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
+    const { clientSecret, refreshToken: existingRefreshToken } = await getImapOauthAuthorizationCredentials({
+      ...imapConfig,
+      id: state.providerId,
+      tenant,
+    });
 
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -107,7 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     const accessToken = tokenResponse.data.access_token;
-    const refreshToken = tokenResponse.data.refresh_token;
+    const refreshToken = tokenResponse.data.refresh_token || existingRefreshToken;
     const expiresIn = Number(tokenResponse.data.expires_in || 3600);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
@@ -117,9 +141,23 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!refreshToken) {
+      return NextResponse.json(
+        { error: 'IMAP OAuth did not return a refresh token. Reauthorize the mailbox with offline access.' },
+        { status: 400 }
+      );
+    }
 
+    const boundSecretNames = getImapOauthSecretNames({
+      id: state.providerId,
+      oauth_token_url: imapConfig.oauth_token_url,
+      oauth_credentials_secret_version: 1,
+    });
+    if (clientSecret) {
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.clientSecret, clientSecret);
+    }
     if (refreshToken) {
-      await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.refreshToken, refreshToken);
     }
 
     await db.table('imap_email_provider_config')
@@ -128,6 +166,9 @@ export async function GET(request: NextRequest) {
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
+        oauth_credentials_token_url: imapConfig.oauth_token_url,
+        oauth_credentials_secret_version: 1,
+        oauth_reauthorization_required: false,
         updated_at: knex.fn.now(),
       });
 

@@ -13,11 +13,10 @@ import {
   generateInvoiceForSalesOrder,
   getServices,
 } from '@alga-psa/billing/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
-import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
+import type { ISalesOrder, IStockLocation } from '@alga-psa/types';
 import type { SalesOrderServiceOption } from '@alga-psa/inventory/components';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -75,13 +74,6 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
     console.error('Failed to load stock locations:', error);
   }
 
-  let clients: IClient[] = [];
-  try {
-    clients = await getAllClients();
-  } catch (error) {
-    console.error('Failed to load clients:', error);
-  }
-
   // Products *and* services can be sold on a sales order (item_kind: 'any'). The picker and
   // price auto-fill live in the inventory client component, but the fetch belongs on the server
   // beside the other prop loads — inventory can't import billing's getServices directly.
@@ -123,7 +115,6 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
       initialSos={initialSos}
       loadErrorMessage={loadErrorMessage}
       locations={locations}
-      clients={clients}
       services={services}
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}

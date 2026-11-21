@@ -24,6 +24,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { SlaPauseReason } from '../types';
 import { SlaBackendAction } from './slaBackendActions';
+import { activeSlaPauseCondition } from '@alga-psa/shared/lib/sla/slaPauseConditions';
 import { acquireTicketSlaLock } from './slaLock';
 
 /**
@@ -299,11 +300,13 @@ export async function handleStatusChange(
     // SLA should be paused if:
     // 1. New status is configured to pause, OR
     // 2. Awaiting client AND pause_on_awaiting_client is enabled AND response state tracking is enabled
-    const shouldBePaused = newStatusPauses || (isAwaitingClient && pauseOnAwaitingClient);
+    // 3. A registered condition holds (e.g. the ticket is with client IT).
+    const registeredCondition = await activeSlaPauseCondition(trx, tenant, ticketId);
+    const shouldBePaused = newStatusPauses || (isAwaitingClient && pauseOnAwaitingClient) || registeredCondition !== null;
 
     if (shouldBePaused && !isPaused) {
       // Need to pause
-      return pauseSla(trx, tenant, ticketId, 'status_pause', triggeredBy);
+      return pauseSla(trx, tenant, ticketId, newStatusPauses ? 'status_pause' : (registeredCondition ?? 'status_pause'), triggeredBy);
     } else if (!shouldBePaused && isPaused) {
       // Need to resume (only if the pause wasn't due to awaiting_client)
       // If awaiting_client is still active and that caused the pause, don't resume
@@ -400,8 +403,8 @@ export async function handleResponseStateChange(
       return pauseSla(trx, tenant, ticketId, 'awaiting_client', triggeredBy);
     } else if (wasAwaitingClient && !isNowAwaitingClient && isPaused) {
       // Changing away from awaiting_client - should resume (unless status also pauses)
-      if (statusPauses) {
-        // Keep paused due to status
+      if (statusPauses || await activeSlaPauseCondition(trx, tenant, ticketId)) {
+        // Keep paused due to status, or a registered condition (e.g. the ticket is with client IT)
         return { success: true, was_paused: true, is_now_paused: true };
       }
       return resumeSla(trx, tenant, ticketId, triggeredBy);
@@ -474,6 +477,12 @@ export async function shouldSlaBePaused(
 
   if (statusPauseConfig?.pauses_sla) {
     return { paused: true, reason: 'status_pause' };
+  }
+
+  // Check 3: Conditions contributed by other packages (resolves without a query when none is registered)
+  const contributed = await activeSlaPauseCondition(trx, tenant, ticketId);
+  if (contributed) {
+    return { paused: true, reason: contributed };
   }
 
   return { paused: false, reason: null };

@@ -11,6 +11,10 @@ vi.mock('@alga-psa/core/net/safeFetch', () => ({
   assertPublicHttpsUrl: mocks.assertPublicHttpsUrl,
   postSafeOutboundForm: mocks.postSafeOutboundForm,
 }));
+vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', async (importOriginal) => ({
+  ...await importOriginal<any>(),
+  assertSafeImapOauthTokenEndpoint: vi.fn(async () => ({})),
+}));
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({ getTenantSecret: mocks.getTenantSecret }),
 }));
@@ -24,6 +28,7 @@ describe('refreshImapAccessToken', () => {
   const provider = {
     id: 'provider-a', tenant: 'tenant-a',
     oauth_token_url: 'https://idp.example.test/token', oauth_client_id: 'client-a',
+    oauth_credentials_token_url: 'https://idp.example.test/token', oauth_credentials_secret_version: 1,
     refresh_token: null,
   };
   const db = { fn: { now: () => 'NOW' } } as any;
@@ -41,7 +46,11 @@ describe('refreshImapAccessToken', () => {
 
   it('rejects an unsafe legacy URL before reading credentials or posting', async () => {
     mocks.assertPublicHttpsUrl.mockRejectedValue(new Error('unsafe destination'));
-    await expect(refreshImapAccessToken({ provider: { ...provider, oauth_token_url: 'http://127.0.0.1/token' }, db }))
+    await expect(refreshImapAccessToken({ provider: {
+      ...provider,
+      oauth_token_url: 'http://127.0.0.1/token',
+      oauth_credentials_token_url: 'http://127.0.0.1/token',
+    }, db }))
       .rejects.toThrow('unsafe destination');
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
     expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();

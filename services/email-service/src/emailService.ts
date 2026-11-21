@@ -1,6 +1,7 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from '@alga-psa/shared/services/email/inboundMimeParseOptions';
+import { repairUtf8Mojibake } from '@alga-psa/shared/services/email/inboundEmailMimeHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
@@ -20,6 +21,10 @@ import {
 import { resolveImapSyncStartUid } from '@alga-psa/shared/services/email/imapSyncCursor';
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import {
+  assertImapOauthCredentialIssuerBound,
+  assertSafeImapHost,
+} from '@alga-psa/shared/services/email/imapOutboundTarget';
 import {
   recordImapListenerError,
   recordImapWebhookDispatchRetry,
@@ -447,6 +452,8 @@ interface ImapProviderRow {
   folder_filters: string[];
   oauth_authorize_url?: string | null;
   oauth_token_url?: string | null;
+  oauth_credentials_token_url?: string | null;
+  oauth_credentials_secret_version?: number | null;
   oauth_client_id?: string | null;
   oauth_client_secret?: string | null;
   oauth_scopes?: string | null;
@@ -717,7 +724,9 @@ class ImapFolderListener {
   }
 
   private async buildClient(): Promise<ImapFlow> {
+    const imapTarget = await assertSafeImapHost(this.provider.host, Number(this.provider.port));
     if (this.provider.auth_type === 'oauth2') {
+      assertImapOauthCredentialIssuerBound(this.provider);
       if (this.isTokenExpired()) {
         await this.refreshAccessToken();
       }
@@ -743,9 +752,10 @@ class ImapFolderListener {
     const secure = Boolean(this.provider.secure);
 
     const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
-    const tlsOptions = (secure || this.provider.allow_starttls)
-      ? { rejectUnauthorized }
-      : undefined;
+    const tlsOptions = {
+      lookup: imapTarget.lookup as any,
+      ...(secure || this.provider.allow_starttls ? { rejectUnauthorized } : {}),
+    };
     const client = new ImapFlow({
       host: this.provider.host,
       port: Number(this.provider.port),
@@ -981,7 +991,7 @@ class ImapFolderListener {
         email: entry.address || '',
         name: entry.name,
       })) : undefined,
-      subject: parsed.subject || '',
+      subject: repairUtf8Mojibake(parsed.subject || ''),
       body: {
         text: parsed.text || '',
         html: parsed.html || undefined,
@@ -1293,6 +1303,13 @@ class ImapProviderWorker {
       username: this.provider.username,
       folder_filters: this.provider.folder_filters,
       max_emails_per_sync: this.provider.max_emails_per_sync,
+      oauth_token_url: this.provider.oauth_token_url,
+      oauth_credentials_token_url: this.provider.oauth_credentials_token_url,
+      oauth_credentials_secret_version: this.provider.oauth_credentials_secret_version,
+      oauth_client_id: this.provider.oauth_client_id,
+      oauth_client_secret: this.provider.oauth_client_secret,
+      refresh_token: this.provider.refresh_token,
+      oauth_scopes: this.provider.oauth_scopes,
     });
 
     const folders = this.provider.folder_filters?.length
@@ -1342,6 +1359,13 @@ class ImapProviderWorker {
       username: nextProvider.username,
       folder_filters: nextProvider.folder_filters,
       max_emails_per_sync: nextProvider.max_emails_per_sync,
+      oauth_token_url: nextProvider.oauth_token_url,
+      oauth_credentials_token_url: nextProvider.oauth_credentials_token_url,
+      oauth_credentials_secret_version: nextProvider.oauth_credentials_secret_version,
+      oauth_client_id: nextProvider.oauth_client_id,
+      oauth_client_secret: nextProvider.oauth_client_secret,
+      refresh_token: nextProvider.refresh_token,
+      oauth_scopes: nextProvider.oauth_scopes,
     });
     return nextSignature !== this.configSignature;
   }
@@ -1465,6 +1489,8 @@ export class EmailService {
         'ic.folder_filters',
         'ic.oauth_authorize_url',
         'ic.oauth_token_url',
+        'ic.oauth_credentials_token_url',
+        'ic.oauth_credentials_secret_version',
         'ic.oauth_client_id',
         'ic.oauth_client_secret',
         'ic.oauth_scopes',

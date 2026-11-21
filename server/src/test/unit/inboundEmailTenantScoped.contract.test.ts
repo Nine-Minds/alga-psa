@@ -37,7 +37,8 @@ describe('inbound email tenant-scoped query contract', () => {
     ]) {
       expect(text).toContain(`db.table('${table}')`);
     }
-    expect(text).toContain("tenantDb(knex, tenant).table<IClient>('clients')");
+    // Client mapping uses the server-searched client picker; the lookups no longer list every client.
+    expect(text).not.toContain("table<IClient>('clients')");
     expect(text).toContain("tenantDb(knex, tenant).table<IUser>('users')");
     expect(text).toContain(".table<{ team_id: string; team_name: string; manager_id: string | null; tenant: string }>('teams')");
   });

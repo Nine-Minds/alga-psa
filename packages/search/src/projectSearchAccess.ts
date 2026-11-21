@@ -2,8 +2,8 @@ import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { serves } from '@alga-psa/core/capability';
-import { CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_PROJECT_FIELD_SOURCE, CO_MANAGED_PHASE_FIELD_SOURCE, CO_MANAGED_TASK_FIELD_SOURCE, isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
-import { getCoManagedLocalProjectSearchPolicy, isCoManagedReadFieldHidden, type CoManagedSearchAuthentication } from '@alga-psa/co-managed/localProjectSearchPolicy';
+import { coManagedProjectFamilyMask } from '@alga-psa/co-managed/projectFieldMask';
+import { getCoManagedLocalProjectSearchPolicy, type CoManagedSearchAuthentication } from '@alga-psa/co-managed/localProjectSearchPolicy';
 import { listCoManagedSharedProjects } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedWorkspace } from '@alga-psa/co-managed/coManagedWorkspace';
 import type { CoManagedSessionActor } from '@alga-psa/co-managed/sharedWorkIdentity';
@@ -25,7 +25,7 @@ const INDEX_PLUMBING_ALIASES = ['url', 'parent_id', 'source_updated_at', 'update
  */
 function projectRelation(trx: Knex.Transaction, tenant: string, projects: Knex.QueryBuilder, redactedFields: readonly string[],
   neutralAcl: boolean, shared: { relationshipId: string } | null): Knex.QueryBuilder[] {
-  const owner = tenantDb(trx, tenant), hidden = (names: readonly string[]) => isCoManagedReadFieldHidden(redactedFields, names);
+  const owner = tenantDb(trx, tenant);
   const branches: Knex.QueryBuilder[] = [];
   for (const kind of PROJECT_SEARCH_TYPES) {
     const isTask = kind === 'project_task', isPhase = kind === 'project_phase';
@@ -33,15 +33,14 @@ function projectRelation(trx: Knex.Transaction, tenant: string, projects: Knex.Q
     if (isTask) query.joinRaw('JOIN project_tasks t ON t.tenant = i.tenant AND t.task_id::text = i.object_id');
     if (isTask || isPhase) query.joinRaw(`JOIN project_phases ph ON ph.tenant = i.tenant AND ${isTask ? 'ph.phase_id = t.phase_id' : 'ph.phase_id::text = i.object_id'}`);
     query.join(projects.clone().as('p'), join => join.on('p.tenant', '=', 'i.tenant').andOn(trx.raw(isTask || isPhase ? 'p.project_id = ph.project_id' : 'p.project_id::text = i.object_id')));
-    const source = isTask ? 'project_tasks' : isPhase ? 'project_phases' : 'projects';
-    const fields = isTask ? CO_MANAGED_TASK_FIELD_SOURCE : isPhase ? CO_MANAGED_PHASE_FIELD_SOURCE : CO_MANAGED_PROJECT_FIELD_SOURCE;
-    const titleColumn = isTask ? 't.task_name' : isPhase ? 'ph.phase_name' : 'p.project_name';
+    const mask = coManagedProjectFamilyMask(redactedFields, kind, INDEX_PLUMBING_ALIASES);
     // The field aliases live in the co-managed descriptors, so queues, editors and search hide the same canonical value.
-    const title = hidden(['title', ...fields.title]) ? trx.raw('?::text', [isTask ? 'Project task' : isPhase ? 'Project phase' : 'Project']) : trx.ref(titleColumn);
-    const subtitle = kind === 'project' || hidden(['subtitle', ...CO_MANAGED_PROJECT_NAME_ALIASES]) ? trx.raw('NULL::text') : trx.ref('p.project_name');
-    const body = hidden(['body', ...fields.description]) ? trx.raw('NULL::text') : trx.ref(isTask ? 't.description' : isPhase ? 'ph.description' : 'p.description');
+    const titleColumn = isTask ? 't.task_name' : isPhase ? 'ph.phase_name' : 'p.project_name';
+    const title = mask.title ? trx.raw('?::text', [mask.neutralTitle]) : trx.ref(titleColumn);
+    const subtitle = mask.subtitle ? trx.raw('NULL::text') : trx.ref('p.project_name');
+    const body = mask.body ? trx.raw('NULL::text') : trx.ref(isTask ? 't.description' : isPhase ? 'ph.description' : 'p.description');
     // The whole resource (or a hidden identifier / index plumbing value) yields no rows, as the shared task queue does.
-    if (isCoManagedResourceHidden(redactedFields, fields.resource) || hidden([...fields.identifier, ...INDEX_PLUMBING_ALIASES, `${source}.updated_at`, `${source}.created_at`])) query.whereRaw('false');
+    if (mask.dropRow) query.whereRaw('false');
     const suffix = isTask ? "'/tasks/' || t.task_id::text" : isPhase ? "'/phases/' || ph.phase_id::text" : "''";
     query.select('i.tenant', 'i.object_type', 'i.object_id',
       trx.raw('?::text as parent_type', [kind === 'project' ? null : 'project']),

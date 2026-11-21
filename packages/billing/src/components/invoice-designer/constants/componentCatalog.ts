@@ -17,6 +17,7 @@ const PALETTE_TYPES: ComponentDefinition['type'][] = [
   'container',
   'divider',
   'spacer',
+  'page-break',
   'text',
   'richText',
   'totals',

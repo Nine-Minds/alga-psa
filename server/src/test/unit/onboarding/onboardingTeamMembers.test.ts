@@ -19,8 +19,9 @@ const mocks = vi.hoisted(() => ({
 
 function queryFor(table: string) {
   const query: any = {
-    where: () => query, whereNull: () => query, count: () => query, forUpdate: () => query,
-    select: async () => table === 'roles'
+    where: () => query, whereNot: () => query, whereNull: () => query, whereNotExists: () => query, whereExists: () => query, whereRaw: () => query, count: () => query, forUpdate: () => query,
+    // The seat-assignment subquery stays a builder; every other select is the roles read.
+    select: table.startsWith('co_managed_seat_assignments') ? () => query : async () => table === 'roles'
       ? [{ role_id: 'role-admin', role_name: 'Admin' }, { role_id: 'role-tech', role_name: 'Technician' }] : [],
     first: async () => table === 'user_invitations' ? { count: String(mocks.pendingInvitations) }
       : table === 'tenant_settings' ? { onboarding_data: mocks.saved } : undefined,
@@ -29,7 +30,7 @@ function queryFor(table: string) {
 }
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: { fn: { now: () => 'now' } } }),
+  createTenantKnex: async () => ({ knex: { fn: { now: () => 'now' }, raw: () => 'raw' } }),
   tenantDb: () => ({ table: queryFor }),
   withTransaction: async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({}),
 }));
@@ -41,7 +42,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
 vi.mock('@alga-psa/users/actions/user-actions/userActions', () => ({ addUser: mocks.addUser }));
 vi.mock('@alga-psa/clients/actions/clientActions', () => ({ createClient: vi.fn() }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ createClientContact: vi.fn() }));
-vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
+vi.mock('@alga-psa/licensing/server', () => ({
   getLicenseUsage: vi.fn(async () => ({ limit: 3, used: 1 })),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));

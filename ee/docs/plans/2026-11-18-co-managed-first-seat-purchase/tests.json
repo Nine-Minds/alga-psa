@@ -1,0 +1,72 @@
+[
+  {
+    "id": "T001",
+    "description": "Drive MSP navigation in a hosted Pro fixture with account read/update, no entitlement, no relationships and no co-management grants. Open the single Co-Managed IT link and refresh its URL. Expect zero totals and Buy co-managed seats in both visits, no archive or client controls, a positive quantity and a quote in the configured currency. Dismiss review and verify no operation, entitlement or grants were created.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Exercise the sidebar and direct routes with purchase eligibility independently closed by release flag, forced off, missing price, self-host/manual billing, non-Pro plan or missing account read/update. Include an unrelated product, client portal actor and a seat technician. Expect no purchase entry or billing data. Verify the co-managed customer sees its own home and a served-only sponsor retains its authorized read-only overview and archive. Run the CE host with the flag forced on and a configured price and verify the purchase path is inert.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Against migrated PostgreSQL and the Stripe emulator, confirm a first purchase from the overview. Interrupt and resume checkout after a refresh and an ambiguous response. Deliver an unpaid observation that creates a zero-capacity hosted row, then complete checkout and delay paid reconciliation. Verify the overview remains reachable, offers recovery or awaiting-verification as appropriate, and cannot start a second first charge. Deliver and replay the matching paid event with the browser closed. Reopen the overview and assert the verified quantity, one subscription, one operation and no client allocations or base-seat changes.",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "On a migrated schema, give two sponsors different pending purchases and a buyer only account rights on the first. Read, refresh and resume under each authenticated context, including reuse of the other sponsor’s operation identity and a foreign client query parameter. Verify no cross-tenant data, charge or mutation, and no grants or scoped client reads from the purchase-only page. Revoke account update between review and confirmation and attempt preview, confirm and resume directly. Check server denial and unchanged provider operations.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Complete a first purchase for a default MSP administrator whose co-management grants have yet to be seeded and for a custom billing-only role. Refresh in the same session. Both see the verified total and one menu entry. Only the authorized administrator reaches normal admitted client setup. Check that purchase discovery neither seeds grants while payment is pending nor restores a revoked operational grant.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Exercise the existing Account Management editor and the client Seat setup shortfall flow for an admitted sponsor. Confirm the latter reviews the required new pool total, recovers the same purchase and completes the intended allocation once. Check that purchasing from the overview alone leaves Seat and Workspace arrangements untouched.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F008",
+      "F009"
+    ]
+  }
+]

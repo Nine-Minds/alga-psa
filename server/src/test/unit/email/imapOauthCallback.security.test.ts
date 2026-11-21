@@ -28,6 +28,10 @@ vi.mock('@alga-psa/core/net/safeFetch', () => ({
   assertPublicHttpsUrl: mocks.assertPublicHttpsUrl,
   postSafeOutboundForm: mocks.postSafeOutboundForm,
 }));
+vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', async (importOriginal) => ({
+  ...await importOriginal<any>(),
+  assertSafeImapOauthTokenEndpoint: vi.fn(async () => ({})),
+}));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: vi.fn(async () => undefined),
@@ -38,9 +42,12 @@ vi.mock('@/lib/productAccess', () => ({
 import { GET } from '@/app/api/email/oauth/imap/callback/route';
 import { POST } from '@/app/api/email/oauth/imap/initiate/route';
 import { createImapOAuthState } from '@/utils/email/imapOAuthState';
+import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 
 const config = {
   oauth_token_url: 'https://oauth.example.com/token',
+  oauth_credentials_token_url: 'https://oauth.example.com/token',
+  oauth_credentials_secret_version: 1,
   oauth_client_id: 'client-a',
 };
 
@@ -61,10 +68,15 @@ function configureDb() {
       return query;
     },
   });
-  mocks.createTenantKnex.mockImplementation(async (tenant: string) => ({ knex: { fn: { now: () => new Date().toISOString() } }, tenant }));
+  mocks.createTenantKnex.mockImplementation(async (requestedTenant?: string) => ({
+    knex: { fn: { now: () => new Date().toISOString() } },
+    tenant: requestedTenant ?? mocks.currentUser?.tenant,
+  }));
 }
 
 async function signedAttempt(overrides: Record<string, unknown> = {}) {
+  mocks.currentUser = { user_id: 'user-a', user_type: 'internal', tenant: 'tenant-a' };
+  mocks.hasPermission.mockResolvedValue(true);
   const { state, token } = await createImapOAuthState({
     tenant: 'tenant-a', userId: 'user-a', providerId: 'provider-a',
     redirectUri: 'https://app.example.com/api/email/oauth/imap/callback',
@@ -101,7 +113,7 @@ describe('IMAP OAuth callback security', () => {
       body: JSON.stringify({ providerId: 'provider-a' }),
     }));
     expect(response.status).toBe(401);
-    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
   });
 
   it('denies client-portal users before permission lookup or state persistence', async () => {
@@ -131,12 +143,14 @@ describe('IMAP OAuth callback security', () => {
     const tamperedPayload = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload!, 'base64url').toString()), tenant: 'tenant-victim' })).toString('base64url');
     const response = await GET(request(`${tamperedPayload}.${token.split('.')[1]}`, { 'x-tenant-id': 'tenant-victim' }));
     expect(response.status).toBe(400);
-    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
     expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
   });
 
   it('rejects unsigned legacy state before database or secret access', async () => {
+    mocks.currentUser = { user_id: 'user-a', user_type: 'internal', tenant: 'tenant-a' };
+    mocks.hasPermission.mockResolvedValue(true);
     const unsigned = Buffer.from(JSON.stringify({
       tenant: 'tenant-a', userId: 'user-a', providerId: 'provider-a',
       redirectUri: 'https://app.example.com/api/email/oauth/imap/callback',
@@ -144,7 +158,7 @@ describe('IMAP OAuth callback security', () => {
     })).toString('base64');
     const response = await GET(request(unsigned));
     expect(response.status).toBe(400);
-    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
     expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
   });
@@ -153,6 +167,8 @@ describe('IMAP OAuth callback security', () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(new Date('2026-11-21T12:00:00.000Z'));
+      mocks.currentUser = { user_id: 'user-a', user_type: 'internal', tenant: 'tenant-a' };
+      mocks.hasPermission.mockResolvedValue(true);
       const { state, token } = await createImapOAuthState({
         tenant: 'tenant-a',
         userId: 'user-a',
@@ -166,7 +182,6 @@ describe('IMAP OAuth callback security', () => {
 
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ error: 'Invalid OAuth state' });
-      expect(mocks.createTenantKnex).not.toHaveBeenCalled();
       expect(mocks.tenantDb).not.toHaveBeenCalled();
       expect(mocks.getTenantSecret).not.toHaveBeenCalled();
       expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
@@ -186,7 +201,7 @@ describe('IMAP OAuth callback security', () => {
     const token = await signedAttempt();
     const responses = await Promise.all([GET(request(token)), GET(request(token))]);
     expect(responses.map((response) => response.status).sort()).toEqual([307, 400]);
-    expect(mocks.getTenantSecret).toHaveBeenCalledTimes(1);
+    expect(mocks.getTenantSecret).toHaveBeenCalledTimes(2);
     expect(mocks.postSafeOutboundForm).toHaveBeenCalledTimes(1);
   });
 
@@ -210,14 +225,15 @@ describe('IMAP OAuth callback security', () => {
     const validToken = await signedAttempt();
     const response = await GET(request(validToken, { 'x-tenant-id': 'tenant-victim' }));
     expect(response.status).toBe(307);
-    expect(mocks.createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
-    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-a', 'imap_oauth_client_secret_provider-a');
+    expect(mocks.createTenantKnex).toHaveBeenLastCalledWith();
+    const secretNames = getImapOauthSecretNames({ id: 'provider-a', ...config });
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-a', secretNames.clientSecret);
     expect(mocks.postSafeOutboundForm).toHaveBeenCalledTimes(1);
     const [, form] = mocks.postSafeOutboundForm.mock.calls[0]!;
     expect(form.get('grant_type')).toBe('authorization_code');
     expect(form.get('code')).toBe('auth-code');
     expect(form.get('client_secret')).toBe('client-secret');
-    expect(mocks.setTenantSecret).toHaveBeenCalledWith('tenant-a', 'imap_refresh_token_provider-a', 'refresh-token');
+    expect(mocks.setTenantSecret).toHaveBeenCalledWith('tenant-a', secretNames.refreshToken, 'refresh-token');
   });
 
   it('rejects an unsafe legacy token URL before retrieving credentials', async () => {

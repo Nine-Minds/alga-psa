@@ -1,0 +1,123 @@
+[
+  {
+    "id": "F001",
+    "description": "TICKET_ASSIGNEE_ME = 'me' constant exported from @alga-psa/types next to ITicketListFilters; assignedToIds doc comments (types + server/src/interfaces duplicate) mention it",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "ticketFiltersToPredicates substitutes context.userId for the sentinel in assignedToIds (deduped) inside the existing assignee/team/unassigned OR group; uses assigned_to, not involves_user; ignores assignedToMeBypass",
+    "implemented": true,
+    "prdRefs": [
+      "FR2",
+      "FR3"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "ticketListFiltersSchema.assignedToIds accepts uuid | 'me' (union, like the no-board/no-category unions)",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "list-views ticketFiltersShape.assignedToIds accepts uuid | 'me', covering named views and board default views",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "normalizeAssignedToIds (URL CSV) keeps the 'me' token, deduped, alongside UUIDs; 'unassigned' still maps to includeUnassigned",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "normalizeAssignedToIdList (stored arrays) keeps 'me'",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "validateCapturedFilters keeps 'me' in assignedToIds regardless of the known-user universe (built into the assignee check)",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "sanitizeTicketListView passes 'me' as an allowed pseudo-value to keepList('assignedToIds') so it is not dropped or reported as dropped",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Capture and URL serialization store 'me' verbatim (never resolved to a user id before storage)",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "MultiUserAndTeamPicker accepts caller-supplied pinned pseudo-options ({ value, label, icon? }) that live in values; rendered as checkbox rows in the pinned area beside Unassigned, unaffected by search",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "MultiUserAndTeamPicker stale-value cleaner keeps values matching a pinned option; compact trigger, pills and Clear all handle them by label",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "TicketingDashboard passes the 'Me' pinned option (TICKET_ASSIGNEE_ME, t('filters.me'), person icon) to its assignee picker",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "TicketingDashboard filter chips label the sentinel 'Me' and remove it like other assignee chips",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "features/tickets filters.me key added to all locale files (en, de, es, fr, it, nl, pl, pt, sv, xx, yy); validate-translations passes",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "assignedToMe kept unchanged in behaviour; doc comments on ITicketListFilters.assignedToMe, TicketFilterCodecContext and the codec branch explain it is the task-link 'involves me' scope (bypassed for project:read), distinct from the assignee 'Me'; LEVERAGE friction marker at the codec branch",
+    "implemented": true,
+    "prdRefs": [
+      "FR14"
+    ]
+  }
+]

@@ -36,6 +36,9 @@ vi.mock('@alga-psa/clients/actions', () => ({
   searchContactListIds: hoisted.searchContactListIds,
 }));
 
+vi.mock('@alga-psa/auth/actions', () => ({
+  getContactPortalPermissions: async () => ({ canInvite: true, canUpdateRoles: true, canRead: true }),
+}));
 vi.mock('../../lib/usersHelpers', () => ({
   getCurrentUserAsync: hoisted.getCurrentUserAsync,
 }));

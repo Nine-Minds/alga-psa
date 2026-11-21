@@ -1,7 +1,7 @@
 import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
-import type { TemplateAst } from '../lib/invoice-template-ast';
+import type { TemplateAst, TemplateChildRows } from '../lib/invoice-template-ast';
 import type {
   BillingProfileSource,
   InvoiceTimeEntrySnapshot,
@@ -120,7 +120,51 @@ export interface IInvoiceChargeTimeEntryLink {
   snapshot: unknown;
 }
 
+/**
+ * Versioned, language-neutral snapshot of a consolidated Fixed bundle, written
+ * to `invoice_charges.bundle_presentation` when the invoice is generated.
+ * It holds names, raw quantities, pricing basis, order and previous-period
+ * quantities - never amounts. Component prices are read from
+ * `invoice_charge_fixed_details` when a template that uses them renders.
+ */
+export const INVOICE_BUNDLE_PRESENTATION_VERSION = 1 as const;
+
+export type InvoiceBundleComparison = 'compared' | 'no_prior_period';
+
+export interface InvoiceBundleComponentSnapshot {
+  serviceId: string;
+  /** `service_catalog.service_name` at generation. */
+  name: string;
+  /** Raw configured/revision quantity (not the `|| 1` clamped detail quantity); null when unset. */
+  quantity: number | null;
+  pricingBasis: 'unit' | 'bundle';
+  order: number;
+  servicePeriodStart: ISO8601String | null;
+  servicePeriodEnd: ISO8601String | null;
+  /** Detail rows behind this component; empty for a service removed since the prior period. */
+  detailItemIds: string[];
+  previousQuantity: number | null;
+  comparison: InvoiceBundleComparison;
+}
+
+export interface InvoiceBundlePresentation {
+  version: typeof INVOICE_BUNDLE_PRESENTATION_VERSION;
+  subtitle: string | null;
+  components: InvoiceBundleComponentSnapshot[];
+}
+
+/** Opt-in (invoice model option): fixed-detail money for one component detail row. */
+export interface IInvoiceBundleComponentAmount {
+  allocated_amount: number;
+  /** Persisted detail rate; only meaningful for unit-basis services. */
+  rate: number;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
+  /** Bundle component snapshot; loaded only with the `includeBundlePresentation` option. */
+  bundle_presentation?: InvoiceBundlePresentation | null;
+  /** Detail-row money keyed by item_detail_id; loaded only with `includeBundleComponentAmounts`. */
+  bundle_component_amounts?: Record<string, IInvoiceBundleComponentAmount>;
   unit_code?: string | null;
   unit_label?: string | null;
   item_id: string;
@@ -692,6 +736,17 @@ export interface InvoiceViewModelLocationGroup {
   total: number;
 }
 
+/**
+ * The bundle component rows of the template that renders an invoice for its
+ * viewer, reduced to what a non-template surface (the client portal details
+ * dialog) needs to draw them the way the template does: the table's childRows
+ * and which of its column ids plays each line-item role.
+ */
+export interface InvoiceBundleRowsLayout {
+  columnIds: { description: string; quantity: string; unitPrice: string; total: string };
+  childRows: TemplateChildRows;
+}
+
 export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
@@ -769,4 +824,9 @@ export interface InvoiceViewModel {
    * flag for auto-branching between flat and grouped layouts.
    */
   has_multiple_locations?: boolean;
+  /**
+   * Bundle component row layout of the viewer's resolved template; set for
+   * client-portal reads whose template renders component rows (PRD R7).
+   */
+  bundle_rows_layout?: InvoiceBundleRowsLayout | null;
 }

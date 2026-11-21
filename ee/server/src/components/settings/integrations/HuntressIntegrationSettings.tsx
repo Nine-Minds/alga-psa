@@ -14,8 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { AlertCircle, CheckCircle, RefreshCw, ShieldAlert, Unlink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -35,7 +34,6 @@ const HuntressIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
   const [status, setStatus] = useState<HuntressConnectionStatus | null>(null);
   const [routingOptions, setRoutingOptions] = useState<RoutingOptions | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -61,14 +59,12 @@ const HuntressIntegrationSettings: React.FC = () => {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [statusResult, optionsResult, clientsResult] = await Promise.all([
+      const [statusResult, optionsResult] = await Promise.all([
         getHuntressConnectionStatus(),
         getHuntressRoutingOptions(),
-        getAllClients(false),
       ]);
       setStatus(statusResult);
       setRoutingOptions(optionsResult);
-      setClients(clientsResult ?? []);
 
       const s = statusResult.settings;
       if (s) {
@@ -389,7 +385,7 @@ const HuntressIntegrationSettings: React.FC = () => {
                   </label>
                   <ClientPicker
                     id="huntress-fallback-client"
-                    clients={clients}
+                    searchClients={searchClientsForPicker}
                     selectedClientId={fallbackClientId}
                     onSelect={(id) => setFallbackClientId(id)}
                     filterState="active"

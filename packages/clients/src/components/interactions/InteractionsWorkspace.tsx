@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IContact } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -10,7 +10,6 @@ import OverallInteractionsFeed from './OverallInteractionsFeed';
 interface InteractionsWorkspaceProps {
   users: IUser[];
   contacts: IContact[];
-  clients: IClient[];
   callsPanel?: React.ReactNode;
   onOpenUser?: (userId: string, onUpdate?: () => void) => void;
 }
@@ -18,7 +17,6 @@ interface InteractionsWorkspaceProps {
 export default function InteractionsWorkspace({
   users,
   contacts,
-  clients,
   callsPanel,
   onOpenUser,
 }: InteractionsWorkspaceProps) {
@@ -48,7 +46,6 @@ export default function InteractionsWorkspace({
           <OverallInteractionsFeed
             users={users}
             contacts={contacts}
-            clients={clients}
             onOpenUser={onOpenUser}
           />
         </TabsContent>

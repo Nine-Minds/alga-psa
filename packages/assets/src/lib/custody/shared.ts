@@ -14,6 +14,18 @@ export const CUSTODY_COLUMNS = [
 /** `date` columns come back as a JS Date at local midnight; always read the calendar string instead. */
 export const FOLLOW_UP_SELECT = "to_char(follow_up_on, 'YYYY-MM-DD') as follow_up_on";
 
+/** Citus rejects non-IMMUTABLE functions (to_char) in RETURNING; return the raw column and normalize in mapCustodyRow. */
+export const CUSTODY_RETURNING = [...CUSTODY_COLUMNS, 'follow_up_on'];
+
+function calendarDate(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  }
+  return String(value).slice(0, 10);
+}
+
 function iso(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   return value instanceof Date ? value.toISOString() : String(value);
@@ -32,7 +44,7 @@ export function mapCustodyRow(row: any): IAssetCustody {
     bin: row.bin ?? null,
     next_action_party: row.next_action_party,
     next_action_note: row.next_action_note ?? null,
-    follow_up_on: row.follow_up_on ?? null,
+    follow_up_on: calendarDate(row.follow_up_on),
     condition_note: row.condition_note ?? null,
     accessories: Array.isArray(row.accessories) ? row.accessories : [],
     opened_at: iso(row.opened_at)!,

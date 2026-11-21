@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/db', () => ({
-  createTenantKnex: vi.fn(async (tenant: string) => ({ knex: mocks.knex, tenant })),
+  createTenantKnex: vi.fn(async (tenant?: string) => ({ knex: mocks.knex, tenant: tenant ?? mocks.user?.tenant })),
 }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => mocks.user }));
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -30,6 +30,10 @@ vi.mock('@alga-psa/core/net/safeFetch', () => ({
   assertPublicHttpsUrl: vi.fn(async () => undefined),
   postSafeOutboundForm: mocks.postSafeOutboundForm,
 }));
+vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', async (importOriginal) => ({
+  ...await importOriginal<any>(),
+  assertSafeImapOauthTokenEndpoint: vi.fn(async () => ({})),
+}));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => mocks.hasPermission(...args) }));
 vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: vi.fn(async () => undefined),
@@ -40,6 +44,7 @@ vi.mock('@/lib/productAccess', () => ({
 import { GET } from '@/app/api/email/oauth/imap/callback/route';
 import { POST } from '@/app/api/email/oauth/imap/initiate/route';
 import { createImapOAuthState } from '@/utils/email/imapOAuthState';
+import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 
 const knex = knexFactory({ client: 'pg', pool: { min: 0, max: 1 } });
 
@@ -127,6 +132,8 @@ function seedTenant(tenant: string) {
       email_provider_id: 'provider-a',
       oauth_authorize_url: 'https://idp.example.test/authorize',
       oauth_token_url: 'https://idp.example.test/token',
+      oauth_credentials_token_url: 'https://idp.example.test/token',
+      oauth_credentials_secret_version: 1,
       oauth_client_id: 'client-a',
       oauth_scopes: 'mail.read',
     },
@@ -151,7 +158,7 @@ describe('IMAP OAuth routes with the real tenantDb facade', () => {
     mocks.rows = {};
     mocks.queries = [];
     mocks.getTenantSecret.mockImplementation(async (_tenant: string, name: string) =>
-      name.startsWith('imap_oauth_client_secret_') ? 'client-secret' : null);
+      name.endsWith('_client_secret') ? 'client-secret' : null);
     mocks.setTenantSecret.mockResolvedValue(undefined);
     mocks.postSafeOutboundForm.mockResolvedValue({
       status: 200,
@@ -181,7 +188,12 @@ describe('IMAP OAuth routes with the real tenantDb facade', () => {
     const first = await GET(callbackRequest(started.state));
     expect(first.status, JSON.stringify({ body: await first.clone().text(), rows: mocks.rows.imap_oauth_states, queries: mocks.queries }, null, 2)).toBe(307);
     expect(mocks.rows.imap_oauth_states).toHaveLength(0);
-    expect(mocks.setTenantSecret).toHaveBeenCalledWith('tenant-a', 'imap_refresh_token_provider-a', 'refresh-token');
+    const secretNames = getImapOauthSecretNames({
+      id: 'provider-a',
+      oauth_token_url: 'https://idp.example.test/token',
+      oauth_credentials_secret_version: 1,
+    });
+    expect(mocks.setTenantSecret).toHaveBeenCalledWith('tenant-a', secretNames.refreshToken, 'refresh-token');
 
     const replay = await GET(callbackRequest(started.state));
     expect(replay.status).toBe(400);

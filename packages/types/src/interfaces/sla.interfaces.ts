@@ -119,7 +119,7 @@ export type SlaTimerStatus =
 /**
  * Reason why an SLA timer is paused.
  */
-export type SlaPauseReason = 'awaiting_client' | 'status_pause';
+export type SlaPauseReason = 'awaiting_client' | 'status_pause' | 'client_it_responsibility';
 
 /**
  * Current SLA status for a ticket.

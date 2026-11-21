@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
-import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceSql, commentAudienceVisibleSql, type CommentAudience, type CommentAudienceReader } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, assertCoManagedSessionUnexpired, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -72,15 +72,18 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     on: join => join.andOn('root.thread_id', '=', 't.thread_id').andOn('root.ticket_id', '=', 'c.ticket_id') });
   comments.where('root.publish_state', 'published');
   const audience = commentAudienceSql(trx, 't', 'root', 'c');
-  if (foreign) comments.whereRaw('? IN (?, ?)', [audience, 'requester', 'shared_it']);
+  // The reader's organization is their tenant here: the owner reads everything, the other side of
+  // the relationship reads requester and shared_it.
+  const reader: CommentAudienceReader = { kind: 'staff', tenant: actor.tenant };
+  comments.whereRaw('?', [commentAudienceVisibleSql(trx, reader, { thread: 't', root: 'root', comment: 'c', ownerTenant: 'c.tenant' })]);
   customer.tenantJoin(comments, 'comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
     on: join => join.andOn('parent.thread_id', '=', 't.thread_id').andOn('parent.ticket_id', '=', 'c.ticket_id') });
   customer.tenantJoin(comments, 'collaboration_actor_references as a', 'c.actor_reference_id', 'a.actor_reference_id', { type: 'left' });
   customer.tenantJoin(comments, 'users as u', 'c.user_id', 'u.user_id', { type: 'left' });
   customer.tenantJoin(comments, 'contacts as contact', 'c.contact_id', 'contact.contact_name_id', { type: 'left' });
-  const parentAudience = commentAudienceSql(trx, 't', 'root', 'parent');
+  const parentVisible = commentAudienceVisibleSql(trx, reader, { thread: 't', root: 'root', comment: 'parent', ownerTenant: 'parent.tenant' });
   comments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id',
-    parent_comment_id: trx.raw(`CASE WHEN parent.publish_state = 'published' AND (? = false OR ? IN ('requester', 'shared_it')) THEN parent.comment_id ELSE NULL END`, [foreign, parentAudience]),
+    parent_comment_id: trx.raw(`CASE WHEN parent.publish_state = 'published' AND ? THEN parent.comment_id ELSE NULL END`, [parentVisible]),
     audience, created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
     deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: trx.raw('NULL::integer'),
     actor_tenant: trx.raw('COALESCE(a.actor_tenant, c.tenant)'),
@@ -97,6 +100,10 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     const privateComments = home.table('co_management_private_comments as c');
     home.tenantJoin(privateComments, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
     privateComments.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id });
+    // A private thread that was disclosed lives on as its shared copy (read from the customer store above).
+    // Its source is retained history only: listing it again is a duplicate with no readable attachments
+    // and a disclose control that can never succeed (a disclosed thread is not eligible to disclose twice).
+    privateComments.whereNull('t.disclosure_operation_id');
     home.tenantJoin(privateComments, 'co_management_private_comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',

@@ -4,6 +4,8 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { assertMspPermission } from '../../lib/authHelpers';
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 
 export interface ContactTicketSummaryRow {
   ticket_id: string;
@@ -77,8 +79,18 @@ function asCount(value: unknown): number {
   return 0;
 }
 
-async function fetchTicketSummary(trx: Knex.Transaction, tenant: string, contactId: string): Promise<ContactTicketsSummary> {
-  const rows = await scopedTable(trx, tenant, 'tickets as t')
+/**
+ * The contact's ticket rows and counts, all over the tickets the caller may read: the ticket list's read
+ * narrowing is applied to each query, so a client-restricted caller's counts equal what their list returns.
+ */
+async function fetchTicketSummary(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  user: IUserWithRoles,
+): Promise<ContactTicketsSummary> {
+  const readable = await createTicketReadScope(trx, tenant, user);
+  const rowsQuery = scopedTable(trx, tenant, 'tickets as t')
     .leftJoin('statuses as s', function joinStatus() {
       this.on('s.status_id', '=', 't.status_id').andOn('s.tenant', '=', 't.tenant');
     })
@@ -104,20 +116,21 @@ async function fetchTicketSummary(trx: Knex.Transaction, tenant: string, contact
     .orderByRaw(`CASE WHEN ${URGENT_TICKET_CONDITION} THEN 0 ELSE 1 END`)
     .orderBy('t.entered_at', 'desc')
     .limit(5);
+  const rows = await readable.apply(rowsQuery, 't');
 
   const [openResult, urgentResult, totalResult] = await Promise.all([
     // Status-backed, not the denormalized tickets.is_closed column: that column
     // is stale on ~24% of production tickets (all claiming "open" while their
     // status says closed), which inflated this contact's open count. Same
     // predicate as getBoardListStats and the client pulse.
-    scopedTable(trx, tenant, 'tickets as t')
+    readable.apply(scopedTable(trx, tenant, 'tickets as t')
       .leftJoin('statuses as s', function joinOpenStatuses() {
         this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
       })
       .where('t.contact_name_id', contactId)
       .whereRaw('s.is_closed IS NOT TRUE')
-      .count<{ count: string | number }[]>('t.ticket_id as count'),
-    scopedTable(trx, tenant, 'tickets as t')
+      .count<{ count: string | number }[]>('t.ticket_id as count'), 't'),
+    readable.apply(scopedTable(trx, tenant, 'tickets as t')
       .leftJoin('urgencies as u', function joinUrgency() {
         this.on('u.urgency_id', '=', 't.urgency_id').andOn('u.tenant', '=', 't.tenant');
       })
@@ -127,10 +140,10 @@ async function fetchTicketSummary(trx: Knex.Transaction, tenant: string, contact
       .where('t.contact_name_id', contactId)
       .whereRaw('s.is_closed IS NOT TRUE')
       .whereRaw(URGENT_TICKET_CONDITION)
-      .count<{ count: string | number }[]>('t.ticket_id as count'),
-    scopedTable(trx, tenant, 'tickets')
-      .where({ contact_name_id: contactId })
-      .count<{ count: string | number }[]>('ticket_id as count'),
+      .count<{ count: string | number }[]>('t.ticket_id as count'), 't'),
+    readable.apply(scopedTable(trx, tenant, 'tickets as t')
+      .where({ 't.contact_name_id': contactId })
+      .count<{ count: string | number }[]>('t.ticket_id as count'), 't'),
   ]);
 
   return {
@@ -158,7 +171,7 @@ export const getContactTicketsSummary = withAuth(async (
 ): Promise<ContactTicketsSummary> => {
   await assertMspPermission(user, 'ticket', 'read', 'Permission denied: Cannot read tickets');
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, (trx) => fetchTicketSummary(trx, tenant, contactId));
+  return withTransaction(knex, (trx) => fetchTicketSummary(trx, tenant, contactId, user as IUserWithRoles));
 });
 
 export const getContactStats = withAuth(async (
@@ -171,7 +184,7 @@ export const getContactStats = withAuth(async (
 
   return withTransaction(knex, async (trx) => {
     const [tickets, lastInteraction, surveyRows] = await Promise.all([
-      fetchTicketSummary(trx, tenant, contactId),
+      fetchTicketSummary(trx, tenant, contactId, user as IUserWithRoles),
       scopedTable(trx, tenant, 'interactions as i')
         .leftJoin('interaction_types as it', function joinInteractionType() {
           this.on('it.type_id', '=', 'i.type_id').andOn('it.tenant', '=', 'i.tenant');

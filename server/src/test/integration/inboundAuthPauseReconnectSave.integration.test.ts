@@ -56,6 +56,12 @@ vi.mock('redis', () => ({
   },
 }));
 
+// The IMAP transport is stubbed below; resolve its fixture hostname while
+// retaining the production destination policy and socket pinning.
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) },
+}));
+
 // Route the action's tenant resolution (global withAuth mock) at our test
 // tenant, same harness as emailProviderCreation.test.ts.
 // Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;

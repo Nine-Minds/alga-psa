@@ -42,8 +42,11 @@ import { getRmmIntegrationIdByProvider } from '@alga-psa/integrations/actions';
 import { DATTO_RMM_PLATFORMS, dattoPlatformApiUrl, type DattoRmmPlatform } from '../../../lib/integrations/datto/shared';
 import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
 import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds, useClientNames } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type PlatformChoice = DattoRmmPlatform | 'custom';
@@ -104,11 +107,11 @@ export function DattoRmmIntegrationSettings() {
 
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getDattoRmmConnectionSummary>>['summary'] | null>(null);
   const [siteMappings, setSiteMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listDattoRmmSiteMappings>>['mappings']>>([]);
-  const [clients, setClients] = React.useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = React.useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = React.useState<IContact[]>([]);
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = React.useState<{ mappingId: string; clientId: string } | null>(null);
-  const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [webhookInfo, setWebhookInfo] = React.useState<Awaited<ReturnType<typeof getDattoRmmWebhookInfo>>['webhook'] | null>(null);
@@ -156,7 +159,14 @@ export function DattoRmmIntegrationSettings() {
       setError(getActionFailureMessage(res, t('integrations.rmm.datto.errors.loadSiteMappings', { defaultValue: 'Failed to load site mappings' })));
       return;
     }
-    setSiteMappings(res.mappings || []);
+    const mappings = res.mappings || [];
+    setKnownClients(
+      await lookupClientsByIds(
+        searchClientsForPicker,
+        mappings.map((m) => m.client_id).filter((id): id is string => !!id),
+      ),
+    );
+    setSiteMappings(mappings);
   }, [t]);
 
   const loadWebhookInfo = React.useCallback(async () => {
@@ -178,19 +188,10 @@ export function DattoRmmIntegrationSettings() {
   }, [loadWebhookInfo]);
 
   const loadClientsAndContacts = React.useCallback(async () => {
-    setClientsLoading(true);
     try {
-      const [clientsData, contactsData] = await Promise.all([
-        getAllClients(true),
-        getAllContacts('active'),
-      ]);
-      setClients(clientsData as any);
-      setContacts((contactsData as any) ?? []);
+      setContacts(((await getAllContacts('active')) as any) ?? []);
     } catch (e) {
-      setClients([]);
       setContacts([]);
-    } finally {
-      setClientsLoading(false);
     }
   }, []);
 
@@ -489,6 +490,9 @@ export function DattoRmmIntegrationSettings() {
 
   // Re-pointing a site moves its devices, so confirm first.
   const [pendingClientChange, setPendingClientChange] = React.useState<{ mappingId: string; clientId: string | null } | null>(null);
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
 
   const handleClientChange = (mappingId: string, clientId: string | null) => {
     const current = siteMappings.find((m) => m.mapping_id === mappingId);
@@ -619,16 +623,15 @@ export function DattoRmmIntegrationSettings() {
         <div className="space-y-1">
           <ClientPicker
             id={`datto-rmm-site-client-picker-${m.mapping_id}`}
-            clients={clients}
+            searchClients={searchClientsForPicker}
+            knownClients={knownClients}
             selectedClientId={m.client_id || null}
             onSelect={(clientId) => handleClientChange(m.mapping_id, clientId)}
             filterState={clientFilterState}
             onFilterStateChange={setClientFilterState}
             clientTypeFilter={clientTypeFilter}
             onClientTypeFilterChange={setClientTypeFilter}
-            placeholder={clientsLoading
-              ? t('integrations.rmm.datto.client.loading', { defaultValue: 'Loading clients…' })
-              : t('integrations.rmm.datto.client.select', { defaultValue: 'Select client' })}
+            placeholder={t('integrations.rmm.datto.client.select', { defaultValue: 'Select client' })}
             fitContent
             triggerVariant="outline"
             triggerSize="sm"
@@ -751,7 +754,7 @@ export function DattoRmmIntegrationSettings() {
     <>
     <RmmOrganizationClientChangeDialog
       mappingId={pendingClientChange?.mappingId ?? null}
-      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      pendingClientName={pendingClientName}
       isOpen={Boolean(pendingClientChange)}
       onCancel={() => setPendingClientChange(null)}
       onConfirm={() => {
@@ -1489,7 +1492,6 @@ export function DattoRmmIntegrationSettings() {
         }
         setQuickAddContactFor(null);
       },
-      clients,
       selectedClientId: quickAddContactFor?.clientId ?? null,
     })}
     </>

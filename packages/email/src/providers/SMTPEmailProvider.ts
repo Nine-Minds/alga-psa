@@ -4,6 +4,7 @@
 
 import nodemailer, { type Transporter } from 'nodemailer';
 import logger from '@alga-psa/core/logger';
+import { onWireMessageIdFields } from '../onWireMessageId';
 import {
   IEmailProvider,
   EmailMessage,
@@ -149,20 +150,24 @@ export class SMTPEmailProvider implements IEmailProvider {
       });
 
       // Prefer the on-wire id when the relay rewrote ours (Amazon SES SMTP).
+      // Shared on-wire contract (onWireMessageId.ts): rfcMessageId = on-wire id,
+      // metadata.generatedRfcMessageId = the id we generated.
       const sesMessageId = resolveSesOnWireMessageId(this.config.host, result.response);
+      const onWire = onWireMessageIdFields(result.messageId, sesMessageId);
 
       return {
         success: true,
         messageId: result.messageId,
         providerMessageId: result.messageId,
-        rfcMessageId: sesMessageId ?? result.messageId,
+        rfcMessageId: onWire.rfcMessageId ?? result.messageId,
         providerId: this.providerId,
         providerType: this.providerType,
         sentAt: new Date(),
         metadata: {
           response: result.response,
           envelope: result.envelope,
-          ...(sesMessageId ? { generatedRfcMessageId: result.messageId, sesMessageId } : {})
+          ...onWire.metadata,
+          ...(onWire.metadata && sesMessageId ? { sesMessageId } : {})
         }
       };
     } catch (error: any) {

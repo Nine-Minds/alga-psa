@@ -11,7 +11,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
-      fn({ id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+      fn({ user_id: 'user-1', tenant: 'tenant-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({

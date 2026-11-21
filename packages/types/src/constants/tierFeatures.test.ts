@@ -61,6 +61,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.OPPORTUNITY_MANAGEMENT,
         TIER_FEATURES.CONTRACT_SIMULATOR,
         TIER_FEATURES.CREDENTIALS,
+        TIER_FEATURES.SERVICE_PRINCIPALS,
       ]);
     });
   });
@@ -109,6 +110,12 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.CREDENTIALS)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.CREDENTIALS)).toBe(true);
     });
+
+    it('service principals require pro; essentials and solo are locked out', () => {
+      expect(tierHasFeature('essentials', TIER_FEATURES.SERVICE_PRINCIPALS)).toBe(false);
+      expect(tierHasFeature('solo', TIER_FEATURES.SERVICE_PRINCIPALS)).toBe(false);
+      expect(tierHasFeature('pro', TIER_FEATURES.SERVICE_PRINCIPALS)).toBe(true);
+    });
   });
 
   describe('FEATURE_MINIMUM_TIER', () => {
@@ -138,6 +145,7 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CREDENTIALS]).toBe('pro');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SERVICE_PRINCIPALS]).toBe('pro');
     });
   });
 });

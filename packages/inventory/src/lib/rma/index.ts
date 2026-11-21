@@ -5,3 +5,4 @@ export * from './warrantyTransitions';
 export * from './publishRmaUpdated';
 export * from './warrantyRunner';
 export * from './rmaReadAccess';
+export * from './openWarrantyClaimRunner';

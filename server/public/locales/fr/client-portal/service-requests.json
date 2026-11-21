@@ -9,10 +9,7 @@
     "newRequestHeading": "Soumettre une nouvelle demande"
   },
   "detail": {
-    "version": "Version {{version}}",
     "submitted": "Demande soumise",
-    "requestIdLabel": "ID de la demande : ",
-    "ticketIdLabel": "ID du ticket : ",
     "unableToSubmit": "Impossible de soumettre la demande",
     "formTitle": "Formulaire de demande",
     "noFields": "Aucun champ configuré.",
@@ -21,8 +18,18 @@
     "optionLabel": "Option {{index}}",
     "submit": "Soumettre la demande",
     "requiredField": "Ce champ est obligatoire.",
-    "initialValuesTitle": "Valeurs initiales",
-    "noInitialValues": "Aucune valeur par défaut statique configurée."
+    "validation": {
+      "type": "Cette réponse n'a pas la forme attendue.",
+      "pattern": "Cette réponse n'a pas la forme attendue.",
+      "minLength": "Utilisez au moins {{minLength}} caractères.",
+      "maxLength": "Utilisez {{maxLength}} caractères au maximum.",
+      "min": "Saisissez {{min}} ou plus.",
+      "max": "Saisissez {{max}} ou moins.",
+      "minDate": "Choisissez le {{minDate}} ou après.",
+      "maxDate": "Choisissez le {{maxDate}} ou avant.",
+      "minSelected": "Choisissez-en au moins {{minSelected}}.",
+      "maxSelected": "Choisissez-en {{maxSelected}} au maximum."
+    }
   },
   "myRequests": {
     "title": "Mes demandes",
@@ -46,19 +53,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Retour à Mes demandes",
-    "requestIdLabel": "ID de la demande :",
     "statusSection": "Statut",
     "submittedAt": "Soumise : {{date}}",
-    "executionStatus": "Statut d'exécution : {{status}}",
-    "ticketLabel": "Ticket :",
-    "workflowLabel": "Workflow : {{id}}",
     "submittedAnswersTitle": "Réponses soumises",
     "noResponse": "Aucune réponse",
     "attachmentsTitle": "Pièces jointes",
     "noAttachments": "Aucune pièce jointe incluse.",
-    "fileIdLabel": "ID du fichier : {{id}}",
     "fileTypeLabel": "Type : {{mime}}",
-    "versionLabel": "Version {{version}}",
     "historyTitle": "Historique",
     "historyEmpty": "Aucun historique enregistré pour le moment.",
     "historyActor": "par {{actor}}",
@@ -66,7 +67,8 @@
       "service_request_submission_created": "Demande envoyée",
       "service_request_submission_execution_succeeded": "Traitement terminé",
       "service_request_submission_execution_failed": "Échec du traitement"
-    }
+    },
+    "unnamedAttachment": "Pièce jointe"
   },
   "recent": {
     "title": "Vos demandes récentes",
@@ -77,5 +79,12 @@
   },
   "myRequestsAll": {
     "title": "Vos demandes"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, soumise le {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Voir le ticket"
   }
 }
