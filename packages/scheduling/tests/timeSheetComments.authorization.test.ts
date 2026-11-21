@@ -111,8 +111,10 @@ describe('addCommentToTimeSheet authorization and attribution', () => {
       handled: true as const,
       value: commenter,
     }));
+    const providerSheet = { user_id: 'owner-1' };
+    const commentSubject = vi.fn(async () => ({ handled: true as const, value: providerSheet }));
     delegateToTimeSourceMock.mockImplementation(async (_ctx, call) =>
-      call({ sheets: { comment: sourceComment } }, { tenant: 'tenant-1' }),
+      call({ sheets: { commentSubject, comment: sourceComment } }, { tenant: 'tenant-1' }),
     );
     const addComment = await action();
 
@@ -125,6 +127,51 @@ describe('addCommentToTimeSheet authorization and attribution', () => {
       { user_id: actor.user_id, is_approver: true },
     );
     expect(result).toEqual({ user_id: actor.user_id, is_approver: true });
+    expect(commentSubject).toHaveBeenCalledWith({ tenant: 'tenant-1' }, 'sheet-1');
+    expect(insertedValues).toBeUndefined();
+  });
+
+  it('comments on a provider-owned sheet with no native row using server-derived owner attribution', async () => {
+    const providerComment = vi.fn(async (_ctx: unknown, _id: string, _comment: string, commenter: unknown) => ({
+      handled: true as const,
+      value: commenter,
+    }));
+    const commentSubject = vi.fn(async () => ({ handled: true as const, value: { user_id: actor.user_id } }));
+    const nativeSheetLookup = vi.fn(async () => undefined);
+    scopedDb.table = (table: string) => {
+      if (table === 'time_sheets') return { where: () => ({ first: nativeSheetLookup }) };
+      if (table === 'time_sheet_comments') throw new Error('provider comment must not write natively');
+      throw new Error(`Unexpected table ${table}`);
+    };
+    delegateToTimeSourceMock.mockImplementation(async (_ctx, call) =>
+      call({ sheets: { commentSubject, comment: providerComment } }, { tenant: 'tenant-1' }),
+    );
+    const addComment = await action();
+
+    const result = await addComment(actor as any, { tenant: 'tenant-1' }, 'sheet-1', 'hello');
+
+    expect(result).toEqual({ user_id: actor.user_id, is_approver: false });
+    expect(nativeSheetLookup).not.toHaveBeenCalled();
+    expect(assertCanApproveSubjectMock).not.toHaveBeenCalled();
+    expect(providerComment).toHaveBeenCalledWith(
+      { tenant: 'tenant-1' }, 'sheet-1', 'hello',
+      { user_id: actor.user_id, is_approver: false },
+    );
+  });
+
+  it('blocks provider writes when delegated authorization is denied', async () => {
+    const providerComment = vi.fn(async () => ({ handled: true as const, value: null }));
+    const commentSubject = vi.fn(async () => ({ handled: true as const, value: { user_id: 'owner-1' } }));
+    delegateToTimeSourceMock.mockImplementation(async (_ctx, call) =>
+      call({ sheets: { commentSubject, comment: providerComment } }, { tenant: 'tenant-1' }),
+    );
+    assertCanActOnBehalfMock.mockRejectedValue(new Error('Permission denied: Cannot access other users time sheets'));
+    const addComment = await action();
+
+    await expect(addComment(actor as any, { tenant: 'tenant-1' }, 'sheet-1', 'hello')).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot access other users time sheets',
+    });
+    expect(providerComment).not.toHaveBeenCalled();
     expect(insertedValues).toBeUndefined();
   });
 

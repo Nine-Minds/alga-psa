@@ -196,10 +196,15 @@ export const addCommentToTimeSheet = withAuth(async (
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    // Fetch the timesheet to check ownership
-    const timeSheet = await scopedDb.table('time_sheets')
-      .where({ id: timeSheetId })
-      .first();
+    // Resolve the subject from the owning source. Providers must derive this
+    // from their authoritative sheet record; caller input contains only an id.
+    const sourceSubject = await delegateToTimeSource(
+      { tenant, userId: user.user_id },
+      (source, ctx) => source.sheets.commentSubject(ctx, timeSheetId)
+    );
+    const timeSheet = sourceSubject.handled
+      ? sourceSubject.value
+      : await scopedDb.table('time_sheets').where({ id: timeSheetId }).first();
 
     if (!timeSheet) {
       throw new Error('Time sheet not found');
@@ -231,13 +236,8 @@ export const addCommentToTimeSheet = withAuth(async (
     }
     const commenter = { user_id: user.user_id, is_approver: isApprover };
 
-    // Time-source seam receives only server-derived attribution.
-    // LEVERAGE: friction timesource-comment-authz — comment is the one seam method that now
-    // runs native authorization (and a native `time_sheets` lookup) BEFORE asking the source,
-    // while every sibling method delegates first and lets the provider decide without querying.
-    // A provider that owns sheets unknown to the native table cannot answer this call; when one
-    // is actually registered, the derivation belongs in the native branch and the provider
-    // should compute its own attribution from `ctx`.
+    // Time-source seam receives only server-derived attribution after the same
+    // ownership, delegation, and approval checks used for native sheets.
     const delegated = await delegateToTimeSource(
       { tenant, userId: user.user_id },
       (source, ctx) => source.sheets.comment(ctx, timeSheetId, comment, commenter)

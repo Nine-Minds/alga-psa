@@ -47,6 +47,8 @@ export const nativeTimeSource: TimeSource = Object.freeze({
   kind: 'native',
 
   sheets: Object.freeze({
+    // Native sheets are resolved by the native action body after this source misses.
+    commentSubject: async (): Promise<TimeSourceValue<null>> => ({ handled: false }),
     read: lazy(sheetActions, 'fetchTimeSheet'),
     list: lazy(sheetOps, 'fetchTimeSheets'),
     listAll: lazy(sheetOps, 'fetchAllTimeSheets'),

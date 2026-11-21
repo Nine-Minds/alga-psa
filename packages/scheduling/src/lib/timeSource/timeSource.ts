@@ -143,6 +143,11 @@ export type TimeSourceMethod<F extends (...args: any[]) => any> = (
 
 /** `time_sheets` and their approval lifecycle. */
 export interface TimeSourceSheets {
+  /** Resolve the owner from this source's authoritative sheet record for comment authorization. */
+  commentSubject: (
+    ctx: TimeSourceContext,
+    timeSheetId: string,
+  ) => Promise<TimeSourceValue<TimeSheetCommentSubject | null>>;
   read: TimeSourceMethod<typeof fetchTimeSheet>;
   list: TimeSourceMethod<typeof fetchTimeSheets>;
   listAll: TimeSourceMethod<typeof fetchAllTimeSheets>;
@@ -171,6 +176,11 @@ export interface TimeSourceSheets {
 export interface TimeSheetCommenter {
   user_id: string;
   is_approver: boolean;
+}
+
+/** Trusted ownership data returned by the sheet-owning source, never caller input. */
+export interface TimeSheetCommentSubject {
+  user_id: string;
 }
 
 /** `time_periods` and their settings. */
