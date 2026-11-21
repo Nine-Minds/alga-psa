@@ -31,7 +31,7 @@ import {
 } from '../candidate';
 import type { SmartSearchEntityDefinition, SmartSearchRedactions } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
-import { hiddenTicketFields, interpretTicketRedactions } from '@alga-psa/tickets/lib/ticketFieldProjection';
+import { interpretTicketRedactions, type TicketRedactionInterpretation } from '@alga-psa/tickets/lib/ticketFieldProjection';
 
 export type TicketCommentAuthor = 'technician' | 'client' | 'system';
 
@@ -118,9 +118,9 @@ function maskedColumn(trx: Knex.Transaction, hidden: ReadonlySet<string>, field:
   return hidden.has(field) ? trx.raw(`NULL::${type} as ??`, [field]) : trx.raw(`${expression} as ??`, [field]);
 }
 
-async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[], redactedFields: readonly string[]): Promise<TicketTextRow[]> {
-  const hidden = hiddenTicketFields(redactedFields);
-  if (hidden.has('ticket_id') || redactedFields.includes('*')) return [];
+async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[], interpretation: TicketRedactionInterpretation): Promise<TicketTextRow[]> {
+  const { hiddenFields: hidden } = interpretation;
+  if (hidden.has('ticket_id')) return [];
   const db = tenantDb(trx, tenant);
   const query = db.table('tickets as t');
   db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -201,21 +201,26 @@ export async function loadTicketCandidates(
   const principal = await resolveSearchAclPrincipal(trx, user);
   const attributesRows = await tenantDb(trx, tenant).table('tickets').whereIn('ticket_id', authorizedIds).select('ticket_id', 'attributes');
   const attributesById = new Map(attributesRows.map((row: { ticket_id: string; attributes: Record<string, unknown> | null }) => [row.ticket_id, row.attributes]));
-  const grouped = new Map<string, string[]>();
+  const grouped = new Map<string, { ids: string[]; interpretation: TicketRedactionInterpretation; hasRedactions: boolean }>();
   for (const id of authorizedIds) {
     const fields = [...new Set(redactions.get(id)!)].sort();
     // Candidate construction must reject policy names it cannot interpret just as hydration does.
-    interpretTicketRedactions(fields, attributesById.get(id));
-    const key = JSON.stringify(fields);
-    grouped.set(key, [...(grouped.get(key) ?? []), id]);
+    const interpretation = interpretTicketRedactions(fields, attributesById.get(id));
+    const key = JSON.stringify({
+      fields: [...interpretation.hiddenFields].sort(),
+      attributes: [...interpretation.hiddenAttributes].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())),
+    });
+    const group = grouped.get(key) ?? { ids: [], interpretation, hasRedactions: fields.length > 0 };
+    group.ids.push(id);
+    group.hasRedactions ||= fields.length > 0;
+    grouped.set(key, group);
   }
   const ticketRows: TicketTextRow[] = [];
   const commentRows: CommentIndexRow[] = [];
-  for (const [key, ids] of grouped) {
-    const fields = JSON.parse(key) as string[];
+  for (const { ids, interpretation, hasRedactions } of grouped.values()) {
     const [rows, comments] = await Promise.all([
-      loadTicketTextRows(trx, tenant, ids, fields),
-      loadVisibleCommentRows(trx, tenant, principal, ids, fields.length > 0),
+      loadTicketTextRows(trx, tenant, ids, interpretation),
+      loadVisibleCommentRows(trx, tenant, principal, ids, hasRedactions),
     ]);
     ticketRows.push(...rows);
     commentRows.push(...comments);
