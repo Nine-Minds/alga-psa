@@ -39,10 +39,13 @@ describe('IMAP destination policy', () => {
     await expect(assertSafeImapHost(host, 993)).rejects.toThrow();
   });
 
-  it('rejects non-mail ports and refuses to apply the IMAP exception to OAuth HTTPS', async () => {
+  it('accepts a validated custom IMAP port and refuses to apply the IMAP exception to OAuth HTTPS', async () => {
     process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST = 'imap.internal.example';
     lookup.mockResolvedValue([{ address: '10.40.8.12', family: 4 }]);
-    await expect(assertSafeImapHost('imap.internal.example', 25)).rejects.toThrow(/port 25/);
+    const customPortTarget = await assertSafeImapHost('imap.internal.example', 1143);
+    expect(customPortTarget.url.port).toBe('1143');
+    expect(customPortTarget.pin).toEqual({ address: '10.40.8.12', family: 4 });
+    await expect(assertSafeImapHost('imap.internal.example', 65536)).rejects.toThrow(/invalid/);
     await expect(assertSafeImapOauthTokenEndpoint('https://imap.internal.example/token'))
       .rejects.toThrow(/blocked private address/);
   });

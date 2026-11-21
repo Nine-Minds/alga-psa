@@ -309,6 +309,10 @@ spec:
           - name: WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON
             value: {{ .Values.correlationPathsJson | quote }}
           {{- end }}
+          {{- with .Values.imap.privateTargetAllowlist }}
+          - name: EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
+            value: {{ . | quote }}
+          {{- end }}
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}

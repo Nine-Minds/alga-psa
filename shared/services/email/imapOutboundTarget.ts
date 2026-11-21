@@ -14,7 +14,6 @@ export async function assertSafeImapHost(host: string, port: number = 993) {
   const urlHost = value.includes(':') && !value.startsWith('[') ? `[${value}]` : value;
   const target = await resolveSafeOutboundTarget(`imap://${urlHost}:${port}/`, {
     schemes: ['imap'],
-    ports: [143, 993],
     privateTargetAllowlist: parseOutboundTargetAllowlist(
       process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
     ),

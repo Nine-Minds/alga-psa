@@ -139,6 +139,10 @@ spec:
             value: "{{ .Values.devPod.host | default .Values.host }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
+          {{- with .Values.imap.privateTargetAllowlist }}
+          - name: EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
+            value: {{ . | quote }}
+          {{- end }}
           {{- if and .Values.vaultAgent.enabled .Values.vaultAgent.gcpServiceAccount.secretPath }}
           - name: GOOGLE_APPLICATION_CREDENTIALS
             value: "/vault/secrets/{{ .Values.vaultAgent.gcpServiceAccount.fileName }}"

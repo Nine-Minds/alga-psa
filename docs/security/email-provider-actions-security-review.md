@@ -1,6 +1,22 @@
 # Email provider security fixes: human review guide
 
-Review this repair first for **initial and reconnect OAuth authorization with a fresh application secret**, **durable credential invalidation across endpoint changes (including environment fallbacks)**, and **private mail-target allowlist compatibility in every IMAP socket path**. Both original findings and their authorization boundaries are covered below.
+Start with the deployment compatibility repair in `shared/services/email/imapOutboundTarget.ts`, the two Helm chart templates, and the rendered-deployment regression. The card says no plan is attached; the repository contains the approved plan at `docs/plans/2026-11-10-2-findings-in-emailprovideractions-ts-fix-plan.md`. This repair follows its default-deny private-target requirement while correcting the deployment wiring and custom-port compatibility gap.
+
+This guide records evidence for the captain's review. It does not grant approval.
+
+The allowlist is configured independently for `alga-core` and `email-service`. Compose deployments set `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST` in the deployment `.env`. Helm deployments set `imap.privateTargetAllowlist` in both charts' values and roll out both workloads. See `docs/security/email-provider-private-target-allowlist.md` for the operator instructions and restart requirements. Existing deployments that use private mail servers must add the exact hostname/IP before upgrading. Custom ports from 1 through 65535 are accepted; the provider's existing `secure` and `allow_starttls` settings continue to control TLS.
+
+Fresh evidence on this repair revision: the two-chart Helm rendering regression passes; the provider action SSRF suite passes with private-target opt-in on port 1143 and default denial. A real `ImapFlow` client also used `assertSafeImapHost` and its pinned lookup to authenticate the fixture's dedicated `review` mailbox on custom port `172.17.0.1:1143`; a temporary TCP relay forwarded that port to GreenMail `172.17.0.31:143`. `secure: false` matched the fixture's plain IMAP listener. With the allowlist unset, the same private target was rejected before a socket attempt. The relay was stopped after the check. The persisted inbound ingestion path has **not** yet been validated end to end. No application server was running, and this task prohibits starting one. The existing fixture alone cannot deliver the webhook into the persisted inbound path. Do not treat the review hold as resolved until a focused harness or existing application service demonstrates a uniquely identified message persisted once with the expected tenant/provider association.
+
+### Fresh compatibility checks
+
+- `node --test ee/appliance/host-service/tests/imap-private-allowlist-rendering.test.mjs`: passed. The same render against baseline `f60034099ea7044aa6ef090fe24719b57dc8c18d` had no allowlist environment value in either Deployment, so this regression detects the deployment gap.
+- `docker-compose -f docker-compose.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml config --format json`, with `EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST=imap.internal.example,10.40.8.12`: rendered the configured value to both `server` and `email-service`.
+- Shared destination-policy tests: 35 passed. Focused provider action, authorization, lifecycle, queue, route, and provider-creation tests: 74 passed. Email-service tests: 51 passed.
+- `helm lint helm` and `helm lint ee/helm/email-service`: both passed.
+- Shared, integrations, and server typechecks passed. Shared and email-service builds passed. The integrations package has no tsup inputs, so its build script exits with `No input files`. The server production build compiled and generated all 74 static pages on a 12 GB retry, then exited with Next.js `SecurityFatalError` because the installed Next.js version is reported as affected by a security vulnerability. The first 8 GB attempt also exhausted its heap. No app server was started.
+
+The authorization and credential-binding findings remain covered by the behavioral regressions listed below. Their evidence in this guide predates this compatibility repair unless a result is explicitly marked fresh. Both original findings and their authorization boundaries are covered below.
 
 ## Finding 1: provider actions lacked the MSP authorization boundary
 

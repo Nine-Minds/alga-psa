@@ -116,7 +116,7 @@ describe('IMAP outbound target protections', () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it.each([25, 110, 1430])('rejects IMAP port %s before reading credentials or connecting', async (port) => {
+  it.each([0, -1, 65536, 143.5])('rejects invalid IMAP port %s before reading credentials or connecting', async (port) => {
     setupConfig({ port, auth_type: 'password' });
     const { testEmailProviderConnection } = await import('./emailProviderActions');
 
@@ -162,12 +162,13 @@ describe('IMAP outbound target protections', () => {
       await expect(resolvePinned(imapLookup)).resolves.toEqual([{ address: '93.184.216.34', family: 4 }]);
 
       process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST = 'imap.internal.example';
-      setupConfig({ host: 'imap.internal.example', auth_type: 'password', access_token: 'already-authorized' });
+      setupConfig({ host: 'imap.internal.example', port: 1143, auth_type: 'password', access_token: 'already-authorized' });
       mocks.getTenantSecret.mockResolvedValue('mailbox-password');
       mocks.lookup.mockResolvedValue([{ address: '10.10.2.20', family: 4 }]);
       const privateResult = await testEmailProviderConnection('provider-1');
       expect(privateResult).toEqual({ success: true });
       expect(mocks.connect).toHaveBeenCalledTimes(2);
+      expect(mocks.imapOptions.at(-1)).toMatchObject({ host: 'imap.internal.example', port: 1143, secure: true });
     } finally {
       if (oldAllowlist === undefined) delete process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST;
       else process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST = oldAllowlist;

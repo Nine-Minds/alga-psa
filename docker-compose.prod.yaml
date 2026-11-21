@@ -10,6 +10,7 @@ services:
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
     build:
       context: .
       # The one runtime image definition. It packages prebuilt artifacts, so run
@@ -51,6 +52,7 @@ services:
       IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
 
   # Production publishes no data-plane ports. To reach them from the host on
   # purpose, add docker-compose.expose-infra.yaml as the last -f file.
