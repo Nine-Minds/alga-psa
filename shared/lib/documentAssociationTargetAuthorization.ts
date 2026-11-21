@@ -1,11 +1,11 @@
 import type { Knex } from 'knex';
 import type { IUser, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/authorization/rbac';
 import { createAssetReadContext, filterReadableAssets, resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { compileResourceReadAuthorizationSql, type BundleNarrowingRule, type RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { createProjectReadAuthorizer } from '../../packages/projects/src/lib/projectReadAuthorization';
+import { createProjectReadAuthorizer } from '@alga-psa/authorization/projectReadAuthorization';
 import { canAccessAttachmentTicket } from './ticketCommentAttachments';
 import { authorizeAndRedactDocumentsForAction } from './documentAuthorization';
 import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';

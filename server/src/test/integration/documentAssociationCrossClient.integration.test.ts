@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -61,6 +61,14 @@ vi.mock('@alga-psa/storage/StorageService', async (importOriginal) => {
     },
   };
 });
+// LEVERAGE: pattern test-rbac-forwarding — auth and authorization fixtures must share one permission policy.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: vi.fn(async (...args: Parameters<typeof import('@alga-psa/authorization/rbac').hasPermission>) => {
+    const { hasPermission } = await import('@alga-psa/auth');
+    return hasPermission(args[0] as import('@alga-psa/types').IUser, args[1], args[2], args[3]);
+  }),
+}));
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
@@ -133,6 +141,11 @@ async function seedDocument(clientId = clientAId, createdBy = clientAUserId, nam
 }
 
 describe('document association cross-client authorization', () => {
+  beforeEach(async () => {
+    const rbac = await import('@alga-psa/authorization/rbac');
+    vi.mocked(rbac.hasPermission).mockReset();
+  });
+
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
@@ -578,7 +591,9 @@ describe('document association cross-client authorization', () => {
     setMockUser(user);
     setupCommonMocks({ tenantId, userId, user });
     const authModule = await import('@alga-psa/auth');
-    const { hasPermission: hasPersistedPermission } = await import('@alga-psa/authorization/rbac');
+    const { hasPermission: hasPersistedPermission } = await vi.importActual<typeof import('@alga-psa/authorization/rbac')>('@alga-psa/authorization/rbac');
+    const rbac = await import('@alga-psa/authorization/rbac');
+    vi.mocked(rbac.hasPermission).mockImplementation(hasPersistedPermission);
     vi.mocked(authModule.hasPermission).mockImplementation((principal, resource, action, connection) =>
       hasPersistedPermission(principal, resource, action, connection));
 

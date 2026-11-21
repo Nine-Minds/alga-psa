@@ -85,24 +85,40 @@ export interface DocumentUploadTarget {
   parentDocumentId?: string;
 }
 
+export function getDocumentUploadTargets(target: DocumentUploadTarget): Array<{ entityType: string; entityId: string }> {
+  const targets = [
+    { entityType: 'ticket', entityId: target.ticketId },
+    { entityType: 'client', entityId: target.clientId },
+    { entityType: 'contact', entityId: target.contactNameId },
+    { entityType: 'asset', entityId: target.assetId },
+    { entityType: 'project_task', entityId: target.projectTaskId },
+    { entityType: 'contract', entityId: target.contractId },
+    { entityType: 'opportunity', entityId: target.opportunityId },
+    { entityType: 'document', entityId: target.parentDocumentId },
+  ];
+  return targets.filter((target): target is { entityType: string; entityId: string } => Boolean(target.entityId));
+}
+
+export async function areDocumentUploadTargetsAuthorized(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  target: DocumentUploadTarget,
+): Promise<boolean> {
+  for (const { entityType, entityId } of getDocumentUploadTargets(target)) {
+    if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entityType, entityId, 'update')) return false;
+  }
+  return true;
+}
+
 export async function canUploadDocument(user: IUser, target: DocumentUploadTarget): Promise<boolean> {
   const grants = await ticketDocumentGrants(user, 'create');
   const { knex } = await createTenantKnex(user.tenant);
-  const targets: Array<[string, string | undefined]> = [
-    ['ticket', target.ticketId], ['client', target.clientId], ['contact', target.contactNameId],
-    ['asset', target.assetId], ['project_task', target.projectTaskId], ['contract', target.contractId],
-    ['opportunity', target.opportunityId],
-  ];
-  const hasAssociationTarget = targets.some(([, id]) => Boolean(id)) || Boolean(target.parentDocumentId);
-  if (!grants.general && (!grants.scoped || !target.ticketId || hasAssociationTarget &&
-    targets.some(([type, id]) => id && type !== 'ticket'))) return false;
-  if (!hasAssociationTarget) return grants.general;
+  const targets = getDocumentUploadTargets(target);
+  if (!grants.general && (!grants.scoped || !target.ticketId ||
+    targets.some(({ entityType }) => entityType !== 'ticket'))) return false;
+  if (targets.length === 0) return grants.general;
 
-  return knex.transaction(async (trx) => {
-    for (const [entityType, entityId] of targets) {
-      if (entityId && !await assertAuthorizedAssociationTarget(trx, user.tenant, user, entityType, entityId, 'update')) return false;
-    }
-    if (target.parentDocumentId) return grants.general;
-    return true;
-  });
+  if (target.parentDocumentId && !grants.general) return false;
+  return knex.transaction((trx) => areDocumentUploadTargetsAuthorized(trx, user.tenant, user, target));
 }
