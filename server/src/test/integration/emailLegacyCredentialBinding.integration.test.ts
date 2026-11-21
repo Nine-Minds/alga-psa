@@ -80,34 +80,64 @@ describe('legacy outbound credential binding against PostgreSQL', () => {
   });
 
   it('binds formatted legacy JSON and uses the preserved credential for outbound SMTP', async () => {
-    const settings = await TenantEmailService.getTenantEmailSettings(tenant, db);
-    expect(settings?.providerConfigs[0].config.password).toBe(password);
-    expect(settings?.providerConfigs[0].config.from).toBe('legacy@example.test');
-    expect(settings?.providerConfigs[0].config.__secretFingerprint).toBe(
-      connectionFingerprint(settings!.providerConfigs[0].config, 'smtp', providerId),
-    );
+    const seeded = await db('tenant_email_settings').where({ tenant }).first('provider_configs');
+    const seededConfigs = typeof seeded.provider_configs === 'string'
+      ? JSON.parse(seeded.provider_configs)
+      : seeded.provider_configs;
+    expect(seededConfigs[0].config).not.toHaveProperty('__secretFingerprint');
+    expect(seededConfigs[0].config.password).toBe(password);
 
+    // Exercise the application delivery path: TenantEmailService reloads the
+    // persisted row, binds it under the row lock, initializes SMTP, then sends.
+    const service = TenantEmailService.getInstance(tenant);
+    const result = await service.sendEmail({
+      tenantId: tenant,
+      mailClass: 'general',
+      from: { email: 'legacy@example.test' },
+      to: 'recipient@example.test',
+      subject: 'Legacy credential upgrade',
+      html: '<p>Upgrade retained the SMTP credential.</p>',
+    });
+    expect(result.success).toBe(true);
     const stored = await db('tenant_email_settings').where({ tenant }).first('provider_configs');
     const storedConfigs = typeof stored.provider_configs === 'string'
       ? JSON.parse(stored.provider_configs)
       : stored.provider_configs;
     expect(storedConfigs[0].config.password).toBe(password);
-    expect(storedConfigs[0].config.__secretFingerprint).toBe(settings!.providerConfigs[0].config.__secretFingerprint);
-
-    const manager = new EmailProviderManager();
-    await manager.initialize(settings!);
-    const result = await manager.sendEmail({
-      from: { email: 'legacy@example.test' },
-      to: [{ email: 'recipient@example.test' }],
-      subject: 'Legacy credential upgrade',
-      html: '<p>Upgrade retained the SMTP credential.</p>',
-    } as any, tenant);
-    expect(result.success).toBe(true);
+    expect(storedConfigs[0].config.from).toBe('legacy@example.test');
+    expect(storedConfigs[0].config.__secretFingerprint).toBe(
+      connectionFingerprint(storedConfigs[0].config, 'smtp', providerId),
+    );
     expect(smtp.createTransport).toHaveBeenCalledWith(expect.objectContaining({
       host: 'smtp.legacy.example.test',
       auth: { user: 'legacy-user', pass: password },
     }));
     expect(sendMail).toHaveBeenCalledTimes(1);
+
+    // A fingerprint that exists but names a different endpoint is terminal for
+    // both delivery and Test Connection, and must be rejected before SMTP.
+    const tamperedConfigs = storedConfigs.map((provider: any) => ({
+      ...provider,
+      config: { ...provider.config, host: 'smtp.changed-in-database.example.test' },
+    }));
+    await db('tenant_email_settings').where({ tenant }).update({
+      provider_configs: JSON.stringify(tamperedConfigs),
+    });
+    smtp.createTransport.mockClear();
+    sendMail.mockClear();
+    const rejectedSend = await service.sendEmail({
+      tenantId: tenant,
+      mailClass: 'general',
+      to: 'recipient@example.test',
+      subject: 'Tampered endpoint',
+      html: '<p>Must not send.</p>',
+    });
+    const rejectedTest = await TenantEmailService.testConnection(tenant);
+    expect(rejectedSend).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(rejectedTest).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(smtp.createTransport).not.toHaveBeenCalled();
+    expect(sendMail).not.toHaveBeenCalled();
+    await TenantEmailService.invalidateTenantSettings(tenant);
   });
 
   it('serializes first binding against a concurrent endpoint edit and requires a replacement credential', async () => {

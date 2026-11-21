@@ -26,11 +26,15 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 vi.mock('../features', () => ({ isEnterprise: true }));
 
 vi.mock('@alga-psa/db', () => ({
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => ({ transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) })),
   isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => ({
     table: (table: string) => {
-      if (table === 'tenant_email_settings') return { first: vi.fn(async () => tenantSettingsRow) };
+      if (table === 'tenant_email_settings') return {
+        forUpdate: vi.fn().mockReturnThis(),
+        first: vi.fn(async () => tenantSettingsRow),
+        update: vi.fn(async () => 1),
+      };
       if (table === 'email_sending_logs') return { insert: vi.fn(async () => 1) };
       if (table === 'email_sender_addresses' || table === 'email_sender_routes') return { select: vi.fn(async () => []) };
       throw new Error(`Unexpected table in system Resend fallback smoke: ${table}`);
@@ -77,12 +81,18 @@ const tenantSettingsRow = {
   ticketing_from_email: null,
   ticketing_from_name: null,
   custom_domains: [],
-  email_provider: 'microsoft',
+  email_provider: 'smtp',
   provider_configs: [{
-    providerId: 'tenant-microsoft-provider',
-    providerType: 'microsoft',
+    providerId: 'tenant-smtp-provider',
+    providerType: 'smtp',
     isEnabled: true,
-    config: { from: 'service@tenant.example' },
+    // A pre-upgrade credential without a fingerprint is bound during the
+    // trusted settings read; its ordinary provider-init failure still falls
+    // back to the Enterprise system provider.
+    config: {
+      host: 'smtp.tenant.example', port: 587, username: 'legacy-user',
+      password: 'synthetic-legacy-password', from: 'service@tenant.example',
+    },
   }],
   tracking_enabled: false,
   created_at: new Date('2026-08-28T00:00:00.000Z'),
