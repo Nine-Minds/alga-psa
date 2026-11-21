@@ -78,8 +78,7 @@ import {
   reorderActivitiesInGroupForApi,
   setDefaultActivityGroupForApi,
 } from '@alga-psa/user-activities/server/activity-actions';
-import { hasPermission } from '@alga-psa/auth';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { hasPermission, getCurrentUser } from '@alga-psa/auth';
 import { ActivityType } from '@alga-psa/types';
 import { getScheduleActivityEntriesForUser } from '@alga-psa/scheduling/actions/scheduleActivityCore';
 
@@ -580,7 +579,7 @@ describe('User Activities v1 API — ad-hoc CRUD, list, and the API-key bridge',
   // ── The API-key bridge (route-level) ─────────────────────────────────────────
 
   it('rejects an activities request with neither session nor API key (401)', async () => {
-    // No session: getCurrentUser (re-exported from the globally-mocked @alga-psa/auth)
+    // No session: the auth resolver underneath the public user projection
     // returns null, and there is no x-api-key header.
     vi.mocked(getCurrentUser).mockResolvedValue(null as any);
 

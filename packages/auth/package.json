@@ -90,6 +90,10 @@
       "import": "./src/lib/commercialAccess.ts",
       "types": "./src/lib/commercialAccess.ts"
     },
+    "./lib/authenticateUserForAuth": {
+      "import": "./src/lib/authenticateUserForAuth.ts",
+      "types": "./src/lib/authenticateUserForAuth.ts"
+    },
     "./lib/authPolicy": {
       "import": "./src/lib/authPolicy.ts",
       "types": "./src/lib/authPolicy.ts"
