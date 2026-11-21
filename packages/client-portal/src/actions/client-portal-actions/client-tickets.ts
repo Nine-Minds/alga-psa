@@ -189,7 +189,7 @@ async function resolveVisibleTicket(
     .select(
       't.ticket_id', 't.client_id', 't.board_id', 't.contact_name_id', 't.billing_profile_id',
       't.attributes', 't.is_closed', 't.category_id', 't.subcategory_id', 't.priority_id',
-      't.assigned_to', 't.status_id', 't.response_state', 't.tenant',
+      't.assigned_to', 't.status_id', 't.response_state', 't.tenant', 't.master_ticket_id',
     )
     .where({
       't.ticket_id': ticketId,

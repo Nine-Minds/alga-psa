@@ -15,6 +15,7 @@ describe('client ticket response allowlists', () => {
       authentication: 'auth-secret', matchedContact: 'matching-secret', ruleId: 'rule-secret',
     },
     assigned_to: 'staff-id',
+    master_ticket_id: 'server-only-master-ticket-id',
     additional_agents: [{ name: 'Avery Agent', role: 'staff', avatar_url: '/avatar', email: 'staff@example.test', user_id: 'staff-id' }],
     future_private_column: 'private-column',
     ticket_origin: 'inbound_email', has_original_email: true,
@@ -27,11 +28,11 @@ describe('client ticket response allowlists', () => {
     const response = JSON.parse(JSON.stringify(project(row)));
     expect(response).toMatchObject({ ticket_id: 'ticket-1', title: 'Customer ticket' });
     expect(response.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: '/avatar' }]);
-    for (const field of ['email_metadata', 'assigned_to', 'future_private_column']) {
+    for (const field of ['email_metadata', 'assigned_to', 'master_ticket_id', 'future_private_column']) {
       expect(response).not.toHaveProperty(field);
     }
     const serialized = JSON.stringify(response);
-    for (const secret of ['watcher@example.test', 'watcher-id', 'internal-rule', 'private-attribute', 'provider-secret', 'message-secret', 'thread-secret', 'auth-secret', 'matching-secret', 'rule-secret', 'staff@example.test', 'staff-id', 'private-column']) {
+    for (const secret of ['watcher@example.test', 'watcher-id', 'internal-rule', 'private-attribute', 'provider-secret', 'message-secret', 'thread-secret', 'auth-secret', 'matching-secret', 'rule-secret', 'staff@example.test', 'staff-id', 'server-only-master-ticket-id', 'private-column']) {
       expect(serialized).not.toContain(secret);
     }
   });
