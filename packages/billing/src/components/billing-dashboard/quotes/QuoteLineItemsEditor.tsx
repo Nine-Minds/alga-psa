@@ -6,13 +6,14 @@ import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import type { UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Pencil, Info } from 'lucide-react';
+import { Pencil, Info, RotateCcw } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import type { CatalogPickerItem } from '../../../actions/serviceActions';
+import { getServiceCatalogDescriptions, type CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import LocationPicker from '../locations/LocationPicker';
 import LocationAddress from '../locations/LocationAddress';
@@ -30,9 +31,12 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
+  isCatalogDescriptionDiverged,
   resolveDraftDiscountAmounts,
+  withEditedCatalogDescription,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
+import { resolveCatalogDescriptionWrite } from '../../../lib/quoteItemCatalogDescription';
 import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 interface InlineEditableValueProps {
@@ -299,6 +303,121 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
+  // Current catalog text per product, for "Use current product description".
+  // `undefined` for a service id = not loaded yet; a loaded id with no key in
+  // the result means the product no longer exists (stored as `null` here would
+  // be indistinguishable from "empty text", so absence is tracked separately).
+  const [currentDescriptions, setCurrentDescriptions] = useState<Record<string, string | null>>({});
+  const [goneServiceIds, setGoneServiceIds] = useState<Record<string, true>>({});
+  const requestedServiceIds = useRef<Set<string>>(new Set());
+
+  const catalogBackedServiceIds = useMemo(
+    () => Array.from(new Set(
+      items.filter((item) => !item.is_discount && item.service_id).map((item) => item.service_id as string)
+    )),
+    [items]
+  );
+
+  useEffect(() => {
+    const missing = catalogBackedServiceIds.filter((id) => !requestedServiceIds.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => requestedServiceIds.current.add(id));
+    let cancelled = false;
+    getServiceCatalogDescriptions(missing)
+      .then((result) => {
+        if (cancelled || !result || typeof result !== 'object') return;
+        setCurrentDescriptions((prev) => ({ ...prev, ...result }));
+        const gone: Record<string, true> = {};
+        for (const id of missing) {
+          if (!Object.prototype.hasOwnProperty.call(result, id)) gone[id] = true;
+        }
+        if (Object.keys(gone).length > 0) setGoneServiceIds((prev) => ({ ...prev, ...gone }));
+      })
+      .catch(() => {
+        // Let a later render retry; until then the refresh button stays disabled.
+        missing.forEach((id) => requestedServiceIds.current.delete(id));
+      });
+    return () => { cancelled = true; };
+  }, [catalogBackedServiceIds]);
+
+  const renderProductDescription = (item: DraftQuoteItem) => {
+    if (item.is_discount) return null;
+
+    // A line whose product was deleted keeps its frozen snapshot, read-only.
+    if (!item.service_id) {
+      if (!item.catalog_description) return null;
+      return (
+        <div className="space-y-1">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('quoteLineItems.productDescription.label', { defaultValue: 'Product description' })}
+          </div>
+          <p
+            id={`quote-line-product-description-readonly-${item.local_id}`}
+            className="whitespace-pre-wrap text-xs text-muted-foreground"
+          >
+            {item.catalog_description}
+          </p>
+        </div>
+      );
+    }
+
+    const serviceId = item.service_id;
+    const isGone = Boolean(goneServiceIds[serviceId]);
+    const isLoaded = Object.prototype.hasOwnProperty.call(currentDescriptions, serviceId);
+    const currentText = isLoaded ? currentDescriptions[serviceId] : undefined;
+    const matches = isLoaded
+      && !resolveCatalogDescriptionWrite(item.catalog_description, currentText).catalog_description_edited;
+    const canRefresh = !disabled && isLoaded && !isGone && !matches;
+    const disabledReason = isGone
+      ? t('quoteLineItems.productDescription.productGone', { defaultValue: 'Product no longer in the catalog' })
+      : matches
+        ? t('quoteLineItems.productDescription.matchesProduct', { defaultValue: 'Matches the product' })
+        : null;
+
+    const refreshButton = (
+      <Button
+        id={`quote-line-product-description-refresh-${item.local_id}`}
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={!canRefresh}
+        onClick={() => updateItem(item.local_id, withEditedCatalogDescription(item, currentText ?? null))}
+      >
+        <RotateCcw className="mr-1 h-3 w-3" />
+        {t('quoteLineItems.productDescription.useCurrent', { defaultValue: 'Use current product description' })}
+      </Button>
+    );
+
+    return (
+      <div className="space-y-1">
+        <TextArea
+          id={`quote-line-product-description-${item.local_id}`}
+          label={t('quoteLineItems.productDescription.label', { defaultValue: 'Product description' })}
+          value={item.catalog_description ?? ''}
+          onChange={(event) => updateItem(item.local_id, withEditedCatalogDescription(item, event.target.value))}
+          disabled={disabled}
+          rows={2}
+        />
+        {isCatalogDescriptionDiverged(item, isLoaded ? currentText : undefined) && (
+          <div
+            id={`quote-line-product-description-edited-${item.local_id}`}
+            className="text-xs text-muted-foreground"
+          >
+            {t('quoteLineItems.productDescription.edited', { defaultValue: 'Edited for this quote' })}
+          </div>
+        )}
+        {!disabled && (
+          // A disabled button swallows pointer events, so the tooltip hangs off a wrapper.
+          disabledReason ? (
+            <Tooltip content={disabledReason}>
+              <span className="inline-block">{refreshButton}</span>
+            </Tooltip>
+          ) : refreshButton
+        )}
+      </div>
+    );
+  };
+
   const itemTargetOptions = items.filter((item) => !item.is_discount);
   const serviceTargetOptions = Array.from(new Map(
     items
@@ -542,6 +661,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 )
               }
             </div>
+            {renderProductDescription(item)}
             {!isDiscount && (
               <UnitOfMeasureInput
                 id={`quote-line-item-unit-${item.local_id}`}

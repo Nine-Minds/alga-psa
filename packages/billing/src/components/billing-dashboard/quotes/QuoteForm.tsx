@@ -53,6 +53,7 @@ import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { getQuoteValidityDays } from '../../../constants/billing';
 import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
+import { normalizeCatalogDescription } from '../../../lib/quoteItemCatalogDescription';
 
 // Cadence key -> the `quoteForm.sidebar.cadence.*` leaf. Unknown cadences fall
 // back to the adapter's English `entry.name` so a new cadence never renders a
@@ -204,6 +205,11 @@ const buildQuoteItemWritePayload = (item: DraftQuoteItem, appliesToItemId: strin
   location_id: item.location_id ?? null,
   cost: item.cost ?? null,
   cost_currency: item.cost_currency ?? null,
+  // Explicit product-description write: only for lines the user edited or
+  // refreshed. Leaving the key out always means "no change".
+  ...(item.catalog_description_dirty
+    ? { catalog_description: normalizeCatalogDescription(item.catalog_description) }
+    : {}),
 });
 
 /**
@@ -729,6 +735,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           ...createDraftQuoteItemFromQuoteItem(item),
           local_id: localIdByTemplateItemId.get(item.quote_item_id) ?? buildDraftLocalId(),
           quote_item_id: undefined,
+          // These drafts replace the template's rows on create, so the server
+          // would recapture the live catalog text. A template line the author
+          // edited must keep that wording: send it as an explicit write (the
+          // server re-derives the flag). Unedited lines keep recapturing.
+          catalog_description_dirty: Boolean(item.catalog_description_edited && item.service_id),
           // An unmatched target keeps its original id so the discount stays
           // item-scoped (resolving to zero) rather than widening to the quote.
           applies_to_item_id: item.applies_to_item_id

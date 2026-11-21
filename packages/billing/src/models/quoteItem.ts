@@ -5,6 +5,10 @@ import { recalculateQuoteFinancials } from '../services/quoteCalculationService'
 import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { deriveServiceTaxTreatment } from '@alga-psa/shared/billingClients/serviceTaxTreatment';
 import { knownUnitCodeForLabel } from '@alga-psa/core/unitOfMeasure';
+import {
+  normalizeCatalogDescription,
+  resolveCatalogDescriptionWrite,
+} from '../lib/quoteItemCatalogDescription';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
   if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
@@ -79,30 +83,23 @@ async function getNextDisplayOrder(
   return Number(result?.max ?? -1) + 1;
 }
 
-/** Empty or whitespace-only catalog text snapshots as `null`. */
-function normalizeCatalogDescription(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
 /**
- * Internal-only channel for the catalog-description snapshot. Only trusted,
- * server-internal copy flows (duplicate / save-as-template /
- * create-from-template) supply this so the stored snapshot survives the copy
- * verbatim — including `null` for lines whose catalog entry was deleted.
- * Caller-facing payloads never carry a snapshot: fresh catalog-backed lines
- * capture it from the tenant-scoped catalog row instead, and custom/discount
- * lines store `null`.
+ * Internal-only channel for the catalog-description snapshot and its flag.
+ * Only trusted, server-internal copy flows (duplicate / save-as-template /
+ * create-from-template) supply these so the stored text and divergence flag
+ * survive the copy verbatim — including `null` text for lines whose catalog
+ * entry was deleted. When this channel is used it wins over any payload value.
+ * `catalog_description_edited` is never accepted from callers: it is either
+ * derived from an explicit payload write or carried through here.
  */
 export type QuoteItemCreateOptions = {
   catalogDescriptionSnapshot?: string | null;
+  catalogDescriptionEdited?: boolean;
 };
 
-/** Payload accepted by `QuoteItem.create`. `catalog_description` is excluded:
- *  the snapshot is never part of the caller-facing item shape. */
+/** Payload accepted by `QuoteItem.create`. `catalog_description` is an optional
+ *  explicit write (honoured only with a `service_id`); the flag is never part
+ *  of the caller-facing shape. */
 type CreateQuoteItemPayload = Omit<
   IQuoteItem,
   | 'quote_item_id'
@@ -111,7 +108,7 @@ type CreateQuoteItemPayload = Omit<
   | 'net_amount'
   | 'tax_amount'
   | 'display_order'
-  | 'catalog_description'
+  | 'catalog_description_edited'
   | 'created_at'
   | 'updated_at'
 > & Partial<Pick<IQuoteItem, 'display_order'>>;
@@ -147,13 +144,15 @@ const QuoteItem = {
     ensureIntegerField(item.quantity, 'Quantity');
     ensureIntegerField(item.unit_price, 'Unit price');
 
-    // The catalog-description snapshot is never read from the item payload.
-    // It is not part of any caller-facing input shape, and a value smuggled
-    // past schema validation (defense in depth) is dropped before insert so it
-    // can never persist. Verbatim snapshots arrive only through the internal
-    // `options.catalogDescriptionSnapshot` channel.
+    // `catalog_description` is an explicit write only on a catalog-backed line.
+    // It is read from the payload below (when `service_id` is set); the flag is
+    // never read from the payload — a smuggled value is dropped here.
     const itemPayload: CreateQuoteItemPayload = { ...item };
+    const callerCatalogDescription = itemPayload.catalog_description;
+    const callerSuppliedCatalogDescription = Object.prototype.hasOwnProperty.call(item, 'catalog_description')
+      && callerCatalogDescription !== undefined;
     delete (itemPayload as Partial<IQuoteItem>).catalog_description;
+    delete (itemPayload as Partial<IQuoteItem>).catalog_description_edited;
     let resolvedItem: Partial<IQuoteItem> = { ...itemPayload };
 
     const snapshotFromOptions =
@@ -207,15 +206,27 @@ const QuoteItem = {
 
       const resolvedItemKind = resolvedItem.service_item_kind ?? service.item_kind ?? 'service';
 
-      // Catalog-description snapshot policy: a trusted server-internal copy
-      // flow that supplies `options.catalogDescriptionSnapshot` keeps that
-      // value verbatim (including null). Otherwise — a freshly selected
-      // catalog-backed line — the authoritative, tenant-scoped catalog text is
-      // captured here. Persistence never trusts picker or caller data.
-      const resolvedCatalogDescription =
-        snapshotFromOptions !== undefined
-          ? snapshotFromOptions
-          : normalizeCatalogDescription(service.description);
+      // Catalog-description policy (plan §2/§3):
+      //  1. a trusted copy flow (`options.catalogDescriptionSnapshot`) keeps the
+      //     text verbatim, and the flag from `options.catalogDescriptionEdited`
+      //     (default false); the options channel wins over the payload;
+      //  2. otherwise an explicit payload value is resolved against the catalog
+      //     text and the flag is derived;
+      //  3. otherwise the authoritative, tenant-scoped catalog text is captured
+      //     and the line is not edited.
+      let resolvedCatalogDescription: string | null;
+      let resolvedCatalogDescriptionEdited: boolean;
+      if (snapshotFromOptions !== undefined) {
+        resolvedCatalogDescription = snapshotFromOptions;
+        resolvedCatalogDescriptionEdited = options.catalogDescriptionEdited ?? false;
+      } else if (callerSuppliedCatalogDescription) {
+        const write = resolveCatalogDescriptionWrite(callerCatalogDescription, service.description);
+        resolvedCatalogDescription = write.catalog_description;
+        resolvedCatalogDescriptionEdited = write.catalog_description_edited;
+      } else {
+        resolvedCatalogDescription = normalizeCatalogDescription(service.description);
+        resolvedCatalogDescriptionEdited = false;
+      }
 
       // Tax treatment follows the catalog service unless the caller made an
       // explicit choice. A service with no tax_rate_id is non-taxable (the
@@ -241,19 +252,23 @@ const QuoteItem = {
         service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
         catalog_description: resolvedCatalogDescription,
+        catalog_description_edited: resolvedCatalogDescriptionEdited,
         // Snapshot cost for product items so markup can be calculated on the quote
         cost: resolvedItemKind === 'product' && service.cost != null ? Number(service.cost) : (resolvedItem as any).cost ?? null,
         cost_currency: resolvedItemKind === 'product' && service.cost_currency ? service.cost_currency : (resolvedItem as any).cost_currency ?? null,
       };
     } else {
-      // Custom and discount lines have no catalog identity, so there is no
-      // snapshot to capture. When a trusted copy flow passes a verbatim
+      // Custom and discount lines have no catalog identity, so a caller value
+      // is refused (dropped). When a trusted copy flow passes a verbatim
       // snapshot (a copy of a line whose catalog entry was deleted and whose
-      // FK was SET NULL), keep it so duplication/template flows preserve
-      // historical output; otherwise store null.
+      // FK was SET NULL), keep it, and its flag, so duplication/template flows
+      // preserve historical output; otherwise store null / not edited.
       resolvedItem = {
         ...resolvedItem,
         catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
+        catalog_description_edited: snapshotFromOptions !== undefined
+          ? (options.catalogDescriptionEdited ?? false)
+          : false,
       };
     }
 
@@ -298,7 +313,7 @@ const QuoteItem = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     quoteItemId: string,
-    updateData: Omit<Partial<IQuoteItem>, 'catalog_description'>
+    updateData: Omit<Partial<IQuoteItem>, 'catalog_description_edited'>
   ): Promise<IQuoteItem> {
     if (!tenant) {
       throw new Error('Tenant context is required for updating quote item');
@@ -320,11 +335,17 @@ const QuoteItem = {
 
     const totalPrice = Number(quantity) * Number(unitPrice);
 
-    // `catalog_description` is not caller-writable. Drop it from the update
-    // payload unconditionally — even if a value smuggles past schema
-    // validation — so ordinary edits can never overwrite the stored snapshot.
+    // `catalog_description` is an explicit write only when the key is present.
+    // It is held aside here and applied below only on a catalog-backed line
+    // whose `service_id` is not changing; `catalog_description_edited` is never
+    // caller-writable (a smuggled value is dropped).
     let resolvedUpdate: Partial<IQuoteItem> = { ...updateData };
-    delete (resolvedUpdate as Partial<IQuoteItem> & { catalog_description?: string | null }).catalog_description;
+    const callerCatalogDescriptionKeyPresent =
+      Object.prototype.hasOwnProperty.call(updateData, 'catalog_description')
+      && updateData.catalog_description !== undefined;
+    const callerCatalogDescription = updateData.catalog_description;
+    delete resolvedUpdate.catalog_description;
+    delete resolvedUpdate.catalog_description_edited;
 
     // Catalog selection change: recapture name/SKU/kind/catalog description
     // together from the fresh, tenant-scoped catalog row. Ordinary edits
@@ -365,7 +386,9 @@ const QuoteItem = {
           unit_code: updateData.unit_code ?? (updateData.unit_of_measure === undefined ? service.unit_code : null) ?? null,
           billing_method: service.billing_method ?? null,
           service_item_kind: service.item_kind ?? 'service',
+          // Recapture wins over any caller value, and clears the flag.
           catalog_description: normalizeCatalogDescription(service.description),
+          catalog_description_edited: false,
         };
       } else {
         resolvedUpdate = {
@@ -374,8 +397,26 @@ const QuoteItem = {
           service_sku: null,
           service_item_kind: null,
           catalog_description: null,
+          catalog_description_edited: false,
         };
       }
+    } else if (callerCatalogDescriptionKeyPresent && existingItem.service_id) {
+      // Explicit write on a catalog-backed line with an unchanged product.
+      // Custom, discount and deleted-product lines (no stored `service_id`)
+      // fall through: the value is refused and the snapshot stays frozen.
+      const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
+        .where({ service_id: existingItem.service_id })
+        .select('description')
+        .first();
+
+      if (!service) {
+        throw new Error(`Service ${existingItem.service_id} not found in tenant ${tenant}`);
+      }
+
+      resolvedUpdate = {
+        ...resolvedUpdate,
+        ...resolveCatalogDescriptionWrite(callerCatalogDescription, service.description),
+      };
     }
 
     if (resolvedUpdate.unit_of_measure !== undefined || resolvedUpdate.unit_code !== undefined) {

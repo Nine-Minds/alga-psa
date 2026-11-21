@@ -606,6 +606,13 @@
       "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer les devis multi-sites.",
       "allLocationsInUse": "Chaque emplacement actif de ce client a déjà un groupe sur ce devis.",
       "emptyGroup": "Aucun élément pour cet emplacement pour le moment."
+    },
+    "productDescription": {
+      "edited": "Modifiée pour ce devis",
+      "label": "Description du produit",
+      "matchesProduct": "Identique au produit",
+      "productGone": "Produit absent du catalogue",
+      "useCurrent": "Utiliser la description actuelle du produit"
     }
   },
   "quoteRecipients": {

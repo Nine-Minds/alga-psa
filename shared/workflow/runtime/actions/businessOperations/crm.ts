@@ -1647,7 +1647,11 @@ export function registerCrmActions(): void {
             // live catalog text (silently rewriting historical output) or, for a
             // deleted catalog row, store null and lose the snapshot. The snapshot
             // is never sourced from caller input.
-          } as any, { catalogDescriptionSnapshot: item.catalog_description ?? null });
+          } as any, {
+            catalogDescriptionSnapshot: item.catalog_description ?? null,
+            // The divergence flag travels with the text so an edited line stays edited.
+            catalogDescriptionEdited: item.catalog_description_edited ?? false,
+          });
         }
 
         const createdQuoteWithItems = await Quote.getById(tx.trx, tx.tenantId, createdQuote.quote_id);

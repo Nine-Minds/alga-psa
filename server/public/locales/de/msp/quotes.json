@@ -606,6 +606,13 @@
       "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
       "allLocationsInUse": "Jeder aktive Standort dieses Kunden hat auf diesem Angebot bereits eine Gruppe.",
       "emptyGroup": "Noch keine Positionen für diesen Standort."
+    },
+    "productDescription": {
+      "edited": "Für dieses Angebot bearbeitet",
+      "label": "Produktbeschreibung",
+      "matchesProduct": "Entspricht dem Produkt",
+      "productGone": "Produkt nicht mehr im Katalog",
+      "useCurrent": "Aktuelle Produktbeschreibung verwenden"
     }
   },
   "quoteRecipients": {

@@ -6,6 +6,7 @@ import type { IService, IServiceType, IServicePrice, DeletionValidationResult } 
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { normalizeCatalogDescription } from '../lib/quoteItemCatalogDescription';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
@@ -400,6 +401,38 @@ export const getServiceCatalogCostInfo = withAuth(async (
       };
     }
     return { canViewCost, items };
+  });
+});
+
+/**
+ * Current catalog description per product, normalised with the same rule the
+ * quote model uses to capture it (trimmed, empty becomes null). Backs the quote
+ * editor's "Use current product description" action; the editor then saves the
+ * text through the normal line write. Same shape and auth as
+ * getServiceCatalogCostInfo. A missing key means the product no longer exists.
+ */
+export const getServiceCatalogDescriptions = withAuth(async (
+  _user,
+  { tenant },
+  serviceIds: string[]
+): Promise<Record<string, string | null>> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  if (uniqueServiceIds.length === 0) {
+    return {};
+  }
+
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await tenantDb(trx, tenant)
+      .table('service_catalog')
+      .whereIn('service_id', uniqueServiceIds)
+      .select('service_id', 'description') as Array<{ service_id: string; description: string | null }>;
+
+    const result: Record<string, string | null> = {};
+    for (const row of rows) {
+      result[row.service_id] = normalizeCatalogDescription(row.description);
+    }
+    return result;
   });
 });
 

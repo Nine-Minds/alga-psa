@@ -25,6 +25,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTenant } from '../../../../../test-utils/testDataFactory';
 import { createTestService } from '../../../../../test-utils/billingTestHelpers';
+import { copyQuoteItemsToQuote } from '../../../../../../packages/billing/src/actions/quoteActions';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
 import { mapDbQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
@@ -126,6 +127,8 @@ describe('Quote item catalog-description snapshot', () => {
   it('T001: schema exposes nullable catalog_description and create captures authoritative snapshots for product and service', async () => {
     const columns = await context.db('quote_items').columnInfo();
     expect(columns.catalog_description?.type).toBe('text');
+    expect(columns.catalog_description_edited?.type).toBe('boolean');
+    expect(columns.catalog_description_edited?.nullable).toBe(false);
 
     const quote = await createQuote('Snapshot quote');
     const serviceId = await seedCatalogService();
@@ -223,26 +226,35 @@ describe('Quote item catalog-description snapshot', () => {
     expect(custom.catalog_description).toBeNull();
   });
 
-  it('TR-1: create ignores a caller-forged catalog_description and persists the server-derived value instead', async () => {
-    const quote = await createQuote('Forge-create quote');
+  it('TR-1: create accepts an explicit catalog_description only on a catalog-backed line and derives the flag; custom lines refuse it', async () => {
+    const quote = await createQuote('Explicit-create quote');
     const serviceId = await seedCatalogService();
 
-    // Catalog-backed create: a value smuggled into the item payload must not
-    // survive; the authoritative tenant-scoped catalog text wins.
-    const forgedServiceItem = await QuoteItem.create(context.db, context.tenantId, {
-      quote_id: quote.quote_id,
-      service_id: serviceId,
-      description: NAME,
-      quantity: 1,
-      unit_price: 25000,
-      is_optional: false,
-      is_selected: true,
-      is_recurring: false,
-      catalog_description: 'CALLER FORGED SNAPSHOT',
-    } as any);
-    expect(forgedServiceItem.catalog_description).toBe(CATALOG_DESCRIPTION);
+    // Catalog-backed create: the explicit value persists and differs from the catalog => edited.
+    const edited = await createCatalogItem(quote.quote_id, serviceId, {
+      catalog_description: '  Includes: rule review.  Excludes: hardware.  ',
+    });
+    expect(edited.catalog_description).toBe('Includes: rule review.  Excludes: hardware.');
+    expect(edited.catalog_description_edited).toBe(true);
 
-    // Custom line: the forged value is dropped and the snapshot stays null.
+    // Explicit value equal to the catalog text => not edited.
+    const same = await createCatalogItem(quote.quote_id, serviceId, {
+      catalog_description: `  ${CATALOG_DESCRIPTION}  `,
+    });
+    expect(same.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(same.catalog_description_edited).toBe(false);
+
+    // Explicit '' stores null and counts as an edit.
+    const blank = await createCatalogItem(quote.quote_id, serviceId, { catalog_description: '' });
+    expect(blank.catalog_description).toBeNull();
+    expect(blank.catalog_description_edited).toBe(true);
+
+    // No key: captured from the catalog, not edited.
+    const captured = await createCatalogItem(quote.quote_id, serviceId);
+    expect(captured.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(captured.catalog_description_edited).toBe(false);
+
+    // Custom line and discount line: the value is refused (stored null, not edited).
     const forgedCustom = await QuoteItem.create(context.db, context.tenantId, {
       quote_id: quote.quote_id,
       description: 'Custom audit',
@@ -251,34 +263,229 @@ describe('Quote item catalog-description snapshot', () => {
       is_optional: false,
       is_selected: true,
       is_recurring: false,
-      catalog_description: 'CALLER FORGED SNAPSHOT',
+      catalog_description: 'CALLER SUPPLIED',
     } as any);
     expect(forgedCustom.catalog_description).toBeNull();
+    expect(forgedCustom.catalog_description_edited).toBe(false);
 
-    const rows = await context.db('quote_items')
-      .where({ tenant: context.tenantId, quote_id: quote.quote_id })
-      .select('catalog_description');
-    expect(rows.map((row: any) => row.catalog_description)).not.toContain('CALLER FORGED SNAPSHOT');
+    const forgedDiscount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount',
+      quantity: 1,
+      unit_price: 0,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      catalog_description: 'CALLER SUPPLIED',
+    } as any);
+    expect(forgedDiscount.catalog_description).toBeNull();
+    expect(forgedDiscount.catalog_description_edited).toBe(false);
+
+    // The flag is never caller-settable.
+    const forgedFlag = await createCatalogItem(quote.quote_id, serviceId, {
+      catalog_description_edited: true,
+    });
+    expect(forgedFlag.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(forgedFlag.catalog_description_edited).toBe(false);
+
+    const customFlag = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Custom flag',
+      quantity: 1,
+      unit_price: 1,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      catalog_description_edited: true,
+    } as any);
+    expect(customFlag.catalog_description_edited).toBe(false);
   });
 
-  it('TR-2: ordinary updates ignore a caller-supplied catalog_description and leave the stored snapshot byte-identical', async () => {
-    const quote = await createQuote('Mutate-update quote');
+  it('TR-2: update accepts an explicit value on a catalog-backed line, sets the flag, and leaves every other field and the totals unchanged', async () => {
+    const quote = await createQuote('Explicit-update quote');
     const serviceId = await seedCatalogService();
-    const item = await createCatalogItem(quote.quote_id, serviceId);
-
-    const edited = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
-      description: 'Edited line description',
+    const item = await createCatalogItem(quote.quote_id, serviceId, {
       quantity: 2,
-      unit_price: 30000,
-      catalog_description: 'CALLER MUTATED SNAPSHOT',
-    } as any);
-    expect(edited.description).toBe('Edited line description');
-    expect(edited.catalog_description).toBe(CATALOG_DESCRIPTION);
-
-    const row = await context.db('quote_items')
+      phase: 'Rollout',
+      is_taxable: true,
+      tax_region: 'US-NY',
+    });
+    const before = await context.db('quote_items')
       .where({ tenant: context.tenantId, quote_item_id: item.quote_item_id })
       .first();
-    expect(row.catalog_description).toBe(CATALOG_DESCRIPTION);
+    const quoteBefore = await context.db('quotes')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .first();
+
+    const edited = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      catalog_description: 'Option wording for this quote only.',
+    });
+    expect(edited.catalog_description).toBe('Option wording for this quote only.');
+    expect(edited.catalog_description_edited).toBe(true);
+
+    const after = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_item_id: item.quote_item_id })
+      .first();
+    const { catalog_description: _d1, catalog_description_edited: _e1, updated_at: _u1, ...beforeRest } = before;
+    const { catalog_description: _d2, catalog_description_edited: _e2, updated_at: _u2, ...afterRest } = after;
+    expect(afterRest).toEqual(beforeRest);
+
+    const quoteAfter = await context.db('quotes')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .first();
+    for (const column of ['subtotal', 'discount_total', 'tax', 'total_amount']) {
+      expect(quoteAfter[column]).toBe(quoteBefore[column]);
+    }
+
+    // Refresh = write the current catalog text: text follows the catalog, flag clears.
+    const refreshed = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      catalog_description: `  ${CATALOG_DESCRIPTION} `,
+    });
+    expect(refreshed.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(refreshed.catalog_description_edited).toBe(false);
+
+    // Explicit '' stores null and is an edit.
+    const blank = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      catalog_description: '',
+    });
+    expect(blank.catalog_description).toBeNull();
+    expect(blank.catalog_description_edited).toBe(true);
+
+    // The flag itself is never caller-writable.
+    const forged = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      catalog_description_edited: false,
+    } as any);
+    expect(forged.catalog_description_edited).toBe(true);
+  });
+
+  it('TR-2b: update refuses the value on custom, discount and deleted-product lines', async () => {
+    const quote = await createQuote('Refuse-update quote');
+    const serviceId = await seedCatalogService();
+    const catalogItem = await createCatalogItem(quote.quote_id, serviceId);
+
+    const custom = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Custom line',
+      quantity: 1,
+      unit_price: 1000,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+    });
+    const customUpdated = await QuoteItem.update(context.db, context.tenantId, custom.quote_item_id, {
+      catalog_description: 'FORGED',
+    });
+    expect(customUpdated.catalog_description).toBeNull();
+    expect(customUpdated.catalog_description_edited).toBe(false);
+
+    const discount = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount',
+      quantity: 1,
+      unit_price: 0,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+    });
+    const discountUpdated = await QuoteItem.update(context.db, context.tenantId, discount.quote_item_id, {
+      catalog_description: 'FORGED',
+    });
+    expect(discountUpdated.catalog_description).toBeNull();
+    expect(discountUpdated.catalog_description_edited).toBe(false);
+
+    // Deleted product: FK is SET NULL; the snapshot (and flag) stay frozen.
+    await QuoteItem.update(context.db, context.tenantId, catalogItem.quote_item_id, {
+      catalog_description: 'Edited before the product was deleted.',
+    });
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .del();
+    const deletedUpdated = await QuoteItem.update(context.db, context.tenantId, catalogItem.quote_item_id, {
+      catalog_description: 'FORGED AFTER DELETE',
+      quantity: 4,
+    });
+    expect(deletedUpdated.service_id).toBeNull();
+    expect(deletedUpdated.quantity).toBe(4);
+    expect(deletedUpdated.catalog_description).toBe('Edited before the product was deleted.');
+    expect(deletedUpdated.catalog_description_edited).toBe(true);
+  });
+
+  it('TR-2c: an update with no catalog_description key leaves both columns unchanged, even after the catalog text changes', async () => {
+    const quote = await createQuote('No-key quote');
+    const serviceId = await seedCatalogService();
+    const plain = await createCatalogItem(quote.quote_id, serviceId);
+    const edited = await createCatalogItem(quote.quote_id, serviceId, { catalog_description: 'Edited wording' });
+
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .update({ description: 'The catalog moved on.' });
+
+    for (const [item, text, flag] of [
+      [plain, CATALOG_DESCRIPTION, false],
+      [edited, 'Edited wording', true],
+    ] as const) {
+      const updated = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+        description: 'Renamed line',
+        quantity: 5,
+        unit_price: 100,
+      });
+      expect(updated.catalog_description).toBe(text);
+      expect(updated.catalog_description_edited).toBe(flag);
+    }
+  });
+
+  it('TR-2d: a product edit in the catalog never propagates to existing lines', async () => {
+    const quote = await createQuote('Never-propagates quote');
+    const serviceId = await seedCatalogService();
+    const plain = await createCatalogItem(quote.quote_id, serviceId);
+    const edited = await createCatalogItem(quote.quote_id, serviceId, { catalog_description: 'Edited wording' });
+
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .update({ description: 'Brand new catalog copy.' });
+
+    const items = await QuoteItem.listByQuoteId(context.db, context.tenantId, quote.quote_id);
+    const byId = new Map(items.map((i) => [i.quote_item_id, i]));
+    expect(byId.get(plain.quote_item_id)?.catalog_description).toBe(CATALOG_DESCRIPTION);
+    expect(byId.get(plain.quote_item_id)?.catalog_description_edited).toBe(false);
+    expect(byId.get(edited.quote_item_id)?.catalog_description).toBe('Edited wording');
+    expect(byId.get(edited.quote_item_id)?.catalog_description_edited).toBe(true);
+  });
+
+  it('TR-2e: the options channel wins over a payload value and carries the flag', async () => {
+    const quote = await createQuote('Options-channel quote');
+    const serviceId = await seedCatalogService();
+    const copied = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: NAME,
+      quantity: 1,
+      unit_price: 25000,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      catalog_description: 'PAYLOAD VALUE',
+    } as any, { catalogDescriptionSnapshot: 'Verbatim copied text', catalogDescriptionEdited: true });
+    expect(copied.catalog_description).toBe('Verbatim copied text');
+    expect(copied.catalog_description_edited).toBe(true);
+
+    const noFlag = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: NAME,
+      quantity: 1,
+      unit_price: 25000,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+    }, { catalogDescriptionSnapshot: 'Verbatim copied text' });
+    expect(noFlag.catalog_description_edited).toBe(false);
   });
 
   it('TR-3: service-selection change recaptures from the current catalog and ignores any caller-forged value', async () => {
@@ -298,6 +505,7 @@ describe('Quote item catalog-description snapshot', () => {
     } as any);
     expect(recaptured.service_name).toBe('Patch Management');
     expect(recaptured.catalog_description).toBe('Automated patch deployment for endpoints, tested before release.');
+    expect(recaptured.catalog_description_edited).toBe(false);
 
     // Clearing the catalog selection must also null the snapshot, not the caller value.
     const cleared = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
@@ -306,6 +514,26 @@ describe('Quote item catalog-description snapshot', () => {
     } as any);
     expect(cleared.service_id).toBeNull();
     expect(cleared.catalog_description).toBeNull();
+    expect(cleared.catalog_description_edited).toBe(false);
+  });
+
+  it('TR-3b: a service_id change beats a caller value and clears an existing edited flag', async () => {
+    const quote = await createQuote('Change-beats-caller quote');
+    const serviceId = await seedCatalogService();
+    const item = await createCatalogItem(quote.quote_id, serviceId, { catalog_description: 'Edited wording' });
+    expect(item.catalog_description_edited).toBe(true);
+
+    const secondServiceId = await seedCatalogService({
+      service_name: 'Patch Management',
+      description: 'Automated patch deployment.',
+      default_rate: 12000,
+    });
+    const changed = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      service_id: secondServiceId,
+      catalog_description: 'CALLER VALUE ALONGSIDE A SERVICE CHANGE',
+    });
+    expect(changed.catalog_description).toBe('Automated patch deployment.');
+    expect(changed.catalog_description_edited).toBe(false);
   });
 
   it('TR-4: copy flows carry the stored snapshot verbatim through the internal channel, including null', async () => {
@@ -526,6 +754,46 @@ describe('Quote item catalog-description snapshot', () => {
     expect(fromTemplateItems[0]?.service_name).toBe(NAME);
   });
 
+  it('TR-5: duplicate, save-as-template, create-from-template and revision carry an edited text and its flag verbatim', async () => {
+    const source = await createQuote('Edited source');
+    const serviceId = await seedCatalogService();
+    await createCatalogItem(source.quote_id, serviceId, { catalog_description: 'Edited wording for this quote' });
+    await createCatalogItem(source.quote_id, serviceId);
+
+    const copy = async (fromQuoteId: string, toQuoteId: string) => {
+      const items = await QuoteItem.listByQuoteId(context.db, context.tenantId, fromQuoteId);
+      await copyQuoteItemsToQuote(context.db as any, context.tenantId, toQuoteId, items, { createdBy: context.userId });
+      return QuoteItem.listByQuoteId(context.db, context.tenantId, toQuoteId);
+    };
+    const expectCarried = (items: Array<{ catalog_description?: string | null; catalog_description_edited?: boolean }>) => {
+      expect(items.map((i) => [i.catalog_description, i.catalog_description_edited])).toEqual([
+        ['Edited wording for this quote', true],
+        [CATALOG_DESCRIPTION, false],
+      ]);
+    };
+
+    // Catalog text changes between copies: copies must not re-derive from it.
+    await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .update({ description: 'Catalog moved on.' });
+
+    const duplicated = await createQuote('Duplicate of edited');
+    expectCarried(await copy(source.quote_id, duplicated.quote_id));
+
+    const template = await createQuote('Template of edited', true);
+    const templateItems = await copy(source.quote_id, template.quote_id);
+    expectCarried(templateItems);
+
+    const fromTemplate = await createQuote('From template of edited');
+    expectCarried(await copy(template.quote_id, fromTemplate.quote_id));
+
+    await context.db('quotes')
+      .where({ tenant: context.tenantId, quote_id: source.quote_id })
+      .update({ status: 'sent' });
+    const revision = await Quote.createRevision(context.db, context.tenantId, source.quote_id, context.userId);
+    expectCarried(await QuoteItem.listByQuoteId(context.db, context.tenantId, revision.quote_id));
+  });
+
   it('T008: seeded standard templates are updated additively and tenant custom ASTs are untouched', async () => {
     const standardRows = await context.db('standard_quote_document_templates')
       .whereIn('standard_quote_document_template_code', [
@@ -734,5 +1002,35 @@ describe('Quote item catalog-description snapshot', () => {
     const descriptionIndex = text.indexOf(CATALOG_DESCRIPTION);
     expect(nameIndex).toBeGreaterThanOrEqual(0);
     expect(descriptionIndex).toBeGreaterThan(nameIndex);
+  });
+
+  it('prints an edited catalog text instead of the original, and prints text equal to the description once', async () => {
+    const renderText = async (quoteId: string) => {
+      const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quoteId);
+      const resolved = await resolveQuoteTemplateAst(context.db, context.tenantId, quoteId);
+      const evaluation = evaluateTemplateAst(resolved.templateAst, viewModel as unknown as Record<string, unknown>);
+      const { html } = await renderEvaluatedTemplateAst(resolved.templateAst, evaluation, { locale: 'en-US' });
+      return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    };
+    const occurrences = (text: string, needle: string) => text.split(needle).length - 1;
+
+    const quote = await createQuote('Edited render quote');
+    const serviceId = await seedCatalogService();
+    const item = await createCatalogItem(quote.quote_id, serviceId);
+
+    const EDITED = 'Includes on-site setup. Excludes cabling.';
+    await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, { catalog_description: EDITED });
+    const editedText = await renderText(quote.quote_id);
+    const nameIndex = editedText.indexOf(NAME);
+    const editedIndex = editedText.indexOf(EDITED);
+    expect(nameIndex).toBeGreaterThanOrEqual(0);
+    expect(editedIndex).toBeGreaterThan(nameIndex);
+    expect(editedText).not.toContain(CATALOG_DESCRIPTION);
+
+    // Edited text equal to the line description: the renderer dedupe prints it once.
+    await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, { catalog_description: NAME });
+    const duplicateText = await renderText(quote.quote_id);
+    expect(occurrences(duplicateText, NAME)).toBe(1);
+    expect(duplicateText).not.toContain(CATALOG_DESCRIPTION);
   });
 });

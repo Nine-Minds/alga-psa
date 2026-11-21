@@ -4,6 +4,7 @@ import {
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromQuoteItem,
   createDraftQuoteItemFromService,
+  withEditedCatalogDescription,
 } from './quoteLineItemDraft';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 
@@ -78,6 +79,27 @@ describe('quote line item draft catalog-description snapshots', () => {
       persistedItem({ catalog_description: null }) as never,
     );
     expect(legacy.catalog_description).toBeNull();
+  });
+
+  // alga-2026-0002804: the save path merges the returned row over the draft
+  // (`{ ...draft, ...fromRow }`); the session dirty marker must not survive it,
+  // or the next save would resend the text as a fresh explicit write.
+  it('clears the dirty marker when a saved row is merged over an edited draft', () => {
+    const edited = withEditedCatalogDescription(
+      createDraftQuoteItemFromQuoteItem(persistedItem() as never),
+      'Includes rule review; excludes firmware patching.',
+    );
+    expect(edited.catalog_description_dirty).toBe(true);
+
+    const merged = {
+      ...edited,
+      ...createDraftQuoteItemFromQuoteItem(persistedItem({
+        catalog_description: 'Includes rule review; excludes firmware patching.',
+        catalog_description_edited: true,
+      }) as never),
+    };
+    expect(merged.catalog_description_dirty).toBe(false);
+    expect(merged.catalog_description_edited).toBe(true);
   });
 
   // alga-2026-0002902: the draft used to start every catalog line taxable, so

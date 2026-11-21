@@ -13,10 +13,10 @@ const forgedItem = {
   description: 'Managed Firewall Service',
   quantity: 1,
   unit_price: 25000,
-  catalog_description: 'CALLER FORGED SNAPSHOT',
+  catalog_description: 'Edited wording',
 };
 
-describe('quote API item schemas: catalog_description is server-captured only', () => {
+describe('quote API item schemas: catalog_description is an explicit, capped write', () => {
   it('accepts and normalizes section titles on create and update', () => {
     const create = createQuoteApiSchema.safeParse({
       title: 'Managed services proposal',
@@ -40,25 +40,33 @@ describe('quote API item schemas: catalog_description is server-captured only', 
     }
   });
 
-  it('createQuoteItemSchema strips a caller-supplied catalog_description', () => {
+  it('createQuoteItemSchema accepts catalog_description, allows null, and caps it at 4000 characters', () => {
     const result = createQuoteItemSchema.safeParse(forgedItem);
-
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect('catalog_description' in result.data).toBe(false);
-    }
+    if (result.success) expect(result.data.catalog_description).toBe('Edited wording');
+
+    expect(createQuoteItemSchema.safeParse({ ...forgedItem, catalog_description: null }).success).toBe(true);
+    expect(createQuoteItemSchema.safeParse({ ...forgedItem, catalog_description: 'x'.repeat(4000) }).success).toBe(true);
+    expect(createQuoteItemSchema.safeParse({ ...forgedItem, catalog_description: 'x'.repeat(4001) }).success).toBe(false);
   });
 
-  it('updateQuoteItemSchema strips a caller-supplied catalog_description', () => {
-    const result = updateQuoteItemSchema.safeParse({
-      quantity: 2,
-      unit_price: 30000,
-      catalog_description: 'CALLER FORGED SNAPSHOT',
-    });
-
+  it('updateQuoteItemSchema accepts catalog_description, and omitting it leaves the key absent', () => {
+    const result = updateQuoteItemSchema.safeParse({ quantity: 2, catalog_description: 'Edited wording' });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect('catalog_description' in result.data).toBe(false);
+    if (result.success) expect(result.data.catalog_description).toBe('Edited wording');
+
+    const absent = updateQuoteItemSchema.safeParse({ quantity: 2 });
+    expect(absent.success).toBe(true);
+    if (absent.success) expect('catalog_description' in absent.data).toBe(false);
+
+    expect(updateQuoteItemSchema.safeParse({ catalog_description: 'x'.repeat(4001) }).success).toBe(false);
+  });
+
+  it('catalog_description_edited is never accepted (stripped by create and update)', () => {
+    for (const schema of [createQuoteItemSchema, updateQuoteItemSchema]) {
+      const result = schema.safeParse({ ...forgedItem, catalog_description_edited: true });
+      expect(result.success).toBe(true);
+      if (result.success) expect('catalog_description_edited' in result.data).toBe(false);
     }
   });
 
@@ -96,11 +104,11 @@ describe('quote API item schemas: catalog_description is server-captured only', 
     }
   });
 
-  it('createQuoteApiSchema strips catalog_description from inline items', () => {
+  it('createQuoteApiSchema keeps catalog_description on inline items and strips the flag', () => {
     const result = createQuoteApiSchema.safeParse({
       title: 'Managed services proposal',
       items: [
-        forgedItem,
+        { ...forgedItem, catalog_description_edited: true },
         { ...forgedItem, service_id: null, description: 'Custom one-time audit' },
       ],
     });
@@ -109,7 +117,8 @@ describe('quote API item schemas: catalog_description is server-captured only', 
     if (result.success) {
       expect(result.data.items?.length).toBe(2);
       for (const item of result.data.items ?? []) {
-        expect('catalog_description' in item).toBe(false);
+        expect(item.catalog_description).toBe('Edited wording');
+        expect('catalog_description_edited' in item).toBe(false);
       }
     }
   });
