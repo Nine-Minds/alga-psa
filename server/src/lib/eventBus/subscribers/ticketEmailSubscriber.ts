@@ -85,6 +85,7 @@ import {
   resolveTicketEmailTemplate,
   ticketEmailRecipientVariables,
 } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 import { optionalEmailData } from '../../notifications/optionalEmailData';
 import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
 import type { EmailAddress } from '../../../types/email.types';
@@ -1244,7 +1245,8 @@ function formatTicketDateTime(
  * Shared "ticket summary" email context (the ticket-created body variables).
  * Used by the ticket-created handler and the board status-entered handler.
  */
-async function buildTicketSummaryEmailContext(
+// Exported for unit tests of the description sanitising path.
+export async function buildTicketSummaryEmailContext(
   db: Knex,
   tenantId: string,
   ticket: NonNullable<TicketEmailRow>,
@@ -1368,9 +1370,13 @@ async function buildTicketSummaryEmailContext(
   const descriptionFormatting = formatBlockNoteContent(rawDescription);
   const descriptionText = descriptionFormatting.text.trim();
   const description = descriptionText || 'No description provided.';
+  // The HTML rendition derives from an untrusted inbound email body and is
+  // inserted unescaped ({{{ }}}) by the board-created template, so it goes
+  // through the shared email sanitiser. Fall back to the escaped paragraph.
+  const escapedDescriptionFallback = `<p>${escapeHtml(description)}</p>`;
   const descriptionHtml = descriptionText
-    ? descriptionFormatting.html
-    : `<p>${description}</p>`;
+    ? ((await sanitizeEmailHtml(descriptionFormatting.html)) || escapedDescriptionFallback)
+    : escapedDescriptionFallback;
 
   const requesterDetailsForText = requesterDetails;
   const assignedDetailsForText = assignedDetails;
