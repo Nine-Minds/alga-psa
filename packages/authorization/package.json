@@ -90,6 +90,10 @@
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
     },
+    "./knowledgeBasePermissions": {
+      "import": "./dist/knowledgeBasePermissions.js",
+      "types": "./src/knowledgeBasePermissions.ts"
+    },
     "./knowledgeBaseReadAuthorization": {
       "import": "./dist/knowledgeBaseReadAuthorization.js",
       "types": "./src/knowledgeBaseReadAuthorization.ts"

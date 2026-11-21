@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import type { IDocument, IUser } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/authorization/rbac';
+import { canReadPublishedKnowledgeBase } from '@alga-psa/authorization/knowledgeBasePermissions';
 import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authorization/assetReadAuthorization';
 import { canReadCommentAttachment, isPublicAttachmentComment } from './ticketCommentAttachments';
 import {
@@ -61,12 +62,23 @@ function applyDocumentRedactions<T extends object>(document: T, redactedFields: 
   return redacted as T;
 }
 
-function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
+/**
+ * `readable_via_published_parent` is held only by subjects who pass the portal KB read check
+ * (`canReadPublishedKnowledgeBase`, the same predicate the portal KB actions use). Evaluated once per request.
+ */
+async function getDocumentBuiltinRelationshipRules(
+  user: IUser,
+  conn: Knex | Knex.Transaction
+): Promise<RelationshipRule[]> {
   if (isMspPrincipalUserType(user.user_type)) {
     return [];
   }
 
-  return [{ template: 'own' }, { template: 'same_client' }, { template: 'readable_via_published_parent' }];
+  const rules: RelationshipRule[] = [{ template: 'own' }, { template: 'same_client' }];
+  if (await canReadPublishedKnowledgeBase(user, conn)) {
+    rules.push({ template: 'readable_via_published_parent' });
+  }
+  return rules;
 }
 
 /**
@@ -388,7 +400,7 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
   const requestCache = new RequestLocalAuthorizationCache();
   // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
   const authorizationSubject = await resolveAuthorizationSubject(trx, { tenant, user, requestCache });
-  const relationshipRules = getDocumentBuiltinRelationshipRules(user);
+  const relationshipRules = await getDocumentBuiltinRelationshipRules(user, trx);
   const selectedClientIds = user.clientId ? [user.clientId] : undefined;
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
@@ -652,7 +664,7 @@ export async function resolveDocumentReadScope(
   });
   if (!scope) return null;
 
-  const builtinRules = getDocumentBuiltinRelationshipRules(user);
+  const builtinRules = await getDocumentBuiltinRelationshipRules(user, conn);
   return {
     apply(query, documentAlias) {
       applyReadScope(query, scope, {

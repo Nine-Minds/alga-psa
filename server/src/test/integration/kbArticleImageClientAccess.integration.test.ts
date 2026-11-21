@@ -35,13 +35,25 @@ describeDb('KB article images readable by client portal users', { shuffle: false
   let client: string;
   let otherTenantClient: string;
   let msp: string;
-  const users = { client: null as any, otherTenantClient: null as any, msp: null as any };
+  const users = { client: null as any, otherTenantClient: null as any, msp: null as any, noPerm: null as any, docReader: null as any };
   // key -> { articleDoc, image }
   const kb: Record<string, { articleDoc: string; image: string; file: string }> = {};
 
   const userRow = (userId: string, t: string, type: 'client' | 'internal', clientId?: string) =>
     ({ user_id: userId, tenant: t, user_type: type, username: userId, email: `${userId}@example.test`,
        is_inactive: false, roles: [], ...(clientId ? { clientId } : {}) }) as any;
+
+  /** A client-portal role holding exactly one `<resource>:read` grant (resource null: a role with no permissions). */
+  const grantClientRole = async (t: string, userId: string, resource: string | null) => {
+    const roleId = randomUUID();
+    await db('roles').insert({ tenant: t, role_id: roleId, role_name: `Client ${roleId.slice(0, 6)}`, description: 'c', msp: false, client: true });
+    if (resource) {
+      const permId = randomUUID();
+      await db('permissions').insert({ tenant: t, permission_id: permId, resource, action: 'read', msp: false, client: true });
+      await db('role_permissions').insert({ tenant: t, role_id: roleId, permission_id: permId });
+    }
+    await db('user_roles').insert({ tenant: t, user_id: userId, role_id: roleId });
+  };
 
   const insertDoc = async (t: string, name: string, by: string, visible: boolean) => {
     const documentId = randomUUID();
@@ -86,6 +98,14 @@ describeDb('KB article images readable by client portal users', { shuffle: false
     users.client = userRow(clientUser, tenant, 'client', client);
     users.otherTenantClient = userRow(otherUser, otherTenant, 'client', otherTenantClient);
     users.msp = userRow(msp, tenant, 'internal');
+    // The portal KB read check (document:read OR knowledge_base:read) now gates readable_via_published_parent.
+    await grantClientRole(tenant, clientUser, 'knowledge_base');
+    const noPermUser = await createUser(db, tenant, { user_type: 'client' });
+    await grantClientRole(tenant, noPermUser, null);
+    users.noPerm = userRow(noPermUser, tenant, 'client', client);
+    const docReaderUser = await createUser(db, tenant, { user_type: 'client' });
+    await grantClientRole(tenant, docReaderUser, 'document');
+    users.docReader = userRow(docReaderUser, tenant, 'client', client);
 
     await seed('published', {});
     await seed('public', { audience: 'public' });
@@ -209,6 +229,23 @@ describeDb('KB article images readable by client portal users', { shuffle: false
     it('returns null when the article is internal, draft, archived, parentless, or the image is not client-visible', async () => {
       for (const key of ['internal', 'draft', 'archived', 'noArticle', 'hiddenImage']) {
         expect(await get(users.client, key), key).toBeNull();
+      }
+    });
+
+    it('KB read gate: a portal user with no document:read and no knowledge_base:read gets null for a published client article image', async () => {
+      for (const key of ['published', 'public']) {
+        expect(await get(users.noPerm, key), key).toBeNull();
+      }
+      expect((await recordReadable(users.noPerm)).size).toBe(0);
+    });
+
+    it('KB read gate: knowledge_base:read alone, and document:read alone, each admit the image (and nothing the rule does not allow)', async () => {
+      for (const user of [users.client, users.docReader]) {
+        expect((await get(user, 'published'))?.document_id).toBe(kb.published.image);
+        expect((await get(user, 'public'))?.document_id).toBe(kb.public.image);
+        for (const key of ['internal', 'draft', 'archived', 'noArticle', 'hiddenImage']) {
+          expect(await get(user, key), key).toBeNull();
+        }
       }
     });
 
