@@ -111,6 +111,18 @@ describe('IMAP OAuth authorization routes', () => {
     expect(mocks.grantsInserted).toHaveLength(0);
   });
 
+  it('fails closed without issuing OAuth state or a grant when the signing key is missing', async () => {
+    mocks.secret = null;
+    const response = await initiate(new NextRequest('https://psa.example.test/api/email/oauth/imap/initiate', {
+      method: 'POST', body: JSON.stringify({ providerId: 'provider-a' }), headers: { 'content-type': 'application/json' },
+    }));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).not.toHaveProperty('state');
+    expect(mocks.grantsInserted).toHaveLength(0);
+    expect(mocks.tokenExchange).not.toHaveBeenCalled();
+  });
+
   it('denies readers and client users from generic OAuth initiate and IMAP reconnect', async () => {
     const request = (path: string) => new NextRequest(`https://psa.example.test${path}`, {
       method: 'POST', body: JSON.stringify({ providerId: 'provider-a', provider: 'google' }),

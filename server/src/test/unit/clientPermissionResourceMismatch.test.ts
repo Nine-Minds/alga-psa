@@ -10,6 +10,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
 // Import after mocking
 import UserModel from '@alga-psa/db/models/user';
 import { hasPermission } from '../../lib/auth/rbac';
+import { assertProviderMutationAuthority, ProviderMutationForbiddenError } from '../../lib/email/providerMutationAuthority';
 
 describe('Client permission resource mapping', () => {
   const tenantId = 'test-tenant';
@@ -53,5 +54,30 @@ describe('Client permission resource mapping', () => {
 
   it('should also grant access when the controller requests the client resource alias', async () => {
     await expect(hasPermission(user, 'client', 'create', {} as any)).resolves.toBe(true);
+  });
+
+  it('can resolve a client-scoped update permission while provider mutation authority still rejects the client', async () => {
+    const clientUser = { ...user, user_type: 'client' } as IUser;
+    const clientPermission: IPermission = {
+      permission_id: 'perm-ticket-settings-update-client',
+      resource: 'ticket_settings',
+      action: 'update',
+      tenant: tenantId,
+      msp: false,
+      client: true,
+    };
+    const clientRole: IRoleWithPermissions = {
+      ...roleWithClientPermissions,
+      role_id: 'role-client-oauth-fixture',
+      role_name: 'Disposable client OAuth fixture',
+      msp: false,
+      client: true,
+      permissions: [clientPermission],
+    };
+    vi.mocked(UserModel.getUserRolesWithPermissions).mockResolvedValue([clientRole]);
+
+    await expect(hasPermission(clientUser, 'ticket_settings', 'update', {} as any)).resolves.toBe(true);
+    await expect(assertProviderMutationAuthority(clientUser, {} as any))
+      .rejects.toBeInstanceOf(ProviderMutationForbiddenError);
   });
 });

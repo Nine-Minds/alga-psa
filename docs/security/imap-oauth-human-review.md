@@ -26,45 +26,94 @@ Use two disposable tenants, Tenant A and Tenant B, and create a fake OAuth2 IMAP
 
 Create an internal reader in **MSP Settings → Users**. In **Security Settings → User Roles**, assign a role that has `ticket_settings:read` and lacks `ticket_settings:update`; confirm this in **Security Settings → Permissions**. Create a client portal user under **MSP Settings → Users**, switch the ViewSwitcher to **Client Portal**, then choose **Create New Client User** and link it to a disposable client/contact. Use separate browser profiles for admin, reader, and client so their session cookies cannot be confused. These fixtures are created in the disposable tenant through the application UI; remove or deactivate them after review.
 
-The client route check is expected to reject on `user_type` before checking permissions. To reproduce the adversarial case where a client is also mistakenly assigned `ticket_settings:update`, use the disposable tenant database operator to attach that permission to a role used only by the test client (the permission catalog normally marks it MSP-only):
+The client route check is expected to reject on `user_type` before checking permissions. To prove this even when RBAC itself resolves `ticket_settings:update` for the client, use a disposable tenant database operator to enable the catalog permission's client flag temporarily and attach it to a client role. The `permissions.client` and `roles.client` flags are both required by `hasPermission`; the permission catalog normally marks this action MSP-only. First record the current permission flag and confirm there is exactly one catalog row:
+
+```sql
+SELECT permission_id, client AS previous_client_flag
+FROM permissions
+WHERE tenant = '<tenant-a-uuid>'::uuid
+  AND resource = 'ticket_settings' AND action = 'update';
+```
+
+Record the returned `permission_id` and `previous_client_flag` privately. Then run this setup and keep the returned role ID for cleanup:
 
 ```sql
 BEGIN;
+UPDATE permissions SET client = true
+WHERE tenant = '<tenant-a-uuid>'::uuid AND permission_id = '<permission-id>'::uuid;
 WITH test_role AS (
-  INSERT INTO roles (tenant, role_name, description)
-  VALUES ('<tenant-a-uuid>'::uuid, 'review-client-oauth-<unique-suffix>', 'Disposable OAuth review fixture')
+  INSERT INTO roles (tenant, role_name, description, msp, client)
+  VALUES ('<tenant-a-uuid>'::uuid, 'review-client-oauth-<unique-suffix>', 'Disposable OAuth review fixture', false, true)
   RETURNING tenant, role_id
-), test_permission AS (
-  SELECT tenant, permission_id FROM permissions
-  WHERE tenant = '<tenant-a-uuid>'::uuid
-    AND resource = 'ticket_settings' AND action = 'update'
+), linked_permission AS (
+  INSERT INTO role_permissions (tenant, role_id, permission_id)
+  SELECT r.tenant, r.role_id, '<permission-id>'::uuid FROM test_role r
+  RETURNING tenant, role_id
 )
-INSERT INTO role_permissions (tenant, role_id, permission_id)
-SELECT r.tenant, r.role_id, p.permission_id FROM test_role r JOIN test_permission p USING (tenant);
-
 INSERT INTO user_roles (tenant, user_id, role_id)
-SELECT '<tenant-a-uuid>'::uuid, '<client-user-uuid>'::uuid, role_id
-FROM roles
+SELECT tenant, '<client-user-uuid>'::uuid, role_id FROM linked_permission;
+SELECT role_id FROM roles
 WHERE tenant = '<tenant-a-uuid>'::uuid
   AND role_name = 'review-client-oauth-<unique-suffix>';
 COMMIT;
 ```
 
-After the client rejection check, clean up only this disposable role:
+Now use the session request below as the client and expect HTTP 403. The route
+test suite additionally verifies that a client can resolve this permission
+through `hasPermission` while `assertProviderMutationAuthority` still rejects
+that client based on user type. After recording the check, remove the fixture
+and restore the catalog flag to the exact prior value:
 
 ```sql
 BEGIN;
-DELETE FROM user_roles WHERE tenant = '<tenant-a-uuid>'::uuid AND user_id = '<client-user-uuid>'::uuid
-  AND role_id = (SELECT role_id FROM roles WHERE tenant = '<tenant-a-uuid>'::uuid AND role_name = 'review-client-oauth-<unique-suffix>');
-DELETE FROM role_permissions WHERE tenant = '<tenant-a-uuid>'::uuid
-  AND role_id = (SELECT role_id FROM roles WHERE tenant = '<tenant-a-uuid>'::uuid AND role_name = 'review-client-oauth-<unique-suffix>');
-DELETE FROM roles WHERE tenant = '<tenant-a-uuid>'::uuid AND role_name = 'review-client-oauth-<unique-suffix>';
+DELETE FROM user_roles WHERE tenant = '<tenant-a-uuid>'::uuid AND user_id = '<client-user-uuid>'::uuid AND role_id = '<role-id>'::uuid;
+DELETE FROM role_permissions WHERE tenant = '<tenant-a-uuid>'::uuid AND role_id = '<role-id>'::uuid;
+DELETE FROM roles WHERE tenant = '<tenant-a-uuid>'::uuid AND role_id = '<role-id>'::uuid;
+UPDATE permissions SET client = <previous-client-flag>::boolean
+WHERE tenant = '<tenant-a-uuid>'::uuid AND permission_id = '<permission-id>'::uuid;
 COMMIT;
 ```
 
-Replace the suffix consistently. Never attach this role to a real user or tenant.
+Replace the suffix consistently. Never attach this role or temporarily enabled
+catalog permission to a real tenant or user. Run cleanup even if a review check
+fails.
 
-Before a check, open DevTools → Network while signed in as that persona and use the **POST** request to `/api/email/oauth/imap/initiate` → **Copy as cURL** as the authenticated request template. Keep the copied `Cookie` header private and out of shell history, tickets, logs, and screenshots. The UI calls this route with JSON `{ "providerId": "<provider-uuid>" }`; the examples below use a hidden prompt for the copied cookie and suppress response bodies.
+The authenticated session request can be made directly from that persona's browser DevTools → Console; no prior IMAP initiation request is needed. This same-origin fetch uses the portal's current HttpOnly session cookie without reading or copying it. It prints status and response shape only, never state or authorization URL:
+
+```js
+window.requestImapOAuthReview = async (providerId) => {
+  const response = await fetch('/api/email/oauth/imap/initiate', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ providerId }),
+  });
+  return { status: response.status, body: await response.json() };
+};
+const attempt = await window.requestImapOAuthReview('<tenant-a-provider-uuid>');
+console.log({ status: attempt.status, hasState: Boolean(attempt.body.state), hasAuthUrl: Boolean(attempt.body.authUrl), error: attempt.body.error });
+```
+
+For a valid administrator attempt needed by callback checks, retain state in a
+browser variable without printing it. Use this variant as the admin; it stores
+the response in the current tab and logs only status and response shape:
+
+```js
+window.oauthReviewResponse = await window.requestImapOAuthReview('<tenant-a-provider-uuid>');
+console.log({ status: window.oauthReviewResponse.status, hasState: Boolean(window.oauthReviewResponse.body.state), hasAuthUrl: Boolean(window.oauthReviewResponse.body.authUrl) });
+```
+
+To transfer state to the callback shell's hidden prompt without displaying it,
+run Chrome DevTools' `copy(window.oauthReviewResponse.body.state)` helper and
+paste into `read -rsp`. Keep state out of shell history, tickets, logs, and
+screenshots. The initiate response also includes `authUrl`; open it privately
+to complete the test-provider flow when running admin success.
+
+For a shell-based request from any persona, use DevTools → Network → the
+`POST /api/email/oauth/imap/initiate` request → **Copy as cURL**. Keep the
+copied `Cookie` header private. The request body is
+`{ "providerId": "<provider-uuid>" }`; the example below prompts for the cookie
+and suppresses the response body.
 
 ```bash
 API_ORIGIN='https://<application-host>'
@@ -189,7 +238,7 @@ For each rejected check, compare the provider row and IMAP OAuth credential valu
 
 ## Evidence ledger
 
-- **Executed during this repair:** route and state behavioral unit suites cover role rejection, grant issuance, signed/tampered/unsigned/expired/replay/cross-tenant state, permission revocation and unchanged credentials. Isolated database integration coverage checks migration retry, application-role access, and exactly one successful atomic consume. The full server typecheck passed with a 12 GB Node heap. The production build compiled and generated all 74 static pages, then exited at Next.js `SecurityFatalError` because the installed Next.js version is flagged by the npm advisory check; a second 12 GB run reached the same hold. This security gate was not bypassed.
+- **Executed during this repair:** route/state behavioral tests cover role rejection, grant issuance, missing-key fail-closed behavior, signed/tampered/unsigned/expired/replay/cross-tenant state, permission revocation, and unchanged credentials. The client RBAC fixture test verifies `hasPermission(client, 'ticket_settings', 'update')` is true when both client flags are enabled while the mutation authority guard rejects that same user type. The grant, route, state, and client RBAC suites passed 18/18 in this follow-up. The migration integration test checked retry, application-role access, and exactly one successful atomic consume. The full server typecheck passed in this follow-up with a 12 GB Node heap. Static Compose checks rendered CE and EE without a signing-key mount by default, with the opt-in filesystem mount, environment pass-through using a dummy value, and Vault provider selection using placeholder configuration; no secret value was printed and no application service was started. The production build compiled and generated all 74 static pages, then exited at Next.js `SecurityFatalError` because the installed Next.js version is flagged by the npm advisory check; a second 12 GB run reached the same hold. This security gate was not bypassed.
 - **Historical only:** product smoke evidence from 2026-11-01 at revision `e5ddee1a5ae54247e95423b07a1e55d906a3f520`, previously described in PR #4086. It reported admin success and reader/client/revocation/invalid-state/replay/foreign-tenant rejection, with credential snapshots. External token exchange used a minimal simulator. Evidence was stored under `/tmp/alga-smoke-evidence/security-authz-post-20261101-2224`; that local path is not the durable review artifact.
 - **Still for review owner:** execute all seven checks on the currently deployed/published revision, record the exact revision, test tenant, outcomes, credential-preservation evidence, and any deviations. Confirm the configured signing key and callback origin in each target environment without exposing values. Human review and production deployment are pending and must be recorded separately.
 

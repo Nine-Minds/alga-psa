@@ -1,0 +1,13 @@
+version: '3.8'
+
+# Opt-in filesystem-provider wiring. Include this file only when the signing
+# key is provisioned at ./secrets/OAUTH_STATE_SIGNING_KEY on the Compose host.
+secrets:
+  oauth_state_signing_key:
+    file: ./secrets/OAUTH_STATE_SIGNING_KEY
+
+services:
+  server:
+    secrets:
+      - source: oauth_state_signing_key
+        target: OAUTH_STATE_SIGNING_KEY

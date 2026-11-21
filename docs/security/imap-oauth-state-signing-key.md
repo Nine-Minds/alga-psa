@@ -13,18 +13,19 @@ signature validation.
 
 ## Provision through a supported provider
 
-- **Environment provider:** set `OAUTH_STATE_SIGNING_KEY` in the server
-  container's secret-backed environment. With `SECRET_ENV_PREFIX`, use
-  `<PREFIX>_OAUTH_STATE_SIGNING_KEY`.
+- **Environment provider:** inject `OAUTH_STATE_SIGNING_KEY` into the server
+  container environment from the deployment secret manager. Prebuilt Compose
+  server configuration passes through that host variable when it is present;
+  it does not require or mount a signing-key file. With `SECRET_ENV_PREFIX`,
+  inject `<PREFIX>_OAUTH_STATE_SIGNING_KEY` instead and configure that prefix.
 - **Filesystem provider:** create an application secret file named
   `OAUTH_STATE_SIGNING_KEY` directly in the configured secret root
   (`SECRET_FS_BASE_PATH`; otherwise the provider uses `/run/secrets` when
   mounted, then `<cwd>/secrets`). Application secrets are direct children of
   the root; `tenants/<tenantId>/` is only for tenant secrets. The prebuilt CE
-  and EE Compose stacks now define a Docker secret from
-  `./secrets/OAUTH_STATE_SIGNING_KEY` and mount it into the server as
-  `/run/secrets/OAUTH_STATE_SIGNING_KEY`. Provision the file once on the host
-  before bringing up the stack, for example:
+  Prebuilt Compose stacks mount this key only when the opt-in overlay
+  `docker-compose.prebuilt.oauth-state-signing-key.yaml` is included. Provision
+  the file once on the host before bringing up the stack, for example:
 
   ```bash
   umask 077
@@ -32,11 +33,19 @@ signature validation.
   chmod 600 secrets/OAUTH_STATE_SIGNING_KEY
   ```
 
+  Include the overlay after the edition file in each `docker compose` command:
+  `-f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml -f docker-compose.prebuilt.oauth-state-signing-key.yaml`
+  (use `docker-compose.prebuilt.ee.yaml` for EE). Without that overlay, the
+  prebuilt Compose stack does not reference or require this file.
+
   For multiple hosts/instances, distribute the same managed value securely;
   never generate independently on each host.
 - **Vault provider:** write a string field named `OAUTH_STATE_SIGNING_KEY` to
   the KV v2 application-secret document at `VAULT_APP_SECRET_PATH`. Configure
-  `VAULT_ADDR`, `VAULT_TOKEN`, and `VAULT_APP_SECRET_PATH` on every instance.
+  `SECRET_READ_CHAIN=env,vault` (or another deliberate chain that includes
+  `vault`) plus `VAULT_ADDR`, `VAULT_TOKEN`, and `VAULT_APP_SECRET_PATH` on
+  every instance. The shared prebuilt server configuration forwards these
+  settings; no signing-key file or filesystem overlay is required.
 
 The provider supports `env`, `filesystem`, and `vault`. Composite reads use the
 first provider returning a value, so ensure the intended provider contains the
@@ -45,21 +54,40 @@ and [Helm secret provider configuration](config/HELM_SECRET_PROVIDER_CONFIG.md).
 
 ## Verify prebuilt wiring without starting services
 
-From the repository root, render the chosen stack and inspect only the secret
-source and server target. This filter avoids printing unrelated resolved
-environment values:
+From the repository root, render the chosen stack and inspect only the server
+secret target. Do not add the filesystem overlay for environment or Vault
+providers. This filter avoids printing unrelated resolved environment values:
 
 ```bash
 docker compose -f docker-compose.prebuilt.base.yaml \
   -f docker-compose.prebuilt.ce.yaml --env-file server/.env config --format json |
-  jq '{source: .secrets.oauth_state_signing_key.file,
-       serverSecret: [.services.server.secrets[] | select(.target == "OAUTH_STATE_SIGNING_KEY")]}'
+  jq '{serverSigningKeyMounts: [.services.server.secrets[]? | select(.target == "OAUTH_STATE_SIGNING_KEY")]}'
 ```
 
-Use `docker-compose.prebuilt.ee.yaml` for EE. Expected source:
-the resolved host path under this checkout's `secrets/` directory; expected
-container target: `/run/secrets/OAUTH_STATE_SIGNING_KEY`. This static check does not establish
-that a deployment host has the file or that a running server can read it.
+Use `docker-compose.prebuilt.ee.yaml` for EE. Without the filesystem overlay,
+the expected mount list is empty. Add `-f docker-compose.prebuilt.oauth-state-signing-key.yaml`
+to verify filesystem mode; the expected target is
+`/run/secrets/OAUTH_STATE_SIGNING_KEY`. This static check verifies repository
+configuration only, not an actual host file or running server.
+
+To verify environment mode without printing the signing key, render with the
+deployment secret manager's environment injection enabled and check only key
+presence. Avoid saving or sharing unfiltered `docker compose config` output,
+because resolved environment values can be included:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml \
+  -f docker-compose.prebuilt.ce.yaml --env-file server/.env config --format json |
+  jq '{environmentKeyPassedThrough: (.services.server.environment.OAUTH_STATE_SIGNING_KEY != null and .services.server.environment.OAUTH_STATE_SIGNING_KEY != ""),
+       signingKeyMounts: [.services.server.secrets[]? | select(.target == "OAUTH_STATE_SIGNING_KEY") | .target]}'
+```
+
+The pass-through setting is optional and absent from the container when the
+host environment has no value. Vault mode is selected through the existing
+`SECRET_READ_CHAIN` and Vault configuration variables; the same filtered
+configuration check can confirm provider selection without printing the
+Vault token. These are config-resolution checks, not proof that deployment
+secret stores or Vault contain the key.
 
 To verify the actual application filesystem provider against the local secret
 root, without displaying the value or starting the app server:

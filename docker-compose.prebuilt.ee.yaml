@@ -69,8 +69,6 @@ services:
       - google_oauth_client_id
       - google_oauth_client_secret
       - alga_auth_key
-      - source: oauth_state_signing_key
-        target: OAUTH_STATE_SIGNING_KEY
     networks:
       - app-network
     depends_on:
