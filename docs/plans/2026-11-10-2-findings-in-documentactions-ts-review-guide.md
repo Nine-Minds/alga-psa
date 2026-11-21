@@ -2,6 +2,91 @@
 
 Plan followed: [2026-11-10 fix plan](./2026-11-10-2-findings-in-documentactions-ts-fix-plan.md), committed as `9ff538d5cb`.
 
+## Review repair — default Technician task uploads
+
+**Cause.** The `project_task` association target adapter used `project` as its RBAC
+resource, so the shared transaction boundary required `project:update`. The default
+MSP Technician has `document:create` and `project_task:update`, but no `project:update`.
+
+**Repair.** The adapter now checks `project_task:update` for task association writes.
+It still resolves the task through its owning phase and project and evaluates the
+owning project's update record policy, including applicable client and bundle scope.
+The shared transaction-scoped boundary remains authoritative for upload, association
+creation, and association removal. The SQL-scoped search adapter was not changed.
+
+**New behavioral regression.** `server/src/test/integration/documentAssociationCrossClient.integration.test.ts`
+now provisions the canonical PSA default roles using the repository's role-grant
+catalog and reconciliation helper. It attaches an MSP user to the persisted default
+Technician role, reads the role's grants from `role_permissions` and `permissions`,
+and explicitly verifies `document:create` and `project_task:update` are present while
+`project:update` is absent. The test invokes the production `uploadDocument` action
+for a task whose project is authorized, then checks that both the document row and
+the `document_associations` row persisted. This test fails with the prior adapter
+because its target check asks for the absent `project:update` grant.
+
+The new regression is separate from the existing cross-client upload denial case.
+That case continues to assert that a rejected upload leaves no document, task
+association, or target folder state. Existing create/remove association checks and
+the shared document/target authorization contract checks remain in the focused run.
+
+**Evidence status.** The earlier guide's recorded 18-test result, search scale
+measurements, and package checks apply to the original implementation revision
+`9ff538d5cb`, not this repair. Fresh automated results for this repair are listed
+below. On the current local repair working tree, the focused PostgreSQL integration
+and three contract suites passed: 19 tests across 4 files. The Technician regression
+used the persisted default Technician role and the real authorization RBAC evaluator;
+its upload produced both the document and task association. Cross-client denied
+uploads left no document, association, or target folder. The SQL scope/scale case
+also passed with 20,000 tasks, 20,000 assets, and 20,000 ownership associations;
+search used at most 16 SQL parameters and transferred at most 8 root rows per query.
+The exact command and package/server check results are recorded in the repair
+completion section below. No browser session, screenshots, recordings, or fresh manual
+observations were produced for this repair: the app server was intentionally kept
+stopped. Manual review should use the current PR head and the following workflow.
+
+### Manual default Technician workflow
+
+1. Use the default MSP **Technician** role. Confirm it grants `document:create` and
+   `project_task:update` and does not grant `project:update`.
+2. Open an existing project task that the Technician is authorized to update under
+   the applicable project/client policy.
+3. Upload a small text file from the task's document/attachment control.
+4. Confirm the upload succeeds, the document appears on that task, and the stored
+   document has one `project_task` association to the task.
+5. As a Client A portal user, attempt an upload or association to a Client B task.
+   Expect denial. Verify there is no new document or association and no folder was
+   created for the denied target. Confirm Client B cannot see the attempted file.
+
+The automated regression now proves steps 1–4 through the production upload action
+and database persistence. The existing cross-client integration case proves step 5's
+denial and no-write outcome. All manual/browser steps remain awaiting execution; do
+not treat earlier QA-admin success as evidence of Technician compatibility.
+
+### Repair completion checks
+
+The following focused database command passed on the repair working tree using the
+isolated `test_document_actions_authz_4477` database (confirmed with no active
+connections before the suite bootstrapped it):
+
+```bash
+cd server
+TEST_DB_NAME=test_document_actions_authz_4477 DB_NAME_SERVER=test_document_actions_authz_4477 \
+  node ../node_modules/vitest/vitest.mjs run \
+  src/test/integration/documentAssociationCrossClient.integration.test.ts \
+  ../packages/documents/tests/documentActions.authorization.contract.test.ts \
+  ../packages/documents/tests/documentActionsUploadAssociationsTenantScoped.contract.test.ts \
+  ../packages/documents/tests/documentActionsAssociationSearchTenantScoped.contract.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+It passed 19 tests across 4 files, including cross-client upload denial, association
+create/remove, rollback, concurrent folder creation, document policy, contract and
+asset policy cases; the new default Technician persistence case; and task/asset SQL
+ownership and scale coverage. The documents and shared package typechecks and
+documents build passed. The full server typecheck passed with
+`NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck --workspace=server`.
+No app server was started, so all manual/browser review steps remain pending.
+
 ## Finding 1 — association search disclosed cross-client records and counts
 
 **Confirmed vulnerable path.** `searchDocumentAssociationEntities` had a tenant-wide `document:read` gate, then each entity branch counted and paged tenant rows without checking the caller's entity permission or client/record scope. A client user could search by another client's task, ticket, or client name and receive both identifiers/labels and a tenant-wide count.

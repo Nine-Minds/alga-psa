@@ -9,6 +9,9 @@ import { createMockUser, setMockUser, setupCommonMocks } from '../../../test-uti
 let db: Knex;
 let tenantId: string;
 let mspUserId: string;
+let mspTechnicianUserId: string;
+let mspTechnicianRoleId: string;
+let mspTechnicianPermissions = new Set<string>();
 let clientAId: string;
 let clientBId: string;
 let clientAUserId: string;
@@ -143,6 +146,33 @@ describe('document association cross-client authorization', () => {
     dbRef.knex = db;
     dbRef.tenant = tenantId;
     mspUserId = await createUser(db, tenantId, { username: `msp-${uuidv4().slice(0, 8)}` });
+    // Provision this tenant with the canonical default role catalog, then use
+    // the persisted MSP Technician role/grants for the upload regression.
+    const { getDefaultRoles } = require('../../../migrations/utils/permissions/roleGrants.cjs');
+    const defaultRoles = getDefaultRoles('psa') as Array<{ roleName: string; msp: boolean; client: boolean }>;
+    await table('roles').insert(defaultRoles.map((role) => ({
+      tenant: tenantId, role_id: uuidv4(), role_name: role.roleName, msp: role.msp, client: role.client,
+    })));
+    const { reconcileAllTenants } = require('../../../migrations/utils/permissions/reconcileTenants.cjs');
+    await reconcileAllTenants(db, {
+      label: 'document association Technician regression', tenantId, product: 'psa', apply: 'catalog', onDrift: 'throw',
+      logger: { log() {}, warn() {}, error() {} },
+    });
+    const technicianRole = await table('roles').where({ role_name: 'Technician', msp: true, client: false }).first();
+    if (!technicianRole) throw new Error('Expected the default MSP Technician role');
+    mspTechnicianRoleId = technicianRole.role_id;
+    mspTechnicianUserId = await createUser(db, tenantId, { username: `technician-${uuidv4().slice(0, 8)}` });
+    await table('user_roles').insert({ tenant: tenantId, user_id: mspTechnicianUserId, role_id: mspTechnicianRoleId });
+    const technicianGrants = await table('role_permissions as rp')
+      .join('permissions as p', function joinPermission() {
+        this.on('rp.permission_id', '=', 'p.permission_id').andOn('rp.tenant', '=', 'p.tenant');
+      })
+      .where({ 'rp.role_id': mspTechnicianRoleId })
+      .select('p.resource', 'p.action');
+    mspTechnicianPermissions = new Set(technicianGrants.map((grant: { resource: string; action: string }) => `${grant.resource}:${grant.action}`));
+    expect(mspTechnicianPermissions).toContain('document:create');
+    expect(mspTechnicianPermissions).toContain('project_task:update');
+    expect(mspTechnicianPermissions).not.toContain('project:update');
     clientAId = await createClient(db, tenantId, 'Association Client A');
     clientBId = await createClient(db, tenantId, 'Association Client B');
     clientAContactId = uuidv4();
@@ -243,7 +273,8 @@ describe('document association cross-client authorization', () => {
     if (db && tenantId) {
       await table('document_associations').whereIn('document_id', [documentAId, documentBId]).del();
       await table('documents').whereIn('document_id', [documentAId, documentBId]).del();
-      const uploadedDocuments = await table('documents').where({ created_by: mspUserId, document_name: 'msp-cross-client.txt' }).select('document_id');
+      const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId])
+        .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt']).select('document_id');
       const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
       if (uploadedIds.length) {
         await table('document_associations').whereIn('document_id', uploadedIds).del();
@@ -278,9 +309,13 @@ describe('document association cross-client authorization', () => {
       if (projects.length) await table('project_status_mappings').whereIn('project_id', projects).del();
       if (projects.length) await table('projects').whereIn('project_id', projects).del();
       await table('statuses').where('created_by', mspUserId).andWhere('status_type', 'project').del();
-      await table('users').whereIn('user_id', [clientAUserId, clientBUserId]).del();
+      await table('user_roles').where({ user_id: mspTechnicianUserId }).del();
+      await table('users').whereIn('user_id', [clientAUserId, clientBUserId, mspTechnicianUserId]).del();
       await table('contacts').whereIn('client_id', [clientAId, clientBId]).del();
       await table('clients').whereIn('client_id', [clientAId, clientBId]).del();
+      await table('role_permissions').where({ tenant: tenantId }).del();
+      await table('roles').where({ tenant: tenantId }).del();
+      await table('permissions').where({ tenant: tenantId }).del();
     }
     await db?.destroy();
   });
@@ -294,8 +329,8 @@ describe('document association cross-client authorization', () => {
       tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
       entity_type: 'client', entity_id: clientAId, created_at: new Date(),
     });
-    const uploadedDocuments = await table('documents').where({ created_by: mspUserId })
-      .whereIn('document_name', ['msp-cross-client.txt', 'folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
+    const uploadedDocuments = await table('documents').whereIn('created_by', [mspUserId, mspTechnicianUserId])
+      .whereIn('document_name', ['msp-cross-client.txt', 'technician-task-upload.txt', 'folder-concurrent-a.txt', 'folder-concurrent-b.txt'])
       .select('document_id', 'file_id');
     const uploadedIds = uploadedDocuments.map((document: { document_id: string }) => document.document_id);
     const uploadedFileIds = [...new Set([
@@ -328,7 +363,7 @@ describe('document association cross-client authorization', () => {
     });
     const clientPermissions = new Set([
       'document:read', 'document:create', 'document:update', 'client:read', 'contact:read', 'ticket:read',
-      'asset:read', 'project:read', 'project:update', 'billing:read', 'billing:update', 'opportunities:read', 'opportunities:update',
+      'asset:read', 'project:read', 'project:update', 'project_task:update', 'billing:read', 'billing:update', 'opportunities:read', 'opportunities:update',
     ]);
     setMockUser(clientUser, [...clientPermissions]);
     setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser, permissionCheck: (_user, resource, action) => clientPermissions.has(`${resource}:${action}`) });
@@ -472,7 +507,7 @@ describe('document association cross-client authorization', () => {
 
     const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
     const mspPermissions = new Set([
-      'document:read', 'document:create', 'document:update', 'project:read', 'project:update', 'billing:read',
+      'document:read', 'document:create', 'document:update', 'project:read', 'project:update', 'project_task:update', 'billing:read',
       'billing:update', 'opportunities:read', 'opportunities:update',
     ]);
     setMockUser(mspUser, [...mspPermissions]);
@@ -527,11 +562,64 @@ describe('document association cross-client authorization', () => {
     expect(await table('document_associations').where({ document_id: uploaded.document_id, entity_id: taskBId })).toHaveLength(1);
   });
 
+  it('lets the default MSP Technician upload to an authorized task without project:update', async () => {
+    const technician = createMockUser('internal', {
+      user_id: mspTechnicianUserId, tenant: tenantId,
+      roles: [{ role_id: mspTechnicianRoleId, role_name: 'Technician' }],
+    });
+    setMockUser(technician, [...mspTechnicianPermissions]);
+    setupCommonMocks({
+      tenantId, userId: mspTechnicianUserId, user: technician,
+      permissionCheck: (_user, resource, action) => mspTechnicianPermissions.has(`${resource}:${action}`),
+    });
+    const authModule = await import('@alga-psa/auth');
+    const { hasPermission: hasPersistedPermission } = await import('@alga-psa/authorization/rbac');
+    vi.mocked(authModule.hasPermission).mockImplementation((user, resource, action, connection) =>
+      hasPersistedPermission(user, resource, action, connection));
+
+    expect(mspTechnicianPermissions).toContain('document:create');
+    expect(mspTechnicianPermissions).toContain('project_task:update');
+    expect(mspTechnicianPermissions).not.toContain('project:update');
+    expect(await hasPersistedPermission(technician, 'document', 'create', db)).toBe(true);
+    expect(await hasPersistedPermission(technician, 'project_task', 'update', db)).toBe(true);
+    expect(await hasPersistedPermission(technician, 'project', 'update', db)).toBe(false);
+
+    const storageFileId = uuidv4();
+    mspStorageProviderId = uuidv4();
+    mspStorageConfigurationId = uuidv4();
+    await table('storage_providers').insert({
+      tenant: tenantId, provider_id: mspStorageProviderId, provider_type: 'local', provider_name: 'Technician regression storage', config: {},
+    });
+    await table('storage_configurations').insert({
+      tenant: tenantId, configuration_id: mspStorageConfigurationId, provider_id: mspStorageProviderId,
+      name: 'Technician regression storage', path: '/', is_default: true,
+    });
+    await table('external_files').insert({
+      tenant: tenantId, file_id: storageFileId, file_name: 'technician-task-upload.txt',
+      original_name: 'technician-task-upload.txt', mime_type: 'text/plain', file_size: 29,
+      storage_path: `test/${storageFileId}`, uploaded_by_id: mspTechnicianUserId,
+    });
+    trackedStorageFileIds.push(storageFileId);
+    storageMocks.uploadFile.mockResolvedValueOnce({ file_id: storageFileId, storage_path: `test/${storageFileId}` });
+    const form = new FormData();
+    form.set('file', new File(['Technician task attachment'], 'technician-task-upload.txt', { type: 'text/plain' }));
+
+    const result = await uploadDocument(form, { userId: mspTechnicianUserId, projectTaskId: taskAId });
+    expect(result).toHaveProperty('success', true);
+    const persisted = await table('documents')
+      .where({ created_by: mspTechnicianUserId, document_name: 'technician-task-upload.txt' }).first();
+    expect(persisted).toBeDefined();
+    if (!persisted) throw new Error('Expected the Technician document to persist');
+    expect(await table('document_associations').where({
+      document_id: persisted.document_id, entity_type: 'project_task', entity_id: taskAId,
+    })).toHaveLength(1);
+  });
+
   it('requires document:update for association mutations and parent-document uploads even when read/create are granted', async () => {
     const clientUser = createMockUser('client', {
       user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
     });
-    const grants = new Set(['document:read', 'document:create', 'project:update']);
+    const grants = new Set(['document:read', 'document:create', 'project:update', 'project_task:update']);
     setMockUser(clientUser, [...grants]);
     setupCommonMocks({
       tenantId, userId: clientAUserId, user: clientUser,
@@ -567,7 +655,7 @@ describe('document association cross-client authorization', () => {
       user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
     });
     const grants = new Set([
-      'document:read', 'document:create', 'document:update', 'project:read', 'project:update',
+      'document:read', 'document:create', 'document:update', 'project:read', 'project:update', 'project_task:update',
     ]);
     setMockUser(clientUser, [...grants]);
     setupCommonMocks({
@@ -719,7 +807,7 @@ describe('document association cross-client authorization', () => {
     const clientUser = createMockUser('client', {
       user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
     });
-    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update']);
+    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update', 'project_task:update']);
     setMockUser(clientUser, [...grants]);
     setupCommonMocks({
       tenantId, userId: clientAUserId, user: clientUser,
@@ -768,7 +856,7 @@ describe('document association cross-client authorization', () => {
 
   it('completes concurrent first uploads through one entity-folder initialization and retains both files', async () => {
     const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
-    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update']);
+    const grants = new Set(['document:read', 'document:create', 'document:update', 'project:update', 'project_task:update']);
     setMockUser(mspUser, [...grants]);
     setupCommonMocks({
       tenantId, userId: mspUserId, user: mspUser,

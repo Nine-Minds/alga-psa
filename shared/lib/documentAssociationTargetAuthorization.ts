@@ -265,7 +265,7 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     permissionResource: 'project',
     scopeSearch: projectTaskSearchScope,
     assertTarget: async (conn, tenant, user, id, action) => {
-      if (!await hasTargetPermission(user, 'project', action, conn)) return false;
+      if (!await hasTargetPermission(user, 'project_task', action, conn)) return false;
       const row = await dbTable(conn, tenant, 'project_tasks as pt')
         .leftJoin('project_phases as pp', function joinPhase() {
           this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
