@@ -5,7 +5,8 @@
     "quoting": "Offerter",
     "tax": "Skatt",
     "payments": "Betalningar",
-    "costRates": "Timkostnader"
+    "costRates": "Timkostnader",
+    "priceBooks": "Prislistor"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Det gick inte att inaktivera tjänsten"
     },
     "emptySearch": "Inga tjänster matchar din sökning.",
-    "clearFilters": "Rensa filter"
+    "clearFilters": "Rensa filter",
+    "removePrices": {
+      "title": "Ta bort historiska priser",
+      "message": "Detta tar bort {{count}} historiskt/historiska pris för den borttagna valutan.",
+      "messageWithBooks": "Detta tar bort {{count}} historiskt/historiska pris, inklusive prislistan {{names}}.",
+      "confirm": "Ta bort priser"
+    }
   },
   "products": {
     "title": "Produkter",
@@ -1842,6 +1849,169 @@
       "exact": "Exakt matchning",
       "differs": "Avviker från katalogen",
       "needsDecision": "Kräver ett beslut"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Förkasta",
+      "download": "Ladda ned",
+      "makeActiveAgain": "Gör aktiv igen",
+      "menu": "Åtgärder för prislista",
+      "newFromCsv": "Ny prislista från CSV",
+      "withdraw": "Dra tillbaka"
+    },
+    "columns": {
+      "appliedAt": "Tillämpad",
+      "appliedBy": "Tillämpad av",
+      "currencies": "Valutor",
+      "effectiveDate": "Ikraftträdandedatum",
+      "items": "Artiklar",
+      "name": "Namn",
+      "status": "Status"
+    },
+    "confirm": {
+      "discardMessage": "Förkasta utkastet \"{{name}}\"?",
+      "discardTitle": "Förkasta utkast",
+      "withdrawMessage": "Dra tillbaka \"{{name}}\"? Dess priser har inte trätt i kraft ännu och tas bort.",
+      "withdrawTitle": "Dra tillbaka prislista"
+    },
+    "description": "En prislista är en namngiven, daterad uppsättning katalogpriser. Den aktiva är den senaste vars datum har inträffat.",
+    "errors": {
+      "discardFailed": "Det gick inte att förkasta prislistan.",
+      "makeActiveFailed": "Det gick inte att skapa prislistan.",
+      "notApplied": "Endast en tillämpad prislista kan göras aktiv igen.",
+      "notEnabled": "Prislistor är inte aktiverade för det här kontot.",
+      "notFound": "Prislistan hittades inte.",
+      "permissionDenied": "Du har inte behörighet att göra detta.",
+      "withdrawFailed": "Det gick inte att dra tillbaka prislistan."
+    },
+    "import": {
+      "apply": "Tillämpa prislista",
+      "applying": "Tillämpar prislistan…",
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "config": {
+        "billingMethod": "Faktureringsmetod för nya tjänster",
+        "method": {
+          "fixed": "Fast",
+          "hourly": "Per timme",
+          "usage": "Användning"
+        },
+        "save": "Uppdatera förhandsgranskning",
+        "serviceType": "Tjänstetyp för nya artiklar",
+        "serviceTypePlaceholder": "Välj en tjänstetyp",
+        "required": "Några rader skapar nya artiklar. Välj en tjänstetyp nedan (och en faktureringsmetod för nya tjänster) och välj sedan Uppdatera förhandsgranskning."
+      },
+      "errors": {
+        "slow": "Importen pågår fortfarande. Kontrollera prislistan om en stund.",
+        "unreadable": "Filen kunde inte läsas. Kontrollera att det är en CSV- eller XLSX-fil med rubrikrad.",
+        "applyFailed": "Prislistan kunde inte tillämpas. Inget sparades. Försök igen eller kontakta din administratör om felet kvarstår."
+      },
+      "impact": {
+        "columns": {
+          "client": "Kund",
+          "contract": "Avtal",
+          "line": "Rad",
+          "rate": "Pris"
+        },
+        "custom": "Behåll anpassat pris",
+        "excluded": "Undantagna",
+        "monthly": "Förändring av månadsintäkt ({{currency}}): {{amount}}",
+        "title": "Påverkan på avtal",
+        "unreviewed": "Inte granskade ännu",
+        "willChange": "Kommer att ändras"
+      },
+      "kind": {
+        "product": "Produkt",
+        "service": "Tjänst"
+      },
+      "map": {
+        "help": "Kontrollera vilken kolumn som innehåller vad. Kolumner satta till \"Ignorera\" importeras inte.",
+        "ignore": "Ignorera",
+        "mapsTo": "Mappas till",
+        "preview": "Förhandsgranska",
+        "required": "Mappa en priskolumn och minst en av SKU, namn eller artikelreferens.",
+        "sampleValues": "Exempelvärden",
+        "sourceColumn": "Kolumn i filen"
+      },
+      "next": "Nästa",
+      "outcome": {
+        "ambiguous": "Tvetydig",
+        "conflict": "Konflikt",
+        "create": "Skapa",
+        "invalid": "Ogiltig",
+        "unchanged": "Oförändrad",
+        "unmatched": "Ingen matchning",
+        "update": "Uppdatera"
+      },
+      "preview": {
+        "allOutcomes": "Alla utfall",
+        "blocked": "{{count}} rader kommer inte att importeras. Rätta filen och ladda upp den igen, eller tillämpa resten.",
+        "columns": {
+          "change": "Ändring",
+          "currency": "Valuta",
+          "current": "Nuvarande pris",
+          "item": "Artikel",
+          "kind": "Typ",
+          "new": "Nytt pris",
+          "outcome": "Utfall",
+          "row": "Rad"
+        },
+        "noWrites": "Detta är en förhandsgranskning. Inget har skrivits till katalogen ännu."
+      },
+      "result": {
+        "blocked": "Inte importerade",
+        "created": "Skapade",
+        "done": "Klart",
+        "download": "Ladda ned rapport",
+        "failed": "Misslyckade",
+        "pending": "Väntande",
+        "unchanged": "Oförändrade",
+        "updated": "Uppdaterade"
+      },
+      "targets": {
+        "category": "Kategori",
+        "cost": "Kostnad",
+        "cost_currency": "Kostnadsvaluta",
+        "currency": "Valuta",
+        "description": "Beskrivning",
+        "is_active": "Aktiv",
+        "item_kind": "Typ (produkt eller tjänst)",
+        "item_ref": "Artikelreferens",
+        "name": "Namn",
+        "price": "Pris",
+        "priceIn": "Pris i {{currency}}",
+        "service_type": "Tjänstetyp",
+        "sku": "SKU",
+        "unit_of_measure": "Måttenhet"
+      },
+      "title": "Ny prislista från CSV",
+      "upload": {
+        "currency": "Valuta för tomma valutaceller",
+        "effectiveDate": "Ikraftträdandedatum",
+        "file": "CSV- eller XLSX-fil",
+        "name": "Prislistans namn",
+        "namePlaceholder": "t.ex. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Skapa prislista",
+      "date": "Ikraftträdandedatum",
+      "help": "Detta skapar en ny prislista med priserna från \"{{name}}\". Originalet ändras inte.",
+      "impact": "{{willChange}} avtalsrader kommer att ändras, {{custom}} behåller ett anpassat pris, {{unreviewed}} är inte granskade ännu.",
+      "name": "Ny prislistas namn",
+      "title": "Gör prislista aktiv igen"
+    },
+    "status": {
+      "active": "Aktiv",
+      "draft": "Utkast",
+      "scheduled": "Schemalagd",
+      "superseded": "Ersatt"
+    },
+    "toast": {
+      "discarded": "Utkast förkastat.",
+      "reactivated": "Prislista skapad.",
+      "withdrawn": "Prislista tillbakadragen."
     }
   }
 }

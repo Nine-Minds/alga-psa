@@ -2562,7 +2562,9 @@
         "unknown": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "loadJobs": "Migrationsjobs konnten nicht geladen werden.",
         "loadJob": "Der Migrationsjob konnte nicht geladen werden.",
-        "jobNotFound": "Migrationsjob nicht gefunden."
+        "jobNotFound": "Migrationsjob nicht gefunden.",
+        "priceBookInvalid": "Die Preisliste konnte nicht erstellt werden. Prüfen Sie den Namen, dass das Gültigkeitsdatum heute oder später liegt und dass der Name nicht bereits mit einem anderen Datum verwendet wird.",
+        "priceBookPermissionDenied": "Zum Import einer Preisliste benötigen Sie die Berechtigung, Abrechnungsdaten einzusehen."
       },
       "preflight": {
         "title": "Vorprüfung",

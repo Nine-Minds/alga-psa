@@ -43628,7 +43628,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -43656,7 +43658,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -43866,7 +43870,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -43894,7 +43900,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -44373,7 +44381,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -44401,7 +44411,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -44715,7 +44727,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",
@@ -44743,7 +44757,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant": {},
               "created_at": {},
               "updated_at": {},
-              "display_order": {}
+              "display_order": {},
+              "price_book_id": {},
+              "created_by": {}
             },
             "required": [
               "currency_code",

@@ -214,6 +214,7 @@ export function resolveQboItems(
   }
   const mappedServiceToExternal = new Map(existingMappings.map((m) => [m.alga_entity_id, m.external_entity_id]));
   const serviceById = new Map(existingServices.map((s) => [s.service_id, s]));
+  // LEVERAGE: pattern catalog-item-key — a Map keyed by name silently lets the last duplicate win; resolveCatalogItemKey (lib/catalog/catalogItemKey.ts) treats two matches as ambiguous. QBO can adopt it.
   const serviceByName = new Map(existingServices.map((s) => [normalizedName(s.service_name), s]));
   const productBySku = new Map(
     existingServices

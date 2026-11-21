@@ -5,7 +5,8 @@
     "quoting": "Zitieren",
     "tax": "Steuer",
     "payments": "Zahlungen",
-    "costRates": "Kostensätze"
+    "costRates": "Kostensätze",
+    "priceBooks": "Preislisten"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Der Dienst konnte nicht deaktiviert werden"
     },
     "emptySearch": "Keine Dienste entsprechen Ihrer Suche.",
-    "clearFilters": "Filter zurücksetzen"
+    "clearFilters": "Filter zurücksetzen",
+    "removePrices": {
+      "title": "Historische Preise entfernen",
+      "message": "Dadurch werden {{count}} historische(r) Preis(e) der entfernten Währung gelöscht.",
+      "messageWithBooks": "Dadurch werden {{count}} historische(r) Preis(e) gelöscht, darunter die Preisliste {{names}}.",
+      "confirm": "Preise entfernen"
+    }
   },
   "products": {
     "title": "Produkte",
@@ -1842,6 +1849,169 @@
       "exact": "Exakte Übereinstimmung",
       "differs": "Vom Katalog abweichend",
       "needsDecision": "Entscheidung erforderlich"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Verwerfen",
+      "download": "Herunterladen",
+      "makeActiveAgain": "Wieder aktivieren",
+      "menu": "Preislisten-Aktionen",
+      "newFromCsv": "Neue Preisliste aus CSV",
+      "withdraw": "Zurückziehen"
+    },
+    "columns": {
+      "appliedAt": "Angewendet",
+      "appliedBy": "Angewendet von",
+      "currencies": "Währungen",
+      "effectiveDate": "Gültig ab",
+      "items": "Positionen",
+      "name": "Name",
+      "status": "Status"
+    },
+    "confirm": {
+      "discardMessage": "Den Entwurf „{{name}}“ verwerfen?",
+      "discardTitle": "Entwurf verwerfen",
+      "withdrawMessage": "„{{name}}“ zurückziehen? Die Preise sind noch nicht in Kraft getreten und werden entfernt.",
+      "withdrawTitle": "Preisliste zurückziehen"
+    },
+    "description": "Eine Preisliste ist ein benannter, datierter Satz von Katalogpreisen. Aktiv ist die neueste, deren Datum erreicht ist.",
+    "errors": {
+      "discardFailed": "Die Preisliste konnte nicht verworfen werden.",
+      "makeActiveFailed": "Die Preisliste konnte nicht erstellt werden.",
+      "notApplied": "Nur eine angewendete Preisliste kann wieder aktiviert werden.",
+      "notEnabled": "Preislisten sind für dieses Konto nicht aktiviert.",
+      "notFound": "Preisliste nicht gefunden.",
+      "permissionDenied": "Sie haben dafür keine Berechtigung.",
+      "withdrawFailed": "Die Preisliste konnte nicht zurückgezogen werden."
+    },
+    "import": {
+      "apply": "Preisliste anwenden",
+      "applying": "Preisliste wird angewendet…",
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "config": {
+        "billingMethod": "Abrechnungsmethode für neue Services",
+        "method": {
+          "fixed": "Pauschal",
+          "hourly": "Stundenbasiert",
+          "usage": "Nutzungsbasiert"
+        },
+        "save": "Vorschau aktualisieren",
+        "serviceType": "Servicetyp für neue Positionen",
+        "serviceTypePlaceholder": "Servicetyp auswählen",
+        "required": "Einige Zeilen legen neue Positionen an. Wählen Sie unten einen Servicetyp (und für neue Services eine Abrechnungsmethode) und klicken Sie dann auf „Vorschau aktualisieren“."
+      },
+      "errors": {
+        "slow": "Der Import läuft noch. Prüfen Sie die Preislistenübersicht gleich noch einmal.",
+        "unreadable": "Die Datei konnte nicht gelesen werden. Prüfen Sie, ob es eine CSV- oder XLSX-Datei mit Kopfzeile ist.",
+        "applyFailed": "Die Preisliste konnte nicht angewendet werden. Es wurde nichts gespeichert. Versuchen Sie es erneut oder wenden Sie sich an Ihren Administrator, wenn der Fehler bestehen bleibt."
+      },
+      "impact": {
+        "columns": {
+          "client": "Kunde",
+          "contract": "Vertrag",
+          "line": "Zeile",
+          "rate": "Preis"
+        },
+        "custom": "Eigenen Preis beibehalten",
+        "excluded": "Ausgeschlossen",
+        "monthly": "Monatliche Umsatzänderung ({{currency}}): {{amount}}",
+        "title": "Auswirkung auf Verträge",
+        "unreviewed": "Noch nicht geprüft",
+        "willChange": "Wird sich ändern"
+      },
+      "kind": {
+        "product": "Produkt",
+        "service": "Dienst"
+      },
+      "map": {
+        "help": "Prüfen Sie, welche Spalte was enthält. Auf „Ignorieren“ gesetzte Spalten werden nicht importiert.",
+        "ignore": "Ignorieren",
+        "mapsTo": "Zuordnung zu",
+        "preview": "Vorschau",
+        "required": "Ordnen Sie eine Preisspalte und mindestens eines von SKU, Name oder Positionsreferenz zu.",
+        "sampleValues": "Beispielwerte",
+        "sourceColumn": "Spalte in der Datei"
+      },
+      "next": "Weiter",
+      "outcome": {
+        "ambiguous": "Mehrdeutig",
+        "conflict": "Konflikt",
+        "create": "Erstellen",
+        "invalid": "Ungültig",
+        "unchanged": "Unverändert",
+        "unmatched": "Nicht zugeordnet",
+        "update": "Aktualisieren"
+      },
+      "preview": {
+        "allOutcomes": "Alle Ergebnisse",
+        "blocked": "{{count}} Zeilen werden nicht importiert. Korrigieren Sie die Datei und laden Sie sie erneut hoch, oder wenden Sie den Rest an.",
+        "columns": {
+          "change": "Änderung",
+          "currency": "Währung",
+          "current": "Aktueller Preis",
+          "item": "Position",
+          "kind": "Art",
+          "new": "Neuer Preis",
+          "outcome": "Ergebnis",
+          "row": "Zeile"
+        },
+        "noWrites": "Dies ist eine Vorschau. Es wurde noch nichts in den Katalog geschrieben."
+      },
+      "result": {
+        "blocked": "Nicht importiert",
+        "created": "Erstellt",
+        "done": "Fertig",
+        "download": "Bericht herunterladen",
+        "failed": "Fehlgeschlagen",
+        "pending": "Ausstehend",
+        "unchanged": "Unverändert",
+        "updated": "Aktualisiert"
+      },
+      "targets": {
+        "category": "Kategorie",
+        "cost": "Kosten",
+        "cost_currency": "Kostenwährung",
+        "currency": "Währung",
+        "description": "Beschreibung",
+        "is_active": "Aktiv",
+        "item_kind": "Typ (Produkt oder Service)",
+        "item_ref": "Positionsreferenz",
+        "name": "Name",
+        "price": "Preis",
+        "priceIn": "Preis in {{currency}}",
+        "service_type": "Servicetyp",
+        "sku": "SKU",
+        "unit_of_measure": "Maßeinheit"
+      },
+      "title": "Neue Preisliste aus CSV",
+      "upload": {
+        "currency": "Währung für leere Währungszellen",
+        "effectiveDate": "Gültig ab",
+        "file": "CSV- oder XLSX-Datei",
+        "name": "Name der Preisliste",
+        "namePlaceholder": "z. B. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Preisliste erstellen",
+      "date": "Gültig ab",
+      "help": "Dies erstellt eine neue Preisliste mit den Preisen von „{{name}}“. Das Original bleibt unverändert.",
+      "impact": "{{willChange}} Vertragszeilen ändern sich, {{custom}} behalten einen eigenen Preis, {{unreviewed}} sind noch nicht geprüft.",
+      "name": "Name der neuen Preisliste",
+      "title": "Preisliste wieder aktivieren"
+    },
+    "status": {
+      "active": "Aktiv",
+      "draft": "Entwurf",
+      "scheduled": "Geplant",
+      "superseded": "Ersetzt"
+    },
+    "toast": {
+      "discarded": "Entwurf verworfen.",
+      "reactivated": "Preisliste erstellt.",
+      "withdrawn": "Preisliste zurückgezogen."
     }
   }
 }

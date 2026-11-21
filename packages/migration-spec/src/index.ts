@@ -9,6 +9,8 @@ export {
   AMP_DIAGNOSTIC_SEVERITIES,
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   AMP_ASSUMED_CURRENCY_EXTENSION_KEY,
+  AMP_PRICE_TEXT_EXTENSION_KEY,
+  AMP_PRICE_ERROR_EXTENSION_KEY,
 } from './tables';
 export type { AmpEntityType, AmpAuxiliaryTable, AmpTable } from './tables';
 
@@ -44,6 +46,8 @@ export type {
   AmpTicketCommentRecord,
   AmpAssetRecord,
   AmpProductRecord,
+  AmpServiceRecord,
+  AmpCatalogPriceRecord,
   AmpVendorProductRecord,
   AmpExternalIdentifierRecord,
   AmpCustomFieldValueRecord,

@@ -9,6 +9,7 @@ import {
   type ScheduledServicePriceInput,
   type ServicePriceInput,
 } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
+import { createServiceCore, ServiceCatalogCoreError } from '@alga-psa/billing/lib/catalog/serviceCatalogCore';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -263,79 +264,22 @@ export class ServiceCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    const { custom_service_type_id } = data;
-
     const rawData = data as any;
-    const {
-      currency_code,
-      prices,
-      scheduled_prices: scheduledPrices,
-      ...serviceInput
-    } = rawData as {
+    const { currency_code, ...serviceInput } = rawData as {
       currency_code?: unknown;
-      prices?: ServicePriceInput[];
-      scheduled_prices?: ScheduledServicePriceInput[];
       [key: string]: any;
     };
     rejectTopLevelCurrencyCode(currency_code);
-    // default_rate is the mirror of the primary price; derive it from prices[0]
-    // so a create that only sends prices does not need to repeat the rate.
-    if (serviceInput.default_rate === undefined && prices && prices.length > 0) {
-      serviceInput.default_rate = prices[0].rate;
-    }
 
-    // Resolve inherited defaults and units in the transaction, holding the
-    // documented rate/region locks until the catalog row is persisted.
     // Publication happens only after commit so search consumers can read it.
     const createdResult = await withTransaction(knex, async (trx) => {
-      if (custom_service_type_id) {
-        const serviceType = await tenantDb(trx, tenant).table('service_types')
-          .where('id', custom_service_type_id)
-          .first();
-        if (!serviceType) {
-          throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
-        }
+      try {
+        return await createServiceCore(trx, tenant, serviceInput);
+      } catch (error) {
+        if (error instanceof ServiceCatalogCoreError) throw new ValidationError(error.message);
+        if (isServiceCatalogPricingError(error)) throw new ValidationError(error.message, { issues: error.issues });
+        throw error;
       }
-
-      const serviceData = {
-        category_id: serviceInput.category_id ?? null,
-        ...serviceInput,
-        ...(await resolveCatalogUnitForCreate(trx, tenant, serviceInput)),
-        tenant,
-        default_rate: typeof serviceInput.default_rate === 'string'
-          ? parseFloat(serviceInput.default_rate) || 0
-          : serviceInput.default_rate,
-        // Omitted inherits the tenant default; explicit null stays non-taxable.
-        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
-          trx,
-          tenant,
-          serviceInput.tax_rate_id,
-          undefined,
-          { lock: true },
-        ),
-      };
-
-      const [created] = await tenantDb(trx, tenant).table('service_catalog')
-        .insert(serviceData)
-        .returning('*');
-
-      if (prices !== undefined || scheduledPrices !== undefined) {
-        await writePricing(trx, tenant, created.service_id, {
-          current: prices,
-          scheduled: scheduledPrices,
-          defaultRate: serviceInput.default_rate === undefined ? undefined : Number(serviceInput.default_rate),
-        });
-      }
-
-      return {
-        serviceId: created.service_id,
-        itemKind: created.item_kind,
-        changedFields: [
-          ...Object.keys(serviceData),
-          ...(prices !== undefined ? ['prices'] : []),
-          ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
-        ],
-      };
     });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {

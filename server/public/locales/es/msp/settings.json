@@ -2562,7 +2562,9 @@
         "unknown": "La carga falló. Inténtelo de nuevo.",
         "loadJobs": "No se pudieron cargar los trabajos de migración.",
         "loadJob": "No se pudo cargar el trabajo de migración.",
-        "jobNotFound": "No se encontró el trabajo de migración."
+        "jobNotFound": "No se encontró el trabajo de migración.",
+        "priceBookInvalid": "No se pudo crear la lista de precios. Compruebe el nombre, que la fecha de vigencia sea hoy o posterior y que el nombre no se use ya con otra fecha.",
+        "priceBookPermissionDenied": "Necesita permiso para ver la facturación para importar una lista de precios."
       },
       "preflight": {
         "title": "Verificación previa",

@@ -412,6 +412,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_catalog_mode_defaults',
   'service_rate_tiers',
   'service_prices',
+  'catalog_price_books',
   'contract_line_discounts',
   'contract_discount_assignments',
   'discounts',

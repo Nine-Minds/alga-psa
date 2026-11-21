@@ -14,6 +14,8 @@ export const AMP_ENTITY_TABLES = [
   'ticket_comments',
   'assets',
   'products',
+  'services',
+  'catalog_prices',
   'vendor_products',
 ] as const;
 
@@ -129,6 +131,28 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'description',
     'is_active',
   ],
+  services: [
+    ...AMP_ENTITY_IDENTITY_COLUMNS,
+    'name',
+    'sku',
+    'service_type_name',
+    'category_name',
+    'unit_of_measure',
+    'description',
+    'is_active',
+  ],
+  catalog_prices: [
+    ...AMP_ENTITY_IDENTITY_COLUMNS,
+    'product_package_record_id',
+    'service_package_record_id',
+    'item_kind',
+    'item_ref',
+    'sku',
+    'name',
+    'service_type_name',
+    'currency',
+    'rate_minor',
+  ],
   vendor_products: [
     ...AMP_ENTITY_IDENTITY_COLUMNS,
     'product_package_record_id',
@@ -194,6 +218,11 @@ export const AMP_ENTITY_REFERENCES: Record<
     { column: 'location_package_record_id', targetTable: 'locations', required: false },
   ],
   products: [],
+  services: [],
+  catalog_prices: [
+    { column: 'product_package_record_id', targetTable: 'products', required: false },
+    { column: 'service_package_record_id', targetTable: 'services', required: false },
+  ],
   // product_package_record_id is optional at the reference level because a row
   // may instead carry product_sku (matched against the tenant catalog at apply
   // time); the validator enforces "one of the two".
@@ -220,3 +249,14 @@ export const AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY = '__contact_client_name';
  * tenant currency at apply time differs, since the minor-unit scale could differ.
  */
 export const AMP_ASSUMED_CURRENCY_EXTENSION_KEY = '__assumed_currency';
+
+/**
+ * Reserved `extension_json` keys set by the price book spreadsheet producer on a
+ * `catalog_prices` record whose price could not be read. `rate_minor` is then
+ * null, `__price_text` carries the original cell text and `__price_error` the
+ * reason: `currency_unresolved` (no row currency and no job/tenant currency),
+ * `currency_unsupported`, `negative`, `precision`, `invalid` or `overflow`.
+ * The planner reports such a row as invalid instead of silently dropping it.
+ */
+export const AMP_PRICE_TEXT_EXTENSION_KEY = '__price_text';
+export const AMP_PRICE_ERROR_EXTENSION_KEY = '__price_error';

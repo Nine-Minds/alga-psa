@@ -56,6 +56,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   onImportComplete,
 }) => {
   const { t } = useTranslation('msp/contacts');
+  // LEVERAGE: pattern spreadsheet-column-mapping — hand-rolled header-to-field mapping step; see SpreadsheetColumnMappingStep (packages/ui), used first by the price book import.
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'results' | 'complete'>('upload');
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
   const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);

@@ -25,6 +25,8 @@ vi.mock("next/dynamic", () => ({
 
 vi.mock("@alga-psa/ui/hooks", () => ({
   useCollapsiblePreference: (...args: unknown[]) => useCollapsiblePreferenceMock(...args),
+  // The Price books tab is flag-gated; these tests run with the flag off.
+  useFeatureFlag: () => false,
 }));
 
 vi.mock("@alga-psa/ui/lib/i18n/client", () => ({

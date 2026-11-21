@@ -2,6 +2,7 @@ import { AMP_TABLE_COLUMNS, type AmpEntityType } from '@alga-psa/migration-spec'
 import { CLIENT_NAME_COLUMN, FULL_NAME_COLUMN, MONEY_COLUMN_CURRENCY } from './engine';
 
 const MONEY_COLUMNS: ReadonlySet<string> = new Set(Object.keys(MONEY_COLUMN_CURRENCY));
+import { isSupportedCurrency } from '@alga-psa/core/formatters';
 import { parseSpreadsheet } from './parse';
 
 /** Normalized source header -> canonical AMP column (or an engine sentinel). */
@@ -151,11 +152,65 @@ const VENDOR_PRODUCT_ALIASES: AliasTable = {
   preferred_vendor: 'is_preferred',
 };
 
+/** Service aliases: a services sheet is a price list of non-stock items. */
+const SERVICE_ALIASES: AliasTable = {
+  service: 'name',
+  service_name: 'name',
+  name: 'name',
+  item_name: 'name',
+  item: 'name',
+  title: 'name',
+  sku: 'sku',
+  service_sku: 'sku',
+  item_number: 'sku',
+  item_no: 'sku',
+  service_type: 'service_type_name',
+  service_type_name: 'service_type_name',
+  category: 'category_name',
+  uom: 'unit_of_measure',
+  unit: 'unit_of_measure',
+  unit_of_measure: 'unit_of_measure',
+  description: 'description',
+  service_description: 'description',
+  active: 'is_active',
+  is_active: 'is_active',
+  enabled: 'is_active',
+};
+
+/** Catalog price aliases: one row per (item, currency). */
+const CATALOG_PRICE_ALIASES: AliasTable = {
+  item_ref: 'item_ref',
+  alga_item_ref: 'item_ref',
+  sku: 'sku',
+  item_number: 'sku',
+  part_number: 'sku',
+  name: 'name',
+  item_name: 'name',
+  service: 'name',
+  service_name: 'name',
+  product_name: 'name',
+  type: 'item_kind',
+  kind: 'item_kind',
+  item_type: 'item_kind',
+  item_kind: 'item_kind',
+  service_type: 'service_type_name',
+  service_type_name: 'service_type_name',
+  currency: 'currency',
+  price_currency: 'currency',
+  price: 'rate_minor',
+  list_price: 'rate_minor',
+  sell_price: 'rate_minor',
+  unit_price: 'rate_minor',
+  rate: 'rate_minor',
+};
+
 const ENTITY_ALIASES: Partial<Record<AmpEntityType, AliasTable>> = {
   assets: ASSET_ALIASES,
   contacts: CONTACT_ALIASES,
   organizations: ORGANIZATION_ALIASES,
   products: PRODUCT_ALIASES,
+  services: SERVICE_ALIASES,
+  catalog_prices: CATALOG_PRICE_ALIASES,
   vendor_products: VENDOR_PRODUCT_ALIASES,
 };
 
@@ -197,4 +252,129 @@ export async function inferSpreadsheetMapping(path: string, entityType: AmpEntit
       return [];
     })
   );
+}
+
+/**
+ * Targets of the price book profile: one spreadsheet that fans out to products,
+ * services and catalog prices. `price:<CCY>` is a price column for one currency
+ * (`Price USD`, `Price CAD`, ...), so a sheet can carry several.
+ */
+export const PRICE_BOOK_TARGETS = [
+  'item_kind',
+  'item_ref',
+  'sku',
+  'name',
+  'service_type',
+  'price',
+  'currency',
+  'cost',
+  'cost_currency',
+  'unit_of_measure',
+  'description',
+  'category',
+  'is_active',
+] as const;
+
+const PRICE_COLUMN_TARGET = /^price:([A-Z]{3})$/;
+
+/** True for a price book target, including `price:<CCY>` of a supported currency. */
+export function isPriceBookTarget(target: string): boolean {
+  if ((PRICE_BOOK_TARGETS as readonly string[]).includes(target)) return true;
+  const match = PRICE_COLUMN_TARGET.exec(target);
+  return match !== null && isSupportedCurrency(match[1]);
+}
+
+/** The currency of a `price:<CCY>` target, or null for any other target. */
+export function priceColumnCurrency(target: string): string | null {
+  const match = PRICE_COLUMN_TARGET.exec(target);
+  return match ? match[1] : null;
+}
+
+const PRICE_BOOK_ALIASES: AliasTable = {
+  type: 'item_kind',
+  kind: 'item_kind',
+  item_type: 'item_kind',
+  item_kind: 'item_kind',
+  item_ref: 'item_ref',
+  alga_item_ref: 'item_ref',
+  sku: 'sku',
+  item_number: 'sku',
+  item_no: 'sku',
+  item_id: 'sku',
+  part_number: 'sku',
+  part_no: 'sku',
+  part: 'sku',
+  mpn: 'sku',
+  manufacturer_part_number: 'sku',
+  product_name: 'name',
+  item_name: 'name',
+  item: 'name',
+  product: 'name',
+  title: 'name',
+  name: 'name',
+  service: 'name',
+  service_name: 'name',
+  service_type: 'service_type',
+  service_type_name: 'service_type',
+  list_price: 'price',
+  price: 'price',
+  sell_price: 'price',
+  unit_price: 'price',
+  retail_price: 'price',
+  msrp: 'price',
+  rate: 'price',
+  currency: 'currency',
+  price_currency: 'currency',
+  cost: 'cost',
+  unit_cost: 'cost',
+  dealer_cost: 'cost',
+  buy_price: 'cost',
+  cost_currency: 'cost_currency',
+  uom: 'unit_of_measure',
+  unit: 'unit_of_measure',
+  unit_of_measure: 'unit_of_measure',
+  description: 'description',
+  part_description: 'description',
+  item_description: 'description',
+  product_description: 'description',
+  category: 'category',
+  product_category: 'category',
+  active: 'is_active',
+  is_active: 'is_active',
+  enabled: 'is_active',
+};
+
+const CURRENCY_PRICE_HEADER = /^(?:price|rate|list_price|sell_price|unit_price)_([a-z]{3})$|^([a-z]{3})_(?:price|rate)$/;
+
+/** Map one normalized header to a price book target, or undefined. */
+export function priceBookTargetForHeader(header: string): string | undefined {
+  const normalized = normalizeHeader(header);
+  const currency = CURRENCY_PRICE_HEADER.exec(normalized);
+  if (currency) {
+    const code = (currency[1] ?? currency[2]).toUpperCase();
+    if (isSupportedCurrency(code)) return `price:${code}`;
+  }
+  return PRICE_BOOK_ALIASES[normalized];
+}
+
+/**
+ * Proposes the price book mapping (header -> price book target). The first
+ * header for a target wins for single-valued targets; every `price:<CCY>`
+ * column is kept. The caller's confirmed mapping replaces this one entirely.
+ */
+export async function inferPriceBookMapping(path: string): Promise<Record<string, string>> {
+  const { headers } = await parseSpreadsheet(path);
+  return inferPriceBookMappingFromHeaders(headers);
+}
+
+export function inferPriceBookMappingFromHeaders(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const taken = new Set<string>();
+  for (const header of headers) {
+    const target = priceBookTargetForHeader(header);
+    if (!target || taken.has(target)) continue;
+    taken.add(target);
+    mapping[header] = target;
+  }
+  return mapping;
 }

@@ -140,7 +140,7 @@ describe('services REST API price writes (alga0002016)', () => {
     await db?.destroy();
   }, HOOK_TIMEOUT);
 
-  it('1. PUT prices replaces the row, syncs default_rate, and GET shows it as prices[0]', async () => {
+  it('1. PUT prices upserts at today (earlier row kept), syncs default_rate, and GET shows it as prices[0]', async () => {
     const id = await seedService({ defaultRate: 10000, prices: [{ currency_code: 'USD', rate: 10000 }] });
     const result = await put(id, { prices: [{ currency_code: 'USD', rate: 12500 }] });
     expect(result.status).toBe(200);
@@ -148,7 +148,8 @@ describe('services REST API price writes (alga0002016)', () => {
     const read = await get(id);
     expect(Number(read!.prices![0].rate)).toBe(12500);
     expect(read!.prices).toHaveLength(1);
-    expect(await rows(id)).toHaveLength(1);
+    // History is kept: the epoch row stays and the edit lands at today.
+    expect(await rows(id)).toHaveLength(2);
   }, HOOK_TIMEOUT);
 
   it('2. PUT default_rate alone rewrites the primary current row only', async () => {

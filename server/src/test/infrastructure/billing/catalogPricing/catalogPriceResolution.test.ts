@@ -16,12 +16,14 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   generateInvoiceForCycle,
+  addServiceToFixedPlan,
 } from '../../../../../test-utils/billingTestHelpers';
 import {
   previewServicePriceChange,
   applyServicePriceChange,
 } from '@alga-psa/billing/actions/servicePriceRolloutActions';
 import { updateServicePricing } from '@alga-psa/billing/actions/serviceActions';
+import { previewCatalogPriceChanges } from '@alga-psa/billing/lib/catalog/previewCatalogPriceChanges';
 import { resetContractLineRateToStandard } from '@alga-psa/billing/actions/rateReviewActions';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import {
@@ -144,6 +146,7 @@ describe('Catalog price resolution – fixed path', () => {
         'contract_line_service_configuration',
         'contract_line_service_fixed_config',
         'service_prices',
+        'catalog_price_books',
         'service_catalog',
         'contract_lines',
         'contracts',
@@ -1094,7 +1097,7 @@ describe('Catalog price resolution – fixed path', () => {
     expect(next.subtotal).toBe(12000);
   }, 120000);
 
-  it('applyServicePriceChange without an effective date replaces the current row and leaves future rows', async () => {
+  it('applyServicePriceChange without an effective date writes at today, keeps the earlier row and leaves future rows', async () => {
     const futureStart = monthStart(1);
     const { serviceId } = await seedInheritedLine('Immediate write service', 10000, monthStart(0));
     await context.db('service_prices').insert({
@@ -1111,6 +1114,8 @@ describe('Catalog price resolution – fixed path', () => {
     });
     expect(result).toEqual({ success: true });
 
+    // History is kept (pricebooks depend on it): the epoch row stays, and the
+    // edit is a new row at today.
     const epoch = await context.db('service_prices')
       .where({
         tenant: context.tenantId,
@@ -1119,7 +1124,16 @@ describe('Catalog price resolution – fixed path', () => {
         effective_date: '1970-01-01',
       })
       .first('rate');
-    expect(Number(epoch.rate)).toBe(11000);
+    expect(Number(epoch.rate)).toBe(10000);
+    const today = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: new Date().toISOString().slice(0, 10),
+      })
+      .first('rate');
+    expect(Number(today.rate)).toBe(11000);
 
     const scheduled = await context.db('service_prices')
       .where({
@@ -1251,4 +1265,130 @@ describe('Catalog price resolution – fixed path', () => {
     });
     expect('permissionError' in result).toBe(true);
   }, 30000);
+
+  async function stampPriceBook(serviceId: string, rate: number, effectiveDate: string, bookId: string) {
+    await context.db('service_prices').insert({
+      tenant: context.tenantId,
+      price_id: uuidv4(),
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate,
+      effective_date: effectiveDate,
+      display_order: 0,
+      price_book_id: bookId,
+    });
+  }
+  async function makeBook(name: string, effectiveDate: string): Promise<string> {
+    const id = uuidv4();
+    await context.db('catalog_price_books').insert({
+      tenant: context.tenantId, price_book_id: id, name, effective_date: effectiveDate.slice(0, 10), status: 'scheduled',
+    });
+    return id;
+  }
+
+  it('T9: a price book rate moves inherited lines from the first period on or after its date; custom and unreviewed lines stay', async () => {
+    const inherited = await seedInheritedLine('T9 inherited', 10000, JAN_START);
+    const custom = await seedInheritedLine('T9 custom', 10000, JAN_START);
+    const unreviewed = await seedInheritedLine('T9 unreviewed', 10000, JAN_START);
+    await setLineProvenance(context, custom.contractLineId, 'custom', 10000);
+    await setLineProvenance(context, unreviewed.contractLineId, 'unreviewed', 10000);
+
+    const book = await makeBook('2023-02', FEB_START);
+    for (const item of [inherited, custom, unreviewed]) {
+      await stampPriceBook(item.serviceId, 12000, FEB_START, book);
+      await materializeRecurringServicePeriods(context, item.contractLineId);
+    }
+
+    // The preview sorts the same three lines the way billing treats them.
+    const preview = await previewCatalogPriceChanges(
+      context.db, context.tenantId,
+      [inherited, custom, unreviewed].map((item) => ({ serviceId: item.serviceId, currency: 'USD', newRateCents: 12000 })),
+      FEB_PERIOD,
+    );
+    expect(preview.willChange.map((row) => row.contractLineId)).toEqual([inherited.contractLineId]);
+    expect(preview.custom.map((row) => row.contractLineId)).toEqual([custom.contractLineId]);
+    expect(preview.unreviewed.map((row) => row.contractLineId)).toEqual([unreviewed.contractLineId]);
+
+    // Billing: January predates the price book; February is 12000 (inherited) + 10000 + 10000.
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(30000);
+    const february = await invoiceCycle(FEB_START, MAR_START);
+    expect(february.subtotal).toBe(32000);
+
+    // Provenance is never reclassified by a price book.
+    const rows = await context.db('contract_lines')
+      .where({ tenant: context.tenantId })
+      .whereIn('contract_line_id', [inherited, custom, unreviewed].map((item) => item.contractLineId))
+      .select('contract_line_id', 'rate_provenance');
+    const byLine = new Map(rows.map((row: any) => [row.contract_line_id, row.rate_provenance]));
+    expect(byLine.get(inherited.contractLineId)).toBe('inherited');
+    expect(byLine.get(custom.contractLineId)).toBe('custom');
+    expect(byLine.get(unreviewed.contractLineId)).toBe('unreviewed');
+  });
+
+  it('T10: an invoiced period is not re-rated by a price book and is listed as excluded', async () => {
+    const item = await seedInheritedLine('T10 invoiced', 10000, JAN_START);
+    const january = await invoiceCycle(JAN_START, FEB_START);
+    expect(january.subtotal).toBe(10000);
+    const preview = await previewCatalogPriceChanges(
+      context.db, context.tenantId,
+      [{ serviceId: item.serviceId, currency: 'USD', newRateCents: 12000 }],
+      JAN_START.slice(0, 10),
+    );
+    expect(preview.willChange).toHaveLength(0);
+    expect(preview.excluded.find((row) => row.contractLineId === item.contractLineId)?.reason).toMatch(/invoiced/i);
+    const charges = await context.db('invoice_charges').where('invoice_id', january.invoice_id).select('net_amount');
+    expect(parseInt(charges[0].net_amount)).toBe(10000);
+  });
+
+  it('T11: previewCatalogPriceChanges with one change equals previewServicePriceChange', async () => {
+    const a = await seedInheritedLine('T11 a', 10000, JAN_START);
+    const b = await seedInheritedLine('T11 b', 10000, JAN_START);
+    await setLineProvenance(context, b.contractLineId, 'custom', 10000);
+
+    const single = await previewServicePriceChange(a.serviceId, 12500, FEB_PERIOD, 'USD');
+    if (!('willChange' in single)) throw new Error(JSON.stringify(single));
+    const core = await previewCatalogPriceChanges(
+      context.db, context.tenantId, [{ serviceId: a.serviceId, currency: 'USD', newRateCents: 12500 }], FEB_PERIOD,
+    );
+    const strip = (rows: any[]) => rows.map(({ serviceIds: _ignored, ...row }) => row);
+    expect(single.willChange).toEqual(strip(core.willChange));
+    expect(single.custom).toEqual(strip(core.custom));
+    expect(single.unreviewed).toEqual(strip(core.unreviewed));
+    expect(single.excluded).toEqual(strip(core.excluded));
+    expect(single.totalMonthlyDeltaCents).toBe(core.totalMonthlyDeltaByCurrency.USD ?? 0);
+    expect(single.willChange).toHaveLength(1);
+    expect(single.willChange[0]).toMatchObject({ currentRateCents: 10000, newRateCents: 12500, deltaCents: 2500 });
+  });
+
+  it('T11b: a line using two changed services gets one combined row', async () => {
+    const first = await seedInheritedLine('T11 combined', 10000, JAN_START);
+    const secondService = await createTestService(context, { service_name: 'T11 second member', billing_method: 'fixed', default_rate: 4000 });
+    await addServiceToFixedPlan(context, first.contractLineId, secondService, { quantity: 1 });
+    await linkMemberToCatalog(first.contractLineId);
+    await setLineProvenance(context, first.contractLineId, 'inherited');
+
+    const core = await previewCatalogPriceChanges(
+      context.db, context.tenantId,
+      [
+        { serviceId: first.serviceId, currency: 'USD', newRateCents: 11000 },
+        { serviceId: secondService, currency: 'USD', newRateCents: 5000 },
+      ],
+      FEB_PERIOD,
+    );
+    const rows = [...core.willChange, ...core.custom, ...core.unreviewed, ...core.excluded]
+      .filter((row) => row.contractLineId === first.contractLineId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].serviceIds.sort()).toEqual([first.serviceId, secondService].sort());
+    expect(rows[0].deltaCents).toBe(2000);
+  });
+
+  it('T11c: a contract in a currency the price book does not price is excluded with the reason', async () => {
+    const item = await seedInheritedLine('T11 cad only', 10000, JAN_START);
+    const core = await previewCatalogPriceChanges(
+      context.db, context.tenantId, [{ serviceId: item.serviceId, currency: 'CAD', newRateCents: 12000 }], FEB_PERIOD,
+    );
+    const row = core.excluded.find((r) => r.contractLineId === item.contractLineId);
+    expect(row?.reason).toBe('Bills in USD; this price book has no USD price for T11 cad only.');
+  });
 });

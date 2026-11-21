@@ -132,6 +132,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVTaskPreviewData | null>(null);
   const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
+  // LEVERAGE: pattern spreadsheet-column-mapping — hand-rolled header-to-field mapping step; see SpreadsheetColumnMappingStep (packages/ui), used first by the price book import.
   const [columnMappings, setColumnMappings] = useState<ICSVTaskColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ITaskImportValidationResult[]>([]);
   const [groupedPhases, setGroupedPhases] = useState<IGroupedPhaseData[]>([]);

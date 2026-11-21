@@ -2562,7 +2562,9 @@
         "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie.",
         "loadJobs": "Nie udało się załadować zadań migracji w tle.",
         "loadJob": "Nie udało się załadować zadania migracji w tle.",
-        "jobNotFound": "Nie znaleziono zadania migracji w tle."
+        "jobNotFound": "Nie znaleziono zadania migracji w tle.",
+        "priceBookInvalid": "Nie udało się utworzyć cennika. Sprawdź nazwę, czy data wejścia w życie to dziś lub później oraz czy nazwa nie jest już używana z inną datą.",
+        "priceBookPermissionDenied": "Aby zaimportować cennik, potrzebujesz uprawnienia do przeglądania rozliczeń."
       },
       "preflight": {
         "title": "Kontrola wstępna",

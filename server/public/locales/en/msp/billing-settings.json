@@ -5,7 +5,8 @@
     "quoting": "Quoting",
     "tax": "Tax",
     "payments": "Payments",
-    "costRates": "Cost Rates"
+    "costRates": "Cost Rates",
+    "priceBooks": "Price books"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Failed to deactivate service"
     },
     "emptySearch": "No services match your search.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "removePrices": {
+      "title": "Remove historical prices",
+      "message": "This removes {{count}} historical price(s) for the removed currency.",
+      "messageWithBooks": "This removes {{count}} historical price(s), including price book {{names}}.",
+      "confirm": "Remove prices"
+    }
   },
   "products": {
     "title": "Products",
@@ -1842,6 +1849,169 @@
       "exact": "Exact match",
       "differs": "Differs from catalog",
       "needsDecision": "Needs a decision"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Discard",
+      "download": "Download",
+      "makeActiveAgain": "Make active again",
+      "menu": "Price book actions",
+      "newFromCsv": "New price book from CSV",
+      "withdraw": "Withdraw"
+    },
+    "columns": {
+      "appliedAt": "Applied",
+      "appliedBy": "Applied by",
+      "currencies": "Currencies",
+      "effectiveDate": "Effective date",
+      "items": "Items",
+      "name": "Name",
+      "status": "Status"
+    },
+    "confirm": {
+      "discardMessage": "Discard the draft \"{{name}}\"?",
+      "discardTitle": "Discard draft",
+      "withdrawMessage": "Withdraw \"{{name}}\"? Its prices have not taken effect yet and will be removed.",
+      "withdrawTitle": "Withdraw price book"
+    },
+    "description": "A price book is a named, dated set of catalog prices. The active one is the latest whose date has arrived.",
+    "errors": {
+      "discardFailed": "Could not discard the price book.",
+      "makeActiveFailed": "Could not create the price book.",
+      "notApplied": "Only an applied price book can be made active again.",
+      "notEnabled": "Price books are not enabled for this account.",
+      "notFound": "Price book not found.",
+      "permissionDenied": "You do not have permission to do this.",
+      "withdrawFailed": "Could not withdraw the price book."
+    },
+    "import": {
+      "apply": "Apply price book",
+      "applying": "Applying the price book…",
+      "back": "Back",
+      "cancel": "Cancel",
+      "config": {
+        "billingMethod": "Billing method for new services",
+        "method": {
+          "fixed": "Fixed",
+          "hourly": "Hourly",
+          "usage": "Usage"
+        },
+        "save": "Update preview",
+        "serviceType": "Service type for new items",
+        "serviceTypePlaceholder": "Select a service type",
+        "required": "Some rows create new items. Choose a service type (and a billing method for new services) below, then select Update preview."
+      },
+      "errors": {
+        "slow": "The import is still running. Check the price book list in a moment.",
+        "unreadable": "That file could not be read. Check that it is a CSV or XLSX file with a header row.",
+        "applyFailed": "The price book could not be applied. Nothing was written. Try again, or contact your administrator if it keeps failing."
+      },
+      "impact": {
+        "columns": {
+          "client": "Client",
+          "contract": "Contract",
+          "line": "Line",
+          "rate": "Rate"
+        },
+        "custom": "Keep custom price",
+        "excluded": "Excluded",
+        "monthly": "Monthly revenue change ({{currency}}): {{amount}}",
+        "title": "Contract impact",
+        "unreviewed": "Not yet reviewed",
+        "willChange": "Will change"
+      },
+      "kind": {
+        "product": "Product",
+        "service": "Service"
+      },
+      "map": {
+        "help": "Check which column holds what. Columns set to \"Ignore\" are not imported.",
+        "ignore": "Ignore",
+        "mapsTo": "Maps to",
+        "preview": "Preview",
+        "required": "Map a price column and at least one of SKU, name or item ref.",
+        "sampleValues": "Sample values",
+        "sourceColumn": "Column in file"
+      },
+      "next": "Next",
+      "outcome": {
+        "ambiguous": "Ambiguous",
+        "conflict": "Conflict",
+        "create": "Create",
+        "invalid": "Invalid",
+        "unchanged": "Unchanged",
+        "unmatched": "Unmatched",
+        "update": "Update"
+      },
+      "preview": {
+        "allOutcomes": "All outcomes",
+        "blocked": "{{count}} rows will not be imported. Fix the file and upload it again, or apply the rest.",
+        "columns": {
+          "change": "Change",
+          "currency": "Currency",
+          "current": "Current price",
+          "item": "Item",
+          "kind": "Kind",
+          "new": "New price",
+          "outcome": "Outcome",
+          "row": "Row"
+        },
+        "noWrites": "This is a preview. Nothing has been written to the catalog yet."
+      },
+      "result": {
+        "blocked": "Not imported",
+        "created": "Created",
+        "done": "Done",
+        "download": "Download report",
+        "failed": "Failed",
+        "pending": "Pending",
+        "unchanged": "Unchanged",
+        "updated": "Updated"
+      },
+      "targets": {
+        "category": "Category",
+        "cost": "Cost",
+        "cost_currency": "Cost currency",
+        "currency": "Currency",
+        "description": "Description",
+        "is_active": "Active",
+        "item_kind": "Type (product or service)",
+        "item_ref": "Item ref",
+        "name": "Name",
+        "price": "Price",
+        "priceIn": "Price in {{currency}}",
+        "service_type": "Service type",
+        "sku": "SKU",
+        "unit_of_measure": "Unit of measure"
+      },
+      "title": "New price book from CSV",
+      "upload": {
+        "currency": "Currency for blank currency cells",
+        "effectiveDate": "Effective date",
+        "file": "CSV or XLSX file",
+        "name": "Price book name",
+        "namePlaceholder": "e.g. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Create price book",
+      "date": "Effective date",
+      "help": "This creates a new price book with the rates of \"{{name}}\". The original is not changed.",
+      "impact": "{{willChange}} contract lines will change, {{custom}} keep a custom price, {{unreviewed}} are not yet reviewed.",
+      "name": "New price book name",
+      "title": "Make price book active again"
+    },
+    "status": {
+      "active": "Active",
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "superseded": "Superseded"
+    },
+    "toast": {
+      "discarded": "Draft discarded.",
+      "reactivated": "Price book created.",
+      "withdrawn": "Price book withdrawn."
     }
   }
 }

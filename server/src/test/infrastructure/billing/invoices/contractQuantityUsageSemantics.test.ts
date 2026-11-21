@@ -37,6 +37,7 @@ import {
   scheduleUnitPricingRevision,
   scheduleRecurringUnitPricingRevision,
 } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
+import { previewCatalogPriceChanges } from '@alga-psa/billing/lib/catalog/previewCatalogPriceChanges';
 import { setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -1502,6 +1503,59 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // Overview valuation agrees with the billed catalog revisions.
       const overview: any = await getContractOverview(await context.db('contract_lines').where({ tenant: context.tenantId, contract_line_id: contractLineId }).first().then((row: any) => row.contract_id));
       expect(overview.totalEstimatedMonthlyValue).toBe(130000);
+    });
+
+    it('T9: a price book rate moves a catalog-policy unit revision (preview and billing) and leaves an override revision alone', async () => {
+      const seatLine = async (name: string, policy: 'catalog' | 'override', overrideRate: number | null) => {
+        const contractLineId = await context.createEntity('contract_lines', {
+          contract_line_name: name, billing_frequency: 'monthly', is_custom: false, contract_line_type: 'Fixed',
+          custom_rate: null, billing_timing: 'arrears',
+        }, 'contract_line_id');
+        const seat = await addSeatService(contractLineId, { serviceName: name, quantity: 10, unitRateCents: 10000, taxRegion: 'US-NY' });
+        await assignContractLineToClient(context, contractLineId, { startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }) });
+        await updateCatalogPrice(context, seat.serviceId, { rateCents: 12000, effectiveDate: '2023-02-01' });
+        const scheduled = await scheduleUnitPricingRevision({
+          contract_line_id: contractLineId, service_id: seat.serviceId, config_id: seat.configId, quantity: 10,
+          price_policy: policy, unit_rate_cents: overrideRate, effective_period_start: '2023-02-01',
+        });
+        if ('actionError' in (scheduled as object)) throw new Error(JSON.stringify(scheduled));
+        return { contractLineId, ...seat };
+      };
+      const catalogLine = await seatLine('Catalog Policy Seat', 'catalog', null);
+      // The catalog-policy line follows the catalog: no stored rate, inherited provenance.
+      await context.db('contract_line_service_fixed_config')
+        .where({ tenant: context.tenantId, config_id: catalogLine.configId })
+        .update({ base_rate: null, base_rate_basis: null, rate_provenance: 'inherited' });
+      await context.db('contract_lines')
+        .where({ tenant: context.tenantId, contract_line_id: catalogLine.contractLineId })
+        .update({ rate_provenance: 'inherited', custom_rate: null });
+      const overrideLine = await seatLine('Override Policy Seat', 'override', 9000);
+
+      // Contract-impact preview: the catalog-policy line follows, the override line does not.
+      const preview = await previewCatalogPriceChanges(
+        context.db, context.tenantId,
+        [catalogLine, overrideLine].map((line) => ({ serviceId: line.serviceId, currency: 'USD', newRateCents: 13000 })),
+        '2023-03-01',
+      );
+      expect(preview.willChange.map((row) => row.contractLineId)).toEqual([catalogLine.contractLineId]);
+      expect(preview.willChange[0]).toMatchObject({ currentRateCents: 120000, newRateCents: 130000 });
+      expect([...preview.custom, ...preview.unreviewed].map((row) => row.contractLineId)).toEqual([overrideLine.contractLineId]);
+
+      // Applying the price book (dated March) raises both catalog prices to 130.
+      const bookId = uuidv4();
+      await context.db('catalog_price_books').insert({ tenant: context.tenantId, price_book_id: bookId, name: `T9 ${bookId.slice(0, 6)}`, effective_date: '2023-03-01', status: 'scheduled' });
+      for (const line of [catalogLine, overrideLine]) {
+        await context.db('service_prices').insert({
+          tenant: context.tenantId, price_id: uuidv4(), service_id: line.serviceId, currency_code: 'USD', rate: 13000,
+          effective_date: '2023-03-01', display_order: 0, price_book_id: bookId,
+        });
+      }
+
+      // Billing resolver: February still bills 10 x 120 + 10 x 90, March picks up the price book for the catalog line only.
+      const february = unwrapInvoiceResult(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(120000 + 90000);
+      const march = unwrapInvoiceResult(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 4, 1)));
+      expect(march.subtotal).toBe(130000 + 90000);
     });
 
     it('refuses to delete a configuration that carries scheduled revisions (stop via zero instead)', async () => {

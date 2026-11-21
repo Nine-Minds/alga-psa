@@ -5,7 +5,8 @@
     "quoting": "Oferty",
     "tax": "Podatek",
     "payments": "Płatności",
-    "costRates": "Stawki kosztów"
+    "costRates": "Stawki kosztów",
+    "priceBooks": "Cenniki"
   },
   "general": {
     "currency": {
@@ -939,7 +940,13 @@
       "deactivate": "Nie udało się dezaktywować usługi"
     },
     "emptySearch": "Żadna usługa nie pasuje do wyszukiwania.",
-    "clearFilters": "Wyczyść filtry"
+    "clearFilters": "Wyczyść filtry",
+    "removePrices": {
+      "title": "Usuń historyczne ceny",
+      "message": "Spowoduje to usunięcie następującej liczby cen historycznych: {{count}} dla usuniętej waluty.",
+      "messageWithBooks": "Spowoduje to usunięcie następującej liczby cen historycznych: {{count}}, w tym cennika {{names}}.",
+      "confirm": "Usuń ceny"
+    }
   },
   "products": {
     "title": "Produkty",
@@ -1844,6 +1851,169 @@
       "exact": "Dokładne dopasowanie",
       "differs": "Różni się od katalogu",
       "needsDecision": "Wymaga decyzji"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Odrzuć",
+      "download": "Pobierz",
+      "makeActiveAgain": "Aktywuj ponownie",
+      "menu": "Akcje cennika",
+      "newFromCsv": "Nowy cennik z pliku CSV",
+      "withdraw": "Wycofaj"
+    },
+    "columns": {
+      "appliedAt": "Zastosowano",
+      "appliedBy": "Zastosował(a)",
+      "currencies": "Waluty",
+      "effectiveDate": "Data wejścia w życie",
+      "items": "Pozycje",
+      "name": "Nazwa",
+      "status": "Status"
+    },
+    "confirm": {
+      "discardMessage": "Odrzucić wersję roboczą „{{name}}”?",
+      "discardTitle": "Odrzuć wersję roboczą",
+      "withdrawMessage": "Wycofać „{{name}}”? Jego ceny jeszcze nie weszły w życie i zostaną usunięte.",
+      "withdrawTitle": "Wycofaj cennik"
+    },
+    "description": "Cennik to nazwany, datowany zestaw cen katalogowych. Aktywny jest ten najnowszy, którego data już nadeszła.",
+    "errors": {
+      "discardFailed": "Nie udało się odrzucić cennika.",
+      "makeActiveFailed": "Nie udało się utworzyć cennika.",
+      "notApplied": "Tylko zastosowany cennik można aktywować ponownie.",
+      "notEnabled": "Cenniki nie są włączone dla tego konta.",
+      "notFound": "Nie znaleziono cennika.",
+      "permissionDenied": "Nie masz uprawnień do wykonania tej czynności.",
+      "withdrawFailed": "Nie udało się wycofać cennika."
+    },
+    "import": {
+      "apply": "Zastosuj cennik",
+      "applying": "Stosowanie cennika…",
+      "back": "Wstecz",
+      "cancel": "Anuluj",
+      "config": {
+        "billingMethod": "Metoda rozliczania nowych usług",
+        "method": {
+          "fixed": "Stała",
+          "hourly": "Godzinowa",
+          "usage": "Zużycie"
+        },
+        "save": "Odśwież podgląd",
+        "serviceType": "Typ usługi dla nowych pozycji",
+        "serviceTypePlaceholder": "Wybierz typ usługi",
+        "required": "Niektóre wiersze tworzą nowe pozycje. Wybierz poniżej typ usługi (oraz metodę rozliczania dla nowych usług), a następnie kliknij Odśwież podgląd."
+      },
+      "errors": {
+        "slow": "Import nadal trwa. Sprawdź listę cenników za chwilę.",
+        "unreadable": "Nie udało się odczytać tego pliku. Sprawdź, czy to plik CSV lub XLSX z wierszem nagłówka.",
+        "applyFailed": "Nie udało się zastosować cennika. Nic nie zostało zapisane. Spróbuj ponownie lub skontaktuj się z administratorem, jeśli błąd się powtarza."
+      },
+      "impact": {
+        "columns": {
+          "client": "Klient",
+          "contract": "Umowa",
+          "line": "Linia",
+          "rate": "Stawka"
+        },
+        "custom": "Zachowaj cenę niestandardową",
+        "excluded": "Wykluczone",
+        "monthly": "Zmiana przychodu miesięcznego ({{currency}}): {{amount}}",
+        "title": "Wpływ na umowy",
+        "unreviewed": "Jeszcze nieprzejrzane",
+        "willChange": "Zostaną zmienione"
+      },
+      "kind": {
+        "product": "Produkt",
+        "service": "Usługa"
+      },
+      "map": {
+        "help": "Sprawdź, która kolumna co zawiera. Kolumny ustawione na „Ignoruj” nie są importowane.",
+        "ignore": "Ignoruj",
+        "mapsTo": "Mapuj na",
+        "preview": "Podgląd",
+        "required": "Zmapuj kolumnę z ceną oraz co najmniej jedną z: SKU, nazwa lub odwołanie do pozycji.",
+        "sampleValues": "Przykładowe wartości",
+        "sourceColumn": "Kolumna w pliku"
+      },
+      "next": "Dalej",
+      "outcome": {
+        "ambiguous": "Niejednoznaczne",
+        "conflict": "Konflikt",
+        "create": "Utwórz",
+        "invalid": "Nieprawidłowe",
+        "unchanged": "Bez zmian",
+        "unmatched": "Brak dopasowania",
+        "update": "Aktualizuj"
+      },
+      "preview": {
+        "allOutcomes": "Wszystkie wyniki",
+        "blocked": "Liczba wierszy, które nie zostaną zaimportowane: {{count}}. Popraw plik i prześlij go ponownie lub zastosuj resztę.",
+        "columns": {
+          "change": "Zmiana",
+          "currency": "Waluta",
+          "current": "Bieżąca cena",
+          "item": "Pozycja",
+          "kind": "Rodzaj",
+          "new": "Nowa cena",
+          "outcome": "Wynik",
+          "row": "Wiersz"
+        },
+        "noWrites": "To jest podgląd. Nic nie zostało jeszcze zapisane w katalogu."
+      },
+      "result": {
+        "blocked": "Nie zaimportowano",
+        "created": "Utworzone",
+        "done": "Gotowe",
+        "download": "Pobierz raport",
+        "failed": "Nieudane",
+        "pending": "Oczekujące",
+        "unchanged": "Bez zmian",
+        "updated": "Zaktualizowane"
+      },
+      "targets": {
+        "category": "Kategoria",
+        "cost": "Koszt",
+        "cost_currency": "Waluta kosztu",
+        "currency": "Waluta",
+        "description": "Opis",
+        "is_active": "Aktywna",
+        "item_kind": "Typ (produkt lub usługa)",
+        "item_ref": "Odwołanie do pozycji",
+        "name": "Nazwa",
+        "price": "Cena",
+        "priceIn": "Cena w {{currency}}",
+        "service_type": "Typ usługi",
+        "sku": "SKU",
+        "unit_of_measure": "Jednostka miary"
+      },
+      "title": "Nowy cennik z pliku CSV",
+      "upload": {
+        "currency": "Waluta dla pustych komórek waluty",
+        "effectiveDate": "Data wejścia w życie",
+        "file": "Plik CSV lub XLSX",
+        "name": "Nazwa cennika",
+        "namePlaceholder": "np. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Utwórz cennik",
+      "date": "Data wejścia w życie",
+      "help": "Spowoduje to utworzenie nowego cennika ze stawkami z „{{name}}”. Oryginał nie zostanie zmieniony.",
+      "impact": "Linie umów do zmiany: {{willChange}}, z ceną niestandardową: {{custom}}, jeszcze nieprzejrzane: {{unreviewed}}.",
+      "name": "Nazwa nowego cennika",
+      "title": "Aktywuj cennik ponownie"
+    },
+    "status": {
+      "active": "Aktywny",
+      "draft": "Wersja robocza",
+      "scheduled": "Zaplanowany",
+      "superseded": "Zastąpiony"
+    },
+    "toast": {
+      "discarded": "Wersja robocza odrzucona.",
+      "reactivated": "Cennik utworzony.",
+      "withdrawn": "Cennik wycofany."
     }
   }
 }

@@ -2562,7 +2562,9 @@
         "unknown": "Caricamento non riuscito. Riprova.",
         "loadJobs": "Impossibile caricare i job di migrazione.",
         "loadJob": "Impossibile caricare il job di migrazione.",
-        "jobNotFound": "Job di migrazione non trovato."
+        "jobNotFound": "Job di migrazione non trovato.",
+        "priceBookInvalid": "Impossibile creare il listino. Controlla il nome, che la data di entrata in vigore sia oggi o successiva e che il nome non sia già usato con un'altra data.",
+        "priceBookPermissionDenied": "Per importare un listino serve l'autorizzazione a visualizzare la fatturazione."
       },
       "preflight": {
         "title": "Verifica preliminare",

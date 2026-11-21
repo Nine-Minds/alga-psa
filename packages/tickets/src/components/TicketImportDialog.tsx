@@ -128,6 +128,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVTicketPreviewData | null>(null);
   const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
+  // LEVERAGE: pattern spreadsheet-column-mapping — hand-rolled header-to-field mapping step; see SpreadsheetColumnMappingStep (packages/ui), used first by the price book import.
   const [columnMappings, setColumnMappings] = useState<ICSVTicketColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ITicketImportValidationResult[]>([]);
   const [importResult, setImportResult] = useState<ITicketImportResult | null>(null);

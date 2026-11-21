@@ -2562,7 +2562,9 @@
         "unknown": "O upload falhou. Tente novamente.",
         "loadJobs": "Não foi possível carregar os trabalhos de migração.",
         "loadJob": "Não foi possível carregar o trabalho de migração.",
-        "jobNotFound": "Trabalho de migração não encontrado."
+        "jobNotFound": "Trabalho de migração não encontrado.",
+        "priceBookInvalid": "Não foi possível criar a lista de preços. Verifique o nome, se a data de entrada em vigor é hoje ou posterior e se o nome já não é usado com outra data.",
+        "priceBookPermissionDenied": "Precisa de permissão para ver a faturação para importar uma lista de preços."
       },
       "preflight": {
         "title": "Verificação prévia",

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'node:crypto';
@@ -11,7 +11,9 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import { tenantDb } from '@alga-psa/db';
 import { createProductCore } from '@alga-psa/billing/lib/catalog/productCatalogCore';
-import { convertSpreadsheets, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
+import { convertPriceBookSpreadsheet, convertSpreadsheets, inferPriceBookMapping, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
+import { createServiceCore } from '@alga-psa/billing/lib/catalog/serviceCatalogCore';
+import { findOrCreateDraftPriceBook } from '@alga-psa/billing/lib/catalog/priceBooks';
 import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
 import { AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY, type AmpPackageRows } from '@alga-psa/migration-spec';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
@@ -24,6 +26,30 @@ import { spreadsheetImportNamespace } from '../../lib/migrations/spreadsheetName
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
 
 const HOOK_TIMEOUT = 180_000;
+
+// The price book appliers re-check RBAC. The fixture user has no roles, so the
+// permission answer is a per-test allow list rather than a seeded role graph.
+const permissionGrants = vi.hoisted(() => ({ allowed: new Set<string>(), asked: [] as string[] }));
+const sessionUser = vi.hoisted(() => ({ value: null as null | { user_id: string; tenant: string } }));
+vi.mock('@alga-psa/user-composition/actions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/user-composition/actions')>()),
+  getCurrentUser: vi.fn(async () => sessionUser.value),
+}));
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth')>()),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) => permissionGrants.allowed.has(`${resource}:${action}`)),
+}));
+vi.mock('@alga-psa/core/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core/server')>()),
+  featureFlags: { isEnabled: vi.fn(async () => true) },
+}));
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth/rbac')>()),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) => {
+    permissionGrants.asked.push(`${resource}:${action}`);
+    return permissionGrants.allowed.has(`${resource}:${action}`);
+  }),
+}));
 
 const ALL_ENTITY_TYPES = [
   'organizations',
@@ -83,6 +109,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'product_inventory_settings').del();
   await tenantTable(tenantId, 'vendors').del();
   await tenantTable(tenantId, 'service_prices').del();
+  await tenantTable(tenantId, 'catalog_price_books').del();
   await tenantTable(tenantId, 'service_catalog').del();
   await tenantTable(tenantId, 'service_types').del();
   await tenantTable(tenantId, 'default_billing_settings').del();
@@ -460,10 +487,16 @@ async function configureJob(
     .update({ configuration: JSON.stringify(configuration) });
 }
 
-/** The original six-entity sample; products need a service type, so they have their own tests. */
+/**
+ * The original six-entity sample. The catalog entities (products, services,
+ * their catalog_prices and vendor offers) need a service type and reference each
+ * other, so they have their own tests; dropping a parent drops its dependants.
+ */
 function legacySampleRows(): AmpPackageRows {
   const rows = sampleEntityRows();
   delete rows.products;
+  delete rows.services;
+  delete rows.catalog_prices;
   delete rows.vendor_products;
   return rows;
 }
@@ -501,6 +534,12 @@ async function migratedClientId(tenantId: string): Promise<string> {
   expect(acme).toBeDefined();
   return acme.client_id;
 }
+
+const addDays = (date: string, days: number): string => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
 
 describe('AMP migration pipeline integration', () => {
   beforeAll(async () => {
@@ -545,6 +584,8 @@ describe('AMP migration pipeline integration', () => {
       ticket_comments: 1,
       assets: 1,
       products: 0,
+      services: 0,
+      catalog_prices: 0,
       vendor_products: 0,
     });
     expect(await stagedCountsByEntity(fixture.tenantId, migrationJobId)).toEqual({
@@ -1513,6 +1554,320 @@ describe('AMP migration pipeline integration', () => {
       await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
       const again = await planner.preflight(migrationJobId);
       expect(again.plan[0]).toMatchObject({ stagedCount: 3, toSkipIdentityMapped: 3, toCreate: 0 });
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('price book import (pricebooks CSV, T3–T8, T15)', () => {
+    const FUTURE_DATE = (() => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + 60);
+      return d.toISOString().slice(0, 10);
+    })();
+    let uniqueName = 0;
+
+    beforeEach(() => {
+      permissionGrants.allowed = new Set(['service:update', 'service:create']);
+      permissionGrants.asked = [];
+    });
+
+    async function tenantWith(fixture: Fixture, currency: string | null) {
+      const serviceTypeId = uuidv4();
+      await tenantTable(fixture.tenantId, 'service_types').insert({ tenant: fixture.tenantId, id: serviceTypeId, name: `Type ${serviceTypeId.slice(0, 6)}`, is_active: true });
+      if (currency) {
+        await tenantTable(fixture.tenantId, 'default_billing_settings').insert({ tenant: fixture.tenantId, default_currency_code: currency });
+      }
+      return serviceTypeId;
+    }
+
+    const seedProduct = (fixture: Fixture, serviceTypeId: string, sku: string, name: string, cad = 1000) =>
+      db.transaction((trx) => createProductCore(trx, fixture.tenantId, {
+        service_name: name, custom_service_type_id: serviceTypeId, sku, cost_currency: 'CAD', default_rate: cad,
+        prices: [{ currency_code: 'CAD', rate: cad }],
+      })).then((r) => r.serviceId);
+
+    const seedService = (fixture: Fixture, serviceTypeId: string, name: string, cad = 2000) =>
+      db.transaction((trx) => createServiceCore(trx, fixture.tenantId, {
+        service_name: name, custom_service_type_id: serviceTypeId, billing_method: 'fixed', item_kind: 'service',
+        prices: [{ currency_code: 'CAD', rate: cad }],
+      })).then((r) => r.serviceId);
+
+    interface ImportOptions {
+      serviceTypeId?: string | null;
+      name?: string;
+      date?: string;
+      jobCurrency?: string;
+      mapping?: Record<string, string>;
+      billingMethod?: 'fixed' | 'hourly' | 'usage';
+    }
+
+    /** Mirrors the upload route: convert with the job/tenant currency, stage, create the draft book, configure. */
+    async function stageImport(fixture: Fixture, csv: string, options: ImportOptions = {}) {
+      const inputPath = path.join(packageDir, `pb-${uuidv4()}.csv`);
+      const packagePath = path.join(packageDir, `pb-${uuidv4()}.amp`);
+      await fs.promises.writeFile(inputPath, csv);
+      const mapping = options.mapping ?? (await inferPriceBookMapping(inputPath));
+      const tenantCurrency = (await tenantTable(fixture.tenantId, 'default_billing_settings').first('default_currency_code'))?.default_currency_code;
+      await convertPriceBookSpreadsheet({
+        outputPath: packagePath,
+        namespace: spreadsheetImportNamespace(fixture.tenantId, createHash('sha256').update(csv).digest('hex')),
+        sourceSystem: 'csv-upload',
+        defaultCurrency: options.jobCurrency ?? tenantCurrency ?? undefined,
+        path: inputPath,
+        mapping,
+      }, packageDir);
+      const migrationJobId = await createJob(fixture);
+      const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, packagePath);
+      expect(staging.rejected).toBe(false);
+      const { priceBook } = await db.transaction((trx) => findOrCreateDraftPriceBook(trx, fixture.tenantId, {
+        name: options.name ?? `Book ${++uniqueName}`, effectiveDate: options.date ?? FUTURE_DATE, createdBy: fixture.ownerUserId, sourceMigrationJobId: migrationJobId,
+      }));
+      await configureJob(fixture, migrationJobId, {
+        priceBook: { priceBookId: priceBook.price_book_id, effectiveDate: options.date ?? FUTURE_DATE, currency: options.jobCurrency ?? null },
+        ...(options.serviceTypeId ? { products: { serviceTypeId: options.serviceTypeId }, services: { serviceTypeId: options.serviceTypeId, billingMethod: options.billingMethod ?? 'fixed' } } : {}),
+      });
+      return { migrationJobId, priceBookId: priceBook.price_book_id };
+    }
+
+    const preflight = (fixture: Fixture, jobId: string) => new MigrationPlanner(db, fixture.tenantId).preflight(jobId);
+    const apply = (fixture: Fixture, jobId: string) => new MigrationDomainApplier(db, fixture.tenantId).applyJob(jobId, fixture.ownerUserId);
+    const planOf = async (fixture: Fixture, jobId: string) => (await new MigrationReportService(db, fixture.tenantId).getCatalogPricePlan(jobId))!;
+    const pricesOf = (fixture: Fixture, serviceId: string) =>
+      tenantTable(fixture.tenantId, 'service_prices').where({ service_id: serviceId }).orderBy(['currency_code', 'effective_date']);
+    const countPrices = async (fixture: Fixture) => Number((await tenantTable(fixture.tenantId, 'service_prices').count({ c: '*' }).first())!.c);
+
+    it('T3: a matched product SKU gets a new price at the price book date; the old row and the product stay', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const productId = await seedProduct(fixture, typeId, 'EXIST-1', 'Existing Router', 1000);
+      const before = await tenantTable(fixture.tenantId, 'service_catalog').where({ service_id: productId }).first();
+
+      const { migrationJobId, priceBookId } = await stageImport(fixture, 'SKU,Name,Price,Is Active\nEXIST-1,Renamed By File,15.50,no\n', { serviceTypeId: typeId });
+      const result = await preflight(fixture, migrationJobId);
+      expect(result.state).toBe('ready');
+      const plan = await planOf(fixture, migrationJobId);
+      expect(plan.counts.update).toBe(1);
+      expect(plan.rows[0]).toMatchObject({ outcome: 'update', currentRateMinor: 1000, newRateMinor: 1550, currency: 'CAD' });
+      expect(plan.rows[0].warnings.join(' ')).toMatch(/inactive/i);
+      expect(await countPrices(fixture)).toBe(1); // a dry run writes nothing
+
+      const applied = await apply(fixture, migrationJobId);
+      expect(applied.failed).toBe(0);
+      const rows = (await pricesOf(fixture, productId)).map((r: any) => [Number(r.rate), String(new Date(r.effective_date).toISOString().slice(0, 10)), r.price_book_id]);
+      expect(rows).toEqual([[1000, '1970-01-01', null], [1550, FUTURE_DATE, priceBookId]]);
+      const after = await tenantTable(fixture.tenantId, 'service_catalog').where({ service_id: productId }).first();
+      expect(after.service_name).toBe(before.service_name);
+      expect(after.is_active).toBe(before.is_active);
+      expect(Number(after.default_rate)).toBe(Number(before.default_rate)); // a future price does not move default_rate
+      const book = await tenantTable(fixture.tenantId, 'catalog_price_books').where({ price_book_id: priceBookId }).first();
+      expect(book.status).toBe('scheduled');
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(migrationJobId);
+      expect(report).toEqual([expect.objectContaining({ sourceRow: 1, result: 'updated', oldRateMinor: 1000, newRateMinor: 1550, currency: 'CAD' })]);
+    }, HOOK_TIMEOUT);
+
+    it('T4: a service is matched by name; two services with one name are ambiguous, listed, and nothing is written', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const helpDesk = await seedService(fixture, typeId, 'Help Desk', 2000);
+      const dupA = await seedService(fixture, typeId, 'Managed Backup', 3000);
+      const dupB = await seedService(fixture, typeId, ' managed backup ', 3500);
+      const { migrationJobId } = await stageImport(fixture, 'Name,Price,Type\nHELP DESK,25.00,service\nManaged Backup,40.00,service\n', { serviceTypeId: typeId });
+
+      const result = await preflight(fixture, migrationJobId);
+      const plan = await planOf(fixture, migrationJobId);
+      expect(plan.rows.map((r) => r.outcome)).toEqual(['update', 'ambiguous']);
+      expect(plan.rows[1].candidates).toHaveLength(2);
+      expect(plan.rows[1].candidates.join(' ')).toMatch(/Managed Backup/i);
+      expect(plan.rows[1].code).toBe('CATALOG_ITEM_AMBIGUOUS');
+      expect(result.state).toBe('ready'); // blocked rows do not stop the rest
+
+      await apply(fixture, migrationJobId);
+      expect((await pricesOf(fixture, helpDesk)).map((r: any) => Number(r.rate))).toEqual([2000, 2500]);
+      expect(await pricesOf(fixture, dupA)).toHaveLength(1);
+      expect(await pricesOf(fixture, dupB)).toHaveLength(1);
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(migrationJobId);
+      expect(report.map((r) => r.result)).toEqual(['updated', 'blocked:CATALOG_ITEM_AMBIGUOUS']);
+      expect(await tenantTable(fixture.tenantId, 'service_catalog').where({ item_kind: 'service' })).toHaveLength(3); // no service was created for the ambiguous row
+    }, HOOK_TIMEOUT);
+
+    it('T5: an item ref and a SKU that disagree are a conflict; duplicate item+currency rows are both blocked', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const a = await seedProduct(fixture, typeId, 'A-1', 'Product A');
+      await seedProduct(fixture, typeId, 'B-1', 'Product B');
+      const csv = `Item ref,SKU,Name,Price\n${a},B-1,Whatever,9.00\n,A-1,Product A,11.00\n,A-1,Product A,12.00\n`;
+      const { migrationJobId } = await stageImport(fixture, csv, { serviceTypeId: typeId });
+      await preflight(fixture, migrationJobId);
+      const plan = await planOf(fixture, migrationJobId);
+      expect(plan.rows.map((r) => [r.sourceRow, r.outcome, r.code])).toEqual([
+        [1, 'conflict', 'CATALOG_ITEM_CONFLICT'],
+        [2, 'invalid', 'CATALOG_PRICE_DUPLICATE_ROW'],
+        [3, 'invalid', 'CATALOG_PRICE_DUPLICATE_ROW'],
+      ]);
+      expect(plan.rows[1].message).toMatch(/Rows 2, 3/);
+      await apply(fixture, migrationJobId);
+      expect(await countPrices(fixture)).toBe(2); // only the two seeded rows
+    }, HOOK_TIMEOUT);
+
+    it('T6: new products and new services are created in one pass, each with its price book price', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const { migrationJobId, priceBookId } = await stageImport(
+        fixture,
+        'Type,SKU,Name,Price,Cost\nproduct,NEW-P,New Switch,99.00,60.00\nservice,,New Monitoring,30.00,\n',
+        { serviceTypeId: typeId },
+      );
+      const result = await preflight(fixture, migrationJobId);
+      expect(result.state).toBe('ready');
+      expect((await planOf(fixture, migrationJobId)).counts.create).toBe(2);
+      const applied = await apply(fixture, migrationJobId);
+      expect(applied.failed).toBe(0);
+      const product = await tenantTable(fixture.tenantId, 'service_catalog').where({ sku: 'NEW-P' }).first();
+      const service = await tenantTable(fixture.tenantId, 'service_catalog').where({ service_name: 'New Monitoring' }).first();
+      expect(product.item_kind).toBe('product');
+      expect(service.item_kind).toBe('service');
+      expect(service.billing_method).toBe('fixed');
+      for (const [id, rate] of [[product.service_id, 9900], [service.service_id, 3000]] as const) {
+        const rows = await pricesOf(fixture, id);
+        expect(rows.map((r: any) => [r.currency_code, Number(r.rate), r.price_book_id])).toEqual([['CAD', rate, priceBookId]]);
+      }
+    }, HOOK_TIMEOUT);
+
+    it('T7: Price USD + Price CAD columns make two prices, a blank currency takes a non-USD tenant default, and no currency at all blocks the job', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const seeded = await seedProduct(fixture, typeId, 'MC-1', 'Multi Currency', 1000);
+      const { migrationJobId } = await stageImport(fixture, 'SKU,Name,Price USD,Price CAD\nMC-1,Multi Currency,8.00,11.00\n', { serviceTypeId: typeId });
+      await preflight(fixture, migrationJobId);
+      const plan = await planOf(fixture, migrationJobId);
+      expect(plan.rows.map((r) => [r.currency, r.outcome]).sort()).toEqual([['CAD', 'update'], ['USD', 'create']]);
+      await apply(fixture, migrationJobId);
+      expect((await pricesOf(fixture, seeded)).map((r: any) => [r.currency_code, Number(r.rate)]).sort()).toEqual([['CAD', 1000], ['CAD', 1100], ['USD', 800]]);
+
+      // Blank currency cell: the tenant default (CAD), never USD.
+      const blank = await stageImport(fixture, 'SKU,Name,Price,Currency\nMC-1,Multi Currency,12.00,\n', { serviceTypeId: typeId, date: addDays(FUTURE_DATE, 30) });
+      await preflight(fixture, blank.migrationJobId);
+      expect((await planOf(fixture, blank.migrationJobId)).rows[0]).toMatchObject({ currency: 'CAD', newRateMinor: 1200, outcome: 'update' });
+
+      // JPY job currency: parsed with 0 decimals.
+      const jpy = await stageImport(fixture, 'SKU,Name,Price\nMC-1,Multi Currency,1500\n', { serviceTypeId: typeId, jobCurrency: 'JPY', date: addDays(FUTURE_DATE, 60) });
+      await preflight(fixture, jpy.migrationJobId);
+      expect((await planOf(fixture, jpy.migrationJobId)).rows[0]).toMatchObject({ currency: 'JPY', newRateMinor: 1500 });
+
+      // No tenant default, no currency column, no job currency: the job is blocked.
+      const bare = await createFixture();
+      const bareType = await tenantWith(bare, null);
+      const none = await stageImport(bare, 'Name,Price,Type\nNew Thing,5.00,service\n', { serviceTypeId: bareType });
+      const blocked = await preflight(bare, none.migrationJobId);
+      expect(blocked.state).toBe('blocked');
+      expect(blocked.issues.map((i) => i.code)).toContain('CONFIG_TENANT_CURRENCY_MISSING');
+    }, HOOK_TIMEOUT);
+
+    it('T8: uploading the same file again writes nothing and every row reports unchanged (already applied)', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      await seedProduct(fixture, typeId, 'RE-1', 'Re-upload', 1000);
+      const csv = 'SKU,Name,Price\nRE-1,Re-upload,20.00\n,Brand New Service,30.00\n';
+      const options = { serviceTypeId: typeId, name: 'Same book' };
+      const first = await stageImport(fixture, csv, options);
+      await preflight(fixture, first.migrationJobId);
+      await apply(fixture, first.migrationJobId);
+      const pricesAfterFirst = await countPrices(fixture);
+      const servicesAfterFirst = (await tenantTable(fixture.tenantId, 'service_catalog')).length;
+
+      const second = await stageImport(fixture, csv, options);
+      expect(second.priceBookId).toBe(first.priceBookId); // the same book is reused
+      const result = await preflight(fixture, second.migrationJobId);
+      expect(result.state).toBe('ready');
+      const applied = await apply(fixture, second.migrationJobId);
+      expect(applied).toMatchObject({ created: 0, failed: 0 });
+      expect(await countPrices(fixture)).toBe(pricesAfterFirst);
+      expect((await tenantTable(fixture.tenantId, 'service_catalog')).length).toBe(servicesAfterFirst);
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(second.migrationJobId);
+      expect(report.map((r) => r.result)).toEqual(['unchanged (already applied)', 'unchanged (already applied)']);
+    }, HOOK_TIMEOUT);
+
+    it('a different file for the same date revises a not-yet-effective price book row, and refuses one that is already in effect', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const productId = await seedProduct(fixture, typeId, 'REV-1', 'Revisable', 1000);
+      const options = { serviceTypeId: typeId, name: 'Revisions' };
+      const first = await stageImport(fixture, 'SKU,Name,Price\nREV-1,Revisable,20.00\n', options);
+      await preflight(fixture, first.migrationJobId);
+      await apply(fixture, first.migrationJobId);
+      const second = await stageImport(fixture, 'SKU,Name,Price\nREV-1,Revisable,22.00\n', options);
+      await preflight(fixture, second.migrationJobId);
+      expect((await planOf(fixture, second.migrationJobId)).rows[0]).toMatchObject({ outcome: 'update', currentRateMinor: 2000 });
+      await apply(fixture, second.migrationJobId);
+      expect((await pricesOf(fixture, productId)).map((r: any) => Number(r.rate))).toEqual([1000, 2200]);
+    }, HOOK_TIMEOUT);
+
+    it('T15: the server actions need billing:read to preview and service:update to apply, and refuse before touching the job', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const { migrationJobId } = await stageImport(fixture, 'SKU,Name,Price\nNEW-ACT,Action Item,5.00\n', { serviceTypeId: typeId });
+      sessionUser.value = { user_id: fixture.ownerUserId, tenant: fixture.tenantId };
+      const { previewPriceBookImport, applyPriceBookImport } = await import('../../lib/migrations/priceBookImportActions');
+
+      permissionGrants.allowed = new Set(['import_export:manage']);
+      expect(await previewPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/billing:read/) });
+      permissionGrants.allowed = new Set(['import_export:manage', 'billing:read']);
+      expect(await applyPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/service:update/) });
+      // A job that creates items also needs service:create.
+      permissionGrants.allowed = new Set(['import_export:manage', 'billing:read', 'service:update']);
+      expect(await applyPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/service:create/) });
+      const job = await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).first();
+      expect(job.state).not.toBe('queued');
+      sessionUser.value = null;
+    }, HOOK_TIMEOUT);
+
+    it('a price book row that is already in effect is CATALOG_PRICE_ALREADY_EFFECTIVE in the preview, the applier and the report', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const productId = await seedProduct(fixture, typeId, 'EFF-1', 'In effect', 1000);
+      const today = new Date().toISOString().slice(0, 10);
+      const options = { serviceTypeId: typeId, name: 'Starts today', date: today };
+      const first = await stageImport(fixture, 'SKU,Name,Price\nEFF-1,In effect,20.00\n', options);
+      await preflight(fixture, first.migrationJobId);
+      await apply(fixture, first.migrationJobId);
+
+      // A different file for the same book: the row dated today is already in effect.
+      const second = await stageImport(fixture, 'SKU,Name,Price\nEFF-1,In effect,25.00\n', options);
+      await preflight(fixture, second.migrationJobId);
+      expect((await planOf(fixture, second.migrationJobId)).rows[0]).toMatchObject({ outcome: 'invalid', code: 'CATALOG_PRICE_ALREADY_EFFECTIVE' });
+      const planned = await new MigrationReportService(db, fixture.tenantId).getPriceReport(second.migrationJobId);
+      expect(planned[0].result).toBe('blocked:CATALOG_PRICE_ALREADY_EFFECTIVE');
+
+      // The applier refuses it with the same code even when the planner's block is bypassed.
+      await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: second.migrationJobId }).update({ validation_state: 'valid', validation_errors: '[]' });
+      const applied = await apply(fixture, second.migrationJobId);
+      expect(applied.failed).toBe(1);
+      const outcome = await tenantTable(fixture.tenantId, 'migration_record_outcomes').where({ migration_job_id: second.migrationJobId }).first();
+      expect(JSON.stringify(outcome.errors)).toContain('CATALOG_PRICE_ALREADY_EFFECTIVE');
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(second.migrationJobId);
+      expect(report[0].result).toBe('blocked:CATALOG_PRICE_ALREADY_EFFECTIVE');
+      expect((await pricesOf(fixture, productId)).map((r: any) => Number(r.rate))).toEqual([1000, 2000]);
+    }, HOOK_TIMEOUT);
+
+    it('T15: the applier re-checks RBAC: no service:update fails the run; no service:create creates nothing', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      await seedProduct(fixture, typeId, 'RB-1', 'RBAC Router', 1000);
+      const csv = 'SKU,Name,Price\nRB-1,RBAC Router,15.00\nNEW-RB,Created Item,5.00\n';
+      const { migrationJobId } = await stageImport(fixture, csv, { serviceTypeId: typeId });
+      await preflight(fixture, migrationJobId);
+
+      permissionGrants.allowed = new Set(['service:create']);
+      await expect(apply(fixture, migrationJobId)).rejects.toThrow(/service:update/);
+      expect(await countPrices(fixture)).toBe(1);
+
+      // service:update but not service:create: the matched price lands, the item to create does not.
+      permissionGrants.allowed = new Set(['service:update']);
+      const partial = await apply(fixture, migrationJobId);
+      expect(partial.failed).toBeGreaterThan(0);
+      expect(await tenantTable(fixture.tenantId, 'service_catalog').where({ sku: 'NEW-RB' })).toHaveLength(0);
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(migrationJobId);
+      expect(report.find((r) => r.sourceRow === 1)?.result).toBe('updated');
+      expect(report.find((r) => r.sourceRow === 2)?.result).toBe('failed');
     }, HOOK_TIMEOUT);
   });
 });

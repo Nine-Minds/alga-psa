@@ -44,12 +44,32 @@ export interface ProductMigrationConfiguration {
   serviceTypeId?: string | null;
 }
 
+/** Operator-supplied service reference data. Required when new services will be created. */
+export interface ServiceMigrationConfiguration {
+  /** Tenant service type (service_types.id) that newly created services are filed under. */
+  serviceTypeId?: string | null;
+  /** Billing method of newly created services. */
+  billingMethod?: 'fixed' | 'hourly' | 'usage' | null;
+}
+
+/** The price book a catalog price import writes into. */
+export interface PriceBookMigrationConfiguration {
+  /** The draft `catalog_price_books` row created at upload. */
+  priceBookId: string;
+  /** Mirrors the price book's effective date (YYYY-MM-DD). */
+  effectiveDate: string;
+  /** The job currency used for rows whose currency cell is blank. */
+  currency?: string | null;
+}
+
 export interface MigrationJobConfiguration {
   /** Client that receives orphaned contacts/assets (no resolvable organization). */
   defaultClientId?: string | null;
   tickets?: TicketMigrationConfiguration;
   assets?: AssetMigrationConfiguration;
   products?: ProductMigrationConfiguration;
+  services?: ServiceMigrationConfiguration;
+  priceBook?: PriceBookMigrationConfiguration;
 }
 
 export interface MigrationJobSummary {
@@ -110,6 +130,65 @@ export interface PreflightResult {
   preflightedAt: string;
 }
 
+/** How one price row resolves in a dry run (docs/plans/2026-11-18-pricebooks-csv-import.md §4.2). */
+export type CatalogPriceOutcome =
+  | 'create'
+  | 'update'
+  | 'unchanged'
+  | 'unmatched'
+  | 'ambiguous'
+  | 'conflict'
+  | 'invalid';
+
+export const CATALOG_PRICE_OUTCOMES: readonly CatalogPriceOutcome[] = [
+  'create', 'update', 'unchanged', 'unmatched', 'ambiguous', 'conflict', 'invalid',
+];
+
+/** One row of the price preview. Item ids never appear here; the UI shows names. */
+export interface CatalogPricePlanRow {
+  packageRecordId: string;
+  /** 1-based data row of the upload. */
+  sourceRow: number;
+  outcome: CatalogPriceOutcome;
+  /** Block code when the row will not be imported (`CATALOG_PRICE_DUPLICATE_ROW`, ...). */
+  code: string | null;
+  message: string | null;
+  itemName: string | null;
+  itemKind: 'product' | 'service' | null;
+  currency: string | null;
+  /** The rate in effect on the price book date; null for a new item or currency. */
+  currentRateMinor: number | null;
+  newRateMinor: number | null;
+  /** Item candidates for an `ambiguous` or `conflict` row, described without ids. */
+  candidates: string[];
+  warnings: string[];
+  /** Resolved existing item (server side only; stripped before it reaches the browser). */
+  matchedItemId: string | null;
+  /** True when this exact price book row already exists (an idempotent re-run). */
+  alreadyApplied: boolean;
+}
+
+export interface CatalogPricePlan {
+  priceBookId: string | null;
+  effectiveDate: string | null;
+  counts: Record<CatalogPriceOutcome, number>;
+  rows: CatalogPricePlanRow[];
+  plannedAt: string;
+}
+
+/** The outcome of one applied (or blocked) price row, in upload order. */
+export interface CatalogPriceReportRow {
+  sourceRow: number;
+  currency: string | null;
+  itemName: string | null;
+  itemKind: 'product' | 'service' | null;
+  /** `created`, `updated`, `unchanged`, `unchanged (already applied)`, `blocked:<code>`, `failed`, `pending`. */
+  result: string;
+  oldRateMinor: number | null;
+  newRateMinor: number | null;
+  message: string | null;
+}
+
 export interface MigrationOutcomeSummary {
   entityType: AmpEntityType;
   created: number;
@@ -124,6 +203,16 @@ export interface MigrationOutcomeSummary {
  */
 // LEVERAGE: friction outcome-structured-reason — migration_record_outcomes has no reason column, so a skip's cause rides as a prefixed free-text warning.
 export const SKU_MATCH_WARNING_PREFIX = 'sku_match: ';
+
+/**
+ * Machine-readable prefix of the outcome warning the price applier writes; its
+ * JSON tail carries the structured price outcome the report reads back.
+ */
+// LEVERAGE: friction outcome-structured-reason — a second structured payload riding the same prefixed free-text warning.
+/** Block/failure code for a price row whose price book row is already in effect. */
+export const CATALOG_PRICE_ALREADY_EFFECTIVE = 'CATALOG_PRICE_ALREADY_EFFECTIVE';
+
+export const CATALOG_PRICE_OUTCOME_PREFIX = 'price_outcome: ';
 
 /** The prior migration whose identity mapping claimed a skipped record. */
 export interface MigrationOutcomeClaim {
@@ -184,8 +273,11 @@ export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = [
   'tickets',
   'ticket_comments',
   'assets',
-  // Vendor offers reference products, so products always apply first.
+  // Items first (products and services), then the prices that reference them,
+  // then vendor offers, which reference products.
   'products',
+  'services',
+  'catalog_prices',
   'vendor_products',
 ];
 

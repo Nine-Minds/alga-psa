@@ -6,6 +6,7 @@ import { parseConfiguration } from '../MigrationPlanner';
 import { MIGRATION_PHASE_ORDER } from '../types';
 import { ApplierContext } from './context';
 import { ENTITY_APPLIERS } from './entityAppliers';
+import { markPriceBookApplied } from '@alga-psa/billing/lib/catalog/priceBooks';
 
 const APPLY_BATCH_SIZE = 25;
 
@@ -50,6 +51,12 @@ export class MigrationDomainApplier {
 
     const totals: ApplyRunResult = { cancelled: false, created: 0, skipped: 0, failed: 0 };
 
+    // The apply run is asynchronous, so a price book import re-checks the
+    // permission its server action already checked before touching anything.
+    if (context.configuration.priceBook) {
+      await withTransaction(this.knex, (trx) => context.requirePermission(trx, 'service', 'update'));
+    }
+
     for (const entityType of MIGRATION_PHASE_ORDER) {
       const hasRecords = await db
         .table('migration_staged_records')
@@ -69,7 +76,35 @@ export class MigrationDomainApplier {
       await this.setEntityState(migrationJobId, entityType, 'completed');
     }
 
+    await this.finalizePriceBook(migrationJobId, context);
     return totals;
+  }
+
+  /**
+   * When every price row has been processed the price book moves `draft` ->
+   * `scheduled`. A row that failed leaves it a draft, so applying again re-runs
+   * only the records without an outcome and then completes the book. Rows
+   * blocked in preflight never run and do not hold the book back.
+   */
+  private async finalizePriceBook(migrationJobId: string, context: ApplierContext): Promise<void> {
+    const priceBook = context.configuration.priceBook;
+    if (!priceBook) return;
+    const db = tenantDb(this.knex, this.tenant);
+    const pending = await db
+      .table('migration_staged_records as s')
+      .where({ 's.migration_job_id': migrationJobId, 's.entity_type': 'catalog_prices', 's.validation_state': 'valid' })
+      .whereNotExists(function applied() {
+        this.select(1)
+          .from('migration_record_outcomes as o')
+          .whereRaw('o.tenant = s.tenant')
+          .whereRaw('o.migration_staged_record_id = s.migration_staged_record_id')
+          .whereIn('o.action', ['created', 'skipped']);
+      })
+      .first();
+    if (pending) return;
+    await withTransaction(this.knex, (trx) =>
+      markPriceBookApplied(trx, this.tenant, priceBook.priceBookId, context.actorUserId)
+    );
   }
 
   private async applyEntity(

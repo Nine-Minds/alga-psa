@@ -163,6 +163,8 @@ export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
   ticket_comments: 'Ticket comments',
   assets: 'Assets',
   products: 'Products',
+  services: 'Services',
+  catalog_prices: 'Catalog prices',
   vendor_products: 'Vendor price list',
 };
 
@@ -287,6 +289,14 @@ const MIGRATION_UPLOAD_ERROR_COPY: Record<MigrationUploadErrorCode, MigrationUpl
   AMP_SPREADSHEET_INVALID: {
     key: 'importExport.migration.errors.invalidSpreadsheet',
     defaultValue: 'That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.',
+  },
+  PRICE_BOOK_INVALID: {
+    key: 'importExport.migration.errors.priceBookInvalid',
+    defaultValue: 'The price book could not be created. Check its name, that its effective date is today or later, and that the name is not already used with another date.',
+  },
+  PRICE_BOOK_PERMISSION_DENIED: {
+    key: 'importExport.migration.errors.priceBookPermissionDenied',
+    defaultValue: 'You need permission to view billing to import a price book.',
   },
   AMP_NOT_SQLITE: {
     key: 'importExport.migration.errors.notAmpPackage',
