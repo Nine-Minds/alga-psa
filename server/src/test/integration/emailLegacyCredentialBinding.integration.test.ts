@@ -157,7 +157,7 @@ describe('legacy outbound credential binding against PostgreSQL', () => {
       concurrentWriter = db('tenant_email_settings')
         .where({ tenant: raceTenant })
         .update({ provider_configs: JSON.stringify([{ ...bound!.providerConfigs[0], config: concurrentConfig }]) })
-        .then(() => { writerFinished = true; });
+        .then((count) => { writerFinished = true; return count; });
 
       // The service's nested transaction has completed, but the caller's
       // transaction still owns its SELECT FOR UPDATE lock.
@@ -181,7 +181,7 @@ describe('legacy outbound credential binding against PostgreSQL', () => {
     await expect(staleManager.initialize(afterConcurrentEdit!)).rejects.toMatchObject({ errorCode: 'SECRET_IDENTITY_MISMATCH' });
     expect(smtp.createTransport).not.toHaveBeenCalled();
 
-    const replacementConfig = {
+    const replacementConfig: Record<string, unknown> = {
       ...afterConcurrentEdit!.providerConfigs[0].config,
       password: 'synthetic-explicit-replacement-password',
     };
