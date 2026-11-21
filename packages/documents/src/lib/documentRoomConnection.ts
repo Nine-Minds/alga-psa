@@ -132,7 +132,10 @@ export function startDocumentRoomConnection(
       provider.disconnect();
 
       if (error instanceof DocumentRoomCredentialDeniedError) {
-        if (initial) throw error;
+        if (initial) {
+          stop();
+          throw error;
+        }
         finishWithFailure(error);
         return;
       }
@@ -147,7 +150,10 @@ export function startDocumentRoomConnection(
         `Unable to renew collaborative editing credentials after ${retryIndex + 1} attempts. Check your connection and document access, then reload the editor.`,
         { cause: error },
       );
-      if (initial) throw exhausted;
+      if (initial) {
+        stop();
+        throw exhausted;
+      }
       finishWithFailure(exhausted);
     }
   };

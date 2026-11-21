@@ -63,6 +63,18 @@ describe('document room credential renewal lifecycle', () => {
     expect(provider.connect).toHaveBeenCalledTimes(1);
   });
 
+  it('stops the initial connection lifecycle on an authorization denial', async () => {
+    const provider = createProvider();
+    const denied = new DocumentRoomCredentialDeniedError('Permission denied: document access was revoked');
+    const issueCredential = vi.fn().mockRejectedValue(denied);
+    const connection = startDocumentRoomConnection(provider, issueCredential, vi.fn());
+
+    await expect(connection.ready).rejects.toBe(denied);
+
+    expect(issueCredential).toHaveBeenCalledTimes(1);
+    expect(provider.listenerCount('authenticationFailed')).toBe(0);
+  });
+
   it('cancels a scheduled retry when the document lifecycle stops', async () => {
     vi.useFakeTimers();
     const provider = createProvider();
