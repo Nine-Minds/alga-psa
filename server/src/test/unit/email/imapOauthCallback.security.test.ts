@@ -150,11 +150,29 @@ describe('IMAP OAuth callback security', () => {
   });
 
   it('rejects expired state before database or secret access', async () => {
-    const token = await signedAttempt({ now: Date.now() - 11 * 60 * 1000 });
-    const response = await GET(request(token));
-    expect(response.status).toBe(400);
-    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
-    expect(mocks.getTenantSecret).not.toHaveBeenCalled();
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-21T12:00:00.000Z'));
+      const { state, token } = await createImapOAuthState({
+        tenant: 'tenant-a',
+        userId: 'user-a',
+        providerId: 'provider-a',
+        redirectUri: 'https://app.example.com/api/email/oauth/imap/callback',
+      });
+      mocks.consumedState = state;
+
+      vi.setSystemTime(state.expiresAt + 1);
+      const response = await GET(request(token));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Invalid OAuth state' });
+      expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+      expect(mocks.tenantDb).not.toHaveBeenCalled();
+      expect(mocks.getTenantSecret).not.toHaveBeenCalled();
+      expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('consumes state once and refuses replay', async () => {
