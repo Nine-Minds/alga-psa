@@ -1661,7 +1661,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 const logger = (await import('@alga-psa/core/logger')).default;
                 const { authenticateUserForAuth } = await import('./authenticateUserForAuth');
                 const {
-                    TwoFactorRequiredError,
                     enforceLoginProtection,
                     normalizeLoginEmail,
                     recordLoginFailure,
@@ -1816,7 +1815,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                             if (!credentials.twoFactorCode) {
                                 console.log('2FA verification failed: No code provided');
                                 logger.warn("2FA code required for email", credentials.email);
-                                throw new TwoFactorRequiredError();
+                                return null;
                             }
                             if (!user.two_factor_secret) {
                                 console.log('2FA verification failed: No secret found');

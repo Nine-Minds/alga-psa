@@ -1,5 +1,7 @@
 # Credential-boundary smoke build repair
 
+For the latest scope and verification, see [the scope repair](current-user-scope-repair.md). The live checks below describe earlier revisions.
+
 The mitigation repairs the pre-existing SQL binding error that prevented the email-service dependency build and application startup. No approved branch plan exists (`git log main..HEAD --name-only -- docs/plans/` returned no paths).
 
 `SqlFragment.bindings` now uses `Knex.RawBinding[]`. Ticket computed resolvers preserve `PredicateValue` and `PredicateLiteral` instead of widening values to `unknown`. Scalar bindings reject missing values before reaching Knex. The SQL compiler no longer needs a binding assertion. Existing SQL structure, tenant correlation, and parameterization are retained.

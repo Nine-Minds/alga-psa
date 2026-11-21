@@ -1,8 +1,6 @@
 'use client'
 
-import { useCredentialSignIn } from './useCredentialSignIn';
-import type { SignInOptions } from 'next-auth/react';
-import type { TwoFactorContinuation } from './useTwoFactorChallenge';
+import { signIn } from 'next-auth/react';
 import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -18,7 +16,7 @@ import { appendPortalDomain } from '../lib/portalDomain';
 interface ClientLoginFormProps {
   callbackUrl: string;
   onError: (error: string) => void;
-  onTwoFactorRequired: (submit: TwoFactorContinuation) => void;
+  onTwoFactorRequired: () => void;
   tenantSlug?: string;
   portalDomain?: string;
 }
@@ -32,7 +30,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [tenantRequired, setTenantRequired] = useState(false);
   const captcha = useLoginCaptcha();
-  const signInCredentials = useCredentialSignIn();
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -84,12 +81,13 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     });
   }, [email, password, isLoading, updateEmailField, updatePasswordField, updateSignInButton]);
 
-  async function submitCredentials(twoFactorCode?: string) {
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setIsLoading(true)
     setTenantRequired(false)
 
     try {
-      const signInPayload: SignInOptions<false> = {
+      const signInPayload: Record<string, unknown> = {
         email,
         password,
         userType: 'client',
@@ -112,11 +110,11 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         signInPayload.captchaToken = captcha.token;
       }
 
-      const result = await signInCredentials(signInPayload, twoFactorCode);
+      const result = (await signIn('credentials', signInPayload)) as unknown as { error?: string; code?: string; url?: string } | null
 
       if (result?.error) {
-        if (result.code === '2FA_REQUIRED') {
-          onTwoFactorRequired(submitCredentials);
+        if (result.error === '2FA_REQUIRED') {
+          onTwoFactorRequired();
         } else if (result.code === 'CAPTCHA_REQUIRED') {
           await captcha.requireCaptcha();
           onError(t('auth.captchaRequired', 'Please complete the verification below, then sign in again.'))
@@ -149,10 +147,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
   return (
     <form 
-      onSubmit={(event) => {
-        event.preventDefault();
-        void submitCredentials();
-      }}
+      onSubmit={onSubmit}
       method="POST"
       className="space-y-4" 
       {...withDataAutomationId({ id: 'client-login-form' })}

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import speakeasy from 'speakeasy';
-import { CredentialsSignin } from '@auth/core/errors';
 
 const cookieGetMock = vi.fn();
 const cookieSetMock = vi.fn();
@@ -127,7 +126,7 @@ const { getAuthOptions } = await import('./nextAuthOptions');
 
 // Exercise the actual Credentials authorize callback and real TOTP verification.
 // Only the password/database boundary and external effects are stubbed.
-describe.each(['internal', 'client'])('credentials TOTP challenge: %s', (userType) => {
+describe.each(['internal', 'client'])('credentials TOTP verification: %s', (userType) => {
   const seed = 'JBSWY3DPEHPK3PXP';
   const user = { user_id: 'user-1', tenant: 'tenant-1', email: 'totp@example.test',
     username: 'totp', user_type: userType, two_factor_enabled: true,
@@ -146,16 +145,13 @@ describe.each(['internal', 'client'])('credentials TOTP challenge: %s', (userTyp
     authenticate.mockImplementation(async (_email, password) => password === 'correct-password' ? user : null);
   });
 
-  it('challenges only after a valid password without recording success or creating a session', async () => {
-    const error = await authorize('correct-password').catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(CredentialsSignin);
-    expect(error).toMatchObject({ type: 'CredentialsSignin', code: '2FA_REQUIRED' });
+  it('rejects a missing code without recording success or creating a session', async () => {
+    expect(await authorize('correct-password')).toBeNull();
     expect(authenticate).toHaveBeenCalledWith(user.email, 'correct-password', userType,
       expect.objectContaining({ tenantSlug: 'tenant-slug', requireTenantMatch: true }));
     expect(protection.success).not.toHaveBeenCalled();
     expect(protection.failure).not.toHaveBeenCalled();
     expect(userSessionCreateMock).not.toHaveBeenCalled();
-    expect(JSON.stringify(error)).not.toContain(seed);
   });
 
   it.each([undefined, '123456'])('rejects a wrong password with code %s without revealing a challenge', async (code) => {
@@ -175,7 +171,7 @@ describe.each(['internal', 'client'])('credentials TOTP challenge: %s', (userTyp
   });
 
   it('accepts a valid code on resubmission and returns only public identity', async () => {
-    await expect(authorize('correct-password')).rejects.toMatchObject({ code: '2FA_REQUIRED' });
+    expect(await authorize('correct-password')).toBeNull();
     const code = speakeasy.totp({ secret: seed, encoding: 'base32' });
     const result = await authorize('correct-password', code);
     expect(result).toMatchObject({ id: 'user-1', user_type: userType });

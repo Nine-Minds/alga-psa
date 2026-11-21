@@ -75,8 +75,6 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
       });
 
       if (newCode.every(digit => digit !== '')) {
-        setCode(['', '', '', '', '', '']);
-        updateInput({ value: '' });
         onComplete(fullCode);
       }
     }
@@ -91,14 +89,10 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={() => {
-        setCode(['', '', '', '', '', '']);
-        updateInput({ value: '' });
-        onClose();
-      }}
+      onClose={onClose}
       className="max-w-sm"
       id="2fa-dialog"
-      hideCloseButton={false}
+      hideCloseButton={true}
     >
       <DialogContent className="p-0">
         <div className="p-8">
@@ -117,8 +111,6 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
               {code.map((digit, index): React.JSX.Element => (
                 <Input
                   key={index}
-                  id={`2fa-digit-${index}`}
-                  aria-label={`${t('auth.twoFactor.codeLabel')} ${index + 1}`}
                   ref={el => {
                     inputRefs.current[index] = el
                   }}

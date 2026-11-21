@@ -1,5 +1,7 @@
 # Current-user credential boundary
 
+For the latest scope and verification, see [the scope repair](current-user-scope-repair.md). The verification results below describe earlier revisions.
+
 No approved implementation plan was present in `git log main..HEAD --name-only -- docs/plans/` at the start of this task.
 
 The canonical public user projection now lives in `packages/types/src/lib/userResponse.ts`. The previous users-package sanitizer module re-exports it so existing consumers keep the same imports. The allowlist includes `phone_extension` to preserve the public profile field when full rows become projected rows.
