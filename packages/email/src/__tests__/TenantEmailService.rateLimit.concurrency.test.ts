@@ -2,7 +2,23 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
-import { TenantEmailService } from '../TenantEmailService';
+const controlledProvider = vi.hoisted(() => ({
+  sendEmail: vi.fn(),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(async () => ({})),
+  isTenantSuspended: vi.fn(async () => false),
+}));
+
+vi.mock('../providers/EmailProviderManager', () => ({
+  EmailProviderManager: class {
+    async initialize() {}
+    sendEmail = controlledProvider.sendEmail;
+  },
+}));
+
+import { defaultSendLive } from '../diagnostics/outboundDiagnostics';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import type { TokenBucketRedisClient } from '@alga-psa/core/rateLimit';
 
@@ -49,7 +65,7 @@ describe('TenantEmailService email rate limit concurrency (live Redis)', () => {
     await client?.disconnect().catch(() => undefined);
   });
 
-  it('allows exactly the bucket capacity and calls the mocked provider no more than capacity', async ({ skip }) => {
+  it('sends exactly the bucket capacity through diagnostics live-send and blocks the rest', async ({ skip }) => {
     if (!client) {
       skip();
       return;
@@ -63,18 +79,28 @@ describe('TenantEmailService email rate limit concurrency (live Redis)', () => {
     });
     await client.del(bucketKey);
 
-    const mockedProviderSend = vi.fn(async () => ({ success: true }));
-    const results: Array<{ allowed: boolean }> = await Promise.all(
-      Array.from({ length: capacity * 3 }, async () => {
-        const gate = await TenantEmailService.checkEmailRateLimit(tenantId, userId);
-        if (gate.allowed) await mockedProviderSend();
-        return gate;
-      }),
+    controlledProvider.sendEmail.mockReset();
+    controlledProvider.sendEmail.mockResolvedValue({
+      success: true,
+      messageId: 'controlled-provider-message',
+      providerId: 'controlled-provider',
+      providerType: 'smtp',
+    });
+    const input = {
+      tenant: tenantId,
+      userId,
+      settings: { tenantId, emailProvider: 'smtp', providerConfigs: [] } as any,
+      from: 'notifications@example.test',
+      recipient: 'recipient@example.test',
+    };
+    const results = await Promise.all(
+      Array.from({ length: capacity * 3 }, () => defaultSendLive(input)),
     );
 
-    const allowed = results.filter((result) => result.allowed).length;
+    expect(controlledProvider.sendEmail).toHaveBeenCalledTimes(capacity);
+    const allowed = results.filter((result) => result.success).length;
     expect(allowed).toBe(capacity);
     expect(allowed).toBeLessThanOrEqual(capacity);
-    expect(mockedProviderSend).toHaveBeenCalledTimes(capacity);
+    expect(results.filter((result) => result.errorCode === 'RATE_LIMITED')).toHaveLength(capacity * 2);
   });
 });
