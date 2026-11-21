@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const sharedAuthorizationSource = readFileSync(resolve(__dirname, '../lib/projectReadAuthorization.ts'), 'utf8');
 const source = readFileSync(resolve(__dirname, 'projectActions.ts'), 'utf8');
 
 function sectionBetween(startMarker: string, endMarker: string): string {
@@ -18,10 +17,7 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 describe('project actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for project action roots', () => {
     expect(source).toContain("tenantScopedTable(params.knexOrTrx, 'contacts', params.tenant)");
-    // The authorization subject is resolved by the one shared record-level helper (C6 extraction).
-    // The one resolver in packages/authorization (structurally tenant scoped via tenantDb) owns the lookups.
-    expect(sharedAuthorizationSource).toContain('resolveAuthorizationSubject(conn, { tenant, user, requestCache })');
-    expect(sharedAuthorizationSource).not.toContain('portfolioClientIds');
+    // Shared authorization scope is exercised by projectReadAuthorization.subjectScope.test.ts.
     expect(source).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");

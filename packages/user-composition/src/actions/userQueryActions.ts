@@ -1,7 +1,11 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import {
+  isInteractiveUserType, USER_RESPONSE_FIELD_NAMES, USER_RESPONSE_COLUMNS,
+  sanitizeUserFields, sanitizeUserForResponse,
+  type IUser, type IRole, type PublicUser, type PublicUserWithRoles, type IRoleWithPermissions,
+} from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -10,9 +14,12 @@ import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
 import { projectedPeopleAsUsers, projectedPeopleForCaller } from '../lib/seatPeople';
 import logger from '@alga-psa/core/logger';
-import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { getCurrentUser as getAuthenticatedUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
-export { getCurrentUser };
+export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
+  const user = await getAuthenticatedUser();
+  return user ? sanitizeUserForResponse(user) : null;
+}
 
 function isPermissionDeniedError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Permission denied:');
@@ -28,12 +35,8 @@ function isExpectedUserQueryError(error: unknown): boolean {
 }
 
 /**
- * These query actions return full `users` rows (select '*', including
- * hashed_password/two_factor_secret). Client-portal roles hold a
- * client-flagged `user:read` permission, so the RBAC check alone does not
- * keep portal callers out. No client-portal surface legitimately calls these
- * actions (the portal uses dedicated actions like getClientUserById /
- * getClientUsersForClient), so they are restricted to non-client callers.
+ * Portal user management uses dedicated, company-scoped actions. Keep the
+ * existing non-client restriction in addition to projecting public fields.
  */
 function assertNotClientPortalCaller(currentUser: { user_type?: string }, action: string): void {
   if (currentUser.user_type === 'client') {
@@ -45,7 +48,7 @@ export const findUserById = withAuth(async (
   currentUser,
   _ctx,
   id: string
-): Promise<IUserWithRoles | null> => {
+): Promise<PublicUserWithRoles | null> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -57,7 +60,7 @@ export const findUserById = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, id);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? sanitizeUserForResponse(user) : null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
@@ -78,7 +81,7 @@ export const getAllUsersBasic = withAuth(async (
   includeInactive: boolean = true,
   userType?: string,
   includeNonInteractive: boolean = false
-): Promise<IUser[]> => {
+): Promise<PublicUser[]> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -98,7 +101,7 @@ export const getAllUsersBasic = withAuth(async (
       return users.filter(user =>
         user.tenant === tenant &&
         (userType ? user.user_type === userType : true)
-      );
+      ).map(sanitizeUserFields);
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
@@ -115,7 +118,7 @@ export const getAllUsers = withAuth(async (
   includeInactive: boolean = true,
   userType?: string,
   includeNonInteractive: boolean = false
-): Promise<IUserWithRoles[]> => {
+): Promise<PublicUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -141,7 +144,7 @@ export const getAllUsers = withAuth(async (
       const userIds = filteredUsers.map(u => u.user_id);
       const rolesByUser = await User.getUserRolesBulk(trx, userIds);
 
-      return filteredUsers.map((user): IUserWithRoles => ({
+      return filteredUsers.map((user): PublicUserWithRoles => sanitizeUserForResponse({
         ...user,
         roles: rolesByUser.get(user.user_id) || []
       }));
@@ -159,7 +162,7 @@ export const getReportsToSubordinates = withAuth(async (
   currentUser,
   { tenant },
   managerUserId?: string
-): Promise<IUser[]> => {
+): Promise<PublicUser[]> => {
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
@@ -173,15 +176,15 @@ export const getReportsToSubordinates = withAuth(async (
 
       const subordinateIds = await User.getReportsToSubordinateIds(trx, targetManagerId);
       if (subordinateIds.length === 0) {
-        return [] as IUser[];
+        return [] as PublicUser[];
       }
 
       const rows = await tenantDb(trx, tenant)
         .table('users')
         .whereIn('user_id', subordinateIds)
-        .select('*');
+        .select(...USER_RESPONSE_FIELD_NAMES);
 
-      return rows as IUser[];
+      return rows.map(sanitizeUserFields);
     });
   } catch (error) {
     logger.error('Failed to fetch reports_to subordinates:', error);
@@ -354,7 +357,7 @@ export const getUserWithRoles = withAuth(async (
   currentUser,
   _ctx,
   userId: string
-): Promise<IUserWithRoles | null> => {
+): Promise<PublicUserWithRoles | null> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -366,7 +369,7 @@ export const getUserWithRoles = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, userId);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? sanitizeUserForResponse(user) : null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
@@ -381,7 +384,7 @@ export const getMultipleUsersWithRoles = withAuth(async (
   currentUser,
   { tenant },
   userIds: string[]
-): Promise<IUserWithRoles[]> => {
+): Promise<PublicUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -398,8 +401,8 @@ export const getMultipleUsersWithRoles = withAuth(async (
       }
       assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
-      const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
-      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type));
+      const users = await Promise.all(userIds.map((id: string): Promise<PublicUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
+      return users.filter((user): user is PublicUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type)).map(sanitizeUserForResponse);
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
@@ -580,7 +583,7 @@ export const getClientUsersForClient = withAuth(async (
   currentUser,
   { tenant },
   clientId: string
-): Promise<IUser[]> => {
+): Promise<PublicUser[]> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -635,10 +638,10 @@ export const getClientUsersForClient = withAuth(async (
           'users.updated_at'
         );
       } else {
-        query = query.select<IUser[]>('users.*');
+        query = query.select<IUser[]>(...USER_RESPONSE_COLUMNS);
       }
 
-      return await query;
+      return (await query).map(sanitizeUserFields);
     });
   } catch (error) {
     logger.error('Error getting client users:', error);

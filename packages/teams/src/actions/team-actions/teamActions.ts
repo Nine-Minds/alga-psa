@@ -40,8 +40,14 @@ async function getUsersWithRoles(
   const rolesByUser = new Map<string, IRole[]>();
   for (const row of roles as any[]) {
     const userId = row.user_id as string;
-    const role: IRole = { ...(row as any) };
-    delete (role as any).user_id;
+    const role: IRole = {
+      role_id: row.role_id,
+      role_name: row.role_name,
+      description: row.description,
+      msp: row.msp,
+      client: row.client,
+      tenant: row.tenant,
+    };
     const list = rolesByUser.get(userId) ?? [];
     list.push(role);
     rolesByUser.set(userId, list);

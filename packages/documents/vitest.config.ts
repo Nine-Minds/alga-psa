@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
@@ -5,6 +6,7 @@ import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-
 // Shared aliases so component tests resolve workspace packages from source
 // instead of built dist output.
 const workspaceAliases = [
+  serverOnlyAlias,
   // next-auth's lib/env.js imports the extensionless builtin specifier
   // "next/server"; point it at the real file so a fresh install resolves.
   { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
@@ -88,6 +90,7 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  serverOnlyAlias,
   { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
   // This workspace package publishes its runtime entry from dist, which Nx's
   // no-op build target does not create. Resolve from source so node tests do

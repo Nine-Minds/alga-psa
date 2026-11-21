@@ -1,6 +1,6 @@
 'use server';
 
-import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
+import { getLicenseUsage, type LicenseUsage } from '@alga-psa/licensing/server';
 import { getSession } from '@alga-psa/auth';
 import type { AddOnKey } from '@alga-psa/types';
 import {

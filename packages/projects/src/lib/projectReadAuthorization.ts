@@ -56,11 +56,12 @@ export type ProjectAuthorizationAction = 'read' | 'update' | 'delete';
 async function createProjectAuthorizationContext(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  apiKeyId?: string | null
 ) {
   const requestCache = new RequestLocalAuthorizationCache();
   // A failed lookup propagates: a subject that cannot be resolved gets no decision, hence no access.
-  const subject = await resolveAuthorizationSubject(conn, { tenant, user, requestCache });
+  const subject = await resolveAuthorizationSubject(conn, { tenant, user, apiKeyId, requestCache });
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: createBundleNarrowingProvider(conn),
@@ -90,9 +91,10 @@ export async function createProjectActionDecider(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  action: ProjectAuthorizationAction = 'read'
+  action: ProjectAuthorizationAction = 'read',
+  apiKeyId?: string | null
 ): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
-  const prepare = await createProjectAuthorizationContext(conn, tenant, user);
+  const prepare = await createProjectAuthorizationContext(conn, tenant, user, apiKeyId);
 
   return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;
@@ -131,9 +133,10 @@ export async function createProjectReadAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  action: ProjectAuthorizationAction = 'read'
+  action: ProjectAuthorizationAction = 'read',
+  apiKeyId?: string | null
 ): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
-  const prepare = await createProjectAuthorizationContext(conn, tenant, user);
+  const prepare = await createProjectAuthorizationContext(conn, tenant, user, apiKeyId);
 
   return async (project) => {
     const projectId = project.project_id;
@@ -157,14 +160,15 @@ export async function assertProjectReadAllowed(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  projectId: string
+  projectId: string,
+  apiKeyId?: string | null
 ): Promise<IProject> {
   const project = await ProjectModel.getById(conn, tenant, projectId);
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const authorize = await createProjectReadAuthorizer(conn, tenant, user);
+  const authorize = await createProjectReadAuthorizer(conn, tenant, user, 'read', apiKeyId);
   if (!(await authorize(project))) {
     throw new Error('Permission denied: Cannot read project');
   }
