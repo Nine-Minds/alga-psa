@@ -10,6 +10,8 @@
 // System email exports
 export { SystemEmailService, getSystemEmailService } from './system/SystemEmailService';
 export * from './system/types';
+export { resolveSystemEmailState, isSystemEmailConfigured } from './system/systemEmailState';
+export type { SystemEmailState, SystemEmailProviderType } from './system/systemEmailState';
 
 // Tenant email exports
 export { TenantEmailService } from './TenantEmailService';

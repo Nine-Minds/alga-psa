@@ -18,7 +18,6 @@ import { buildPasswordResetLink } from '../lib/portalDomain';
 import { resolvePasswordResetOrigin } from '../lib/resetLinkOrigin';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
-const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
 
 interface VerifyResponse {
   message: string;
@@ -180,8 +179,9 @@ export async function recoverPassword(
 
     // Provider readiness is decided by the send path, not by an environment
     // flag here. An enabled tenant SMTP/Resend/Microsoft provider therefore
-    // works even when EMAIL_ENABLE is false or unset; the system fallback
-    // remains controlled by SystemEmailProviderFactory and EMAIL_ENABLE.
+    // works even when system email is disabled or unconfigured; the system
+    // fallback remains controlled by SystemEmailProviderFactory (which uses
+    // resolveSystemEmailState).
     //
     // The reset link origin may only come from trusted server-side
     // configuration. Request-derived headers are never consulted (reset-link
@@ -278,7 +278,7 @@ export async function registerUser({ username, email, password, clientName }: IU
     user_type: 'client'
   });
 
-  if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
+  if (VERIFY_EMAIL_ENABLED && getAuthEmailRegistry().isSystemEmailConfigured()) {
     const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
     
     const { t } = await getServerTranslation(undefined, 'client-portal');

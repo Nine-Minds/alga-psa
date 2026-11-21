@@ -153,7 +153,8 @@ beforeAll(async () => {
     smtpPort = started.ports['smtp-sink'];
     controlUrl = `http://127.0.0.1:${started.controlPort}`;
   }
-  process.env.EMAIL_ENABLE = 'true';
+  // System email is on whenever credentials are present; the flag stays unset.
+  delete process.env.EMAIL_ENABLE;
   process.env.EMAIL_PROVIDER_TYPE = 'smtp';
   process.env.EMAIL_HOST = '127.0.0.1';
   process.env.EMAIL_PORT = String(smtpPort);

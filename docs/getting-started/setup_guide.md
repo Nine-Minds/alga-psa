@@ -120,7 +120,7 @@ cp .env.example server/.env
    - `LOG_LEVEL=INFO`
    - `LOG_IS_FORMAT_JSON=false`
    - `LOG_IS_FULL_DETAILS=false`
-   - `EMAIL_ENABLE=false` (set to `true` when you are ready to send mail)
+   - `EMAIL_ENABLE` (optional off switch: leave unset, or set `false` to disable system email; mail is sent once credentials below are configured)
    - `EMAIL_FROM=noreply@example.com`
    - `EMAIL_HOST=smtp.gmail.com`
    - `EMAIL_PORT=587`
@@ -560,7 +560,7 @@ configuration.
 ### Email Configuration for Production
 Update email settings for production notifications:
 ```bash
-EMAIL_ENABLE=true
+# EMAIL_ENABLE is optional; set EMAIL_ENABLE=false only to turn system email off
 EMAIL_FROM=noreply@your-domain.com
 EMAIL_HOST=your-smtp-server.com
 EMAIL_USERNAME=noreply@your-domain.com

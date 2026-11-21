@@ -4,8 +4,10 @@
  *
  * Regression matrix (plan 2026-08-14-password-recovery-email-provider-plan):
  *
- *  1. MSP recovery works with EMAIL_ENABLE='false' via an enabled tenant SMTP
- *     provider pointed at the emulator; public result is true and exactly one
+ *  1. MSP recovery works with EMAIL_ENABLE='false' (the off switch for the
+ *     environment-backed system provider only) via an enabled tenant SMTP
+ *     provider pointed at the emulator; the system provider is not used (the
+ *     log row names the tenant provider); public result is true and exactly one
  *     message is delivered.
  *  2. Client-portal recovery works with the global flag unset; the message
  *     carries the set-new-password link, portal=client, and the encoded
@@ -39,7 +41,7 @@ import type { Knex } from 'knex';
 import { tenantDb, resetTenantConnectionPool } from '@alga-psa/db';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import smtpSink, { CapturedEmail } from '@alga-psa/emulator-smtp-sink';
-import { getSystemEmailService, sendPasswordResetEmail, TenantEmailService } from '@alga-psa/email';
+import { getSystemEmailService, isSystemEmailConfigured, sendPasswordResetEmail, TenantEmailService } from '@alga-psa/email';
 import { recoverPassword } from '@alga-psa/auth/actions';
 
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
@@ -177,6 +179,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     // Wire the real email implementations exactly as initializeApp does.
     registerAuthEmailProvider({
       sendPasswordResetEmail,
+      isSystemEmailConfigured,
       getSystemEmailService: async () => getSystemEmailService(),
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
@@ -424,7 +427,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     expect(await capturedEmails()).toHaveLength(0);
 
     // A provider-level attempt was made: the tenant SMTP provider logged a
-    // failed row rather than being masked by the generic system-disabled path.
+    // failed row rather than being masked by the generic system-unavailable path.
     const rows = await db('email_sending_logs').where({ tenant: tenantId });
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('failed');

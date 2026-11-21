@@ -150,7 +150,7 @@ await runWithTenant(tenantId, async () => {
 System emails use environment variables:
 
 ```env
-EMAIL_ENABLE=true                    # Enable/disable email sending
+# EMAIL_ENABLE=false                 # Optional off switch; system email is on whenever credentials are set
 EMAIL_HOST=smtp.example.com          # SMTP host
 EMAIL_PORT=587                       # SMTP port
 EMAIL_USERNAME=noreply@example.com   # SMTP username
@@ -265,7 +265,7 @@ When implementing a new email feature, ask yourself:
 
 1. Check environment variables are set correctly
 2. Verify SMTP credentials are valid
-3. Check `EMAIL_ENABLE=true`
+3. Check that `EMAIL_ENABLE` is not set to `false` (it is an optional off switch) and that `RESEND_API_KEY` or `EMAIL_HOST` is set
 4. Look for errors in logs prefixed with `[SystemEmailService]`
 
 ### Tenant Emails Not Sending  

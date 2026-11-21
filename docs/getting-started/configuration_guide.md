@@ -69,12 +69,15 @@ LOG_EXTERNAL_HTTP_TOKEN=
 ```
 
 #### Email Settings (EMAIL_*)
+System email is on whenever credentials are present: `RESEND_API_KEY` (Resend) or `EMAIL_HOST` (SMTP).
+`EMAIL_ENABLE` is an optional off switch. Set `EMAIL_ENABLE=false` to disable system email even when
+credentials are set; leave it unset otherwise. All of these settings are optional.
 ```
-EMAIL_ENABLE=false  # Required: Boolean
-EMAIL_FROM=noreply@example.com  # Required: Valid email address
+# EMAIL_ENABLE=false  # Optional: only "false" has an effect (disables system email)
+EMAIL_FROM=noreply@example.com
 EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587  # Required: Number greater than 0
-EMAIL_USERNAME=noreply@example.com  # Required: Valid email address
+EMAIL_PORT=587
+EMAIL_USERNAME=noreply@example.com
 # EMAIL_PASSWORD managed via Docker secrets
 ```
 

@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { resolveSystemEmailState } from '@alga-psa/email';
 
 /**
  * Validates email provider configuration
@@ -7,20 +8,17 @@ import logger from '@alga-psa/core/logger';
 export function validateEmailConfiguration(): { valid: boolean; warnings: string[] } {
   const warnings: string[] = [];
   
-  // Check if email is enabled
-  const isEnabled = process.env.EMAIL_ENABLE === 'true';
-  
-  if (!isEnabled) {
-    // Email is explicitly disabled, no warnings needed
+  // Only validate when system email is configured. 'disabled' (EMAIL_ENABLE=false)
+  // and 'unconfigured' (no credentials) are both quiet: nothing to warn about.
+  const resolved = resolveSystemEmailState();
+
+  if (resolved.state !== 'configured') {
     return { valid: true, warnings: [] };
   }
 
-  // Email is enabled, validate provider configuration
   const providerType = process.env.EMAIL_PROVIDER_TYPE;
-  
-  // Detect provider type if not specified
-  const detectedType = !providerType ? detectProviderType() : providerType;
-  
+  const detectedType = resolved.providerType;
+
   if (!providerType) {
     warnings.push(`EMAIL_PROVIDER_TYPE not specified. Auto-detected provider type: ${detectedType}`);
   }
@@ -50,6 +48,7 @@ export function validateEmailConfiguration(): { valid: boolean; warnings: string
 /**
  * Detect provider type based on environment variables
  */
+// LEVERAGE: pattern system-email-provider-type — provider-type detection is still duplicated here for the help text; resolveSystemEmailState owns the rule
 function detectProviderType(): 'smtp' | 'resend' {
   // If Resend API key is present, use Resend
   if (process.env.RESEND_API_KEY) {

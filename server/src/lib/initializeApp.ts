@@ -13,7 +13,7 @@ import { getConnection } from 'server/src/lib/db/db';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
-import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService, isSystemEmailConfigured, resolveSystemEmailState } from '@alga-psa/email';
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
@@ -130,7 +130,7 @@ export async function initializeApp() {
       const emailValidation = validateEmailConfiguration();
       if (emailValidation.warnings.length > 0) {
         logEmailConfigWarnings(emailValidation.warnings);
-      } else if (process.env.EMAIL_ENABLE === 'true') {
+      } else if (resolveSystemEmailState().state === 'configured') {
         logger.info('Email configuration validation passed');
       }
     } catch (error) {
@@ -151,6 +151,7 @@ export async function initializeApp() {
     // This breaks circular dependencies: auth and shared no longer import from email directly
     registerAuthEmailProvider({
       sendPasswordResetEmail,
+      isSystemEmailConfigured,
       getSystemEmailService: async () => getSystemEmailService(),
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
@@ -465,12 +466,11 @@ function logConfiguration() {
   });
 
   // Email Configuration
-  const emailProviderType = process.env.EMAIL_PROVIDER_TYPE ||
-    (process.env.RESEND_API_KEY ? 'resend' : 'smtp');
+  const emailState = resolveSystemEmailState();
 
   logger.info('Email Configuration:', {
-    EMAIL_ENABLE: process.env.EMAIL_ENABLE,
-    EMAIL_PROVIDER_TYPE: emailProviderType,
+    SYSTEM_EMAIL_STATE: emailState.state,
+    EMAIL_PROVIDER_TYPE: emailState.state === 'configured' ? emailState.providerType : process.env.EMAIL_PROVIDER_TYPE,
     EMAIL_FROM: process.env.EMAIL_FROM,
     EMAIL_HOST: process.env.EMAIL_HOST,
     EMAIL_PORT: process.env.EMAIL_PORT,
