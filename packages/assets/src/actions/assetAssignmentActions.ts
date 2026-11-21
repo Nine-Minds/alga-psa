@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import type { AssetAssignment } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { loadReadableAssetById } from '@alga-psa/authorization/assetReadAuthorization';
 import {
   permissionError,
   type ActionPermissionError,
@@ -60,6 +61,9 @@ export const getAssetAssignments = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const asset = await loadReadableAssetById(trx, tenant, user, assetId);
+    if (!asset) return [];
+
     const db = tenantDb(trx, tenant);
     // An asset of another tenant simply has no rows under this scope.
     const query = table(trx, tenant, 'asset_assignments as aa')
@@ -134,6 +138,9 @@ export const assignAssetContact = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const asset = await loadReadableAssetById(trx, tenant, user, assetId);
+      if (!asset) throw new Error('Asset not found');
+
       const applied = await setAssetAssignee(trx, tenant, assetId, contactId, {
         actorUserId: user.user_id,
         source: 'manual',

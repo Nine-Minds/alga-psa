@@ -8,7 +8,7 @@
  * migrated-database purchase-persistence suite; it is not a real Stripe
  * sandbox capture.
  */
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import knex, { type Knex } from 'knex';
@@ -20,12 +20,35 @@ import { getCoManagedEntitlementState } from '../../../../packages/licensing/src
 import { runCoManagedPurchase } from '../../../../packages/licensing/src/lib/co-managed-purchases';
 import { reconcileHostedCoManagedEntitlement } from '../../../../packages/licensing/src/lib/co-managed-hosted-reconcile';
 import { isCoManagedPurchaseSurfaceOpen } from '../../../../packages/licensing/src/lib/co-managed-purchase-surface';
-import { hasCoManagedEntitlement } from '../../../../packages/co-managed/src/capability';
+import { hasCoManagedEntitlement, coManagedParticipants } from '../../../../packages/co-managed/src/capability';
+import { isCoManagedSeatEligible } from '../../../../packages/co-managed/src/seatCapability';
+import { readCoManagedFirstPurchasePhase } from '../../../../packages/licensing/src/lib/co-managed-first-purchase';
 import { admits } from '../../../../packages/core/src/lib/capability';
 import { registerFeatureFlagChecker } from '../../../../packages/core/src/lib/features';
-import { StripeService } from '@ee/lib/stripe/StripeService';
+import React from 'react';
+import { getStripeService, StripeService } from '@ee/lib/stripe/StripeService';
 
-const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable' }));
+const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable', user: { tenant: '', user_type: 'internal' } }));
+// The hosted page and its actions share the fixture's signed-in account admin. The catalog,
+// tenant data, surface gate, licensing operations and Stripe adapter all run normally.
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: async () => holder.user,
+  getSession: async () => ({ user: holder.user }),
+  withAuth: (work: (...args: any[]) => unknown) => (...args: unknown[]) => work(holder.user, { tenant: holder.user.tenant }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/db', async (original) => ({
+  ...await original<typeof import('@alga-psa/db')>(),
+  createTenantKnex: async () => ({ knex: holder.db }),
+}));
+vi.mock('@alga-psa/licensing', async (original) => ({
+  ...await original<typeof import('@alga-psa/licensing')>(), getLicenseStateRow: async () => null,
+}));
+vi.mock('@enterprise/components/co-managed/CoManagedPurchaseOverview', async () => import('@ee/components/co-managed/CoManagedPurchaseOverview'));
+vi.mock('@enterprise/lib/co-managed/purchaseDiscovery', async () => import('@ee/lib/co-managed/purchaseDiscovery'));
+vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: async () => 'psa' }));
+vi.mock('@/components/co-managed/CoManagedOverview', () => ({ default: () => null }));
+vi.mock('@/components/co-managed/CoManagedCustomerHome', () => ({ default: () => null }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => holder.db,
@@ -47,6 +70,10 @@ const require = createRequire(import.meta.url);
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const foundationMigration = require('../../../migrations/20261028130000_create_co_management_foundation.cjs');
 const purchaseMigration = require('../../../migrations/20261029120000_create_co_managed_purchase_operations.cjs');
+const pinMigration = require('../../../migrations/20261118090100_pin_co_managed_purchase_offer_terms.cjs');
+const offerCatalogMigration = require('../../../../ee/server/migrations/20261118090000_create_stripe_offer_catalog.cjs');
+const catalogAccountMigration = require('../../../../ee/server/migrations/20261120120000_add_stripe_catalog_account_settings.cjs');
+const allocationKindMigration = require('../../../migrations/20261111100000_add_co_managed_allocation_kind.cjs');
 const subscriptionItemMigration = require('../../../migrations/20261027090100_add_stripe_subscription_item_id.cjs');
 const stripeMigrations = [
   '20251014120000_create_stripe_integration_tables.cjs',
@@ -135,11 +162,20 @@ beforeAll(async () => {
     await previousProductMigration.up(target);
     for (const migration of stripeMigrations) await migration.up(target);
     await subscriptionItemMigration.up(target);
+    await target.schema.alterTable('stripe_subscriptions', t => t.timestamp('trial_end', { useTz: true }));
     // StripeService writes cancel_at, which no checked-in migration creates (production schema drift).
     await target.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS cancel_at timestamptz');
   }
   await foundationMigration.up(db);
   await purchaseMigration.up(db);
+  await pinMigration.up(db); // reviewed offer version and price pinned on the operation
+  await offerCatalogMigration.up(db);
+  await catalogAccountMigration.up(db);
+  // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
+  await allocationKindMigration.up(db);
+  await require('../../../migrations/20261119100000_add_co_managed_allocation_funding_source.cjs').up(db);
+
+  await require('../../../migrations/20261119100200_co_managed_funding_views.cjs').up(db);
 
   host = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
   const started = await host.start();
@@ -148,7 +184,8 @@ beforeAll(async () => {
   process.env.STRIPE_SECRET_KEY = 'sk_test_algasim';
   process.env.STRIPE_WEBHOOK_SECRET = 'whsec_algasim';
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_algasim';
-  process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID;
+  process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID; // legacy binding: the offer is unmanaged here
+  process.env.STRIPE_ACCOUNT_ID = 'acct_algasim'; // catalog scope; the emulator has no accounts endpoint
   process.env.STRIPE_PRO_PRICE_ID = PRO_PRICE_ID;
   process.env.MASTER_BILLING_TENANT_ID = randomUUID();
   process.env.CAPABILITY_CACHE_TTL_MS = '0';
@@ -157,6 +194,13 @@ beforeAll(async () => {
   await control('seed/price', { id: CO_MANAGED_PRICE_ID, unitAmount: 1149, currency: 'eur', interval: 'month', product: 'prod_co_managed' });
   process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 }, HOOK_TIMEOUT);
+
+// Tests run in shuffled order. Each starts with its own catalog state in the suite's temporary database.
+beforeEach(async () => {
+  await db('stripe_offer_publications').delete();
+  await db('stripe_offer_catalog_settings').delete();
+  await db('stripe_offer_versions').delete();
+});
 
 afterAll(async () => {
   await host?.stop();
@@ -169,11 +213,11 @@ afterAll(async () => {
   await admin?.destroy();
 }, HOOK_TIMEOUT);
 
-async function sponsorFixture() {
+async function sponsorFixture(customerId: string = CUSTOMER_ID) {
   const tenant = randomUUID();
   const sponsor = tenantDb(db, tenant);
   await sponsor.table('tenants').insert({ tenant, product_code: 'psa', plan: 'pro', email: 'sponsor@example.test', billing_source: 'stripe' });
-  await sponsor.table('stripe_customers').insert({ tenant, stripe_customer_external_id: CUSTOMER_ID, email: 'sponsor@example.test' });
+  await sponsor.table('stripe_customers').insert({ tenant, stripe_customer_external_id: customerId, email: 'sponsor@example.test' });
   return { tenant, sponsor };
 }
 
@@ -196,7 +240,7 @@ async function setStripeQuantity(subscription: any, quantity: number): Promise<v
 }
 
 describe('co-managed purchase against the Stripe emulator', () => {
-  it('buys capacity, raises it only through delivered webhooks, and is admitted by the capability gate', async () => {
+  it('buys capacity, raises it only through delivered webhooks, and is admitted by the capability gate', async ({ onTestFinished }) => {
     holder.flag = true;
     delete process.env.FORCE_CAPABILITIES;
     const { tenant, sponsor } = await sponsorFixture();
@@ -208,14 +252,26 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
 
     const service = new StripeService();
+    // The emulator lacks the Stripe account endpoint. Simulate only that response while
+    // preview, confirmation, the merchant locks and checkout use the real adapters.
+    await service.getOfferCatalog();
+    const accountRead = vi.spyOn(service['stripe'].accounts, 'retrieve').mockResolvedValue({
+      id: 'acct_algasim',
+    } as Awaited<ReturnType<typeof service['stripe']['accounts']['retrieve']>>);
+    vi.stubEnv('STRIPE_ACCOUNT_ID', undefined);
+    onTestFinished(() => { vi.unstubAllEnvs(); accountRead.mockRestore(); });
     const preview = await service.previewCoManagedSeats(tenant, 3);
     // R1: amount and currency are whatever the configured price object says (a non-USD price here).
     expect(preview).toMatchObject({ unitAmount: 1149, monthlyTotal: 3447, amountDue: 3447, currency: 'eur' });
 
     const operationId = randomUUID();
-    const started = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+    const started = await service.purchaseCoManagedSeats(tenant, 3, operationId, preview.offerRef);
+    expect(accountRead).toHaveBeenCalled();
     expect(started.kind).toBe('checkout');
+    expect(await operationRow(tenant, operationId)).toMatchObject({ stripe_account: 'acct_algasim', livemode: false, price_id: CO_MANAGED_PRICE_ID });
     expect((await state('checkout-sessions'))[0]).toMatchObject({ mode: 'subscription', status: 'open' });
+
+    vi.unstubAllEnvs();
 
     // Complete the emulator's hosted Checkout. The emulator emits the events; capture them but do not
     // deliver yet: completing a checkout grants nothing.
@@ -228,7 +284,11 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await hasCoManagedEntitlement(tenant, db)).toBe(false);
 
     // A2: capacity goes 0 -> 3 through webhook reconciliation alone: no second purchase call.
-    await deliver(service, emitted);
+    await deliver(service, [emitted[0]]);
+    const subscriptionId = emitted.find((event: any) => event.type === 'customer.subscription.created')?.data.object.id;
+    expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'completed', provider_reference: subscriptionId,
+      stripe_account: 'acct_algasim', livemode: false });
+    await deliver(service, emitted.slice(1));
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, available: 3 });
     expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'completed', quantity: 3 });
     const coManagedSubscriptions = (await state('subscriptions')).filter((subscription) => subscription.metadata?.subscription_kind === 'co_managed');
@@ -288,6 +348,103 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
     await service.handleWebhookEvent(update());
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 5 });
+  }, HOOK_TIMEOUT);
+
+  it('admits the server-rendered first-purchase page and quotes and confirms the database offer with both overrides unset', async ({ onTestFinished }) => {
+    vi.stubEnv('STRIPE_ACCOUNT_ID', undefined);
+    vi.stubEnv('STRIPE_CO_MANAGED_USER_PRICE_ID', undefined);
+    vi.stubGlobal('React', React);
+    onTestFinished(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+    const customerId = 'cus_database_only';
+    const { tenant } = await sponsorFixture(customerId);
+    holder.user.tenant = tenant;
+    await control('seed/customer', { id: customerId, email: 'admin@example.test', name: 'Database Sponsor' });
+    await control('seed/subscription', { customer: customerId, priceId: PRO_PRICE_ID, quantity: 1, status: 'active' });
+
+    const service = getStripeService();
+    const catalog = await service.getOfferCatalog();
+    const accountRead = vi.spyOn(service['stripe'].accounts, 'retrieve').mockRejectedValue(new Error('account reads denied'));
+    onTestFinished(() => accountRead.mockRestore());
+    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1,
+      price_id: CO_MANAGED_PRICE_ID, product_id: 'prod_co_managed', is_current: true, published_by: 'fixture' });
+    await db('stripe_offer_catalog_settings').insert({ stripe_account: 'acct_algasim', livemode: false,
+      price_id: CO_MANAGED_PRICE_ID, updated_by: 'fixture' });
+    const { default: Page } = await import('../../app/msp/co-managed/page');
+    const { default: PurchaseOverview } = await import('@enterprise/components/co-managed/CoManagedPurchaseOverview');
+    const { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } = await import('@ee/lib/actions/coManagedBillingActions');
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0, allocated: 0 });
+    holder.user.user_type = 'client';
+    try {
+      await expect(Page({})).rejects.toThrow(/404/);
+      await expect(previewCoManagedSeatsAction(1)).rejects.toThrow('Permission denied');
+    } finally {
+      holder.user.user_type = 'internal';
+    }
+    expect((await Page({})).type).toBe(PurchaseOverview);
+    const quote = await previewCoManagedSeatsAction(2);
+    assert(quote.kind === 'quote', 'Expected a quote for the current database offer');
+    expect(quote).toMatchObject({ unitAmount: 1149, monthlyTotal: 2298, currency: 'eur' });
+    const operationId = randomUUID();
+    expect(await purchaseCoManagedSeatsAction({ operationId, quantity: 2, offerRef: quote.offerRef })).toMatchObject({ kind: 'checkout' });
+    expect(await operationRow(tenant, operationId)).toMatchObject({
+      offer_version_id: quote.offerRef, price_id: CO_MANAGED_PRICE_ID, stripe_account: 'acct_algasim',
+    });
+    const checkoutCount = (await state('checkout-sessions')).length;
+    const key = 'co_managed_technician_seat';
+    const actor = { userId: 'operator', tenantId: process.env.MASTER_BILLING_TENANT_ID! };
+    await catalog.pauseSales({ actor, offerKey: key, interval: 'month', expectedCurrentVersionId: quote.offerRef });
+    await expect(Page({})).rejects.toThrow(/404/);
+    await expect(previewCoManagedSeatsAction(2)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
+    await expect(purchaseCoManagedSeatsAction({ operationId: randomUUID(), quantity: 2, offerRef: quote.offerRef }))
+      .rejects.toThrow('not available');
+    expect(await tenantDb(db, tenant).table('co_managed_purchase_operations')).toHaveLength(1);
+    expect(await state('checkout-sessions')).toHaveLength(checkoutCount);
+    expect(accountRead).not.toHaveBeenCalled();
+  }, HOOK_TIMEOUT);
+
+  it('recovers a missing merchant pin from the operation Price under the real retry lock and retries in that scope', async () => {
+    const customerId = 'cus_co_managed_retry';
+    const { tenant, sponsor } = await sponsorFixture(customerId);
+    await control('seed/customer', { id: customerId, email: 'retry@example.test', name: 'Retry Sponsor' });
+    await control('seed/subscription', { customer: customerId, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
+    const oldPriceId = 'price_co_managed_retired';
+    await control('seed/price', { id: oldPriceId, unitAmount: 999, currency: 'eur', interval: 'month', product: 'prod_co_managed' });
+    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1, price_id: CO_MANAGED_PRICE_ID,
+      product_id: 'prod_co_managed', is_current: true, published_by: 'test-fixture' }).onConflict(['stripe_account', 'livemode', 'price_id']).ignore();
+    const currentVersion = await db('stripe_offer_versions').where({ stripe_account: 'acct_algasim', livemode: false, price_id: CO_MANAGED_PRICE_ID }).first();
+    const [oldVersion] = await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 2, price_id: oldPriceId,
+      product_id: 'prod_co_managed', is_current: false, published_by: 'test-fixture' }).returning('*');
+    const operationId = randomUUID();
+    await sponsor.table('co_managed_purchase_operations').insert({ tenant, operation_id: operationId, quantity: 2, state: 'preparing',
+      offer_version_id: oldVersion.version_id, price_id: oldPriceId, stripe_account: null, livemode: null });
+
+    const result = await new StripeService().purchaseCoManagedSeats(tenant, 2, operationId);
+    expect(result.kind).toBe('checkout');
+    expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'checkout', offer_version_id: oldVersion.version_id,
+      price_id: oldPriceId, stripe_account: 'acct_algasim', livemode: false });
+    expect((await state('checkout-sessions')).at(-1)).toMatchObject({ line_items: [{ price: { unit_amount: 999 }, quantity: 2 }] });
+    expect(currentVersion.is_current).toBe(true);
+  }, HOOK_TIMEOUT);
+
+  it.each([
+    { field: 'account', stripe_account: 'acct_original', livemode: null },
+    { field: 'mode', stripe_account: null, livemode: true },
+  ])('rejects merchant recovery when the locked operation has a conflicting $field', async ({ stripe_account, livemode }) => {
+    const { tenant, sponsor } = await sponsorFixture();
+    const operationId = randomUUID();
+    await sponsor.table('co_managed_purchase_operations').insert({ tenant, operation_id: operationId,
+      quantity: 2, state: 'preparing', price_id: CO_MANAGED_PRICE_ID, stripe_account, livemode });
+    const provider = vi.fn(async () => ({ kind: 'checkout' as const, sessionId: 'cs_unexpected', clientSecret: 'secret' }));
+
+    await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId, quantity: 2,
+      pinned: { offerVersionId: null, priceId: CO_MANAGED_PRICE_ID, stripeAccount: 'acct_algasim', livemode: false },
+    }, provider)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+
+    expect(provider).not.toHaveBeenCalled();
+    expect(await operationRow(tenant, operationId)).toMatchObject({ stripe_account, livemode, state: 'preparing', provider_reference: null });
   }, HOOK_TIMEOUT);
 
   it('scopes operation completion to the subscription it proves (a base renewal cannot close another purchase)', async () => {
@@ -408,6 +565,133 @@ describe('co-managed purchase against the Stripe emulator', () => {
         holder.flag = previous.flag;
         if (previous.price) process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = previous.price; else delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
       }
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('first purchase: discovery, awaiting verification and operational authority', () => {
+    const paid = (capacity: number) => async () => ({ capacity, active: true, validUntil: new Date(Date.now() + 86_400_000) });
+    const unpaid = async () => ({ capacity: 3, active: false, validUntil: new Date(Date.now() + 86_400_000) });
+    const never = async () => { throw new Error('provider must not be called'); };
+    const operational = async (tenant: string) => ({
+      admits: (await admits('co-managed', tenant)).admitted,
+      eligible: await hasCoManagedEntitlement(tenant, db),
+      participates: (await coManagedParticipants([tenant], db)).has(tenant),
+      seatEligible: await isCoManagedSeatEligible(tenant, db),
+    });
+
+    it('T003: in-flight, unpaid zero row, completed-but-unverified, then verified once; no second first charge in between', async () => {
+      holder.flag = true;
+      delete process.env.FORCE_CAPABILITIES;
+      // Its own Stripe customer: the emulator's subscriptions outlive a single test.
+      const customer = `cus_first_${randomUUID().slice(0, 8)}`;
+      await control('seed/customer', { id: customer, email: 'first@example.test', name: 'First Purchase MSP' });
+      const { tenant, sponsor } = await sponsorFixture(customer);
+      await control('seed/subscription', { customer, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
+      const service = new StripeService();
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'none' });
+
+      // A first purchase needs a positive pool: a zero target is refused before anything is persisted.
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 0 }, never))
+        .rejects.toMatchObject({ code: 'INVALID_PURCHASE' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(0);
+
+      // In flight; a refresh or an ambiguous response resumes the SAME operation and charges once.
+      const operationId = randomUUID();
+      const started = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+      expect(started.kind).toBe('checkout');
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'in_flight', operationId, quantity: 3 });
+      const resumed = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+      expect(resumed).toMatchObject({ kind: 'checkout' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 3 }, never))
+        .rejects.toMatchObject({ code: 'PURCHASE_IN_PROGRESS' });
+
+      // An unpaid observation creates a zero-capacity hosted row. It is no purchase and no authority.
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', unpaid);
+      expect(await entitlementRow(tenant)).toMatchObject({ source: 'hosted', source_reference: 'sub_first' });
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0, available: 0 });
+      expect(await operational(tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toMatchObject({ phase: 'in_flight', operationId });
+
+      // The request completes at the provider (inline update) but no paid reconciliation has arrived.
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: operationId }).delete();
+      const completed = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: completed, quantity: 3 },
+        async () => ({ kind: 'updated' as const, subscriptionId: 'sub_first' }));
+      expect(await operationRow(tenant, completed)).toMatchObject({ state: 'completed', quantity: 3, provider_reference: 'sub_first' });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'awaiting_verification', operationId: completed, quantity: 3 });
+      // The operation status alone raised nothing, and a second first charge cannot start.
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0 });
+      expect(await operational(tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 5 }, never))
+        .rejects.toMatchObject({ code: 'PURCHASE_AWAITING_VERIFICATION' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+      // Replaying the completed operation is still answered from it.
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: completed, quantity: 3 }, never))
+        .resolves.toMatchObject({ kind: 'updated', subscriptionId: 'sub_first' });
+
+      // The matching paid event, delivered (and replayed) with no browser involved, verifies it once.
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', paid(3));
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', paid(3));
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, allocated: 0, available: 3 });
+      expect(await sponsor.table('co_managed_entitlements')).toHaveLength(1);
+      expect(await operational(tenant)).toEqual({ admits: true, eligible: true, participates: true, seatEligible: true });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'established' });
+      // Buying seats created no client arrangement and assigned no seat.
+      expect(await sponsor.table('co_managed_allocations')).toHaveLength(0);
+      expect(await sponsor.table('co_management_relationships')).toHaveLength(0);
+    }, HOOK_TIMEOUT);
+
+    it('an awaiting record older than the verification window is history: a legitimate retry is not stranded', async () => {
+      const { tenant, sponsor } = await sponsorFixture();
+      const stale = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: stale, quantity: 2 },
+        async () => ({ kind: 'updated' as const, subscriptionId: 'sub_stale' }));
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toMatchObject({ phase: 'awaiting_verification' });
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: stale })
+        .update({ updated_at: new Date(Date.now() - 73 * 3_600_000) });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'none' });
+      const retry = randomUUID();
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: retry, quantity: 2 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_retry', clientSecret: 'secret' }))).resolves.toMatchObject({ kind: 'checkout' });
+      // An expired operation is likewise no obstacle.
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: retry }).update({ state: 'expired' });
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 2 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_again', clientSecret: 'secret' }))).resolves.toMatchObject({ kind: 'checkout' });
+    }, HOOK_TIMEOUT);
+
+    it('T004: every read and refusal is the current sponsor tenant\'s own (operation ids and pending state do not cross)', async () => {
+      const a = await sponsorFixture();
+      const b = await sponsorFixture();
+      const bOperation = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: b.tenant, operationId: bOperation, quantity: 9 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_b', clientSecret: 'secret_b' }));
+      expect(await readCoManagedFirstPurchasePhase(db, b.tenant)).toEqual({ phase: 'in_flight', operationId: bOperation, quantity: 9 });
+      // Sponsor A sees none of it, and may start its own purchase even when it presents B's operation id.
+      expect(await readCoManagedFirstPurchasePhase(db, a.tenant)).toEqual({ phase: 'none' });
+      const calls: string[] = [];
+      await runCoManagedPurchase(db, { sponsorTenant: a.tenant, operationId: bOperation, quantity: 2 },
+        async (operation) => { calls.push(operation.operation_id); return { kind: 'checkout' as const, sessionId: 'cs_a', clientSecret: 'secret_a' }; });
+      expect(await operationRow(a.tenant, bOperation)).toMatchObject({ quantity: 2, provider_reference: 'cs_a' });
+      expect(await operationRow(b.tenant, bOperation)).toMatchObject({ quantity: 9, provider_reference: 'cs_b', state: 'checkout' });
+      expect(await a.sponsor.table('co_managed_entitlements')).toHaveLength(0);
+      expect(await b.sponsor.table('co_managed_entitlements')).toHaveLength(0);
+      // The unverified pending purchase of one sponsor makes neither sponsor operational.
+      expect(await operational(a.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      expect(await operational(b.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+    }, HOOK_TIMEOUT);
+
+    it('a lapsed sponsor with history stays operational; a never-paid zero row does not', async () => {
+      const lapsed = await sponsorFixture();
+      await reconcileHostedCoManagedEntitlement(db, lapsed.tenant, 'sub_lapse', paid(4));
+      await reconcileHostedCoManagedEntitlement(db, lapsed.tenant, 'sub_lapse',
+        async () => ({ capacity: 4, active: false, validUntil: new Date(Date.now() + 86_400_000), lapseSince: new Date() }));
+      expect(await getCoManagedEntitlementState(db, lapsed.tenant)).toMatchObject({ capacity: 0 });
+      expect(await operational(lapsed.tenant)).toMatchObject({ admits: true, eligible: true, participates: true });
+      expect(await readCoManagedFirstPurchasePhase(db, lapsed.tenant)).toEqual({ phase: 'established' });
+      const pending = await sponsorFixture();
+      await reconcileHostedCoManagedEntitlement(db, pending.tenant, 'sub_pending', unpaid);
+      expect(await operational(pending.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
     }, HOOK_TIMEOUT);
   });
 });

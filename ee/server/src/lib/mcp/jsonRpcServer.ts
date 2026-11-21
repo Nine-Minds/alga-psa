@@ -23,6 +23,7 @@ import { resolvePublicBaseUrl, resolveInternalBaseUrl } from './baseUrl';
 import { looksLikeAlgaToken, verifyAccessToken } from './oauth/tokens';
 import { isGrantActive } from './oauth/grants';
 import { mintUserSessionKey } from './oauth/userSession';
+import { isApiCredentialsRefusedError } from '@alga-psa/authorization/subject/principalKind';
 
 // Minimal Streamable-HTTP MCP server. Handles JSON-RPC over POST with single
 // application/json responses (sufficient for initialize / tools/list /
@@ -280,7 +281,15 @@ async function resolveAuth(
     if (!(await isGrantActive(claims.grantId))) {
       return { ok: false, status: 401, error: 'Authorization was revoked', wwwAuthenticate: true };
     }
-    const sessionKey = await mintUserSessionKey({ tenant: claims.tenant, userId: claims.userId });
+    let sessionKey: string;
+    try {
+      sessionKey = await mintUserSessionKey({ tenant: claims.tenant, userId: claims.userId });
+    } catch (error) {
+      // A principal kind that holds no API credentials (a seat technician) has no MCP access, whatever grant
+      // it holds. Refused here, before any tool is dispatched.
+      if (isApiCredentialsRefusedError(error)) return { ok: false, status: 403, error: error.message };
+      throw error;
+    }
     return { ok: true, auth: { apiKey: sessionKey, tenant: claims.tenant } };
   }
 
@@ -298,12 +307,18 @@ async function resolveAuth(
         agentId: resolved.agent.agent_id,
         backingUserId: resolved.backingUserId as string,
       });
-    } catch (err) {
-      // Name/code match, not instanceof: the class may cross a module seam.
-      if ((err as { name?: string }).name === 'AgentInactiveError') {
-        return { ok: false, status: 403, error: (err as Error).message };
+    } catch (error) {
+      // A valid IdP token can outlive the tenant's Pro entitlement. Report the
+      // expected denial at the authentication boundary, before any dispatch.
+      if (error instanceof Error && 'code' in error && error.code === 'TIER_ACCESS_DENIED') {
+        return { ok: false, status: 403, error: error.message };
       }
-      throw err;
+      // Name/code match, not instanceof: the class may cross a module seam.
+      const err = error as { name?: string; message?: string };
+      if ((err as { name?: string }).name === 'AgentInactiveError') {
+        return { ok: false, status: 403, error: err.message ?? 'Agent is inactive' };
+      }
+      throw error;
     }
     return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { commercialTimeEntryRowFilter } from "../../../../test-utils/commercialTimeEntryMock";
 
 import {
   findOrCreateCurrentBucketUsageRecord,
@@ -228,8 +229,15 @@ function buildBucketUsageUpdateTransaction(config: {
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
     builder.sum = vi.fn().mockImplementation(() => builder);
+    const rowFilters: Array<(row: Record<string, any>) => boolean> = [];
+    builder.whereRaw = vi.fn().mockImplementation((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      rowFilters.push(commercialOnly);
+      return builder;
+    });
     builder.then = (resolve: (value: unknown[]) => void) => {
-      resolve(listRowsFor(tableName));
+      resolve(listRowsFor(tableName).filter((row) => rowFilters.every((keep) => keep(row as Record<string, any>))));
     };
 
     builder.first = vi.fn().mockImplementation(async () => {
@@ -493,6 +501,42 @@ describe("bucketUsageService period selection", () => {
           overage_minutes: 5,
         },
       },
+    ]);
+  });
+
+  it("S28/F068: an operational (seat technician) time entry never draws down a bucket", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        client_id: "client-1",
+        service_catalog_id: "service-1",
+        contract_line_id: "plan-1",
+        bucket_id: "bucket-1",
+        period_start: "2025-02-01",
+        period_end: "2025-02-28",
+        rolled_over_minutes: "5",
+        total_minutes: "40",
+        allow_rollover: false,
+        covers_all_services: false,
+        after_hours_multiplier: null,
+        business_hours_schedule_id: null,
+      },
+      members: [
+        { bucket_id: "bucket-1", contract_line_id: "plan-1", service_id: "service-1", burn_multiplier: 1 },
+      ],
+      timeEntries: [
+        { entry_id: "commercial", service_id: "service-1", billing_mode: "commercial",
+          start_time: "2025-02-10T10:00:00Z", end_time: "2025-02-10T11:00:00Z", billable_duration: "45" },
+        // Adversarial: a service and billable minutes on the same line, which only billing_mode keeps out.
+        { entry_id: "operational", service_id: "service-1", billing_mode: "operational",
+          start_time: "2025-02-11T10:00:00Z", end_time: "2025-02-11T20:00:00Z", billable_duration: "600" },
+      ],
+      usageRows: [],
+    });
+
+    await reconcileBucketUsageRecord(trx, "usage-1");
+
+    expect(state.updates).toEqual([
+      { tableName: "bucket_usage", payload: { minutes_used: 45, overage_minutes: 0 } },
     ]);
   });
 });

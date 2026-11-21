@@ -37,27 +37,41 @@ EOF
   export ALGA_APPLIANCE_KUBECONFIG="$KUBECONFIG_PATH"
 fi
 
+# Start a background job that the container's init (tini, PID 1) reaps when it
+# exits. A plain `( ... ) &` stays a child of this shell, and the `exec node`
+# below turns this shell into node, which only waits for children it spawned
+# itself: every finished job would stay a zombie for the life of the container.
+# Forking twice orphans the job, so it is re-parented to PID 1 and reaped.
+run_detached() {
+  log_file="$1"
+  shift
+  ( "$@" >> "$log_file" 2>&1 & )
+}
+
 # A control-plane channel update can repair storage without replacing the
 # ISO-baked host scripts. Reconcile in the background only when the historical
 # k3s controller is still present or the appliance controller is unavailable;
 # the setup/update workflows run the same locked installer synchronously before
 # asking Flux to create or converge PVC-backed workloads.
-(
+repair_storage() {
   sleep "${ALGA_APPLIANCE_STORAGE_REPAIR_DELAY_SECONDS:-5}"
   if kubectl --kubeconfig "$KUBECONFIG_PATH" -n kube-system get deployment local-path-provisioner >/dev/null 2>&1 \
     || ! kubectl --kubeconfig "$KUBECONFIG_PATH" -n local-path-storage rollout status deployment/local-path-provisioner --timeout=5s >/dev/null 2>&1; then
     /opt/alga-appliance/scripts/install-storage.sh --kubeconfig "$KUBECONFIG_PATH"
   fi
-) >> /var/lib/alga-appliance/storage-reconcile.log 2>&1 &
+}
 
 # Existing appliances only run `flux install` during setup, so a control-plane
 # update is how they receive the single-node Flux controller tuning (leader
 # election off, Recreate rollouts). Idempotent; a box without Flux yet (fresh,
 # pre-setup) reports the controllers as absent and changes nothing.
-(
+tune_flux_controllers() {
   sleep "${ALGA_APPLIANCE_FLUX_TUNING_DELAY_SECONDS:-15}"
   node /opt/alga-appliance/host-service/flux-controller-tuning.mjs \
     --kubeconfig "$KUBECONFIG_PATH" --attempts 5 --retry-delay-ms 60000
-) >> /var/lib/alga-appliance/flux-controller-tuning.log 2>&1 &
+}
+
+run_detached /var/lib/alga-appliance/storage-reconcile.log repair_storage
+run_detached /var/lib/alga-appliance/flux-controller-tuning.log tune_flux_controllers
 
 exec node /opt/alga-appliance/host-service/server.mjs

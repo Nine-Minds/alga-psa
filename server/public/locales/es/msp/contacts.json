@@ -418,7 +418,10 @@
       "refreshing": "Actualizando...",
       "resend": "Reenviar",
       "resending": "Reenviando...",
-      "revoke": "Revocar"
+      "revoke": "Revocar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Eliminar"
     },
     "toast": {
       "successTitle": "Éxito",
@@ -454,13 +457,15 @@
         "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
         "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Use el restablecimiento de contraseña en lugar de enviar una invitación.",
+        "portalUserAlreadyExists": "Esta dirección de correo electrónico ya pertenece a otra cuenta de usuario de esta organización.",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
         "invitationNotFound": "Invitación no encontrada o ya utilizada."
       },
-      "userNotFound": "No se encontró el usuario del cliente"
+      "userNotFound": "No se encontró el usuario del cliente",
+      "validationErrorTitle": "Error de validación"
     },
     "boardCount_few": "{{count}} tableros",
     "boardCount_many": "{{count}} tableros"
@@ -649,12 +654,43 @@
     "actions": {
       "openMenu": "Abrir menú",
       "quickView": "Vista rápida",
-      "addNewContact": "Añadir nuevo contacto"
+      "addNewContact": "Añadir nuevo contacto",
+      "selectAll": "Seleccionar todos los contactos",
+      "selectContact": "Seleccionar a {{name}}",
+      "inviteSelected": "Invitar al portal ({{selected}})",
+      "inviteAllEligible": "Invitar a todos los elegibles"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los contactos.",
       "loadingTitle": "Error al cargar los contactos",
       "retryFailed": "No se pudieron cargar los contactos. Inténtelo de nuevo."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Invitar contactos al portal del cliente",
+    "description": "Confirmación de invitaciones masivas al portal con vista previa de elegibles y resultados por contacto",
+    "loading": "Verificando a quién se puede invitar...",
+    "inviteCount": "{{total}} contactos serán invitados al portal del cliente.",
+    "skipCount": "{{total}} se omitirán:",
+    "visibilityNote": "Cada invitación otorga el acceso que el contacto ya tiene: {{grouped}} están limitados a un grupo de visibilidad del portal y {{full}} obtienen acceso completo a los datos del portal de su cliente.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ya tiene acceso al portal",
+      "missingEmail": "sin dirección de correo utilizable",
+      "sharedMailbox": "buzón compartido"
+    },
+    "actions": {
+      "send": "Enviar {{total}} invitaciones",
+      "sending": "Enviando..."
+    },
+    "results": {
+      "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
+      "sent": "Enviada",
+      "skipped": "Omitida",
+      "failed": "Fallida"
+    },
+    "errors": {
+      "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
+      "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo."
     }
   },
   "contactsLayout": {
@@ -723,6 +759,118 @@
       "saved": "Contacto actualizado",
       "saveFailed": "No se pudo actualizar el contacto",
       "saveFailedDescription": "No se pudo actualizar el contacto. Inténtelo de nuevo."
+    },
+    "relative": {
+      "today": "hoy",
+      "yesterday": "ayer",
+      "daysAgo": "hace {{count}} d"
+    },
+    "emailType": {
+      "primary": "Principal",
+      "other": "otro"
+    },
+    "phoneType": {
+      "other": "Otro"
+    },
+    "ticketPill": {
+      "closed": "Cerrado",
+      "urgent": "Urgente",
+      "open": "Abierto"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "role": {
+      "add": "Agregar rol",
+      "editTitle": "Haga clic para editar el rol"
+    },
+    "atClient": "en",
+    "noClient": "Sin cliente",
+    "noPrimaryEmail": "Sin correo electrónico principal",
+    "noPhoneNumber": "Sin número de teléfono",
+    "contactSince": "Contacto desde {{date}}",
+    "lastTouch": "Última interacción",
+    "editContact": "Editar contacto",
+    "openFullPage": "Abrir página completa",
+    "viewAll": "Ver todas",
+    "viewAllCount": "Ver todos ({{count}})",
+    "reach": {
+      "title": "Datos de contacto",
+      "add": "Agregar correo electrónico o teléfono",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "primaryMeta": "principal",
+      "noEmails": "Sin direcciones de correo electrónico",
+      "addEmail": "Agregar un correo electrónico",
+      "noPhones": "Sin números de teléfono",
+      "addPhone": "Agregar un número de teléfono"
+    },
+    "portalChip": {
+      "deactivated": "Portal · desactivado",
+      "signedIn": "Portal · inició sesión {{when}}",
+      "neverSignedIn": "Portal · nunca inició sesión",
+      "invited": "Portal · invitado",
+      "noAccess": "Sin acceso al portal"
+    },
+    "portal": {
+      "title": "Acceso al portal",
+      "manage": "Gestionar",
+      "status": "Estado",
+      "role": "Rol",
+      "clientAdmin": "Administrador del cliente",
+      "standard": "Estándar",
+      "lastSignIn": "Último inicio de sesión",
+      "invited": "Invitado",
+      "noClientAssigned": "Sin cliente asignado",
+      "deactivated": "Desactivado",
+      "activeAccount": "Cuenta activa",
+      "invitationSent": "Invitación enviada",
+      "noAccess": "Sin acceso"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Crear ticket",
+      "createFirst": "Crear un ticket",
+      "empty": "Aún no hay tickets",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interacciones",
+      "log": "Registrar interacción",
+      "logFirst": "Registrar una interacción",
+      "empty": "No hay interacciones registradas",
+      "fallbackTitle": "Interacción",
+      "loadError": "No se pudieron cargar las interacciones. Inténtelo de nuevo."
+    },
+    "documents": {
+      "title": "Documentos",
+      "add": "Agregar documento",
+      "addFirst": "Agregar un documento",
+      "empty": "Aún no hay documentos",
+      "fallbackTitle": "Documento",
+      "dialogTitle": "Documentos del contacto"
+    },
+    "relatedWork": {
+      "title": "Trabajo relacionado",
+      "projects": "Proyectos",
+      "quotes": "Cotizaciones",
+      "noProjects": "Sin proyectos",
+      "noQuotes": "Sin cotizaciones",
+      "noStatus": "Sin estado",
+      "noStatusLower": "sin estado",
+      "projectFallback": "Proyecto {{number}}",
+      "quoteFallback": "Cotización",
+      "empty": "No hay proyectos ni cotizaciones relacionados"
+    },
+    "notes": {
+      "title": "Notas",
+      "edit": "Editar",
+      "openDocument": "Abrir documento de notas",
+      "save": "Guardar notas",
+      "cancel": "Cancelar",
+      "empty": "Aún no hay notas",
+      "add": "Agregar notas"
     }
   },
   "errors": {
@@ -833,9 +981,32 @@
       "scopeSummaryAll": "Todos",
       "scopeSummaryOwn": "Propios",
       "managerScopeNote_one": "Su vista también incluye los registros de {{count}} persona que depende de ella.",
-      "managerScopeNote_many": "Su vista también incluye los registros de {{count}} de personas que dependen de ella.",
       "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
-      "managerScopeNote_few": "Su vista también incluye los registros de {{count}} personas que dependen de ella."
+      "managerScopeNote_few": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
+      "managerScopeNote_many": "Su vista también incluye los registros de {{count}} de personas que dependen de ella.",
+      "assignmentLabel": "Grupo de visibilidad de tickets",
+      "assignmentPlaceholder": "Seleccione una asignación de visibilidad",
+      "assignmentUpdated": "Asignación de visibilidad del contacto actualizada",
+      "assignFailed": "No se pudo asignar el grupo de visibilidad",
+      "manageLabel": "Grupos de visibilidad del cliente",
+      "manageHelp": "Cree o edite grupos de tableros y asígnelos a contactos.",
+      "nameLabel": "Nombre del grupo",
+      "nameRequired": "El nombre del grupo de visibilidad es obligatorio",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional",
+      "boardsLabel": "Tableros",
+      "noBoards": "No hay tableros disponibles",
+      "createGroup": "Crear grupo",
+      "updateGroup": "Actualizar grupo",
+      "created": "Grupo de visibilidad creado",
+      "updated": "Grupo de visibilidad actualizado",
+      "deleted": "Grupo de visibilidad eliminado",
+      "deleteConfirm": "¿Eliminar este grupo de visibilidad?",
+      "deleteFailed": "No se pudo eliminar el grupo de visibilidad",
+      "saveFailed": "No se pudo guardar el grupo de visibilidad",
+      "loadFailed": "No se pudo cargar el grupo de visibilidad para editarlo",
+      "empty": "Aún no hay grupos de visibilidad",
+      "fullAccess": "Acceso completo"
     }
   },
   "messages": {

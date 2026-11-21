@@ -203,6 +203,7 @@
       "exclude": "Pomiń",
       "excluded": "Pominięta",
       "fallbackTitle": "Oferta {{id}}",
+      "unnumberedTitle": "Oferta",
       "include": "Uwzględnij",
       "included": "Uwzględniona",
       "lineItems": "Pozycje",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Warunki i postanowienia",
       "total": "Razem",
       "validUntil": "Ważne do"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Oferta zaakceptowana",
+        "body": "Dziękujemy. Twoja akceptacja została zapisana, a my zostaliśmy powiadomieni."
+      },
+      "rejected": {
+        "title": "Oferta odrzucona",
+        "body": "Twoja odpowiedź została zapisana, a my zostaliśmy powiadomieni."
+      },
+      "already": {
+        "title": "Na tę ofertę już udzielono odpowiedzi",
+        "accepted": "Ta oferta została zaakceptowana dnia {{date}}.",
+        "rejected": "Ta oferta została odrzucona dnia {{date}}."
+      },
+      "changed": {
+        "title": "Ta oferta uległa zmianie",
+        "body": "Ta oferta zmieniła się od momentu jej otwarcia. Skontaktuj się z nami."
+      },
+      "optionalItems": "Pozycje opcjonalne",
+      "optionalHint": "Wybierz pozycje opcjonalne, które chcesz uwzględnić. Twój wybór zostanie wysłany po akceptacji.",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "total": "Razem",
+      "fullName": "Imię i nazwisko",
+      "titleOptional": "Stanowisko (opcjonalnie)",
+      "agreementVersion": "Wersja zgody {{version}}",
+      "accept": "Zaakceptuj ofertę",
+      "reject": "Odrzuć ofertę",
+      "submitting": "Wysyłanie...",
+      "rejectTitle": "Odrzuć ofertę",
+      "rejectHint": "Napisz, co należy zmienić. Możemy poprawić i ponownie wysłać ofertę.",
+      "rejectConfirm": "Odrzuć",
+      "cancel": "Anuluj",
+      "errors": {
+        "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+        "nameRequired": "Wpisz swoje imię i nazwisko.",
+        "agreementRequired": "Potwierdź zgodę, aby zaakceptować tę ofertę.",
+        "agreementOutdated": "Treść zgody została zaktualizowana. Odśwież stronę i spróbuj ponownie.",
+        "commentRequired": "Dodaj krótki komentarz przed odrzuceniem tej oferty.",
+        "tooLong": "Jedno z wpisanych pól jest zbyt długie.",
+        "reload": "Odśwież tę stronę i spróbuj ponownie."
+      }
+    },
+    "public": {
+      "metaTitle": "Przegląd oferty",
+      "notice": {
+        "accepted": "Ta oferta została zaakceptowana. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "declined": "Ta oferta została odrzucona. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "converted": "Ta oferta została zaakceptowana i jest realizowana. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "readOnly": "To jest widok oferty tylko do odczytu."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Ten link jest niedostępny",
+          "body": "Link mógł zostać błędnie wpisany lub nie jest już aktywny."
+        },
+        "expired": {
+          "title": "Ten link wygasł",
+          "body": "Ze względów bezpieczeństwa linki do ofert przestają działać po pewnym czasie."
+        },
+        "superseded": {
+          "title": "Ta oferta została zastąpiona",
+          "body": "Wysłano nowszą wersję. Użyj linku z najnowszej wiadomości e-mail."
+        },
+        "decided": {
+          "title": "W sprawie tej oferty podjęto już decyzję",
+          "body": "Odpowiedź została już zapisana, więc nie można jej otworzyć z tego linku."
+        },
+        "help": "Potrzebujesz pomocy? Odpowiedz na wiadomość e-mail, w której otrzymano ten link.",
+        "signIn": "Zaloguj się do portalu klienta",
+        "signInHint": "Masz już konto w portalu klienta?"
+      }
     }
   },
   "enums": {

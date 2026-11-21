@@ -70,6 +70,10 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     'ContractLineBody',
     zOpenApi.object({
       contract_line_name: zOpenApi.string().min(1).max(255),
+      invoice_line_description: zOpenApi.string().max(500).nullable().optional()
+        .describe('Invoice title for a Fixed line (the bundle row title); falls back to the line name when null.'),
+      invoice_line_subtitle: zOpenApi.string().max(500).nullable().optional()
+        .describe('Muted second line under a Fixed bundle title on invoices; null = none.'),
       billing_frequency: BillingFrequency,
       is_custom: zOpenApi.boolean().optional(),
       service_category: zOpenApi.string().optional(),

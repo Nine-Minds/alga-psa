@@ -239,7 +239,10 @@
       "detail": {
         "fallbackTitle": "Serviceanfrage"
       },
-      "title": "Serviceanfragen"
+      "title": "Serviceanfragen",
+      "formBuilder": {
+        "title": "Formular-Editor"
+      }
     },
     "surveys": {
       "dashboard": {
@@ -374,6 +377,10 @@
       "title": "Asset-Inventar",
       "custody": {
         "title": "Equipment in Verwahrung"
+      },
+      "audits": {
+        "title": "Standort-Audits",
+        "detailTitle": "Standort-Audit"
       }
     },
     "chat": {

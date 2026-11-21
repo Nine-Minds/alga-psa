@@ -1,6 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
+import { offeredClientPortalSsoProviders } from '../authPolicy';
+import { loadTenantAuthPolicy } from '../authPolicyStore';
+import { SSO_PROVIDER_IDS } from './types';
 import {
   type MspSsoProviderId,
   MSP_SSO_DISCOVERY_TTL_SECONDS,
@@ -146,25 +150,63 @@ export async function resolveClientPortalSsoTenantContext(
   };
 }
 
-export async function discoverClientPortalSsoProviders(tenantId: string): Promise<MspSsoProviderId[]> {
+/**
+ * Providers that can sign in on this tenant's client portal: tenant-owned
+ * credentials OR the app's fallback credentials, per provider. The tenant's own
+ * choice of which to show is applied separately (`offeredClientPortalSsoProviders`).
+ */
+export async function listClientPortalAvailableSsoProviders(tenantId: string): Promise<MspSsoProviderId[]> {
   // The CE OAuth profile mapper resolves internal MSP users only, so the client
   // portal has no SSO on Community Edition.
   if (getMspSsoEdition() === 'ce') return [];
 
-  const [tenantGoogleReady, tenantMicrosoftReady, appGoogleReady, appMicrosoftReady, appKeycloakReady] =
-    await Promise.all([
-      hasTenantProviderCredentials(tenantId, 'google'),
-      hasTenantProviderCredentials(tenantId, 'azure-ad'),
-      hasAppFallbackProviderCredentials('google'),
-      hasAppFallbackProviderCredentials('azure-ad'),
-      hasAppFallbackProviderCredentials('keycloak'),
-    ]);
+  const readiness = await Promise.all(
+    SSO_PROVIDER_IDS.map(async (provider) => {
+      const [tenantReady, appReady] = await Promise.all([
+        hasTenantProviderCredentials(tenantId, provider),
+        hasAppFallbackProviderCredentials(provider),
+      ]);
+      return tenantReady || appReady ? provider : null;
+    })
+  );
 
-  return normalizeProviders([
-    ...(tenantGoogleReady || appGoogleReady ? ['google'] : []),
-    ...(tenantMicrosoftReady || appMicrosoftReady ? ['azure-ad'] : []),
-    ...(appKeycloakReady ? ['keycloak'] : []),
+  return normalizeProviders(readiness.filter((provider) => provider !== null));
+}
+
+/**
+ * Providers the client portal offers: available for the tenant, narrowed by the
+ * tenant's `clientPortalSsoProviders` setting. This feeds the signed discovery
+ * cookie, so the resolve route can only ever accept an offered provider.
+ */
+export async function discoverClientPortalSsoProviders(tenantId: string): Promise<MspSsoProviderId[]> {
+  const [available, policy] = await Promise.all([
+    listClientPortalAvailableSsoProviders(tenantId),
+    loadTenantAuthPolicy(tenantId),
   ]);
+  return offeredClientPortalSsoProviders(available, policy);
+}
+
+/**
+ * Server-side list for the client portal sign-in page. Any failure yields no SSO
+ * buttons (never an error) so the password form keeps working.
+ */
+export async function getClientPortalSignInSsoProviders(input: {
+  tenantSlug?: string | null;
+  portalDomain?: string | null;
+}): Promise<MspSsoProviderId[]> {
+  try {
+    const { tenantId } = await resolveClientPortalSsoTenantContext({
+      tenantSlug: input.tenantSlug,
+      portalDomain: input.portalDomain,
+    });
+    if (!tenantId) return [];
+    return await discoverClientPortalSsoProviders(tenantId);
+  } catch (error) {
+    logger.warn('[clientPortalSso] Failed to resolve sign-in SSO providers', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
 }
 
 export function createSignedClientPortalSsoDiscoveryCookie(params: {

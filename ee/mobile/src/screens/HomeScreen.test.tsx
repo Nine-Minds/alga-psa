@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   openStopModal: vi.fn(),
   startTimer: vi.fn(),
-  features: { inventory: true, assets: true, projects: true },
+  features: { inventory: true, assets: true, projects: true } as Record<string, boolean>,
+  capabilitiesLoaded: true,
   offline: false,
   timer: {
     status: "idle" as string,
@@ -45,8 +46,8 @@ vi.mock("../ui/ThemeContext", async () => {
   return { useTheme: () => lightTheme };
 });
 vi.mock("../auth/AuthContext", () => ({ useAuth: () => mocks.authValue }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({
-  useCapabilities: () => ({ features: mocks.features, loaded: true }),
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
+  useCapabilities: () => ({ features: mocks.features, loaded: mocks.capabilitiesLoaded }),
 }));
 vi.mock("../config/appConfig", () => ({ getAppConfig: () => ({ ok: true, env: "dev", baseUrl: "https://algapsa.com" }) }));
 vi.mock("../api", () => ({ createApiClient: () => ({ request: vi.fn() }) }));
@@ -133,6 +134,7 @@ describe("HomeScreen", () => {
     clearHomeCache();
     mocks.offline = false;
     mocks.features = { inventory: true, assets: true, projects: true };
+    mocks.capabilitiesLoaded = true;
     mocks.timer.status = "idle";
     mocks.timer.session = null;
     mocks.elapsedMs = null;
@@ -262,6 +264,30 @@ describe("HomeScreen", () => {
     expect(texts(renderer)).toContain("Printer jam");
     await act(async () => renderer.root.find((n) => n.props?.testID === "home-timer-stop").props.onPress());
     expect(mocks.openStopModal).toHaveBeenCalled();
+  });
+
+  it("waits for the capabilities before loading anything", async () => {
+    mocks.capabilitiesLoaded = false;
+    await renderScreen();
+    expect(mocks.listTickets).not.toHaveBeenCalled();
+    expect(mocks.listScheduleEntries).not.toHaveBeenCalled();
+    expect(mocks.listActivities).not.toHaveBeenCalled();
+  });
+
+  it("an operational-only (co-managed seat) session loads only its tickets and offers no interaction or timer", async () => {
+    mocks.features = { inventory: false, assets: true, projects: true, operationalOnly: true };
+    const renderer = await renderScreen();
+
+    expect(mocks.listTickets).toHaveBeenCalledTimes(1);
+    expect(mocks.listScheduleEntries).not.toHaveBeenCalled();
+    expect(mocks.listActivities).not.toHaveBeenCalled();
+    const all = texts(renderer);
+    expect(all).not.toContain("Today");
+    expect(all).not.toContain("Activities");
+    for (const testID of ["home-action-log-interaction", "home-action-start-timer"]) {
+      expect(renderer.root.findAll((n) => n.props?.testID === testID)).toHaveLength(0);
+    }
+    expect(renderer.root.findAll((n) => n.props?.testID === "home-action-new-ticket").length).toBeGreaterThan(0);
   });
 
   it("T083 the Scan quick action is absent without the inventory capability", async () => {

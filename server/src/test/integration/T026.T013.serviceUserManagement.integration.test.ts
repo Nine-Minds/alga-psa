@@ -88,6 +88,7 @@ interface Fixture {
   clientId: string;
   serviceId: string;
   adminRoleId: string;
+  portalRoleId: string;
 }
 
 async function insertUser(tenant: string, userType: 'internal' | 'client', label: string) {
@@ -100,6 +101,7 @@ async function insertUser(tenant: string, userType: 'internal' | 'client', label
     first_name: label,
     last_name: 'User',
     hashed_password: 'original-hash',
+    two_factor_secret: 'JBSWY3DPEHPK3PXP',
     user_type: userType,
     is_inactive: false,
   });
@@ -117,6 +119,9 @@ async function createFixture(opts: { licensedUserCount?: number | null } = {}): 
   });
   const adminRoleId = uuidv4();
   await tt(tenant, 'roles').insert({ tenant, role_id: adminRoleId, role_name: 'Admin', msp: true, client: false });
+  // Every created user gets a role: there is no zero-role state.
+  const portalRoleId = uuidv4();
+  await tt(tenant, 'roles').insert({ tenant, role_id: portalRoleId, role_name: 'User', msp: false, client: true });
   const adminId = await insertUser(tenant, 'internal', 'admin');
   await tt(tenant, 'user_roles').insert({ tenant, user_id: adminId, role_id: adminRoleId });
   const internalId = await insertUser(tenant, 'internal', 'staff');
@@ -131,7 +136,7 @@ async function createFixture(opts: { licensedUserCount?: number | null } = {}): 
     roles: [{ role_id: adminRoleId, role_name: 'Admin' }],
   };
   mockCurrentUser = admin;
-  return { tenant, admin, internalId, clientId, serviceId, adminRoleId };
+  return { tenant, admin, internalId, clientId, serviceId, adminRoleId, portalRoleId };
 }
 
 const serviceRow = (f: Fixture) => tt(f.tenant, 'users').where({ user_id: f.serviceId }).first();
@@ -157,6 +162,56 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
   });
 
   describe('T026: list defaults exclude non-interactive users', () => {
+    it('User.getAll and the basic directory action return only response-allowlisted fields', async () => {
+      const f = await createFixture();
+      const staff = await tt(f.tenant, 'users').where({ user_id: f.internalId }).first();
+      mockCurrentUser = { user_id: f.internalId, tenant: f.tenant, user_type: 'internal', roles: [] };
+      const statements: string[] = [];
+      const capture = (query: { sql?: string }) => { if (query.sql?.includes('from "users"')) statements.push(query.sql); };
+      db.on('query', capture);
+      try {
+        const User = (await import('@alga-psa/db/models/user')).default;
+        const { runWithTenant } = await import('@alga-psa/db');
+        const rows = await runWithTenant(f.tenant, () => User.getAll(db, true));
+        expect(statements.length).toBeGreaterThan(0);
+        expect(statements.some((sql) => /hashed_password|two_factor_secret/.test(sql))).toBe(false);
+        expect(rows.find((row) => row.user_id === f.internalId)).toMatchObject({ email: staff.email, first_name: staff.first_name });
+        expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('hashed_password');
+        expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('two_factor_secret');
+
+        const detail = await runWithTenant(f.tenant, () => User.getUserWithRoles(db, f.internalId));
+        expect(statements.some((sql) => /hashed_password|two_factor_secret/.test(sql))).toBe(false);
+        expect(detail).toMatchObject({ user_id: f.internalId, email: staff.email });
+        expect(detail).not.toHaveProperty('hashed_password');
+        expect(detail).not.toHaveProperty('two_factor_secret');
+
+        const { getAllUsersBasic } = await import('@alga-psa/user-composition/actions/userQueryActions');
+        const result = await getAllUsersBasic(true);
+        const listed = result.find((row) => row.user_id === f.internalId);
+        expect(listed).toBeDefined();
+        if (!listed) throw new Error('Expected the authorized staff user in the basic directory');
+        expect(listed).toMatchObject({ user_id: f.internalId, email: staff.email, first_name: staff.first_name, user_type: 'internal' });
+        expect(listed).not.toHaveProperty('hashed_password');
+        expect(listed).not.toHaveProperty('two_factor_secret');
+        const { USER_RESPONSE_FIELD_NAMES } = await import('@alga-psa/types');
+        const allowedFields = new Set<string>(USER_RESPONSE_FIELD_NAMES);
+        expect(Object.keys(listed).every((key) => allowedFields.has(key))).toBe(true);
+
+        const { findUserById, getUserWithRoles, getMultipleUsersWithRoles } = await import('@alga-psa/user-composition/actions/userQueryActions');
+        for (const detailResult of [
+          await findUserById(f.internalId),
+          await getUserWithRoles(f.internalId),
+          ...(await getMultipleUsersWithRoles([f.internalId])),
+        ]) {
+          expect(detailResult).toMatchObject({ user_id: f.internalId, email: staff.email });
+          expect(detailResult).not.toHaveProperty('hashed_password');
+          expect(detailResult).not.toHaveProperty('two_factor_secret');
+        }
+      } finally {
+        db.removeListener('query', capture);
+      }
+    });
+
     it('User.getAll excludes service by default and includes with includeNonInteractive', async () => {
       const f = await createFixture();
       const User = (await import('@alga-psa/db/models/user')).default;
@@ -364,10 +419,11 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
   });
 
   describe('F086: REST UserService.create', () => {
-    const base = (suffix: string, userType?: string) => ({
+    const base = (f: Fixture, suffix: string, userType?: string) => ({
       username: `new-${suffix}-${uuidv4().slice(0, 6)}`,
       email: `new-${suffix}-${uuidv4().slice(0, 6)}@example.com`,
       password: 'Sup3r-secret-password!',
+      role_ids: [userType === 'client' ? f.portalRoleId : f.adminRoleId],
       ...(userType ? { user_type: userType } : {}),
     });
 
@@ -379,7 +435,7 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const count = async () => Number((await tt(f.tenant, 'users').count('* as c').first())?.c);
       const before = await count();
       for (const t of ['service', 'bogus']) {
-        await expect(service.create(base('bad', t) as any, context)).rejects.toMatchObject({ statusCode: 400 });
+        await expect(service.create(base(f, 'bad', t) as any, context)).rejects.toMatchObject({ statusCode: 400 });
       }
       expect(await count()).toBe(before);
     });
@@ -393,16 +449,16 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const count = async () => Number((await tt(f.tenant, 'users').count('* as c').first())?.c);
       const before = await count();
 
-      await expect(service.create(base('internal', 'internal') as any, context)).rejects.toMatchObject({
+      await expect(service.create(base(f, 'internal', 'internal') as any, context)).rejects.toMatchObject({
         statusCode: 403,
         code: 'LICENSE_LIMIT_REACHED',
       });
-      await expect(service.create(base('default') as any, context)).rejects.toMatchObject({
+      await expect(service.create(base(f, 'default') as any, context)).rejects.toMatchObject({
         code: 'LICENSE_LIMIT_REACHED',
       });
       expect(await count()).toBe(before);
 
-      const client: any = await service.create(base('client', 'client') as any, context);
+      const client: any = await service.create(base(f, 'client', 'client') as any, context);
       expect(client.user_type).toBe('client');
       expect(await count()).toBe(before + 1);
     });
@@ -412,7 +468,7 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const { UserService } = await import('@alga-psa/users/services/UserService');
       const service = new UserService();
       const context: any = { tenant: f.tenant, userId: f.admin.user_id, user: f.admin };
-      const created: any = await service.create(base('ok', 'internal') as any, context);
+      const created: any = await service.create(base(f, 'ok', 'internal') as any, context);
       expect(created.user_type).toBe('internal');
     });
   });

@@ -7,6 +7,8 @@ import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
+  TemplateChildRows,
+  TemplateDynamicTableNode,
   TemplateFieldBorderStyle,
   TemplateI18nText,
   TemplateNode,
@@ -56,6 +58,13 @@ type RenderContext = {
    * without an entry is a bug and throws.
    */
   barcodes?: Record<string, string>;
+  /**
+   * Node ids that nothing drawing ink follows: the document's last inked child,
+   * its own last inked child, and so on, plus the inkless blocks trailing each
+   * of them. A forced page break on any of these opens a page there is nothing
+   * to put on, so honouring it would print an empty final page.
+   */
+  trailingNodeIds: Set<string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -206,6 +215,77 @@ const resolveFieldBorderStyle = (
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+  };
+};
+
+/** The designer's Page Break block: a rule-less divider whose only job is the break. */
+const isPageBreakDivider = (node: TemplateNode): boolean =>
+  node.type === 'divider' && isRecord(node.style?.inline) && node.style.inline.breakAfter === 'page';
+
+/**
+ * True when a node puts nothing on the page it would open. Conservative: only a
+ * Page Break block (and a wrapper holding nothing but those) is known to draw
+ * no ink — anything else is assumed to print something.
+ */
+const drawsNoInk = (node: TemplateNode): boolean => {
+  if (isPageBreakDivider(node)) return true;
+  const children: TemplateNode[] = Array.isArray(node.children) ? node.children : [];
+  return children.length > 0 && children.every(drawsNoInk);
+};
+
+/**
+ * The nodes that close the document: its last child that draws ink, that
+ * child's own last inked child, and so on — plus the inkless blocks trailing
+ * each of them. Only these can carry a forced break with nothing after it.
+ *
+ * Skipping the inkless trailing blocks is what keeps a Page Break dropped after
+ * a block that already ended with one from printing a blank sheet: the first
+ * break would otherwise open a page occupied solely by the second (itself
+ * dropped for being last).
+ */
+export const collectTrailingNodeIds = (root: TemplateNode): Set<string> => {
+  const ids = new Set<string>();
+  const addSubtree = (node: TemplateNode) => {
+    ids.add(node.id);
+    (Array.isArray(node.children) ? node.children : []).forEach(addSubtree);
+  };
+
+  let current: TemplateNode | undefined = root;
+  while (current) {
+    const children: TemplateNode[] = Array.isArray(current.children) ? current.children : [];
+    let index = children.length - 1;
+    while (index >= 0 && drawsNoInk(children[index])) {
+      // Every break inside an inkless block is equally pointless, however deeply
+      // the author nested it.
+      addSubtree(children[index]);
+      index -= 1;
+    }
+    const lastInked = index >= 0 ? children[index] : undefined;
+    if (!lastInked) break;
+    ids.add(lastInked.id);
+    current = lastInked;
+  }
+  return ids;
+};
+
+/**
+ * Strip a forced break that would open a page with nothing on it: a
+ * `break-after: page` nothing inked follows, or a `break-before: page` on a
+ * block that itself draws no ink and is followed by none either.
+ */
+const dropPointlessPageBreak = (
+  style: React.CSSProperties | undefined,
+  node: TemplateNode,
+  ctx: RenderContext
+): React.CSSProperties | undefined => {
+  if (!style || !ctx.trailingNodeIds.has(node.id)) return style;
+  const dropsAfter = style.breakAfter === 'page';
+  const dropsBefore = style.breakBefore === 'page' && drawsNoInk(node);
+  if (!dropsAfter && !dropsBefore) return style;
+  return {
+    ...style,
+    ...(dropsAfter ? { breakAfter: 'auto' as const } : {}),
+    ...(dropsBefore ? { breakBefore: 'auto' as const } : {}),
   };
 };
 
@@ -388,6 +468,128 @@ const renderTableCellContent = (
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
 };
 
+
+/**
+ * Signed quantity change shown before a child-row quantity. Null, non-numeric
+ * and zero changes render nothing; positive and negative values are signed
+ * ("+2" / "\u22121") and toned. Digits use the document locale.
+ */
+const resolveSignedChange = (
+  raw: unknown,
+  ctx: RenderContext
+): { text: string; tone: 'positive' | 'negative' } | null => {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const numeric = typeof raw === 'number' ? raw : Number(String(raw));
+  if (!Number.isFinite(numeric) || numeric === 0) return null;
+  let digits: string;
+  try {
+    digits = new Intl.NumberFormat(ctx.locale || 'en-US', { maximumFractionDigits: 4 }).format(Math.abs(numeric));
+  } catch {
+    digits = String(Math.abs(numeric));
+  }
+  return numeric > 0
+    ? { text: `+${digits}`, tone: 'positive' }
+    : { text: `\u2212${digits}`, tone: 'negative' };
+};
+
+/** Child-row numbers follow the document locale (quantities may be fractional). */
+const formatChildValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+  // An unbound value is blank whatever the format (currency would otherwise render $0.00).
+  if (value === undefined || value === null || value === '') return '';
+  if (format === 'number' && value !== null && value !== undefined && value !== '') {
+    const numeric = typeof value === 'number' ? value : Number(String(value));
+    if (Number.isFinite(numeric)) {
+      try {
+        return new Intl.NumberFormat(ctx.locale || 'en-US', { maximumFractionDigits: 4 }).format(numeric);
+      } catch {
+        return String(numeric);
+      }
+    }
+  }
+  return formatValue(value ?? '', format, ctx);
+};
+
+const resolveChildItems = (childRows: TemplateChildRows, parentRow: UnknownRecord, parentBinding: string, scope: RenderScope): UnknownRecord[] => {
+  // The source path is written relative to the parent binding (`item.components`).
+  const prefix = `${parentBinding}.`;
+  const relative = childRows.sourcePath.startsWith(prefix) ? childRows.sourcePath.slice(prefix.length) : childRows.sourcePath;
+  const source = getPathValue(parentRow, relative);
+  if (!Array.isArray(source)) return [];
+  return source.filter(isRecord);
+};
+
+const renderChildRow = (
+  node: TemplateDynamicTableNode,
+  childRows: TemplateChildRows,
+  child: UnknownRecord,
+  parentRow: UnknownRecord,
+  key: string,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext
+): React.ReactNode => {
+  const childScope: RenderScope = {
+    ...scope,
+    row: child,
+    items: { ...scope.items, [node.repeat.itemBinding]: parentRow, [childRows.itemBinding]: child },
+  };
+  const { className: rowClassName, style: rowStyle } = resolveStyleRef(childRows.style);
+  return (
+    <tr key={key} className={joinClassNames('ast-child-row', rowClassName) || undefined} style={rowStyle}>
+      {node.columns.map((column, columnIndex) => {
+        const cell = childRows.cells[column.id];
+        const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+        const alignRight = column.format === 'currency' || column.format === 'number';
+        const tdStyle = { ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' as const } : {}) };
+        if (!cell) {
+          return <td key={column.id} className={colClassName || undefined} style={tdStyle} />;
+        }
+        const { className: cellClassName, style: cellStyle } = resolveStyleRef(cell.style);
+        const change = cell.change
+          ? resolveSignedChange(resolveExpressionValue(cell.change.value, evaluation, childScope, ctx), ctx)
+          : null;
+        const lineSource = cell.lines?.length
+          ? cell.lines.map((line) => {
+              const { className, style: lineStyle } = resolveStyleRef(line.style);
+              return {
+                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx),
+                className,
+                style: lineStyle,
+              };
+            }).filter((line) => line.text.trim().length > 0)
+          : [];
+        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx);
+        const lineEntries = lineSource.length > 0 ? lineSource : flat.trim().length > 0 ? [{ text: flat, className: null as string | null, style: undefined as React.CSSProperties | undefined }] : [];
+        const isMarkerColumn = columnIndex === 0;
+        return (
+          <td
+            key={column.id}
+            className={joinClassNames(colClassName, cellClassName, isMarkerColumn ? 'ast-child-row-lead' : null) || undefined}
+            style={{ ...tdStyle, ...(cellStyle ?? {}), ...(isMarkerColumn ? { paddingLeft: '20px' } : {}) }}
+          >
+            {change ? (
+              <span className={`ast-change ast-change-${change.tone}`} style={{ color: change.tone === 'positive' ? '#15803d' : '#b91c1c', marginRight: '4px', fontWeight: 600 }}>
+                {change.text}
+              </span>
+            ) : null}
+            {lineEntries.map((line, lineIndex) => (
+              <div
+                key={`${column.id}-line-${lineIndex}`}
+                className={joinClassNames(change ? 'ast-child-inline' : 'ast-table-cell-line', line.className) || undefined}
+                style={{ ...(line.style ?? {}), ...(change ? { display: 'inline' } : {}) }}
+              >
+                {isMarkerColumn && lineIndex === 0 ? '\u2022 ' : ''}
+                {line.text}
+              </div>
+            ))}
+            {isMarkerColumn && lineEntries.length === 0 ? '\u2022' : null}
+          </td>
+        );
+      })}
+    </tr>
+  );
+};
+
 /** A totals value that has nothing to report: absent, blank, or numerically zero. */
 const isZeroOrEmptyTotal = (raw: unknown): boolean => {
   if (raw === null || raw === undefined) return true;
@@ -460,6 +662,8 @@ const buildAstCss = (ast: TemplateAst): string => {
   .invoice-template-root thead { display: table-header-group; }
   .invoice-template-root tbody tr,
   .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+  /* A bundle row stays with its first component row. */
+  .invoice-template-root tbody tr.ast-has-child-rows { break-after: avoid; }
   /* A section heading never sits alone at the foot of a page: the heading
      may not end a page and whatever follows it may not start one. */
   .invoice-template-root section > h2 { break-after: avoid; }
@@ -526,6 +730,14 @@ const resolveExpressionValue = (
 
       if (parsedPath.filter === 'currency') {
         return formatValue(resolvedValue, 'currency', ctx);
+      }
+
+      if (parsedPath.filter === 'daterange') {
+        const endPath = parsedPath.path.replace(/Start$/, 'End');
+        const endValue = (scope.row ? getPathValue(scope.row, endPath) : undefined) ?? getPathValue(scope.items, endPath);
+        const start = formatValue(resolvedValue, 'date', ctx);
+        const end = endValue === undefined || endValue === null ? '' : formatValue(endValue, 'date', ctx);
+        return start && end ? `${start} \u2013 ${end}` : start;
       }
 
       return resolvedValue;
@@ -636,7 +848,11 @@ const renderNode = (
   rootDocumentStyleOverride?: React.CSSProperties
 ): React.ReactNode => {
   const nodeTypeClass = `ast-node ast-node-type-${sanitizeCssIdentifier(node.type)}`;
-  const { className: styleClassName, style } = resolveStyleRef(node.style);
+  const { className: styleClassName, style: authoredStyle } = resolveStyleRef(node.style);
+  // A forced break with nothing inked after it is dropped here rather than in a
+  // stylesheet: whether it is the last thing in the document is a fact about
+  // document order, which no selector can ask about.
+  const style = dropPointlessPageBreak(authoredStyle, node, ctx);
   const elementClassName = joinClassNames(nodeTypeClass, styleClassName);
 
   switch (node.type) {
@@ -849,8 +1065,21 @@ const renderNode = (
         />
       );
     }
-    case 'divider':
-      return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
+    case 'divider': {
+      // The designer's Page Break block exports as a rule-less divider whose only job is
+      // the forced break, so it is marked as one in the output — the same way every node
+      // carries its `ast-node-type-*` class. No stylesheet selects it today: the one rule
+      // it needs, dropping a break with nothing after it, depends on document order rather
+      // than on a selector, so it is applied inline (dropPointlessPageBreak) instead.
+      return (
+        <hr
+          key={node.id}
+          id={node.id}
+          className={joinClassNames(elementClassName, isPageBreakDivider(node) && 'ast-page-break') || undefined}
+          style={style}
+        />
+      );
+    }
     case 'table': {
       const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
@@ -930,24 +1159,37 @@ const renderNode = (
                 <td colSpan={node.columns.length}>{displayText(node.emptyStateText) ?? ''}</td>
               </tr>
             ) : (
-              rows.map((row, index) => (
-                <tr key={`${node.id}-row-${index}`}>
-                  {node.columns.map((column) => {
-                    const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
-                    const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
-                    const alignRight = column.format === 'currency' || column.format === 'number';
-                    return (
-                      <td
-                        key={column.id}
-                        className={colClassName || undefined}
-                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
-                      >
-                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+              rows.map((row, index) => {
+                const childItems = node.childRows
+                  ? resolveChildItems(node.childRows, row, node.repeat.itemBinding, scope)
+                  : [];
+                const blankColumns = childItems.length > 0 ? node.childRows?.parentBlankColumns ?? [] : [];
+                return (
+                  <React.Fragment key={`${node.id}-row-${index}`}>
+                    <tr className={childItems.length > 0 ? 'ast-has-child-rows' : undefined}>
+                      {node.columns.map((column) => {
+                        const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
+                        const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                        const alignRight = column.format === 'currency' || column.format === 'number';
+                        return (
+                          <td
+                            key={column.id}
+                            className={colClassName || undefined}
+                            style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                          >
+                            {blankColumns.includes(column.id) ? '' : renderTableCellContent(column, evaluation, rowScope, ctx)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {node.childRows
+                      ? childItems.map((child, childIndex) =>
+                          renderChildRow(node, node.childRows as TemplateChildRows, child, row, `${node.id}-row-${index}-child-${childIndex}`, evaluation, scope, ctx)
+                        )
+                      : null}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1026,7 +1268,14 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
+        {
+          ast,
+          currencyCode,
+          locale,
+          dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
+          barcodes,
+          trailingNodeIds: collectTrailingNodeIds(ast.layout),
+        },
         rootDocumentStyleOverride
       )}
     </div>
@@ -1063,6 +1312,7 @@ export const resolveTemplateExpressionValue = (
     currencyCode,
     locale,
     dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+    trailingNodeIds: new Set<string>(),
   });
 };
 

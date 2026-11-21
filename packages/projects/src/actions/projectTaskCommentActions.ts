@@ -6,7 +6,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { serves } from '@alga-psa/core/capability';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
-import type { IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
+import type { CommentAudience, IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
 import {
   countTaskCommentsBatchWithDb,
   countTaskCommentsWithDb,
@@ -61,6 +61,10 @@ function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentAc
     }
   }
 
+  if (error instanceof Error && error.name === 'CommentAudienceError') {
+    return permissionError('Permission denied: Cannot comment with that audience');
+  }
+
   if (isCoManagedSharedWorkError(error)) {
     return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
   }
@@ -90,16 +94,19 @@ export const createTaskComment = withAuth(async (
   { tenant },
   comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'> & {
     parent_comment_id?: string | null;
+    /** Who may read it. A seat technician must name one; MSP callers leave it out. */
+    audience?: CommentAudience | null;
   }
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx, collaboration }) =>
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx, collaboration, governed }) =>
       createTaskCommentWithDb(trx, tenant, user, {
         taskId: comment.taskId,
         note: comment.note,
         parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-      }, { collaboration }));
+        audience: comment.audience ?? null,
+      }, { collaboration, governed }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -117,8 +124,8 @@ export const getTaskComments = withAuth(async (
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx, collaboration }) =>
-      listTaskCommentsWithDb(trx, tenant, taskId, { collaboration, viewerUserId: user.user_id }));
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx, collaboration, governed }) =>
+      listTaskCommentsWithDb(trx, tenant, taskId, { collaboration, governed, viewerUserId: user.user_id, viewerUserType: user.user_type }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

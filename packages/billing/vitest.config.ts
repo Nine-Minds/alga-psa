@@ -1,5 +1,7 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -13,7 +15,13 @@ export default defineConfig({
       'tests/**/*.test.tsx',
       'src/lib/invoice-template-ast/printSettings.test.ts',
       'src/lib/invoice-template-ast/previewSheet.test.ts',
+      // Preview framing (sheet, guide, page caption) must never reach a PDF.
+      'src/lib/invoice-template-ast/previewSeparation.test.ts',
+      // And the caption it does draw speaks the reader's language, not the document's.
+      'src/lib/invoice-template-ast/previewPageCaption.test.ts',
       'src/components/invoice-designer/preview/previewSheetScale.test.ts',
+      // A page at 100% is wider than the pane it is read in, so it is dragged into view.
+      'src/components/invoice-designer/preview/previewPan.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
       'src/lib/invoice-template-ast/barcode/barcode.test.ts',
       'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
@@ -35,6 +43,9 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/services/quoteAccessLinks.test.ts',
+      'src/services/quoteAccessLinks.revoke.test.ts',
+      'src/services/publicQuoteView.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -48,6 +59,9 @@ export default defineConfig({
       'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
       'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
       'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      // Every surface that reads a document shows it as the pages it prints as.
+      'src/components/billing-dashboard/TemplateRenderer.paginated.test.tsx',
+      'src/components/billing-dashboard/quotes/QuotePreviewPanel.pages.test.tsx',
       'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
       // Manual invoice total arithmetic must be selected by the billing
       // package's own test command as well as the server's monorepo glob.
@@ -90,6 +104,10 @@ export default defineConfig({
       // resolved target's realm + Intuit environment that the invoice deep
       // link reads — listed for the same reason as the suites above.
       'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/accountingSyncActions.disconnectScope.test.ts',
+      'src/actions/accountingSyncActions.erroredOps.test.ts',
+      'src/services/accountingSync/syncOperationsRepository.listErrored.test.ts',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.syncButton.test.tsx',
       'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
@@ -97,6 +115,10 @@ export default defineConfig({
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
+      // The quote view model its by-location bands are built from — its sibling
+      // adapters were already listed, this one was only reached by the
+      // server-wide glob.
+      'src/lib/adapters/quoteAdapters.test.ts',
       'src/lib/adapters/salesOrderAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
@@ -106,12 +128,39 @@ export default defineConfig({
       // alongside the server-wide glob.
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      // Multi-location quote editing (alga-2026-0002902): client-change
+      // clearing, discount lines staying unsited, the remove-location
+      // move/delete choice, and the create-from-template item override.
+      'src/components/billing-dashboard/quotes/QuoteForm.locations.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoice-template-ast/bundleChildRows.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      // Forced page breaks only exist in a paginating engine, so this one also
+      // prints with real Chromium and counts the pages it produced.
+      'src/lib/invoice-template-ast/pageBreaks.pdf.test.ts',
+      // The paginated preview is only true if it agrees with the printed pages:
+      // this one draws both and compares them page for page.
+      'src/lib/invoice-template-ast/previewPagination.pdf.test.ts',
+      // Margins that repeat per page, and print scaling, likewise only exist on
+      // paper: this one prints and measures where the ink landed.
+      'src/lib/invoice-template-ast/printGeometry.pdf.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // The chunker has no route to the app, so a preview it paginates has to carry
+      // its images inline or its pages disagree with the printed ones.
+      'src/actions/templatePreviewImageInlining.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,
       // opt-in layout + back-compat renders, the derivation helper's call sites, and
       // the designer's catalog / Discount Row / preview-sample coverage.
@@ -128,6 +177,11 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // PDF document rendering must exercise the isolated Chromium policy, and
+      // its existing print-settings tests must remain part of the package lane.
+      'src/services/pdfGenerationService.ssrf.test.ts',
+      'src/services/pdfGenerationService.printSettings.test.ts',
+      'src/services/pdfGenerationService.locale.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
@@ -177,6 +231,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      serverOnlyAlias,
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,
@@ -216,6 +271,14 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
       },
       {
+        find: /^@alga-psa\/core\/rendering\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/rendering')}/$1.ts`,
+      },
+      {
+        find: /^@alga-psa\/core\/net\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/net')}/$1.ts`,
+      },
+      {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
@@ -237,10 +300,8 @@ export default defineConfig({
         find: /^@alga-psa\/core\/i18n\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
-      {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
-        replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
-      },
+      // Published @alga-psa/db subpaths come from its exports map (most live under src/lib).
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       {
         find: /^@alga-psa\/auth\/sso\/entry$/,
         replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),

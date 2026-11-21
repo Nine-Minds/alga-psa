@@ -56,7 +56,7 @@ vi.mock('../actions/activityServerActions', () => ({ fetchActivities: mocks.fetc
 vi.mock('@alga-psa/user-activities/actions', () => ({ createAdHocActivity: vi.fn() }));
 vi.mock('../hooks/useActivityFilterOptions', () => ({
   useActivityFilterOptions: () => ({
-    priorities: [], clients: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
+    priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
   }),
 }));
 vi.mock('../hooks/useViewableUsers', () => ({

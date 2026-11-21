@@ -10,6 +10,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FileText } from 'lucide-react';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { renderQuotePreview, updateQuote } from '../../../actions/quoteActions';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface QuotePreviewPanelProps {
@@ -29,7 +30,7 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
   onOpen,
 }) => {
   const { t } = useTranslation('msp/quotes');
-  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string; documentHtml?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -77,11 +78,13 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
         const result = await renderQuotePreview(
           quoteId,
           effectiveTemplateId || undefined,
+          // Drawn as the pages it prints as, so a layout with page breaks is read as sheets.
+          { paginate: true },
         );
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           throw new Error(getErrorMessage(result));
         }
-        setPreviewHtml(result as { html: string; css: string });
+        setPreviewHtml(result as { html: string; css: string; documentHtml?: string });
       } catch (err) {
         console.error('Error loading quote preview:', err);
         setError(t('quotePreview.errors.load', {
@@ -210,19 +213,29 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
             </div>
 
             <div className="mb-4 max-h-[80vh] overflow-y-auto overflow-x-auto">
-              <div
-                style={{
-                  zoom: scale,
-                  width: `${baseWidth}px`,
-                  transition: 'zoom 0.2s ease-out',
-                  colorScheme: 'light',
-                  backgroundColor: 'white',
-                  color: 'black',
-                }}
-              >
-                <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
-                <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
-              </div>
+              {previewHtml.documentHtml ? (
+                <PreviewSheetFrame
+                  html={previewHtml.documentHtml}
+                  title={t('quotePreview.title', { defaultValue: 'Quote Preview' })}
+                  zoomMode="fit"
+                  automationId="quote-preview-pages"
+                />
+              ) : (
+                // A single roll beats no preview when the chunking pass could not run.
+                <div
+                  style={{
+                    zoom: scale,
+                    width: `${baseWidth}px`,
+                    transition: 'zoom 0.2s ease-out',
+                    colorScheme: 'light',
+                    backgroundColor: 'white',
+                    color: 'black',
+                  }}
+                >
+                  <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
+                  <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
+                </div>
+              )}
             </div>
           </>
         ) : (

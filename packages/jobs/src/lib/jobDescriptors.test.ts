@@ -44,6 +44,7 @@ vi.mock('./handlers/workflowQuotaResumeScanHandler', () => ({ workflowQuotaResum
 vi.mock('./handlers/cleanupAiSessionKeysHandler', () => ({ cleanupAiSessionKeysHandler: vi.fn() }));
 vi.mock('./handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemporaryFormsJob: vi.fn() }));
 vi.mock('./handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: vi.fn() }));
+vi.mock('./handlers/cleanupInboundEmailQuarantineJob', () => ({ cleanupInboundEmailQuarantineJob: vi.fn() }));
 vi.mock('./handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: vi.fn() }));
 vi.mock('./handlers/providerDisconnectRetryHandler', () => ({ providerDisconnectRetryHandler: vi.fn() }));
 

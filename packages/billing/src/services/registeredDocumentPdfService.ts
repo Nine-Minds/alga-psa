@@ -49,6 +49,7 @@ export async function renderRegisteredDocumentPdf(
     title: options.title ?? 'Document',
     knex,
     locale: options.locale,
+    printGeometry: getDocumentTypeRegistryEntry(documentType).printGeometry,
   });
   const pdf = await renderHtmlToPdf(html, resolvePdfPrintOptionsFromAst(ast));
   return { pdf, templateId: value.templateId };

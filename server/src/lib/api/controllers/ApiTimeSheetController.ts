@@ -47,6 +47,33 @@ import {
 import { ZodError } from 'zod';
 import { uuidSchema } from '../schemas/common';
 
+/**
+ * Query keys the search/export schemas type as `z.array(...)`. Both repeated keys
+ * (`?user_ids=a&user_ids=b`) and comma-separated values (`?user_ids=a,b`) are accepted,
+ * matching the documented array encoding for `/api/v1/time-sheets/{search,export}`.
+ */
+const TIME_SHEET_ARRAY_QUERY_KEYS: ReadonlySet<string> = new Set(['approval_statuses', 'user_ids', 'period_ids', 'fields']);
+
+/**
+ * Shape a query string for timeSheetSearchSchema / timeSheetExportQuerySchema.
+ * `Object.fromEntries(searchParams)` yields one string per key and keeps only the last
+ * repeated value, so no `z.array` filter could ever validate. Array keys collect every
+ * occurrence (split on commas, trimmed, blanks dropped); scalars keep their last value;
+ * absent keys stay absent so the schema defaults apply.
+ */
+// LEVERAGE: pattern multi-value-query-params — ApiAssetController.export() hand-rolls the same
+// getAll + split(',') normalization; a shared query normalizer belongs below the controllers.
+function timeSheetQueryParams(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const params: Record<string, string | string[]> = {};
+  for (const key of new Set(searchParams.keys())) {
+    const values = searchParams.getAll(key);
+    params[key] = TIME_SHEET_ARRAY_QUERY_KEYS.has(key)
+      ? values.flatMap((value) => value.split(',')).map((value) => value.trim()).filter(Boolean)
+      : values[values.length - 1];
+  }
+  return params;
+}
+
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
 
@@ -869,16 +896,9 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        // Repeated array params (?user_ids=a&user_ids=b) collapse under
-        // Object.fromEntries, so collect them explicitly; the schema also
-        // splits comma-separated values.
-        const queryParams: Record<string, string | string[]> = {};
-        for (const key of new Set(url.searchParams.keys())) {
-          const values = url.searchParams.getAll(key);
-          queryParams[key] = values.length > 1 ? values : values[0];
-        }
+        const queryParams = timeSheetQueryParams(url.searchParams);
 
         let searchParams;
         try {
@@ -955,10 +975,10 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot export time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        const queryParams = timeSheetQueryParams(url.searchParams);
+
         let exportParams;
         try {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
@@ -969,15 +989,19 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw error;
         }
 
-        // Export within tenant context
-        const result = await runWithTenant(tenantId!, async () => {
-          const timeSheets = await this.timeSheetService.list({}, {
+        // Export within tenant context: every row matching the filters, not page 1 of list()
+        const rows = await runWithTenant(tenantId!, async () => {
+          return this.timeSheetService.exportTimeSheets(exportParams, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
           });
-          return timeSheets.data;
         });
+
+        const fields = exportParams.fields?.filter((field) => field.length > 0);
+        const result = fields && fields.length > 0
+          ? rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]])))
+          : rows;
 
         // Return appropriate response based on format
         if (exportParams.format === 'csv') {
@@ -1593,7 +1617,7 @@ export class ApiTimeSheetController extends ApiBaseController {
       try {
         // Authenticate
         const apiKey = req.headers.get('x-api-key');
-        
+
         if (!apiKey) {
           throw new UnauthorizedError('API key required');
         }
@@ -1610,7 +1634,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             tenantId = keyRecord.tenant;
           }
         }
-        
+
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
@@ -1703,7 +1727,6 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time period settings');
         }
 
-        // Get settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
           return await this.timeSheetService.getTimePeriodSettings({
             userId: user.user_id,
@@ -1720,7 +1743,74 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Create time period settings
+   * Get time period settings by ID
+   */
+  getTimePeriodSettingsById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        const settings = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getTimePeriodSettingsById(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(settings);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create time period settings (409 when it overlaps an active setting)
    */
   createTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1797,7 +1887,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Update time period settings
+   * Update time period settings (409 when the result overlaps an active setting)
    */
   updateTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1846,8 +1936,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Extract ID from path
-        const pathParts = req.url.split('/');
-        const id = pathParts[pathParts.length - 1];
+        const id = new URL(req.url).pathname.split('/').pop()!;
 
         // Parse and validate request body
         const body = await req.json();
@@ -1877,7 +1966,72 @@ export class ApiTimeSheetController extends ApiBaseController {
     };
   }
 
-  // Schedule Management
+  /**
+   * Delete time period settings
+   */
+  deleteTimePeriodSettings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Build the same API context used by the other controller handlers.
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+        const user = apiAuthContext.user;
+
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
+          'time_period',
+          'manage',
+          db
+        );
+
+        if (!hasManagePermission) {
+          throw new ForbiddenError('Permission denied: Cannot manage time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.deleteTimePeriodSettings(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 
   /**
    * Search schedule entries (GET /api/v1/schedules/search): same auth,

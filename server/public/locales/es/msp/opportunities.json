@@ -566,6 +566,17 @@
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crear un proyecto de incorporación (opcional)",
       "title": "Marcar como ganada"
+    },
+    "declare": {
+      "title": "Mover a {{stage}}",
+      "sourceLabel": "Fuente de respaldo",
+      "noSource": "Sin fuente",
+      "sourceHelp": "Opcional. Cita una interacción o un documento de esta oportunidad. Si no aparece, adjunta primero el documento a la oportunidad.",
+      "submit": "Declarar",
+      "source": "Fuente",
+      "sourceRemoved": "Fuente eliminada",
+      "interactionFallback": "Interacción",
+      "documentFallback": "Documento"
     }
   }
 }

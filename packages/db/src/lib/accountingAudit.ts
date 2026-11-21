@@ -28,7 +28,11 @@ export type AccountingAuditOperation =
   | 'accounting_mapping_deleted'
   | 'accounting_export_executed'
   | 'accounting_sync_cycle_run'
-  | 'accounting_remote_void';
+  | 'accounting_remote_void'
+  // AlgaPSA-only operations: the local record changed and the provider's was
+  // deliberately left untouched, so the books knowingly disagree.
+  | 'accounting_local_payment_reversal'
+  | 'accounting_alga_only_void';
 
 export type AccountingAuditProvider = 'qbo' | 'xero' | 'quickbooks_online' | 'csv';
 

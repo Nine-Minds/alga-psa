@@ -16,6 +16,8 @@ export const UI_SLOT_SURFACES = [
   // does not render them leaves the base conversation untouched.
   'ticket.conversation.comment-attachments',
   'ticket.conversation.thread-header',
+  // Seat shape: the ticket screen's responsibility chip and handoff. Contributed with capability 'co-managed-seat'.
+  'ticket.details.responsibility',
 ] as const;
 
 export type UiSlotSurface = (typeof UI_SLOT_SURFACES)[number];

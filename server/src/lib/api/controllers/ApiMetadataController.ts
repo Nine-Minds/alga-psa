@@ -51,9 +51,6 @@ export class ApiMetadataController extends ApiBaseController {
       permissions: {
         list: 'read',
         read: 'read',
-        create: 'create',
-        update: 'update',
-        delete: 'delete'
       }
     });
 

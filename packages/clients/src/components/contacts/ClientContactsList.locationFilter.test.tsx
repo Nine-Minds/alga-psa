@@ -48,6 +48,9 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
 }));
+vi.mock('@alga-psa/auth/actions', () => ({
+  getContactPortalPermissions: async () => ({ canInvite: true, canUpdateRoles: true, canRead: true }),
+}));
 vi.mock('../../lib/usersHelpers', () => ({ getCurrentUserAsync: hoisted.getCurrentUserAsync }));
 vi.mock('./ContactDetailsEdit', () => ({ default: () => null }));
 vi.mock('./bento/ContactQuickView', () => ({ default: () => null }));

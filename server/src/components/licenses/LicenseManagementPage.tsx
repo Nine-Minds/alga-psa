@@ -17,6 +17,7 @@ import {
   TicketCheck,
 } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import {
   Card,
   CardContent,
@@ -32,13 +33,16 @@ import {
   refreshLicenseNow,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
+import { notifyLicenseStatusChanged } from "./LicenseBanner";
 import {
   getErrorMessage,
   isActionPermissionError,
 } from "@alga-psa/ui/lib/errorHandling";
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
-import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { ServicePrincipalUsageRow } from "@enterprise/components/service-principals/ServicePrincipalUsageRow";
+import { TIER_FEATURES, tierHasFeature, type TenantTier } from "@alga-psa/types";
+import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -77,6 +81,63 @@ function tierLabel(tier: string | null, t: TFunction) {
   return t(`managementPage.tiers.${tier}`, {
     defaultValue: `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`,
   });
+}
+
+/**
+ * Localized text for a failed "Refresh license now". The two check-in failures
+ * that need their own wording are keyed by `code`; anything else falls back to
+ * the action's English `error`.
+ */
+function refreshErrorMessage(
+  result: { error?: string; code?: string; status?: LicenseStatus },
+  t: TFunction,
+): string | undefined {
+  if (result.code === "credential_revoked") {
+    return t("managementPage.errors.credentialRevoked", {
+      defaultValue:
+        "This appliance’s license credential was revoked. Connect it again with a new claim code from the licensing portal.",
+    });
+  }
+  if (result.code === "subscription_lapsed") {
+    const sub = result.status?.subscription;
+    const date = formatDate(sub?.endsAt ?? result.status?.expiresAt ?? null);
+    const stillPro = sub?.phase === "ending";
+    const paymentFailed = sub?.cause === "payment_failed";
+    const head = paymentFailed
+      ? stillPro
+        ? date
+          ? t("managementPage.errors.subscriptionEndingPaymentFailed", {
+              date,
+              defaultValue: "Your Pro subscription ended — payment failed. Pro ends on {{date}}.",
+            })
+          : t("managementPage.errors.subscriptionEndingPaymentFailedNoDate", {
+              defaultValue: "Your Pro subscription ended — payment failed.",
+            })
+        : t("managementPage.errors.subscriptionEndedPaymentFailed", {
+            defaultValue: "Pro ended — payment failed. Your appliance runs Essentials.",
+          })
+      : stillPro
+      ? date
+        ? t("managementPage.errors.subscriptionEnding", {
+            date,
+            defaultValue: "Your Pro subscription has been cancelled. Pro ends on {{date}}.",
+          })
+        : t("managementPage.errors.subscriptionEndingNoDate", {
+            defaultValue: "Your Pro subscription has been cancelled.",
+          })
+      : t("managementPage.errors.subscriptionEnded", {
+          defaultValue: "Your Pro subscription has ended. This appliance is on the free edition.",
+        });
+    return sub?.resubscribeUrl
+      ? `${head} ${t("managementPage.errors.resubscribeAt", {
+          url: sub.resubscribeUrl,
+          defaultValue: "Resubscribe at {{url}}.",
+        })}`
+      : `${head} ${t("managementPage.errors.resubscribeToRestore", {
+          defaultValue: "Resubscribe to restore Pro.",
+        })}`;
+  }
+  return result.error;
 }
 
 function statusPresentation(
@@ -123,7 +184,28 @@ function statusPresentation(
           tier: tierLabel(status.tier, t),
           defaultValue: "{{tier}} is active",
         }),
-        description: status.expiresAt
+        description: status.subscription?.phase === "payment_failed"
+          ? t("managementPage.status.licensed.descriptionPaymentFailed", {
+              defaultValue: "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro.",
+            })
+          : status.subscription?.phase === "ending" && status.subscription.cause === "term"
+          ? t("managementPage.status.licensed.descriptionTermEnds", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue: "Pro is active through {{date}}, when its fixed term ends.",
+            })
+          : status.subscription?.phase === "ending" && status.subscription.cause === "payment_failed"
+          ? t("managementPage.status.licensed.descriptionPaymentFailedEnded", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue:
+                "Your Pro subscription ended — payment failed. Pro stays active through {{date}}.",
+            })
+          : status.subscription?.phase === "ending"
+          ? t("managementPage.status.licensed.descriptionEnding", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue:
+                "Your subscription has been cancelled. Pro stays active through {{date}}.",
+            })
+          : status.expiresAt
           ? t("managementPage.status.licensed.descriptionWithExpiry", {
               date: formatDate(status.expiresAt),
               defaultValue: "Your license is active through {{date}}.",
@@ -137,6 +219,24 @@ function statusPresentation(
         tone: "success",
       };
     case "license_expired":
+      if (status.subscription?.phase === "lapsed") {
+        return {
+          eyebrow: t("managementPage.status.subscriptionLapsed.eyebrow", {
+            defaultValue: "Subscription ended",
+          }),
+          title: t("managementPage.status.subscriptionLapsed.title", {
+            defaultValue: "You’re now on the free edition",
+          }),
+          description: t("managementPage.status.subscriptionLapsed.description", {
+            defaultValue:
+              "Your Pro subscription has ended. Your data is kept, and Pro features turn back on when you resubscribe.",
+          }),
+          badge: t("managementPage.status.subscriptionLapsed.badge", {
+            defaultValue: "Free edition",
+          }),
+          tone: "warning",
+        };
+      }
       return {
         eyebrow: t("managementPage.status.licenseExpired.eyebrow", {
           defaultValue: "License needs attention",
@@ -252,6 +352,7 @@ function toneClasses(tone: Tone) {
  */
 export default function LicenseManagementPage() {
   const { t } = useTranslation("msp/licensing");
+  const { formatDate: formatLocaleDate } = useFormatters();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [licenseKey, setLicenseKey] = useState("");
@@ -296,6 +397,7 @@ export default function LicenseManagementPage() {
       console.error("Failed to refresh session after license change:", error);
     }
     setStatus(newStatus);
+    notifyLicenseStatusChanged();
   }
 
   function handleSubmitLicense() {
@@ -385,8 +487,9 @@ export default function LicenseManagementPage() {
           }),
         );
       } else {
-        setError(
-          result.error ??
+        // A soft lapse still stored new subscription context — show it.
+        if (result.status) await refresh(result.status);
+        setError(refreshErrorMessage(result, t) ??
             t("managementPage.errors.refreshLicense", {
               defaultValue: "Failed to refresh the license.",
             }),
@@ -440,6 +543,13 @@ export default function LicenseManagementPage() {
   const showLicenseRefresh = status.connected;
   const lastCheckIn = formatDateTime(status.lastCheckinAt);
   const expiresAt = formatDate(status.expiresAt);
+  const subscriptionEndDate = formatDate(
+    status.subscription?.endsAt ?? null,
+  );
+  const paymentFailed = status.subscription?.phase === "payment_failed";
+  const paymentRetryDate = status.subscription?.nextRetryAt
+    ? formatLocaleDate(status.subscription.nextRetryAt, { month: "short", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
@@ -516,6 +626,128 @@ export default function LicenseManagementPage() {
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">
+          {status.subscription ? (
+            <section
+              id="license-subscription-lapse-section"
+              className="space-y-4"
+            >
+              <Alert
+                id="license-subscription-lapse-alert"
+                variant={status.subscription.phase === "lapsed" || paymentFailed || status.subscription.cause === "payment_failed" ? "destructive" : "warning"}
+              >
+                <AlertDescription className="space-y-3">
+                  <p className="font-medium text-[rgb(var(--color-text-900))]">
+                    {paymentFailed
+                      ? paymentRetryDate
+                        ? t("managementPage.lapse.paymentFailedTitle", {
+                            date: paymentRetryDate,
+                            defaultValue: "Payment failed — we’ll retry on {{date}}. Update your payment method to keep Pro.",
+                          })
+                        : t("managementPage.lapse.paymentFailedTitleNoRetry", {
+                            defaultValue: "Payment failed. Update your payment method to keep Pro.",
+                          })
+                      : status.subscription.phase === "lapsed" && status.subscription.cause === "payment_failed"
+                      ? t("managementPage.lapse.paymentFailedEndedTitle", {
+                          defaultValue: "Pro ended — payment failed. Your appliance runs Essentials.",
+                        })
+                      : status.subscription.phase === "lapsed"
+                      ? t("managementPage.lapse.lapsedTitle", {
+                          defaultValue: "You’re now on the free edition. Resubscribe to restore Pro.",
+                        })
+                      : status.subscription.cause === "payment_failed"
+                        ? t("managementPage.lapse.paymentFailedEndingTitle", {
+                            defaultValue: "Your Pro subscription ended — payment failed.",
+                          })
+                      : status.subscription.cause === "term"
+                        ? t("managementPage.lapse.termEndsTitle", {
+                            defaultValue: "Your Pro term is ending.",
+                          })
+                        : t("managementPage.lapse.endingTitle", {
+                            defaultValue: "Your Pro subscription has been cancelled.",
+                          })}
+                  </p>
+                  {subscriptionEndDate ? (
+                    <p>
+                      {paymentFailed
+                        ? t("managementPage.lapse.paymentFailedEndsOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ends on {{date}} if payment keeps failing.",
+                          })
+                        : status.subscription.phase === "lapsed"
+                        ? t("managementPage.lapse.endedOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ended on {{date}}.",
+                          })
+                        : t("managementPage.lapse.endsOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ends on {{date}}.",
+                          })}
+                    </p>
+                  ) : null}
+                  {paymentFailed ? null : (
+                  <p>
+                    {t("managementPage.lapse.dataKept", {
+                      defaultValue:
+                        "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
+                    })}
+                  </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {paymentFailed && status.subscription.updatePaymentUrl ? (
+                      <Button id="license-update-payment-link" asChild>
+                        <a
+                          href={status.subscription.updatePaymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                          {t("managementPage.lapse.updatePaymentMethod", {
+                            defaultValue: "Update payment method",
+                          })}
+                        </a>
+                      </Button>
+                    ) : null}
+                    {/* Fall back to the licensing portal when the server sent no URL. */}
+                    {!paymentFailed && (status.subscription.resubscribeUrl || PORTAL_URL) ? (
+                      <Button id="license-lapse-resubscribe-link" asChild>
+                        <a
+                          href={status.subscription.resubscribeUrl ?? PORTAL_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                          {t("managementPage.lapse.resubscribe", {
+                            defaultValue: "Resubscribe",
+                          })}
+                        </a>
+                      </Button>
+                    ) : null}
+                    {showLicenseRefresh ? (
+                      <Button
+                        id="license-lapse-refresh-now"
+                        variant="outline"
+                        onClick={handleRefreshLicense}
+                        disabled={isPending}
+                        className="gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        {isPending
+                          ? t("managementPage.actions.refreshing", {
+                              defaultValue: "Refreshing…",
+                            })
+                          : t("managementPage.actions.refreshNow", {
+                              defaultValue: "Refresh license now",
+                            })}
+                      </Button>
+                    ) : null}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </section>
+          ) : null}
+
           {canStartTrial ? (
             <section className="relative overflow-hidden rounded-2xl border border-[rgb(var(--color-primary-300))] bg-[rgb(var(--color-primary-50))] p-5 dark:border-[rgb(var(--color-primary-400)/0.35)] dark:bg-[rgb(var(--color-primary-400)/0.12)]">
               <div
@@ -571,6 +803,11 @@ export default function LicenseManagementPage() {
                 {tierLabel(status.tier, t)}
               </p>
             </div>
+
+            <ServicePrincipalUsageRow
+              hasPro={status.tier ? tierHasFeature(status.tier as TenantTier, TIER_FEATURES.SERVICE_PRINCIPALS) : false}
+              className="flex items-center justify-between rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 text-sm"
+            />
 
             {expiresAt ? (
               <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">

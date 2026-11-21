@@ -144,9 +144,9 @@ Line items modeled on `invoice_charges` with quote-specific fields.
 | `is_selected` | BOOLEAN | Client's current selection (default true) |
 | `is_recurring` | BOOLEAN | Recurring vs one-time |
 | `billing_frequency` | TEXT | monthly, quarterly, etc. |
-| `is_taxable` | BOOLEAN | Subject to tax |
+| `is_taxable` | BOOLEAN | Subject to tax (derived from the catalog service when not supplied) |
 | `tax_region` | TEXT | Tax jurisdiction |
-| `tax_rate` | DECIMAL | Applied tax rate |
+| `tax_rate` | NUMERIC(10,4) | Exact applied tax percentage (e.g. `6.875`, not rounded) |
 | `tax_amount` | BIGINT | Calculated tax (cents) |
 | `is_discount` | BOOLEAN | If true, this is a discount line |
 | `discount_type` | TEXT | percentage or fixed |
@@ -223,6 +223,19 @@ Tax integrates with the existing `taxService.calculateTax()`:
 - Honors client tax exemptions
 - Supports reverse-charge scenarios
 - `tax_source` field tracks whether tax was calculated internally or externally
+- `tax_rate` stores the exact percentage used in the calculation (`numeric(10,4)`, matching `tax_rates.tax_percentage`), so a 6.875% line persists `6.875` rather than a rounded `7`. API and workflow schemas accept any non-negative number.
+
+### Line Taxability
+
+Quote items follow the same rule as manual invoice charges, via `deriveServiceTaxTreatment` (`shared/billingClients/serviceTaxTreatment.ts`):
+- When `is_taxable` is omitted on create or on a service change, it is derived from the catalog service's `tax_rate_id`: no rate id → non-taxable; a rate id → taxable in that rate's region; a rate id that resolves to no tenant rate → non-taxable. A non-taxable service therefore never picks up the client's default rate.
+- Items with no catalog service fall back to `is_taxable = true`.
+- An explicit `is_taxable` / `tax_rate` from the caller is respected. The schemas no longer default `is_taxable` to `true`, so an omitted value is distinguishable from an explicit one.
+- Both creation paths (`packages/billing` `QuoteItem` and the workflow-runtime `crmWorkerDal`) use the helper. The line item editor exposes a per-line **Taxable** checkbox, pre-set from the picked service's `tax_rate_id`.
+
+### Discounts Before Tax
+
+Discounts reduce the taxable base before tax is computed, following the same allocation rule as invoices (`quoteCalculationService` uses `allocateIncludedQuoteDiscounts`; see [tax_calculation_allocation.md](tax/tax_calculation_allocation.md)). A targeted discount is spread over its target items; a quote-level discount is spread pro rata over all positive non-discount items, taxable and exempt, and only the taxable share lowers tax. Tax never goes negative. Because quotes, billing preview and invoices apply the same rule, quote tax equals the tax on the invoice converted from it.
 
 ### Discounts
 
@@ -247,7 +260,7 @@ Totals are recalculated on every item mutation (add, update, remove, reorder).
 ```
 subtotal       = SUM(total_price) for non-discount, selected items
 discount_total = SUM(discount amounts) for applicable discount lines
-tax            = SUM(tax_amount) for selected, taxable items
+tax            = SUM(tax_amount) for selected, taxable items (computed on post-discount amounts)
 total_amount   = subtotal - discount_total + tax
 ```
 
@@ -448,7 +461,7 @@ For each selected, non-discount **product** one-time item:
 
 For each **recurring** quote item (where `is_selected = true`):
 1. Creates a new contract (status: draft)
-2. Creates `contract_line` entries matching billing method
+2. Creates `contract_line` entries matching billing method, stamping `service_category` from each item's `service_catalog.category_id` so category-based billing splits see the line
 3. Creates service configurations (`_fixed_config`, `_hourly_config`, `_usage_config`)
 4. Creates `client_contracts` assignment
 5. Sets `quote.converted_contract_id`
@@ -458,7 +471,10 @@ For each **recurring** quote item (where `is_selected = true`):
 For each **one-time** quote item (where `is_selected = true`):
 1. Creates a new invoice (status: draft, `is_manual: true`)
 2. Creates `invoice_charge` entries with matching fields
-3. Calculates invoice totals
+3. Resolves the invoice's `tax_source` from the client's effective tax configuration (`getEffectiveTaxSourceForClient`), never from `quote.tax_source`:
+   - **Internal-tax client**: each charge keeps the quote row's `tax_amount`, `tax_rate` and `total_price` verbatim (the tax the customer accepted); nothing is recomputed
+   - **External-tax client** (client override or tenant default): the invoice starts as `pending_external` with zero per-charge `tax_amount`/`tax_rate`, and the accounting integration fills tax after export
+   - The `packages/billing` conversion service and the workflow-worker `crmWorkerDal` path apply the same resolution
 4. Sets `quote.converted_invoice_id`
 
 ### Combined Conversion

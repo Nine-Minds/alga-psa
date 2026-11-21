@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.6.18",
+  "version": "1.6.20",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
+    "dev": "NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
@@ -180,7 +180,7 @@
     "mkdirp": "^3.0.1",
     "monaco-editor": "^0.52.2",
     "nestjs-knex": "^2.0.0",
-    "next": "16.4.2",
+    "next": "16.4.5",
     "next-auth": "^5.0.0-beta.32",
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",

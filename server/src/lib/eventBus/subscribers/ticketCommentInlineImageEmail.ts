@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { runWithTenant } from '@alga-psa/db';
 import type { EmailAttachment } from '../../../types/email.types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 
@@ -241,7 +242,9 @@ export async function rewriteTicketCommentImagesToCid(params: {
     }
 
     try {
-      const downloadResult = await StorageService.downloadFile(fileId);
+      // The storage layer resolves its tenant from async context, which an
+      // event subscriber has not entered.
+      const downloadResult = await runWithTenant(params.tenantId, () => StorageService.downloadFile(fileId));
       const inlineBytes = Buffer.isBuffer(downloadResult.buffer)
         ? downloadResult.buffer.length
         : Buffer.byteLength(String(downloadResult.buffer || ''), 'utf-8');
@@ -285,6 +288,11 @@ export async function rewriteTicketCommentImagesToCid(params: {
         reason: 'converted_to_cid',
       });
     } catch (error) {
+      console.warn('[TicketEmailSubscriber] inline image download failed', {
+        tenantId: params.tenantId,
+        fileId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       outcomes.push({
         sourceUrl: source,
         resolvedFileId: fileId,

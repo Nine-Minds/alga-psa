@@ -14,6 +14,7 @@
     "communityEditionDescription": "Die selbst gehostete Community Edition bietet unbegrenzt viele Benutzer ohne Lizenzbeschränkungen oder zusätzliche Kosten."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Unbegrenzt",
     "metaTitle": "Kauf erfolgreich",
     "scheduledTitle": "Änderung erfolgreich geplant!",
     "updatedTitle": "Aktualisierung erfolgreich!",
@@ -266,7 +267,11 @@
         "title": "{{tier}} ist aktiv",
         "description": "Ihre kostenpflichtige Lizenz ist auf dieser Appliance aktiv.",
         "descriptionWithExpiry": "Ihre Lizenz ist bis zum {{date}} aktiv.",
-        "badge": "Lizenziert"
+        "badge": "Lizenziert",
+        "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv.",
+        "descriptionTermEnds": "Pro ist bis zum {{date}} aktiv, dann endet die feste Laufzeit.",
+        "descriptionPaymentFailed": "Pro ist aktiv, aber die letzte Verlängerungszahlung ist fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+        "descriptionPaymentFailedEnded": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis zum {{date}} aktiv."
       },
       "licenseExpired": {
         "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
@@ -291,6 +296,12 @@
         "title": "Sie verwenden Essentials",
         "description": "Essentials ist auf dieser Appliance aktiv. Nutzen Sie weiterhin den zentralen Funktionsumfang oder starten Sie einmalig eine 15-tägige Pro-Testversion.",
         "badge": "Essentials aktiv"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beendet",
+        "title": "Sie nutzen jetzt die kostenlose Edition",
+        "description": "Ihr Pro-Abonnement ist beendet. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden mit einem neuen Abonnement wieder aktiviert.",
+        "badge": "Kostenlose Edition"
       }
     },
     "trialCta": {
@@ -356,7 +367,31 @@
       "activateLicenseKey": "Der Lizenzschlüssel konnte nicht aktiviert werden.",
       "activateClaimCode": "Der Aktivierungscode konnte nicht aktiviert werden.",
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
-      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
+      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden.",
+      "credentialRevoked": "Die Lizenz-Zugangsdaten dieser Appliance wurden widerrufen. Verbinden Sie sie mit einem neuen Aktivierungscode aus dem Lizenzportal erneut.",
+      "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}.",
+      "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt.",
+      "subscriptionEnded": "Ihr Pro-Abonnement ist beendet. Diese Appliance nutzt die kostenlose Edition.",
+      "subscriptionEndingPaymentFailed": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro endet am {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen.",
+      "subscriptionEndedPaymentFailed": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance nutzt Essentials.",
+      "resubscribeAt": "Erneut abonnieren unter {{url}}.",
+      "resubscribeToRestore": "Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen."
+    },
+    "lapse": {
+      "lapsedTitle": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
+      "endingTitle": "Ihr Pro-Abonnement wurde gekündigt.",
+      "endedOn": "Pro endete am {{date}}.",
+      "endsOn": "Pro endet am {{date}}.",
+      "dataKept": "Es wird nichts gelöscht. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden nach erneutem Abonnement und Aktualisierung der Lizenz wieder aktiviert.",
+      "resubscribe": "Erneut abonnieren",
+      "termEndsTitle": "Ihre Pro-Laufzeit endet bald.",
+      "paymentFailedTitle": "Zahlung fehlgeschlagen — wir versuchen es am {{date}} erneut. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+      "paymentFailedTitleNoRetry": "Zahlung fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+      "paymentFailedEndedTitle": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance läuft mit Essentials.",
+      "paymentFailedEndingTitle": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen.",
+      "paymentFailedEndsOn": "Pro endet am {{date}}, wenn die Zahlung weiterhin fehlschlägt.",
+      "updatePaymentMethod": "Zahlungsmethode aktualisieren"
     }
   },
   "errors": {
@@ -364,6 +399,171 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "trial": {
+      "title": "15-tägiger Test eines Co-Managed-Platzes",
+      "description": "Laden Sie einen Techniker des Kunden ein, auf den ausgewählten Boards zu arbeiten. Die 15 Tage beginnen mit seiner ersten Anmeldung. Der Zugriff setzt ein aktives Basisabonnement oder einen laufenden Test des Basisangebots voraus.",
+      "terms": "Ein kostenpflichtiger Platz kostet {{amount}} pro Monat. Der Test endet ohne Kosten, sofern Sie keine kostenpflichtige Kapazität bestätigen.",
+      "status": {
+        "active": "Aktiv",
+        "pending": "Erste Anmeldung steht aus",
+        "base_paused": "Basisabonnement pausiert",
+        "expired": "Test abgelaufen",
+        "paid": "Kostenpflichtiger Platz in Nutzung",
+        "ended": "Test beendet",
+        "checkout_pending": "Zahlung steht aus"
+      },
+      "purchaseAwaitingVerification": "Kauf wird noch geprüft",
+      "conversionFailed": "Der Wechsel zu einem kostenpflichtigen Platz wurde nicht abgeschlossen. Prüfen Sie die verfügbare kostenpflichtige Kapazität oder versuchen Sie den Kauf erneut.",
+      "deadline": "Der Platztest endet am {{date}}.",
+      "baseUntil": "Der aktuelle Basiszugriff endet am {{date}}.",
+      "openSetup": "Platzeinrichtung des Kunden öffnen",
+      "invite": "Techniker für 15 Tage einladen",
+      "resend": "Einladung erneut senden",
+      "replace": "Techniker ersetzen",
+      "cancelInvitation": "Einladung zurückziehen",
+      "restoreBase": "Basiszugriff im Konto wiederherstellen",
+      "resumePurchase": "Kauf fortsetzen",
+      "cancelConversion": "Platzumstellung abbrechen",
+      "spareSeatTerms": "Verwenden Sie jetzt einen verfügbaren kostenpflichtigen Platz. Die Gesamtzahl der Plätze im Pool bleibt gleich.",
+      "confirmSpareSeat": "Nutzung eines kostenpflichtigen Platzes bestätigen",
+      "keepSeat": "Diesen Platz behalten",
+      "refresh": "Teststatus aktualisieren",
+      "returnToTrial": "Zum Platztest des Kunden zurückkehren",
+      "notice": {
+        "invitationSaved": "Einladung gespeichert. Versuchen Sie unten erneut, sie zu senden.",
+        "deliveryFailed": "Der Versand ist fehlgeschlagen. Sie können ihn erneut versuchen.",
+        "replacementSent": "Einladung für den Ersatztechniker gesendet.",
+        "replacementSaved": "Ersatztechniker gespeichert. Versuchen Sie erneut, die Einladung zu senden."
+      },
+      "error": {
+        "boardChoicesFailed": "Die auswählbaren Boards konnten nicht geladen werden.",
+        "actionFailed": "Die Aktion konnte nicht abgeschlossen werden. Aktualisieren Sie den Teststatus und versuchen Sie es erneut.",
+        "paymentFailed": "Die Zahlung konnte nicht abgeschlossen werden. Prüfen Sie den Teststatus."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Dieser Arbeitsbereich hat keinen Co-Managed-Pool. Fügen Sie Co-Managed-Plätze hinzu, um dies zu nutzen.",
+        "lapsed": "Der Co-Managed-Pool ist abgelaufen. Stellen Sie ihn wieder her, bevor Sie Plätze hinzufügen.",
+        "capacity": "Im Pool sind keine Plätze mehr frei. Fügen Sie dem Pool Plätze hinzu oder geben Sie Plätze eines anderen Kunden frei.",
+        "clientInactive": "Reaktivieren Sie diesen Kunden, bevor Sie Co-Managed IT aktivieren.",
+        "clientNotFound": "Dieser Kunde ist nicht mehr verfügbar.",
+        "hasArrangement": "Dieser Kunde hat bereits Co-Managed IT. Aktualisieren Sie die Ansicht, um es zu sehen."
+      },
+      "error": {
+        "operationConflict": "Diese Anfrage wurde bereits mit anderen Angaben gesendet. Aktualisieren Sie die Ansicht und beginnen Sie neu.",
+        "invalidSeats": "Geben Sie eine ganze Zahl von Plätzen ein, mindestens 1.",
+        "invalidInvitation": "Wählen Sie einen Kontakt zum Einladen aus.",
+        "contactNotFound": "Dieser Kontakt ist nicht mehr verfügbar. Wählen Sie einen anderen Kontakt.",
+        "contactWrongClient": "Dieser Kontakt gehört zu einem anderen Kunden. Wählen Sie einen Kontakt dieses Kunden.",
+        "contactInactive": "Dieser Kontakt ist inaktiv. Reaktivieren Sie den Kontakt zuerst.",
+        "contactNoEmail": "Dieser Kontakt hat keine E-Mail-Adresse. Ergänzen Sie zuerst eine beim Kontakt.",
+        "contactHasSeat": "Dieser Kontakt hat bereits einen Platz oder eine offene Einladung.",
+        "emailInUse": "Diese E-Mail-Adresse gehört bereits zu einem Benutzerkonto. Verwenden Sie eine andere Adresse.",
+        "emailInvited": "Für diese E-Mail-Adresse besteht bereits eine offene Einladung.",
+        "seatLimit": "Alle Plätze sind belegt. Fügen Sie zuerst Plätze hinzu oder ziehen Sie eine Einladung zurück.",
+        "poolLimit": "Im Pool sind nicht so viele Plätze verfügbar.",
+        "allocationConflict": "Die Plätze wurden während der Bearbeitung geändert. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "board": "Ein ausgewähltes Board ist nicht mehr verfügbar. Aktualisieren Sie die Ansicht und wählen Sie erneut.",
+        "project": "Ein ausgewähltes Projekt ist nicht mehr verfügbar. Aktualisieren Sie die Ansicht und wählen Sie erneut.",
+        "handoffUser": "Die ausgewählte Person ist nicht mehr verfügbar. Wählen Sie eine andere Person.",
+        "notPending": "Dieser Techniker hat bereits angenommen, die Einladung kann daher nicht geändert werden.",
+        "arrangementGone": "Diese Platzvereinbarung ist nicht mehr aktiv. Aktualisieren Sie die Ansicht, um den Status zu sehen.",
+        "generic": "Das hat nicht funktioniert. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "load": "Die Auswahlmöglichkeiten konnten nicht geladen werden. Aktualisieren Sie die Ansicht und versuchen Sie es erneut.",
+        "submit": "Die Anfrage ist möglicherweise nicht abgeschlossen. Versuchen Sie es erneut; sie wird nicht doppelt angewendet."
+      },
+      "purchase": {
+        "checking": "Pool wird geprüft…",
+        "review": "Der Pool hat zu wenige Plätze. Prüfen Sie den Kauf, um {{count}} Plätze zuzuweisen.",
+        "waiting": "Warten auf den Abschluss des Kaufs. {{count}} Plätze werden zugewiesen, sobald der Pool sie enthält.",
+        "stalled": "Die neuen Plätze sind noch nicht erschienen. Prüfen Sie in Kürze erneut; Ihnen wird nichts doppelt berechnet.",
+        "failed": "Die Zahlung ist nicht durchgegangen. Wiederholen Sie denselben Kauf, um {{count}} Plätze zuzuweisen.",
+        "check": "Erneut prüfen",
+        "cancel": "Abbrechen",
+        "error": "Der Pool konnte nicht geprüft werden. Aktualisieren Sie und versuchen Sie es erneut; nichts wird doppelt berechnet."
+      },
+      "saved": "Gespeichert.",
+      "boards": {
+        "title": "Board-Umfang",
+        "hint": "Techniker bearbeiten Tickets dieses Kunden auf den hier markierten Boards. Ist keines markiert, sehen sie keine Tickets.",
+        "save": "Board-Umfang speichern",
+        "none": "Es gibt keine Boards zur Auswahl.",
+        "canCreate": "Kann Tickets erstellen"
+      },
+      "projects": {
+        "title": "Gemeinsame Projekte",
+        "hint": "Projekte dieses Kunden, die seine Techniker öffnen können.",
+        "none": "Dieser Kunde hat keine Projekte zum Teilen.",
+        "save": "Gemeinsame Projekte speichern"
+      },
+      "handoff": {
+        "title": "Standardwerte für Übergaben",
+        "assignee": "An Sie übergebene Tickets zuweisen an",
+        "nobody": "Nicht zugewiesen lassen",
+        "save": "Standardwerte für Übergaben speichern"
+      },
+      "client": {
+        "seatArrangement": "Platzvereinbarung",
+        "summary": "Platzvereinbarung: {{used}} von {{count}} Plätzen belegt"
+      },
+      "technicians": {
+        "sent": "Einladung gesendet.",
+        "notSent": "Der Platz ist reserviert, aber die E-Mail wurde nicht gesendet. Senden Sie sie erneut.",
+        "name": "Name",
+        "email": "E-Mail",
+        "status": "Status",
+        "active": "Aktiv",
+        "expired": "Einladung abgelaufen",
+        "invited": "Eingeladen",
+        "resend": "Erneut senden",
+        "withdraw": "Zurückziehen",
+        "title": "Techniker",
+        "none": "Noch keine Techniker.",
+        "invite": "Techniker einladen",
+        "withdrawTitle": "Einladung zurückziehen",
+        "withdrawMessage": "Einladung für {{email}} zurückziehen? Der Platz geht an diese Vereinbarung zurück.",
+        "withdrawn": "Einladung zurückgezogen."
+      },
+      "panel": {
+        "title": "Platzvereinbarung",
+        "usage": "{{used}} von {{count}} Plätzen belegt",
+        "allocation": "Zugewiesene Plätze",
+        "changeSeats": "Plätze ändern"
+      },
+      "access": {
+        "title": "Zugriff und Übergabe"
+      },
+      "setup": {
+        "seats": "Anzahl der Plätze",
+        "boards": "Boards im Umfang",
+        "boardsHint": "Techniker sehen Tickets ihres Unternehmens nur auf diesen Boards.",
+        "technician": "Erster Techniker",
+        "technicianHint": "Wählen Sie einen Kontakt dieses Kunden. Er wird per E-Mail eingeladen.",
+        "submit": "Plätze aktivieren",
+        "title": "Platzvereinbarung"
+      },
+      "contact": {
+        "label": "Techniker",
+        "placeholder": "Kontakt auswählen",
+        "addedNoEmail": "{{name}} wurde hinzugefügt, hat aber keine E-Mail-Adresse und kann noch nicht eingeladen werden.",
+        "addedUnavailable": "{{name}} wurde hinzugefügt, kann aber nicht eingeladen werden.",
+        "unavailable": "Nicht aufgeführt, weil inaktiv, ohne E-Mail-Adresse oder bereits mit Platz oder Einladung: {{count}}."
+      },
+      "chooser": {
+        "seat": "Platz",
+        "seatHint": "Die Techniker des Kunden arbeiten in Ihrer PSA, beschränkt auf ihr Unternehmen.",
+        "workspace": "Arbeitsbereich",
+        "workspaceHint": "Das IT-Team des Kunden erhält einen eigenen Servicedesk und eskaliert an Sie.",
+        "description": "Wählen Sie, wie das IT-Team dieses Kunden mit Ihnen zusammenarbeitet.",
+        "shape": "Co-Managed-Form",
+        "pool": "{{available}} von {{purchased}} Plätzen verfügbar. {{allocated}} zugewiesen."
+      },
+      "states": {
+        "active": "Aktiv",
+        "ended": "Beendet"
+      }
+    },
     "portableExport": {
       "title": "Arbeitsbereich exportieren",
       "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
@@ -440,6 +640,10 @@
     },
     "loading": "Kundenplatzkapazität wird geladen…",
     "overview": {
+      "shape": "Form",
+      "state": "Status",
+      "seatsUsed": "Belegte Plätze",
+      "seatsAllocated": "Zugewiesene Plätze",
       "actions": "Aktionen",
       "client": "Kunde",
       "empty": "Keine Co-Managed-Kunden entsprechen dieser Suche.",
@@ -533,6 +737,8 @@
     "proRequired": "Zum Sponsern von Kunden-Workspaces ist ein Pro-PSA-Abonnement erforderlich.",
     "loadError": "Die Kundenplatzkapazität konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "purchaseError": "Der Platzkauf konnte nicht abgeschlossen werden. Sie können ihn sicher fortsetzen.",
+    "termsChanged": "Der Preis hat sich seit Ihrer Prüfung geändert. Prüfen Sie die neuen Konditionen, bevor Sie den Kauf bestätigen.",
+    "offerUnavailable": "Neue Sitzplatzkäufe sind vorübergehend nicht verfügbar. Es wurde nichts berechnet.",
     "checkoutExpired": "Dieser Checkout ist abgelaufen. Starten Sie einen neuen Kauf, um fortzufahren.",
     "grace": "Erneuern Sie Ihre Lizenz oder beheben Sie den Kapazitätsengpass vor dem {{date}}, damit Kunden-Workspaces beschreibbar bleiben.",
     "readOnly": "Die Karenzzeit endete am {{date}}. Stellen Sie die lizenzierte Kapazität wieder her, um Änderungen an Kunden-Workspaces fortzusetzen.",
@@ -540,7 +746,19 @@
     "checkoutUnavailable": "Der eingebettete Checkout ist nicht verfügbar. Versuchen Sie es erneut, nachdem die Zahlungseinrichtung repariert wurde.",
     "pendingCapacity_one": "Ein Kauf von {{count}} Platz ist ausstehend.",
     "pendingCapacity_other": "Ein Kauf von {{count}} Plätzen ist ausstehend.",
+    "buySeats": "Co-Managed-Plätze kaufen",
+    "awaitingVerification_one": "Ihr Kauf von {{count}} Platz wartet auf die Zahlungsbestätigung. Der Platz erscheint hier, sobald die Zahlung bestätigt ist.",
+    "awaitingVerification_other": "Ihr Kauf von {{count}} Plätzen wartet auf die Zahlungsbestätigung. Die Plätze erscheinen hier, sobald die Zahlung bestätigt ist.",
+    "refreshStatus": "Status aktualisieren",
+    "purchaseOnly": {
+      "intro": "Kaufen Sie hier einen Pool von Co-Managed-Plätzen. Nach dem Kauf weisen Sie Plätze über den jeweiligen Kunden zu."
+    },
     "previewError": "Diese Änderung konnte nicht bepreist werden. Aktualisieren Sie und versuchen Sie es erneut.",
+    "billingCustomerUnlinked": "Für diesen Arbeitsbereich konnte kein Stripe-Abrechnungskonto verifiziert werden. Wenden Sie sich an den Support, um das Konto zu verknüpfen.",
+    "proSubscriptionRequired": "Für Co-Managed-Plätze ist ein laufendes Pro-Abonnement erforderlich. Überprüfen Sie Ihr Abonnement in der Kontoverwaltung.",
+    "offerPaused": "Neue Sitzplatzkäufe sind pausiert. Wenden Sie sich für ein Update an Ihren Account Manager.",
+    "offerMisconfigured": "Das Angebot für Co-managed-Sitzplätze ist nicht korrekt konfiguriert. Wenden Sie sich an den Support.",
+    "offerTemporarilyUnavailable": "Die Preisermittlung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.",
     "purchaseNeedsAdmin": "Ein Kontoadministrator muss Co-Managed-Kapazität hinzufügen.",
     "purchaseProviderUnconfigured": "Der Zahlungsanbieter ist nicht konfiguriert.",
     "purchaseUnavailable": "Der Kauf von gehostetem Co-Managed ist in dieser Bereitstellung nicht verfügbar.",

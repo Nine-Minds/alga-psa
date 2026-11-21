@@ -371,6 +371,10 @@
       "title": "Zasoby",
       "custody": {
         "title": "Sprzęt w przechowaniu"
+      },
+      "audits": {
+        "title": "Audyty lokalizacji",
+        "detailTitle": "Audyt lokalizacji"
       }
     },
     "createContact": {
@@ -440,6 +444,9 @@
       "title": "Zgłoszenia serwisowe",
       "detail": {
         "fallbackTitle": "Zgłoszenie serwisowe"
+      },
+      "formBuilder": {
+        "title": "Kreator formularza"
       }
     },
     "timeEntry": {

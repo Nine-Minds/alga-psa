@@ -4,12 +4,16 @@ import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 export default defineConfig({
   entry: {
     'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'lib/rma/warrantyStateMachine': 'lib/rma/warrantyStateMachine.ts',
+    'lib/rma/recordRmaEvent': 'lib/rma/recordRmaEvent.ts',
+    'lib/email/sanitizeEmailHtml': 'lib/email/sanitizeEmailHtml.ts',
     'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
     'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
     'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
     'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
+    'lib/net/outboundTarget': 'lib/net/outboundTarget.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
     'interfaces/contact.interfaces': 'interfaces/contact.interfaces.ts',
@@ -24,6 +28,7 @@ export default defineConfig({
     'events/publisher': 'events/publisher.ts',
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
+    'services/email/inboundEmailIdentity': 'services/email/inboundEmailIdentity.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
@@ -121,6 +126,7 @@ export default defineConfig({
     // the Next-built consumers are. Without an entry it is "Cannot find
     // package" at test time.
     'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
+    'billingClients/billingMutationLock': 'billingClients/billingMutationLock.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
@@ -147,6 +153,7 @@ export default defineConfig({
     'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
     'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
     'lib/sla/holidayRows': 'lib/sla/holidayRows.ts',
+    'lib/sla/slaPauseConditions': 'lib/sla/slaPauseConditions.ts',
   },
   format: ['esm'],
   dts: false,

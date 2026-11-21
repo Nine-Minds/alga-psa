@@ -18,15 +18,23 @@ import {
   addGroupUser,
   createGroup,
   deleteGroupRow,
+  AssetGroupError,
   getGroupOwnerId,
   getGroupWithDetails,
   isAssetGroupError,
   listGroupsForClient,
+  lockAssetGroupForMutation,
   removeAssetFromGroupRow,
   removeGroupUser,
   setGroupOwner,
   updateGroupRow,
 } from '@alga-psa/assets/lib/assetGroups';
+import {
+  assertAssetGroupAssetsUpdatable,
+  assertAssetGroupMemberUpdatableIfPresent,
+  lockAndAuthorizeAssetGroupClient,
+  lockAndAuthorizeAssetGroupMembers,
+} from '@alga-psa/assets/lib/assetGroupAuthorization';
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
@@ -34,6 +42,7 @@ import { getConnection } from '../../db/db';
 import { uuidSchema } from '../schemas/common';
 
 const groupKindSchema = z.enum(['bundle', 'shared_workspace']);
+const ASSET_GROUP_PERMISSION_ACTIONS = ['read', 'create', 'update', 'delete'] as const;
 
 export const createAssetGroupSchema = z.object({
   client_id: uuidSchema,
@@ -61,10 +70,17 @@ export const assetGroupContactSchema = z.object({
 });
 
 export class ApiAssetGroupController {
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return ASSET_GROUP_PERMISSION_ACTIONS.map((action) => ({ resource: 'asset', action }));
+  }
+
   private async requireContext(
     req: NextRequest,
     action: 'read' | 'create' | 'update' | 'delete'
   ): Promise<ApiContext | NextResponse> {
+    if (!(ASSET_GROUP_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared asset group permission action: ${action}`);
+    }
     const context = requireRequestContext(req);
     if (!context.user) {
       return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
@@ -85,7 +101,7 @@ export class ApiAssetGroupController {
       if (isAssetGroupError(error)) {
         // A group that is not there is a 404 wherever it is asked for, not
         // only on GET.
-        const status = error.code === 'not_found' ? 404 : 400;
+        const status = error.code === 'not_found' ? 404 : error.code === 'permission_denied' ? 403 : 400;
         return createErrorResponse(error.message, status, error.code.toUpperCase());
       }
       if (error instanceof Error && error.name === 'AssetAssigneeError') {
@@ -93,6 +109,29 @@ export class ApiAssetGroupController {
       }
       throw error;
     }
+  }
+
+  private async authorizeExistingAssetsForUpdate(
+    context: ApiContext,
+    trx: Knex.Transaction,
+    clientId: string,
+    assetIds: readonly string[]
+  ): Promise<void> {
+    if (!await hasApiContextPermission(context, 'asset', 'update', trx)) {
+      throw new AssetGroupError('permission_denied', 'Permission denied: Cannot update assets');
+    }
+    await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, clientId, assetIds);
+  }
+
+  private async authorizeGroupForUpdate(
+    context: ApiContext,
+    trx: Knex.Transaction,
+    groupId: string
+  ): Promise<void> {
+    if (!await hasApiContextPermission(context, 'asset', 'update', trx)) {
+      throw new AssetGroupError('permission_denied', 'Permission denied: Cannot update assets');
+    }
+    await lockAndAuthorizeAssetGroupMembers(trx, context.tenant, context.user!, groupId);
   }
 
   /** GET /api/v1/asset-groups?client_id=… */
@@ -121,6 +160,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await this.authorizeExistingAssetsForUpdate(context, trx, parsed.data.client_id, parsed.data.asset_ids ?? []);
       const group = await createGroup(trx, context.tenant, {
         clientId: parsed.data.client_id,
         name: parsed.data.name,
@@ -165,6 +205,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await this.authorizeGroupForUpdate(context, trx, params.id);
       await updateGroupRow(trx, context.tenant, params.id, {
         name: parsed.data.name,
         kind: parsed.data.kind,
@@ -182,6 +223,7 @@ export class ApiAssetGroupController {
     if (context instanceof NextResponse) return context;
 
     return this.run(context, async (trx) => {
+      await this.authorizeGroupForUpdate(context, trx, params.id);
       await deleteGroupRow(trx, context.tenant, params.id, { actorUserId: context.userId ?? null });
       return { success: true };
     });
@@ -198,6 +240,8 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      const group = await lockAssetGroupForMutation(trx, context.tenant, params.id);
+      await this.authorizeExistingAssetsForUpdate(context, trx, group.client_id, parsed.data.asset_ids);
       await addAssetsToGroupRows(trx, context.tenant, params.id, parsed.data.asset_ids, {
         actorUserId: context.userId ?? null,
       });
@@ -216,6 +260,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
+      await assertAssetGroupMemberUpdatableIfPresent(trx, context.tenant, context.user!, params.id, assetId.data);
       await removeAssetFromGroupRow(trx, context.tenant, params.id, assetId.data, {
         actorUserId: context.userId ?? null,
       });
@@ -235,6 +280,7 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (parsed.data.role === 'owner') {
+        await this.authorizeGroupForUpdate(context, trx, params.id);
         await setGroupOwner(trx, context.tenant, params.id, parsed.data.contact_name_id, {
           actorUserId: context.userId ?? null,
         });
@@ -242,6 +288,7 @@ export class ApiAssetGroupController {
         if (!parsed.data.contact_name_id) {
           throw Object.assign(new Error('contact_name_id is required for a user'), { name: 'AssetAssigneeError' });
         }
+        await lockAndAuthorizeAssetGroupClient(trx, context.tenant, context.user!, params.id);
         await addGroupUser(trx, context.tenant, params.id, parsed.data.contact_name_id);
       }
       return getGroupWithDetails(trx, context.tenant, params.id);
@@ -275,8 +322,10 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (isBundle) {
+        await this.authorizeGroupForUpdate(context, trx, params.id);
         await setGroupOwner(trx, context.tenant, params.id, null, { actorUserId: context.userId ?? null });
       } else {
+        await lockAndAuthorizeAssetGroupClient(trx, context.tenant, context.user!, params.id);
         await removeGroupUser(trx, context.tenant, params.id, contactId.data);
       }
       return getGroupWithDetails(trx, context.tenant, params.id);

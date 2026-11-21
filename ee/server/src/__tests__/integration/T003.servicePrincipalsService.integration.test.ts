@@ -5,7 +5,8 @@
  *  - T005 (F025/F026/F032/F034): deactivate deactivates keys; reactivation is limit-checked; old keys stay off.
  *  - T006 (F027/F029/F033/F072): archive when referenced, hard delete otherwise; archived does not count.
  *  - T012 (F028/F041): EE issuer writes an active purpose='service' key that validates.
- *  - T035 (F092/F093/F094): Essentials tenant: create refused, existing keys still validate, reactivate/issue refused.
+ *  - T035 (F092/F093/F094): Essentials tenant: create refused, existing keys refused
+ *    (immediate cutoff, R6.0a), records preserved, reactivate/issue refused.
  *
  * The tier gate is the only mocked collaborator (it reads the admin tier tables).
  */
@@ -58,7 +59,7 @@ import {
 } from '../../lib/service-principals/service';
 import { listAgents } from '../../lib/mcp/agents';
 import { getServicePrincipalUsage } from '../../lib/service-principals/usage';
-import { servicePrincipalKeyGate } from '../../lib/service-principals/boundary';
+import { resolveServicePrincipalApiContext, servicePrincipalKeyGate } from '../../lib/service-principals/boundary';
 
 let db: Knex;
 let mergedDir: string;
@@ -305,8 +306,8 @@ describe('key issuance (T012)', () => {
 });
 
 describe('Essentials tenant (T035)', () => {
-  it('refuses create, keeps existing keys working, refuses reactivate and issue', async () => {
-    const sp = await createServicePrincipal(db, tenant, { kind: 'api', name: 'grandfathered' });
+  it('refuses create and use, preserves records, refuses reactivate and issue', async () => {
+    const sp = await createServicePrincipal(db, tenant, { kind: 'api', name: 'existing' });
     const key = await issueServicePrincipalKey(db, tenant, sp.user_id);
     const other = await createServicePrincipal(db, tenant, { kind: 'api', name: 'to-deactivate' });
     await setServicePrincipalActive(db, tenant, other.user_id, false);
@@ -321,8 +322,16 @@ describe('Essentials tenant (T035)', () => {
     });
     expect((await listServicePrincipals(db, tenant)).length).toBe(before);
 
-    // grandfathered: gate still passes and the stored key row is still active
-    expect(await servicePrincipalKeyGate({ tenant, user_id: sp.user_id, user_type: 'service', is_inactive: false } as never)).toBe(true);
+    // R6.0a immediate cutoff: the key stops authenticating on the next call, while the
+    // principal and its credential row are preserved so an admin can still clean up.
+    expect(await servicePrincipalKeyGate({ tenant, user_id: sp.user_id, user_type: 'service', is_inactive: false } as never)).toBe(false);
+    await expect(
+      resolveServicePrincipalApiContext(
+        { tenant, user_id: sp.user_id, api_key_id: key.api_key_id },
+        { user_id: sp.user_id, user_type: 'service' },
+        new Request('http://localhost/api/v1/tickets'),
+      ),
+    ).rejects.toMatchObject({ code: 'TIER_ACCESS_DENIED', statusCode: 403 });
     const row = await tenantDb(db, tenant).table('api_keys').where({ api_key_id: key.api_key_id }).first('active');
     expect(row.active).toBe(true);
 

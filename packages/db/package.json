@@ -18,6 +18,10 @@
       "import": "./dist/lib/tenantDb.js",
       "types": "./src/lib/tenantDb.ts"
     },
+    "./userRoleFloor": {
+      "import": "./dist/lib/userRoleFloor.js",
+      "types": "./src/lib/userRoleFloor.ts"
+    },
     "./writeAdmission": {
       "import": "./dist/writeAdmission.js",
       "types": "./src/writeAdmission.ts"
@@ -79,6 +83,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@alga-psa/types": "file:../types",
     "@alga-psa/core": "file:../core",
     "dotenv": "^16.4.5",
     "knex": "^3.1.0",

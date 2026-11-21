@@ -24,7 +24,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs scripts/tests/test-digest.test.mjs scripts/tests/change-digest.test.mjs scripts/tests/typesafe-client.test.mjs scripts/tests/jev-test-selection.test.mjs scripts/tests/jev-selection-evaluation.test.mjs scripts/tests/jev-enforcement.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs scripts/tests/unit-lane-hocuspocus-deps.test.mjs scripts/tests/test-digest.test.mjs scripts/tests/change-digest.test.mjs scripts/tests/typesafe-client.test.mjs scripts/tests/jev-test-selection.test.mjs scripts/tests/jev-selection-evaluation.test.mjs scripts/tests/jev-enforcement.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -88,6 +88,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install locked collaboration server for relay authorization tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
+
       - name: Verify workflow worker build workspace inputs
         run: npm run check:build-workspaces --workspace=workflow-worker
 
@@ -125,7 +128,15 @@ jobs:
             echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           else
-            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+            # Manual dispatches have no github.event.before. Use the fetched
+            # default-branch commit rather than letting Nx fall back to `main`
+            # as a local revision (which checkout does not create).
+            base="${{ github.event.before }}"
+            if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin main
+              base="$(git rev-parse refs/remotes/origin/main^{commit})"
+            fi
+            echo "NX_BASE=${base}" >> "$GITHUB_ENV"
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
@@ -211,6 +222,11 @@ jobs:
         env:
           FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
         run: node scripts/install-api-test-dependencies.mjs
+      # The ticket live-update relay suites drive the real installed Hocuspocus
+      # server from hocuspocus/node_modules, which is not a workspace.
+      # scripts/tests/unit-lane-hocuspocus-deps.test.mjs keeps this in place.
+      - name: Install locked collaboration server for relay authorization tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.

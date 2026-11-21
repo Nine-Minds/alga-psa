@@ -194,6 +194,8 @@ function emailTemplateDefs() {
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/rmm/rmmAlertTriggered.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidCreditLowBalance.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBucketThresholdReached.cjs')).getTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/tickets/ticketCommentAddedClient.cjs')).getTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/tickets/ticketClosedClient.cjs')).getTemplate());
   return defs;
 }
 

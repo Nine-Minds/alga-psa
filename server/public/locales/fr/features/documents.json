@@ -196,6 +196,7 @@
     "fileError": "Impossible de téléverser le fichier"
   },
   "folders": {
+    "show": "Afficher les dossiers",
     "root": "Racine",
     "loadFailed": "Impossible de charger l'arborescence des dossiers",
     "deleteConfirm": "Voulez-vous vraiment supprimer le dossier \"{{name}}\" ? Cela ne fonctionnera que si le dossier est vide.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Documents du ticket",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Imprimer",
+    "edit": "Modifier",
+    "upload": "Téléverser",
+    "closePreview": "Fermer l’aperçu",
     "save": "Enregistrer",
     "saving": "Enregistrement...",
     "cancel": "Annuler"
@@ -376,6 +382,18 @@
     "altVideoThumbnail": "Miniature de {{name}}",
     "pageCount_one": "{{count}} page au total",
     "pageCount_other": "{{count}} pages au total"
+  },
+  "fallbackUserName": "Utilisateur",
+  "selectOrCreate": "Sélectionnez un document ou créez-en un nouveau.",
+  "viewMode": {
+    "grid": "Grille",
+    "list": "Liste"
+  },
+  "unsavedChanges": {
+    "title": "Modifications non enregistrées",
+    "message": "Voulez-vous vraiment annuler ? Toutes les modifications non enregistrées seront perdues.",
+    "confirm": "Abandonner les modifications",
+    "cancel": "Continuer la modification"
   },
   "skeleton": {
     "cardLabel": "Carte de chargement de document"

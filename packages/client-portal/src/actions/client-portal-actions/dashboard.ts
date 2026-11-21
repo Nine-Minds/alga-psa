@@ -5,7 +5,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { withAuth, type AuthContext } from '@alga-psa/auth';
+import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import {
@@ -16,6 +16,7 @@ import { applyAssetVisibilityFilter, applyProjectVisibilityFilter } from '@alga-
 import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 import { hasClientProjectReadPermission } from './clientProjectPermissions';
+import { hasClientBillingReadPermission } from './clientBillingPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
@@ -100,7 +101,6 @@ type RecentProjectActivityRow = {
 type RecentServiceRequestActivityRow = {
   name: string;
   status: string;
-  execution_error_summary: string | null;
   timestamp: string | Date;
 };
 
@@ -193,6 +193,9 @@ export const getDashboardMetrics = withAuth(async (
     // Project tiles and project activity ride on the same role-based gate the
     // portal projects routes enforce.
     const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
+    // Same for the ticket tile: a portal role without `ticket:read` reads no
+    // tickets on /tickets, so the dashboard must not count them either.
+    const canReadTickets = await hasPermission(user, 'ticket', 'read', knex);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -210,6 +213,9 @@ export const getDashboardMetrics = withAuth(async (
 
       const clientId = contact.client_id;
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
+      // The portal billing surfaces use this same check (client-billing-metrics,
+      // client-billing-segments), so the invoice tile follows it.
+      const canReadBilling = await hasClientBillingReadPermission(trx, user, tenant);
 
         const [
           [ticketCount],
@@ -218,16 +224,18 @@ export const getDashboardMetrics = withAuth(async (
           [assetCount],
           [serviceRequestCount],
         ] = await Promise.all([
-        // Get open tickets count
-        applyTicketVisibilityFilter(
-          scopedDb.table('tickets')
-            .where({
-              'tickets.client_id': clientId,
-              'is_closed': false
-            }),
-          visibility,
-          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
-        ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
+        // Get open tickets count (only for roles granted ticket:read)
+        canReadTickets
+          ? applyTicketVisibilityFilter(
+              scopedDb.table('tickets')
+                .where({
+                  'tickets.client_id': clientId,
+                  'is_closed': false
+                }),
+              visibility,
+              { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
+            ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>
+          : Promise.resolve([{ count: '0' }]),
 
         // Get active projects count (only for roles granted project:read)
         canReadProjects
@@ -244,12 +252,15 @@ export const getDashboardMetrics = withAuth(async (
 
         // Pending invoice counts remain financial-document / invoice-state
         // metrics. They should not silently pivot to recurring coverage dates.
-        scopedDb.table('invoices')
-          .where({
-            'invoices.client_id': clientId
-          })
-          .whereNull('finalized_at')
-          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
+        // Only for roles granted billing:read.
+        canReadBilling
+          ? scopedDb.table('invoices')
+              .where({
+                'invoices.client_id': clientId
+              })
+              .whereNull('finalized_at')
+              .count('* as count') as unknown as Promise<Array<{ count: string }>>
+          : Promise.resolve([{ count: '0' }]),
 
         // Active assets: FR-B5 reads "deployed" from the status registry's
         // `deployable` kind, not from "anything but the literal inactive" —
@@ -265,7 +276,7 @@ export const getDashboardMetrics = withAuth(async (
             {
               contactColumn: 'assets.contact_name_id',
               // FR-E7: shared-workspace members count for their users too.
-              sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+              sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
             }
           )
             .whereIn('status', deployableSlugs)
@@ -318,6 +329,9 @@ export const getRecentActivity = withAuth(async (
     // Project tiles and project activity ride on the same role-based gate the
     // portal projects routes enforce.
     const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
+    // Same for the ticket tile: a portal role without `ticket:read` reads no
+    // tickets on /tickets, so the dashboard must not count them either.
+    const canReadTickets = await hasPermission(user, 'ticket', 'read', knex);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -335,69 +349,80 @@ export const getRecentActivity = withAuth(async (
 
       const clientId = contact.client_id;
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
+      // The portal billing surfaces use this same check (client-billing-metrics,
+      // client-billing-segments), so invoice and quote activity follows it.
+      const canReadBilling = await hasClientBillingReadPermission(trx, user, tenant);
 
       // Get recent tickets with their initial descriptions.
       // MSP-internal notes (and notes on internal threads) must never surface
       // as the activity excerpt — exclude them at the query, mirroring the
       // getClientTicketDetails comment filter. The filters are null-tolerant
       // so tickets without any comments are kept.
-      const ticketsQuery = scopedDb.table('tickets')
-        .select([
-          'tickets.title',
-          'tickets.updated_at as timestamp',
-          'comments.note as description'
-        ]);
-      scopedDb.tenantJoin(ticketsQuery, 'comments', 'tickets.ticket_id', 'comments.ticket_id', { type: 'left' });
-      scopedDb.tenantJoin(ticketsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
-      const tickets = await ticketsQuery
-        .where({
-          'tickets.client_id': clientId
-        })
-        .where(function (this: Knex.QueryBuilder) {
-          this.whereNull('comments.is_internal')
-            .orWhere('comments.is_internal', false);
-        })
-        .where(function (this: Knex.QueryBuilder) {
-          this.whereNull('ct.is_internal')
-            .orWhere('ct.is_internal', false);
-        })
-        // Scheduled/canceled comments are an MSP-only draft state and must not
-        // surface their note as a client activity excerpt before publication.
-        // Null-tolerant so tickets without any comment (left join) are kept,
-        // mirroring the getClientTicketDetails conversations filter.
-        .where(function (this: Knex.QueryBuilder) {
-          this.whereNull('comments.publish_state')
-            .orWhere('comments.publish_state', 'published');
-        })
-        .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
-        })
-        .orderBy('tickets.updated_at', 'desc')
-        .limit(3);
+      // Only for roles granted ticket:read.
+      let tickets: RecentTicketActivityRow[] = [];
+      if (canReadTickets) {
+        const ticketsQuery = scopedDb.table('tickets')
+          .select([
+            'tickets.title',
+            'tickets.updated_at as timestamp',
+            'comments.note as description'
+          ]);
+        scopedDb.tenantJoin(ticketsQuery, 'comments', 'tickets.ticket_id', 'comments.ticket_id', { type: 'left' });
+        scopedDb.tenantJoin(ticketsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+        tickets = await ticketsQuery
+          .where({
+            'tickets.client_id': clientId
+          })
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereNull('comments.is_internal')
+              .orWhere('comments.is_internal', false);
+          })
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereNull('ct.is_internal')
+              .orWhere('ct.is_internal', false);
+          })
+          // Scheduled/canceled comments are an MSP-only draft state and must not
+          // surface their note as a client activity excerpt before publication.
+          // Null-tolerant so tickets without any comment (left join) are kept,
+          // mirroring the getClientTicketDetails conversations filter.
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereNull('comments.publish_state')
+              .orWhere('comments.publish_state', 'published');
+          })
+          .modify((queryBuilder: Knex.QueryBuilder) => {
+            applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
+          })
+          .orderBy('tickets.updated_at', 'desc')
+          .limit(3);
+      }
 
       // Get recent invoices.
       // Drafts (no finalized_at) are not visible to client portal users —
       // mirror the InvoicesTab/getClientInvoices contract here so the activity
       // feed never surfaces an invoice the client can't actually open.
-      const invoicesQuery = scopedDb.table('invoices as inv')
-        .select([
-          'inv.invoice_number',
-          'inv.total_amount as total',
-          'inv.currency_code',
-          'inv.updated_at as timestamp',
-          trx.raw('MIN(iid.service_period_start) as service_period_start'),
-          trx.raw('MAX(iid.service_period_end) as service_period_end'),
-        ]);
-      scopedDb.tenantJoin(invoicesQuery, 'invoice_charges as ic', 'inv.invoice_id', 'ic.invoice_id', { type: 'left' });
-      scopedDb.tenantJoin(invoicesQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id', { type: 'left' });
-      const invoices = await invoicesQuery
-        .whereNotNull('inv.finalized_at')
-        .where({
-          'inv.client_id': clientId
-        })
-        .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.currency_code', 'inv.updated_at')
-        .orderBy('inv.updated_at', 'desc')
-        .limit(3);
+      // Only for roles granted billing:read.
+      let invoices: RecentInvoiceActivityRow[] = [];
+      if (canReadBilling) {
+        const invoicesQuery = scopedDb.table('invoices as inv')
+          .select([
+            'inv.invoice_number',
+            'inv.total_amount as total',
+            'inv.currency_code',
+            'inv.updated_at as timestamp',
+            trx.raw('MIN(iid.service_period_start) as service_period_start'),
+            trx.raw('MAX(iid.service_period_end) as service_period_end'),
+          ]);
+        scopedDb.tenantJoin(invoicesQuery, 'invoice_charges as ic', 'inv.invoice_id', 'ic.invoice_id', { type: 'left' });
+        scopedDb.tenantJoin(invoicesQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id', { type: 'left' });
+        invoices = await invoicesQuery
+          .whereNotNull('inv.finalized_at')
+          .where({
+            'inv.client_id': clientId
+          })
+          .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.currency_code', 'inv.updated_at')
+          .orderBy('inv.updated_at', 'desc')
+          .limit(3);
+      }
 
       // Get recent asset maintenance activities
       const assetActivitiesQuery = scopedDb.table('asset_maintenance_history')
@@ -419,13 +444,16 @@ export const getRecentActivity = withAuth(async (
 
       // Recent quotes — only the client-meaningful state transitions
       // (sent/accepted/rejected/expired) so we don't flood the feed with
-      // internal draft churn.
-      const quotes = await scopedDb.table('quotes')
-        .where({ client_id: clientId })
-        .whereIn('status', ['sent', 'accepted', 'rejected', 'expired'])
-        .select(['quote_number', 'title', 'status', 'updated_at as timestamp'])
-        .orderBy('updated_at', 'desc')
-        .limit(3);
+      // internal draft churn. Quotes are a billing document, so they ride on
+      // the same billing:read gate as invoices.
+      const quotes = canReadBilling
+        ? await scopedDb.table('quotes')
+            .where({ client_id: clientId })
+            .whereIn('status', ['sent', 'accepted', 'rejected', 'expired'])
+            .select(['quote_number', 'title', 'status', 'updated_at as timestamp'])
+            .orderBy('updated_at', 'desc')
+            .limit(3)
+        : [];
 
       // Recent project updates for this client (only for roles granted project:read).
       const projects = canReadProjects
@@ -445,7 +473,6 @@ export const getRecentActivity = withAuth(async (
         .select([
           'request_name as name',
           'execution_status as status',
-          'execution_error_summary',
           'created_at as timestamp',
         ])
         .orderBy('created_at', 'desc')
@@ -529,7 +556,9 @@ export const getRecentActivity = withAuth(async (
         title: `Service request: ${s.name}`,
         status: s.status,
         timestamp: s.timestamp instanceof Date ? s.timestamp.toISOString() : s.timestamp,
-        description: s.execution_error_summary || '',
+        // Raw execution error text is internal; the dashboard shows a translated
+        // generic description instead (see ClientDashboard).
+        description: '',
       })),
       ...result.appointments.map((a): RecentActivity => ({
         type: 'appointment',

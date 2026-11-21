@@ -1,6 +1,9 @@
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { TIER_FEATURES } from '@alga-psa/types';
+import { mayHoldApiCredentials } from '@alga-psa/authorization/subject/principalKind';
+import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { servicePrincipalDb } from './tables';
-import { findUserByIdForApi } from '@alga-psa/users/actions/user-actions/findUserByIdForApi';
 import { getForKey } from 'server/src/lib/api/rateLimit/apiRateLimitSettingsModel';
 import { BoundaryError } from './errors';
 export { mapServicePrincipalError } from './errors';
@@ -76,6 +79,12 @@ export async function resolveServicePrincipalApiContext<TUser = unknown>(
   const ownerRow = owner as unknown as { user_id?: string; user_type?: string | null };
   if (ownerRow?.user_type !== 'service' || ownerRow.user_id !== keyRecord.user_id) return null;
 
+  // R6.0a: the tenant's *current* tier gates every principal call, including one that
+  // acts as a licensed human and one whose key was minted while the tenant was on Pro.
+  // The kernel's TIER_ACCESS_DENIED (403) is the reported error; a tier lookup failure
+  // fails closed because assertTenantTierAccess throws on it.
+  await assertTenantTierAccess(keyRecord.tenant, TIER_FEATURES.SERVICE_PRINCIPALS);
+
   const principal = await loadActivePrincipal(keyRecord.tenant, keyRecord.user_id);
   if (!principal) return null;
 
@@ -95,6 +104,11 @@ export async function resolveServicePrincipalApiContext<TUser = unknown>(
     // findUserByIdForApi only returns active users in this tenant.
     const target = await findUserByIdForApi(actAsHeader, keyRecord.tenant);
     if (!target || target.user_type !== 'internal') throw invalidTarget();
+    // Acting as a user is the user's REST access: a principal kind that holds no API credentials (a seat
+    // technician) cannot be acted as either.
+    if (!(await mayHoldApiCredentials(await getConnection(keyRecord.tenant), { tenant: keyRecord.tenant, userId: target.user_id }))) {
+      throw invalidTarget();
+    }
     effectiveUser = target as unknown as TUser;
     actAsUserId = target.user_id;
     viaPrincipalUserId = keyRecord.user_id;
@@ -119,12 +133,19 @@ export async function resolveServicePrincipalApiContext<TUser = unknown>(
 }
 
 /**
- * True only for an active (or grandfathered) service principal. Owners below the Pro
- * tier keep authenticating (R6.0a), so this never consults the tier. Archived
- * principals have no keys, and are refused here as well.
+ * True only for an active service principal whose tenant is currently entitled to
+ * service principals (PRD R6.0a: Pro is required, with no grandfathering or grace
+ * period, so a key that was valid while the tenant was on Pro stops working on the
+ * next authentication below Pro). Archived principals have no keys and are refused
+ * here as well; a tier lookup failure refuses the key rather than admitting it.
  */
 export async function servicePrincipalKeyGate(owner: BoundaryKeyGateOwner): Promise<boolean> {
   if (owner.user_type !== 'service' || owner.is_inactive) return false;
+  try {
+    await assertTenantTierAccess(owner.tenant, TIER_FEATURES.SERVICE_PRINCIPALS);
+  } catch {
+    return false;
+  }
   try {
     return (await loadActivePrincipal(owner.tenant, owner.user_id)) !== null;
   } catch {

@@ -71,12 +71,13 @@ import { isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
+import BatchDuplicateTicketDialog from "./BatchDuplicateTicketDialog";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { ExternalLink, Printer, Mail, History, Trash2, Copy, Users, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -91,6 +92,8 @@ import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
 import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
+import SeatResponsibilitySlot from './SeatResponsibilitySlot';
+import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
@@ -132,6 +135,14 @@ interface PendingCommentDelete {
 const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
 const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
+/**
+ * A save that moves the ticket (its client or board) can be settled further by the server in the
+ * same write: a seat technician who may no longer work the ticket is unassigned. After such a save
+ * the screen re-reads the ticket instead of trusting its own merge of what it sent.
+ */
+const movesTicket = (fields: Iterable<string>): boolean =>
+    [...fields].some((field) => field === 'client_id' || field === 'board_id');
+
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -171,11 +182,15 @@ interface TicketDetailsProps {
     liveContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string; board_id?: string | null }[];
     agentOptions?: { value: string; label: string }[];
+    /** Seat technicians of this ticket's client (MSP viewer, live arrangement only): the picker's Client IT group. */
+    clientItUserIds?: readonly string[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
+    /** Who is responsible for the ticket under a co-managed seat arrangement. Absent: no chip, no handoff action. */
+    initialSeatResponsibility?: TicketResponsibilityState | null;
 
     // Current user (for drawer usage)
     currentUser?: IUser | null;
@@ -204,6 +219,7 @@ interface TicketDetailsProps {
      * This keeps @alga-psa/tickets from importing other vertical slices directly.
      */
     surveySummaryCard?: React.ReactNode;
+    seatEffortCard?: React.ReactNode;
     /**
      * Server-gathered startup payload (see ticketScreenBootstrap.ts). When
      * present, the matching mount fetches are skipped — the screen renders
@@ -312,11 +328,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     liveContactMap,
     statusOptions = [],
     agentOptions = [],
+    clientItUserIds,
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
     initialLocations = [],
     initialAgentSchedules = [],
+    initialSeatResponsibility = null,
     // Current user (for drawer usage)
     currentUser,
     // Optimized handlers
@@ -327,6 +345,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onSaved,
     isSubmitting = false,
     surveySummaryCard,
+    seatEffortCard,
     bootstrap,
     associatedAssets = null,
     renderContactDetails,
@@ -458,6 +477,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
     const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
+    const [batchDuplicateOpen, setBatchDuplicateOpen] = useState(false);
     // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
     const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
 
@@ -2919,6 +2939,10 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(changes))) {
+                    await refreshTicketSnapshot(Object.keys(changes));
+                }
                 onSaved?.();
             }
             return success;
@@ -2948,6 +2972,10 @@ const handleClose = () => {
                 }));
                 setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
+                // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+                if (movesTicket(Object.keys(ticketChanges))) {
+                    await refreshTicketSnapshot(Object.keys(ticketChanges));
+                }
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
@@ -2973,6 +3001,7 @@ const handleClose = () => {
         handleSelectChange,
         localActor,
         onBatchTicketUpdate,
+        refreshTicketSnapshot,
         runWithPendingLiveFields,
         ticket.ticket_id,
     ]);
@@ -3158,6 +3187,8 @@ const handleClose = () => {
             setContacts(contactsData || []);
             setLocations(locationData || []);
             setContactInfo(null); // Reset contact info
+            // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
+            await refreshTicketSnapshot(['client_id', 'contact_name_id', 'location_id']);
 
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));
@@ -3886,6 +3917,15 @@ const handleClose = () => {
                     <Copy className="h-4 w-4 mr-2" />
                     {t('actions.duplicate', { defaultValue: 'Duplicate' })}
                 </DropdownMenuItem> : null}
+                {capabilities.duplicate ? (
+                    <DropdownMenuItem
+                        id={`${id}-batch-duplicate-menu-item`}
+                        onSelect={() => setBatchDuplicateOpen(true)}
+                    >
+                        <Users className="h-4 w-4 mr-2" />
+                        {t('actions.duplicateMultiple', { defaultValue: 'Duplicate multiple…' })}
+                    </DropdownMenuItem>
+                ) : null}
                 {capabilities.createTemplate && templatePermissions.create ? (
                     <DropdownMenuItem
                         id={`${id}-create-template-menu-item`}
@@ -3932,6 +3972,20 @@ const handleClose = () => {
             systemLabel={originExternalLink?.display.label ?? null}
         />
     );
+
+    // Responsibility chip and Hand to client IT: the `ticket.details.responsibility` slot, which renders only
+    // while `co-managed-seat` is served on the client AND the server sent a state.
+    const seatResponsibilityControl = initialSeatResponsibility && ticket.ticket_id ? (
+        <SeatResponsibilitySlot
+            ticketId={ticket.ticket_id}
+            state={initialSeatResponsibility}
+            onChange={() => {
+                // The handoff also moved the assignee and paused the SLA clocks: show the ticket as it now stands.
+                void refreshTicketSnapshot(['assigned_to']);
+                onSaved?.();
+            }}
+        />
+    ) : null;
 
     // Created / Updated stamps. Entry shows them under the header; Grid folds
     // them into the hero's single metadata line.
@@ -4008,6 +4062,7 @@ const handleClose = () => {
                                     />
                                 ) : null}
                                 {!useGridLayout ? ticketOriginBadge : null}
+                                {!useGridLayout ? seatResponsibilityControl : null}
                                 {recurringSource ? (
                                     <Link
                                         id="ticket-recurring-source-link"
@@ -4534,6 +4589,7 @@ const handleClose = () => {
                     heroMeta={
                         <>
                             {ticketOriginBadge}
+                            {seatResponsibilityControl}
                             {/* Relative stamps; the absolute time is the tooltip. */}
                             {ticket.entered_at && hasHydrated ? (
                                 <p title={formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday)}>
@@ -4563,6 +4619,7 @@ const handleClose = () => {
                     priorityOptions={priorityOptions}
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
+                    clientItUserIds={clientItUserIds}
                     onSelectChange={handleSelectChange}
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
@@ -4635,7 +4692,7 @@ const handleClose = () => {
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
-                    onChangeBillingProfile={handleBillingProfileChange}
+                    onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
@@ -4675,6 +4732,7 @@ const handleClose = () => {
                     onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                     hideMaterials={effectiveHideMaterials}
                     surveySummaryCard={effectiveSurveySummaryCard}
+                    seatEffortCard={seatEffortCard}
                     associatedAssets={effectiveAssociatedAssets}
                     documents={documents}
                     onDocumentCreated={async () => {
@@ -4696,6 +4754,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
+                                    clientItUserIds={clientItUserIds}
                                     boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
@@ -4878,7 +4937,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
-                                onChangeBillingProfile={handleBillingProfileChange}
+                                onChangeBillingProfile={capabilities.billing ? handleBillingProfileChange : undefined}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
@@ -4893,6 +4952,7 @@ const handleClose = () => {
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummaryCard={effectiveSurveySummaryCard}
+                    seatEffortCard={seatEffortCard}
                                     hideTimeEntry={effectiveHideTimeEntry}
                                     timeSummarySlot={timeSummarySlot}
                                     hideMaterials={effectiveHideMaterials}
@@ -4936,6 +4996,7 @@ const handleClose = () => {
                             conversations={conversations}
                             statusOptions={statusOptions}
                             agentOptions={agentOptions}
+                            clientItUserIds={clientItUserIds}
                             boardOptions={boardOptions}
                             priorityOptions={priorityOptions}
                             onSelectChange={handleSelectChange}
@@ -5077,6 +5138,14 @@ const handleClose = () => {
                 </div>
             </Drawer>
             ) : null}
+            {batchDuplicateOpen && ticket.ticket_id && (
+                <BatchDuplicateTicketDialog
+                    sourceTicketId={ticket.ticket_id}
+                    isOpen
+                    onClose={() => setBatchDuplicateOpen(false)}
+                    onCompleted={() => setActivityLogRefreshKey((value) => value + 1)}
+                />
+            )}
             {isPrintWorkTagOpen && (
                 <LabelPrintDialog
                     isOpen={isPrintWorkTagOpen}

@@ -1,16 +1,32 @@
-import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import {
+  PHASE_NAME_ALIASES,
+  TASK_RESOURCE_ALIASES,
+  isResourceHidden,
+} from '@alga-psa/authorization/recordProjection';
+import { isCoManagedReadFieldHidden, withCoManagedRedactionError } from './sharedWorkRedaction';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 import { coManagedConversationAuthorSources, coManagedConversationBodySources } from './conversationPolicy';
 
 /** Alias lists a reader's redactions are matched against, one per display name. Single source for the project list, task list and assigned-task queue. */
 /** The whole customer task resource; a reader who has either hidden may not read or write the task at all. */
-export const CO_MANAGED_TASK_RESOURCE_ALIASES = ['tasks', 'project_tasks'] as const;
+export const CO_MANAGED_TASK_RESOURCE_ALIASES = TASK_RESOURCE_ALIASES;
 /** Whole-resource entries only (`*`, `fields`, exactly `tasks`/`project_tasks`, optionally `fields.`-prefixed); a nested path such as `project_tasks.task_name` is a per-field redaction and must not match. */
 export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[]): boolean => redactedFields.some(field => {
   if (typeof field !== 'string') throw new CoManagedSharedWorkError();
   return field === '*' || field === 'fields' || (CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(field.startsWith('fields.') ? field.slice(7) : field);
 });
-export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'values.task_name', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
+/** Canonical sources for task fields, shared by read projection and write admission.
+ * Status is derived from a mapping and either a custom or standard status. */
+const TASK_FIELD_DERIVED_SOURCES: Readonly<Record<string, readonly string[]>> = {
+  project_status_mapping_id: ['status', 'selectedStatus', 'status_id', 'status_name', 'custom_name', 'standard_status_id',
+    'project_status_mappings', 'statuses', 'standard_statuses'],
+};
+export function coManagedEditFieldPaths(field: string): string[] {
+  return [field, `values.${field}`, `tasks.${field}`, `project_tasks.${field}`,
+    ...(Object.hasOwn(TASK_FIELD_DERIVED_SOURCES, field) ? TASK_FIELD_DERIVED_SOURCES[field] : [])];
+}
+// Do not include resource parents here: tasks.description must not hide task_name.
+export const CO_MANAGED_TASK_NAME_ALIASES = coManagedEditFieldPaths('task_name');
 export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
 /** Every spelling the organization's display name is stored, queried or projected under: the snapshot column, the raw provider value, the live `tenants.client_name` read and the response key. */
 export const CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES = [
@@ -23,8 +39,13 @@ export const CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES = [
 export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assignee_name', 'assignee', 'users', 'teams'] as const;
+/** Reader aliases for stored values whose source is represented by a derived display field. */
+export const CO_MANAGED_STORED_FIELD_ALIASES: Record<string, readonly string[]> = {
+  msp_assignee: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  project_status_mapping_id: ['status', 'status_name', 'status_id', 'selectedStatus', 'statuses', 'standard_statuses', 'custom_name', 'project_status_mappings'],
+};
 
-export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'] as const;
+export const CO_MANAGED_PHASE_NAME_ALIASES = PHASE_NAME_ALIASES;
 
 const CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES = [...coManagedConversationBodySources, 'comments', 'comment', 'comment_content', 'comments.content', 'comment_threads', 'ticket_conversation'] as const;
 const CO_MANAGED_NOTIFICATION_AUTHOR_ALIASES = [...coManagedConversationAuthorSources, 'author_name', 'comments.author'] as const;
@@ -99,25 +120,18 @@ export const CO_MANAGED_TASK_FIELD_SOURCE: CoManagedFieldSource = {
  * treat `tasks.description` as hiding `tasks`: a field-level redaction must not drop the resource.
  */
 export function isCoManagedResourceHidden(redactions: readonly string[], resource: readonly string[]): boolean {
-  return redactions.some(field => {
-    if (typeof field !== 'string') throw new CoManagedSharedWorkError();
-    if (field === '*' || field === 'fields') return true;
-    return resource.includes(field.startsWith('fields.') ? field.slice(7) : field);
-  });
+  return withCoManagedRedactionError(() => isResourceHidden(redactions, resource));
 }
 
 /**
  * Audit fields that carry a DERIVED display value: hiding the derived value's source hides the field too. A future audit
  * field that embeds a display name gets an entry here, not a special case in the reader.
  */
-export const CO_MANAGED_AUDIT_DERIVED_ALIASES: Record<string, readonly string[]> = {
-  msp_assignee: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
-};
+export const CO_MANAGED_AUDIT_DERIVED_ALIASES = CO_MANAGED_STORED_FIELD_ALIASES;
 
 /** Every alias a reader's redactions are matched against for one audit `changed_data` field. */
 export function coManagedAuditFieldAliases(field: string): readonly string[] {
-  // LEVERAGE: pattern co-managed-alias-lists — [field, values.field, table.field] is hand-built at several call sites (e.g. projectTaskAssignments.ts task_name/project_name checks).
-  return [field, `values.${field}`, `project_tasks.${field}`, ...(Object.hasOwn(CO_MANAGED_AUDIT_DERIVED_ALIASES, field) ? CO_MANAGED_AUDIT_DERIVED_ALIASES[field] : [])];
+  return [...coManagedEditFieldPaths(field), ...(Object.hasOwn(CO_MANAGED_AUDIT_DERIVED_ALIASES, field) ? CO_MANAGED_AUDIT_DERIVED_ALIASES[field] : [])];
 }
 
 /**

@@ -5,8 +5,11 @@ export type {
   AccountingMappingLoadResult,
   AccountingMappingEntityOption,
   AccountingMappingBulkCreateInput,
-  AccountingMappingBulkCreateResult
+  AccountingMappingBulkCreateResult,
+  AccountingMappingAlgaSearch,
+  AccountingMappingAlgaPickerProps
 } from './types';
+export { createClientAlgaSearch, useClientAlgaSearch } from './clientAlgaSearch';
 export { suggestMappingTargets } from './suggestMappingTargets';
 export * from './AccountingMappingModuleView';
 export * from './AccountingMappingDialog';

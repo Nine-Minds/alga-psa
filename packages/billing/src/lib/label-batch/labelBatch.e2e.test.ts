@@ -5,7 +5,7 @@
  * `pdftoppm` and `pdfinfo` (poppler) on PATH. Both are required: this test fails, not skips, when they are absent.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import jsQR from 'jsqr';
@@ -34,8 +34,9 @@ import {
   STANDARD_LABEL_RMA_CODE,
   STANDARD_LABEL_STOCK_UNIT_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+  getStandardLabelTemplateAstByCode,
 } from '../label-template-ast/standardTemplates';
-import type { LabelBatchLayout } from './layout';
+import { resolveCommonTemplatePageSize, type LabelBatchLayout } from './layout';
 
 const BASE = 'https://psa.example.com';
 const DPI = 300;
@@ -338,6 +339,26 @@ describe('label PDF end to end', () => {
     expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
   }, 120_000);
 
+  it('prints a 62 x 80 mm template on pages of exactly that size (Brother QL-800 / DK-2205)', async () => {
+    // A tenant template designed for a 62 x 80 mm continuous roll, printed with the layout derived
+    // from the template itself - the path a request that carries no layout takes.
+    const ast = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_WORK_TAG_CODE)!;
+    const printSettings = (ast.metadata as { printSettings: { customPageSize: unknown } }).printSettings;
+    printSettings.customPageSize = { width: 62, height: 80, unit: 'mm' };
+    const pageSize = resolveCommonTemplatePageSize([printSettings.customPageSize as never]);
+    expect(pageSize).toEqual({ width: 62, height: 80, unit: 'mm' });
+
+    const item: LabelPrintItem = { ...ticketLabel(11), templateCode: 'custom-62x80', templateAst: ast };
+    const { pages, rasters } = await printLabels([item, item], { kind: 'one-per-page', pageSize: pageSize! }, 'template-62x80');
+
+    expect(pages).toHaveLength(2);
+    for (const page of pages) {
+      expect(page.width).toBeCloseTo((62 / 25.4) * PT_PER_IN, 0);
+      expect(page.height).toBeCloseTo((80 / 25.4) * PT_PER_IN, 0);
+    }
+    expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+  }, 120_000);
+
   it('prints each label on its own page, in order, for a thermal roll', async () => {
     const items = [ticketLabel(1), ticketLabel(2), ticketLabel(3)];
     const { pages, rasters } = await printLabels(items, ONE_PER_PAGE, 'roll');
@@ -382,6 +403,26 @@ describe('label PDF end to end', () => {
       expect(decodeQr(cell)).toBe(items[i].viewModel.url);
       expect(decodeCode128(cell)).toBe(items[i].viewModel.code128Value);
     });
+  }, 120_000);
+
+  it('renders adjacent physical asset pairs and preserves each tag barcode', async () => {
+    const first = assetLabel(31, 'FTS-000431');
+    const second = assetLabel(32, 'NORTH-000432');
+    const items = [first, first, second, second];
+    const { html, geometry, pages, rasters, pdf } = await printLabels(items, LETTER_2X5, 'asset-paired-evidence');
+    expect(pages).toHaveLength(1);
+    expect(geometry.placements.map((p) => [p.column, p.row])).toEqual([[0, 0], [1, 0], [0, 1], [1, 1]]);
+    geometry.placements.forEach((placement, index) => {
+      const cell = crop(rasters[0], mmToPx(placement.leftMm), mmToPx(placement.topMm), mmToPx(placement.widthMm), mmToPx(placement.heightMm));
+      expect(decodeCode128(cell)).toBe(items[index].viewModel.code128Value);
+      expect(decodeQr(cell)).toBe(items[index].viewModel.url);
+    });
+    expect(items.map((item) => item.viewModel.identifier)).toEqual(['FTS-000431', 'FTS-000431', 'NORTH-000432', 'NORTH-000432']);
+    expect(html.match(/FTS-000431/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(html.match(/NORTH-000432/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    const evidenceDir = path.resolve(process.cwd(), '../../docs/evidence/alga-2026-0003120-draft');
+    mkdirSync(evidenceDir, { recursive: true });
+    writeFileSync(path.join(evidenceDir, 'paired-asset-labels.pdf'), pdf);
   }, 120_000);
 
   it('Code 128 on a single 4x2in label decodes', async () => {

@@ -87,6 +87,7 @@ export class ProjectTaskCommentService extends BaseService<never> {
     try {
       return await withTaskCommentAccess(knex, context.tenant, context.user as IUserWithRoles, target, action, ({ trx, taskId, collaboration }) =>
         work(trx, { taskId, ...(collaboration ? { collaboration } : {}) }),
+        context.apiKeyId,
       );
     } catch (error) {
       throwTaskCommentApiError(error);

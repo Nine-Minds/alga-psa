@@ -16,7 +16,7 @@ const sources = {
   reassignTicketResources: readRepoFile('packages/db/src/lib/reassignTicketResources.ts'),
   teamAssignmentCore: readRepoFile('shared/services/tickets/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
-  ticketRecordAuthorization: readRepoFile('packages/tickets/src/lib/ticketRecordAuthorization.ts'),
+  ticketRecordAuthorization: readRepoFile('packages/authorization/src/ticketRecordAuthorization.ts'),
   ticketNumberActions: readRepoFile('packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts'),
   responseState: readRepoFile('shared/lib/tickets/responseState.ts'),
   ticketAuthorizationSql: readRepoFile('packages/tickets/src/lib/ticketAuthorizationSql.ts'),

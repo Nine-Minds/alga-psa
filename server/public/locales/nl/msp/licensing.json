@@ -14,6 +14,7 @@
     "communityEditionDescription": "De zelfgehoste Community Edition biedt een onbeperkt aantal gebruikers zonder licentiebeperkingen of extra kosten."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Onbeperkt",
     "metaTitle": "Aankoop voltooid",
     "scheduledTitle": "Wijziging succesvol ingepland!",
     "updatedTitle": "Update geslaagd!",
@@ -266,7 +267,11 @@
         "title": "{{tier}} is actief",
         "description": "Uw betaalde licentie is actief op deze appliance.",
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
-        "badge": "Gelicentieerd"
+        "badge": "Gelicentieerd",
+        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt.",
+        "descriptionPaymentFailed": "Pro is actief, maar de laatste verlengingsbetaling is mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+        "descriptionPaymentFailedEnded": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -291,6 +296,12 @@
         "title": "U gebruikt Essentials",
         "description": "Essentials is actief op deze appliance. Blijf de belangrijkste functies gebruiken of start een eenmalige Pro-proefperiode van 15 dagen.",
         "badge": "Essentials actief"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beëindigd",
+        "title": "U gebruikt nu de gratis editie",
+        "description": "Uw Pro-abonnement is beëindigd. Uw gegevens blijven behouden en de Pro-functies worden weer ingeschakeld zodra u opnieuw abonneert.",
+        "badge": "Gratis editie"
       }
     },
     "trialCta": {
@@ -356,7 +367,31 @@
       "activateLicenseKey": "Kan de licentiesleutel niet activeren.",
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
-      "refreshLicense": "Kan de licentie niet vernieuwen."
+      "refreshLicense": "Kan de licentie niet vernieuwen.",
+      "credentialRevoked": "De licentiegegevens van deze appliance zijn ingetrokken. Verbind de appliance opnieuw met een nieuwe activeringscode uit het licentieportaal.",
+      "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}.",
+      "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd.",
+      "subscriptionEnded": "Uw Pro-abonnement is beëindigd. Deze appliance gebruikt de gratis editie.",
+      "subscriptionEndingPaymentFailed": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro eindigt op {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "subscriptionEndedPaymentFailed": "Pro is beëindigd — betaling mislukt. Uw appliance gebruikt Essentials.",
+      "resubscribeAt": "Abonneer opnieuw via {{url}}.",
+      "resubscribeToRestore": "Abonneer opnieuw om Pro te herstellen."
+    },
+    "lapse": {
+      "lapsedTitle": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+      "endingTitle": "Uw Pro-abonnement is opgezegd.",
+      "endedOn": "Pro eindigde op {{date}}.",
+      "endsOn": "Pro eindigt op {{date}}.",
+      "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
+      "resubscribe": "Opnieuw abonneren",
+      "termEndsTitle": "Uw Pro-periode loopt af.",
+      "paymentFailedTitle": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedTitleNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedEndedTitle": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+      "paymentFailedEndingTitle": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+      "updatePaymentMethod": "Betaalmethode bijwerken"
     }
   },
   "errors": {
@@ -364,6 +399,171 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "trial": {
+      "title": "Proefperiode van 15 dagen voor een gezamenlijk beheerde plek",
+      "description": "Nodig een technicus van de klant uit om op de door u gekozen borden te werken. De 15 dagen gaan in bij de eerste aanmelding. Toegang vereist een actief basisabonnement of een actieve proefperiode van het basisabonnement.",
+      "terms": "Een betaalde plek kost {{amount}} per maand. De proefperiode eindigt zonder kosten, tenzij u betaalde capaciteit bevestigt.",
+      "status": {
+        "active": "Actief",
+        "pending": "Wacht op eerste aanmelding",
+        "base_paused": "Basisabonnement gepauzeerd",
+        "expired": "Proefperiode verlopen",
+        "paid": "Betaalde plek in gebruik",
+        "ended": "Proefperiode beëindigd",
+        "checkout_pending": "Wacht op betaling"
+      },
+      "purchaseAwaitingVerification": "Aankoop wacht op verificatie",
+      "conversionFailed": "De overstap naar een betaalde plek is niet voltooid. Bekijk de beschikbare betaalde capaciteit of probeer de aankoop opnieuw.",
+      "deadline": "De proefperiode voor de plek eindigt op {{date}}.",
+      "baseUntil": "De huidige basistoegang eindigt op {{date}}.",
+      "openSetup": "Plekinstellingen van de klant openen",
+      "invite": "Technicus voor 15 dagen uitnodigen",
+      "resend": "Uitnodiging opnieuw sturen",
+      "replace": "Technicus vervangen",
+      "cancelInvitation": "Uitnodiging annuleren",
+      "restoreBase": "Basistoegang herstellen in Account",
+      "resumePurchase": "Aankoop hervatten",
+      "cancelConversion": "Omzetting van de plek annuleren",
+      "spareSeatTerms": "Gebruik nu één beschikbare betaalde plek. Het totale aantal plekken in de pool blijft gelijk.",
+      "confirmSpareSeat": "Gebruik van één betaalde plek bevestigen",
+      "keepSeat": "Deze plek behouden",
+      "refresh": "Proefperiode vernieuwen",
+      "returnToTrial": "Terug naar de proefperiode voor de klantplek",
+      "notice": {
+        "invitationSaved": "Uitnodiging opgeslagen. Probeer hieronder opnieuw te verzenden.",
+        "deliveryFailed": "Verzenden mislukt. U kunt het opnieuw proberen.",
+        "replacementSent": "Uitnodiging naar de vervangende technicus verzonden.",
+        "replacementSaved": "Vervangende technicus opgeslagen. Probeer de uitnodiging opnieuw te verzenden."
+      },
+      "error": {
+        "boardChoicesFailed": "De beschikbare borden konden niet worden geladen.",
+        "actionFailed": "Deze actie kon niet worden afgerond. Vernieuw de proefperiode en probeer het opnieuw.",
+        "paymentFailed": "De betaling kon niet worden afgerond. Controleer de status van de proefperiode."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Deze werkruimte heeft geen co-managed pool. Voeg co-managed plekken toe om dit te gebruiken.",
+        "lapsed": "De co-managed pool is verlopen. Herstel de pool voordat u plekken toevoegt.",
+        "capacity": "In de pool zijn geen plekken meer over. Voeg plekken toe aan de pool of maak er een aantal vrij bij een andere klant.",
+        "clientInactive": "Activeer deze klant opnieuw voordat u gezamenlijk beheerde IT inschakelt.",
+        "clientNotFound": "Deze klant is niet meer beschikbaar.",
+        "hasArrangement": "Deze klant heeft al gezamenlijk beheerde IT. Vernieuw de pagina om dit te zien."
+      },
+      "error": {
+        "operationConflict": "Dit verzoek is al met andere gegevens verzonden. Vernieuw de pagina en begin opnieuw.",
+        "invalidSeats": "Voer een geheel aantal plekken in, minimaal 1.",
+        "invalidInvitation": "Kies een contactpersoon om uit te nodigen.",
+        "contactNotFound": "Deze contactpersoon is niet meer beschikbaar. Kies een andere.",
+        "contactWrongClient": "Deze contactpersoon hoort bij een andere klant. Kies een contactpersoon van deze klant.",
+        "contactInactive": "Deze contactpersoon is inactief. Activeer de contactpersoon eerst opnieuw.",
+        "contactNoEmail": "Deze contactpersoon heeft geen e-mailadres. Voeg eerst een e-mailadres toe.",
+        "contactHasSeat": "Deze contactpersoon heeft al een plek of een openstaande uitnodiging.",
+        "emailInUse": "Dit e-mailadres hoort al bij een gebruikersaccount. Gebruik een ander adres.",
+        "emailInvited": "Voor dit e-mailadres staat al een uitnodiging open.",
+        "seatLimit": "Alle plekken zijn in gebruik. Voeg eerst plekken toe of trek een uitnodiging in.",
+        "poolLimit": "De pool heeft niet zoveel plekken beschikbaar.",
+        "allocationConflict": "De plekken zijn gewijzigd terwijl u bezig was. Vernieuw de pagina en probeer het opnieuw.",
+        "board": "Een geselecteerd bord is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "project": "Een geselecteerd project is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "handoffUser": "De geselecteerde persoon is niet meer beschikbaar. Kies iemand anders.",
+        "notPending": "Deze technicus heeft al geaccepteerd, dus de uitnodiging kan niet meer worden gewijzigd.",
+        "arrangementGone": "Deze plekkenregeling is niet meer actief. Vernieuw de pagina om de status te zien.",
+        "generic": "Dat is niet gelukt. Vernieuw de pagina en probeer het opnieuw.",
+        "load": "De keuzes konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+        "submit": "Het verzoek is mogelijk niet voltooid. Probeer het opnieuw; het wordt niet dubbel toegepast."
+      },
+      "purchase": {
+        "checking": "Pool controleren…",
+        "review": "De pool heeft te weinig plaatsen. Controleer de aankoop om {{count}} plaatsen toe te wijzen.",
+        "waiting": "Wachten tot de aankoop is voltooid. {{count}} plaatsen worden toegewezen zodra de pool ze heeft.",
+        "stalled": "De nieuwe plaatsen zijn er nog niet. Controleer binnenkort opnieuw; u betaalt niet dubbel.",
+        "failed": "De betaling is niet gelukt. Probeer dezelfde aankoop opnieuw om {{count}} plaatsen toe te wijzen.",
+        "check": "Opnieuw controleren",
+        "cancel": "Annuleren",
+        "error": "De pool kon niet worden gecontroleerd. Vernieuw en probeer het opnieuw; er wordt niets dubbel in rekening gebracht."
+      },
+      "saved": "Opgeslagen.",
+      "boards": {
+        "title": "Bordbereik",
+        "hint": "Technici werken de tickets van deze klant af op de hier aangevinkte borden. Als er geen is aangevinkt, zien ze geen tickets.",
+        "save": "Bordbereik opslaan",
+        "none": "Er zijn geen borden om uit te kiezen.",
+        "canCreate": "Kan tickets aanmaken"
+      },
+      "projects": {
+        "title": "Gedeelde projecten",
+        "hint": "Projecten van deze klant die de technici kunnen openen.",
+        "none": "Deze klant heeft geen projecten om te delen.",
+        "save": "Gedeelde projecten opslaan"
+      },
+      "handoff": {
+        "title": "Standaardwaarden voor overdracht",
+        "assignee": "Aan u overgedragen tickets toewijzen aan",
+        "nobody": "Niet toegewezen laten",
+        "save": "Standaardwaarden voor overdracht opslaan"
+      },
+      "client": {
+        "seatArrangement": "Plekkenregeling",
+        "summary": "Plekkenregeling: {{used}} van {{count}} plekken in gebruik"
+      },
+      "technicians": {
+        "sent": "Uitnodiging verzonden.",
+        "notSent": "De plek is vastgehouden, maar de e-mail is niet verzonden. Verzend de uitnodiging opnieuw.",
+        "name": "Naam",
+        "email": "E-mail",
+        "status": "Status",
+        "active": "Actief",
+        "expired": "Uitnodiging verlopen",
+        "invited": "Uitgenodigd",
+        "resend": "Opnieuw verzenden",
+        "withdraw": "Intrekken",
+        "title": "Technici",
+        "none": "Nog geen technici.",
+        "invite": "Technicus uitnodigen",
+        "withdrawTitle": "Uitnodiging intrekken",
+        "withdrawMessage": "De uitnodiging voor {{email}} intrekken? De plek gaat terug naar deze regeling.",
+        "withdrawn": "Uitnodiging ingetrokken."
+      },
+      "panel": {
+        "title": "Plekkenregeling",
+        "usage": "{{used}} van {{count}} plekken in gebruik",
+        "allocation": "Toegewezen plekken",
+        "changeSeats": "Plekken wijzigen"
+      },
+      "access": {
+        "title": "Toegang en overdracht"
+      },
+      "setup": {
+        "seats": "Aantal plekken",
+        "boards": "Borden in bereik",
+        "boardsHint": "Technici zien de tickets van hun bedrijf alleen op deze borden.",
+        "technician": "Eerste technicus",
+        "technicianHint": "Kies een contactpersoon van deze klant. Die wordt per e-mail uitgenodigd.",
+        "submit": "Plekken inschakelen",
+        "title": "Plekkenregeling"
+      },
+      "contact": {
+        "label": "Technicus",
+        "placeholder": "Kies een contactpersoon",
+        "addedNoEmail": "{{name}} is toegevoegd maar heeft geen e-mailadres en kan nog niet worden uitgenodigd.",
+        "addedUnavailable": "{{name}} is toegevoegd maar kan niet worden uitgenodigd.",
+        "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
+      },
+      "chooser": {
+        "seat": "Plek",
+        "seatHint": "De technici van de klant werken in uw PSA, beperkt tot hun eigen bedrijf.",
+        "workspace": "Werkruimte",
+        "workspaceHint": "Het IT-team van de klant krijgt een eigen servicedesk en escaleert naar u.",
+        "description": "Kies hoe het IT-team van deze klant met u samenwerkt.",
+        "shape": "Co-managed vorm",
+        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen."
+      },
+      "states": {
+        "active": "Actief",
+        "ended": "Beëindigd"
+      }
+    },
     "portableExport": {
       "title": "Werkruimte exporteren",
       "description": "Download een versleuteld, draagbaar archief van de records en bestanden in uw werkruimte.",
@@ -440,6 +640,10 @@
     },
     "loading": "Capaciteit aan klantplaatsen laden…",
     "overview": {
+      "shape": "Vorm",
+      "state": "Status",
+      "seatsUsed": "Plekken in gebruik",
+      "seatsAllocated": "Toegewezen plekken",
       "actions": "Acties",
       "client": "Klant",
       "empty": "Geen gezamenlijk beheerde klanten komen overeen met deze zoekopdracht.",
@@ -533,6 +737,8 @@
     "proRequired": "Een Pro PSA-abonnement is vereist om klantwerkruimtes te sponsoren.",
     "loadError": "De capaciteit aan klantplaatsen kon niet worden geladen. Probeer het opnieuw.",
     "purchaseError": "De aankoop van plaatsen kon niet worden voltooid. U kunt deze veilig hervatten.",
+    "termsChanged": "De prijs is gewijzigd nadat u de aankoop hebt gecontroleerd. Controleer de bijgewerkte voorwaarden voordat u bevestigt.",
+    "offerUnavailable": "U kunt tijdelijk geen nieuwe plaatsen kopen. Er is niets in rekening gebracht.",
     "checkoutExpired": "Deze checkout is verlopen. Start een nieuwe aankoop om verder te gaan.",
     "grace": "Verleng uw licentie of los het capaciteitstekort op vóór {{date}} om klantwerkruimtes beschrijfbaar te houden.",
     "readOnly": "De coulanceperiode eindigde op {{date}}. Herstel de gelicentieerde capaciteit om wijzigingen in klantwerkruimtes te hervatten.",
@@ -540,7 +746,19 @@
     "checkoutUnavailable": "Ingebedde checkout is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
     "pendingCapacity_one": "Een aankoop van {{count}} plaats is in behandeling.",
     "pendingCapacity_other": "Een aankoop van {{count}} plaatsen is in behandeling.",
+    "buySeats": "Co-managed plekken kopen",
+    "awaitingVerification_one": "Uw aankoop van {{count}} plek wacht op betalingsverificatie. De plek verschijnt hier zodra de betaling is bevestigd.",
+    "awaitingVerification_other": "Uw aankoop van {{count}} plekken wacht op betalingsverificatie. De plekken verschijnen hier zodra de betaling is bevestigd.",
+    "refreshStatus": "Status vernieuwen",
+    "purchaseOnly": {
+      "intro": "Koop hier een pool co-managed plekken. Wijs na de aankoop plekken toe aan klanten via het klantdossier."
+    },
     "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
+    "billingCustomerUnlinked": "Er kon geen Stripe-factureringsaccount voor deze werkruimte worden geverifieerd. Neem contact op met ondersteuning om het account te koppelen.",
+    "proSubscriptionRequired": "Voor co-managed seats is een lopend Pro-abonnement vereist. Controleer uw abonnement in Accountbeheer.",
+    "offerPaused": "Aankopen van nieuwe seats zijn gepauzeerd. Neem contact op met uw accountmanager voor een update.",
+    "offerMisconfigured": "De aanbieding voor co-managed seats is niet goed ingesteld. Neem contact op met support.",
+    "offerTemporarilyUnavailable": "Prijzen zijn tijdelijk niet beschikbaar. Probeer het binnenkort opnieuw.",
     "purchaseNeedsAdmin": "Een accountbeheerder moet co-managed capaciteit toevoegen.",
     "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",
     "purchaseUnavailable": "Gehoste co-managed aankoop is niet beschikbaar in deze implementatie.",

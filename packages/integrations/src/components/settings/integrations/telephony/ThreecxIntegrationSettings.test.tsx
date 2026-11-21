@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   download: vi.fn(async (): Promise<any> => ({ success: true, xml: '<Crm/>', filename: 'algapsa-3cx-abc.xml', contentType: 'application/xml' })),
   ok: vi.fn(async (): Promise<any> => ({ success: true })),
   listQueue: vi.fn(async (): Promise<any> => ({ success: true, items: [] })),
-  listTargets: vi.fn(async (): Promise<any> => ({ success: true, targets: [] })),
 }));
 
 vi.mock('next/navigation', () => ({ useSearchParams: () => ({ get: () => null }) }));
@@ -60,7 +59,6 @@ vi.mock('../../../../actions/integrations/telephonyActions', () => ({
   completeThreecxPendingContact: mocks.ok,
   dismissThreecxPendingContact: mocks.ok,
   listThreecxContactQueue: mocks.listQueue,
-  listTelephonyResolutionTargets: mocks.listTargets,
 }));
 
 import { ThreecxIntegrationSettings } from './ThreecxIntegrationSettings';

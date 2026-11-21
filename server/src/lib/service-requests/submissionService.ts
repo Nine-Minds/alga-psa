@@ -6,11 +6,13 @@ import {
 } from './portalDetail';
 import { getServiceRequestExecutionProvider } from './providers/registry';
 import {
+  collectElementVisibilityRules,
   computeVisibleFieldKeys,
   parseVisibilityRules,
   type VisibilityContext,
-  isMissingRequiredValue,
 } from './formVisibility';
+import { collectFormFieldIssues, type FormFieldIssue } from './formValidation';
+import { describeFieldValidationIssue } from '@alga-psa/ui/form-fields';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
@@ -195,60 +197,89 @@ export function resolveSubmissionVisibility(
   payload: Record<string, unknown>,
   context: VisibilityContext
 ): string[] {
-  if (detail.formBehaviorProvider !== 'advanced') {
-    return detail.visibleFieldKeys;
-  }
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
-  return computeVisibleFieldKeys(
-    fields,
-    parseVisibilityRules(detail.formBehaviorConfig) ?? [],
-    { ...detail.initialValues, ...payload },
-    context
-  );
+  const rules = [
+    ...collectElementVisibilityRules(fields),
+    ...(detail.formBehaviorProvider === 'advanced'
+      ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+      : []),
+  ];
+  if (rules.length === 0) {
+    return detail.visibleFieldKeys;
+  }
+  return computeVisibleFieldKeys(fields, rules, { ...detail.initialValues, ...payload }, context);
 }
 
-export function validateSubmissionAgainstPublishedSchema(input: {
+export interface SubmissionValidationInput {
   formSchema: Record<string, unknown>;
   payload: Record<string, unknown>;
   attachments?: ServiceRequestSubmissionAttachmentInput[];
   visibleFieldKeys?: string[];
-}): string[] {
+}
+
+/**
+ * The failures as data, so a caller that can reach a requester renders them in their language.
+ * `validateSubmissionAgainstPublishedSchema` is the English rendering of the same list, kept
+ * for the API and for callers with no locale to hand.
+ */
+export function collectSubmissionValidationIssues(
+  input: SubmissionValidationInput
+): FormFieldIssue[] {
   const fields = Array.isArray((input.formSchema as any)?.fields)
     ? ((input.formSchema as any).fields as any[])
     : [];
   const attachmentList = input.attachments ?? [];
-  const visibleFieldKeySet = input.visibleFieldKeys
-    ? new Set(input.visibleFieldKeys)
-    : null;
-  const errors: string[] = [];
+  const visibleFieldKeySet = input.visibleFieldKeys ? new Set(input.visibleFieldKeys) : null;
 
-  for (const field of fields) {
-    if (!field?.required || typeof field?.key !== 'string') {
-      continue;
-    }
-    if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
-      continue;
-    }
-    // Messages reach the requester, so name the field by its label, not its internal key.
-    const fieldLabel =
-      typeof field.label === 'string' && field.label.trim().length > 0 ? field.label.trim() : field.key;
+  // The same rules the browser enforced, run again here: required-ness, per-field validation
+  // rules, display blocks skipped (no answer), hidden fields skipped (never rendered).
+  return collectFormFieldIssues({
+    fields,
+    values: input.payload,
+    visibleFieldKeys: visibleFieldKeySet,
+    fieldKeysWithFiles: new Set(
+      attachmentList
+        .map((attachment) => attachment.fieldKey)
+        .filter((fieldKey): fieldKey is string => typeof fieldKey === 'string')
+    ),
+  });
+}
 
-    if (field.type === 'file-upload') {
-      const hasFile = attachmentList.some((attachment) => attachment.fieldKey === field.key);
-      if (!hasFile) {
-        errors.push(`Required file upload missing for "${fieldLabel}"`);
-      }
-      continue;
-    }
+/**
+ * A submission the published schema rejected, with the failures still as data. The message is
+ * the English rendering the API and the logs have always carried; a caller that can reach a
+ * requester reads `issues` instead and says it in their language.
+ */
+export class ServiceRequestSubmissionValidationError extends Error {
+  readonly issues: FormFieldIssue[];
 
-    if (isMissingRequiredValue(input.payload[field.key])) {
-      errors.push(`Required field missing: "${fieldLabel}"`);
-    }
+  constructor(message: string, issues: FormFieldIssue[]) {
+    super(message);
+    this.name = 'ServiceRequestSubmissionValidationError';
+    this.issues = issues;
   }
+}
 
-  return errors;
+export function validateSubmissionAgainstPublishedSchema(
+  input: SubmissionValidationInput
+): string[] {
+  const fields = Array.isArray((input.formSchema as any)?.fields)
+    ? ((input.formSchema as any).fields as any[])
+    : [];
+  const issues = collectSubmissionValidationIssues(input);
+
+  return issues.map((entry) => {
+    // Messages reach the requester, so name the field by its label, not its internal key.
+    if (entry.issue.rule === 'required') {
+      const field = fields.find((candidate) => candidate?.key === entry.fieldKey);
+      if (field?.type === 'file-upload') {
+        return `Required file upload missing for "${entry.label}"`;
+      }
+    }
+    return describeFieldValidationIssue(entry.issue, entry.label);
+  });
 }
 
 export async function submitPortalServiceRequest(
@@ -316,14 +347,18 @@ export async function submitPortalServiceRequest(
     visibleFieldKeySet.has(attachment.fieldKey)
   );
 
-  const validationErrors = validateSubmissionAgainstPublishedSchema({
+  const validationInput = {
     formSchema: definitionDetail.formSchema,
     payload: visiblePayload,
     attachments: visibleAttachments,
     visibleFieldKeys,
-  });
+  };
+  const validationErrors = validateSubmissionAgainstPublishedSchema(validationInput);
   if (validationErrors.length > 0) {
-    throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
+    throw new ServiceRequestSubmissionValidationError(
+      `Submission validation failed: ${validationErrors.join('; ')}`,
+      collectSubmissionValidationIssues(validationInput)
+    );
   }
 
   if (visibleAttachments.length > 0) {
@@ -470,6 +505,7 @@ export async function submitPortalServiceRequest(
       clientId,
       contactId,
       payload: visiblePayload,
+      formSchema: definitionDetail.formSchema,
       config: definitionDetail.executionConfig,
     });
   } catch (error) {

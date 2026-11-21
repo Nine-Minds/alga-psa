@@ -113,7 +113,8 @@
     "signOut": "Se déconnecter",
     "coManaged": "IT cogérée",
     "coManagedArchive": "Archive IT cogérée",
-    "coManagedAdministration": "Accès et administration"
+    "coManagedAdministration": "Accès et administration",
+    "assetsAudits": "Audits de sites"
   },
   "sidebar": {
     "backToMain": "Retour au principal",
@@ -236,6 +237,7 @@
       "descriptionPlaceholder": "Précisez ce que vous attendiez, ce qui s’est passé et le client ou la facture concernés.",
       "replyTo": "Les réponses sont envoyées à {{email}}",
       "success": "Envoyé à l’assistance Nine Minds. Les réponses sont envoyées à {{email}}.",
+      "successWithTicket": "Envoyé à l’assistance Nine Minds sous le ticket {{ticketNumber}}. Les réponses sont envoyées à {{email}}.",
       "submit": "Envoyer à Nine Minds",
       "sending": "Envoi en cours…",
       "cancel": "Annuler",

@@ -1276,6 +1276,76 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
   }
 }, HOOK_TIMEOUT);
 
+it('T036 (S28): operational seat-technician entries never reach a billing run or an invoice preview', async () => {
+  setupCommonMocks({ tenantId, userId: 'operational-exclusion-user', permissionCheck: () => true });
+
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Operational Exclusion Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const hourlyLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Operational Exclusion Service',
+    planName: 'Operational Exclusion Plan',
+    baseRateCents: 12000,
+    startDate: '2025-02-08',
+    billingTiming: 'arrears',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-08T00:00:00Z',
+    materializedAt: '2026-04-12T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-08T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: hourlyLine.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'arrears',
+    sourceRuleVersion: `${hourlyLine.contractLineId}:operational-exclusion:v1`,
+    sourceRunKey: 'integration-operational-exclusion',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(plan.records[0]);
+
+  const commercial = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId, serviceId: hourlyLine.serviceId, contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z', endTime: '2025-02-15T12:00:00.000Z',
+  });
+  // Adversarial: a seat technician's entry that still carries a service, contract line, approval and billable minutes
+  // (a real operational write never does). Only `billing_mode` can keep it off the invoice.
+  const operational = await createApprovedTimeEntryForContractLine({
+    clientId: contextLike.clientId, serviceId: hourlyLine.serviceId, contractLineId: hourlyLine.contractLineId,
+    startTime: '2025-02-16T10:00:00.000Z', endTime: '2025-02-16T12:00:00.000Z',
+  });
+  await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: operational.entry_id })
+    .update({ billing_mode: 'operational' });
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: hourlyLine.contractId,
+    contractLineId: hourlyLine.contractLineId,
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
+  });
+
+  // Billing run: the engine collects the commercial entry only.
+  const billingResult = await calculateBillingForSelectionInputAction({ billingEngine: new BillingEngine(), selectorInput });
+  const timeCharges = billingResult.charges.filter((charge) => charge.type === 'time') as Array<{ entryId?: string }>;
+  expect(timeCharges.map((charge) => charge.entryId)).toEqual([commercial.entry_id]);
+
+  // Invoice preview: the same collection, so the preview never prices the operational entry either.
+  const preview = await previewInvoiceForSelectionInputAction(selectorInput, { consolidateFixedBundles: false });
+  expect(preview).toMatchObject({ success: true });
+  const previewed = JSON.stringify(preview.data?.items ?? []);
+  expect(previewed).toContain('Operational Exclusion Service');
+  // Two hours of commercial time at 120.00, not four.
+  expect(preview.data?.items?.reduce((sum: number, item: any) => sum + Number(item.total ?? 0), 0)).toBe(24000);
+}, HOOK_TIMEOUT);
+
 it('T070: hourly recurring charges with no billable time inside the service period produce no recurring invoice line while preserving due-window identity', async () => {
   setupCommonMocks({ tenantId, userId: 'contract-hourly-empty-user', permissionCheck: () => true });
 
@@ -3497,7 +3567,8 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
   });
   expect(dueRow?.executionIdentityKey).toBe(selectorInput.executionWindow.identityKey);
 
-  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput);
+  // Exercise the per-service preview used by Automatic Invoices and REST.
+  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput, { consolidateFixedBundles: false });
   expect(preview).toMatchObject({ success: true });
   expect(preview.data?.items).toEqual(
     expect.arrayContaining([
@@ -3748,7 +3819,8 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     invoiceWindowEnd: nextPeriodStart,
   });
 
-  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput);
+  // Exercise the per-service preview used by Automatic Invoices and REST.
+  const preview = await previewInvoiceForSelectionInputAction(dueRow!.selectorInput, { consolidateFixedBundles: false });
   expect(preview).toMatchObject({ success: true });
   expect(preview.data?.items).toEqual(
     expect.arrayContaining([

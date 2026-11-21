@@ -494,6 +494,60 @@ describe('ticket watchers', () => {
   });
 
   describe('UI server actions', () => {
+    it('denies a same-client portal contact from making a hidden ticket visible by adding any recipient', async () => {
+      const hiddenTicket = await insertTicket({ note: 'keep hidden' });
+      const visibilityGroupId = uuidv4();
+      await scoped('client_portal_visibility_groups').insert({
+        tenant: tenantId,
+        group_id: visibilityGroupId,
+        client_id: clientId,
+        name: 'Watcher regression contact scope',
+        ticket_scope: 'contact',
+      });
+      await scoped('client_portal_visibility_group_boards').insert({
+        tenant: tenantId,
+        group_id: visibilityGroupId,
+        board_id: boardId,
+      });
+      await scoped('contacts').where({ contact_name_id: contactId }).update({
+        portal_visibility_group_id: visibilityGroupId,
+      });
+      await scoped('tickets').where({ ticket_id: hiddenTicket }).update({
+        contact_name_id: contactNoEmailId,
+        entered_by: null,
+      });
+
+      const internalUser = userRef.user;
+      userRef.user = {
+        ...internalUser,
+        user_type: 'client',
+        clientId,
+        contact_id: contactId,
+      };
+
+      try {
+        for (const input of [
+          { contact_id: contactId },
+          { user_id: actorId },
+          { email: 'outside@vendor.example' },
+        ]) {
+          await expect(addTicketWatchers(hiddenTicket, [input])).rejects.toThrow(/Permission denied/);
+        }
+
+        expect(await tableRows(hiddenTicket)).toHaveLength(0);
+        const ticket = await scoped('tickets').where({ ticket_id: hiddenTicket }).first('attributes');
+        expect(typeof ticket.attributes === 'string' ? JSON.parse(ticket.attributes) : ticket.attributes)
+          .toEqual({ note: 'keep hidden' });
+        expect(publishWorkflowEventMock.mock.calls.map(([event]) => event.eventType))
+          .not.toContain('TICKET_UPDATED');
+      } finally {
+        userRef.user = internalUser;
+        await scoped('contacts').where({ contact_name_id: contactId }).update({
+          portal_visibility_group_id: null,
+        });
+      }
+    });
+
     it('add / pause / remove go through the table and never rewrite the whole attributes object', async () => {
       const withNote = await insertTicket({ note: 'untouched by watcher writes' });
 
