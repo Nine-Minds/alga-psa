@@ -18,7 +18,7 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: Function) => action,
 }));
 
-vi.mock('@alga-psa/documents/actions/documentActions', () => ({
+vi.mock('@shared/lib/documentAccess', () => ({
   getAuthorizedDocumentById: mocks.authorizedDocument,
 }));
 

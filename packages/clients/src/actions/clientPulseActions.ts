@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
+import { getAuthorizedDocumentById } from '@alga-psa/shared/lib/documentAccess';
 import type { IUser } from '@alga-psa/types';
 import { isDocumentFieldRedacted } from '@alga-psa/shared/lib/documentAuthorization';
 import { toCalendarDateString } from '@alga-psa/core';

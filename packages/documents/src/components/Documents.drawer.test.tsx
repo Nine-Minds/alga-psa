@@ -512,6 +512,7 @@ describe('Documents drawer', () => {
       await Promise.resolve();
     });
 
+    fireEvent.change(screen.getByDisplayValue('Runbook'), { target: { value: 'Renamed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await act(async () => {
@@ -521,6 +522,10 @@ describe('Documents drawer', () => {
     expect(updateBlockContent).toHaveBeenCalledWith('doc-1', expect.objectContaining({
       block_data: JSON.stringify(mockFallbackContent),
     }));
+
+    expect(updateDocument).toHaveBeenCalledExactlyOnceWith('doc-1', { document_name: 'Renamed' });
+    expect(vi.mocked(updateBlockContent).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(updateDocument).mock.invocationCallOrder[0]);
 
     vi.useRealTimers();
   });
@@ -546,6 +551,7 @@ describe('Documents drawer', () => {
 
     fireEvent.click(screen.getByTestId('doc-card'));
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    fireEvent.change(screen.getByDisplayValue('Runbook'), { target: { value: 'Renamed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await act(async () => { await Promise.resolve(); });
 

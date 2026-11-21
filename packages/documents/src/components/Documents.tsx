@@ -966,15 +966,6 @@ const Documents = ({
 
       setIsSaving(true);
 
-      // Update document name
-      const updateResult = await updateDocument(selectedDocument.document_id, {
-        document_name: documentName
-      });
-      if (isDocumentActionError(updateResult)) {
-        setDrawerError(getErrorMessage(updateResult));
-        return;
-      }
-
       // Update content if changed
       if (hasContentChanged) {
         const contentResult = await updateBlockContent(selectedDocument.document_id, {
@@ -989,8 +980,7 @@ const Documents = ({
 
       // Update metadata only after a changed content payload was accepted.
       const updateResult = await updateDocument(selectedDocument.document_id, {
-        document_name: documentName,
-        edited_by: userId
+        document_name: documentName
       });
       if (isDocumentActionError(updateResult)) {
         setDrawerError(getErrorMessage(updateResult));
@@ -1029,16 +1019,6 @@ const Documents = ({
         ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
         : documentName;
 
-      if (finalName !== selectedDocument.document_name) {
-        const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName
-        });
-        if (isDocumentActionError(updateResult)) {
-          setDrawerError(getErrorMessage(updateResult));
-          return;
-        }
-      }
-
       const result = await syncCollabSnapshot(selectedDocument.document_id);
       if (!result.success) {
         // Fallback: save content directly from the client-side editor
@@ -1062,8 +1042,7 @@ const Documents = ({
       // revoked writer must not leave a successful-looking partial save.
       if (finalName !== selectedDocument.document_name) {
         const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName,
-          edited_by: userId
+          document_name: finalName
         });
         if (isDocumentActionError(updateResult)) {
           setDrawerError(getErrorMessage(updateResult));
@@ -1107,16 +1086,6 @@ const Documents = ({
         ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
         : documentName;
 
-      if (finalName !== selectedDocument.document_name) {
-        const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName
-        });
-        if (isDocumentActionError(updateResult)) {
-          setDrawerError(getErrorMessage(updateResult));
-          return;
-        }
-      }
-
       const content = fallbackEditorRef.current?.getJSON()
         || fallbackContent
         || { type: 'doc', content: [{ type: 'paragraph' }] };
@@ -1132,8 +1101,7 @@ const Documents = ({
 
       if (finalName !== selectedDocument.document_name) {
         const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName,
-          edited_by: userId
+          document_name: finalName
         });
         if (isDocumentActionError(updateResult)) {
           setDrawerError(getErrorMessage(updateResult));

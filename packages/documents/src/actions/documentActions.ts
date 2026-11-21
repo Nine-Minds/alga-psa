@@ -1,7 +1,7 @@
 'use server'
 
 import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
-import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
+import { canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
 import { resolveDocumentTypeForMime } from '../lib/documentTypeLookup';
 import { assertDocumentUploadAllowed } from '../lib/documentUploadAuthorization';
 import { createDocumentFromCommittedFile, ensureEntityFoldersInitializedInternal, publishDocumentUpdatedSearchEvent } from '../lib/createDocumentFromCommittedFile';
@@ -60,12 +60,11 @@ import {
 import {
   authorizeAndRedactDocuments as authorizeDocumentRows,
   isDocumentFieldRedacted,
-  authorizeAndRedactDocumentsForAction as authorizeDocumentRowsForAction,
   resolveDocumentReadScope,
-  type DocumentAuthorizationAction,
   type DocumentReadScope,
 } from '@shared/lib/documentAuthorization';
-import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
+import { authorizeDocumentsForAction, loadAuthorizedDocumentById } from '@shared/lib/documentAccess';
+import { applyDocumentProductReadScope } from '@shared/lib/documentProductReadScope';
 import { getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
@@ -214,21 +213,6 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
 }
 
-/** `authorizeAndRedactDocuments` for any document action; `update` and `delete` also pass the kernel's mutation decision. */
-async function authorizeDocumentsForAction<T extends IDocument>(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUser,
-  documents: T[],
-  action: DocumentAuthorizationAction,
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
-): Promise<T[]> {
-  const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
-  const authorized = await authorizeDocumentRowsForAction(trx, tenant, user, admitted.documents, action, verifiedRecipientLifecycleAccess);
-  await admitted.assertCurrent?.();
-  return authorized;
-}
-
 export async function getAuthorizedDocumentByFileId(
   trx: Knex.Transaction,
   tenant: string,
@@ -255,26 +239,6 @@ export async function getAuthorizedDocumentById(
   documentId: string
 ): Promise<IDocument | null> {
   return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read');
-}
-
-async function loadAuthorizedDocumentById(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUser,
-  documentId: string,
-  action: DocumentAuthorizationAction
-): Promise<IDocument | null> {
-  const document = await tenantScopedTable(trx, 'documents', tenant)
-    .modify(query => applyDocumentProductReadScope(query, trx, user))
-    .where('document_id', documentId)
-    .first();
-
-  if (!document) {
-    return null;
-  }
-
-  const [authorizedDocument] = await authorizeDocumentsForAction(trx, tenant, user, [document as IDocument], action);
-  return authorizedDocument ?? null;
 }
 
 function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {

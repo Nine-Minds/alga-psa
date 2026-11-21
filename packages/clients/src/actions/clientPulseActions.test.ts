@@ -21,7 +21,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn(async (..._args: any[]) => true));
 const authorizedDocumentMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@alga-psa/documents/actions/documentActions', () => ({
+vi.mock('@alga-psa/shared/lib/documentAccess', () => ({
   getAuthorizedDocumentById: authorizedDocumentMock,
 }));
 const assignmentRows = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>>, timezone: null as string | null }));

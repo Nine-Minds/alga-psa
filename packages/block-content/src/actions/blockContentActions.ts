@@ -6,9 +6,8 @@ import { hasPermission, withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
-import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
+import { getAuthorizedDocumentById } from '@shared/lib/documentAccess';
 import { canAuthorizeDocumentAssociation, isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
-import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
