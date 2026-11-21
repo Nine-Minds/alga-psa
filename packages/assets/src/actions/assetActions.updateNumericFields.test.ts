@@ -557,6 +557,48 @@ describe('asset read redaction boundaries', () => {
 });
 
 describe('updateAsset protects unreadable fields at the mutation boundary', () => {
+  it('preserves concealed nullable values when an older form submits empty defaults with a name edit', async () => {
+    const concealed = {
+      purchase_cost: 987654,
+      purchase_cost_currency: 'USD',
+      manufacturer: 'Private manufacturer',
+      model: 'Private model',
+      order_number: 'PRIVATE-ORDER',
+    };
+    seedAsset(concealed);
+    seedNetworkDevice({ power_draw_watts: '42.50' });
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: [...Object.keys(concealed), 'network_device.power_draw_watts'],
+    };
+
+    const loaded = await getAsset(ASSET_ID) as any;
+    for (const field of Object.keys(concealed)) expect(loaded).not.toHaveProperty(field);
+    expect(loaded.network_device).not.toHaveProperty('power_draw_watts');
+
+    // Older or already-open forms can still send null for an unreadable value.
+    // Persistence must be safe independently of the client-side payload guard.
+    const saved = await updateAsset(ASSET_ID, {
+      name: 'Renamed core switch',
+      ...Object.fromEntries(Object.keys(concealed).map((field) => [field, null])),
+      network_device: { power_draw_watts: null },
+    } as any) as any;
+
+    expect(saved.actionError).toBeUndefined();
+    expect(saved.name).toBe('Renamed core switch');
+    expect(h.dbState.assets[0]).toMatchObject({ ...concealed, name: 'Renamed core switch' });
+    expect(h.dbState.network_device_assets[0].power_draw_watts).toBe('42.50');
+
+    const reloaded = await getAsset(ASSET_ID) as any;
+    expect(reloaded.name).toBe('Renamed core switch');
+    for (const field of Object.keys(concealed)) {
+      expect(saved).not.toHaveProperty(field);
+      expect(reloaded).not.toHaveProperty(field);
+    }
+    expect(saved.network_device).not.toHaveProperty('power_draw_watts');
+    expect(reloaded.network_device).not.toHaveProperty('power_draw_watts');
+  });
+
   it('keeps masked base, extension and structured values through unrelated and hostile updates', async () => {
     const storedPurchaseCost = 987654;
     const storedAsset = seedAsset({
