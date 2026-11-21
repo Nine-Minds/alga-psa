@@ -3,6 +3,9 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
+import type { IUser } from '@alga-psa/types';
+import { isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import type { Knex } from 'knex';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
@@ -322,6 +325,7 @@ function blockNoteBlockText(block: unknown): string {
 async function fetchNotes(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   notesDocumentId: string | null,
   legacyNotes: string | null,
 ): Promise<ClientPulseNotes> {
@@ -337,6 +341,11 @@ async function fetchNotes(
       : empty;
   };
   if (!notesDocumentId) return legacyPreview();
+
+  if (!await hasPermission(user, 'document', 'read', trx)) return empty;
+  const document = await getAuthorizedDocumentById(trx, tenant, user, notesDocumentId);
+  // A denied or redacted document must not reveal its preview or a legacy copy.
+  if (!document || isDocumentFieldRedacted(document, 'content')) return empty;
 
   const contentRow = await trx('document_block_content')
     .where({ tenant, document_id: notesDocumentId })
@@ -1102,7 +1111,7 @@ export const getClientPulse = withAuth(async (
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
-      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
+      fetchNotes(trx, tenant, user, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
     ]);
 
     // Each optional section degrades on its own (see optionalSection): one
