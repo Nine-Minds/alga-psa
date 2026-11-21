@@ -5,7 +5,7 @@ import { createTestDbConnection } from '@ee/lib/testing/db-test-utils';
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
-import { loadTicketRowsByReadTargets } from '../../../../../packages/tickets/src/actions/optimizedTicketActions';
+import { loadTicketRowsByReadTargets } from '../../../../../packages/tickets/src/lib/ticketListReadProjection';
 
 const TENANT = '72000000-0000-4000-8000-000000000001';
 const RESTRICTED = '72000000-0000-4000-8000-000000000011';
