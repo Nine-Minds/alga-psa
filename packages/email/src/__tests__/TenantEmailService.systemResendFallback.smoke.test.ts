@@ -4,6 +4,9 @@ const runtime = vi.hoisted(() => ({
   sent: [] as Array<Record<string, any>>,
   systemProviderCreates: 0,
 }));
+const smtp = vi.hoisted(() => ({ createTransport: vi.fn() }));
+
+vi.mock('nodemailer', () => ({ default: { createTransport: smtp.createTransport } }));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
@@ -33,7 +36,10 @@ vi.mock('@alga-psa/db', () => ({
       if (table === 'tenant_email_settings') return {
         forUpdate: vi.fn().mockReturnThis(),
         first: vi.fn(async () => tenantSettingsRow),
-        update: vi.fn(async () => 1),
+        update: vi.fn(async ({ provider_configs }: { provider_configs: string }) => {
+          tenantSettingsRow.provider_configs = JSON.parse(provider_configs);
+          return 1;
+        }),
       };
       if (table === 'email_sending_logs') return { insert: vi.fn(async () => 1) };
       if (table === 'email_sender_addresses' || table === 'email_sender_routes') return { select: vi.fn(async () => []) };
@@ -45,14 +51,6 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('../senderIdentity', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../senderIdentity')>()),
   resolveTenantCompanyName: vi.fn(async () => 'Tenant Services'),
-}));
-
-vi.mock('../providers/EmailProviderManager', () => ({
-  EmailProviderManager: class {
-    async initialize() {
-      throw new Error('tenant Microsoft provider initialization failed');
-    }
-  },
 }));
 
 vi.mock('../system/SystemEmailProviderFactory', () => ({
@@ -73,31 +71,35 @@ vi.mock('../system/SystemEmailProviderFactory', () => ({
 }));
 
 import { TenantEmailService } from '../TenantEmailService';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const tenantId = 'tenant-system-resend-fallback-smoke';
-const tenantSettingsRow = {
+const tenantSettingsRow: any = {
   tenant: tenantId,
   default_from_domain: 'tenant.example',
   ticketing_from_email: null,
   ticketing_from_name: null,
   custom_domains: [],
   email_provider: 'smtp',
-  provider_configs: [{
-    providerId: 'tenant-smtp-provider',
-    providerType: 'smtp',
-    isEnabled: true,
-    // A pre-upgrade credential without a fingerprint is bound during the
-    // trusted settings read; its ordinary provider-init failure still falls
-    // back to the Enterprise system provider.
-    config: {
-      host: 'smtp.tenant.example', port: 587, username: 'legacy-user',
-      password: 'synthetic-legacy-password', from: 'service@tenant.example',
-    },
-  }],
+  provider_configs: [legacySmtpProvider()],
   tracking_enabled: false,
   created_at: new Date('2026-08-28T00:00:00.000Z'),
   updated_at: new Date('2026-08-28T00:00:00.000Z'),
 };
+
+function legacySmtpProvider(): any {
+  return {
+    providerId: 'tenant-smtp-provider',
+    providerType: 'smtp',
+    isEnabled: true,
+    // Kept in the pre-upgrade shape so the service's trusted database read
+    // must bind it before real manager initialization reaches Nodemailer.
+    config: {
+      host: 'smtp.tenant.example', port: 587, username: 'legacy-user',
+      password: 'synthetic-legacy-password', from: 'service@tenant.example',
+    },
+  };
+}
 
 describe('TenantEmailService system-Resend fallback smoke', () => {
   const originalEmailFrom = process.env.EMAIL_FROM;
@@ -105,6 +107,11 @@ describe('TenantEmailService system-Resend fallback smoke', () => {
   beforeEach(async () => {
     runtime.sent.length = 0;
     runtime.systemProviderCreates = 0;
+    smtp.createTransport.mockReset().mockReturnValue({
+      verify: vi.fn(async () => { throw new Error('simulated SMTP connection refused'); }),
+      sendMail: vi.fn(),
+    });
+    tenantSettingsRow.provider_configs = [legacySmtpProvider()];
     process.env.EMAIL_FROM = 'Platform Mail <verified@system.example>';
     await TenantEmailService.invalidateTenantSettings(tenantId);
   });
@@ -115,7 +122,7 @@ describe('TenantEmailService system-Resend fallback smoke', () => {
     else process.env.EMAIL_FROM = originalEmailFrom;
   });
 
-  it('selects the system Resend provider after tenant initialization fails and preserves the tenant reply identity', async () => {
+  it('binds a legacy credential before an ordinary SMTP initialization failure and preserves Enterprise fallback', async () => {
     const service = TenantEmailService.getInstance(tenantId);
 
     await expect(service.sendEmail({
@@ -126,10 +133,35 @@ describe('TenantEmailService system-Resend fallback smoke', () => {
       html: '<p>Fallback status</p>',
     })).resolves.toMatchObject({ success: true, messageId: 'system-resend-message' });
 
+    expect(tenantSettingsRow.provider_configs[0].config.__secretFingerprint).toEqual(expect.any(String));
+    expect(smtp.createTransport).toHaveBeenCalledTimes(1);
     expect(runtime.systemProviderCreates).toBe(1);
     expect(runtime.sent).toEqual([expect.objectContaining({
       from: { email: 'verified@system.example', name: 'Tenant Services' },
       replyTo: { email: 'service@tenant.example', name: 'Tenant Services' },
     })]);
+  });
+
+  it('rejects a present-but-mismatched fingerprint before SMTP or Enterprise fallback', async () => {
+    const original = legacySmtpProvider();
+    original.config.__secretFingerprint = connectionFingerprint(original.config, 'smtp', original.providerId);
+    original.config.host = 'smtp.changed.example.test';
+    tenantSettingsRow.provider_configs = [original];
+
+    const service = TenantEmailService.getInstance(tenantId);
+    await expect(service.sendEmail({
+      mailClass: 'general',
+      tenantId,
+      to: 'customer@example.test',
+      subject: 'Mismatched credential',
+      html: '<p>Must fail closed</p>',
+    })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('Credentials no longer match this server'),
+    });
+
+    expect(smtp.createTransport).not.toHaveBeenCalled();
+    expect(runtime.systemProviderCreates).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
   });
 });

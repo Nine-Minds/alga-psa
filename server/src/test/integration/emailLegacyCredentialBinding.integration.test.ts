@@ -142,25 +142,36 @@ describe('legacy outbound credential binding against PostgreSQL', () => {
 
   it('serializes first binding against a concurrent endpoint edit and requires a replacement credential', async () => {
     const bindingTransaction = await db.transaction();
-    const bound = await TenantEmailService.getTenantEmailSettings(raceTenant, bindingTransaction);
-    expect(bound?.providerConfigs[0].config.password).toBe(password);
-    const originalFingerprint = bound?.providerConfigs[0].config.__secretFingerprint;
-    const concurrentConfig = {
-      ...bound!.providerConfigs[0].config,
-      host: 'smtp.changed-during-upgrade.example.test',
-    };
     let writerFinished = false;
-    const concurrentWriter = db('tenant_email_settings')
-      .where({ tenant: raceTenant })
-      .update({ provider_configs: JSON.stringify([{ ...bound!.providerConfigs[0], config: concurrentConfig }]) })
-      .then(() => { writerFinished = true; });
+    let transactionOpen = true;
+    let concurrentWriter: Promise<number> | undefined;
+    let originalFingerprint: string | undefined;
+    try {
+      const bound = await TenantEmailService.getTenantEmailSettings(raceTenant, bindingTransaction);
+      expect(bound?.providerConfigs[0].config.password).toBe(password);
+      originalFingerprint = bound?.providerConfigs[0].config.__secretFingerprint;
+      const concurrentConfig = {
+        ...bound!.providerConfigs[0].config,
+        host: 'smtp.changed-during-upgrade.example.test',
+      };
+      concurrentWriter = db('tenant_email_settings')
+        .where({ tenant: raceTenant })
+        .update({ provider_configs: JSON.stringify([{ ...bound!.providerConfigs[0], config: concurrentConfig }]) })
+        .then(() => { writerFinished = true; });
 
-    // The service's nested transaction has completed, but the caller's
-    // transaction still owns its SELECT FOR UPDATE lock.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(writerFinished).toBe(false);
-    await bindingTransaction.commit();
-    await concurrentWriter;
+      // The service's nested transaction has completed, but the caller's
+      // transaction still owns its SELECT FOR UPDATE lock.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(writerFinished).toBe(false);
+      await bindingTransaction.commit();
+      transactionOpen = false;
+      await concurrentWriter;
+    } finally {
+      // Always release the row lock before awaiting the writer. This lets a
+      // negative-control assertion fail cleanly instead of hanging afterAll.
+      if (transactionOpen) await bindingTransaction.rollback();
+      if (concurrentWriter) await concurrentWriter;
+    }
 
     const afterConcurrentEdit = await TenantEmailService.getTenantEmailSettings(raceTenant, db);
     expect(afterConcurrentEdit?.providerConfigs[0].config.host).toBe('smtp.changed-during-upgrade.example.test');
