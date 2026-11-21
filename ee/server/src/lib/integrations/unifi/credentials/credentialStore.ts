@@ -43,8 +43,7 @@ export function credentialLocalUrlSecretName(credentialId: string): string {
 }
 
 /**
- * Local host ids are embedded in scope keys (`<hostId>:<siteId>`) and
- * parseUniFiScopeKey splits on the first colon, so an id must never contain one.
+ * Local host ids use a colon-free `local-N` form distinct from cloud host ids.
  * 'local' is reserved for the migrated credential.
  */
 export function nextLocalHostId(existing: Array<string | null | undefined>): string {
