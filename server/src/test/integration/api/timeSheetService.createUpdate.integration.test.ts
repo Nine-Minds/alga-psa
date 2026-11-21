@@ -410,6 +410,41 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
       .rejects.toThrow(/Created and updated date filters are not supported/);
   });
 
+  it.each(['period_start', 'period_end'] as const)('sorts delegated %s calendar dates before pagination for Date and string values', async (sort) => {
+    const f = await seed();
+    const capability = await import('@alga-psa/core/capability');
+    vi.mocked(capability.serves).mockResolvedValue({ served: true } as any);
+    const rows = [
+      { id: 'z-earlier', user_id: f.actor, period_start: new Date(2026, 10, 5), period_end: new Date(2026, 10, 12) },
+      { id: 'a-later', user_id: f.actor, period_start: new Date(2026, 10, 6), period_end: new Date(2026, 10, 13) },
+      { id: 'm-equal-earlier', user_id: f.actor, period_start: '2026-11-05', period_end: '2026-11-12' },
+      { id: 'hidden', user_id: f.subject, period_start: new Date(2020, 0, 1), period_end: new Date(2020, 0, 8) },
+    ].map((row) => ({ ...row, tenant: f.tenantId, time_entries: [], comments: [] }));
+    registerTimeSource('calendar-date-test-source', () => ({
+      kind: 'calendar-date-test-source',
+      rest: { collectTimeSheetReadRows: async () => rows },
+    } as any), { servesCapability: 'co-managed' });
+    const service = serviceFor(f.tenantId);
+    const actor = contextFor(f.tenantId, f.actor);
+
+    for (const order of ['asc', 'desc'] as const) {
+      const expected = order === 'asc'
+        ? ['m-equal-earlier', 'z-earlier', 'a-later']
+        : ['a-later', 'z-earlier', 'm-equal-earlier'];
+      for (let page = 1; page <= expected.length; page++) {
+        const result = await service.list({ page, limit: 1, sort, order }, actor);
+        expect(result.total).toBe(3);
+        expect(result.data.map((row: any) => row.id)).toEqual([expected[page - 1]]);
+      }
+    }
+
+    const filtered = await service.list({ page: 1, limit: 1, sort, order: 'asc' }, actor, {
+      period_start_to: '2026-11-05',
+    } as any);
+    expect(filtered.total).toBe(2);
+    expect(filtered.data.map((row: any) => row.id)).toEqual(['m-equal-earlier']);
+  });
+
   it('fails closed when a registered reader cannot provide the raw collection for shared scoping', async () => {
     const f = await seed();
     let unsafeHandlerCalled = false;

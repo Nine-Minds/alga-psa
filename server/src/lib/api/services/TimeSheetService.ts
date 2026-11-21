@@ -263,20 +263,30 @@ export class TimeSheetService extends BaseService<any> {
         return true;
       });
       const direction = options.order === 'asc' ? 1 : -1;
+      const sortValue = (value: string | Date | null | undefined) => {
+        if (value == null) return value;
+        switch (sortField) {
+          case 'period_start':
+          case 'period_end':
+            return formatDbDate(value);
+          case 'submitted_at':
+          case 'approved_at':
+            return value instanceof Date ? value.getTime() : Date.parse(value);
+          default:
+            return value;
+        }
+      };
       filtered.sort((a, b) => {
-        const left = a[sortField];
-        const right = b[sortField];
+        const left = sortValue(a[sortField]);
+        const right = sortValue(b[sortField]);
         // Match SQL NULLS LAST independently of direction for nullable timestamp sorts.
         if (left == null || right == null) {
           if (left == null && right != null) return 1;
           if (right == null && left != null) return -1;
         }
-        const isTimestampSort = sortField === 'submitted_at' || sortField === 'approved_at';
-        const leftValue = isTimestampSort && left != null ? (left instanceof Date ? left.getTime() : Date.parse(String(left))) : left;
-        const rightValue = isTimestampSort && right != null ? (right instanceof Date ? right.getTime() : Date.parse(String(right))) : right;
-        const comparison = leftValue == null ? 0 : rightValue == null ? 0 : typeof leftValue === 'number' && typeof rightValue === 'number'
-          ? leftValue - rightValue
-          : String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true });
+        const comparison = left == null ? 0 : right == null ? 0 : typeof left === 'number' && typeof right === 'number'
+          ? left - right
+          : String(left).localeCompare(String(right), undefined, { numeric: true });
         return comparison === 0 ? String(a.id).localeCompare(String(b.id)) * direction : comparison * direction;
       });
       const page = options.page || 1;
