@@ -34,6 +34,15 @@ The production-path benchmark is recorded separately in [benchmark.md](benchmark
 
 The application server was not started. No fresh browser walkthrough or production handoff was performed. The November 3 live-smoke recording in the external guide remains historical evidence for the baseline only.
 
+## Review correction round at `46aac638eb6823db6645e81c8a147a78c90a4abd`
+
+- Added PostgreSQL behavioral regressions for replacing a compiled project verifier with deny-all and for documents with a denied association followed by an allowed association. The supplied reproductions failed at pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb`: project search returned total 500 instead of 0, and document SQL included a row the verifier rejected (`/tmp/pr4133-lead-round1-repro.log`). Both new regressions pass at this revision.
+- Added source-verifier/PostgreSQL compiled-predicate parity for project, phase, task, task comment, workflow task assignee forms (including empty and malformed entries), existing status, and stale/missing status. Documents remain on fail-closed verifier fallback because the previous first-association behavior had no deterministic ordering and the broader SQL `EXISTS` semantics were unsafe.
+- The refreshed mixed benchmark passed: 5 tests, including eight mixed request scenarios, 150/500 project growth, and cursor completion. PostgreSQL 15.4; one warmup, five sequential samples, concurrency 1. The 150 and 500 project fixtures both used 10 SQL statements; see the follow-up section in `benchmark.md` for raw per-request timings and query samples. Baseline comparison values are from the identical earlier fixture/harness and remain 516/517 mixed request statements.
+- Search behavior and PostgreSQL suites: eight files, 85 tests passed. Seven-read ticket authorization regressions: four files, 20 tests passed.
+- `npx tsc --noEmit -p packages/search/tsconfig.json` and `npx tsc --noEmit -p packages/tickets/tsconfig.json` passed. `npx nx run search:build` and `npx nx run tickets:build` passed; tickets used the supported Nx target because its direct package build is not configured as a tsup input build.
+- `git diff --check` passed before committing the correction. The app server remained stopped. No fresh browser smoke, production validation, or `security-finding-resolved` check is claimed.
+
 ## Pre-fix behavioral reproductions
 
 Both regressions were run against pre-fix implementation revision `7b20448d1e490793c31fcc1048c8493b0e7b9d1e` in an isolated detached worktree:

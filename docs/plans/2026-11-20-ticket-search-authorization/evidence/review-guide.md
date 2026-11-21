@@ -1,19 +1,20 @@
 # PR #4133 mixed-search repair review guide
 
-Implementation under review: `86abc71008a370b0765ac850fb8642ea48daa953`.
+Initial mixed-search implementation: `86abc71008a370b0765ac850fb8642ea48daa953`.
+Review correction: `46aac638eb6823db6645e81c8a147a78c90a4abd`.
 
 ## Inspect first
 
-1. In `packages/search/src/acl.ts`, review the SQL predicates derived from the existing record verifiers. Project, phase, task, task-comment, document, workflow-task and status source checks are tenant-scoped and correlated to the indexed object. The workflow-task predicate mirrors the existing assignee-array parsing behavior.
+1. In `packages/search/src/acl.ts`, review how SQL compilers are bound to active verifier registrations. Replacing a built-in verifier without a compiler must remove its SQL predicate and use the verifier fallback. Project, phase, task, task-comment, workflow-task and status source checks are tenant-scoped and correlated to the indexed object. Documents deliberately remain on fallback: any denied client association denies the document, rather than broadening access with an `EXISTS` match.
 2. In `packages/search/src/query.ts`, confirm that the same record-visibility predicate is used for ranked rows and grouped/exact counts. Ticket and comment predicates remain coupled to the shared ticket read policy.
 3. In `packages/search/src/runAppSearch.ts`, verify that SQL-compilable types use the authorized count/page route, while a registered verifier without a compiled predicate stays on the existing candidate scan and verifier path. The public cursor still uses the fixed ranking timestamp and visible page lookahead.
-4. Review the production-schema fixtures in `server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts`. They check exact ticket/comment/project totals, a stale project index entry, 5- and 100-result first/later pages, and cursor completion. The 150-versus-500 project assertion is the regression guard for per-candidate SQL work.
+4. Review the production-schema fixtures in `server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts`. They check exact ticket/comment/project totals, a stale project index entry, 5- and 100-result first/later pages, and cursor completion. They also cover deny-all verifier replacement, multiple document associations, and PostgreSQL parity for every remaining compiled visibility predicate. The 150-versus-500 project assertion is the regression guard for per-candidate SQL work.
 
 ## Evidence to check
 
-- [Mixed-search benchmark](benchmark.md#mixed-search-repair-round) contains the exact baseline and repair revisions, fixture proportions, PostgreSQL version, raw timings and SQL counts, and commands to reproduce both sides.
+- [Mixed-search benchmark](benchmark.md#mixed-search-repair-round) contains the original baseline comparison and the follow-up measurement at the corrected revision, fixture proportions, PostgreSQL version, raw timings and SQL counts, and reproduction commands.
 - [Verification record](verification.md#mixed-search-performance-repair) lists the PostgreSQL behavior suites, seven-read authorization suites, typechecks and Nx builds.
-- The baseline harness was run at `bdca35983cc22c75f9b07ffd797aedc8463b2129` and failed the new growth assertion at 160 statements for 150 project matches versus 515 for 500. The repair passed at 10 statements for each fixture size.
+- The baseline harness was run at `bdca35983cc22c75f9b07ffd797aedc8463b2129` and failed the growth assertion at 160 statements for 150 project matches versus 515 for 500. The corrected revision `46aac638eb6823db6645e81c8a147a78c90a4abd` passed at 10 statements for both sizes. The supplied review reproductions failed at the pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb`.
 
 ## Authorization and pagination checks
 
@@ -24,6 +25,6 @@ Implementation under review: `86abc71008a370b0765ac850fb8642ea48daa953`.
 
 ## Limits and historical demonstrations
 
-This benchmark is a sequential PostgreSQL integration measurement with five samples, not a production load test. It scales project candidates while mixing ticket and comment candidates; it does not create large fixtures for every entity type. Custom verifier types without a compiled SQL predicate still use the batched fail-closed scan.
+This benchmark is a sequential PostgreSQL integration measurement with five samples, not a production load test. It scales project candidates while mixing ticket and comment candidates; it does not create large fixtures for every entity type. Custom/replacement verifier types without a compiler and documents still use the batched fail-closed scan.
 
-The application server was deliberately left stopped. Any November 3 live walkthrough or earlier browser demonstration in the plan is historical evidence for the prior revision, not fresh verification of `86abc71008a370b0765ac850fb8642ea48daa953`. No browser smoke or production validation was performed for this repair.
+The application server was deliberately left stopped. Any November 3 live walkthrough or earlier browser demonstration in the plan is historical evidence for older revisions, not fresh verification of `46aac638eb6823db6645e81c8a147a78c90a4abd`. No browser smoke or production validation was performed for this repair.

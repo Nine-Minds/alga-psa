@@ -123,8 +123,53 @@ The baseline run is expected to fail only the regression assertion comparing the
 
 ### Limits
 
-These are sequential PostgreSQL integration measurements with five samples, not a production traffic load test. The fixture exercises project source verification at scale and mixed ticket/comment authorization, but does not assign large match sets to every searchable entity type. The SQL compiler covers the registered verifier-backed types whose current checks are expressible in SQL; a future/custom verifier without a compiled predicate remains on the batched fail-closed scan path. The application server was not started, and no new browser smoke or production validation was performed.
+These are sequential PostgreSQL integration measurements with five samples, not a production traffic load test. The fixture exercises project source verification at scale and mixed ticket/comment authorization, but does not assign large match sets to every searchable entity type. SQL compilation is attached to the active verifier registration. A replacement/custom verifier without a matching compiler, including documents, remains on the batched fail-closed scan path. The application server was not started, and no new browser smoke or production validation was performed.
 
 ## Reproducibility and limitations
 
 The test is `server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts`; it calls the same production `runAppSearch` and authorization path at each revision. The baseline run used a temporary test-only copy of the harness in the detached baseline checkout; no baseline application source was changed. Setup, cursor creation and fixture insertions occur outside measured request query listeners. The five-sample p95 is a small-sample comparison and should be read with that limitation. These are PostgreSQL integration measurements, not a live browser or production traffic test.
+
+## Review correction round
+
+The reviewer reproduced two correctness issues at `574c387258c6d10e684fa46721ea52c4f33786bb`: a replacement deny-all project verifier was bypassed by the stale built-in SQL predicate (search returned 500 instead of zero), and a document SQL `EXISTS` predicate admitted a row the source verifier denied. The supplied log is `/tmp/pr4133-lead-round1-repro.log`. The correction is committed at `46aac638eb6823db6645e81c8a147a78c90a4abd`.
+
+SQL compilers now belong to verifier registrations. Replacing a built-in verifier without supplying a matching compiler removes that type from compiled admission/count SQL and uses its verifier fallback. Documents stay on fallback: their source check now denies a document when any client association is outside the scoped user's access, avoiding the previous ambiguous `.first()` behavior and avoiding the broader “any allowed association” SQL rule. PostgreSQL parity coverage exercises every other compiled source predicate, including missing status rows and workflow assignee variants.
+
+The rerun used the identical mixed fixture and request parameters above on PostgreSQL 15.4 (`Debian 15.4-2.pgdg120+1`), with one warmup and five sequential measured samples per scenario, concurrency 1. Raw timing and statement samples follow. Totals and page walks were asserted, including a unique 1,050-result traversal at page size 100.
+
+| Request | Policy | Prior baseline p95 ms / SQL | Corrected p95 ms / SQL |
+|---|---|---:|---:|
+| First page, limit 5 | Unrestricted | 133.04 / 516 | 20.09 / 9 |
+| First page, limit 5 | Bundle restricted | 105.99 / 517 | 20.06 / 10 |
+| Subsequent page, limit 5 | Unrestricted | 107.38 / 516 | 27.29 / 9 |
+| Subsequent page, limit 5 | Bundle restricted | 107.21 / 517 | 25.30 / 10 |
+| First page, limit 100 | Unrestricted | 113.45 / 516 | 23.66 / 9 |
+| Subsequent page, limit 100 | Unrestricted | 103.60 / 516 | 28.20 / 9 |
+| First page, limit 100 | Bundle restricted | 107.13 / 517 | 23.21 / 10 |
+| Subsequent page, limit 100 | Bundle restricted | 108.75 / 517 | 24.82 / 10 |
+
+| Request | Corrected raw latency samples (ms) | Corrected SQL samples |
+|---|---|---|
+| First page, limit 5, unrestricted | `[19.01, 20.09, 19.46, 19.17, 18.31]` | `[9, 9, 9, 9, 9]` |
+| First page, limit 5, bundle restricted | `[19.17, 18.73, 19.33, 19.97, 20.06]` | `[10, 10, 10, 10, 10]` |
+| Subsequent page, limit 5, unrestricted | `[26.21, 27.29, 23.95, 25.47, 24.45]` | `[9, 9, 9, 9, 9]` |
+| Subsequent page, limit 5, bundle restricted | `[24.14, 25.12, 25.30, 23.86, 24.93]` | `[10, 10, 10, 10, 10]` |
+| First page, limit 100, unrestricted | `[23.66, 21.97, 21.10, 22.66, 18.88]` | `[9, 9, 9, 9, 9]` |
+| Subsequent page, limit 100, unrestricted | `[28.20, 24.98, 25.65, 26.02, 23.63]` | `[9, 9, 9, 9, 9]` |
+| First page, limit 100, bundle restricted | `[18.17, 17.05, 21.20, 21.12, 23.21]` | `[10, 10, 10, 10, 10]` |
+| Subsequent page, limit 100, bundle restricted | `[24.05, 24.82, 23.05, 24.34, 23.37]` | `[10, 10, 10, 10, 10]` |
+
+| Live projects | Corrected SQL samples | Corrected latency samples (ms) | p95 ms |
+|---:|---|---|---:|
+| 150 | `[10, 10, 10, 10, 10]` | `[11.35, 11.97, 14.76, 10.53, 13.30]` | 14.76 |
+| 500 + one stale index row | `[10, 10, 10, 10, 10]` | `[11.60, 13.03, 14.74, 12.78, 15.31]` | 15.31 |
+
+Reproduce the corrected benchmark from `server/` with:
+
+```sh
+SEARCH_BENCH_REVISION=46aac638eb6823db6645e81c8a147a78c90a4abd \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+Raw command output from this run was retained at `/tmp/pr4133-46aac-benchmark.log` in the implementation environment. The older review hold reproductions were run against pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb` and failed with the mismatches described above. Historical live demonstrations remain historical; this correction has no fresh browser smoke or production validation.
