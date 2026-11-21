@@ -91,6 +91,8 @@ secrets:
     file: ./secrets/google_oauth_client_secret
   alga_auth_key:
     file: ./secrets/alga_auth_key
+  oauth_state_signing_key:
+    file: ./secrets/OAUTH_STATE_SIGNING_KEY
 
 services:
   postgres:

@@ -84,6 +84,8 @@ x-common-config: &common-config
     - nextauth_secret
     - google_oauth_client_id
     - google_oauth_client_secret
+    - source: oauth_state_signing_key
+      target: OAUTH_STATE_SIGNING_KEY
 
 services:
   server:
