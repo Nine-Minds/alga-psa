@@ -207,6 +207,7 @@ export const updateChecklistItem = withAuth(
         await authorizeChecklistItem(trx, tenant, user, itemId, 'update');
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
+          .forUpdate()
           .first();
         if (!existing) {
           throw new Error('Checklist item not found');
@@ -281,6 +282,15 @@ export const reorderChecklistItems = withAuth(
       const { knex: db } = await createTenantKnex();
       await runChecklistMutation(db, async (trx: Knex.Transaction) => {
         await authorizeChecklistTarget(trx, tenant, user, ticketId, 'update');
+        const uniqueItemIds = new Set(orderedItemIds);
+        const ownedItems = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+          .where({ ticket_id: ticketId })
+          .whereIn('checklist_item_id', orderedItemIds)
+          .forUpdate()
+          .select('checklist_item_id');
+        if (ownedItems.length !== uniqueItemIds.size || uniqueItemIds.size !== orderedItemIds.length) {
+          throw new Error('Checklist item not found');
+        }
         for (let i = 0; i < orderedItemIds.length; i++) {
           const updated = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
             .where({ ticket_id: ticketId, checklist_item_id: orderedItemIds[i] })
@@ -312,6 +322,7 @@ export const setChecklistItemCompleted = withAuth(
         await authorizeChecklistItem(trx, tenant, user, itemId, 'update');
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
+          .forUpdate()
           .first();
         if (!existing) {
           throw new Error('Checklist item not found');

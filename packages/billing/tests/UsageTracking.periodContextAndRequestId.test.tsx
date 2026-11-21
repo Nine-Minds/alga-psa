@@ -28,7 +28,6 @@ const actionMocks = vi.hoisted(() => ({
   deleteUsageRecord: vi.fn(),
   getUsageRecords: vi.fn(),
   getEligibleContractLinesForUI: vi.fn(),
-  getAllClientsForBilling: vi.fn(),
   getRemainingBucketUnits: vi.fn(),
 }));
 
@@ -51,7 +50,6 @@ vi.mock('../src/actions/usageActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: actionMocks.getAllClientsForBilling,
 }));
 
 vi.mock('@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits', () => ({
@@ -144,8 +142,9 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ onSelect }: any) => (
-    <button type="button" data-testid="pick-client" onClick={() => onSelect('client-1')}>
+  ClientPicker: ({ id, onSelect }: any) => (
+    // The list filter and the Add Usage dialog each render a picker; only the dialog's is `pick-client`.
+    <button type="button" data-testid={id === 'client-filter' ? 'pick-client-filter' : 'pick-client'} onClick={() => onSelect('client-1')}>
       pick client
     </button>
   ),
@@ -220,9 +219,6 @@ async function openAndFillAddDialog() {
 describe('UsageTracking add-usage request_id replay key', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([
-      { client_id: 'client-1', client_name: 'Solutions by Swift' },
-    ]);
     actionMocks.getUsageRecords.mockResolvedValue([]);
     actionMocks.getRemainingBucketUnits.mockResolvedValue([]);
     actionMocks.getEligibleContractLinesForUI.mockResolvedValue(eligibleLines);
@@ -288,9 +284,6 @@ describe('UsageTracking add-usage request_id replay key', () => {
 describe('UsageTracking service-period deep-link context', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([
-      { client_id: 'client-1', client_name: 'Solutions by Swift' },
-    ]);
     actionMocks.getUsageRecords.mockResolvedValue([]);
     actionMocks.getRemainingBucketUnits.mockResolvedValue([]);
     actionMocks.getEligibleContractLinesForUI.mockResolvedValue(eligibleLines);
@@ -382,7 +375,6 @@ describe('UsageTracking service-period deep-link context', () => {
 describe('UsageTracking contextual period reporting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([{client_id: 'client-1', client_name: 'Synthetic Client'}]);
     actionMocks.getUsageRecords.mockResolvedValue([]);
     actionMocks.getRemainingBucketUnits.mockResolvedValue([]);
     actionMocks.getEligibleContractLinesForUI.mockResolvedValue(eligibleLines);
@@ -418,7 +410,6 @@ describe('UsageTracking contextual period reporting', () => {
 describe('UsageTracking bucket failure recovery', () => {
   it.each(['thrown', 'returned'])('clears a previous balance on %s failure and retries without losing usage or filters', async (failureKind) => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([]);
     actionMocks.getUsageRecords.mockResolvedValue([{ usage_id: 'retained-usage', comments: 'Retained usage row' }]);
     actionMocks.getRemainingBucketUnits
       .mockResolvedValueOnce([{ contract_line_id: 'line-a', service_id: 'svc-1', display_label: 'Old balance', remaining_minutes: 120 }])
@@ -449,7 +440,6 @@ describe('UsageTracking bucket failure recovery', () => {
 
 it('ignores a late bucket response from the previously selected client', async () => {
   vi.clearAllMocks();
-  actionMocks.getAllClientsForBilling.mockResolvedValue([]);
   actionMocks.getUsageRecords.mockResolvedValue([]);
   let finishOld!: (value: any) => void;
   let finishCurrent!: (value: any) => void;

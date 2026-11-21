@@ -3,15 +3,15 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ clients: vi.fn(), services: vi.fn(), capability: vi.fn() }));
-vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getAllClientsForBillingRecoverable: mocks.clients }));
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getClientByIdForBillingRecoverable: mocks.clients }));
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({ getServicesRecoverable: mocks.services }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ getInvoiceAdjustmentCapability: mocks.capability }));
 vi.mock('../ManualInvoices', () => ({ default: () => <div data-testid="manual-editor" /> }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, options?: any) => options?.defaultValue ?? _key }) }));
 import DraftInvoiceAdjustmentsCard from './DraftInvoiceAdjustmentsCard';
 afterEach(cleanup);
-beforeEach(() => { vi.clearAllMocks(); mocks.clients.mockResolvedValue([]); mocks.services.mockResolvedValue({ services: [] }); mocks.capability.mockResolvedValue({ editable: true, code: 'editable', reason: '' }); });
-const invoice: any = { invoice_id: 'inv-1', invoice_charges: [] };
+beforeEach(() => { vi.clearAllMocks(); mocks.clients.mockResolvedValue(null); mocks.services.mockResolvedValue({ services: [] }); mocks.capability.mockResolvedValue({ editable: true, code: 'editable', reason: '' }); });
+const invoice: any = { invoice_id: 'inv-1', client_id: 'client-1', invoice_charges: [] };
 const authResult = { success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' };
 
 describe('draft adjustment read auth recovery', () => {

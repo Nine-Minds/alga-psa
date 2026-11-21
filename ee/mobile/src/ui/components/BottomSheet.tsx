@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useTheme } from "../ThemeContext";
+import { DIALOG_MAX_WIDTH, useWindowLayout } from "../layout";
 import { IconButton } from "./IconButton";
 import { Feather } from "@expo/vector-icons";
 
@@ -24,8 +25,10 @@ export function BottomSheet({
   children: ReactNode;
 }) {
   const theme = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight, isWide } = useWindowLayout();
   const sheetHeight = windowHeight * SNAP_FRACTIONS[snapPoint];
+  // On wide windows a full-width sheet turns into a centred dialog.
+  const sheetWidth = isWide ? Math.min(DIALOG_MAX_WIDTH, windowWidth - theme.spacing.xl * 2) : undefined;
 
   return (
     <Modal
@@ -35,7 +38,7 @@ export function BottomSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+      <View style={{ flex: 1, justifyContent: isWide ? "center" : "flex-end", alignItems: isWide ? "center" : undefined }}>
         {/* Overlay */}
         <Pressable
           onPress={onClose}
@@ -55,13 +58,16 @@ export function BottomSheet({
         <View
           style={{
             height: sheetHeight,
+            width: sheetWidth,
             backgroundColor: theme.colors.card,
             borderTopLeftRadius: theme.borderRadius.xl,
             borderTopRightRadius: theme.borderRadius.xl,
+            borderBottomLeftRadius: isWide ? theme.borderRadius.xl : 0,
+            borderBottomRightRadius: isWide ? theme.borderRadius.xl : 0,
           }}
         >
-          {/* Drag handle */}
-          <View style={{ alignItems: "center", paddingTop: theme.spacing.sm }}>
+          {/* Drag handle (a dialog has nothing to drag) */}
+          <View style={{ alignItems: "center", paddingTop: theme.spacing.sm, display: isWide ? "none" : "flex" }}>
             <View
               style={{
                 width: 36,

@@ -202,6 +202,7 @@ describe('findContactByEmail context-aware resolution', () => {
       email: 'robert@nineminds.com',
       matched_email: 'robert@nineminds.com',
       client_id: '',
+      is_inactive: false,
       user_id: 'internal-user-1',
       user_type: 'internal',
       client_name: '',

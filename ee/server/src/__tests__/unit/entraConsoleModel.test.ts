@@ -241,6 +241,12 @@ describe('entraRunResultOutcome', () => {
     expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0 })).toBe('done');
   });
 
+  it('T008: a completed client with failed contacts is a warning outcome, not Done', () => {
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0, failed: 2 })).toBe('partial');
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0, failed: 0 })).toBe('done');
+    expect(entraRunResultOutcome({ status: 'failed', failed: 2 })).toBe('failed');
+  });
+
   it('puts the clients that need a person at the top', () => {
     const sorted = sortEntraRunResultsWorstFirst([
       { id: 'done', status: 'completed', ambiguous: 0 },

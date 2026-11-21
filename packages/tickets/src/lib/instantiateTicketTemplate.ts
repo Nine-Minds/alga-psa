@@ -10,6 +10,7 @@ import {
   createTicketWithSideEffects,
   type CreateTicketActor,
 } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
+import { ExternalLinkValidationError } from '@alga-psa/shared/services/tickets/externalLinkPersistence';
 import type { TicketOrigin } from '@alga-psa/types';
 import { asJsonColumn } from './recurring/jsonColumn';
 import {
@@ -23,7 +24,7 @@ import { countDuplicableCustomFields, pickDuplicableAttributes } from './ticketD
 
 /** A template could not become a ticket. The message is the user-facing reason (stored on a failed occurrence). */
 export class TicketTemplateInstantiationError extends Error {
-  constructor(message: string, readonly code: 'TEMPLATE_NOT_FOUND' | 'INVALID_REFERENCES') {
+  constructor(message: string, readonly code: 'TEMPLATE_NOT_FOUND' | 'INVALID_REFERENCES' | 'CLIENT_MISMATCH') {
     super(message);
     this.name = 'TicketTemplateInstantiationError';
   }
@@ -34,6 +35,8 @@ export interface TemplateForInstantiation {
   name: string;
   title: string;
   description: string | null;
+  /** Client the template is bound to; null = usable for every client. */
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -43,6 +46,8 @@ export interface TemplateForInstantiation {
   tags: string[];
   custom_fields: Record<string, unknown>;
   checklist: { item_name: string; description: string | null; is_required: boolean; checklist_template_id: string | null }[];
+  /** Documentation links, in order. Copied onto every created ticket as `reference` external links. */
+  links: { system: string; external_id: string; realm: string | null; url: string | null; title: string | null; metadata: Record<string, unknown> | null }[];
 }
 
 /**
@@ -63,11 +68,18 @@ export async function loadTemplateForInstantiation(
     .orderBy('order_number', 'asc')
     .orderBy('created_at', 'asc')
     .select('item_name', 'description', 'is_required', 'checklist_template_id');
+  const links = await db
+    .table('ticket_template_links')
+    .where({ template_id: templateId })
+    .orderBy('order_number', 'asc')
+    .orderBy('created_at', 'asc')
+    .select('system', 'external_id', 'realm', 'url', 'title', 'metadata');
   return {
     template_id: row.template_id,
     name: row.name,
     title: row.title,
     description: row.description ?? null,
+    client_id: row.client_id ?? null,
     board_id: row.board_id ?? null,
     category_id: row.category_id ?? null,
     subcategory_id: row.subcategory_id ?? null,
@@ -77,6 +89,14 @@ export async function loadTemplateForInstantiation(
     tags: asJsonColumn<string[]>(row.tags ?? []),
     custom_fields: asJsonColumn<Record<string, unknown>>(row.custom_fields ?? {}),
     checklist: items,
+    links: links.map((link) => ({
+      system: link.system,
+      external_id: link.external_id,
+      realm: link.realm ?? null,
+      url: link.url ?? null,
+      title: link.title ?? null,
+      metadata: link.metadata ? asJsonColumn<Record<string, unknown>>(link.metadata) : null,
+    })),
   };
 }
 
@@ -134,7 +154,12 @@ export interface InstantiateTicketTemplateInput {
   actor: CreateTicketActor;
   suppression?: { suppressContactNotifications?: boolean; suppressInternalNotifications?: boolean };
   titleContext: TitleTokenContext;
-  origin: { ticket_origin: TicketOrigin; source: string };
+  origin: {
+    ticket_origin: TicketOrigin;
+    source: string;
+    /** The recurring schedule occurrence generating the ticket; carried on TICKET_CREATED. */
+    recurrence?: { definitionId: string; occurrenceId: string; occurrenceDate?: string };
+  };
   dueDate?: Date | null;
 }
 
@@ -152,6 +177,10 @@ export async function instantiateTicketTemplate(
   const template = await loadTemplateForInstantiation(trx, tenant, input.templateId);
   if (!template) {
     throw new TicketTemplateInstantiationError('The ticket template no longer exists; point the schedule at another template', 'TEMPLATE_NOT_FOUND');
+  }
+  // A template bound to one client never produces a ticket for another.
+  if (template.client_id && template.client_id !== input.client.client_id) {
+    throw new TicketTemplateInstantiationError('This ticket template belongs to a different client', 'CLIENT_MISMATCH');
   }
 
   const fields = resolveTemplateTicketFields(template, input.dispatch, input.overrides);
@@ -196,6 +225,7 @@ export async function instantiateTicketTemplate(
     tags: template.tags,
     assetIds,
     notificationSuppression: input.suppression,
+    ...(input.origin.recurrence ? { eventPayload: { recurrence: input.origin.recurrence } } : {}),
     // R6: the template's items are a snapshot the ticket owns; the create layer applies the replacement rule.
     checklistItems: template.checklist.map((item) => ({
       item_name: item.item_name,
@@ -208,7 +238,23 @@ export async function instantiateTicketTemplate(
       template_name: template.name,
       custom_fields_copied: countDuplicableCustomFields(provenance.attributes),
     },
-  });
+    templateLinks: template.links,
+  }).catch(rethrowLinkErrorAsInstantiationError);
 
   return { ticketId, ticketNumber };
+}
+
+/**
+ * A stored template link that no longer validates (e.g. its custom system was removed by a data repair) is a
+ * readable per-occurrence failure that retries once the template is fixed; a link the customer configured is
+ * never silently dropped.
+ */
+function rethrowLinkErrorAsInstantiationError(error: unknown): never {
+  if (error instanceof ExternalLinkValidationError) {
+    throw new TicketTemplateInstantiationError(
+      `A documentation link on the ticket template is no longer valid: ${error.message}`,
+      'INVALID_REFERENCES'
+    );
+  }
+  throw error;
 }

@@ -2,18 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import TicketImportDialog from '@alga-psa/tickets/components/TicketImportDialog';
-import type { IBoard, IClient, IUser } from '@alga-psa/types';
+import type { IBoard, IUser } from '@alga-psa/types';
 
 interface TicketImportDialogRouteClientProps {
   initialBoards: IBoard[];
-  initialClients: IClient[];
   initialUsers?: IUser[];
   closeMode: 'back' | 'replace';
 }
 
 export default function TicketImportDialogRouteClient({
   initialBoards,
-  initialClients,
   initialUsers,
   closeMode,
 }: TicketImportDialogRouteClientProps) {
@@ -31,7 +29,6 @@ export default function TicketImportDialogRouteClient({
       isOpen={true}
       onClose={close}
       initialBoards={initialBoards}
-      initialClients={initialClients}
       initialUsers={initialUsers}
       onImportComplete={() => {
         router.refresh();

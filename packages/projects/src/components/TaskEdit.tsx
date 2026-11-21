@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getProjectTaskStatuses } from '../actions/projectActions';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
@@ -46,6 +46,7 @@ export default function TaskEdit({
   confirmBeforeSave
 }: TaskEditProps): React.JSX.Element {
   const { t } = useTranslation('projects');
+  const projectSource = useProjectDataSource();
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
@@ -56,7 +57,7 @@ export default function TaskEdit({
     if (initialStatuses && initialStatuses.length > 0) return;
     if (!phase?.project_id) return;
     let cancelled = false;
-    getProjectTaskStatuses(phase.project_id, phase.phase_id)
+    projectSource.options.taskStatuses(phase.project_id, phase.phase_id)
       .then((statuses) => {
         if (!cancelled) setSelectedPhaseStatuses(statuses);
       })
@@ -66,7 +67,7 @@ export default function TaskEdit({
     return () => {
       cancelled = true;
     };
-  }, [initialStatuses, phase?.project_id, phase?.phase_id]);
+  }, [initialStatuses, phase?.project_id, phase?.phase_id, projectSource]);
 
   const handlePhaseChange = async (newPhaseId: string) => {
     if (!phases) return;
@@ -74,7 +75,7 @@ export default function TaskEdit({
     const newPhase = phases.find(p => p.phase_id === newPhaseId);
     if (newPhase) {
       try {
-        const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id, newPhase.phase_id);
+        const newProjectStatuses = await projectSource.options.taskStatuses(newPhase.project_id, newPhase.phase_id);
         setSelectedPhaseStatuses(newProjectStatuses);
       } catch (error) {
         console.error('Error fetching new project statuses:', error);

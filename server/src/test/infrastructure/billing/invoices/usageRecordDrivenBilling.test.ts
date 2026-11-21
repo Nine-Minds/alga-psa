@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { getContractMonthlyValuesByAssignment } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -12,7 +12,8 @@ import {
   assignServiceTaxRate,
   assignContractLineToClient,
   createTestService,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Force connection directly to PostgreSQL (not pgbouncer on 6432)
@@ -308,7 +309,7 @@ describe('Usage contracts – record-driven billing semantics', () => {
     const { serviceId, billingCycleId } = await setupUsageAssignment({ legacyQuantity: 10 });
     await insertUsageRecord(serviceId, '4');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
     expect(result).not.toBeNull();
 
     // 4 recorded seats × $10.00, never 10 configured seats.
@@ -337,7 +338,7 @@ describe('Usage contracts – record-driven billing semantics', () => {
     const { serviceId, billingCycleId } = await setupUsageAssignment({ minimumUsage: 5 });
     await insertUsageRecord(serviceId, '0');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
     expect(result).not.toBeNull();
 
     // Explicit zero record exists → floor applies: 5 × $10.00.
@@ -368,7 +369,7 @@ describe('Usage contracts – record-driven billing semantics', () => {
     const januaryUsageId = await insertUsageRecord(serviceId, '8', '2023-01-10');
     const februaryUsageId = await insertUsageRecord(serviceId, '3', '2023-02-10');
 
-    const first = await generateInvoice(billingCycleId);
+    const first = await generateInvoiceForCycle(billingCycleId);
     expect(first).not.toBeNull();
     expect(first).toMatchObject({ subtotal: 8000 });
 
@@ -385,7 +386,7 @@ describe('Usage contracts – record-driven billing semantics', () => {
 
     // Re-running the same cycle must not double-bill the invoiced record —
     // whether the guard surfaces as a thrown error or an action-error envelope.
-    const second = await generateInvoice(billingCycleId).catch((error) => error);
+    const second = await generateInvoiceForCycle(billingCycleId).catch((error) => error);
     expect(second === null || second instanceof Error || 'actionError' in (second ?? {})).toBe(true);
 
     const chargeRows = await context.db('invoice_charges')

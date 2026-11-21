@@ -102,6 +102,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)
   allocated_amount?: number; // Calculated allocated amount (INTEGER cents)
+  /**
+   * Presentation only (bundle component snapshot): the configured/revision
+   * quantity before the `|| 1` clamp applied to detail rows. Never affects amounts.
+   */
+  raw_quantity?: number | null;
+  /** Presentation only: how this service is priced inside its Fixed line. */
+  pricing_basis?: 'unit' | 'bundle';
   // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
@@ -676,6 +683,8 @@ export interface IContractLine extends TenantEntity {
   description?: string | null;
   /** Verbatim invoice line text for fixed-fee charges; falls back to the line name when null. */
   invoice_line_description?: string | null;
+  /** Muted second line under a Fixed bundle's title on invoices; null = none. */
+  invoice_line_subtitle?: string | null;
   billing_frequency: string;
   contract_id?: string | null;
   service_category?: string;

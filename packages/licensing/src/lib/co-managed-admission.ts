@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedEntitlementState } from './co-managed-entitlements';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export class CoManagedAdmissionError extends Error {
   constructor(public readonly code: 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED' |
@@ -26,7 +27,7 @@ export async function lockCoManagedSeatScope(trx: Knex.Transaction, customerTena
   const found = await customer.table('co_management_relationships').whereNull('ended_at').first();
   if (!found) throw new CoManagedAdmissionError('CO_MANAGED_NOT_ACTIVE');
   const sponsor = tenantDb(trx, found.sponsor_tenant);
-  const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
+  const entitlement = await lockCoManagedSponsorPool(trx, found.sponsor_tenant);
   const owner = await sponsor.table('tenants').forShare().first('product_code', 'plan');
   const operation = await sponsor.table('co_managed_provisioning_operations')
     .where({ customer_tenant: customerTenant, relationship_id: found.relationship_id }).forUpdate().first();
@@ -98,8 +99,20 @@ export async function assertCoManagedSeatAdmission(trx: Knex.Transaction, tenant
     role_id: invitation.role_id, email: invitation.email } } : {}) };
 }
 
+/** Post-write backstop for co-managed seat consumers. Call after inserting or
+ * activating the user, in the same transaction as admission, so an unexpected
+ * extra committed seat aborts the write along with its related provisioning. */
+export async function assertCoManagedSeatCapacityWithinLimit(trx: Knex.Transaction, tenant: string): Promise<void> {
+  const scope = await lockCoManagedSeatScope(trx, tenant);
+  if (!scope) throw new CoManagedAdmissionError('CO_MANAGED_NOT_ACTIVE');
+  if (await countCoManagedCommittedSeats(trx, tenant) > Number(scope.allocation.seats)) {
+    throw new CoManagedAdmissionError('CO_MANAGED_SEAT_LIMIT');
+  }
+}
+
 /** Sponsor adapter supplies its authenticated home tenant. Allocation changes
  * never evict a user or cancel a pending invitation to make the numbers fit. */
+// LEVERAGE: pattern co-managed-allocation-resize — resizeCoManagedSeatAllocation applies the same rule to the seat kind; only the lock path and the committed count differ.
 export async function changeCoManagedAllocation(db: Knex, sponsorTenant: string, input: {
   customerTenant: string; relationshipId: string; seats: number; expectedSeats: number;
 }): Promise<void> {

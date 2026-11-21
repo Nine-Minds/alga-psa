@@ -70,6 +70,27 @@ test('only the fragment carries a literal pinned image ref', () => {
   assert.deepEqual(offenders, [], 'Reference the image through docker-compose.images.yaml instead of copying it');
 });
 
+test('the email security review recipe provisions Postgres with the shared pinned image', () => {
+  const guide = readFileSync(path.join(repoRoot, 'docs/security/email-provider-actions-security-review.md'), 'utf8');
+  const recipe = [...guide.matchAll(/```sh\n([\s\S]*?)```/g)]
+    .map((match) => match[1])
+    .find((block) => block.includes('--name imap-review-pg'));
+  assert.ok(recipe, 'The review guide must include its provisioning recipe');
+  const postgresCommand = recipe.trim().split('\n')[0];
+  // Execute the documented shell command, capturing Docker arguments without
+  // starting a container or reading the workstation's secret files.
+  const args = execFileSync('sh', ['-eu', '-c', `
+    docker() { printf '%s\\0' "$@"; }
+    cat() { printf '%s' 'recipe-test-password'; }
+    ${postgresCommand}
+  `], { cwd: repoRoot, encoding: 'utf8' }).split('\0').slice(0, -1);
+  assert.deepEqual(args, [
+    'run', '-d', '--name', 'imap-review-pg', '--shm-size=512m',
+    '-e', 'POSTGRES_PASSWORD=recipe-test-password',
+    '-p', '127.0.0.1:26462:5432', pinnedImage('pgvector'),
+  ]);
+});
+
 test('Helm values copies recompose to exactly the pinned ref', () => {
   const expected = pinnedImage('pgvector');
   // helm/values.yaml repeats a top-level key elsewhere; Helm tolerates that, so do we.

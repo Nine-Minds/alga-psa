@@ -3,6 +3,8 @@ import { clientAnniversarySource } from './sources/clientAnniversary';
 import { contractRenewalDecisionSource } from './sources/contractRenewalDecision';
 import { contractEndSource } from './sources/contractEnd';
 import { assetWarrantyEndSource } from './sources/assetWarrantyEnd';
+import { assetMaintenanceDueSource } from './sources/assetMaintenanceDue';
+import { ticketDueDateSource } from './sources/ticketDueDate';
 import { ticketStatusAgeSource } from './sources/ticketStatusAge';
 
 // The list of sources lives in packages/event-schemas/src/schemas/domain/dateTriggerSourceDefinitions.ts. This is the
@@ -13,6 +15,8 @@ export const dateTriggerSources: readonly DateTriggerSource[] = [
   contractRenewalDecisionSource,
   contractEndSource,
   assetWarrantyEndSource,
+  assetMaintenanceDueSource,
+  ticketDueDateSource,
   ticketStatusAgeSource,
 ];
 

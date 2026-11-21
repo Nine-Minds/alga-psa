@@ -111,7 +111,7 @@ Ticket webhooks support these event types in v1:
 - `ticket.assigned`
 - `ticket.closed`
 - `ticket.comment.added`
-- `ticket.response_state_changed` (payload adds `previous_response_state` / `new_response_state`, and `response_state` always reflects the current state — equal to `new_response_state` on this event; `comment` and `comments[]` entries now also carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them)
+- `ticket.response_state_changed` fires when a ticket's response-tracking state transitions between `awaiting_client` and `awaiting_internal`. It is emitted by all comment paths: the MSP UI, the REST API, the client portal, and inbound email replies. Only one event fires per state transition; a reply that does not change the state produces no event. Response-state tracking must be enabled in **Settings → Ticketing** for the event to fire. The payload includes `previous_response_state`, `new_response_state`, and `response_state` (always equal to `new_response_state`); `comment` and `comments[]` entries carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them.
 
 ### Notification Suppression
 
@@ -725,7 +725,7 @@ Use `event_filter.entity_ids` to match either the quote ID or its client ID. Use
 
 Acceptance includes `accepted_by_name`, `accepted_on_behalf`, and `selected_optional_item_ids`. Optional selections contain IDs only. Rejection includes `rejection_reason`. Conversion includes `conversion_targets` and destination IDs; a converted contract may still be a draft. Fetch `GET /api/v1/quotes/{id}` for line items, prices, and terms.
 
-Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval or requesting approval changes emits no event in this version.
+Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval, requesting approval changes, or archiving a quote (`POST /api/v1/quotes/{id}/archive`) emits no event in this version.
 
 ```json
 {
@@ -897,6 +897,25 @@ Webhook delivery also has an outbound cap per webhook. The default is
 
 Test deliveries sent through `POST /api/v1/webhooks/{id}/test` do not consume
 that outbound bucket.
+
+### Outbound URL Restrictions
+
+AlgaPSA validates the webhook URL before each delivery attempt and at the test endpoint. Deliveries to the following destination ranges are blocked and recorded with `error_type: ssrf`:
+
+| Blocked range | Examples |
+| --- | --- |
+| Loopback | `127.0.0.0/8`, `::1` |
+| RFC 1918 private | `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` |
+| Link-local | `169.254.0.0/16`, `fe80::/10` |
+| Carrier-grade NAT | `100.64.0.0/10` |
+| Instance metadata | `169.254.169.254` |
+| IPv4-mapped IPv6 | `::ffff:0:0/96` (evaluated against the inner IPv4 address) |
+
+Redirect chains are checked hop-by-hop: each redirect target is validated against the same blocklist before following. A maximum of 3 redirect hops is allowed; deeper chains are abandoned. HTTPS → HTTP downgrades are refused regardless of the final destination.
+
+When a delivery is blocked by SSRF protection, the delivery record is marked `failed` with `error_type: ssrf` and the attempt counts toward the auto-disable threshold.
+
+**Escape hatch (self-hosted).** On-premise deployments may set the environment variable `WEBHOOK_SSRF_ALLOW_PRIVATE=true` to disable private-range blocking. Do not set this in production environments that face the public internet.
 
 ### Subscriptions with Retired Event Names
 

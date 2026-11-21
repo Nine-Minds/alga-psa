@@ -4,7 +4,7 @@ import { withCoManagedSharedWork } from './sharedWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManagedUuid, isCoManagedSharedWorkError, CoManagedSharedWorkError,
   type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
+import { coManagedEditFieldPaths, maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 /** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
@@ -89,7 +89,7 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
 
 export interface CoManagedSharedTaskRow {
   taskId: string; taskName: string; dueDate: string | null; taskUpdatedAt: string;
-  reference: { revision: number; assigneeName: string; assignedToMe: boolean } | null;
+  reference: { revision: number; assigneeName: string | null; assignedToMe: boolean } | null;
 }
 export interface CoManagedSharedTaskPage { rows: CoManagedSharedTaskRow[]; nextAfterTaskId: string | null }
 
@@ -113,12 +113,13 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
       .where({ customer_tenant: target.customerTenant.toLowerCase(), relationship_id: target.relationshipId.toLowerCase(), active: true }).whereIn('task_id', page.map(task => task.task_id))
       .select('task_id', 'revision', 'assignee_name', 'assigned_to') : [];
     const byTask = new Map(references.map(reference => [reference.task_id, reference]));
-    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, ['due_date', 'values.due_date', 'project_tasks.due_date']);
+    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, coManagedEditFieldPaths('due_date'));
     return {
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);
         return { taskId: task.task_id, taskName: task.task_name, dueDate: dueHidden || !task.due_date ? null : new Date(task.due_date).toISOString(), taskUpdatedAt: new Date(task.updated_at).toISOString(),
-          reference: reference ? { revision: reference.revision, assigneeName: reference.assignee_name, assignedToMe: reference.assigned_to === actor.userId } : null };
+          reference: reference ? maskCoManagedSnapshot(context.redactedFields, { revision: reference.revision as number, assigneeName: (reference.assignee_name ?? null) as string | null, assignedToMe: reference.assigned_to === actor.userId },
+            { assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES }) : null };
       }),
       nextAfterTaskId: tasks.length > limit ? page[page.length - 1].task_id : null,
     };
