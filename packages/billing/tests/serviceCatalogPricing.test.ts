@@ -36,6 +36,9 @@ describe('writeServiceCatalogPricing validation', () => {
     ['duplicate scheduled pair', { scheduled: [{ currency_code: 'USD', rate: 1, effective_date: FUTURE }, { currency_code: 'USD', rate: 2, effective_date: FUTURE }] }],
     ['default_rate conflicting with prices[0]', { current: [{ currency_code: 'USD', rate: 2 }], defaultRate: 1 }],
     ['fractional default_rate rewrite', { defaultRate: 10.5 }],
+    ['appendAt before today', { appendAt: { effectiveDate: '2020-01-01', priceBookId: null, prices: [{ currency_code: 'USD', rate: 1 }] } }],
+    ['appendAt malformed date', { appendAt: { effectiveDate: 'soon', priceBookId: null, prices: [{ currency_code: 'USD', rate: 1 }] } }],
+    ['appendAt fractional rate', { appendAt: { effectiveDate: FUTURE, priceBookId: null, prices: [{ currency_code: 'USD', rate: 1.5 }] } }],
   ])('rejects %s before touching the database', async (_label, input) => {
     await expect(write(input as never)).rejects.toBeInstanceOf(ServiceCatalogPricingError);
   });

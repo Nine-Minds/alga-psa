@@ -168,7 +168,10 @@ describe('products REST API currency_code shorthand (alga0002285)', () => {
     const id = await seedProduct([['USD', 1000], ['EUR', 900]]);
     const result = await put(id, { currency_code: 'EUR', default_rate: 950 });
     expect(result.status).toBe(200);
-    expect(await priceRows(id)).toEqual([['EUR', 950, 0], ['USD', 1000, 1]]);
+    // The edit lands at today and the earlier EUR row stays as history.
+    const rows = await priceRows(id);
+    expect(rows).toHaveLength(3);
+    expect(rows).toEqual(expect.arrayContaining([['EUR', 950, 0], ['USD', 1000, 1]]));
     expect(await defaultRateOf(id)).toBe(950);
     expect(result.body.prices.map((p: any) => [p.currency_code, Number(p.rate)])).toEqual([['EUR', 950], ['USD', 1000]]);
   }, HOOK_TIMEOUT);
@@ -216,7 +219,10 @@ describe('products REST API currency_code shorthand (alga0002285)', () => {
     expect(await priceRows(id)).toEqual([['EUR', 300, 0], ['USD', 400, 1]]);
     expect(await defaultRateOf(id)).toBe(300);
     expect((await put(id, { prices: [{ currency_code: 'USD', rate: 450 }] })).status).toBe(200);
-    expect(await priceRows(id)).toEqual([['USD', 450, 0]]);
+    // EUR was removed (its rows deleted); USD keeps its earlier row and gains one at today.
+    const rows = await priceRows(id);
+    expect(rows.filter((row) => row[0] === 'EUR')).toHaveLength(0);
+    expect(rows).toEqual(expect.arrayContaining([['USD', 450, 0], ['USD', 400, 1]]));
     expect(await defaultRateOf(id)).toBe(450);
   }, HOOK_TIMEOUT);
 

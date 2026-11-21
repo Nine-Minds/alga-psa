@@ -24,21 +24,18 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { writeServiceCatalogPricing } from '../lib/catalog/serviceCatalogPricing';
-import {
-  loadFixedLineRateInputs,
-  toResolverInput,
-  type FixedLineRateInputBundle,
-} from '../lib/billing/pricing/loadFixedLineRateInputs';
+import { getTenantDefaultCurrency } from '../lib/catalog/tenantDefaultCurrency';
 import {
   normalizeProvenance,
-  resolveFixedLineRate,
-  toCalendarDate,
   type RateProvenance,
 } from '../lib/billing/pricing/resolveFixedLineRate';
+import type { InvoicedPeriod } from '../lib/billing/pricing/isPeriodAlreadyInvoiced';
 import {
-  isPeriodAlreadyInvoiced,
-  type InvoicedPeriod,
-} from '../lib/billing/pricing/isPeriodAlreadyInvoiced';
+  calendarDate,
+  loadLineIdsForServices,
+  previewCatalogPriceChanges,
+  toCents,
+} from '../lib/catalog/previewCatalogPriceChanges';
 
 export type ServicePriceRolloutActionError =
   | ActionMessageError
@@ -88,16 +85,6 @@ export interface ApplyServicePriceChangeInput {
   effectiveDate?: string;
 }
 
-function calendarDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
-}
-
-function addOneMonth(dateString: string): string {
-  const date = new Date(`${dateString}T00:00:00.000Z`);
-  date.setUTCMonth(date.getUTCMonth() + 1);
-  return calendarDate(date);
-}
-
 function nextMonthBoundary(): string {
   const now = new Date();
   return calendarDate(
@@ -105,57 +92,12 @@ function nextMonthBoundary(): string {
   );
 }
 
-function toCents(value: number | string | null | undefined): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
-  return Number.isFinite(parsed) ? Math.round(parsed) : null;
-}
-
-/** Replace the price row for one service + currency at the effective date. */
-function withNewPrice(
-  prices: FixedLineRateInputBundle['catalogPrices'],
-  serviceId: string,
-  currency: string,
-  newRateCents: number,
-  effectiveDate: string,
-): FixedLineRateInputBundle['catalogPrices'] {
-  // pg materialises the `date` column as a JS `Date`, so this must go through
-  // `toCalendarDate`; `String(date).slice(0, 10)` yields e.g. "Thu Oct 01" and
-  // never matches the calendar date, leaving the stale scheduled row in place.
-  const target = toCalendarDate(effectiveDate);
-  const retained = prices.filter(
-    (price) =>
-      !(
-        price.service_id === serviceId &&
-        price.currency_code === currency &&
-        (toCalendarDate(price.effective_date ?? '1970-01-01') ?? '1970-01-01') ===
-          target
-      ),
-  );
-  return [
-    ...retained,
-    {
-      price_id: null,
-      service_id: serviceId,
-      currency_code: currency,
-      rate: newRateCents,
-      effective_date: effectiveDate,
-    },
-  ];
-}
-
 async function loadLineIdsForService(
   trx: Knex | Knex.Transaction,
   tenant: string,
   serviceId: string,
 ): Promise<string[]> {
-  const rows = await tenantDb(trx, tenant)
-    .table('contract_line_services')
-    .where({ service_id: serviceId })
-    .distinct('contract_line_id');
-  return rows
-    .map((row: { contract_line_id: string | null }) => row.contract_line_id)
-    .filter((id): id is string => Boolean(id));
+  return loadLineIdsForServices(trx, tenant, [serviceId]);
 }
 
 export const getServiceContractUsage = withAuth(
@@ -248,10 +190,6 @@ export const previewServicePriceChange = withAuth(
     }
 
     const effective = effectiveDate || nextMonthBoundary();
-    const period: InvoicedPeriod = {
-      start: effective,
-      end: addOneMonth(effective),
-    };
 
     const { knex } = await createTenantKnex();
     try {
@@ -268,6 +206,8 @@ export const previewServicePriceChange = withAuth(
           );
         }
 
+        // The service's own price row names its currency; failing that, the
+        // tenant default. Never a literal currency code.
         const priceCurrency =
           currency ||
           (
@@ -276,7 +216,13 @@ export const previewServicePriceChange = withAuth(
               .where({ service_id: serviceId })
               .first('currency_code')
           )?.currency_code ||
-          'USD';
+          (await getTenantDefaultCurrency(trx, tenant));
+        if (!priceCurrency) {
+          return actionError(
+            'This service has no price and the tenant has no default currency. Set a default currency in billing settings.',
+            'msp/billing:errors.rollout.currencyMissing',
+          );
+        }
 
         const currentPrice = await db
           .table('service_prices')
@@ -288,148 +234,15 @@ export const previewServicePriceChange = withAuth(
           .orderBy('effective_date', 'desc')
           .first('rate');
 
-        const lineIds = await loadLineIdsForService(trx, tenant, serviceId);
-        const bundles = await loadFixedLineRateInputs(trx, tenant, lineIds);
-
-        const clientIds = [
-          ...new Set(
-            [...bundles.values()]
-              .map((bundle) => bundle.clientId)
-              .filter((id): id is string => Boolean(id)),
-          ),
-        ];
-        const clientRows =
-          clientIds.length > 0
-            ? await db
-                .table('clients')
-                .whereIn('client_id', clientIds)
-                .select('client_id', 'client_name')
-            : [];
-        const clientNameById = new Map(
-          (clientRows as Array<{ client_id: string; client_name: string }>).map(
-            (row) => [String(row.client_id), row.client_name],
-          ),
+        const preview = await previewCatalogPriceChanges(
+          trx,
+          tenant,
+          [{ serviceId, currency: priceCurrency, newRateCents }],
+          effective,
+          // The rollout dialog keeps its own wording for a contract in another currency.
+          { currencyMismatchReason: (billsIn) => `Contract bills in ${billsIn}.` },
         );
-
-        const willChange: ServicePriceChangePreviewRow[] = [];
-        const custom: ServicePriceChangePreviewRow[] = [];
-        const unreviewed: ServicePriceChangePreviewRow[] = [];
-        const excluded: ServicePriceChangePreviewRow[] = [];
-        let totalMonthlyDeltaCents = 0;
-
-        for (const bundle of bundles.values()) {
-          const stored = toCents(bundle.line.custom_rate);
-          const provenance = normalizeProvenance(
-            bundle.line.rate_provenance,
-            stored,
-          );
-          const baseRow: Omit<
-            ServicePriceChangePreviewRow,
-            'currentRateCents' | 'newRateCents' | 'deltaCents' | 'reason'
-          > = {
-            contractLineId: bundle.contractLineId,
-            contractLineName: bundle.contractLineName,
-            contractId: bundle.contractId,
-            contractName: bundle.contractName,
-            clientId: bundle.clientId,
-            clientName: bundle.clientId
-              ? clientNameById.get(bundle.clientId) ?? null
-              : null,
-            currency: bundle.currency,
-            provenance,
-          };
-
-          const alreadyInvoiced = await isPeriodAlreadyInvoiced(
-            trx,
-            tenant,
-            bundle.contractLineId,
-            period,
-          );
-          if (alreadyInvoiced) {
-            excluded.push({
-              ...baseRow,
-              currentRateCents: null,
-              newRateCents: null,
-              deltaCents: 0,
-              reason: 'This period is already invoiced.',
-            });
-            continue;
-          }
-
-          if (!bundle.contractIsActive || bundle.contractHasEnded) {
-            excluded.push({
-              ...baseRow,
-              currentRateCents: null,
-              newRateCents: null,
-              deltaCents: 0,
-              reason: 'Contract is inactive or has ended.',
-            });
-            continue;
-          }
-
-          if (bundle.currency !== priceCurrency) {
-            excluded.push({
-              ...baseRow,
-              currentRateCents: null,
-              newRateCents: null,
-              deltaCents: 0,
-              reason: `Contract bills in ${bundle.currency}.`,
-            });
-            continue;
-          }
-
-          const current = resolveFixedLineRate(toResolverInput(bundle, period));
-          const next = resolveFixedLineRate(
-            toResolverInput(
-              {
-                ...bundle,
-                catalogPrices: withNewPrice(
-                  bundle.catalogPrices,
-                  serviceId,
-                  bundle.currency,
-                  newRateCents,
-                  effective,
-                ),
-              },
-              period,
-            ),
-          );
-
-          const row: ServicePriceChangePreviewRow = {
-            ...baseRow,
-            currentRateCents: current.line.rateCents,
-            newRateCents: next.line.rateCents,
-            deltaCents:
-              (next.line.rateCents ?? 0) - (current.line.rateCents ?? 0),
-            reason: null,
-          };
-
-          // Line-level provenance alone mislabels a line that is `inherited`
-          // but shadowed lower down: a member-level override or an active
-          // pricing schedule means the catalog change does not reach it, so it
-          // must not appear under "Will change" with a $0 delta. The money
-          // total already excludes those; this fixes the label.
-          let effectiveProvenance: RateProvenance = provenance;
-          if (provenance === 'inherited') {
-            const memberOverride = [...current.perService.values()].find(
-              (member) => member.provenance !== 'inherited' && member.rateCents !== null,
-            );
-            if (memberOverride) {
-              effectiveProvenance = memberOverride.provenance;
-            } else if (current.line.source === 'pricing_schedule') {
-              effectiveProvenance = 'custom';
-            }
-          }
-
-          if (effectiveProvenance === 'inherited') {
-            willChange.push(row);
-            totalMonthlyDeltaCents += row.deltaCents;
-          } else if (effectiveProvenance === 'unreviewed') {
-            unreviewed.push({ ...row, provenance: 'unreviewed' });
-          } else {
-            custom.push({ ...row, provenance: 'custom' });
-          }
-        }
+        const withoutServiceIds = ({ serviceIds: _serviceIds, ...row }: (typeof preview.willChange)[number]) => row;
 
         return {
           serviceId,
@@ -437,12 +250,12 @@ export const previewServicePriceChange = withAuth(
           oldRateCents: toCents(currentPrice?.rate),
           newRateCents,
           effectiveDate: effective,
-          period,
-          willChange,
-          custom,
-          unreviewed,
-          excluded,
-          totalMonthlyDeltaCents,
+          period: preview.period,
+          willChange: preview.willChange.map(withoutServiceIds),
+          custom: preview.custom.map(withoutServiceIds),
+          unreviewed: preview.unreviewed.map(withoutServiceIds),
+          excluded: preview.excluded.map(withoutServiceIds),
+          totalMonthlyDeltaCents: preview.totalMonthlyDeltaByCurrency[priceCurrency] ?? 0,
         };
       });
     } catch (error) {
@@ -511,8 +324,9 @@ export const applyServicePriceChange = withAuth(
                       effectiveDate: input.effectiveDate!,
                       prices: normalizedPrices,
                     },
+                    actorUserId: user.user_id,
                   }
-                : { current: normalizedPrices },
+                : { current: normalizedPrices, actorUserId: user.user_id },
             );
 
         // Route service fields through Service.update: it strips virtual fields

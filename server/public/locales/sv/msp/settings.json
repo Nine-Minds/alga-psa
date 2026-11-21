@@ -2562,7 +2562,9 @@
         "unknown": "Uppladdningen misslyckades. Försök igen.",
         "loadJobs": "Det gick inte att läsa in migreringsjobben.",
         "loadJob": "Det gick inte att läsa in migreringsjobbet.",
-        "jobNotFound": "Migreringsjobbet hittades inte."
+        "jobNotFound": "Migreringsjobbet hittades inte.",
+        "priceBookInvalid": "Prislistan kunde inte skapas. Kontrollera namnet, att ikraftträdandedatumet är idag eller senare och att namnet inte redan används med ett annat datum.",
+        "priceBookPermissionDenied": "Du behöver behörighet att visa fakturering för att importera en prislista."
       },
       "preflight": {
         "title": "Förkontroll",

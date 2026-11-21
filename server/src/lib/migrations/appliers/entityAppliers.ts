@@ -7,8 +7,12 @@ import {
   type AmpEntityType,
   type AmpLocationRecord,
   type AmpOrganizationRecord,
+  type AmpCatalogPriceRecord,
   type AmpProductRecord,
+  type AmpServiceRecord,
   type AmpVendorProductRecord,
+  AMP_PRICE_ERROR_EXTENSION_KEY,
+  AMP_PRICE_TEXT_EXTENSION_KEY,
   AMP_ASSUMED_CURRENCY_EXTENSION_KEY,
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
@@ -33,8 +37,21 @@ import { resolveConfiguredTenantCurrency } from '@alga-psa/inventory/lib/tenantC
 import { createOrMatchVendorCore } from '@alga-psa/inventory/lib/vendors';
 import { upsertVendorProductCore } from '@alga-psa/inventory/lib/vendorProducts';
 import { isSupportedCurrency } from '@alga-psa/core/formatters';
+import { createServiceCore } from '@alga-psa/billing/lib/catalog/serviceCatalogCore';
+import {
+  describeCatalogCandidate,
+  resolveCatalogItemKey,
+  type CatalogItemKeyRow,
+} from '@alga-psa/billing/lib/catalog/catalogItemKey';
+import { loadCatalogIndex } from '@alga-psa/billing/lib/catalog/catalogItemIndex';
+import {
+  reviseScheduledPriceBookRate,
+  todayCalendarDate,
+  writeServiceCatalogPricing,
+} from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
+import { getPriceBook } from '@alga-psa/billing/lib/catalog/priceBooks';
 import type { ApplierContext } from './context';
-import { SKU_MATCH_WARNING_PREFIX } from '../types';
+import { CATALOG_PRICE_ALREADY_EFFECTIVE, CATALOG_PRICE_OUTCOME_PREFIX, SKU_MATCH_WARNING_PREFIX } from '../types';
 
 export interface AppliedTarget {
   targetEntityType: string;
@@ -647,10 +664,16 @@ export class ProductMigrationApplier implements EntityApplier {
           targetEntityType: this.targetEntityType,
           targetEntityId: existing.service_id,
           matchedExisting: true,
-          warnings: [`${SKU_MATCH_WARNING_PREFIX}Matched existing product "${existing.service_name}" by SKU ${sku}; it was left unchanged.`],
+          warnings: [
+            `${SKU_MATCH_WARNING_PREFIX}Matched existing product "${existing.service_name}" by SKU ${sku}; it was left unchanged.`,
+            ...inactiveMatchWarning(record.is_active),
+          ],
         };
       }
     }
+
+    // A price book import creates items on behalf of the operator: re-check the permission here.
+    if (context.configuration.priceBook) await context.requirePermission(trx, 'service', 'create');
 
     const serviceTypeId = context.configuration.products?.serviceTypeId;
     if (!serviceTypeId) {
@@ -685,6 +708,230 @@ export class ProductMigrationApplier implements EntityApplier {
     });
 
     return { targetEntityType: this.targetEntityType, targetEntityId: created.serviceId };
+  }
+}
+
+/** A matched item keeps its fields (#3778's rule); a CSV that marks it inactive is only reported. */
+function inactiveMatchWarning(isActive: number | null | undefined): string[] {
+  return isActive === 0
+    ? ['The file marks this item inactive, but matched items are left unchanged; only the price was imported.']
+    : [];
+}
+
+/**
+ * Services go through the transaction-scoped service catalog core, the same
+ * create path the services REST API uses. Services have no unique key, so the
+ * row is matched with `resolveCatalogItemKey`, the function the planner used:
+ * one match is mapped and left unchanged, two or more is a failure naming every
+ * candidate (never a guess), none creates a service under the job's configured
+ * service type and billing method.
+ */
+export class ServiceMigrationApplier implements EntityApplier {
+  readonly entityType = 'services' as const;
+  readonly targetEntityType = 'service';
+
+  async apply(trx: Knex.Transaction, context: ApplierContext, payload: Record<string, unknown>): Promise<AppliedTarget> {
+    const record = payload as unknown as AmpServiceRecord;
+    const name = record.name?.trim();
+    if (!name) throw new Error('Service has no name.');
+
+    const key: CatalogItemKeyRow = {
+      itemKind: 'service',
+      sku: record.sku,
+      name,
+      serviceTypeName: record.service_type_name,
+    };
+    const index = await loadCatalogIndex(trx, context.tenant, [key]);
+    const resolution = resolveCatalogItemKey(key, index, { allowCreate: true });
+
+    if (resolution.outcome === 'matched') {
+      return {
+        targetEntityType: this.targetEntityType,
+        targetEntityId: resolution.item.serviceId,
+        matchedExisting: true,
+        warnings: [
+          `Matched existing service "${resolution.item.name}" by ${resolution.by === 'service_sku' ? 'SKU' : 'name'}; it was left unchanged.`,
+          ...inactiveMatchWarning(record.is_active),
+        ],
+      };
+    }
+    if (resolution.outcome === 'ambiguous') {
+      throw new Error(
+        `More than one service matches "${name}": ${resolution.candidates.map(describeCatalogCandidate).join('; ')}. Add an Item ref to the file to pick one.`,
+      );
+    }
+    if (resolution.outcome !== 'create') {
+      throw new Error(resolution.outcome === 'unmatched' ? resolution.reason : resolution.reason);
+    }
+
+    // A price book import creates items on behalf of the operator: re-check the permission here.
+    if (context.configuration.priceBook) await context.requirePermission(trx, 'service', 'create');
+    const serviceTypeId = context.configuration.services?.serviceTypeId;
+    const billingMethod = context.configuration.services?.billingMethod;
+    if (!serviceTypeId || !billingMethod) {
+      throw new Error('Service type and billing method are not configured; preflight must pass before applying.');
+    }
+
+    const created = await createServiceCore(trx, context.tenant, {
+      service_name: name,
+      custom_service_type_id: serviceTypeId,
+      billing_method: billingMethod,
+      item_kind: 'service',
+      sku: normalizeProductSku(record.sku),
+      description: record.description ?? null,
+      unit_of_measure: record.unit_of_measure?.trim() || undefined,
+      is_active: record.is_active === 0 ? false : true,
+      // The price arrives as a catalog_prices record in the same file.
+      default_rate: 0,
+    });
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: created.serviceId,
+      warnings: record.category_name ? [`Category "${record.category_name}" was not applied; services keep the configured type.`] : undefined,
+    };
+  }
+}
+
+export interface CatalogPriceOutcomeWarning {
+  outcome: 'created' | 'updated' | 'unchanged';
+  currency: string;
+  oldRateMinor: number | null;
+  newRateMinor: number;
+  itemName: string | null;
+  itemKind: 'product' | 'service' | null;
+  message: string | null;
+}
+
+const priceOutcomeWarning = (details: CatalogPriceOutcomeWarning): string =>
+  `${CATALOG_PRICE_OUTCOME_PREFIX}${JSON.stringify(details)}`;
+
+function readPriceError(extensionJson: string | null | undefined): { text: string | null; error: string | null } {
+  if (!extensionJson) return { text: null, error: null };
+  try {
+    const parsed = JSON.parse(extensionJson) as Record<string, unknown>;
+    const text = parsed?.[AMP_PRICE_TEXT_EXTENSION_KEY];
+    const error = parsed?.[AMP_PRICE_ERROR_EXTENSION_KEY];
+    return { text: typeof text === 'string' ? text : null, error: typeof error === 'string' ? error : null };
+  } catch {
+    return { text: null, error: null };
+  }
+}
+
+/**
+ * One price for one (item, currency), written into the job's price book through
+ * the single catalog price writer (`appendAt`, insert-only). The item is found
+ * with `resolveCatalogItemKey`, the function the planner used, so preview and
+ * apply cannot disagree; an ambiguous or conflicting row fails instead of guessing.
+ */
+export class CatalogPriceMigrationApplier implements EntityApplier {
+  readonly entityType = 'catalog_prices' as const;
+  readonly targetEntityType = 'service_price';
+
+  async apply(trx: Knex.Transaction, context: ApplierContext, payload: Record<string, unknown>): Promise<AppliedTarget> {
+    const record = payload as unknown as AmpCatalogPriceRecord;
+    await context.requirePermission(trx, 'service', 'update');
+
+    const config = context.configuration.priceBook;
+    if (!config) throw new Error('No price book is configured for this job.');
+    const book = await getPriceBook(trx, context.tenant, config.priceBookId);
+    if (!book || (book.status !== 'draft' && book.status !== 'scheduled')) {
+      throw new Error('The price book for this job is no longer open for changes.');
+    }
+
+    const priceError = readPriceError(record.extension_json);
+    if (priceError.error || record.rate_minor === null || record.rate_minor === undefined) {
+      throw new Error(`The price "${priceError.text ?? ''}" could not be read (${priceError.error ?? 'missing'}).`);
+    }
+    const jobCurrency = config.currency || (await resolveConfiguredTenantCurrency(trx, context.tenant));
+    const currency = record.currency || jobCurrency;
+    if (!currency || !isSupportedCurrency(currency)) throw new Error('The price has no usable currency.');
+    const rate = record.rate_minor;
+
+    const key: CatalogItemKeyRow = {
+      itemRef: record.item_ref,
+      itemKind: record.item_kind,
+      sku: record.sku,
+      name: record.name,
+      serviceTypeName: record.service_type_name,
+    };
+    const index = await loadCatalogIndex(trx, context.tenant, [key]);
+    const resolution = resolveCatalogItemKey(key, index, { allowCreate: true });
+
+    let serviceId: string;
+    let itemName: string | null = record.name ?? null;
+    let itemKind: 'product' | 'service' | null = record.item_kind ?? null;
+    if (resolution.outcome === 'matched') {
+      serviceId = resolution.item.serviceId;
+      itemName = resolution.item.name;
+      itemKind = resolution.item.itemKind;
+    } else if (resolution.outcome === 'create') {
+      // The item was created earlier in this run; its identity mapping names it.
+      const linked = record.service_package_record_id
+        ? await context.resolveReference(trx, 'services', record.service_package_record_id)
+        : record.product_package_record_id
+          ? await context.resolveReference(trx, 'products', record.product_package_record_id)
+          : null;
+      if (!linked) throw new Error('The item this price belongs to has not been created.');
+      serviceId = linked;
+      itemKind = resolution.kind;
+    } else if (resolution.outcome === 'ambiguous') {
+      throw new Error(
+        `More than one item matches: ${resolution.candidates.map(describeCatalogCandidate).join('; ')}. Add an Item ref to the file to pick one.`,
+      );
+    } else {
+      throw new Error(resolution.outcome === 'unmatched' ? resolution.reason : resolution.reason);
+    }
+
+    const db = tenantDb(trx, context.tenant);
+    const effective = book.effective_date;
+    const inEffect = await db.table('service_prices')
+      .where({ service_id: serviceId, currency_code: currency })
+      .where('effective_date', '<=', effective)
+      .orderBy('effective_date', 'desc')
+      .first();
+    const atDate = inEffect && String(inEffect.effective_date instanceof Date ? inEffect.effective_date.toISOString() : inEffect.effective_date).slice(0, 10) === effective
+      ? inEffect
+      : null;
+    const oldRate = inEffect ? Number(inEffect.rate) : null;
+    const today = todayCalendarDate();
+
+    // A different file for the same date may revise a row nobody has been billed at;
+    // once the row is in effect it is history and the planner's code is repeated here.
+    if (atDate && atDate.price_book_id === book.price_book_id && Number(atDate.rate) !== rate && effective <= today) {
+      throw new Error(`${CATALOG_PRICE_ALREADY_EFFECTIVE}: This price book row is already in effect; use a new price book with a later date.`);
+    }
+    if (atDate && atDate.price_book_id === book.price_book_id && Number(atDate.rate) !== rate) {
+      const revised = await reviseScheduledPriceBookRate(trx, context.tenant, serviceId, {
+        priceBookId: book.price_book_id, currency, effectiveDate: effective, rate,
+      });
+      return {
+        targetEntityType: this.targetEntityType,
+        targetEntityId: revised.price_id,
+        warnings: [priceOutcomeWarning({ outcome: 'updated', currency, oldRateMinor: Number(atDate.rate), newRateMinor: rate, itemName, itemKind, message: 'Revised before the price book takes effect.' })],
+      };
+    }
+
+    const written = await writeServiceCatalogPricing(trx, context.tenant, serviceId, {
+      // Prices arrive one currency at a time, so an item this book creates takes the job currency as its primary price.
+      appendAt: { effectiveDate: effective, priceBookId: book.price_book_id, prices: [{ currency_code: currency, rate }], primaryCurrency: jobCurrency },
+      actorUserId: context.actorUserId,
+      today,
+    });
+    if (written.servicePatch.default_rate !== undefined) {
+      await db.table('service_catalog').where({ service_id: serviceId }).update(written.servicePatch);
+    }
+    const row = written.prices[0];
+    const already = written.unchangedPrices.length > 0;
+    const outcome = already || oldRate === rate ? 'unchanged' : oldRate === null ? 'created' : 'updated';
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: row.price_id,
+      matchedExisting: already,
+      warnings: [priceOutcomeWarning({
+        outcome, currency, oldRateMinor: oldRate, newRateMinor: rate, itemName, itemKind,
+        message: already ? 'Already applied.' : null,
+      })],
+    };
   }
 }
 
@@ -748,5 +995,7 @@ export const ENTITY_APPLIERS: Record<AmpEntityType, EntityApplier> = {
   ticket_comments: new TicketCommentMigrationApplier(),
   assets: new AssetMigrationApplier(),
   products: new ProductMigrationApplier(),
+  services: new ServiceMigrationApplier(),
+  catalog_prices: new CatalogPriceMigrationApplier(),
   vendor_products: new VendorProductMigrationApplier(),
 };

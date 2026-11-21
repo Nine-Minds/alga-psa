@@ -33,6 +33,34 @@
       "types": "./src/lib/catalog/serviceCatalogPricing.ts",
       "import": "./dist/lib/catalog/serviceCatalogPricing.mjs"
     },
+    "./lib/catalog/serviceCatalogCore": {
+      "types": "./src/lib/catalog/serviceCatalogCore.ts",
+      "import": "./dist/lib/catalog/serviceCatalogCore.mjs"
+    },
+    "./lib/catalog/catalogItemKey": {
+      "types": "./src/lib/catalog/catalogItemKey.ts",
+      "import": "./dist/lib/catalog/catalogItemKey.mjs"
+    },
+    "./lib/catalog/catalogItemIndex": {
+      "types": "./src/lib/catalog/catalogItemIndex.ts",
+      "import": "./dist/lib/catalog/catalogItemIndex.mjs"
+    },
+    "./lib/catalog/previewCatalogPriceChanges": {
+      "types": "./src/lib/catalog/previewCatalogPriceChanges.ts",
+      "import": "./dist/lib/catalog/previewCatalogPriceChanges.mjs"
+    },
+    "./lib/catalog/priceBooks": {
+      "types": "./src/lib/catalog/priceBooks.ts",
+      "import": "./dist/lib/catalog/priceBooks.mjs"
+    },
+    "./lib/catalog/tenantDefaultCurrency": {
+      "types": "./src/lib/catalog/tenantDefaultCurrency.ts",
+      "import": "./dist/lib/catalog/tenantDefaultCurrency.mjs"
+    },
+    "./lib/catalog/priceBookFlag": {
+      "types": "./src/lib/catalog/priceBookFlag.ts",
+      "import": "./dist/lib/catalog/priceBookFlag.mjs"
+    },
     "./lib/catalog/productCatalogCore": {
       "types": "./src/lib/catalog/productCatalogCore.ts",
       "import": "./dist/lib/catalog/productCatalogCore.mjs"

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChevronDown } from 'lucide-react';
-import { useCollapsiblePreference } from '@alga-psa/ui/hooks';
+import { useCollapsiblePreference, useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -20,6 +20,7 @@ import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
 import QuoteSettings from './QuoteSettings';
 import DefaultPaymentTermsSettings from './DefaultPaymentTermsSettings';
+import { PRICE_BOOK_FEATURE_FLAG } from '../../../lib/catalog/priceBookFlag';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -119,11 +120,22 @@ const CollapsibleNumberingCard: React.FC<{
   );
 };
 
-const BillingSettings: React.FC = () => {
+interface BillingSettingsProps {
+  /**
+   * The Price books tab content. The tab lives in the app (it drives the AMP
+   * import machinery, which a package cannot import); it is shown only when the
+   * `catalog-price-books` flag is on.
+   */
+  priceBooksTab?: React.ReactNode;
+}
+
+const BillingSettings: React.FC<BillingSettingsProps> = ({ priceBooksTab }) => {
   const { t } = useTranslation('msp/billing-settings');
+  const priceBooksFlag = useFeatureFlag(PRICE_BOOK_FEATURE_FLAG);
+  const priceBooksEnabled = Boolean(priceBooksTab) && (typeof priceBooksFlag === 'boolean' ? priceBooksFlag : Boolean(priceBooksFlag?.enabled));
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'payments'];
+  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'payments', 'price-books'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -367,6 +379,13 @@ const BillingSettings: React.FC = () => {
         </Card>
       ),
     },
+    ...(priceBooksEnabled
+      ? [{
+          id: 'price-books',
+          label: t('tabs.priceBooks', { defaultValue: 'Price books' }),
+          content: priceBooksTab,
+        }]
+      : []),
   ];
 
   return (

@@ -7,6 +7,7 @@ const COLUMN_TYPES: Record<string, string> = {
   price_minor: 'INTEGER',
   cost_minor: 'INTEGER',
   unit_cost_minor: 'INTEGER',
+  rate_minor: 'INTEGER',
   lead_time_days: 'INTEGER',
 };
 
@@ -39,6 +40,8 @@ const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
   ],
   assets: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
   products: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
+  services: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
+  catalog_prices: ['package_record_id', 'source_record_id', 'external_identifier_namespace'],
   vendor_products: [
     'package_record_id',
     'source_record_id',

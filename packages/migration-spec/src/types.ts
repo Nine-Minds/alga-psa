@@ -101,6 +101,29 @@ export interface AmpProductRecord extends AmpEntityRecordBase {
   is_active?: number | null;
 }
 
+export interface AmpServiceRecord extends AmpEntityRecordBase {
+  name: string;
+  sku?: string | null;
+  service_type_name?: string | null;
+  category_name?: string | null;
+  unit_of_measure?: string | null;
+  description?: string | null;
+  is_active?: number | null;
+}
+
+/** One price for one (item, currency); the item is a package reference, an Alga item ref, a SKU or a name. */
+export interface AmpCatalogPriceRecord extends AmpEntityRecordBase {
+  product_package_record_id?: string | null;
+  service_package_record_id?: string | null;
+  item_kind?: 'product' | 'service' | null;
+  item_ref?: string | null;
+  sku?: string | null;
+  name?: string | null;
+  service_type_name?: string | null;
+  currency?: string | null;
+  rate_minor?: number | null;
+}
+
 export interface AmpVendorProductRecord extends AmpEntityRecordBase {
   product_package_record_id?: string | null;
   product_sku?: string | null;
@@ -145,6 +168,8 @@ export interface AmpEntityRecordMap {
   ticket_comments: AmpTicketCommentRecord;
   assets: AmpAssetRecord;
   products: AmpProductRecord;
+  services: AmpServiceRecord;
+  catalog_prices: AmpCatalogPriceRecord;
   vendor_products: AmpVendorProductRecord;
 }
 

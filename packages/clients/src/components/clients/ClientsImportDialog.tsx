@@ -101,6 +101,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   onImportComplete,
 }) => {
   const { t } = useTranslation('msp/clients');
+  // LEVERAGE: pattern spreadsheet-column-mapping — hand-rolled header-to-field mapping step; see SpreadsheetColumnMappingStep (packages/ui), used first by the price book import.
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
