@@ -176,9 +176,11 @@ describe('native calendar read work bounds', () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
-  it('returns a bounded page and keyset continuation for candidate sets beyond the loading cap', async () => {
+  it('provider review fixture returns a bounded page and keyset continuation for 501 eligible candidates', async () => {
     seedWorkspace();
     for (let n = 0; n < 501; n++) seedEntry({ entry_id: id(1000 + n), scheduled_start: new Date('2025-01-01T09:00:00.000Z'), scheduled_end: new Date('2025-01-01T10:00:00.000Z') });
+    seedEntry({ entry_id: id(999), scheduled_start: new Date('2024-12-31T09:00:00.000Z'), scheduled_end: new Date('2024-12-31T10:00:00.000Z') });
+    seedEntry({ entry_id: id(1501), scheduled_start: new Date('2025-01-02T09:00:00.000Z'), scheduled_end: new Date('2025-01-02T10:00:00.000Z') });
     const page = await readWindow('2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');
     expect(page).toMatchObject({ handled: true, hasMore: true, nextCursor: id(1499) });
     expect((page as any).entries).toHaveLength(500);

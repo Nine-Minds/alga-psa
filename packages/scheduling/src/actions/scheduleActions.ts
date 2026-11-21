@@ -1301,10 +1301,6 @@ export const getScheduleEntryById = withAuth(async (
       if (decision.access === 'none') {
         return null;
       }
-      if (decision.access === 'busy') {
-        return maskEntry(scheduleEntry, access);
-      }
-
       let selected = scheduleEntry;
       if (occurrenceStart !== undefined) {
         const occurrenceTime = Date.parse(occurrenceStart);
@@ -1340,6 +1336,13 @@ export const getScheduleEntryById = withAuth(async (
             scheduled_end: new Date(occurrenceTime + duration),
           };
         }
+      }
+
+      // Busy-only viewers still need occurrence membership checked before the
+      // response is masked. Mask the projected occurrence so valid links show
+      // its time, while off-pattern or excluded timestamps stay unavailable.
+      if (decision.access === 'busy') {
+        return maskEntry(selected, access);
       }
 
       return { ...selected, access: 'full', can_edit: decision.canEdit };

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const publishEventMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const scheduleEntryGetMock = vi.hoisted(() => vi.fn());
+const scheduleEntryRowMock = vi.hoisted(() => vi.fn());
 const scheduleEntryUpdateMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn());
 const scheduleEntryDeleteMock = vi.hoisted(() => vi.fn());
@@ -20,9 +21,12 @@ const authState = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => {
   const builder: any = {
+    first: () => scheduleEntryRowMock(),
     where: () => builder,
     whereNull: () => builder,
     whereIn: () => builder,
+    orderBy: () => builder,
+    limit: () => builder,
     orWhere: () => builder,
     del: vi.fn().mockResolvedValue(0),
     select: vi.fn().mockResolvedValue([]),
@@ -132,6 +136,17 @@ describe('schedule entry mutation permissions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
+    scheduleEntryRowMock.mockResolvedValue({
+      tenant: 'tenant-1',
+      entry_id: '00000000-0000-4000-8000-000000000321',
+      title: 'Private recurring',
+      is_private: true,
+      is_recurring: true,
+      is_all_day: false,
+      scheduled_start: new Date('2026-11-01T09:00:00.000Z'),
+      scheduled_end: new Date('2026-11-01T10:00:00.000Z'),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2026-11-01T09:00:00.000Z', count: 5 },
+    });
     scheduleEntryGetMock.mockResolvedValue({ ...EXISTING_ENTRY });
     scheduleEntryUpdateMock.mockImplementation(async (_trx, _tenant, _id, patch) => ({ ...EXISTING_ENTRY, ...patch }));
     scheduleEntryDeleteMock.mockResolvedValue(true);
@@ -185,6 +200,59 @@ describe('schedule entry mutation permissions', () => {
     } finally {
       scheduleSeam.reset();
     }
+  });
+
+  describe('native PSA occurrence fallback', () => {
+    const entryId = '00000000-0000-4000-8000-000000000321';
+
+    beforeEach(async () => {
+      const { scheduleSeam } = await import('../src/lib/sharedWorkScheduling');
+      scheduleSeam.reset();
+    });
+
+    it('projects a valid occurrence before applying busy-only masking', async () => {
+      const { getScheduleEntryById } = await import('../src/actions/scheduleActions');
+      const result = await getScheduleEntryById(entryId, '2026-11-04T09:00:00.000Z');
+      expect(result).toMatchObject({
+        entry_id: `${entryId}_${Date.parse('2026-11-04T09:00:00.000Z')}`,
+        original_entry_id: entryId,
+        access: 'busy',
+        title: 'Busy',
+        scheduled_start: new Date('2026-11-04T09:00:00.000Z'),
+        scheduled_end: new Date('2026-11-04T10:00:00.000Z'),
+      });
+      expect((result as any).recurrence_pattern).toBeNull();
+    });
+
+    it('does not reveal an off-pattern timestamp to a busy-only viewer', async () => {
+      const { getScheduleEntryById } = await import('../src/actions/scheduleActions');
+      expect(await getScheduleEntryById(entryId, '2026-11-04T12:00:00.000Z')).toBeNull();
+    });
+
+    it('does not resolve an excluded occurrence', async () => {
+      scheduleEntryRowMock.mockResolvedValueOnce({
+        tenant: 'tenant-1',
+        entry_id: entryId,
+        title: 'Private recurring',
+        is_private: true,
+        is_recurring: true,
+        is_all_day: false,
+        scheduled_start: new Date('2026-11-01T09:00:00.000Z'),
+        scheduled_end: new Date('2026-11-01T10:00:00.000Z'),
+        recurrence_pattern: {
+          frequency: 'daily', interval: 1, startDate: '2026-11-01T09:00:00.000Z', count: 5,
+          exceptions: ['2026-11-04T09:00:00.000Z'],
+        },
+      });
+      const { getScheduleEntryById } = await import('../src/actions/scheduleActions');
+      expect(await getScheduleEntryById(entryId, '2026-11-04T09:00:00.000Z')).toBeNull();
+    });
+
+    it('returns unavailable when the master entry has been deleted', async () => {
+      scheduleEntryRowMock.mockResolvedValueOnce(null);
+      const { getScheduleEntryById } = await import('../src/actions/scheduleActions');
+      expect(await getScheduleEntryById(entryId, '2026-11-04T09:00:00.000Z')).toBeNull();
+    });
   });
 
   it.each([undefined, ['user-1']])('denies own-entry update without schedule read permission (assignment %j)', async (assigned_user_ids) => {

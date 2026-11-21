@@ -13,14 +13,17 @@ const required = (name) => {
 };
 const databaseUrl = required('DATABASE_URL');
 const tenant = required('SCHEDULE_REVIEW_TENANT_ID');
-const userId = required('SCHEDULE_REVIEW_READONLY_USER_ID');
+const ownerUserId = required('SCHEDULE_REVIEW_OWNER_USER_ID');
+const viewerUserId = required('SCHEDULE_REVIEW_VIEWER_USER_ID');
 const baseUrl = required('SCHEDULE_REVIEW_BASE_URL').replace(/\/$/, '');
 const dbUrl = new URL(databaseUrl);
 if (!/(?:^|[_-])test(?:$|[_-])/i.test(dbUrl.pathname.slice(1))) {
   throw new Error('Refusing to seed a database whose name does not identify it as a test database.');
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-if (!UUID.test(tenant) || !UUID.test(userId)) throw new Error('Tenant and read-only user IDs must be UUIDs.');
+if (!UUID.test(tenant) || !UUID.test(ownerUserId) || !UUID.test(viewerUserId) || ownerUserId === viewerUserId) {
+  throw new Error('Tenant, distinct owner, and viewer IDs must be UUIDs.');
+}
 
 const namespace = 'security-dos-review-fixture-v1';
 const idFor = (name) => {
@@ -33,7 +36,6 @@ const idFor = (name) => {
 };
 const entryIds = [
   idFor('ordinary'), idFor('recurring'), idFor('dispatch-activity'),
-  ...Array.from({ length: 501 }, (_, index) => idFor(`continuation-${index + 1}`)),
   idFor('outside-before'), idFor('outside-after'),
 ];
 const ownedTitlePrefix = 'Review fixture:';
@@ -45,25 +47,45 @@ try {
   let workItem = { rowCount: 1, rows: [{ ticket_id: null }] };
   if (mode === 'setup') {
     const context = await client.query(
-      `SELECT t.product_code, u.user_type
-         FROM tenants t JOIN users u ON u.tenant = t.tenant
-        WHERE t.tenant = $1 AND u.user_id = $2`, [tenant, userId]);
-    if (context.rowCount !== 1 || context.rows[0].product_code !== 'psa' || context.rows[0].user_type !== 'internal') {
-      throw new Error('Fixture needs an existing internal user in an isolated PSA tenant; product routing and user records are not modified.');
+      `SELECT t.product_code, owner.user_type AS owner_type, viewer.user_type AS viewer_type
+         FROM tenants t
+         JOIN users owner ON owner.tenant = t.tenant AND owner.user_id = $2
+         JOIN users viewer ON viewer.tenant = t.tenant AND viewer.user_id = $3
+        WHERE t.tenant = $1`, [tenant, ownerUserId, viewerUserId]);
+    if (context.rowCount !== 1 || context.rows[0].product_code !== 'psa' ||
+      context.rows[0].owner_type !== 'internal' || context.rows[0].viewer_type !== 'internal') {
+      throw new Error('PSA UI fixture needs distinct existing internal owner/viewer users in an isolated PSA tenant; product routing and user records are not modified.');
     }
     const permissions = await client.query(
-      `SELECT DISTINCT p.resource, p.action
+      `SELECT DISTINCT ur.user_id, p.resource, p.action
          FROM user_roles ur
          JOIN role_permissions rp ON rp.tenant = ur.tenant AND rp.role_id = ur.role_id
          JOIN permissions p ON p.tenant = rp.tenant AND p.permission_id = rp.permission_id
-        WHERE ur.tenant = $1 AND ur.user_id = $2 AND p.resource = 'user_schedule'`, [tenant, userId]);
-    const schedulePermissions = new Set(permissions.rows.map(({ resource, action }) => `${resource}:${action}`));
-    const writeActions = [...schedulePermissions].filter(permission => permission !== 'user_schedule:read');
-    if (!schedulePermissions.has('user_schedule:read') || writeActions.length > 0) {
-      throw new Error('Read-only fixture account must have user_schedule:read and no schedule write permissions. No permissions were changed.');
+        WHERE ur.tenant = $1 AND ur.user_id = ANY($2::uuid[])`, [tenant, [ownerUserId, viewerUserId]]);
+    const byUser = new Map([[ownerUserId, new Set()], [viewerUserId, new Set()]]);
+    for (const { user_id, resource, action } of permissions.rows) byUser.get(user_id)?.add(`${resource}:${action}`);
+    const ownerPermissions = byUser.get(ownerUserId);
+    const viewerPermissions = byUser.get(viewerUserId);
+    const scheduleWrite = (set) => [...set].some(value => value.startsWith('user_schedule:') && value !== 'user_schedule:read');
+    if (!ownerPermissions.has('user_schedule:read') || scheduleWrite(ownerPermissions) ||
+      !ownerPermissions.has('technician_dispatch:read') || !ownerPermissions.has('ticket:read')) {
+      throw new Error('Fixture owner needs user_schedule:read without schedule write permissions, plus technician_dispatch:read and ticket:read for dispatch/activity replay. No permissions were changed.');
     }
-    workItem = await client.query('SELECT ticket_id FROM tickets WHERE tenant = $1 ORDER BY ticket_id LIMIT 1', [tenant]);
-    if (workItem.rowCount !== 1) throw new Error('The isolated review tenant needs one existing ticket for the dispatch/activity fixture row.');
+    if (!viewerPermissions.has('user_schedule:read') || scheduleWrite(viewerPermissions)) {
+      throw new Error('Read-only viewer needs user_schedule:read and no user_schedule write actions. No permissions were changed.');
+    }
+    const readShare = await client.query(
+      `SELECT c.calendar_id, cs.access_level
+         FROM calendars c
+         JOIN calendar_shares cs ON cs.tenant = c.tenant AND cs.calendar_id = c.calendar_id
+        WHERE c.tenant = $1 AND c.calendar_type = 'personal' AND c.owner_user_id = $2
+          AND cs.grantee_type = 'user' AND cs.grantee_id = $3 AND cs.access_level = 'read'
+        LIMIT 1`, [tenant, ownerUserId, viewerUserId]);
+    if (readShare.rowCount !== 1) {
+      throw new Error('Read-only viewer needs an existing read-level share to the owner personal calendar. The fixture does not create or change shares.');
+    }
+    workItem = await client.query('SELECT ticket_id FROM tickets WHERE tenant = $1 AND assigned_to = $2 ORDER BY ticket_id LIMIT 1', [tenant, ownerUserId]);
+    if (workItem.rowCount !== 1) throw new Error('The fixture owner needs an existing assigned ticket for dispatch/activity replay.');
   }
 
   const existing = await client.query(
@@ -87,7 +109,6 @@ try {
       { name: 'ordinary', title: 'Ordinary appointment', start: day(0), recurring: false, pattern: null },
       { name: 'recurring', title: 'Daily recurring appointment', start: day(1), recurring: true, pattern: { frequency: 'daily', interval: 1, startDate: day(1).toISOString(), count: 10 } },
       { name: 'dispatch-activity', title: 'Dispatch and activity appointment', start: day(0), recurring: false, pattern: null, workItemId: workItem.rows[0].ticket_id, workItemType: 'ticket' },
-      ...Array.from({ length: 501 }, (_, index) => ({ name: `continuation-${index + 1}`, title: `Continuation ${String(index + 1).padStart(3, '0')}`, start: day(0), recurring: false, pattern: null })),
       { name: 'outside-before', title: 'Out of window before', start: new Date(day(0).getTime() - 40 * 86_400_000), recurring: false, pattern: null },
       { name: 'outside-after', title: 'Out of window after', start: new Date(day(0).getTime() + 40 * 86_400_000), recurring: false, pattern: null },
     ];
@@ -102,7 +123,7 @@ try {
         [tenant, entryId, `${ownedTitlePrefix} ${entry.title}`, entry.workItemId ?? null, entry.start, end,
           entry.pattern === null ? null : JSON.stringify(entry.pattern), entry.workItemType ?? 'ad_hoc', entry.recurring]);
       await client.query(
-        `INSERT INTO schedule_entry_assignees (tenant, entry_id, user_id) VALUES ($1,$2,$3)`, [tenant, entryId, userId]);
+        `INSERT INTO schedule_entry_assignees (tenant, entry_id, user_id) VALUES ($1,$2,$3)`, [tenant, entryId, ownerUserId]);
     }
 
     const ordinaryId = idFor('ordinary');
@@ -120,10 +141,10 @@ try {
       mode,
       fixture: namespace,
       tenant,
-      readOnlyUser: userId,
+      minimumPermissionOwner: ownerUserId,
+      readOnlyViewer: viewerUserId,
       ordinaryLink: link(ordinaryId, null, day(0)),
       recurringOccurrenceLink: link(recurringId, occurrence, occurrence),
-      continuationEntries: 501,
       outsideWindowEntries: 2,
       dispatchActivityEntryId: idFor('dispatch-activity'),
       cleanup: 'node scripts/security-dos-schedule-review-fixture.mjs cleanup',

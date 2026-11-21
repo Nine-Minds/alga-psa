@@ -12,6 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ScheduleCalendar from '../src/components/schedule/ScheduleCalendar';
+import { parseScheduleEntryUrl, writeScheduleEntryUrl } from '../src/lib/scheduleEntryUrl';
 
 /**
  * Behavioral coverage of ScheduleCalendar's side of the Teams-meeting refresh
@@ -190,7 +191,9 @@ vi.mock('@alga-psa/ui', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: any) => <div>{children}</div>,
+  Dialog: ({ children, footer, id, isOpen }: any) => id === 'busy-entry-dialog' && isOpen === false
+    ? null
+    : <div>{children}{id === 'busy-entry-dialog' ? footer : null}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -710,7 +713,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     const selection = {
       entryId: '00000000-0000-4000-8000-000000000123',
       date: '2026-09-04',
-      view: 'day' as const,
+      view: 'week' as const,
     };
     const onEntrySelectionChange = vi.fn();
     const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
@@ -727,11 +730,108 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     expect(document.getElementById('save-entry-btn')).toBeNull();
   });
 
+  it.each([
+    ['ordinary', { entryId: '00000000-0000-4000-8000-000000000301', date: '2026-09-04', view: 'week' as const }, undefined],
+    ['recurring occurrence', { entryId: '00000000-0000-4000-8000-000000000302', occurrenceStart: '2026-09-04T14:00:00.000Z', date: '2026-09-04', view: 'week' as const }, '2026-09-04T14:00:00.000Z'],
+  ])('restores a real calendar popup from %s URL state', async (_label, selection, occurrenceStart) => {
+    const entryId = selection.entryId;
+    const resultEntry = baseEntry({
+      entry_id: occurrenceStart ? `${entryId}_${Date.parse(occurrenceStart)}` : entryId,
+      ...(occurrenceStart ? { original_entry_id: entryId, scheduled_start: occurrenceStart, scheduled_end: '2026-09-04T15:00:00.000Z', is_recurring: true } : {}),
+      title: `Restored ${_label}`,
+    });
+    getScheduleEntryById.mockResolvedValue(resultEntry);
+
+    render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={vi.fn()} />);
+
+    await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(entryId, occurrenceStart));
+    await screen.findByDisplayValue(`Restored ${_label}`);
+    expect(document.getElementById('save-entry-btn')).not.toBeNull();
+  });
+
+  it('closes a busy URL selection when URL state disappears and clears selection on dismissal', async () => {
+    const selection = {
+      entryId: '00000000-0000-4000-8000-000000000303',
+      date: '2026-09-04',
+      view: 'week' as const,
+    };
+    getScheduleEntryById.mockResolvedValue(baseEntry({ entry_id: selection.entryId, access: 'busy' }));
+    const onEntrySelectionChange = vi.fn();
+    const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
+
+    await screen.findByText('14:00 – 15:00');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onEntrySelectionChange).toHaveBeenCalledWith(null);
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close' })).toBeNull());
+  });
+
+  it('does not reopen a dismissed busy selection when its pending response arrives after a filter change', async () => {
+    const selection = {
+      entryId: '00000000-0000-4000-8000-000000000304',
+      date: '2026-09-04',
+      view: 'week' as const,
+    };
+    let resolveSelection!: (value: any) => void;
+    const pending = new Promise<any>(resolve => { resolveSelection = resolve; });
+    getScheduleEntryById.mockReturnValue(pending);
+    const onEntrySelectionChange = vi.fn();
+    const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
+    await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(selection.entryId, undefined));
+
+    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
+    fireEvent.click(screen.getByTestId('test-calendar-filter'));
+    await act(async () => {
+      resolveSelection(baseEntry({ entry_id: selection.entryId, access: 'busy' }));
+      await pending;
+    });
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+  });
+
+  it('supports browser Back and Forward for entry selection using the real calendar', async () => {
+    const entryId = '00000000-0000-4000-8000-000000000305';
+    serverEvents = [baseEntry({ entry_id: entryId, title: 'History appointment' })];
+    getScheduleEntryById.mockResolvedValue(baseEntry({ entry_id: entryId, title: 'History appointment' }));
+
+    function CalendarWithBrowserUrl() {
+      const [selection, setSelection] = React.useState(() => parseScheduleEntryUrl(new URLSearchParams(window.location.search)));
+      React.useEffect(() => {
+        const onPopState = () => setSelection(parseScheduleEntryUrl(new URLSearchParams(window.location.search)));
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+      }, []);
+      const changeSelection = (next: any) => {
+        const params = writeScheduleEntryUrl(new URLSearchParams(window.location.search), next);
+        const query = params.toString();
+        window.history.pushState({}, '', `/msp/schedule${query ? `?${query}` : ''}`);
+        setSelection(next);
+      };
+      return <ScheduleCalendar entrySelection={selection} onEntrySelectionChange={changeSelection} />;
+    }
+
+    window.history.replaceState({}, '', '/msp/schedule');
+    const { unmount } = render(<CalendarWithBrowserUrl />);
+    await screen.findByTestId(`calendar-event-${entryId}`);
+    openEntry(entryId);
+    await screen.findByDisplayValue('History appointment');
+    expect(window.location.search).toContain(`entryId=${entryId}`);
+
+    window.history.back();
+    await waitFor(() => expect(window.location.search).toBe(''));
+    await waitFor(() => expect(document.getElementById('save-entry-btn')).toBeNull());
+
+    window.history.forward();
+    await waitFor(() => expect(window.location.search).toContain(`entryId=${entryId}`));
+    await screen.findByDisplayValue('History appointment');
+    unmount();
+  });
+
   it('uses generic unavailable behavior when a linked record no longer resolves', async () => {
     const selection = {
       entryId: '00000000-0000-4000-8000-000000000124',
       date: '2026-09-04',
-      view: 'day' as const,
+      view: 'week' as const,
     };
     getScheduleEntryById.mockResolvedValue(null);
 

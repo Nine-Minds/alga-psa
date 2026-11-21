@@ -118,6 +118,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
   const [isLoadingMoreSchedules, setIsLoadingMoreSchedules] = useState(false);
   const scheduleQueryGeneration = useRef(0);
   const entrySelectionGeneration = useRef(0);
+  const previousEntrySelectionKey = useRef('');
   const pageRequestInFlight = useRef(false);
   const fetchEventsRef = useRef<() => Promise<void>>(async () => {});
   const [showEntryPopup, setShowEntryPopup] = useState(false);
@@ -623,7 +624,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
   const entrySelectionKey = entrySelection ? `${entrySelection.entryId}:${entrySelection.occurrenceStart ?? ''}:${entrySelection.date}:${entrySelection.view}` : '';
   useEffect(() => {
     const generation = ++entrySelectionGeneration.current;
+    const selectionChanged = previousEntrySelectionKey.current !== entrySelectionKey;
+    previousEntrySelectionKey.current = entrySelectionKey;
+    if (selectionChanged) {
+      setBusyEntry(null);
+      setShowEntryPopup(false);
+      setSelectedEvent(null);
+    }
     if (!entrySelection) {
+      setBusyEntry(null);
       setShowEntryPopup(false);
       setSelectedEvent(null);
       return;
@@ -634,8 +643,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
       onEntrySelectionChange?.(null);
       return;
     }
-    if (calendarDateKey(date) !== entrySelection.date) setDate(selectedDate);
-    if (view !== entrySelection.view) setView(entrySelection.view as View);
+    const dateNeedsChange = calendarDateKey(date) !== entrySelection.date;
+    const viewNeedsChange = view !== entrySelection.view;
+    if (dateNeedsChange) setDate(selectedDate);
+    if (viewNeedsChange) setView(entrySelection.view as View);
+    // Wait for the requested date and view to become the active query before
+    // starting the lookup. Otherwise the initial request is immediately stale
+    // and can race a second request for the settled query.
+    if (dateNeedsChange || viewNeedsChange) return;
     const queryKey = scheduleQueryKey;
 
     void getScheduleEntryById(entrySelection.entryId, entrySelection.occurrenceStart).then((entry) => {
@@ -769,14 +784,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
       return;
     }
 
-    // Busy blocks carry no details: show time only, read-only.
-    if (scheduleEvent.access === 'busy') {
-      setBusyEntry(scheduleEvent);
-      return;
-    }
-
-    setSelectedEvent(scheduleEvent);
-    setShowEntryPopup(true);
     const entryId = scheduleEvent.original_entry_id ?? scheduleEvent.entry_id;
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId)) {
       onEntrySelectionChange?.({
@@ -786,12 +793,27 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
         view: view === 'day' || view === 'month' ? view : 'week',
       });
     }
+
+    // Busy blocks carry no details: show time only, read-only. Their URL uses
+    // the same stable master plus exact occurrence identity as full entries.
+    if (scheduleEvent.access === 'busy') {
+      setBusyEntry(scheduleEvent);
+      return;
+    }
+
+    setSelectedEvent(scheduleEvent);
+    setShowEntryPopup(true);
   };
 
   const handleEntryPopupClose = () => {
     setShowEntryPopup(false);
     setSelectedEvent(null);
     setSelectedSlot(null);
+    onEntrySelectionChange?.(null);
+  };
+
+  const handleBusyEntryClose = () => {
+    setBusyEntry(null);
     onEntrySelectionChange?.(null);
   };
 
@@ -1592,12 +1614,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
       <Dialog
         id="busy-entry-dialog"
         isOpen={busyEntry !== null}
-        onClose={() => setBusyEntry(null)}
+        onClose={handleBusyEntryClose}
         title={t('calendar.busyDialog.title', { defaultValue: 'Busy' })}
         className="max-w-sm"
         footer={
           <div className="flex justify-end">
-            <Button id="busy-entry-close" onClick={() => setBusyEntry(null)}>
+            <Button id="busy-entry-close" onClick={handleBusyEntryClose}>
               {t('calendar.busyDialog.close', { defaultValue: 'Close' })}
             </Button>
           </div>
