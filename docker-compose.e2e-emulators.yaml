@@ -1,6 +1,13 @@
 # Disposable provider infrastructure for the production browser stack. No
 # persistent state volume: each edition/job owns this emulator instance.
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
 x-provider-environment: &provider-environment
+  # Only the owned GreenMail host may use a private IMAP address in this stack.
+  EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: imap-test-server
   # The login base is used for both browser authorization and server token
   # exchange. CI maps this name on the host; Docker resolves the network alias.
   MICROSOFT_LOGIN_BASE_URL: http://algasim.test:4010
@@ -34,6 +41,7 @@ services:
     environment:
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
   worker-test-state:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     user: '0:0'
     entrypoint: ['node', '/init-worker-test-state.mjs']
@@ -58,6 +66,7 @@ services:
     networks:
       - app-network
   algasim:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     init: true
     environment:
@@ -75,6 +84,7 @@ services:
       timeout: 3s
       retries: 30
   test-ingress:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     init: true
     entrypoint: ['node', '/provider-ingress.mjs']
@@ -152,9 +162,14 @@ services:
     ports: !reset []
   postgres:
     ports: !reset []
+    # Both editions run the application, Temporal, workers and direct fixture
+    # connections against this disposable database. The default 100 sessions
+    # can exhaust at startup and reject real browser sign-ins.
+    command: postgres -c password_encryption=md5 -c max_connections=200
   # This frontend owns separate Temporal schemas in this job's disposable
   # PostgreSQL instance. It has no host ports or live provider access.
   temporal-dev:
+    <<: *hardening
     image: temporalio/auto-setup:1.24.2
     environment:
       DB: postgres12
@@ -178,6 +193,10 @@ services:
     networks:
       - app-network
     depends_on:
+      # The Temporal image runs as uid 1000 and reads the secret files, which
+      # runtime-permissions hands to uid 1000.
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
   workflow-worker:
@@ -206,6 +225,7 @@ services:
   # Explicitly started only in the EE job. Authored workflows belong to the
   # workflow-worker; this worker also adds its existing SLA queue internally.
   temporal-worker:
+    <<: *hardening
     user: '1000:1000'
     profiles: ['enterprise']
     image: alga-e2e-test-temporal-worker:latest
@@ -223,6 +243,9 @@ services:
       STORAGE_LOCAL_BASE_PATH: /data/files
       DB_HOST: pgbouncer
       DB_PORT: '6432'
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+      DB_HOST_ADMIN: postgres
+      DB_PORT_ADMIN: '5432'
       DB_NAME_SERVER: server
       DB_USER_SERVER: app_user
       DB_USER_ADMIN: postgres
@@ -250,6 +273,8 @@ services:
       - app-network
     depends_on:
       temporal-dev:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       pgbouncer:
         condition: service_started

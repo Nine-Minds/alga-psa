@@ -684,7 +684,7 @@ describe('MyService Integration Tests', () => {
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { TestContext } from '../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoiceForCycle } from '../../test-utils/billingTestHelpers';
 
 describe('Invoice Generation Infrastructure Tests', () => {
   const testHelpers = TestContext.createHelpers();
@@ -714,9 +714,12 @@ describe('Invoice Generation Infrastructure Tests', () => {
       const company = await context.createEntity('companies', {
         company_name: 'Test Company'
       });
+      // ...seed the contract, materialize its recurring service periods and
+      // create a client_billing_cycles row; billingCycleId is that row's id.
 
-      // Act - Execute business workflow
-      const invoice = await generateInvoice(company.company_id);
+      // Act - Execute business workflow (the helper selects due recurring work
+      // for the billing cycle, as Automatic Invoices does, then generates)
+      const invoice = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Verify complete workflow results
       expect(invoice.total).toBeGreaterThan(0);
@@ -919,10 +922,17 @@ when its check is registered in the effective repository rules.
 CI runs the full server unit suite with coverage as four shard jobs plus one
 merge job (`server-unit` and `server-unit-complete` in
 `.github/workflows/unit-tests.yml`). `scripts/run-server-unit-shard.mjs` collects
-the complete inventory, takes the shard's modulo partition with
+the complete inventory, takes the shard's partition with
 `scripts/lib/test-sharding.mjs`, proves `server/vitest.server-unit-shard.config.ts`
-selects exactly that partition, collects its test registrations, and runs it with
-`fileParallelism=true` and a fresh fork per file. Each file gets its own process,
+selects exactly that partition, and runs it with `fileParallelism=true` and a
+fresh fork per file. The test inventory the verifier checks against the JSON
+report (`collected-tests.json`) is what each file reported for itself once its
+fork had imported it, the progress reporter's `module-collected` event, read
+back from the journal after the run. It used to come from a separate
+`vitest list` pass that imported the whole partition a second time, about
+seven minutes of every shard on CI; the two file-only passes that prove the
+partition are cheap and stay. The infrastructure, tier-1 integration and
+workspace runners take their inventories from the same event. Each file gets its own process,
 so worker state never carries across files; the processes run in parallel because
 recycling them serially spent about forty minutes on spawn gaps for ten minutes
 of assertions.
@@ -947,6 +957,37 @@ lays the merged manifests out where the single full run left them; `vitest run
 with `shard-aggregate.json` recording the partition verdict.
 `scripts/tests/server-unit-shards.test.mjs` drives the whole sequence over an
 isolated fixture repository.
+
+The partition is balanced by duration, not by name. Each file's wall time from
+the newest main run lives in `scripts/server-unit-durations.json` (its
+`source` names the run and artifact it came from); the heaviest file goes
+first and every file lands on the lightest shard so far, with files the file
+does not know yet weighing the median. The shards and the merge job read the
+same committed file, so the partitions the merge verifies are the ones the
+shards took; without the file the split falls back to the sorted modulo slice.
+The sorted modulo split put 11.0 / 10.1 / 5.6 / 9.6 minutes of test time on
+the four shards of main run 41983121491; the balanced split puts 9.1 on each.
+The integration lane's four shards balance the same way from
+`scripts/integration-durations.json`, read by the tier-1 runner and by the
+integration gate. Refresh a lane's file whenever its shards drift apart again,
+and commit it:
+
+```bash
+node scripts/update-shard-durations.mjs server-unit   # GITHUB_TOKEN or a logged-in gh
+node scripts/update-shard-durations.mjs integration
+```
+
+Both the shards and the merge step run coverage through
+`scripts/lib/vitest-coverage-provider.mjs` (`--coverage.provider=custom`), the
+stock v8 provider with its untested-file crawl moved to the merge. Stock v8
+has every shard glob the whole `coverage.include` tree, transform and parse the
+files its partition never loaded, and print a "Failed to parse" line for each
+package or shared source Vite does not transform — four crawls and four copies
+of the noise for maps the merge only adds together. A shard now remaps the
+modules it loaded and renders no report; the merge adds the four maps, crawls
+the files no shard loaded once, and renders the same report the stock provider
+produced. Pass both provider flags to any local `--merge-reports` replay of CI
+blobs, or the stock provider will render the loaded modules alone.
 
 To reproduce one shard locally from the repository root on a clean checkout:
 

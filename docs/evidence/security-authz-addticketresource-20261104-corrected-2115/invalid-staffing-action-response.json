@@ -1,0 +1,31 @@
+{
+  "revision": "ea8086eb4c993e208a5ca25c694ea081a4a809f6",
+  "principal": {
+    "id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+    "email": "qa@emeraldcity.oz"
+  },
+  "title": "Authz Invalid Agent Browser Rollback 20261104 v5",
+  "request": {
+    "serverAction": "7fdebe2986efbf5dbca1d5e70b487f5d8d2954cd14",
+    "contentType": "multipart/form-data; boundary=----WebKitFormBoundaryVhDielXQj2qaI5U2",
+    "invalidAgentInjected": true,
+    "status": 200
+  },
+  "applicationResult": {
+    "actionError": "One or more selected agents cannot be assigned. Choose active internal agents and try again."
+  },
+  "databaseAfter": [
+    {
+      "kind": "tickets",
+      "rows": 0
+    },
+    {
+      "kind": "audit",
+      "rows": 0
+    },
+    {
+      "kind": "workflow",
+      "rows": 0
+    }
+  ]
+}

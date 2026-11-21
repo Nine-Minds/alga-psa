@@ -15,6 +15,7 @@ export const maintenanceJobRequestedEventPayloadSchema = BaseDomainEventPayloadS
   // server runs the registered handler directly for that tenant.
   jobId: z.string().optional().describe('Original job id (direct registry execution)'),
   executionId: z.string().optional().describe('Unique Temporal run id for this forwarded execution'),
+  requestId: z.string().uuid().optional().describe('Correlated completion request for synchronous server execution'),
   data: z.record(z.string(), z.unknown()).optional().describe('Original job data (direct registry execution)'),
 }).describe('Payload for MAINTENANCE_JOB_REQUESTED');
 

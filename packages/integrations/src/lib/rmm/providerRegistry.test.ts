@@ -43,6 +43,21 @@ describe('RMM provider registry', () => {
     });
   });
 
+  it('exposes UniFi metadata gated by enterprise', () => {
+    const unifi = getRmmProviderMetadata('unifi');
+    expect(unifi).toBeDefined();
+    expect(unifi?.title).toBe('UniFi');
+    expect(unifi?.icon).toBe('unifi');
+    expect(unifi?.requiresEnterprise).toBe(true);
+    expect(unifi?.capabilities).toEqual({
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: false,
+    });
+  });
+
   it('exposes Datto RMM metadata as an Enterprise provider', () => {
     const datto = getRmmProviderMetadata('datto');
     expect(datto).toBeDefined();

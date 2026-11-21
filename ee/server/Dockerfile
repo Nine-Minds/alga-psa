@@ -5,8 +5,13 @@
 # Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
 # and broke bundled Vault provider initialization in the blue deployment.
 FROM node:26.1.0-alpine
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
+    findutils \
+    setpriv \
     postgresql-client \
     redis \
     graphicsmagick \
@@ -21,6 +26,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-dejavu \
+    font-liberation \
     ffmpeg
 
 # Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
@@ -72,8 +79,8 @@ COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
 COPY ./server/tsconfig.json ./server/
 COPY ./server/index.ts ./server/
-COPY ./server/migrations/ ./server/migrations/
-COPY ./server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
 # server/scripts holds runtime entrypoints invoked at boot, notably
 # create-tenant.ts which the appliance bootstrap runs to seed the initial
@@ -82,9 +89,9 @@ COPY ./server/scripts/ ./server/scripts/
 
 # Copy EE-specific files
 COPY ./ee/server/src /app/ee/server/src
-COPY ./ee/server/migrations/ ./server/migrations/
-COPY ./ee/server/seeds/ ./server/seeds/
-COPY ./ee/server/seeds/ /app/ee/server/seeds/
+COPY --chown=1000:1000 ./ee/server/migrations/ ./server/migrations/
+COPY --chown=1000:1000 ./ee/server/seeds/ ./server/seeds/
+COPY --chown=1000:1000 ./ee/server/seeds/ /app/ee/server/seeds/
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json
@@ -92,6 +99,9 @@ COPY packages/core/package.json /app/packages/core/package.json
 # Copy the entrypoint with its runtime mode already set. Keeping this as image
 # metadata avoids starting a throwaway build container solely to run chmod.
 COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
 
 # The image must also run as a non-root user (the browser lane runs it as
 # 1000:1000; hardened deployments may too). At runtime the server creates
@@ -100,7 +110,11 @@ COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
 # that cannot create logs/ throws. Give that user the directory, as the old
 # test image did.
 RUN chown 1000:1000 /app/server /app/server/tsconfig.json
+RUN install -d -o 1000 -g 1000 -m 0755 /data/files && \
+    install -d -o 1000 -g 1000 -m 0700 /run/secrets
 
 EXPOSE 3000
 ENV NODE_ENV=production
+ENV HOME=/home/node
+USER 1000:1000
 ENTRYPOINT ["/app/entrypoint.sh"]

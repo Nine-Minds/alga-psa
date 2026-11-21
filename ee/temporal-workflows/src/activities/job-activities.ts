@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { createLogger, format, transports } from 'winston';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin';
+import { getEventBus } from '@alga-psa/event-bus';
 import type { Knex } from 'knex';
 import {
   workflowOneTimeScheduledRunHandler,
@@ -39,7 +41,9 @@ const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const MIGRATION_APPLY_JOB = 'migration_apply';
 const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
+const FINALIZE_LINK_ACCEPTED_QUOTE_JOB = 'finalize-link-accepted-quote';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+const SERVER_JOB_EXECUTION_TIMEOUT_MS = 9 * 60 * 1000;
 
 // Configure logger
 const logger = createLogger({
@@ -221,6 +225,29 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   };
   registerForwardedJobHandler(RMM_ALERT_RECONCILIATION_JOB);
   registerForwardedJobHandler(HUNTRESS_INCIDENT_POLL_JOB);
+  const forwardJobToServerAndAwait = (jobName: string) =>
+    async (jobId: string, data: Record<string, unknown>) => {
+      const requestId = randomUUID();
+      const eventBus = getEventBus();
+      await eventBus.beginRequest(requestId, Math.ceil(SERVER_JOB_EXECUTION_TIMEOUT_MS / 1000) + 120);
+      try {
+        await publishEvent({
+          eventType: 'MAINTENANCE_JOB_REQUESTED',
+          payload: {
+            tenantId: (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+            occurredAt: new Date().toISOString(),
+            jobName,
+            jobId,
+            requestId,
+            data: data ?? {},
+          },
+        }, { strict: true });
+        await eventBus.waitForRequest(requestId, SERVER_JOB_EXECUTION_TIMEOUT_MS);
+      } catch (error) {
+        await eventBus.clearRequest(requestId);
+        throw error;
+      }
+    };
   // Device sync reaches provider clients under ee/server, so it forwards to the
   // server like the other RMM jobs rather than running in the worker.
   registerForwardedJobHandler(RMM_DEVICE_SYNC_JOB);
@@ -262,10 +289,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // PDF generation), so the worker forwards them like the jobs above.
   registerForwardedJobHandler('invoice_zip');
   registerForwardedJobHandler('invoice_email');
+  // Document thumbnail/preview generation reads files with server-image tools,
+  // so forward it across the same execution boundary.
+  registerForwardedJobHandler('generate-document-previews');
   // Scheduled comment publication reaches server-local ticket settings and job
   // modules, so execute it through the same server-side forwarding boundary.
   registerForwardedJobHandler(PUBLISH_SCHEDULED_COMMENT_JOB);
   registerForwardedJobHandler(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true });
+
+  // Quote acceptance finalization uses server-only billing and storage services.
+  // Keep the acceptance decision committed independently, then let the server
+  // generate the signed PDF and send its confirmation through this retryable job.
+  registerJobHandlerForActivities(
+    FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+    forwardJobToServerAndAwait(FINALIZE_LINK_ACCEPTED_QUOTE_JOB),
+  );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
@@ -417,6 +455,12 @@ export async function executeJobHandler(input: {
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     });
+    // Quote finalization must use Temporal's activity retry policy when the
+    // server-side execution handoff fails. Returning success:false would fail
+    // the workflow without retrying this activity.
+    if (jobName === FINALIZE_LINK_ACCEPTED_QUOTE_JOB) {
+      throw error;
+    }
     return { success: false, error: errorMessage };
   }
 }

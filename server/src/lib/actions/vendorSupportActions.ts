@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 import logger from '@alga-psa/core/logger';
 import { getAppVersion } from '@/lib/utils/version';
+import { submitVendorSupportIntake } from '@/lib/vendorSupport/intake';
 
 const SUBMISSION_INTERVAL_MS = 60_000;
 
@@ -25,7 +26,7 @@ export type VendorSupportRequestError =
   | 'send_failed';
 
 export type VendorSupportRequestResult =
-  | { success: true }
+  | { success: true; ticketNumber?: string }
   | { success: false; error: VendorSupportRequestError };
 
 /**
@@ -50,6 +51,52 @@ export const submitVendorSupportRequest = withAuth(async (
     return { success: false, error: 'rate_limited' };
   }
 
+  const { knex } = await createTenantKnex(tenant);
+  const tenantRow = await tenantDb(knex, tenant).table('tenants').first('client_name');
+
+  const userName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username;
+  const edition: 'CE' | 'EE' = process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? 'EE' : 'CE';
+
+  const request = {
+    tenantName: tenantRow?.client_name || 'Unknown',
+    tenantId: tenant,
+    userName,
+    userEmail: user.email,
+    category: parsed.data.category,
+    subject: parsed.data.subject,
+    description: parsed.data.description,
+    edition,
+    isOnPrem: await isSelfHostLicensing().catch(() => false),
+    appVersion: getAppVersion(),
+    pageUrl: parsed.data.pageUrl,
+  };
+
+  // The intake API resolves the submitting client and contact before creating
+  // the ticket; email is the fallback for every failure, including the window
+  // before the endpoint is live.
+  const intake = await submitVendorSupportIntake({
+    tenantId: request.tenantId,
+    tenantName: request.tenantName,
+    userName: request.userName,
+    userEmail: request.userEmail,
+    category: request.category,
+    subject: request.subject,
+    description: request.description,
+    edition: request.edition,
+    onPrem: request.isOnPrem,
+    appVersion: request.appVersion,
+    pageUrl: request.pageUrl,
+  });
+
+  if (intake.ok === true) {
+    lastSubmissionByUser.set(user.user_id, now);
+    return intake.ticketNumber ? { success: true, ticketNumber: intake.ticketNumber } : { success: true };
+  }
+
+  logger.warn(
+    `[submitVendorSupportRequest] Support intake API unavailable (${intake.reason}); falling back to email`,
+  );
+
   // Imported lazily so the email package (and its provider SDKs) stay out of
   // the module graph until a request is actually submitted.
   const { getSystemEmailService, sendVendorSupportRequestEmail } = await import('@alga-psa/email');
@@ -59,25 +106,8 @@ export const submitVendorSupportRequest = withAuth(async (
     return { success: false, error: 'email_not_configured' };
   }
 
-  const { knex } = await createTenantKnex(tenant);
-  const tenantRow = await tenantDb(knex, tenant).table('tenants').first('client_name');
-
-  const userName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username;
-
   try {
-    await sendVendorSupportRequestEmail({
-      tenantName: tenantRow?.client_name || 'Unknown',
-      tenantId: tenant,
-      userName,
-      userEmail: user.email,
-      category: parsed.data.category,
-      subject: parsed.data.subject,
-      description: parsed.data.description,
-      edition: process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? 'EE' : 'CE',
-      isOnPrem: await isSelfHostLicensing().catch(() => false),
-      appVersion: getAppVersion(),
-      pageUrl: parsed.data.pageUrl,
-    });
+    await sendVendorSupportRequestEmail(request);
   } catch (error) {
     logger.error('[submitVendorSupportRequest] Failed to send support request', error);
     return { success: false, error: 'send_failed' };

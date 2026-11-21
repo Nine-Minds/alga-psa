@@ -61,6 +61,8 @@ export interface ContractLineEditDraft {
     round_up_to_nearest?: number | null;
     location_id?: string | null;
     invoice_line_description?: string | null;
+    /** Muted second line under the bundle title (Fixed lines). */
+    invoice_line_subtitle?: string | null;
     start_date?: string | null;
     end_date?: string | null;
   };
@@ -107,7 +109,7 @@ export const getContractLineEditVersion = withAuth(async (
 
 const LINE_FIELDS = [
   'billing_timing', 'cadence_owner', 'minimum_billable_time', 'round_up_to_nearest',
-  'location_id', 'invoice_line_description', 'start_date', 'end_date',
+  'location_id', 'invoice_line_description', 'invoice_line_subtitle', 'start_date', 'end_date',
 ] as const;
 
 const finiteNonNegative = (value: unknown, label: string) => {

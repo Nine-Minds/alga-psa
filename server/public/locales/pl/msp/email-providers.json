@@ -418,6 +418,7 @@
         "oauthStatus": "Stan OAuth",
         "connected": "Połączony",
         "notConnected": "Nie podłączony",
+        "reauthorizationRequired": "Wymagana ponowna autoryzacja",
         "reconnectOauth": "Połącz ponownie OAuth",
         "authorizeUrl": "Autoryzuj adres URL",
         "tokenUrl": "Adres URL tokena",
@@ -494,6 +495,7 @@
       "statusLabel": "Stan OAuth",
       "connected": "Połączono",
       "notConnected": "Nie podłączono",
+      "reauthorizationRequired": "Wymagana ponowna autoryzacja",
       "authorizing": "Autoryzowanie...",
       "reconnect": "Połącz ponownie OAuth"
     },
@@ -1084,6 +1086,7 @@
       "noClient": "Nie dopasowano klienta",
       "outcome": {
         "assignClient": "Zgłoszenie przypisane do klienta „{{client}}”",
+        "matchedClient": "dopasowany klient",
         "fallback": "Nie dopasowano klienta — zgłoszenie przekierowano do awaryjnego miejsca docelowego",
         "none": "Reguła nie rozstrzygnęła — kontynuowane jest normalne przetwarzanie",
         "setDestination": "Zgłoszenie przekierowano do wybranego miejsca docelowego",
@@ -1167,5 +1170,57 @@
         "users": "Nie udało się wczytać użytkowników. Spróbuj ponownie."
       }
     }
+  },
+  "quarantine": {
+    "title": "Przychodzące wiadomości w kwarantannie",
+    "description": "Wiadomości przychodzące, które odrzucono zamiast dodać do zgłoszenia. Przejrzyj je i odrzuć te, które obsłużono.",
+    "backToSettings": "Wróć do ustawień poczty",
+    "openQueue": "Wiadomości w kwarantannie",
+    "empty": "Brak wiadomości w kwarantannie dla tych filtrów.",
+    "loadError": "Nie udało się wczytać wiadomości w kwarantannie",
+    "dismissError": "Nie udało się odrzucić wpisu",
+    "dismissed": "Wpis odrzucony",
+    "noSubject": "(brak tematu)",
+    "dismiss": "Odrzuć",
+    "filters": {
+      "mailbox": "Skrzynka",
+      "reason": "Powód",
+      "status": "Status",
+      "allMailboxes": "Wszystkie skrzynki",
+      "allReasons": "Wszystkie powody",
+      "allStatuses": "Wszystkie statusy",
+      "ticket": "Filtrowanie według jednego zgłoszenia",
+      "clearTicket": "Pokaż wszystkie zgłoszenia"
+    },
+    "status": {
+      "open": "Otwarty",
+      "dismissed": "Odrzucony"
+    },
+    "columns": {
+      "mailbox": "Skrzynka",
+      "sender": "Nadawca",
+      "subject": "Temat",
+      "reason": "Powód",
+      "ticket": "Zgłoszenie",
+      "received": "Odebrano",
+      "status": "Status",
+      "actions": "Akcje"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Nadawcy nie ma w zgłoszeniu",
+      "reply_outside_sender_audience": "Odpowiedź poza odbiorcami powiadomienia",
+      "co_managed_token_refused": "Odrzucono link odpowiedzi współzarządzania",
+      "co_managed_token_unserved": "Wątek współzarządzania nie jest tu akceptowany",
+      "co_managed_sender_unauthenticated": "Nie zweryfikowano nadawcy współzarządzania"
+    },
+    "banner_one": "{{count}} wiadomość przychodząca do tego zgłoszenia trafiła do kwarantanny",
+    "banner_few": "{{count}} wiadomości przychodzące do tego zgłoszenia trafiły do kwarantanny",
+    "banner_many": "{{count}} wiadomości przychodzących do tego zgłoszenia trafiło do kwarantanny",
+    "banner_other": "{{count}} wiadomości przychodzącej do tego zgłoszenia trafiło do kwarantanny",
+    "bannerLink": "Przejrzyj wiadomości w kwarantannie",
+    "bannerAskAdmin_one": "Poproś administratora poczty o jej przejrzenie.",
+    "bannerAskAdmin_few": "Poproś administratora poczty o ich przejrzenie.",
+    "bannerAskAdmin_many": "Poproś administratora poczty o ich przejrzenie.",
+    "bannerAskAdmin_other": "Poproś administratora poczty o ich przejrzenie."
   }
 }

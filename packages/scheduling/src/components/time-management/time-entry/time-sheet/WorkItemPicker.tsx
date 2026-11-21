@@ -17,8 +17,6 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getSchedulingClients } from '../../../../actions/clientInteractionLookupActions';
-import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getErrorMessage,
@@ -54,7 +52,6 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [users, setUsers] = useState<IUser[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -157,12 +154,8 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [fetchedUsers, fetchedClients] = await Promise.all([
-          getAllUsersBasic(),
-          getSchedulingClients()
-        ]);
+        const fetchedUsers = await getAllUsersBasic();
         setUsers(fetchedUsers);
-        setClients(fetchedClients);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -534,7 +527,6 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                   onFilterStateChange={setFilterState}
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={setClientTypeFilter}
-                  clients={clients}
                   fitContent
                 />
               </div>

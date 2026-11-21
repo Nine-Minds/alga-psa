@@ -27,6 +27,9 @@ function buildMockKnex(initialRow?: { settings?: unknown }) {
 import {
   getQuoteApprovalWorkflowSettings,
   setQuoteApprovalWorkflowRequired,
+  getQuoteEmailLinkReviewSettings,
+  setQuoteEmailLinkReviewSettings,
+  validateQuoteEmailLinkLifetimeHours,
 } from '../../src/lib/quoteApprovalSettings';
 
 const TENANT = 'test-tenant';
@@ -127,5 +130,48 @@ describe('quoteApprovalSettings', () => {
       const result = await setQuoteApprovalWorkflowRequired(knex, TENANT, true);
       expect(result).toEqual({ approvalRequired: true });
     });
+  });
+});
+
+describe('quote email link review settings', () => {
+  it('defaults to enabled with the default lifetime when the key, settings or row is missing', async () => {
+    for (const row of [undefined, { settings: null }, { settings: {} }, { settings: { billing: { quotes: { approvalRequired: true } } } }]) {
+      const { knex } = buildMockKnex(row as any);
+      expect(await getQuoteEmailLinkReviewSettings(knex, TENANT)).toEqual({ enabled: true, linkLifetimeHours: null });
+    }
+  });
+
+  it('reads stored values, including disabled and a lifetime', async () => {
+    const { knex } = buildMockKnex({ settings: { billing: { quotes: { emailLinkReview: { enabled: false, linkLifetimeHours: 72 } } } } });
+    expect(await getQuoteEmailLinkReviewSettings(knex, TENANT)).toEqual({ enabled: false, linkLifetimeHours: 72 });
+  });
+
+  it('setter round-trips and preserves sibling settings', async () => {
+    const { knex, getInserted } = buildMockKnex({ settings: { other: 1, billing: { quotes: { approvalRequired: true } } } });
+    knex.fn = { now: () => 'NOW()' };
+    const saved = await setQuoteEmailLinkReviewSettings(knex, TENANT, { enabled: false, linkLifetimeHours: 96 });
+    expect(saved).toEqual({ enabled: false, linkLifetimeHours: 96 });
+    expect(JSON.parse(getInserted()[0].settings)).toEqual({
+      other: 1,
+      billing: { quotes: { approvalRequired: true, emailLinkReview: { enabled: false, linkLifetimeHours: 96 } } },
+    });
+    expect(await getQuoteEmailLinkReviewSettings(knex, TENANT)).toEqual({ enabled: false, linkLifetimeHours: 96 });
+    // approval setting is untouched
+    expect(await getQuoteApprovalWorkflowSettings(knex, TENANT)).toEqual({ approvalRequired: true });
+  });
+
+  it('validates lifetime server-side', () => {
+    expect(validateQuoteEmailLinkLifetimeHours(null)).toBeNull();
+    expect(validateQuoteEmailLinkLifetimeHours(24)).toBe(24);
+    expect(validateQuoteEmailLinkLifetimeHours(2160)).toBe(2160);
+    for (const bad of [23, 2161, 1.5, Number.NaN, '48', 0, -1]) {
+      expect(() => validateQuoteEmailLinkLifetimeHours(bad)).toThrow();
+    }
+  });
+
+  it('setter rejects an invalid lifetime without writing', async () => {
+    const { knex, getInserted } = buildMockKnex(undefined);
+    await expect(setQuoteEmailLinkReviewSettings(knex, TENANT, { enabled: true, linkLifetimeHours: 5 })).rejects.toThrow();
+    expect(getInserted()).toHaveLength(0);
   });
 });

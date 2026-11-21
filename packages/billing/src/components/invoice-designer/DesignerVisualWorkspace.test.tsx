@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { millimetersToPixels } from '@alga-psa/types';
 import { useInvoiceDesignerStore } from './state/designerStore';
+import { exportWorkspaceToTemplateAst } from './ast/workspaceAst';
 import { DesignerVisualWorkspace } from './DesignerVisualWorkspace';
 import type { DesignerNode } from './state/designerStore';
 
@@ -13,8 +14,7 @@ const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 const getTenantBrandingForDocumentPreviewMock = vi.fn();
-const templateRendererMock = vi.fn();
-const paperInvoiceMock = vi.fn();
+const previewFrameMock = vi.fn();
 
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
   useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
@@ -44,21 +44,12 @@ vi.mock('@alga-psa/billing/actions/tenantBrandingPreview', () => ({
     getTenantBrandingForDocumentPreviewMock(...args),
 }));
 
-vi.mock('../billing-dashboard/PaperInvoice', () => ({
-  default: (props: { children: React.ReactNode; templateAst?: unknown }) => {
-    paperInvoiceMock(props);
-    return <div data-automation-id="paper-invoice-mock">{props.children}</div>;
-  },
-}));
-
-vi.mock('../billing-dashboard/TemplateRenderer', () => ({
-  TemplateRenderer: (props: any) => {
-    templateRendererMock(props);
-    return (
-      <div data-automation-id="template-renderer-mock">
-        {props?.invoiceData?.invoiceNumber ?? 'NO_INVOICE'}::{props?.template?.template_id ?? 'NO_TEMPLATE'}
-      </div>
-    );
+// The preview is the printed pages, drawn server-side and shown in an iframe. jsdom has no iframe
+// document to lay out, so the frame is stubbed and the HTML it was handed is asserted instead.
+vi.mock('./preview/PreviewSheetFrame', () => ({
+  PreviewSheetFrame: (props: any) => {
+    previewFrameMock(props);
+    return <div data-automation-id="preview-sheet-frame-mock">{props.html}</div>;
   },
 }));
 
@@ -187,8 +178,7 @@ describe('DesignerVisualWorkspace', () => {
     mapDbInvoiceToWasmViewModelMock.mockReset();
     runAuthoritativeInvoiceTemplatePreviewMock.mockReset();
     getTenantBrandingForDocumentPreviewMock.mockReset();
-    templateRendererMock.mockReset();
-    paperInvoiceMock.mockReset();
+    previewFrameMock.mockReset();
     getTenantBrandingForDocumentPreviewMock.mockResolvedValue(null);
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult());
     getInvoiceForRenderingMock.mockResolvedValue({ invoice_id: 'inv-1' });
@@ -217,6 +207,7 @@ describe('DesignerVisualWorkspace', () => {
         status: 'success',
         html: `<div>${invoiceData?.invoiceNumber ?? 'N/A'}</div>`,
         css: '',
+        documentHtml: `<html><body><div>${invoiceData?.invoiceNumber ?? 'N/A'}</div></body></html>`,
         contentHeightPx: 1180,
       },
       verification: {
@@ -255,15 +246,17 @@ describe('DesignerVisualWorkspace', () => {
     expect(afterCount).toBe(beforeCount);
   });
 
-  it('uses PaperInvoice + TemplateRenderer preview surface instead of design-canvas scaffolds', async () => {
+  it('draws the preview as the pages the invoice prints as, not a scrolling canvas', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
-    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
+    await waitFor(() => expect(previewFrameMock).toHaveBeenCalled());
     expect(screen.queryByText('Designer Shell')).toBeNull();
-    expect(document.querySelector('[data-automation-id=\"paper-invoice-mock\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"template-renderer-mock\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"preview-sheet-frame-mock\"]')).toBeTruthy();
+    // The server's paginated document, verbatim — not a fragment re-rendered on the client.
+    expect(previewFrameMock.mock.calls.at(-1)?.[0]?.html).toContain('<html>');
+    expect(previewFrameMock.mock.calls.at(-1)?.[0]?.automationId).toBe('invoice-designer-preview-frame');
   });
 
   it('exports page width, height, and padding from resolved print settings into the authoritative preview template', async () => {
@@ -278,9 +271,12 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
-    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
+    await waitFor(() => expect(previewFrameMock).toHaveBeenCalled());
 
-    const previewTemplateAst = templateRendererMock.mock.calls.at(-1)?.[0]?.template?.templateAst;
+    // The workspace the preview ran against, exported exactly as the server action exports it.
+    const previewTemplateAst = exportWorkspaceToTemplateAst(
+      runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0]?.workspace as any
+    ) as any;
     const pageSection = previewTemplateAst?.layout?.children?.[0];
 
     expect(previewTemplateAst?.metadata?.printSettings).toEqual({
@@ -292,27 +288,18 @@ describe('DesignerVisualWorkspace', () => {
     expect(pageSection?.style?.inline?.width).toBe('794px');
     expect(pageSection?.style?.inline?.height).toBe('1123px');
     expect(pageSection?.style?.inline?.padding).toBe(`${Math.round(millimetersToPixels(12))}px`);
-
-    const paperInvoiceProps = paperInvoiceMock.mock.calls.at(-1)?.[0];
-    expect(paperInvoiceProps?.templateAst?.metadata?.printSettings).toEqual({
-      paperPreset: 'A4',
-      marginMm: 12,
-    });
   });
 
-  it('forces TemplateRenderer rerender on manual rerun even without workspace deltas', async () => {
+  it('re-renders the preview on manual rerun even without workspace deltas', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
-    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
-    const firstTemplateId = templateRendererMock.mock.calls.at(-1)?.[0]?.template?.template_id;
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const baselineRuns = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
     fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
-    await waitFor(() => expect(templateRendererMock.mock.calls.length).toBeGreaterThan(1));
-    const nextTemplateId = templateRendererMock.mock.calls.at(-1)?.[0]?.template?.template_id;
-
-    expect(typeof firstTemplateId).toBe('string');
-    expect(typeof nextTemplateId).toBe('string');
-    expect(nextTemplateId).not.toBe(firstTemplateId);
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineRuns)
+    );
   });
 
   it('updates sample scenario selection while in Sample source mode', async () => {
@@ -686,8 +673,8 @@ describe('DesignerVisualWorkspace', () => {
   it('recomputes preview when layout structure changes affect rendered output', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
-    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
-    const baselineCalls = templateRendererMock.mock.calls.length;
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
     act(() => {
       const store = useInvoiceDesignerStore.getState();
@@ -721,13 +708,13 @@ describe('DesignerVisualWorkspace', () => {
     });
 
     await waitFor(() => {
-      expect(templateRendererMock.mock.calls.length).toBeGreaterThan(baselineCalls);
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls);
     }, { timeout: 2500 });
     await waitFor(() => {
-      const hasTableNodeCall = templateRendererMock.mock.calls.some((call) =>
-        JSON.stringify(call[0]?.template?.templateAst ?? {}).includes('table-layout-change')
+      const hasTableNode = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
+        JSON.stringify(call[0]?.workspace ?? {}).includes('table-layout-change')
       );
-      expect(hasTableNodeCall).toBe(true);
+      expect(hasTableNode).toBe(true);
     });
   });
 

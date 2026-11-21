@@ -27,22 +27,22 @@
  * describe the row itself.
  */
 import { tagSet } from '@alga-psa/predicates/sql';
-import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
+import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, PredicateValue, QuerySchema, SqlFragment } from '@alga-psa/predicates';
 import { ticketSlaBreachedSql } from './ticketSlaSql';
 
-type Resolver = (alias: string, value: PredicateLiteral | PredicateLiteral[] | undefined, nowIso: string, operator: PredicateOperator) => SqlFragment;
+type Resolver = (alias: string, value: PredicateValue | undefined, nowIso: string, operator: PredicateOperator) => SqlFragment;
 
-const scalar = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral => {
-  const resolved = Array.isArray(value) ? value[0] : value;
-  if (resolved === undefined) throw new Error('Predicate value is required for this ticket filter');
-  return resolved;
+const scalar = (value: PredicateValue | undefined): PredicateLiteral => {
+  const result = Array.isArray(value) ? value[0] : value;
+  if (result === undefined) throw new Error('Computed ticket predicate requires a scalar value');
+  return result;
 };
-const list = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const list = (value: PredicateValue | undefined): PredicateLiteral[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
 
 const COMPUTED_RESOLVERS = (() => {
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
   // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
-  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateLiteral | PredicateLiteral[] | undefined): SqlFragment => {
+  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateValue | undefined): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
@@ -185,6 +185,31 @@ const COMPUTED_RESOLVERS = (() => {
       ],
     };
   },
+
+  /**
+   * `seat_responsibility equals client_it|msp`: who is responsible for a ticket of a client in a live
+   * co-managed seat arrangement (`co_managed_seat_ticket_work`, see seatTicketWork). A ticket with no
+   * work row is the MSP's. A work row written under an earlier arrangement does not count: under the
+   * client's current arrangement the ticket starts with the MSP. A ticket whose client has no live
+   * arrangement has no responsibility, so it matches neither value.
+   */
+  seat_responsibility: (alias, value) => {
+    const live = `EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+        AND __sa.client_id = ?? AND __sa.state = 'active'`;
+    const clientIt = `EXISTS (SELECT 1 FROM co_managed_seat_ticket_work AS __sw WHERE __sw.tenant = ??
+        AND __sw.ticket_id = ?? AND __sw.responsibility = 'client_it'
+        AND EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+          AND __sa.arrangement_id = __sw.arrangement_id AND __sa.client_id = ?? AND __sa.state = 'active'))`;
+    const itBindings = [`${alias}.tenant`, `${alias}.ticket_id`, `${alias}.tenant`, `${alias}.client_id`];
+    switch (scalar(value)) {
+      case 'client_it':
+        return { sql: clientIt, bindings: itBindings };
+      case 'msp':
+        return { sql: `${live}) AND NOT ${clientIt}`, bindings: [`${alias}.tenant`, `${alias}.client_id`, ...itBindings] };
+      default:
+        return { sql: 'FALSE', bindings: [] };
+    }
+  },
   } satisfies Record<string, Resolver>;
 })();
 
@@ -202,6 +227,7 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   category: { type: 'uuid', operators: ['in', 'not_in'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
+  seat_responsibility: { type: 'string', operators: ['equals'] },
 };
 
 export const TICKET_COMPUTED_ATTRIBUTES = Object.keys(COMPUTED_RESOLVERS) as TicketComputedAttributeName[];
@@ -239,6 +265,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       priority_id: uuidColumn('priority_id'),
       category_id: uuidColumn('category_id'),
       subcategory_id: uuidColumn('subcategory_id'),
+      location_id: uuidColumn('location_id', ['equals', 'in', 'not_in', 'is_empty', 'is_not_empty']),
       assigned_to: uuidColumn('assigned_to'),
       assigned_team_id: uuidColumn('assigned_team_id'),
       master_ticket_id: uuidColumn('master_ticket_id', ['is_empty', 'is_not_empty']),
@@ -252,6 +279,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       category: computed('category', nowIso),
       sla_state: computed('sla_state', nowIso),
       involves_user: computed('involves_user', nowIso),
+      seat_responsibility: computed('seat_responsibility', nowIso),
     },
     relations: {
       client: {
@@ -260,7 +288,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         local: 'client_id',
         foreign: 'client_id',
         attributes: {
-          id: uuidColumn('client_id', ['equals', 'in']),
+          id: uuidColumn('client_id', ['equals', 'in', 'not_in']),
           tags: tagSet({ taggedType: 'client', local: 'client_id' }),
         },
       },
@@ -272,6 +300,16 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         attributes: {
           id: uuidColumn('contact_name_id', ['equals', 'in']),
           tags: tagSet({ taggedType: 'contact', local: 'contact_name_id' }),
+          // "Where the requester works", as a set: a person can be linked to several locations, so
+          // `in` means "linked to any of these" exactly as a tag clause does.
+          locations: {
+            kind: 'set',
+            table: 'contact_locations',
+            local: 'contact_name_id',
+            foreign: 'contact_name_id',
+            valueColumn: 'location_id',
+            valueType: 'uuid',
+          },
         },
       },
     },

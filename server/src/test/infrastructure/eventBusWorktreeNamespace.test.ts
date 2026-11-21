@@ -16,6 +16,10 @@ it('isolates worktree routes while matching publishers and same-route replicas s
   const channel = `worktree-route-${randomUUID()}`;
   const prefixA = `route-isolation-a:${randomUUID()}:`;
   const prefixB = `route-isolation-b:${randomUUID()}:`;
+  const streamPrefixA = `event-stream-route-a:${randomUUID()}:`;
+  const streamPrefixB = `event-stream-route-b:${randomUUID()}:`;
+  const consumerGroupA = `route-a-processors-${randomUUID()}`;
+  const consumerGroupB = `route-b-processors-${randomUUID()}`;
   const control = createClient({
     url: `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || '6379'}`,
     password: process.env.REDIS_PASSWORD || undefined,
@@ -35,6 +39,8 @@ it('isolates worktree routes while matching publishers and same-route replicas s
 
   vi.stubEnv('REDIS_STREAM_BLOCKING_TIMEOUT', '100');
   vi.stubEnv('REDIS_PREFIX', prefixA);
+  vi.stubEnv('REDIS_EVENT_STREAM_PREFIX', streamPrefixA);
+  vi.stubEnv('REDIS_EVENT_CONSUMER_GROUP', consumerGroupA);
   try {
     await control.connect();
 
@@ -52,6 +58,8 @@ it('isolates worktree routes while matching publishers and same-route replicas s
     // does, but points at the same Redis endpoint and uses the same group name.
     vi.resetModules();
     vi.stubEnv('REDIS_PREFIX', prefixB);
+    vi.stubEnv('REDIS_EVENT_STREAM_PREFIX', streamPrefixB);
+    vi.stubEnv('REDIS_EVENT_CONSUMER_GROUP', consumerGroupB);
     const routeB = await import('../../../../packages/event-bus/src/eventBus');
     busB = new (routeB.EventBus as any)();
     busB.consumerName = `route-b-${process.pid}`;
@@ -67,10 +75,10 @@ it('isolates worktree routes while matching publishers and same-route replicas s
     await busB.publish({ ...event, payload: { ...event.payload, entryId: randomUUID() } }, { channel, eventId, strict: true });
     await expect.poll(() => deliveries.b, { timeout: 5000 }).toBe(1);
     expect(deliveries.a1 + deliveries.a2).toBe(1);
-    const groupsA = await control.xInfoGroups(`${prefixA}event-stream:${channel}:SCHEDULE_ENTRY_CREATED`);
-    const groupsB = await control.xInfoGroups(`${prefixB}event-stream:${channel}:SCHEDULE_ENTRY_CREATED`);
-    expect(groupsA.map(({ name }) => name)).toContain('event-processors');
-    expect(groupsB.map(({ name }) => name)).toContain('event-processors');
+    const groupsA = await control.xInfoGroups(`${prefixA}${streamPrefixA}${channel}:SCHEDULE_ENTRY_CREATED`);
+    const groupsB = await control.xInfoGroups(`${prefixB}${streamPrefixB}${channel}:SCHEDULE_ENTRY_CREATED`);
+    expect(groupsA.map(({ name }) => name)).toContain(consumerGroupA);
+    expect(groupsB.map(({ name }) => name)).toContain(consumerGroupB);
     expect(groupsA[0].consumers).toBeGreaterThanOrEqual(1);
     expect(groupsB[0].consumers).toBeGreaterThanOrEqual(1);
   } finally {

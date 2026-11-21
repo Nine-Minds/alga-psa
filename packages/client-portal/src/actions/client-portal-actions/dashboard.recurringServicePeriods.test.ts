@@ -30,6 +30,13 @@ vi.mock('next/headers.js', () => ({
   headers: vi.fn(),
 }));
 
+// Invoice activity is gated on the portal billing permission; this suite is
+// about the service-period copy, so the gate is open.
+vi.mock('./clientBillingPermissions', () => ({
+  hasClientBillingReadPermission: async () => true,
+  getClientIdFromPortalUser: vi.fn(),
+}));
+
 function buildChain(result: any) {
   const builder: any = {};
   builder.select = vi.fn(() => builder);

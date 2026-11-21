@@ -15,10 +15,10 @@ A change to an operator, a path kind or a value type starts here, then in the ta
 A clause is `{ path, operator, value? }`. A group is `{ join: 'and' | 'or', clauses }` and nests. An empty `and`
 group is true; an empty `or` group is false.
 
-Operators: `equals`, `not_equals`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`,
-`ends_with`, `not_contains`, `not_starts_with`, `not_ends_with`, `is_empty`, `is_not_empty`. `value` is a literal
-for single-value operators (a string for the text operators and their `not_` forms), a list for `in` and `not_in`,
-and absent for `is_empty` and `is_not_empty`.
+Operators: `equals`, `not_equals`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `contains_ci`,
+`not_contains_ci`, `starts_with`, `not_starts_with`, `ends_with`, `not_ends_with`, `is_empty`, `is_not_empty`.
+`value` is a literal for single-value operators (a string for text operators), a list for `in` and `not_in`, and
+absent for `is_empty` and `is_not_empty`.
 
 A path is either **scalar** (zero or one value) or **set-valued** (zero or more elements, such as tags).
 A path may cross relations (`contact.tags`); a relation hop that finds no row yields a missing value / empty set.
@@ -41,10 +41,12 @@ through `EXISTS` / `NOT EXISTS`, so `NULL` never leaks into a `NOT`.
 
 ## Text
 
-`contains`, `starts_with`, `ends_with` are **case-sensitive** substring, prefix and suffix tests on strings.
-`%`, `_` and `\` in the needle are literal. A non-string value never satisfies them.
+`contains`, `starts_with` and `ends_with` are **case-sensitive** string tests. `contains_ci` performs a substring
+test after Unicode lowercase conversion. `not_contains_ci` requires both operands to be present strings and tests
+absence of the needle; missing/non-string values return false, unlike the case-sensitive `not_` operators.
+`%`, `_` and `\` in a text needle are literal. A non-string value never satisfies a positive text test.
 
-`not_contains`, `not_starts_with` and `not_ends_with` are the family of negative text operators, defined as
+`not_contains`, `not_starts_with` and `not_ends_with` are the case-sensitive family of negative text operators, defined as
 exactly `NOT contains`, `NOT starts_with` and `NOT ends_with` over the full path:
 
 | Value | `not_contains` / `not_starts_with` / `not_ends_with` |
@@ -78,6 +80,16 @@ Only `in`, `not_in`, `is_empty`, `is_not_empty` are valid:
 
 Across a `many` relation the same words apply to the union of the related rows' values: `not_in` is
 `NOT EXISTS (a related row whose value is in the list)`.
+
+## Ids and sets across a hop
+
+Two shapes are named in the table because query schemas lean on them and they are easy to get wrong:
+
+- An **id column** (`uuid`, e.g. a ticket's `location_id`) is empty only when missing — an id is never
+  `''` — so `is_empty` is "no value" and `not_in` includes the rows that have none. Cases `location-*`.
+- A **set across a relation hop** (`contact.locations`, the requester's rows in `contact_locations`)
+  follows the set rules over the union of the related rows, and a missing hop is an empty set: `in` is
+  false, `not_in` and `is_empty` are true. Cases `contact-locations-*`.
 
 ## Complements
 
