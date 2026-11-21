@@ -1130,7 +1130,8 @@
       "ticketingFromDomainMismatch": "Adres nadawcy zgłoszeń musi korzystać ze skonfigurowanej domeny wychodzącej",
       "refreshFailed": "Nie udało się pobrać zaktualizowanych ustawień",
       "updateFailed": "Nie udało się zaktualizować ustawień poczty e-mail",
-      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365"
+      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Wprowadź ponownie hasło dla {{provider}}: adres serwera lub dane logowania uległy zmianie."
     },
     "inboundRules": {
       "notFound": "Nie znaleziono reguły poczty przychodzącej",

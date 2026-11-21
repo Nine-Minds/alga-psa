@@ -1130,7 +1130,8 @@
       "ticketingFromDomainMismatch": "Die Absenderadresse für Tickets muss die konfigurierte Versanddomain verwenden",
       "refreshFailed": "Die aktualisierten Einstellungen konnten nicht abgerufen werden",
       "updateFailed": "Die E-Mail-Einstellungen konnten nicht aktualisiert werden",
-      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden"
+      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden",
+      "secretRequiredAfterConnectionChange": "Geben Sie das Passwort für {{provider}} erneut ein: Die Serveradresse oder Anmeldedaten wurden geändert."
     },
     "inboundRules": {
       "notFound": "Regel für eingehende E-Mails nicht gefunden",
