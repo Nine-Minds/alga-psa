@@ -1167,7 +1167,9 @@
       "send_one": "⟦Şḗƞḓ {{count}} Ḗḿȧīŀ⟧",
       "send_other": "⟦Şḗƞḓ {{count}} Ḗḿȧīŀş⟧",
       "sending_one": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗ...⟧",
-      "sending_other": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗş...⟧"
+      "sending_other": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗş...⟧",
+      "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
+      "scheduling": "⟦Şƈħḗḓŭŀīƞɠ...⟧"
     },
     "toasts": {
       "noValidRecipients": "⟦Ƞȯ ṽȧŀīḓ řḗƈīƥīḗƞŧş ƒȯŭƞḓ⟧",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "⟦{{count}} īƞṽȯīƈḗş şḗƞŧ şŭƈƈḗşşƒŭŀŀẏ⟧",
       "sentFailure_one": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ {{count}} īƞṽȯīƈḗ⟧",
       "sentFailure_other": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ {{count}} īƞṽȯīƈḗş⟧",
-      "sentPartial": "⟦{{successCount}} şḗƞŧ, {{failureCount}} ƒȧīŀḗḓ⟧"
+      "sentPartial": "⟦{{successCount}} şḗƞŧ, {{failureCount}} ƒȧīŀḗḓ⟧",
+      "scheduled": "⟦Īƞṽȯīƈḗ ḗḿȧīŀ şƈħḗḓŭŀḗḓ⟧"
     },
     "errors": {
       "loadRecipients": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗƈīƥīḗƞŧ īƞƒȯ⟧",
-      "sendFailed": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ ḗḿȧīŀş⟧"
+      "sendFailed": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ ḗḿȧīŀş⟧",
+      "scheduleFailed": "⟦Ƒȧīŀḗḓ ŧȯ şƈħḗḓŭŀḗ īƞṽȯīƈḗ ḗḿȧīŀ⟧"
     }
   },
   "generateTab": {
@@ -2877,7 +2881,8 @@
       "invoiceDelete": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ḓḗŀḗŧḗ řḗʠŭīřḗḓ⟧",
       "invoiceAccess": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ȧƈƈḗşş ḓḗƞīḗḓ⟧",
       "otherClientInvoices": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ȧƈƈḗşş īƞṽȯīƈḗş ƒȯř ȧƞȯŧħḗř ƈŀīḗƞŧ⟧",
-      "invoiceRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ řḗȧḓ řḗʠŭīřḗḓ⟧"
+      "invoiceRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ řḗȧḓ řḗʠŭīřḗḓ⟧",
+      "invoiceSend": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ şḗƞḓ řḗʠŭīřḗḓ⟧"
     },
     "invoice": {
       "notFound": "⟦Īƞṽȯīƈḗ ƞȯŧ ƒȯŭƞḓ⟧",

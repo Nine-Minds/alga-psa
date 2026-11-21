@@ -1167,7 +1167,9 @@
       "send_one": "Send {{count}} Email",
       "send_other": "Send {{count}} Emails",
       "sending_one": "Sending {{count}} invoice...",
-      "sending_other": "Sending {{count}} invoices..."
+      "sending_other": "Sending {{count}} invoices...",
+      "schedule": "Schedule",
+      "scheduling": "Scheduling..."
     },
     "toasts": {
       "noValidRecipients": "No valid recipients found",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "{{count}} invoices sent successfully",
       "sentFailure_one": "Failed to send {{count}} invoice",
       "sentFailure_other": "Failed to send {{count}} invoices",
-      "sentPartial": "{{successCount}} sent, {{failureCount}} failed"
+      "sentPartial": "{{successCount}} sent, {{failureCount}} failed",
+      "scheduled": "Invoice email scheduled"
     },
     "errors": {
       "loadRecipients": "Failed to load recipient info",
-      "sendFailed": "Failed to send emails"
+      "sendFailed": "Failed to send emails",
+      "scheduleFailed": "Failed to schedule invoice email"
     }
   },
   "generateTab": {
