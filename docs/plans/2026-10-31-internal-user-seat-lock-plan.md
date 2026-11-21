@@ -18,18 +18,16 @@ Measured on real Postgres with the lock disabled: 8 concurrent
 ## Mechanism
 
 `checkInternalUserLicenseLimit(trx, tenant, opts)` requires a real `Knex.Transaction`
-(it throws for anything else). Its first statement is
+(it throws for anything else). Its first statement takes the shared advisory lock:
 
 ```sql
-SELECT pg_advisory_xact_lock(hashtext('internal_user_seats'), hashtext(<tenant>))
+SELECT pg_advisory_xact_lock(hashtext('internal_user_seats'), hashtext(<tenant text>))
 ```
 
-- `internal_user_seats` is the lock **namespace**, not a table.
-- The lock is transaction-scoped, so it lasts until commit or rollback and covers the
+- The transaction lock is held until commit or rollback and covers the
   check plus the insert, reactivation or invitation write that follows.
-- The key is per tenant: tenants never block each other.
-- Taking it again in the same transaction is a no-op, so callers may take it early
-  (`lockInternalUserSeats`) and then call the check.
+- The lock is per tenant: tenants never block each other.
+- Callers may take it early (`lockTenantSeatState`) and then call the check.
 
 ## Paths covered
 
@@ -79,11 +77,31 @@ so the tripwire does not catch their race (the no-lock runs above show it passin
 
 ## Lock order
 
-Every seat path takes the seat lock first, then row locks. Co-managed admission and SCIM
-reactivation were arranged to follow this (SCIM takes the seat lock before
-`FOR UPDATE` on the user row). Deactivate, role change, licence-count edits and
-invitation revoke do not take the seat lock, so they cannot invert. Co-managed
-provisioning and allocation changes take only their own row locks, never the seat lock.
+Seat admission paths first take the established transaction-scoped two-int4
+advisory lock:
+`pg_advisory_xact_lock(hashtext('internal_user_seats'), hashtext(String(tenant)))`.
+PostgreSQL `hashtext(text)` returns `int4`, so these are the namespace and
+tenant hash keys of the two-`int4` overload. Both are required to preserve the
+production identity introduced by revision `831cc4494e`; the one-key overload
+`pg_advisory_xact_lock(hashtext(tenant))` is a different lock and does not
+contend with already-deployed consumers. Keep this identity while old and new
+applications may overlap.
+
+The shared lock does not participate in PostgreSQL's row-lock graph and is held
+through admission and the corresponding write. Seat-defining user updates take
+this advisory lock before locking and reading the target user, then derive
+occupancy from that locked row plus the patch. They do not take a tenant-row
+lock before the co-managed entitlement and relationship locks.
+
+Co-managed allocation and user-admission paths retain their row order: sponsor
+entitlement, sponsor tenant, provisioning operation, customer relationship, then
+customer tenant (`FOR NO KEY UPDATE`); when reactivating an existing account, its
+user row follows. Co-managed acceptance locks sponsor entitlement, sponsor tenant,
+operation, and customer relationship, rechecks the administrator identity and
+permission rows, and only then takes the customer tenant lock. The advisory seat
+lock is independent of these row locks, so a seat update cannot hold the customer
+tenant row while waiting for entitlement or relationship locks. Co-managed
+allocation and acceptance do not acquire the seat advisory lock.
 
 ## `lock_timeout`
 
@@ -104,8 +122,8 @@ actor). MCP agent service users (`ee/server/src/lib/mcp/agents.ts`) are inserted
   admin retries.
 - `isCoManagedInvitationServed` runs while the seat lock is held (accept path and send
   path), so its latency extends the queue for that tenant.
-- `updateUser` reads the stored row before taking the lock; a concurrent deactivation
-  between that read and the write is treated conservatively at worst.
+- `UserService.update` takes the seat advisory lock before selecting the target user `FOR UPDATE`;
+  it derives seat transitions from that locked row plus the supplied patch.
 
 ## Tests
 

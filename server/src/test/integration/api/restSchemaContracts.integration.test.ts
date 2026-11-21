@@ -26,7 +26,10 @@ describe('REST query contracts against the migrated schema', () => {
   let tenant: string;
 
   beforeAll(async () => {
-    db = await createTestDbConnection({ recreate: false });
+    // The REST contract needs the development tenant/board fixtures. Other
+    // integration suites may leave the shared database bootstrapped without
+    // seeds, so establish the fixture set this suite depends on itself.
+    db = await createTestDbConnection({ recreate: true });
     const row = await db('tenants').first<{ tenant: string }>('tenant');
     if (!row) throw new Error('The integration database has no tenant fixture');
     tenant = row.tenant;
