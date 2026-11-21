@@ -202,8 +202,25 @@ export class TimeSheetService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters], () => this.resolveTimeSheetReadScope(context));
     if (delegated.handled) {
-      const { spec: sortSpec } = resolveTimeSheetListSort(options.sort);
+      const { field: sortField } = resolveTimeSheetListSort(options.sort);
       const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
+      const unsupportedRangeKeys: Array<keyof TimeSheetFilterData> = ['created_from', 'created_to', 'updated_from', 'updated_to'];
+      if (unsupportedRangeKeys.some((key) => effectiveFilters?.[key] !== undefined && effectiveFilters[key] !== null)) {
+        throw new ValidationError('Created and updated date filters are not supported for time sheets');
+      }
+
+      const timestampRanges: Partial<Record<keyof TimeSheetFilterData, 'submitted_at' | 'approved_at'>> = {
+        submitted_from: 'submitted_at',
+        submitted_to: 'submitted_at',
+        approved_from: 'approved_at',
+        approved_to: 'approved_at',
+      };
+      const periodRanges: Partial<Record<keyof TimeSheetFilterData, 'period_start' | 'period_end'>> = {
+        period_start_from: 'period_start',
+        period_start_to: 'period_start',
+        period_end_from: 'period_end',
+        period_end_to: 'period_end',
+      };
       const filtered = (delegated.value as any[]).filter((row) => {
         if (effectiveFilters?.user_id && row.user_id !== effectiveFilters.user_id) return false;
         if (effectiveFilters?.period_id && row.period_id !== effectiveFilters.period_id) return false;
@@ -217,26 +234,48 @@ export class TimeSheetService extends BaseService<any> {
             ['period_start_from', row.period_start], ['period_start_to', row.period_start],
             ['period_end_from', row.period_end], ['period_end_to', row.period_end],
           ];
-          for (const [key, actual] of ranges) {
+          for (const [key] of ranges) {
             const expected = effectiveFilters[key];
             if (expected === undefined || expected === null) continue;
-            const actualValue = actual == null ? '' : String(actual).slice(0, 10);
-            const expectedValue = String(expected).slice(0, 10);
-            if (key.endsWith('_from') && actualValue < expectedValue) return false;
-            if (key.endsWith('_to') && actualValue > expectedValue) return false;
-          }
-          if (effectiveFilters.created_from || effectiveFilters.created_to || effectiveFilters.updated_from || effectiveFilters.updated_to) {
-            throw new ValidationError('Created and updated date filters are not supported for time sheets');
+            const timestampField = timestampRanges[key];
+            if (timestampField) {
+              const actual = row[timestampField];
+              if (actual == null) return false;
+              const actualInstant = actual instanceof Date ? actual.getTime() : Date.parse(String(actual));
+              const expectedInstant = Date.parse(String(expected));
+              if (!Number.isFinite(actualInstant) || !Number.isFinite(expectedInstant)) return false;
+              if (key.endsWith('_from') && actualInstant < expectedInstant) return false;
+              if (key.endsWith('_to') && actualInstant > expectedInstant) return false;
+              continue;
+            }
+
+            const periodField = periodRanges[key];
+            if (periodField) {
+              const actual = row[periodField];
+              if (actual == null) return false;
+              const actualDate = formatDbDate(actual);
+              const expectedDate = String(expected).slice(0, 10);
+              if (key.endsWith('_from') && actualDate < expectedDate) return false;
+              if (key.endsWith('_to') && actualDate > expectedDate) return false;
+            }
           }
         }
         return true;
       });
-      const sortField = sortSpec.column.split('.').pop()!;
       const direction = options.order === 'asc' ? 1 : -1;
       filtered.sort((a, b) => {
         const left = a[sortField];
         const right = b[sortField];
-        const comparison = left == null ? (right == null ? 0 : 1) : right == null ? -1 : String(left).localeCompare(String(right), undefined, { numeric: true });
+        // Match SQL NULLS LAST independently of direction for nullable timestamp sorts.
+        if (left == null || right == null) {
+          if (left == null && right != null) return 1;
+          if (right == null && left != null) return -1;
+        }
+        const leftValue = (sortField === 'submitted_at' || sortField === 'approved_at') && left != null ? Date.parse(String(left)) : left;
+        const rightValue = (sortField === 'submitted_at' || sortField === 'approved_at') && right != null ? Date.parse(String(right)) : right;
+        const comparison = leftValue == null ? 0 : rightValue == null ? 0 : typeof leftValue === 'number' && typeof rightValue === 'number'
+          ? leftValue - rightValue
+          : String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true });
         return comparison === 0 ? String(a.id).localeCompare(String(b.id)) * direction : comparison * direction;
       });
       const page = options.page || 1;

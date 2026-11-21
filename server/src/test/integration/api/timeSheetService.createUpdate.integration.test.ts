@@ -282,6 +282,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     const rows = [
       { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 101, total_hours: 101, approval_status: 'DRAFT',
+        submitted_at: '2025-03-10T08:00:00Z', approved_at: '2025-03-11T18:00:00Z', period_start: '2025-03-10', period_end: '2025-03-16',
         time_entries: [
           { time_sheet_id: 'provider-own', tenant: f.tenantId, duration: 60 },
           { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, duration: 900 },
@@ -291,9 +292,11 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
           { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, comment: 'foreign nested secret' },
         ], summary: { total_hours: 101 } },
       { id: 'provider-managed', tenant: f.tenantId, user_id: managed, user_name: 'x', hours: 102, total_hours: 102, approval_status: 'SUBMITTED',
+        submitted_at: '2025-03-10T16:00:00Z', approved_at: null, period_start: '2025-03-11', period_end: '2025-03-17',
         time_entries: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, duration: 120 }],
         comments: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, comment: 'managed comment' }], summary: { total_hours: 102 } },
       { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, user_name: 'x', hours: 104, total_hours: 104, approval_status: 'APPROVED',
+        submitted_at: null, approved_at: '2025-03-11T10:00:00Z', period_start: '2025-03-12', period_end: '2025-03-18',
         time_entries: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, duration: 240 }],
         comments: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, comment: 'unrelated private comment' }], summary: { total_hours: 104 } },
       { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, user_name: 'x', hours: 108, total_hours: 108, approval_status: 'APPROVED',
@@ -339,10 +342,10 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     // Existing delegation policy permits a manager with approve to read managed subjects.
     grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
-    const delegated = await service.list({ page: 1, limit: 1 } as any, actor);
+    const delegated = await service.list({ page: 1, limit: 1, sort: 'period_start', order: 'asc' } as any, actor);
     expect(delegated.data.map((row: any) => row.id)).toEqual(['provider-own']);
     expect(delegated.total).toBe(2); // count was resolved over the scope before pagination
-    expect((await service.list({ page: 2, limit: 1 } as any, actor)).data.map((row: any) => row.id)).toEqual(['provider-managed']);
+    expect((await service.list({ page: 2, limit: 1, sort: 'period_start', order: 'asc' } as any, actor)).data.map((row: any) => row.id)).toEqual(['provider-managed']);
     expect((await service.list({ page: 1, limit: 25, filters: { user_id: unrelated } } as any, actor)).data).toEqual([]);
     expect(await service.search({ query: 'x' } as any, actor)).toHaveLength(2);
     expect(await service.getWithDetails('provider-managed', actor)).toMatchObject({ id: 'provider-managed' });
@@ -361,6 +364,50 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await service.getTimeSheetEntries('provider-other-tenant', actor)).toEqual([]);
     expect(await service.getTimeSheetSummary('provider-other-tenant', actor)).toBeNull();
     expect(await service.getTimeSheetComments('provider-other-tenant', actor)).toEqual([]);
+
+    // Delegated ordering uses the resolved API field, keeps nullable values last
+    // in either direction, and orders before page slicing while totals use filters.
+    const periodAsc = await service.list({ page: 2, limit: 1, sort: 'period_start', order: 'asc' } as any, actor);
+    expect(periodAsc.data.map((row: any) => row.id)).toEqual(['provider-managed']);
+    expect(periodAsc.total).toBe(3);
+    expect((await service.list({ page: 1, limit: 1, sort: 'period_end', order: 'desc' } as any, actor)).data.map((row: any) => row.id)).toEqual(['provider-unrelated']);
+    expect((await service.list({ page: 1, limit: 3, sort: 'submitted_at', order: 'asc' } as any, actor)).data.map((row: any) => row.id)).toEqual([
+      'provider-own', 'provider-managed', 'provider-unrelated',
+    ]);
+    expect((await service.list({ page: 1, limit: 3, sort: 'submitted_at', order: 'desc' } as any, actor)).data.map((row: any) => row.id)).toEqual([
+      'provider-managed', 'provider-own', 'provider-unrelated',
+    ]);
+    expect((await service.list({ page: 1, limit: 3, sort: 'approved_at', order: 'asc' } as any, actor)).data.map((row: any) => row.id)).toEqual([
+      'provider-unrelated', 'provider-own', 'provider-managed',
+    ]);
+    expect((await service.list({ page: 1, limit: 3, sort: 'approved_at', order: 'desc' } as any, actor)).data.map((row: any) => row.id)).toEqual([
+      'provider-own', 'provider-unrelated', 'provider-managed',
+    ]);
+
+    const noonUtc = '2025-03-10T12:00:00Z';
+    expect(await service.list({ page: 1, limit: 25 } as any, actor, { submitted_from: noonUtc } as any)).toMatchObject({
+      data: [{ id: 'provider-managed' }], total: 1,
+    });
+    expect(await service.list({ page: 1, limit: 25 } as any, actor, { submitted_to: noonUtc } as any)).toMatchObject({
+      data: [{ id: 'provider-own' }], total: 1,
+    });
+    expect(await service.list({ page: 1, limit: 25 } as any, actor, { submitted_from: '2025-03-10T08:00:00-04:00' } as any)).toMatchObject({
+      data: [{ id: 'provider-managed' }], total: 1,
+    });
+    expect(await service.list({ page: 1, limit: 25 } as any, actor, { approved_from: '2025-03-11T12:00:00Z' } as any)).toMatchObject({
+      data: [{ id: 'provider-own' }], total: 1,
+    });
+    expect(await service.list({ page: 1, limit: 25 } as any, actor, { approved_to: '2025-03-11T12:00:00Z' } as any)).toMatchObject({
+      data: [{ id: 'provider-unrelated' }], total: 1,
+    });
+    expect(await service.list({ page: 1, limit: 1, sort: 'period_start', order: 'asc' } as any, actor, { period_start_to: '2025-03-11' } as any)).toMatchObject({
+      data: [{ id: 'provider-own' }], total: 2,
+    });
+
+    // Unsupported ranges are rejected before filtering, even with no rows.
+    rows.splice(0, rows.length);
+    await expect(service.list({ page: 1, limit: 25 } as any, actor, { created_from: '2025-03-10T12:00:00Z' } as any))
+      .rejects.toThrow(/Created and updated date filters are not supported/);
   });
 
   it('fails closed when a registered reader cannot provide the raw collection for shared scoping', async () => {
