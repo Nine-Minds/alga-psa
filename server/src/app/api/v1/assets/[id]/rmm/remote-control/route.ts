@@ -5,7 +5,9 @@
  * GET - Returns remote control URL for the asset
  *
  * Query parameters:
- * - type: 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell' (default: 'splashtop')
+ * - type: a remote connection type id (default: 'splashtop'). Known ids and aliases are defined by the registry in
+ *   packages/types/src/lib/connectionTypes.ts; the provider adapter decides which types a device offers.
+ *   Values that are not a plausible type id are rejected with 400.
  */
 
 import { NextResponse } from 'next/server';
@@ -14,6 +16,7 @@ import { ASSET_RMM_REMOTE_CONTROL_SOURCE } from '@alga-psa/authorization/recordP
 import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
 import { reprojectUnderDecision, type AuthorizedProjection } from 'server/src/lib/api/controllers/authorizationKernel';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
+import { parseRmmConnectionType } from '@alga-psa/integrations/lib/rmm/connectionTypes';
 import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function GET(
@@ -32,12 +35,10 @@ export async function GET(
     assetProjection = gate.projection;
 
     const url = new URL(request.url);
-    const connectionType = (url.searchParams.get('type') || 'splashtop') as
-      | 'splashtop'
-      | 'teamviewer'
-      | 'vnc'
-      | 'rdp'
-      | 'shell';
+    const connectionType = parseRmmConnectionType(url.searchParams.get('type') || 'splashtop');
+    if (!connectionType) {
+      return NextResponse.json({ error: 'Invalid remote control type' }, { status: 400 });
+    }
 
     const remoteControlUrl = await runWithApiKeyOrSession(
       request,

@@ -5,7 +5,9 @@
  * device-sync and alert-polling jobs resolve their EE strategies.
  */
 
-export type RmmRemoteConnectionType = 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell';
+import type { RmmRemoteConnectionType } from './connectionTypes';
+
+export type { RmmRemoteConnectionType, KnownRmmRemoteConnectionType } from './connectionTypes';
 
 export interface RmmAssetDeviceRef {
   tenant: string;

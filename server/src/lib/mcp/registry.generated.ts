@@ -8464,17 +8464,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "type",
         "in": "query",
         "required": false,
-        "description": "Remote-control protocol (default splashtop).",
+        "description": "Remote connection type id (default splashtop), matched case-insensitively. Known ids: splashtop, teamviewer, vnc, rdp, shell, ninjaone_remote. The provider decides which types a device offers and may publish others; pass them as returned. Malformed ids are rejected with 400.",
         "schema": {
           "type": "string",
-          "enum": [
-            "splashtop",
-            "teamviewer",
-            "vnc",
-            "rdp",
-            "shell"
-          ],
-          "description": "Remote-control protocol (default splashtop)."
+          "maxLength": 64,
+          "description": "Remote connection type id (default splashtop), matched case-insensitively. Known ids: splashtop, teamviewer, vnc, rdp, shell, ninjaone_remote. The provider decides which types a device offers and may publish others; pass them as returned. Malformed ids are rejected with 400."
         }
       }
     ],

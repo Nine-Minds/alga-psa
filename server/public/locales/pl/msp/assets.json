@@ -854,7 +854,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Sesja zdalna"
     },
     "remoteDesktop": "Pulpit zdalny",
     "remoteShell": "Powłoka zdalna",
@@ -886,7 +888,7 @@
       "save": "Zapisz",
       "label": "Etykieta przycisku",
       "template": "Szablon adresu URL",
-      "ninjaExample": "Przykład pulpitu urządzenia NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Zastąp host swoim regionem NinjaOne: app, eu, ca, oc lub us2 .ninjarmm.com.",
+      "ninjaExample": "Przykład pulpitu urządzenia NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Zastąp app w hoście swoim regionem NinjaOne: app, eu, ca, oc lub us2.",
       "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
       "errors": {
         "load": "Nie udało się wczytać łączy dostępu zdalnego.",
