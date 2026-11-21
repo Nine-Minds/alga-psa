@@ -6,7 +6,7 @@ This supplements the approved [design](2026-11-03-apply-current-redactions-to-re
 
 The repair was prepared from branch `feature/security-apply-current-redactions-to-remaining-c`, whose starting `HEAD` was `753c53f1c23563c337141f0cafaf13d5625d4dc9`, equal to `origin/feature/security-apply-current-redactions-to-remaining-c`. The checkout was clean at start. There was no inherited `package-lock.json` modification.
 
-**Tested implementation revision:** `2b98fd0e8f8fbd12d78fe16447f84495de7351b4`.
+**Tested implementation and regression revision:** `94f153911d6ee33202ceb28cdb4b99dd2a9c03e9`.
 
 At that exact revision, results were:
 
@@ -15,7 +15,7 @@ At that exact revision, results were:
 - The ticket PostgreSQL integration command below — 9 passed.
 - The task PostgreSQL integration command below — 12 passed, including snapshot, history, list, conflict, and tightened-attribution cases.
 - The two task editor/queue UI unit suites below — 17 passed.
-- `npm -w server run typecheck` — did not pass: the full server TypeScript process hit Node's default 4 GB heap limit and aborted. The co-managed package typecheck and affected runtime suites passed; this full-server result is a resource limitation, not a passing check.
+- `npm -w server run typecheck` on implementation commit `2b98fd0e8f8fbd12d78fe16447f84495de7351b4` (before the test-only metadata assertions in `94f153911d6ee33202ceb28cdb4b99dd2a9c03e9`) did not pass: the full server TypeScript process hit Node's default 4 GB heap limit and aborted. The implementation source was unchanged by the test-only commit. The co-managed package typecheck and affected runtime suites passed; this full-server result is a resource limitation, not a passing check.
 
 The PostgreSQL suite creates an isolated scratch database named `l3b1_queue_test` through `createTestDbConnection`; it runs migrations and test fixtures there. It does not use the app server. The local test connection comes from `.env.localtest` (`localhost:5472`). The test fixture removes its bundle rule and restores relationship redactions in `finally`; the next run recreates the scratch database.
 
@@ -23,6 +23,7 @@ The focused database scenario exercises `getCoManagedTicketQueue`, `exportCoMana
 
 - An unredacted assigned ticket returns the current assignment name. An unassigned open ticket remains in Working and contributes to `escalated_unassigned`; an assigned ticket with `awaiting_internal` contributes to `awaiting_reply`.
 - A published authorization bundle redacting `tickets.assignee_name` and `values.organization_name` removes assignment names and assignment presence from responses. Both signals return zero when their assignment dependency is hidden. The assigned customer-responsible ticket drops from Working because hidden assignment is its only Working-membership reason; the MSP-responsible ticket remains because responsibility independently admits it. Oversight membership and counts, and the active staff relationship count, remain unchanged.
+- Whole queue, oversight, export, assignment, and detail responses are checked for both seeded assignee names so names cannot escape through other returned metadata.
 - After assignment, relationship redactions are tightened independently for two customers. The reference rows are compared with their pre-tightening values: the assignment principal and routing snapshot remain stored. The assignment response suppresses its MSP name; the ticket details response follows its own sources, so an organization-name redaction does not hide the separately permitted customer-assignee name.
 - Export uses the same redacted relation. Cross-customer actor access and a ticket ID paired with the wrong relationship are denied.
 
