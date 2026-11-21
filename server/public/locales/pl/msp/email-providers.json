@@ -435,7 +435,7 @@
         "active": "Aktywny"
       },
       "messages": {
-        "reconnectRequired": "Ustawienia OAuth zostały zmienione. Połącz skrzynkę pocztową ponownie, aby autoryzować ją z nowymi ustawieniami."
+        "reconnectRequired": "Ustawienia połączenia lub uwierzytelniania uległy zmianie. Wprowadź nowe dane logowania lub połącz ponownie OAuth przed przetestowaniem połączenia."
       }
     }
   },
@@ -507,7 +507,7 @@
       "createProvider": "Utwórz dostawcę"
     },
     "messages": {
-      "reconnectRequired": "Ustawienia OAuth zostały zmienione. Połącz skrzynkę pocztową ponownie, aby autoryzować ją z nowymi ustawieniami."
+      "reconnectRequired": "Ustawienia połączenia lub uwierzytelniania uległy zmianie. Wprowadź nowe dane logowania lub połącz ponownie OAuth przed przetestowaniem połączenia."
     }
   },
   "microsoftForm": {

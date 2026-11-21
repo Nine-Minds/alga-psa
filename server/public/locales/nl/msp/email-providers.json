@@ -435,7 +435,7 @@
         "active": "Actief"
       },
       "messages": {
-        "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
+        "reconnectRequired": "De verbindings- of authenticatie-instellingen zijn gewijzigd. Voer vervangende inloggegevens in of verbind OAuth opnieuw voordat u de verbinding test."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Aanbieder maken"
     },
     "messages": {
-      "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
+      "reconnectRequired": "De verbindings- of authenticatie-instellingen zijn gewijzigd. Voer vervangende inloggegevens in of verbind OAuth opnieuw voordat u de verbinding test."
     }
   },
   "microsoftForm": {

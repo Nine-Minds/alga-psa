@@ -435,7 +435,7 @@
         "active": "Active"
       },
       "messages": {
-        "reconnectRequired": "OAuth settings changed. Reconnect the mailbox to authorize it with the new settings."
+        "reconnectRequired": "Connection or authentication settings changed. Enter replacement credentials or reconnect OAuth before testing the connection."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Create Provider"
     },
     "messages": {
-      "reconnectRequired": "OAuth settings changed. Reconnect the mailbox to authorize it with the new settings."
+      "reconnectRequired": "Connection or authentication settings changed. Enter replacement credentials or reconnect OAuth before testing the connection."
     }
   },
   "microsoftForm": {

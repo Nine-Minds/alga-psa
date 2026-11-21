@@ -12,6 +12,7 @@ export interface OAuthState {
   tenant: string;
   userId?: string;
   providerId?: string;
+  credentialGeneration?: string | null;
   redirectUri: string;
   timestamp: number;
   nonce: string;

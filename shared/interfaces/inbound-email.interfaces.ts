@@ -69,6 +69,7 @@ export interface EmailProviderConfig {
     allow_starttls?: boolean;
     auth_type?: 'password' | 'oauth2';
     username?: string;
+    credential_generation?: string | null;
     password?: string;
     folder_filters?: string[];
     oauth_authorize_url?: string;

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "T001",
+    "description": "Reject private destinations without configuration and in production/unknown environments even when configured.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Allow exact configured hosts with matching resolved addresses in development/test; reject unrelated hosts, mixed DNS answers, invalid entries and resolution failures.",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Allow fixture HTTPS authorize/token URLs while rejecting HTTP and embedded credentials.",
+    "implemented": true
+  }
+]

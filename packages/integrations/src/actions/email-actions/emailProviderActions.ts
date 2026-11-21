@@ -12,8 +12,20 @@ import type {
 } from '../../components/email/types';
 import { toPublicProvider } from './toPublicProvider';
 import { requireOutboundEmailAdmin, requireOutboundEmailReader } from './mspOutboundEmailAccess';
-import { assertSafeOutboundUrl, UnsafeOutboundUrlError } from '../../lib/outboundUrlPolicy';
+import {
+  assertSafeOutboundHost,
+  assertSafeOutboundUrl,
+  normalizeOutboundHostname,
+  UnsafeOutboundAddressError,
+  UnsafeOutboundUrlError,
+} from '../../lib/outboundUrlPolicy';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { randomUUID } from 'node:crypto';
+import {
+  getImapCredentialSecret,
+  imapCredentialSecretKey,
+} from '@alga-psa/shared/services/email/imapCredentialSecrets';
+import { postImapOAuthToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';
@@ -626,9 +638,16 @@ async function persistImapConfig(
   trx: any,
   tenant: string,
   providerId: string,
-  config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<{ config: ImapEmailProviderConfig | undefined; reconnectRequired: boolean }> {
-  if (!config) return { config: undefined, reconnectRequired: false };
+  config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'credential_generation'>
+): Promise<{
+  config: ImapEmailProviderConfig | undefined;
+  reconnectRequired: boolean;
+  secretWrites: Array<{ key: string; value: string }>;
+  credentialGeneration: string | null;
+  retiredCredentialGeneration: string | null;
+  stagedCredentialGeneration: string | null;
+}> {
+  if (!config) return { config: undefined, reconnectRequired: false, secretWrites: [], credentialGeneration: null, retiredCredentialGeneration: null, stagedCredentialGeneration: null };
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save IMAP email configuration');
 
   // Both OAuth endpoints receive tokens or client credentials, so they must
@@ -648,49 +667,87 @@ async function persistImapConfig(
     }
   }
 
+  try {
+    await assertSafeOutboundHost(config.host);
+  } catch (error) {
+    if (error instanceof UnsafeOutboundAddressError) {
+      throwExpectedEmailProviderError(`IMAP destination is not allowed: ${error.message}`);
+    }
+    throw error;
+  }
+
   const secretProvider = await getSecretProviderInstance();
 
-  // Credentials are bound to the issuer that granted them. If the issuer
-  // (either URL or the client credentials) changes, the stored tokens and
-  // client secret must not be carried over to the new issuer.
+  // Credentials are bound to the complete IMAP destination and authentication
+  // identity, not only the OAuth issuer.
   const existing = await tenantDb(trx, tenant)
     .table('imap_email_provider_config')
     .where({ email_provider_id: providerId })
+    .forUpdate()
     .first();
   const incomingClientSecret =
     typeof config.oauth_client_secret === 'string' && config.oauth_client_secret.length > 0
       ? config.oauth_client_secret
       : null;
-  const issuerChanged = Boolean(
-    existing &&
-      ((existing.oauth_token_url ?? null) !== (config.oauth_token_url || null) ||
-        (existing.oauth_authorize_url ?? null) !== (config.oauth_authorize_url || null) ||
-        (existing.oauth_client_id ?? null) !== (config.oauth_client_id || null) ||
-        (incomingClientSecret !== null && incomingClientSecret !== (existing.oauth_client_secret ?? null)))
-  );
+  const normalizeHost = (value: unknown) => typeof value === 'string'
+    ? normalizeOutboundHostname(value.trim())
+    : null;
+  const normalizeOAuthUrl = (value: unknown) => {
+    if (typeof value !== 'string' || value.trim() === '') return null;
+    try {
+      return new URL(value).toString();
+    } catch {
+      return value;
+    }
+  };
+  const credentialScopeChanged = Boolean(existing && (
+    normalizeHost(existing.host) !== normalizeHost(config.host) ||
+    Number(existing.port) !== Number(config.port) ||
+    Boolean(existing.secure ?? true) !== Boolean(config.secure ?? true) ||
+    Boolean(existing.allow_starttls ?? false) !== Boolean(config.allow_starttls ?? false) ||
+    (existing.username ?? null) !== (config.username || null) ||
+    (existing.auth_type ?? null) !== (config.auth_type ?? null) ||
+    normalizeOAuthUrl(existing.oauth_token_url) !== normalizeOAuthUrl(config.oauth_token_url) ||
+    normalizeOAuthUrl(existing.oauth_authorize_url) !== normalizeOAuthUrl(config.oauth_authorize_url) ||
+    (existing.oauth_client_id ?? null) !== (config.oauth_client_id || null) ||
+    (incomingClientSecret !== null && incomingClientSecret !== (existing.oauth_client_secret ?? null))
+  ));
+  const explicitPasswordReplacement = typeof config.password === 'string' && config.password.length > 0;
+  const explicitRefreshTokenReplacement = typeof config.refresh_token === 'string' && config.refresh_token.length > 0;
+  const replaceClientSecret = incomingClientSecret !== null &&
+    (!existing || credentialScopeChanged || incomingClientSecret !== (existing.oauth_client_secret ?? null));
+  const credentialReplacement = explicitPasswordReplacement || explicitRefreshTokenReplacement;
+  const rotateGeneration = !existing || credentialScopeChanged || credentialReplacement;
+  const credentialGeneration = rotateGeneration
+    ? randomUUID()
+    : existing.credential_generation ?? null;
 
   // IMAP runtime tuning is configured via env (not exposed in UI).
   const maxEmailsPerSync = Number(process.env.IMAP_MAX_EMAILS_PER_SYNC || 5);
   const connectionTimeoutMs = Number(process.env.IMAP_CONNECTION_TIMEOUT_MS || 10_000);
   const socketKeepalive = (process.env.IMAP_SOCKET_KEEPALIVE || 'true') !== 'false';
 
+  const secretWrites: Array<{ key: string; value: string }> = [];
+  // A generation is the database-published credential pointer. When rotating
+  // on an unchanged scope, copy untouched credentials into the new namespace;
+  // never mutate the namespace selected by the currently committed row.
+  if (existing && !credentialScopeChanged && rotateGeneration) {
+    for (const kind of ['password', 'refresh_token', 'oauth_client_secret'] as const) {
+      if ((kind === 'password' && explicitPasswordReplacement) ||
+          (kind === 'refresh_token' && explicitRefreshTokenReplacement) ||
+          (kind === 'oauth_client_secret' && replaceClientSecret)) continue;
+      const value = await getImapCredentialSecret(secretProvider, tenant, providerId, kind, existing.credential_generation);
+      if (value) secretWrites.push({ key: imapCredentialSecretKey(kind, providerId, credentialGeneration), value });
+    }
+  }
   if (config.password && typeof config.password === 'string') {
-    await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
+    secretWrites.push({ key: imapCredentialSecretKey('password', providerId, credentialGeneration), value: config.password });
   }
-
-  if (issuerChanged) {
-    // Drop credentials issued under the previous issuer. A client secret supplied
-    // with this save belongs to the new issuer and is stored right after.
-    await secretProvider.deleteTenantSecret(tenant, `imap_refresh_token_${providerId}`);
-    await secretProvider.deleteTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`);
+  if (replaceClientSecret) {
+    secretWrites.push({ key: imapCredentialSecretKey('oauth_client_secret', providerId, credentialGeneration), value: incomingClientSecret });
   }
-
-  if (incomingClientSecret) {
-    await secretProvider.setTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`, incomingClientSecret);
-  }
-
-  if (!issuerChanged && config.refresh_token && typeof config.refresh_token === 'string') {
-    await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${providerId}`, config.refresh_token);
+  if (!credentialScopeChanged && config.refresh_token && typeof config.refresh_token === 'string') {
+    secretWrites.push({ key: imapCredentialSecretKey('refresh_token', providerId, credentialGeneration), value: config.refresh_token });
   }
 
   const folderFiltersArray = config.folder_filters || [];
@@ -714,6 +771,7 @@ async function persistImapConfig(
       oauth_authorize_url: config.oauth_authorize_url || null,
       oauth_token_url: config.oauth_token_url || null,
       oauth_client_id: config.oauth_client_id || null,
+      credential_generation: credentialGeneration,
       oauth_client_secret: incomingClientSecret,
       oauth_scopes: config.oauth_scopes || null,
       access_token: config.access_token || null,
@@ -743,23 +801,24 @@ async function persistImapConfig(
       oauth_authorize_url: config.oauth_authorize_url || null,
       oauth_token_url: config.oauth_token_url || null,
       oauth_client_id: config.oauth_client_id || null,
-      // A blank/undefined secret means "keep the stored one" unless the issuer
-      // changed, in which case the old secret must not survive.
-      oauth_client_secret: issuerChanged
+      credential_generation: credentialGeneration,
+      // A blank/undefined secret means "keep the stored one" only for the same
+      // credential scope.
+      oauth_client_secret: credentialScopeChanged
         ? incomingClientSecret
         : trx.raw('COALESCE(EXCLUDED.oauth_client_secret, imap_email_provider_config.oauth_client_secret)'),
       oauth_scopes: config.oauth_scopes || null,
       connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
       socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),
-      // Issuer changed: tokens are discarded outright (no COALESCE) so they can
-      // never be replayed against the new endpoint.
-      access_token: issuerChanged
+      // Scope changed: tokens are discarded outright (no COALESCE) so they can
+      // never be replayed against the new destination or issuer.
+      access_token: credentialScopeChanged
         ? null
         : trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
-      refresh_token: issuerChanged
+      refresh_token: credentialScopeChanged
         ? null
         : trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
-      token_expires_at: issuerChanged
+      token_expires_at: credentialScopeChanged
         ? null
         : trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
       uid_validity: trx.raw('COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity)'),
@@ -776,7 +835,77 @@ async function persistImapConfig(
     imapConfig.folder_filters = imapConfig.folder_filters || [];
   }
 
-  return { config: imapConfig, reconnectRequired: issuerChanged };
+  return {
+    config: imapConfig,
+    reconnectRequired: credentialScopeChanged,
+    secretWrites,
+    credentialGeneration,
+    retiredCredentialGeneration: rotateGeneration ? existing?.credential_generation ?? null : null,
+    stagedCredentialGeneration: rotateGeneration ? credentialGeneration : null,
+  };
+}
+
+async function applyImapSecretWrites(tenant: string, writes: Array<{ key: string; value: string }>): Promise<void> {
+  if (writes.length === 0) return;
+  const secretProvider = await getSecretProviderInstance();
+  for (const { key, value } of writes) await secretProvider.setTenantSecret(tenant, key, value);
+}
+
+async function retireImapCredentialsAfterCommit(
+  tenant: string,
+  providerId: string,
+  retiredGeneration: string | null,
+  generationPublished: string | null,
+  cleanLegacyKeys: boolean
+): Promise<void> {
+  if (!retiredGeneration && !cleanLegacyKeys) return;
+  try {
+    const { knex } = await createTenantKnex();
+    const committed = await tenantDb(knex, tenant)
+      .table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .first();
+    // A later committed operation may still select this generation. Recheck
+    // the database pointer before retiring it so cleanup cannot break it.
+    if (!committed || (retiredGeneration && committed.credential_generation === retiredGeneration)) return;
+    const secretProvider = await getSecretProviderInstance();
+    if (retiredGeneration) {
+      for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+        await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId, retiredGeneration));
+      }
+    }
+    if (cleanLegacyKeys && generationPublished) {
+      for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+        await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId));
+      }
+    }
+  } catch (error) {
+    // Cleanup is best-effort after commit: a storage outage must not turn a
+    // committed configuration into an apparent rollback.
+    console.warn('Failed to retire superseded IMAP credentials after commit:', error);
+  }
+}
+
+async function discardUnpublishedImapCredentials(
+  tenant: string,
+  providerId: string,
+  generation: string | null
+): Promise<void> {
+  if (!generation) return;
+  try {
+    const { knex } = await createTenantKnex();
+    const committed = await tenantDb(knex, tenant)
+      .table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .first();
+    if (committed?.credential_generation === generation) return;
+    const secretProvider = await getSecretProviderInstance();
+    for (const kind of ['password', 'refresh_token', 'oauth_client_secret', 'access_token'] as const) {
+      await secretProvider.deleteTenantSecret(tenant, imapCredentialSecretKey(kind, providerId, generation));
+    }
+  } catch (error) {
+    console.warn('Failed to discard unpublished IMAP credentials:', error);
+  }
 }
 
 /**
@@ -937,7 +1066,7 @@ export const upsertEmailProvider = withAuth(async (
   microsoftConfig?: MicrosoftEmailProviderConfigInput;
   microsoftIssuer?: MicrosoftEmailIssuerChoice;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'credential_generation'>;
 },
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
@@ -949,10 +1078,15 @@ export const upsertEmailProvider = withAuth(async (
     provider: null as unknown as EmailProvider,
     setupWarnings: []
   };
+  let imapGenerationToDiscard: string | null = null;
+  let retiredImapGeneration: string | null = null;
+  let publishedImapGeneration: string | null = null;
+  let imapProviderId: string | null = null;
 
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data);
+      imapProviderId = base.id;
 
       if (data.providerType === 'microsoft') {
         base.microsoftConfig = await persistMicrosoftConfig(
@@ -967,6 +1101,10 @@ export const upsertEmailProvider = withAuth(async (
       } else if (data.providerType === 'imap') {
         const imap = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
         base.imapConfig = imap.config;
+        imapGenerationToDiscard = imap.stagedCredentialGeneration;
+        publishedImapGeneration = imap.credentialGeneration;
+        retiredImapGeneration = imap.retiredCredentialGeneration;
+        await applyImapSecretWrites(tenant, imap.secretWrites);
         if (imap.reconnectRequired) result.reconnectRequired = true;
         await auditLog(trx, {
           userId: user.user_id,
@@ -988,11 +1126,13 @@ export const upsertEmailProvider = withAuth(async (
       return base;
     });
 
+    await retireImapCredentialsAfterCommit(tenant, provider.id, retiredImapGeneration, publishedImapGeneration, imapGenerationToDiscard !== null);
+    imapGenerationToDiscard = null;
     result.provider = provider;
     if (result.reconnectRequired) {
       result.setupWarnings = [
         ...(result.setupWarnings || []),
-        'The IMAP OAuth settings changed, so the stored authorization was removed. Reconnect the mailbox to authorize it with the new settings.',
+        'The IMAP destination or authentication settings changed, so stored credentials were cleared. Reconnect the mailbox by re-entering the password or reconnecting OAuth.',
       ];
     }
 
@@ -1055,6 +1195,7 @@ export const upsertEmailProvider = withAuth(async (
 
     return { ...result, provider: toPublicProvider(result.provider) };
   } catch (error) {
+    if (imapProviderId) await discardUnpublishedImapCredentials(tenant, imapProviderId, imapGenerationToDiscard);
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
     }
@@ -1080,7 +1221,7 @@ export const createEmailProvider = withAuth(async (
   microsoftConfig?: MicrosoftEmailProviderConfigInput;
   microsoftIssuer?: MicrosoftEmailIssuerChoice;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'credential_generation'>;
 },
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
@@ -1107,7 +1248,7 @@ export const updateEmailProvider = withAuth(async (
     microsoftConfig?: MicrosoftEmailProviderConfigInput;
     microsoftIssuer?: MicrosoftEmailIssuerChoice;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-    imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+    imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'credential_generation'>;
   },
   skipAutomation?: boolean
 ): Promise<EmailProviderSetupActionResult> => {
@@ -1119,6 +1260,9 @@ export const updateEmailProvider = withAuth(async (
     provider: null as unknown as EmailProvider,
     setupWarnings: []
   };
+  let imapGenerationToDiscard: string | null = null;
+  let retiredImapGeneration: string | null = null;
+  let publishedImapGeneration: string | null = null;
 
   try {
     const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
@@ -1137,6 +1281,10 @@ export const updateEmailProvider = withAuth(async (
       } else if (data.providerType === 'imap') {
         const imap = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
         base.imapConfig = imap.config;
+        imapGenerationToDiscard = imap.stagedCredentialGeneration;
+        publishedImapGeneration = imap.credentialGeneration;
+        retiredImapGeneration = imap.retiredCredentialGeneration;
+        await applyImapSecretWrites(tenant, imap.secretWrites);
         if (imap.reconnectRequired) result.reconnectRequired = true;
         await auditLog(trx, {
           userId: user.user_id,
@@ -1158,11 +1306,13 @@ export const updateEmailProvider = withAuth(async (
       return base;
     });
 
+    await retireImapCredentialsAfterCommit(tenant, provider.id, retiredImapGeneration, publishedImapGeneration, imapGenerationToDiscard !== null);
+    imapGenerationToDiscard = null;
     result.provider = provider;
     if (result.reconnectRequired) {
       result.setupWarnings = [
         ...(result.setupWarnings || []),
-        'The IMAP OAuth settings changed, so the stored authorization was removed. Reconnect the mailbox to authorize it with the new settings.',
+        'The IMAP destination or authentication settings changed, so stored credentials were cleared. Reconnect the mailbox by re-entering the password or reconnecting OAuth.',
       ];
     }
 
@@ -1411,6 +1561,7 @@ export const updateEmailProvider = withAuth(async (
 
     return { ...result, provider: toPublicProvider(result.provider) };
   } catch (error) {
+    await discardUnpublishedImapCredentials(tenant, providerId, imapGenerationToDiscard);
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
     }
@@ -1530,6 +1681,16 @@ export const testEmailProviderConnection = withAuth(async (
         return emailProviderOperationError('IMAP provider configuration not found.', 'missing_config');
       }
 
+      try {
+        await assertSafeOutboundHost(config.host);
+      } catch (policyError) {
+        console.warn('IMAP destination rejected by outbound policy:', policyError);
+        return emailProviderOperationError(
+          'The IMAP destination is not allowed by the outbound network policy.',
+          'missing_config'
+        );
+      }
+
       const secretProvider = await getSecretProviderInstance();
       let accessToken = config.access_token;
 
@@ -1541,16 +1702,28 @@ export const testEmailProviderConnection = withAuth(async (
               'missing_config'
             );
           }
-          const secretRefreshToken = await secretProvider.getTenantSecret(tenant, `imap_refresh_token_${providerId}` as string);
+          const secretRefreshToken = await getImapCredentialSecret(
+            secretProvider,
+            tenant,
+            providerId,
+            'refresh_token',
+            config.credential_generation
+          );
           const refreshToken = secretRefreshToken || config.refresh_token;
           if (!refreshToken) {
             return emailProviderOperationError(
-              'IMAP OAuth refresh token is missing. Reconnect the mailbox and try again.',
+              'Credentials were cleared because the IMAP destination or authentication settings changed. Reconnect the mailbox to authorize OAuth again.',
               'missing_credentials'
             );
           }
 
-          const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${providerId}` as string);
+          const clientSecret = await getImapCredentialSecret(
+            secretProvider,
+            tenant,
+            providerId,
+            'oauth_client_secret',
+            config.credential_generation
+          );
           const params = new URLSearchParams();
           params.append('grant_type', 'refresh_token');
           params.append('refresh_token', refreshToken as string);
@@ -1577,9 +1750,7 @@ export const testEmailProviderConnection = withAuth(async (
 
           let response;
           try {
-            response = await axios.post(config.oauth_token_url, params as any, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
+            response = await postImapOAuthToken(config.oauth_token_url, params);
           } catch (oauthError) {
             console.warn('IMAP OAuth token refresh failed:', oauthError);
             return emailProviderOperationError(
@@ -1592,13 +1763,22 @@ export const testEmailProviderConnection = withAuth(async (
           const expiresIn = Number(response.data.expires_in || 3600);
           const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-          await db.table('imap_email_provider_config')
-            .where({ email_provider_id: providerId })
+          const updated = await db.table('imap_email_provider_config')
+            .where({
+              email_provider_id: providerId,
+              credential_generation: config.credential_generation ?? null,
+            })
             .update({
               access_token: accessToken,
               token_expires_at: expiresAt,
               updated_at: knex.fn.now(),
             });
+          if (updated === 0) {
+            return emailProviderOperationError(
+              'IMAP credentials changed while OAuth was refreshing. Retry the connection test.',
+              'missing_config'
+            );
+          }
         }
       }
 
@@ -1609,7 +1789,13 @@ export const testEmailProviderConnection = withAuth(async (
         auth.accessToken = accessToken;
         auth.method = oauthMechanism;
       } else {
-        const passwordSecret = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}` as string);
+        const passwordSecret = await getImapCredentialSecret(
+          secretProvider,
+          tenant,
+          providerId,
+          'password',
+          config.credential_generation
+        );
         const password = passwordSecret || undefined;
         if (password) {
           auth.pass = password;
@@ -1618,7 +1804,7 @@ export const testEmailProviderConnection = withAuth(async (
 
       if (!auth.pass && !auth.accessToken) {
         return emailProviderOperationError(
-          'IMAP credentials are missing. Add mailbox credentials or reconnect OAuth, then try again.',
+          'Credentials were cleared because the IMAP destination or authentication settings changed. Re-enter the password or reconnect OAuth.',
           'missing_credentials'
         );
       }

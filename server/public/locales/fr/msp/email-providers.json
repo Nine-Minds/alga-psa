@@ -435,7 +435,7 @@
         "active": "Actif"
       },
       "messages": {
-        "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
+        "reconnectRequired": "Les paramètres de connexion ou d’authentification ont changé. Saisissez de nouveaux identifiants ou reconnectez OAuth avant de tester la connexion."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Créer un fournisseur"
     },
     "messages": {
-      "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
+      "reconnectRequired": "Les paramètres de connexion ou d’authentification ont changé. Saisissez de nouveaux identifiants ou reconnectez OAuth avant de tester la connexion."
     }
   },
   "microsoftForm": {

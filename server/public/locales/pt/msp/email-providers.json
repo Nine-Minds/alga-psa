@@ -435,7 +435,7 @@
         "active": "Ativo"
       },
       "messages": {
-        "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
+        "reconnectRequired": "As configurações de conexão ou autenticação foram alteradas. Insira novas credenciais ou reconecte o OAuth antes de testar a conexão."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Criar provedor"
     },
     "messages": {
-      "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
+      "reconnectRequired": "As configurações de conexão ou autenticação foram alteradas. Insira novas credenciais ou reconecte o OAuth antes de testar a conexão."
     }
   },
   "microsoftForm": {

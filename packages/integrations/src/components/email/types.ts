@@ -88,6 +88,8 @@ export interface ImapEmailProviderConfig {
   allow_starttls: boolean;
   auth_type: 'password' | 'oauth2';
   username: string;
+  /** Internal secret namespace; excluded from the public provider projection. */
+  credential_generation?: string | null;
   password?: string;
   folder_filters: string[];
   auto_process_emails: boolean;
@@ -142,7 +144,7 @@ export interface PublicGoogleConfig
 export interface PublicImapConfig
   extends Omit<
     ImapEmailProviderConfig,
-    'password' | 'oauth_client_secret' | 'access_token' | 'refresh_token'
+    'password' | 'oauth_client_secret' | 'access_token' | 'refresh_token' | 'credential_generation'
   > {
   has_client_secret: boolean;
   has_access_token: boolean;

@@ -435,7 +435,7 @@
         "active": "Activo"
       },
       "messages": {
-        "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
+        "reconnectRequired": "La configuración de conexión o autenticación ha cambiado. Introduce credenciales nuevas o vuelve a conectar OAuth antes de probar la conexión."
       }
     }
   },
@@ -587,7 +587,7 @@
       "createProvider": "Crear proveedor"
     },
     "messages": {
-      "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
+      "reconnectRequired": "La configuración de conexión o autenticación ha cambiado. Introduce credenciales nuevas o vuelve a conectar OAuth antes de probar la conexión."
     }
   },
   "microsoftForm": {

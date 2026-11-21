@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   usePollingDelivery: vi.fn(),
   recordWebhookDeliveryMode: vi.fn(),
   operations: [] as string[],
+  secretValues: {} as Record<string, string>,
+  secretReads: [] as string[],
+  imapOptions: [] as any[],
+  imapConnect: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -16,6 +20,26 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (knex: any) => ({ table: (table: string) => knex(table) }),
+}));
+vi.mock('@alga-psa/shared/services/net/outboundAddressPolicy', () => ({
+  assertSafeOutboundHost: vi.fn(async () => undefined),
+}));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getTenantSecret: async (_tenant: string, key: string) => {
+      mocks.secretReads.push(key);
+      return mocks.secretValues[key];
+    },
+  }),
+}));
+vi.mock('imapflow', () => ({
+  ImapFlow: class {
+    options: any;
+    constructor(options: any) { this.options = options; mocks.imapOptions.push(options); }
+    connect = (...args: any[]) => mocks.imapConnect(...args);
+    logout = vi.fn(async () => undefined);
+    close = vi.fn();
+  },
 }));
 vi.mock('@alga-psa/shared/services/email/microsoftEmailProviderConfig', () => ({
   buildMicrosoftEmailProviderConfig: vi.fn(async (config) => config),
@@ -136,6 +160,10 @@ describe('EmailProviderLifecycleService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
+    mocks.secretReads.length = 0;
+    mocks.imapOptions.length = 0;
+    for (const key of Object.keys(mocks.secretValues)) delete mocks.secretValues[key];
+    mocks.imapConnect.mockReset().mockResolvedValue(undefined);
     mocks.graphDelete.mockImplementation(async () => {
       mocks.operations.push('external:graph-delete');
     });
@@ -146,6 +174,36 @@ describe('EmailProviderLifecycleService', () => {
     mocks.gmailRegister.mockResolvedValue(undefined);
     mocks.usePollingDelivery.mockResolvedValue('polling');
     mocks.recordWebhookDeliveryMode.mockResolvedValue(undefined);
+  });
+
+  it('validates lifecycle reconnect credentials from the committed generation across rollback and rotation', async () => {
+    const service = new EmailProviderLifecycleService() as any;
+    mocks.secretValues['imap_password_provider-imap_generation-old'] = 'old-committed-password';
+    mocks.secretValues['imap_password_provider-imap_generation-staged'] = 'uncommitted-password';
+    const oldConfig = {
+      host: 'imap.example.test', port: 993, secure: true, allow_starttls: false,
+      auth_type: 'password', username: 'user@example.test', credential_generation: 'generation-old',
+    };
+
+    await service.validateImapCredentials('provider-imap', 'tenant-1', oldConfig);
+    expect(mocks.imapOptions.at(-1).auth.pass).toBe('old-committed-password');
+    expect(mocks.secretReads).toContain('imap_password_provider-imap_generation-old');
+    expect(mocks.secretReads).not.toContain('imap_password_provider-imap');
+
+    mocks.secretValues['imap_password_provider-imap_generation-new'] = 'new-committed-password';
+    await service.validateImapCredentials('provider-imap', 'tenant-1', {
+      ...oldConfig,
+      host: 'imap.new.example.test',
+      credential_generation: 'generation-new',
+    });
+    expect(mocks.imapOptions.at(-1).host).toBe('imap.new.example.test');
+    expect(mocks.imapOptions.at(-1).auth.pass).toBe('new-committed-password');
+
+    await expect(service.validateImapCredentials('provider-imap', 'tenant-1', {
+      ...oldConfig,
+      credential_generation: 'generation-missing',
+    })).rejects.toThrow(/credentials missing/i);
+    expect(mocks.imapOptions).toHaveLength(2);
   });
 
   it.each([

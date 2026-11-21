@@ -224,9 +224,9 @@ export function ImapProviderForm({
       }
 
       if (result.reconnectRequired) {
-        // The OAuth issuer changed, so the stored authorization was discarded.
+        // Destination and authentication changes both invalidate stored credentials.
         toast(t('forms.imap.messages.reconnectRequired', {
-          defaultValue: 'OAuth settings changed. Reconnect the mailbox to authorize it with the new settings.',
+          defaultValue: 'Connection or authentication settings changed. Enter replacement credentials or reconnect OAuth before testing the connection.',
         }), { icon: '⚠️', duration: 8000 });
       }
 

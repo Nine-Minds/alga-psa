@@ -1,0 +1,17 @@
+[
+  {
+    "id": "F001",
+    "description": "Gate exact hostname/IP exceptions on explicit development/test configuration.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Keep DNS resolution and HTTPS validation in the common UI and worker policy path.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Document operator configuration and validate production remains closed.",
+    "implemented": true
+  }
+]
