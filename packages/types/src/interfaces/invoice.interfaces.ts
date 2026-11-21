@@ -101,7 +101,8 @@ export interface NetAmountItem {
  */
 export type ManualInvoiceSourceLink =
   | { kind: 'time_entry'; entryId: string }
-  | { kind: 'ticket_material'; materialId: string };
+  | { kind: 'ticket_material'; materialId: string; updatedAt: string }
+  | { kind: 'ticket_fixed_fee'; entryId: string; updatedAt: string };
 
 export interface IInvoiceChargeRecurringDetailPeriod {
   service_period_start?: ISO8601String | null;
@@ -515,6 +516,7 @@ export type RecurringInvoiceFailureCode =
   | 'FIXED_LINE_NO_SERVICES'
   | 'USAGE_PERIOD_TOTAL_STALE'
   | 'RECURRING_PRICING_STALE'
+  | 'SOURCE_CHANGED'
   | 'RECURRING_PERIODS_NOT_MATERIALIZED'
   | 'NO_ACTIVE_CONTRACT_LINES'
   | 'NOTHING_TO_BILL'

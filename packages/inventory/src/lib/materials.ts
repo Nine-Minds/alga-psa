@@ -2,6 +2,7 @@ import {
   admitOperationalWrite,
   registerAfterCommit,
   registerAfterCommitWithConnection,
+  tenantDb,
   withTransaction,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -172,7 +173,32 @@ export async function listMaterials(
         })
         .select('psl.staging_line_id as from_staging_line_id');
     }
-    return (await query) as MaterialRow[];
+    const materials = (await query) as MaterialRow[];
+    if (parentType !== 'ticket' || materials.length === 0) return materials;
+
+    const ticketMaterials = materials.map((material) => {
+      if (!('ticket_material_id' in material)) {
+        throw new Error('Ticket material query returned a project material row');
+      }
+      return material;
+    });
+    const serviceIds = [...new Set(materials.map((material) => material.service_id))];
+    const db = tenantDb(trx, tenant);
+    const serializedServices = await db.table('product_inventory_settings')
+      .where({ is_serialized: true })
+      .whereIn('service_id', serviceIds)
+      .select('service_id');
+    const linkedUnits = await db.table('stock_movements')
+      .where({ source_doc_type: cfg.sourceDocType, movement_type: 'consume' })
+      .whereIn('source_doc_id', ticketMaterials.map((material) => material.ticket_material_id))
+      .whereNotNull('unit_id')
+      .select('source_doc_id');
+    const lockedServiceIds = new Set(serializedServices.map((row: { service_id: string }) => row.service_id));
+    const lockedMaterialIds = new Set(linkedUnits.map((row: { source_doc_id: string }) => row.source_doc_id));
+    return ticketMaterials.map((material) => ({
+      ...material,
+      quantity_locked: lockedServiceIds.has(material.service_id) || lockedMaterialIds.has(material.ticket_material_id),
+    }));
   });
 }
 
@@ -562,6 +588,7 @@ export async function deleteMaterial(
 // ---- Shared picker queries (single implementation behind the tickets/projects wrappers) ----
 
 export interface CatalogPickerSearchOptions {
+  category_id?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -607,6 +634,9 @@ export async function queryCatalogPickerItems(
   }
   if (options.billing_methods?.length) {
     base.andWhere((qb) => qb.whereIn('sc.billing_method', options.billing_methods!));
+  }
+  if (options.category_id) {
+    base.andWhere('sc.category_id', options.category_id);
   }
   if (searchTerm) {
     base.andWhere((qb) => {
