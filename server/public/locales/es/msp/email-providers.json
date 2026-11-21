@@ -1130,7 +1130,8 @@
       "ticketingFromDomainMismatch": "La dirección de remitente de tickets debe usar el dominio de envío configurado",
       "refreshFailed": "No se pudieron recuperar los ajustes actualizados",
       "updateFailed": "No se pudieron actualizar los ajustes de correo electrónico",
-      "mailboxesLoadFailed": "No se pudieron cargar los buzones de Microsoft 365"
+      "mailboxesLoadFailed": "No se pudieron cargar los buzones de Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Vuelva a introducir la contraseña de {{provider}}: ha cambiado la dirección del servidor o la información de inicio de sesión."
     },
     "inboundRules": {
       "notFound": "No se encontró la regla de correo electrónico entrante",

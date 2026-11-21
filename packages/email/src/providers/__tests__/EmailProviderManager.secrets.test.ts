@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 
 const h = vi.hoisted(() => ({
@@ -45,6 +46,13 @@ import { EmailProviderManager } from '../EmailProviderManager';
 const REF = 'email_outbound_smtp_password_3f2a9c1e-1111-4222-8333-444455556666';
 const RESEND_REF = 'email_outbound_resend_api_key_3f2a9c1e-1111-4222-8333-444455556666';
 
+function bindSecretIdentity(providerId: string, providerType: string, config: Record<string, unknown>) {
+  return {
+    ...config,
+    __secretFingerprint: connectionFingerprint(config, providerType, providerId),
+  };
+}
+
 function settings(config: EmailProviderConfig): TenantEmailSettings {
   return {
     tenantId: 'tenant-1', customDomains: [], emailProvider: config.providerType as any,
@@ -67,7 +75,7 @@ describe('EmailProviderManager secret resolution', () => {
     h.store.set(REF, 'fake-resolved-pw');
     await new EmailProviderManager().initialize(settings({
       providerId: 'smtp-provider', providerType: 'smtp', isEnabled: true,
-      config: { host: 'h', port: 587, username: 'u', secretRefs: { password: REF } },
+      config: bindSecretIdentity('smtp-provider', 'smtp', { host: 'h', port: 587, username: 'u', secretRefs: { password: REF } }),
     }));
     expect(h.smtpInit).toHaveBeenCalledWith(expect.objectContaining({ password: 'fake-resolved-pw', host: 'h' }));
     expect((h.smtpInit.mock.calls[0] as any[])[0]).not.toHaveProperty('secretRefs');
@@ -76,7 +84,7 @@ describe('EmailProviderManager secret resolution', () => {
   it('fails fast when the SMTP ref is unreadable', async () => {
     await expect(new EmailProviderManager().initialize(settings({
       providerId: 'smtp-provider', providerType: 'smtp', isEnabled: true,
-      config: { host: 'h', secretRefs: { password: REF } },
+      config: bindSecretIdentity('smtp-provider', 'smtp', { host: 'h', secretRefs: { password: REF } }),
     }))).rejects.toMatchObject({ errorCode: 'EMAIL_PROVIDER_SECRET_MISSING' });
     expect(h.smtpInit).not.toHaveBeenCalled();
   });
@@ -87,7 +95,7 @@ describe('EmailProviderManager secret resolution', () => {
     process.env.RESEND_API_KEY = 'fake-env-key';
     await new EmailProviderManager().initialize(settings({
       providerId: 'resend-provider', providerType: 'resend', isEnabled: true,
-      config: { from: 'a@b.test', secretRefs: { apiKey: RESEND_REF } },
+      config: bindSecretIdentity('resend-provider', 'resend', { from: 'a@b.test', secretRefs: { apiKey: RESEND_REF } }),
     }));
     expect(h.resendInit).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'fake-tenant-key' }));
     expect(h.getAppSecret).not.toHaveBeenCalled();
@@ -98,7 +106,7 @@ describe('EmailProviderManager secret resolution', () => {
   it('Resend with a legacy inline key uses it without fallbacks', async () => {
     await new EmailProviderManager().initialize(settings({
       providerId: 'resend-provider', providerType: 'resend', isEnabled: true,
-      config: { apiKey: 'fake-legacy-key' },
+      config: bindSecretIdentity('resend-provider', 'resend', { apiKey: 'fake-legacy-key' }),
     }));
     expect(h.resendInit).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'fake-legacy-key' }));
     expect(h.getAppSecret).not.toHaveBeenCalled();

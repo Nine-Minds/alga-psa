@@ -1130,7 +1130,8 @@
       "ticketingFromDomainMismatch": "Avsändaradressen för ärendemeddelanden måste använda den konfigurerade domänen för utgående e-post",
       "refreshFailed": "Det gick inte att hämta uppdaterade inställningar",
       "updateFailed": "Det gick inte att uppdatera e-postinställningarna",
-      "mailboxesLoadFailed": "Det gick inte att läsa in Microsoft 365-postlådor"
+      "mailboxesLoadFailed": "Det gick inte att läsa in Microsoft 365-postlådor",
+      "secretRequiredAfterConnectionChange": "Ange lösenordet för {{provider}} igen: serveradressen eller inloggningsuppgifterna har ändrats."
     },
     "inboundRules": {
       "notFound": "Regeln för inkommande e-post hittades inte",
