@@ -418,13 +418,15 @@
         "oauthStatus": "Estado de OAuth",
         "connected": "Conectado",
         "notConnected": "No conectado",
+        "reauthorizationRequired": "Se requiere una nueva autorización",
         "reconnectOauth": "Reconectar OAuth",
         "authorizeUrl": "Autorizar URL",
         "tokenUrl": "URL del token",
         "clientId": "ID de cliente de OAuth",
         "clientSecret": "Secreto del cliente OAuth",
         "scopes": "Alcances de OAuth",
-        "scopesPlaceholder": "ámbitos delimitados por espacios"
+        "scopesPlaceholder": "ámbitos delimitados por espacios",
+        "clientSecretHelp": "El secreto de cliente se almacena de forma segura y no se mostrará. Déjalo en blanco para conservar el secreto existente."
       },
       "processing": {
         "title": "Configuración de procesamiento",
@@ -432,6 +434,9 @@
         "folderFilters": "Filtros de carpeta",
         "folderFiltersPlaceholder": "Bandeja de entrada, Soporte, Tickets",
         "active": "Activo"
+      },
+      "messages": {
+        "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
       }
     }
   },
@@ -556,7 +561,8 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayName": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket.",
+      "oauthClientSecretHelp": "El secreto de cliente se almacena de forma segura y no se mostrará. Déjalo en blanco para conservar el secreto existente."
     },
     "authOptions": {
       "password": "Contraseña",
@@ -569,6 +575,7 @@
       "statusLabel": "Estado de OAuth",
       "connected": "Conectado",
       "notConnected": "No conectado",
+      "reauthorizationRequired": "Se requiere una nueva autorización",
       "authorizing": "Autorizando...",
       "reconnect": "Reconectar OAuth"
     },
@@ -580,6 +587,9 @@
       "saving": "Guardando...",
       "updateProvider": "Actualizar proveedor",
       "createProvider": "Crear proveedor"
+    },
+    "messages": {
+      "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
     }
   },
   "microsoftForm": {
@@ -1076,6 +1086,7 @@
       "noClient": "Ningún cliente coincidió",
       "outcome": {
         "assignClient": "Ticket asignado al cliente \"{{client}}\"",
+        "matchedClient": "el cliente coincidente",
         "fallback": "Ningún cliente coincidió: el ticket se enrutó al destino alternativo",
         "none": "La regla no se resolvió: continúa el procesamiento normal",
         "setDestination": "Ticket enrutado al destino seleccionado",
@@ -1121,7 +1132,8 @@
       "ticketingFromDomainMismatch": "La dirección de remitente de tickets debe usar el dominio de envío configurado",
       "refreshFailed": "No se pudieron recuperar los ajustes actualizados",
       "updateFailed": "No se pudieron actualizar los ajustes de correo electrónico",
-      "mailboxesLoadFailed": "No se pudieron cargar los buzones de Microsoft 365"
+      "mailboxesLoadFailed": "No se pudieron cargar los buzones de Microsoft 365",
+      "secretRequiredAfterConnectionChange": "Vuelva a introducir la contraseña de {{provider}}: ha cambiado la dirección del servidor o la información de inicio de sesión."
     },
     "inboundRules": {
       "notFound": "No se encontró la regla de correo electrónico entrante",
@@ -1159,5 +1171,55 @@
         "users": "No se pudieron cargar los usuarios. Inténtelo de nuevo."
       }
     }
+  },
+  "quarantine": {
+    "title": "Correo entrante en cuarentena",
+    "description": "Mensajes entrantes que fueron rechazados en lugar de agregarse a un ticket. Revíselos y descarte los que ya haya gestionado.",
+    "backToSettings": "Volver a la configuración de correo",
+    "openQueue": "Correo en cuarentena",
+    "empty": "No hay correo en cuarentena con estos filtros.",
+    "loadError": "No se pudo cargar el correo en cuarentena",
+    "dismissError": "No se pudo descartar la entrada",
+    "dismissed": "Entrada descartada",
+    "noSubject": "(sin asunto)",
+    "dismiss": "Descartar",
+    "filters": {
+      "mailbox": "Buzón",
+      "reason": "Motivo",
+      "status": "Estado",
+      "allMailboxes": "Todos los buzones",
+      "allReasons": "Todos los motivos",
+      "allStatuses": "Todos los estados",
+      "ticket": "Filtrado por un ticket",
+      "clearTicket": "Mostrar todos los tickets"
+    },
+    "status": {
+      "open": "Abierto",
+      "dismissed": "Descartado"
+    },
+    "columns": {
+      "mailbox": "Buzón",
+      "sender": "Remitente",
+      "subject": "Asunto",
+      "reason": "Motivo",
+      "ticket": "Ticket",
+      "received": "Recibido",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "El remitente no está en el ticket",
+      "reply_outside_sender_audience": "Respuesta fuera de la audiencia de la notificación",
+      "co_managed_token_refused": "Enlace de respuesta de gestión compartida rechazado",
+      "co_managed_token_unserved": "Hilo de gestión compartida no aceptado aquí",
+      "co_managed_sender_unauthenticated": "Remitente de gestión compartida no verificado"
+    },
+    "banner_one": "Se puso en cuarentena {{count}} correo entrante de este ticket",
+    "banner_many": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
+    "banner_other": "Se pusieron en cuarentena {{count}} correos entrantes de este ticket",
+    "bannerLink": "Revisar correo en cuarentena",
+    "bannerAskAdmin_one": "Pida a un administrador de correo que lo revise.",
+    "bannerAskAdmin_many": "Pida a un administrador de correo que los revise.",
+    "bannerAskAdmin_other": "Pida a un administrador de correo que los revise."
   }
 }

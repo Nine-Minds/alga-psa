@@ -24,6 +24,7 @@ import {
   type ContractLineSource,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
   bucketUsageErrorMessage,
@@ -32,6 +33,7 @@ import {
 } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { hasCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import {
   actionError,
@@ -616,7 +618,13 @@ export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsage
       query = query.where('usage_tracking.usage_date', '<=', filter.end_date);
     }
 
-    return await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
+    const records = await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
+
+    // Logos for the distinct clients on these rows only (one batched lookup).
+    const clientIds = Array.from(new Set(records.map((record) => record.client_id).filter(Boolean)));
+    if (clientIds.length === 0) return records;
+    const logoUrls = await getClientLogoUrlsBatch(clientIds, tenant);
+    return records.map((record) => ({ ...record, client_logo_url: logoUrls.get(record.client_id) ?? null }));
   } catch (error) {
     const expected = usageActionErrorFrom(error);
     if (expected) return expected;
@@ -640,12 +648,12 @@ export const getEligibleContractLinesForUI = withAuth(
     serviceId: string,
     effectiveDate?: string | Date,
   ): Promise<EligibleContractLinesForUIResult> => {
-    if (!await hasPermission(user, 'billing', 'read')) {
+    if (!await hasCommercialReadPermission(user)) {
       return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     try {
       const { knex } = await createTenantKnex();
-      return await loadEligibleContractLinesForUI(knex, tenant, clientId, serviceId, effectiveDate);
+      return await loadEligibleContractLinesForUI(user, knex, tenant, clientId, serviceId, effectiveDate);
     } catch (error) {
       const expected = usageActionErrorFrom(error);
       if (expected) return expected;
@@ -653,21 +661,3 @@ export const getEligibleContractLinesForUI = withAuth(
     }
   },
 );
-
-interface Client {
-  client_id: string;
-  client_name: string;
-}
-
-export const getClients = withAuth(async (_user, { tenant }) => {
-  const { knex } = await createTenantKnex();
-
-  const clients = await tenantScopedTable(knex, tenant, 'clients')
-    .select('client_id', 'client_name')
-    .orderBy('client_name') as Client[];
-
-  return clients.map((client: Client) => ({
-    value: client.client_id,
-    label: client.client_name
-  }));
-});

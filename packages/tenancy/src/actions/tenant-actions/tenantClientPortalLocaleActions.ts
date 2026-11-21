@@ -5,6 +5,7 @@ import { SupportedLocale, isSupportedLocale, normalizeLocale, LOCALE_CONFIG } fr
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { requireTenantSettingsUpdate } from './tenantSettingsAuthorization';
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
@@ -19,6 +20,7 @@ export const updateTenantClientPortalLocaleAction = withAuth(async (
   { tenant }: AuthContext,
   locale: SupportedLocale,
 ) => {
+  await requireTenantSettingsUpdate(user, tenant);
   if (user.user_type !== 'internal') {
     throw new Error('Only internal users can update tenant settings');
   }

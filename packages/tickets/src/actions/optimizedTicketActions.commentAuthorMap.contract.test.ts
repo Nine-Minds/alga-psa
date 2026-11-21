@@ -13,7 +13,8 @@ describe('MSP consolidated ticket data comment author map contract', () => {
 
     expect(source).toContain('const extraAuthorIds =');
     expect(source).toContain('.map((comment) => comment.user_id)');
-    expect(source).toContain("await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)");
+    expect(source).toContain(".whereIn('user_id', extraAuthorIds)");
+    expect(source).toContain("projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn(");
 
     const authorFetch = source.slice(
       source.indexOf('const extraCommentAuthors'),
@@ -28,7 +29,7 @@ describe('MSP consolidated ticket data comment author map contract', () => {
 
     expect(source).toContain('const usersWithAvatars = [');
     expect(source).toContain('...extraCommentAuthors.map((author: any) => ({');
-    expect(source).toContain("getEntityImageUrlsBatch('contact', authorContactIds, tenant)");
+    expect(source).toContain('getContactAvatarUrlsBatchAction(authorContactIds, tenant)');
     expect(source).toContain("author.user_type === 'client' && author.contact_id");
     expect(source).toContain('[...users.map((user: any) => user.user_id), ...extraAuthorIds]');
     expect(source).toContain('const userMap = usersWithAvatars.reduce(');

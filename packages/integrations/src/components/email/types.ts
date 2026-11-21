@@ -94,6 +94,14 @@ export interface ImapEmailProviderConfig {
   max_emails_per_sync: number;
   oauth_authorize_url?: string | null;
   oauth_token_url?: string | null;
+  /** Issuer currently authorized to use the stored OAuth credentials. */
+  oauth_credentials_token_url?: string | null;
+  /** 0 reads legacy secret keys; 1 reads endpoint-scoped secret keys only. */
+  oauth_credentials_secret_version?: number;
+  /** UI state, independent of the active credential issuer binding. */
+  oauth_reauthorization_required?: boolean;
+  /** Safe UI state; never contains credential material. */
+  oauth_authorization_status?: 'connected' | 'not_connected' | 'reauthorization_required';
   oauth_client_id?: string | null;
   oauth_client_secret?: string | null;
   oauth_scopes?: string | null;
@@ -114,4 +122,44 @@ export interface ImapEmailProviderConfig {
   last_error?: string;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Secret-free read model. These are the only provider shapes allowed to cross
+ * the server-action boundary to the browser. Secret values are replaced by
+ * `has_*` booleans; build them with `toPublicProvider()`.
+ */
+export interface PublicMicrosoftConfig
+  extends Omit<
+    MicrosoftEmailProviderConfig,
+    'client_secret' | 'access_token' | 'refresh_token' | 'webhook_verification_token'
+  > {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+  has_webhook_verification_token: boolean;
+}
+
+export interface PublicGoogleConfig
+  extends Omit<GoogleEmailProviderConfig, 'client_secret' | 'access_token' | 'refresh_token'> {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+}
+
+export interface PublicImapConfig
+  extends Omit<
+    ImapEmailProviderConfig,
+    'password' | 'oauth_client_secret' | 'access_token' | 'refresh_token'
+  > {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+}
+
+export interface PublicEmailProvider
+  extends Omit<EmailProvider, 'microsoftConfig' | 'googleConfig' | 'imapConfig'> {
+  microsoftConfig?: PublicMicrosoftConfig;
+  googleConfig?: PublicGoogleConfig;
+  imapConfig?: PublicImapConfig;
 }

@@ -1,0 +1,20 @@
+{
+  "reviewOutcome": "prepared",
+  "reviewDocumentPath": "/home/robert/alga-copies/feature-security-2-findings-in-deliveryprovider-ts/docs/reviews/255f8e1d/index.html",
+  "reviewDocumentUrl": null,
+  "reviewHeadSha": "007c0683590a471007379557c82b1644d46428a9",
+  "smokeHeadSha": "2fb583e4b2a7994aee65c37471b625ca508fed1a",
+  "reviewPreparedAt": "2026-11-04T20:54:05.695489+00:00",
+  "reviewEnvironment": "Committed HTML guide with links to the preserved local evidence packet. No review-guide service registered or started. reviewHeadSha identifies the inspected code revision; this handoff commit changes documentation only. Existing live smoke demonstrates 2fb583e4b2, not 007c0683.",
+  "evidenceDirectory": "/home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence",
+  "sourceEvidenceDirectory": "/tmp/alga-smoke-evidence/delivery-provider-20261104-1937",
+  "evidenceLinks": [
+    "file:///home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence/REPORT.md",
+    "file:///home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence/smoke-walkthrough.webm",
+    "file:///home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence/routing-completed.json",
+    "file:///home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence/current-address-mail.json",
+    "file:///home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence/redacted-mail.json"
+  ],
+  "boardStateUpdated": false,
+  "approvalGranted": false
+}

@@ -30,9 +30,9 @@ import { Activity, Eye, KeyRound, PencilLine, RefreshCw, SlidersHorizontal, User
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
-import type { IClient, IUserWithRoles } from '@alga-psa/types';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { FEATURE_MINIMUM_TIER, TIER_FEATURES } from '@alga-psa/types';
 import { getCredentialsContext } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
@@ -135,7 +135,6 @@ export function CredentialAuditScreen() {
   const { t } = useTranslation('msp/credentials');
 
   const [context, setContext] = useState<CredentialsContext | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
 
   const [operations, setOperations] = useState<CredentialAuditEventOperation[]>([]);
@@ -191,11 +190,6 @@ export function CredentialAuditScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllClients(false)
-      .then((list) => {
-        if (!cancelled) setClients(list);
-      })
-      .catch(() => undefined);
     getAllUsers(false, 'internal')
       .then((list) => {
         if (!cancelled) setUsers(list);
@@ -410,7 +404,7 @@ export function CredentialAuditScreen() {
               </span>
               <ClientPicker
                 id="credentials-audit-client-filter"
-                clients={clients}
+                searchClients={searchClientsForPicker}
                 selectedClientId={clientId}
                 onSelect={setClientId}
                 placeholder={t('credentials.audit.filter.allClients')}

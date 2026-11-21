@@ -2,6 +2,7 @@
 
 import {
   sendPortalInvitation as sendPortalInvitationAction,
+  sendBulkPortalInvitations as sendBulkPortalInvitationsAction,
   getPortalInvitations as getPortalInvitationsAction,
   revokePortalInvitation as revokePortalInvitationAction,
   updateClientUser as updateClientUserAction
@@ -9,6 +10,8 @@ import {
 import type { IUser } from '@alga-psa/types';
 import type {
   SendInvitationResult,
+  BulkSendInvitationResult,
+  SendBulkPortalInvitationsParams,
   InvitationHistoryItem,
   PortalInvitationErrorCode,
   SendPortalInvitationOptions,
@@ -20,6 +23,12 @@ export async function sendPortalInvitation(
   options?: SendPortalInvitationOptions
 ): Promise<SendInvitationResult> {
   return sendPortalInvitationAction(contactId, options);
+}
+
+export async function sendBulkPortalInvitations(
+  params: SendBulkPortalInvitationsParams
+): Promise<BulkSendInvitationResult> {
+  return sendBulkPortalInvitationsAction(params);
 }
 
 export async function getPortalInvitations(contactId: string): Promise<InvitationHistoryItem[]> {

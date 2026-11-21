@@ -15,9 +15,10 @@ import ClientAvatar from './ClientAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
-import { AsyncClientPicker, type ClientPickerSearchFn } from './AsyncClientPicker';
+import { AsyncClientPicker, type ClientPickerSearchFn, type PickerClientOption } from './AsyncClientPicker';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -35,19 +36,23 @@ const IN_MEMORY_TAG_FETCH_LIMIT = 200;
 interface ClientPickerProps {
   id?: string;
   /**
-   * @deprecated Full in-memory client lists don't scale (5k+ tenants). Pass `searchClients`
-   * (e.g. `searchClientsForPicker`) instead; the server pages, searches and filters.
-   * Cards D, E and F are migrating the remaining callers off full lists. Still honoured
-   * for small, pre-filtered lists. Ignored when `searchClients` is set.
+   * @deprecated Full in-memory client lists don't scale (5k+ tenants). Omit this prop: the
+   * picker is async by default and searches on the server through the searcher from
+   * `ClientPickerSearchProvider` (or the `searchClients` prop). Passing `clients` opts in to the
+   * in-memory picker, which is only intended for small, pre-filtered lists.
+   * Ignored when `searchClients` is set.
    */
   clients?: IClient[];
   /**
-   * Async mode: server-side search (pass `searchClientsForPicker`). The picker pages,
+   * Async mode: server-side search override (e.g. `searchClientsForPicker`). Optional; the
+   * MSP shells supply it through `ClientPickerSearchProvider`. The picker pages,
    * debounces and hydrates the selected value itself and never needs the full list.
    */
   searchClients?: ClientPickerSearchFn;
   /** Async mode only: ids removed from results on the server (not the same as disabledClientIds). */
   excludeIds?: string[];
+  /** Async mode only: rows already resolved by id (`lookupClientsByIds`), so a picker per row does not look each up. */
+  knownClients?: readonly PickerClientOption[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientFilterState;
@@ -114,11 +119,22 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onSelect, disabl
 };
 
 export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (props) => {
-  if (props.searchClients) {
+  const { searchClients: contextSearchClients } = useClientPickerSearch();
+  const searchClients = props.searchClients ?? contextSearchClients;
+  // Async is the default: the in-memory list is opt-in by passing `clients`.
+  if (props.searchClients || props.clients === undefined) {
+    if (!searchClients) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(
+          '[ClientPicker] No client searcher: pass `searchClients` or mount ClientPickerSearchProvider. Rendering an empty picker.'
+        );
+      }
+      return <InMemoryClientPicker {...props} clients={[]} />;
+    }
     return (
       <AsyncClientPicker
         id={props.id}
-        searchClients={props.searchClients}
+        searchClients={searchClients}
         onSelect={props.onSelect}
         selectedClientId={props.selectedClientId}
         filterState={props.filterState}
@@ -128,9 +144,16 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (prop
         disabledClientIds={props.disabledClientIds}
         disabledTooltip={props.disabledTooltip}
         excludeIds={props.excludeIds}
+        knownClients={props.knownClients}
         className={props.className}
         placeholder={props.placeholder}
         modal={props.modal}
+        fitContent={props.fitContent}
+        size={props.size}
+        triggerVariant={props.triggerVariant}
+        triggerSize={props.triggerSize}
+        triggerButtonClassName={props.triggerButtonClassName}
+        data-automation-type={props['data-automation-type']}
         onAddNew={props.onAddNew}
         disabled={props.disabled}
       />

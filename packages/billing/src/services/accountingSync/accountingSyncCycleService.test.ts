@@ -578,6 +578,123 @@ describe('runAccountingSyncCycle', () => {
     expect(result.stats?.opsProcessed).toBe(2);
   });
 
+  async function runInvoiceDrainWithOutcome(outcome: any) {
+    const pendingOps = [
+      { op_id: 'op-ok', alga_entity_id: 'inv-ok', attempts: 0 },
+      { op_id: 'op-bad', alga_entity_id: 'inv-bad', attempts: 1 }
+    ];
+    const markDone = vi.fn(async () => undefined);
+    const markFailed = vi.fn(async () => 'pending');
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return ({
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_invoice' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone,
+      markFailed,
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({}))
+    } as any); });
+    vi.mocked(AccountingExportInvoiceSelector).mockImplementationOnce(function () { return ({
+      createBatchFromFilters: vi.fn(async () => ({ batch: { batch_id: 'batch-part' } }))
+    } as any); });
+    const cancelBatch = vi.fn(async () => ({}));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => ({ deliveredLines: [], ...outcome })),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-part', status: 'needs_attention', origin: 'scheduled' }, lines: [], errors: []
+      })),
+      cancelBatch
+    } as any);
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any, tenantId: TENANT, adapterType: ADAPTER_TYPE, targetRealm: REALM,
+      adapter: makeFakeAdapter(), exceptions, notifications: makeFakeNotifications()
+    });
+    return { result, markDone, markFailed, exceptions, cancelBatch };
+  }
+
+  it('drain: partial delivery → delivered op done, rejected op failed with provider message + exception', async () => {
+    const { result, markDone, markFailed, exceptions, cancelBatch } = await runInvoiceDrainWithOutcome({
+      deliveredEntityIds: ['inv-ok'],
+      failedEntities: [{ entityId: 'inv-bad', code: 'qbo_rejected', message: 'Invalid reference: ItemRef 99' }]
+    });
+    expect(markDone).toHaveBeenCalledTimes(1);
+    expect(markDone).toHaveBeenCalledWith(TENANT, 'op-ok');
+    expect(markFailed).toHaveBeenCalledWith(TENANT, 'op-bad', 'Invalid reference: ItemRef 99');
+    expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_export_error', 'invoice', 'inv-ok');
+    expect(exceptions.resolve).not.toHaveBeenCalledWith('accounting_sync_export_error', 'invoice', 'inv-bad');
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'accounting_sync_export_error',
+      entityId: 'inv-bad',
+      context: expect.objectContaining({ batch_id: 'batch-part', message: 'Invalid reference: ItemRef 99' })
+    }));
+    expect(result.stats?.opsProcessed).toBe(1);
+    expect(result.stats?.opsFailed).toBe(1);
+    // needs_attention would trip the duplicate-selection guard, so it is released.
+    expect(cancelBatch).toHaveBeenCalledWith('batch-part', expect.anything());
+  });
+
+  it('drain: every document rejected → no op done and no export-error exception resolved', async () => {
+    const { result, markDone, markFailed, exceptions } = await runInvoiceDrainWithOutcome({
+      deliveredEntityIds: [],
+      failedEntities: [
+        { entityId: 'inv-ok', code: 'qbo_rejected', message: 'Duplicate document number' },
+        { entityId: 'inv-bad', code: 'qbo_rejected', message: 'Invalid reference: ItemRef 99' }
+      ]
+    });
+    expect(markDone).not.toHaveBeenCalled();
+    expect(markFailed).toHaveBeenCalledTimes(2);
+    expect(exceptions.resolve).not.toHaveBeenCalled();
+    expect(result.stats?.opsProcessed).toBe(0);
+    expect(result.stats?.opsFailed).toBe(2);
+  });
+
+  it('drain: op whose entity has no reported outcome is retried, never marked done', async () => {
+    const { markDone, markFailed } = await runInvoiceDrainWithOutcome({
+      deliveredEntityIds: ['inv-ok'],
+      failedEntities: []
+    });
+    expect(markDone).toHaveBeenCalledTimes(1);
+    expect(markFailed).toHaveBeenCalledWith(TENANT, 'op-bad', expect.stringContaining('no delivery outcome'));
+  });
+
+  it('vendor-bill drain: partial delivery → delivered bill done, rejected bill failed with exception', async () => {
+    const repo = makeVendorBillOpsRepo([
+      { op_id: 'op-vb-ok', alga_entity_id: 'bill-ok', attempts: 0 },
+      { op_id: 'op-vb-bad', alga_entity_id: 'bill-bad', attempts: 0 }
+    ]);
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([
+      { bill_id: 'bill-ok', bill_number: 'VB-1', total_amount: 100, currency_code: 'USD' },
+      { bill_id: 'bill-bad', bill_number: 'VB-2', total_amount: 200, currency_code: 'USD' }
+    ]));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch: vi.fn(async () => ({ batch_id: 'batch-vb-part' })),
+      appendLines: vi.fn(async () => undefined),
+      executeBatch: vi.fn(async () => ({
+        deliveredLines: [],
+        deliveredEntityIds: ['bill-ok'],
+        failedEntities: [{ entityId: 'bill-bad', code: 'qbo_rejected', message: 'Vendor not found' }]
+      })),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-vb-part', status: 'needs_attention', origin: 'scheduled' }, lines: [], errors: []
+      })),
+      cancelBatch: vi.fn(async () => ({}))
+    } as any);
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any, tenantId: TENANT, adapterType: ADAPTER_TYPE, targetRealm: REALM,
+      adapter: makeFakeAdapter(), exceptions, notifications: makeFakeNotifications()
+    });
+    expect(repo.markDone).toHaveBeenCalledTimes(1);
+    expect(repo.markDone).toHaveBeenCalledWith(TENANT, 'op-vb-ok');
+    expect(repo.markFailed).toHaveBeenCalledWith(TENANT, 'op-vb-bad', 'Vendor not found');
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'accounting_sync_export_error', entityType: 'vendor_bill', entityId: 'bill-bad'
+    }));
+    expect(result.stats?.opsFailed).toBe(1);
+    restoreExportServiceDefault();
+  });
+
   it('drain: ACCOUNTING_EXPORT_EMPTY_BATCH → ops marked done (already exported)', async () => {
     const pendingOps = [{ op_id: 'op-3', alga_entity_id: 'inv-3', attempts: 0 }];
 

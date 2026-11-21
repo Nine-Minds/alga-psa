@@ -21,7 +21,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 ## Discoveries / Constraints
 
 - (2026-02-23) Providers setup currently shows only Google (`packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`).
-- (2026-02-23) CE MSP SSO entry is a null stub (`packages/auth/src/components/SsoProviderButtons.tsx`), while EE maps to `ee/server/src/components/auth/SsoProviderButtons.tsx` via `server/next.config.mjs`.
+- (2026-02-23) CE MSP SSO entry is a null stub (`packages/auth/src/components/SsoProviderButtons.tsx`), while EE maps to the former EE copy of `SsoProviderButtons` (since removed) via `server/next.config.mjs`.
 - (2026-02-23) NextAuth provider registration in shared auth options is currently EE-gated (`packages/auth/src/lib/nextAuthOptions.ts`) and uses app OAuth keys.
 - (2026-02-23) NextAuth options are cached (`cachedOptions`), which conflicts with per-request credential-source selection.
 - (2026-02-23) Secret provider interface supports tenant writes but not app writes (`packages/core/src/lib/secrets/ISecretProvider.ts`), so Providers UI cannot write app-wide OAuth keys.
@@ -104,7 +104,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - CE/EE SSO button entry aliasing:
   - `server/next.config.mjs`
   - `packages/auth/src/components/SsoProviderButtons.tsx`
-  - `ee/server/src/components/auth/SsoProviderButtons.tsx`
+  - the former EE copy of `SsoProviderButtons` (since removed)
 - Providers settings page:
   - `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`
 - Microsoft email/calendar forms (CE):

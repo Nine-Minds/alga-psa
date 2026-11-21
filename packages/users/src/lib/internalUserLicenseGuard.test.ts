@@ -6,26 +6,74 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { checkInternalUserLicenseLimit, countPendingInvitationSeats } from './internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, countPendingInvitationSeats, lockTenantSeatState } from './internalUserLicenseGuard';
+
+const lockCalls: unknown[][] = [];
+
+function asTransaction(fn: any) {
+  fn.isTransaction = true;
+  fn.raw = async (...args: unknown[]) => {
+    // Only the advisory lock is recorded; `raw('1')` builds the subquery's select list.
+    if (String(args[0]).startsWith('SELECT pg_advisory')) lockCalls.push(args);
+    return { rows: [] };
+  };
+  return fn;
+}
 
 function fakeTrx(input: { plan: string | null; licensedUserCount: number | null; usedInternalUsers: number }) {
-  return ((table: string) => {
+  const trx: any = (table: string) => {
     if (table === 'tenants') {
       const tenantRow = { licensed_user_count: input.licensedUserCount, plan: input.plan };
-      return { first: async (..._fields: any[]) => tenantRow };
+      return {
+        where: (criteria: Record<string, any>) => ({
+          forUpdate: () => ({ first: async (..._fields: any[]) => { lockCalls.push(['tenant-for-update', criteria]); return { tenant: 'tenant-1' }; } }),
+        }),
+        first: async (..._fields: any[]) => { lockCalls.push(['tenant-read']); return tenantRow; },
+      };
+    }
+
+    // The seat-assignment subquery that leaves seat technicians out of the licensed count.
+    if (table === 'co_managed_seat_assignments as seat_assignment') {
+      const subquery: any = { whereNot: () => subquery, select: () => subquery, whereRaw: () => subquery };
+      return subquery;
     }
 
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
-          count: async () => [{ count: String(input.usedInternalUsers) }],
+          whereNotExists: () => ({ count: () => ({ first: async () => ({ count: String(input.usedInternalUsers) }) }) }),
         }),
       };
     }
 
     throw new Error(`Unexpected tenant table ${table}`);
-  }) as any;
+  };
+  return asTransaction(trx);
 }
+
+describe('seat lock and transaction requirement', () => {
+  it('takes the per-tenant advisory xact lock before seat admission reads', async () => {
+    lockCalls.length = 0;
+    await checkInternalUserLicenseLimit(
+      fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 0 }),
+      'tenant-1'
+    );
+    expect(lockCalls).toEqual([
+      ['SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['internal_user_seats', 'tenant-1']],
+      ['tenant-read'],
+    ]);
+  });
+
+  it('requires a transaction before locking tenant seat state', async () => {
+    const notTrx = (() => { throw new Error('must not query'); }) as any;
+    await expect(lockTenantSeatState(notTrx, 'tenant-1')).rejects.toThrow(/inside a transaction/);
+  });
+
+  it('throws for a non-transaction caller', async () => {
+    const notTrx = (() => { throw new Error('must not query'); }) as any;
+    await expect(checkInternalUserLicenseLimit(notTrx, 'tenant-1')).rejects.toThrow(/inside a transaction/);
+  });
+});
 
 describe('checkInternalUserLicenseLimit', () => {
   it('blocks a second internal user on the Solo plan', async () => {
@@ -97,12 +145,16 @@ describe('checkInternalUserLicenseLimit', () => {
   });
 
   it('throws when the tenant row cannot be found', async () => {
-    const trx = ((table: string) => {
+    const trx = asTransaction((table: string) => {
       if (table === 'tenants') {
-        return { first: async () => undefined };
+        return {
+          where: () => ({ forUpdate: () => ({ first: async () => undefined }) }),
+          first: async () => undefined,
+        };
       }
       throw new Error(`Unexpected tenant table ${table}`);
     }) as any;
+    trx.raw = async () => undefined;
 
     await expect(checkInternalUserLicenseLimit(trx, 'missing-tenant')).rejects.toThrow(
       'Tenant not found: missing-tenant'
@@ -117,23 +169,31 @@ describe('countPendingInvitationSeats', () => {
       whereNull: (...a: unknown[]) => { calls.push(['whereNull', ...a]); return query; },
       where: (...a: unknown[]) => { calls.push(['where', ...a]); return query; },
       whereNot: (...a: unknown[]) => { calls.push(['whereNot', ...a]); return query; },
+      whereNotExists: () => { calls.push(['whereNotExists']); return query; },
+      select: () => query,
+      whereRaw: () => query,
       count: () => query,
       first: async () => ({ count }),
     };
     const trx: any = (table: string) => { calls.push(['table', table]); return query; };
     trx.fn = { now: () => 'NOW' };
+    trx.raw = () => 'RAW';
     return { trx, calls };
   }
 
   it('counts only unused, unexpired invitations of the tenant', async () => {
     const { trx, calls } = recordingTrx('3');
     await expect(countPendingInvitationSeats(trx, 'tenant-1')).resolves.toBe(3);
-    expect(calls).toEqual([['table', 'user_invitations'], ['whereNull', 'used_at'], ['where', 'expires_at', '>', 'NOW']]);
+    // Unused, unexpired, and not the invitation of a seat technician (a live seat assignment).
+    expect(calls).toEqual([
+      ['table', 'user_invitations'], ['whereNull', 'user_invitations.used_at'], ['where', 'user_invitations.expires_at', '>', 'NOW'],
+      ['table', 'co_managed_seat_assignments as seat_assignment'], ['whereNot', 'seat_assignment.state', 'revoked'], ['whereNotExists'],
+    ]);
   });
 
   it('leaves out the invitee being re-invited when asked to', async () => {
     const { trx, calls } = recordingTrx('0');
     await expect(countPendingInvitationSeats(trx, 'tenant-1', { excludeEmail: 'a@example.test' })).resolves.toBe(0);
-    expect(calls).toContainEqual(['whereNot', 'email', 'a@example.test']);
+    expect(calls).toContainEqual(['whereNot', 'user_invitations.email', 'a@example.test']);
   });
 });

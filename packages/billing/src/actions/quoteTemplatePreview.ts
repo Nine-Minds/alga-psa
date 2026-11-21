@@ -3,12 +3,14 @@
 
 import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { QuoteViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { buildTemplateHtmlDocument, inlinePreviewDocumentImages } from '../lib/invoice-template-ast/server-render';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 
@@ -45,6 +47,8 @@ type AuthoritativePreviewResult = {
     status: 'idle' | 'success' | 'error';
     html: string | null;
     css: string | null;
+    /** The same render as a full HTML document, drawn as the pages it prints as. */
+    documentHtml?: string | null;
     contentHeightPx?: number | null;
     error?: string;
   };
@@ -56,7 +60,22 @@ type AuthoritativePreviewResult = {
 };
 
 export const runAuthoritativeQuoteTemplatePreview = withAuth(
-  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return {
+        success: false,
+        sourceHash: null,
+        generatedSource: null,
+        compile: {
+          status: 'error',
+          diagnostics: [],
+          error: 'Permission denied: billing read required',
+        },
+        render: { status: 'idle', html: null, css: null, contentHeightPx: null },
+        verification: { status: 'idle', mismatches: [] },
+      };
+    }
+
     const hasWorkspaceNodes =
       Boolean(input?.workspace?.nodesById) &&
       typeof input.workspace.nodesById === 'object' &&
@@ -130,6 +149,16 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
         dateFormat,
         t: localized.t,
       });
+      // The author sees the pages this quote prints as, chunked by the same engine that prints them.
+      // Its images are inlined first (inlinePreviewDocumentImages), or the chunker would
+      // measure a header the author's iframe then draws taller.
+      const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+      const paginated = await paginateDocumentPreviewHtml(
+        await inlinePreviewDocumentImages(
+          buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Quote preview' }),
+        ),
+        validation.ast,
+      );
       return {
         success: true,
         sourceHash,
@@ -142,6 +171,7 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
           status: 'success',
           html: rendered.html,
           css: rendered.css,
+          documentHtml: paginated.html,
           contentHeightPx: null,
         },
         verification: {

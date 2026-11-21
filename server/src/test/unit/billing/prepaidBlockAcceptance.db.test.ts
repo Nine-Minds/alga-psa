@@ -689,7 +689,8 @@ describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real
     expect(row).toMatchObject({ chargeType: 'PrepaidBlock', billingCycleId: null, canGenerate: true, isEarly: false });
 
     // Approval gate: only the block row is selected -> not blocked by the other line's draft time.
-    const { generateInvoiceForSelectionInput, generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const { generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const { generateInvoiceForCycle } = await import('../../../../test-utils/billingTestHelpers');
     const blockInvoice: any = await generateInvoiceForSelectionInput(row.selectorInput, {}, undefined);
     expect(blockInvoice?.error, JSON.stringify(blockInvoice)).toBeUndefined();
     const blockInvoiceRow = await db('invoices').where({ tenant, invoice_id: blockInvoice.invoiceId ?? blockInvoice.invoice_id }).first();
@@ -698,16 +699,16 @@ describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real
 
     // The cycle is still uninvoiced, so the window's T&M (arrears) invoice is unaffected by the block invoice.
     // A selection that includes the T&M row is still blocked by the unapproved entry.
-    const blocked: any = await generateInvoice(aprilCycleId, {});
+    const blocked: any = await generateInvoiceForCycle(aprilCycleId, {});
     expect(blocked?.error ?? blocked?.message ?? JSON.stringify(blocked)).toMatch(/approv|TIME_APPROVAL_REQUIRED/i);
     expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(0);
 
     await db('time_entries').where({ tenant, entry_id: entryId }).update({ approval_status: 'APPROVED' });
-    const arrears: any = await generateInvoice(aprilCycleId, {});
+    const arrears: any = await generateInvoiceForCycle(aprilCycleId, {});
     expect(arrears?.error, JSON.stringify(arrears)).toBeUndefined();
     expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(1);
     // Exactly once: a second run for the same cycle is rejected as a duplicate, not re-invoiced.
-    const again: any = await generateInvoice(aprilCycleId, {});
+    const again: any = await generateInvoiceForCycle(aprilCycleId, {});
     expect(again?.error ?? again?.message ?? again).toBeTruthy();
     expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(1);
     // The block was issued exactly once.

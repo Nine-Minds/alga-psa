@@ -7,7 +7,7 @@ import { compileResourceReadAuthorizationSql, type BundleNarrowingRule, type Rel
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createProjectReadAuthorizer } from '../../packages/projects/src/lib/projectReadAuthorization';
 import { canAccessAttachmentTicket } from './ticketCommentAttachments';
-import { authorizeAndRedactDocuments } from './documentAuthorization';
+import { authorizeAndRedactDocumentsForAction } from './documentAuthorization';
 import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
 import { applyTicketVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
 
@@ -358,7 +358,7 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
     assertTarget: async (conn, tenant, user, id, action) => {
       if (!await hasTargetPermission(user, 'document', action, conn)) return false;
       const rows = await dbTable(conn, tenant, 'documents').where({ document_id: id }).select('document_id', 'created_by', 'is_client_visible');
-      return (await authorizeAndRedactDocuments(conn, tenant, user, rows as any, undefined, action === 'read' ? 'read' : 'update')).length === 1;
+      return (await authorizeAndRedactDocumentsForAction(conn, tenant, user, rows as any, action === 'read' ? 'read' : 'update')).length === 1;
     },
   },
 };

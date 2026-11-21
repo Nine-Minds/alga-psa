@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { useIsolatedEventBusModules } from './testing/isolatedEventBusModules';
 import { EventEmitter } from 'node:events';
 
 // Captured before vi.useFakeTimers() replaces the globals, so these keep
@@ -24,13 +25,14 @@ type FakeRedisClient = EventEmitter & {
 };
 
 describe('EventBus Redis consumer hard-timeout', () => {
+  useIsolatedEventBusModules();
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.resetModules();
     vi.clearAllMocks();
   });
 

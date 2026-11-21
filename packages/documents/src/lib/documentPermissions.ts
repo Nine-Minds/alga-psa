@@ -102,10 +102,7 @@ export async function canUploadDocument(user: IUser, target: DocumentUploadTarge
     for (const [entityType, entityId] of targets) {
       if (entityId && !await assertAuthorizedAssociationTarget(trx, user.tenant, user, entityType, entityId, 'update')) return false;
     }
-    if (target.parentDocumentId) {
-      // Parent documents are checked by the document mutation authorization in uploadDocument.
-      return grants.general;
-    }
+    if (target.parentDocumentId) return grants.general;
     return true;
   });
 }

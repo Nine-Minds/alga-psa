@@ -271,7 +271,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       });
 
       if (!result.success) {
-        const errorKeys: Record<typeof result.code, string> = {
+        const errorKeys: Partial<Record<typeof result.code, string>> = {
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
@@ -283,7 +283,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           SOLO_PLAN_LIMIT: 'profile.messages.error.saveFailed',
           USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };
-        toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
+        toast.error((errorKeys[result.code] ? t(errorKeys[result.code] as string, { defaultValue: result.error }) : result.error));
         return;
       }
 

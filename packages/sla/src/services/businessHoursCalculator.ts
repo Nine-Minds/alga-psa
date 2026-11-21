@@ -211,7 +211,15 @@ export function calculateDeadline(
 
       if (entry && entry.is_enabled) {
         if (timeString >= entry.start_time && timeString < entry.end_time) {
-          remainingMinutes--;
+          const [endHours, endMinutes] = entry.end_time.split(':').map(Number);
+          const businessEnd = new Date(localCurrent);
+          businessEnd.setHours(endHours, endMinutes, 0, 0);
+          const minutesUntilBusinessEnd = (businessEnd.getTime() - localCurrent.getTime()) / 60000;
+          const elapsedMinutes = Math.min(remainingMinutes, 1, minutesUntilBusinessEnd);
+          remainingMinutes -= elapsedMinutes;
+          localCurrent = new Date(localCurrent.getTime() + elapsedMinutes * 60000);
+          iterations++;
+          continue;
         }
       }
     }

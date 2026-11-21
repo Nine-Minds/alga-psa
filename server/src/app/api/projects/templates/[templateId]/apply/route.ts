@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { applyTemplate } from '@alga-psa/projects/actions/projectTemplateActions';
 import { isTemplateActionError, templateErrorResponse } from '../../templateRouteErrors';
 
@@ -28,13 +29,15 @@ export async function POST(
       );
     }
 
-    const projectId = await applyTemplate(params.templateId, {
-      project_name,
-      client_id,
-      start_date: typeof start_date === 'string' ? start_date : undefined,
-      assigned_to: typeof assigned_to === 'string' ? assigned_to : undefined,
-      options: options && typeof options === 'object' ? options as any : undefined
-    });
+    const projectId = await runWithApiKeyOrSession(request, () =>
+      applyTemplate(params.templateId, {
+        project_name,
+        client_id,
+        start_date: typeof start_date === 'string' ? start_date : undefined,
+        assigned_to: typeof assigned_to === 'string' ? assigned_to : undefined,
+        options: options && typeof options === 'object' ? options as any : undefined
+      })
+    );
     if (isTemplateActionError(projectId)) {
       return templateErrorResponse(projectId, 'Failed to apply template');
     }

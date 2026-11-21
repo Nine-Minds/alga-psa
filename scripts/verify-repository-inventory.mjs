@@ -29,7 +29,8 @@ try {
     const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     result = verifyRepositoryInventory({ root, revision: source.revision,
       input: path.join(root, 'test-results/inventory-input'), candidates: repositoryTestFiles(root),
-      manualRunners: read('scripts/manual-vitest-runners.json'), exclusions: read('scripts/node-test-exclusions.json') });
+      manualRunners: read('scripts/manual-vitest-runners.json'), exclusions: read('scripts/node-test-exclusions.json'),
+      delegations: read('scripts/delegated-vitest-test-workers.json') });
   }
   const jobs = JSON.parse(process.env.INVENTORY_JOBS || '{}');
   if (jobs.selection?.result !== 'success' || jobs.mobile?.result !== 'success') {

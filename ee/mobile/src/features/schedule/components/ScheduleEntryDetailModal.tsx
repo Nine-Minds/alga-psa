@@ -50,8 +50,10 @@ export function ScheduleEntryDetailModal({
   onOpenTicket,
   onOpenClient,
   onOpenContact,
+  onOpenProjectTask,
   onEdit,
   onDelete,
+  onManage,
   onClose,
   client = null,
   apiKey = null,
@@ -64,8 +66,11 @@ export function ScheduleEntryDetailModal({
   onOpenTicket: (ticketId: string) => void;
   onOpenClient?: (clientId: string, clientName: string) => void;
   onOpenContact?: (contactId: string, contactName: string) => void;
-  onEdit: (entry: ScheduleEntry) => void;
-  onDelete: (entry: ScheduleEntry) => void;
+  onOpenProjectTask?: (taskId: string) => void;
+  /** Omitted by screens that do not own the schedule forms; they pass onManage instead. */
+  onEdit?: (entry: ScheduleEntry) => void;
+  onDelete?: (entry: ScheduleEntry) => void;
+  onManage?: (entry: ScheduleEntry) => void;
   onClose: () => void;
   /** Needed to resolve the ticket/client/contact behind an interaction entry. */
   client?: ApiClient | null;
@@ -81,6 +86,7 @@ export function ScheduleEntryDetailModal({
   const recurring = hasRecurrence(entry);
   const isTicket = entry.work_item_type === "ticket" && Boolean(entry.work_item_id);
   const isInteraction = entry.work_item_type === "interaction" && Boolean(entry.work_item_id);
+  const isProjectTask = entry.work_item_type === "project_task" && Boolean(entry.work_item_id);
   const names = assignedNames(entry);
 
   const confirmDelete = () => {
@@ -92,7 +98,7 @@ export function ScheduleEntryDetailModal({
         {
           text: t("detail.deleteConfirm", { defaultValue: "Delete" }),
           style: "destructive",
-          onPress: () => onDelete(entry),
+          onPress: () => onDelete?.(entry),
         },
       ],
     );
@@ -183,12 +189,22 @@ export function ScheduleEntryDetailModal({
                 {t("detail.openTicket", { defaultValue: "Open ticket" })}
               </PrimaryButton>
             ) : null}
-            {editable ? (
+            {isProjectTask && onOpenProjectTask ? (
+              <PrimaryButton onPress={() => onOpenProjectTask(entry.work_item_id as string)} disabled={busy}>
+                {t("detail.openProjectTask", { defaultValue: "Open task" })}
+              </PrimaryButton>
+            ) : null}
+            {onManage ? (
+              <PrimaryButton onPress={() => onManage(entry)} disabled={busy}>
+                {t("detail.manageOnSchedule", { defaultValue: "Open in Schedule" })}
+              </PrimaryButton>
+            ) : null}
+            {editable && onEdit ? (
               <PrimaryButton onPress={() => onEdit(entry)} disabled={busy}>
                 {t("detail.edit", { defaultValue: "Edit" })}
               </PrimaryButton>
             ) : null}
-            {editable ? (
+            {editable && onDelete ? (
               <PrimaryButton onPress={confirmDelete} disabled={busy}>
                 {busy
                   ? t("detail.deleting", { defaultValue: "Deleting…" })

@@ -5,6 +5,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+// Load the subject during collection: a timed-out dynamic import can resume
+// after cleanup and render into the next test's document.
+import IntegrationsSettingsPage from '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
@@ -69,13 +72,9 @@ vi.mock('../../../../../../packages/integrations/src/lib/calendarAvailability', 
   };
 });
 
-vi.mock('@alga-psa/ui/hooks', async () => {
-  const actual = await vi.importActual<object>('@alga-psa/ui/hooks');
-  return {
-    ...actual,
-    useFeatureFlag: useFeatureFlagMock,
-  };
-});
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: useFeatureFlagMock,
+}));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   __esModule: true,
@@ -106,19 +105,20 @@ vi.mock('@alga-psa/integrations/components/settings/integrations/RmmIntegrations
   default: () => <div data-testid="rmm-integrations-setup-stub" />,
 }));
 
-vi.mock('@alga-psa/integrations/components/settings/integrations/GoogleIntegrationSettings', () => ({
-  __esModule: true,
-  GoogleIntegrationSettings: () => <div data-testid="google-integration-settings-stub" />,
+// These panels are outside Identity's contract. Mock the page's direct
+// dependencies so collection never loads their server actions or SDKs.
+vi.mock('@alga-psa/integrations/components/settings/integrations/ProviderCredentialsWorkbench', () => ({
+  ProviderCredentialsWorkbench: () => <div data-testid="provider-credentials-stub" />,
 }));
-
-vi.mock('@alga-psa/integrations/components', () => ({
-  __esModule: true,
-  EmailProviderConfiguration: () => <div data-testid="email-provider-config-stub" />,
-  CalendarIntegrationsSettings: () => <div data-testid="calendar-integrations-settings-stub" />,
+vi.mock('@alga-psa/integrations/components/settings/integrations/CalendarEnterpriseIntegrationSettings', () => ({
+  CalendarEnterpriseIntegrationSettings: () => <div data-testid="calendar-integrations-stub" />,
 }));
-// The page imports EmailProviderConfiguration by relative path, so the
-// barrel mock above never reaches it; stub the concrete module too, or the
-// real component mounts and its provider load can outlive the test.
+vi.mock('@alga-psa/integrations/components/settings/integrations/TeamsEnterpriseIntegrationSettings', () => ({
+  TeamsEnterpriseIntegrationSettings: () => <div data-testid="teams-integrations-stub" />,
+}));
+vi.mock('@alga-psa/integrations/components/settings/integrations/telephony/TelephonyEnterpriseIntegrationSettings', () => ({
+  TelephonyEnterpriseIntegrationSettings: () => <div data-testid="telephony-integrations-stub" />,
+}));
 vi.mock('../../../../../../packages/integrations/src/components/email/EmailProviderConfiguration', () => ({
   EmailProviderConfiguration: () => <div data-testid="email-provider-config-stub" />,
 }));
@@ -150,7 +150,7 @@ describe('IntegrationsSettingsPage Entra placement', () => {
       get: (key: string) => (key === 'category' ? 'identity' : null),
     });
 
-    // The Hudu settings hook still reads feature flags, but Identity must not.
+    // Identity must remain available independently of feature-flag state.
     useFeatureFlagMock.mockReturnValue({ enabled: false, loading: false, error: null });
   });
 
@@ -164,11 +164,7 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the Microsoft Entra integration entry in EE mode', async () => {
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
+  it('renders the Microsoft Entra integration entry in EE mode', () => {
     render(<IntegrationsSettingsPage />);
 
     expect(screen.getByTestId('custom-tabs-mock')).toBeInTheDocument();
@@ -177,12 +173,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('shows Entra settings while PostHog is unavailable', async () => {
+  it('shows Entra settings while PostHog is unavailable', () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false, loading: true, error: new Error('PostHog unavailable') });
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
 
     render(<IntegrationsSettingsPage />);
 
@@ -191,12 +183,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('hides Identity outside EE builds', async () => {
+  it('hides Identity outside EE builds', () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
 
     render(<IntegrationsSettingsPage />);
 
@@ -206,15 +194,29 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByTestId('custom-tabs-mock')).toBeInTheDocument();
   });
 
-  it('keeps Identity visible while preserving the Entra tier notice', async () => {
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
+  it('keeps Identity visible while preserving the Entra tier notice', () => {
     render(<IntegrationsSettingsPage canUseEntraSync={false} />);
 
     expect(screen.getByText('Identity')).toBeInTheDocument();
     expect(screen.getByText('Microsoft Entra requires the Enterprise add-on')).toBeInTheDocument();
     expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
+  });
+
+  it('updates Identity access when the add-on entitlement changes on the mounted page', () => {
+    const { rerender } = render(<IntegrationsSettingsPage canUseEntraSync={false} />);
+
+    expect(screen.getByText('Microsoft Entra requires the Enterprise add-on')).toBeInTheDocument();
+    expect(screen.queryByTestId('entra-integration-settings-shell')).not.toBeInTheDocument();
+
+    rerender(<IntegrationsSettingsPage canUseEntraSync />);
+
+    expect(screen.getByTestId('entra-integration-settings-shell')).toBeInTheDocument();
+    expect(screen.queryByText('Microsoft Entra requires the Enterprise add-on')).not.toBeInTheDocument();
+
+    rerender(<IntegrationsSettingsPage canUseEntraSync={false} />);
+
+    expect(screen.getByText('Identity Integrations')).toBeInTheDocument();
+    expect(screen.getByText('Microsoft Entra requires the Enterprise add-on')).toBeInTheDocument();
+    expect(screen.queryByTestId('entra-integration-settings-shell')).not.toBeInTheDocument();
   });
 });

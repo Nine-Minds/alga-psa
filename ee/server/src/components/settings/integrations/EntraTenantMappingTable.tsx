@@ -5,11 +5,12 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEntraMappingPreview, confirmEntraMappings, listEntraMappingGroups } from '@alga-psa/integrations/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
 
 /** The mapping table is the setup surface; a partner with 200 tenants pages it. */
 const MAPPING_PAGE_SIZE = 15;
@@ -215,7 +216,8 @@ export function EntraTenantMappingTable({
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
-  const [allClients, setAllClients] = React.useState<IClient[]>([]);
+  // The pre-selected clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = React.useState<PickerClientOption[]>([]);
   const [confirmingMappings, setConfirmingMappings] = React.useState(false);
   const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
   const [groupOptionsByTenant, setGroupOptionsByTenant] = React.useState<
@@ -234,7 +236,14 @@ export function EntraTenantMappingTable({
         return;
       }
 
-      setRows(mapPreviewToRows(result.data));
+      const nextRows = mapPreviewToRows(result.data);
+      setKnownClients(
+        await lookupClientsByIds(
+          searchClientsForPicker,
+          nextRows.map((row) => row.selectedClientId).filter((id): id is string => !!id),
+        ),
+      );
+      setRows(nextRows);
     } finally {
       setLoading(false);
     }
@@ -243,21 +252,6 @@ export function EntraTenantMappingTable({
   React.useEffect(() => {
     void loadPreview();
   }, [loadPreview, refreshKey]);
-
-  React.useEffect(() => {
-    const loadClients = async () => {
-      try {
-        const result = await getAllClients();
-        const normalized = (Array.isArray(result) ? result : []) as IClient[];
-        normalized.sort((a, b) => (a.client_name || '').localeCompare(b.client_name || ''));
-        setAllClients(normalized);
-      } catch {
-        setAllClients([]);
-      }
-    };
-
-    void loadClients();
-  }, []);
 
   const summary = React.useMemo<EntraMappingSummary>(() => ({
     mapped: rows.filter(
@@ -552,7 +546,8 @@ export function EntraTenantMappingTable({
         <div className={loading ? 'pointer-events-none opacity-50' : ''}>
           <ClientPicker
             id={`entra-client-picker-${row.managedTenantId}`}
-            clients={allClients}
+            searchClients={searchClientsForPicker}
+            knownClients={knownClients}
             selectedClientId={row.selectedClientId}
             onSelect={(val) => updateSelection(row.managedTenantId, val || '')}
             filterState="active"

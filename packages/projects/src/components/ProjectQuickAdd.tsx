@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { IProject, IClient, IStatus } from '@alga-psa/types';
+import { IProject, IStatus } from '@alga-psa/types';
 import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
@@ -17,7 +17,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
-import { getServices } from '../actions/serviceCatalogActions';
+import { loadServiceOptions } from '../lib/serviceOptions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -42,10 +42,9 @@ import { useTranslation } from 'react-i18next';
 interface ProjectQuickAddProps {
   onClose: () => void;
   onProjectAdded: (newProject: IProject) => void;
-  clients: IClient[];
 }
 
-const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
+const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded }) => {
   const { t } = useTranslation(['features/projects', 'common']);
   const { getContactsByClient, getAllContacts, renderQuickAddContact, renderQuickAddClient } = useClientIntegration();
   const [projectName, setProjectName] = useState('');
@@ -55,7 +54,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
-  const [localClients, setLocalClients] = useState<IClient[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -87,11 +85,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
     }
   }, [statuses]);
 
-  const mergedClients = React.useMemo(() => {
-    const clientIds = new Set(clients.map(c => c.client_id));
-    return [...clients, ...localClients.filter(c => !clientIds.has(c.client_id))];
-  }, [clients, localClients]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -99,10 +92,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           getAllUsersBasic(),
           getProjectStatuses(),
           getTenantProjectStatuses(),
-          getServices(1, 999)
+          loadServiceOptions()
         ]);
         setUsers(allUsers);
-        setServices(servicesResponse.services);
+        setServices(servicesResponse);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -310,7 +303,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.clientLabel', 'Client *')}</label>
                 <ClientPicker
                   id='client-picker'
-                  clients={mergedClients}
                   onSelect={setSelectedClientId}
                   selectedClientId={selectedClientId}
                   filterState={filterState}
@@ -470,7 +462,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           setContacts(prev => [...prev, newContact]);
           setSelectedContactId(newContact.contact_name_id);
         },
-        clients: mergedClients,
         selectedClientId: selectedClientId || null,
       })}
 
@@ -478,7 +469,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setLocalClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
         },
         skipSuccessDialog: true,

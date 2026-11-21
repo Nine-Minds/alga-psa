@@ -5,7 +5,9 @@ import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
 import type { ResolvedTemplateAmounts } from '@alga-psa/shared/billingClients/templateAmounts';
 import { withAuth, withAuthCheck } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';import {
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
+import {
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
   getPrepaidReplenishmentContractOverridesDb,
@@ -349,12 +351,13 @@ export const getServiceCategoriesAsync = withAuth(async (
 });
 
 export const getServicesAsync = withAuth(async (
-  _user,
+  user,
   { tenant },
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse> => {
+  await assertCommercialReadPermission(user);
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

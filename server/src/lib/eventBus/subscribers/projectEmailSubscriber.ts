@@ -1,3 +1,5 @@
+import { resolveCoManagedTaskCommentStep, taskCommentDelivery } from '../../notifications/coManagedCommentDelivery';
+import { recipientsForAudience } from '@shared/lib/coManagedDelivery';
 import { getEventBus } from '../index';
 import {
   EventType,
@@ -25,6 +27,8 @@ import type { Knex } from 'knex';
 import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+import { filterRecipientsWhoCanReadProject } from '../../notifications/projectNotificationAudience';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -201,10 +205,7 @@ function formatProjectBillingAmount(
 ): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(amountCents / 100);
+    return formatCurrencyWithSymbol(amountCents / 100, locale, currencyCode);
   } catch {
     return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
   }
@@ -517,26 +518,46 @@ function escapeHtml(value: string): string {
 
 const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
 const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
-const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
-const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
-const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-size:13px;font-weight:600;color:#475467;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#667085;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#1f2933;font-weight:600;word-break:break-word;';
 const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
 
-function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
-  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
-  if (oldValue === null) {
-    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+/**
+ * One field change, as stock templates lay it out with {{#each project.changeItems}}.
+ * Templates own the colors, so a tenant's email branding restyles the list; the
+ * pre-rendered `project.changes` HTML is kept for templates customized before this.
+ */
+interface ProjectEmailChangeItem {
+  label: string;
+  /** '' when the change carries no previous value: shown as a single value. */
+  oldValue: string;
+  newValue: string;
+}
+
+function renderChangeItemHtml(item: ProjectEmailChangeItem): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(item.label)}</div>`;
+  if (!item.oldValue) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
   }
-  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(item.oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+}
+
+/** The legacy `project.changes` fragment for the "Changes Made" email box. */
+function renderChangeItemsHtml(items: ProjectEmailChangeItem[]): string {
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.map(renderChangeItemHtml).join('')}</ul>`;
 }
 
 /**
- * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ * Resolve a changes record (ids → names) into change items.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
-  const items = await Promise.all(
-    Object.entries(changes).map(async ([field, value]) => {
-      const fieldLabel = formatFieldName(field);
+async function resolveChangeItems(db: any, changes: Record<string, unknown>, tenantId: string): Promise<ProjectEmailChangeItem[]> {
+  return Promise.all(
+    Object.entries(changes).map(async ([field, value]): Promise<ProjectEmailChangeItem> => {
+      const label = formatFieldName(field);
       if (typeof value === 'object' && value !== null) {
         const { from, to, previous, new: newValue } = value as {
           from?: unknown;
@@ -548,23 +569,19 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
         if (from !== undefined && to !== undefined) {
           const fromValue = await resolveValue(db, field, from, tenantId);
           const toValue = await resolveValue(db, field, to, tenantId);
-          return renderChangeItemHtml(fieldLabel, fromValue, toValue);
+          return { label, oldValue: fromValue, newValue: toValue };
         }
 
         if (previous !== undefined && newValue !== undefined) {
           const fromValue = await resolveValue(db, field, previous, tenantId);
           const toValue = await resolveValue(db, field, newValue, tenantId);
-          return renderChangeItemHtml(fieldLabel, fromValue, toValue);
+          return { label, oldValue: fromValue, newValue: toValue };
         }
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId);
-      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+      return { label, oldValue: '', newValue: resolvedValue };
     })
   );
-  if (items.length === 0) {
-    return '';
-  }
-  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
 }
 
 /**
@@ -959,7 +976,8 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     });
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId);
+    const changeItems = await resolveChangeItems(db, payload.changes || {}, tenantId);
+    const formattedChanges = renderChangeItemsHtml(changeItems);
 
     // Log the formatted changes
     logger.info('[ProjectEmailSubscriber] Formatted changes:', {
@@ -986,6 +1004,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
         changes: formattedChanges,
+        changeItems,
         updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : updaterUserId,
         url,
         client: project.client_name || 'No Client'
@@ -1127,7 +1146,8 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
 
     const { internalUrl, portalUrl } = await resolveProjectLinks(db, tenantId, project.project_id);
-    const formattedClosedChanges = await formatChanges(db, payload.changes || {}, tenantId);
+    const closedChangeItems = await resolveChangeItems(db, payload.changes || {}, tenantId);
+    const formattedClosedChanges = renderChangeItemsHtml(closedChangeItems);
     const closedByValue = await resolveValue(db, 'closed_by', closedByUserId, tenantId);
     const closedAtValue = new Date().toISOString();
     const buildContext = (url: string) => ({
@@ -1143,6 +1163,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         startDate: project.start_date,
         endDate: project.end_date,
         changes: formattedClosedChanges,
+        changeItems: closedChangeItems,
         closedBy: closedByValue,
         closedAt: closedAtValue,
         url,
@@ -1561,11 +1582,28 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       }
     }
 
+    // CM L5: served tenants get the audience-aware step (one recipient list from the comment thread's
+    // audience, each send claimed in co_management_deliveries). The served decision is made once; an
+    // unserved tenant gets null at zero SQL and keeps the exact native loop below. No new event is
+    // published and there is no fan-out to other tenants (DO-NOT-PORT #20).
+    const coManagedTask = await resolveCoManagedTaskCommentStep(tenantId, payload.taskCommentId);
+    const recipients = coManagedTask
+      ? recipientsForAudience(coManagedTask.audience, {
+          sponsorUsers: [], sponsorTeams: [], requester: null,
+          customerUsers: assignees.map((a) => ({ kind: 'customer_user' as const, principalId: a.user_id, email: a.email })),
+        })
+      : null;
+    const admittedAssigneeIds = new Set(await filterRecipientsWhoCanReadProject(
+      db, tenantId, task.project_id, assignees.map((assignee) => assignee.user_id),
+    ));
+
     // Send email to each assignee (excluding the comment author)
     for (const assignee of assignees) {
-      if (assignee.user_id === userId) {
+      if (assignee.user_id === userId || !admittedAssigneeIds.has(assignee.user_id)) {
         continue;
       }
+      const planned = recipients?.find((r) => r.principalId === assignee.user_id);
+      if (recipients && !planned) continue;
 
       await sendNotificationIfEnabled({
         tenantId,
@@ -1573,7 +1611,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
         subject: `New Comment on Task: ${task.task_name}`,
         template: 'task-comment-added',
         context: emailContext,
-        replyContext
+        replyContext,
+        ...(planned ? { delivery: taskCommentDelivery(payload.taskCommentId, planned) } : {}),
       }, 'Task Comment Added', assignee.user_id);
     }
 
@@ -1586,6 +1625,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
     throw error;
   }
 }
+
+export const projectEmailSubscriberTestHarness = { handleTaskCommentAdded };
 
 /**
  * Handle all project events

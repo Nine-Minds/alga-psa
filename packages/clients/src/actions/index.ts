@@ -30,7 +30,16 @@ export * from './interactionTypeActions';
 export * from './onlineMeetingActions';
 export * from './interactionCallArtifactActions';
 export * from './contactAvatarActions';
-export * from './queryActions';
+export {
+  getClientById,
+  getAllClients,
+  getContactsByClient,
+  searchContactListIds,
+  getAllContacts,
+  findContactByEmailAddress,
+  createOrFindContactByEmail,
+} from './queryActions';
+export type { ContactFilterStatus } from './queryActions';
 export * from './clientPickerActions';
 export * from './entraClientSyncActions';
 export * from './clientPulseActions';

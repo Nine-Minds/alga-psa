@@ -1,3 +1,4 @@
+import { JSDOM } from 'jsdom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const TENANT_ID = '22222222-2222-4222-8222-222222222222';
@@ -55,7 +56,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('../../src/lib/adapters/quoteAdapters', () => ({
+// Only the loader is stubbed: the band labels this module exports are the ones
+// the PDF service compares against, so they have to be the real constants.
+vi.mock('../../src/lib/adapters/quoteAdapters', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/adapters/quoteAdapters')>()),
   mapDbQuoteToViewModel: (...args: any[]) => mapDbQuoteToViewModel(...args),
 }));
 
@@ -90,6 +94,7 @@ vi.mock('../../src/services/browserPoolService', () => ({
 }));
 
 import { createPDFGenerationService } from '../../src/services/pdfGenerationService';
+import { UNASSIGNED_LOCATION_LABEL } from '../../src/lib/adapters/quoteAdapters';
 import { getStandardQuoteTemplateAstByCode } from '../../src/lib/quote-template-ast/standardTemplates';
 
 describe('quotePdfGenerationService', () => {
@@ -97,13 +102,18 @@ describe('quotePdfGenerationService', () => {
     vi.clearAllMocks();
 
     const pageMock = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-quote-test')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browserMock = {
+    const contextMock = {
       newPage: vi.fn().mockResolvedValue(pageMock),
+      close: vi.fn().mockResolvedValue(undefined),
     };
+    const browserMock = { createBrowserContext: vi.fn().mockResolvedValue(contextMock) };
 
     getBrowserMock.mockResolvedValue(browserMock);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -181,8 +191,13 @@ describe('quotePdfGenerationService', () => {
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.toString('utf8')).toContain('%PDF-quote-test');
     const browser = await getBrowserMock.mock.results[0].value;
-    const page = await browser.newPage.mock.results[0].value;
-    expect(page.setContent).toHaveBeenCalledWith(expect.stringContaining('<!doctype html>'), { waitUntil: 'load' });
+    const context = await browser.createBrowserContext.mock.results[0].value;
+    const page = await context.newPage.mock.results[0].value;
+    expect(context.close).toHaveBeenCalledOnce();
+    expect(page.setContent).toHaveBeenCalledWith(expect.any(String), { waitUntil: 'load' });
+    const document = new JSDOM(page.setContent.mock.calls[0][0]).window.document;
+    expect(document.doctype?.name).toBe('html');
+    expect(document.body.textContent).toContain('Q-0042');
   });
 
   it('T084: stores generated file in file storage and returns file_id', async () => {
@@ -226,6 +241,106 @@ describe('quotePdfGenerationService', () => {
       expect.objectContaining({ entity_id: QUOTE_ID, entity_type: 'quote', tenant: TENANT_ID })
     );
     expect(result.document_id).toBeDefined();
+  });
+
+  // alga-2026-0002902: the editor fixes are worth nothing if the exported
+  // document drops the sites again, and the quote-wide band used to print as an
+  // unlabelled coloured bar on the client's copy.
+  it('exports a multi-location quote as named location bands', async () => {
+    const line = (quoteItemId: string, description: string, amount: number, isDiscount = false) => ({
+      quote_item_id: quoteItemId,
+      service_id: null,
+      service_name: null,
+      service_sku: null,
+      billing_method: 'fixed',
+      description,
+      quantity: 1,
+      unit_price: amount,
+      total_price: amount,
+      tax_amount: 0,
+      net_amount: amount,
+      unit_of_measure: null,
+      phase: null,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      billing_frequency: null,
+      is_discount: isDiscount,
+      discount_type: null,
+      discount_percentage: null,
+      applies_to_item_id: null,
+      applies_to_service_id: null,
+      tax_region: null,
+      tax_rate: null,
+    });
+    const mainItem = line('item-main', 'Managed services', 1000);
+    const branchItem = line('item-branch', 'Patch cables', 90);
+    const discountItem = line('item-discount', 'Discount (10%)', 109, true);
+
+    mapDbQuoteToViewModel.mockResolvedValue({
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0042',
+      title: 'Proposal',
+      description: 'Managed services',
+      scope_of_work: 'Managed services',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      version: 1,
+      po_number: null,
+      terms_and_conditions: 'Net 30',
+      client_notes: null,
+      contact_id: null,
+      currency_code: 'USD',
+      subtotal: 1090,
+      discount_total: 109,
+      tax: 0,
+      total_amount: 981,
+      client_id: 'client-1',
+      client: { name: 'Client', address: null, email: null, phone: null, logo_url: null },
+      contact: null,
+      tenant: { name: 'Tenant', address: null, email: null, phone: null, logo_url: null },
+      line_items: [mainItem, branchItem, discountItem],
+      phases: [],
+      groups_by_location: [
+        {
+          location_id: 'loc-main',
+          location: null,
+          name: 'QA Northstar Main',
+          address: '10 Main Street',
+          items: [mainItem],
+          subtotal: 1000,
+        },
+        {
+          location_id: 'loc-branch',
+          location: null,
+          name: 'QA Northstar Branch',
+          address: '20 Branch Street',
+          items: [branchItem],
+          subtotal: 90,
+        },
+        // What the adapter emits for rows that belong to no single site.
+        { location_id: null, location: null, name: UNASSIGNED_LOCATION_LABEL, address: null, items: [discountItem], subtotal: 0 },
+      ],
+    });
+    resolveQuoteTemplateAst.mockResolvedValue({
+      templateAst: getStandardQuoteTemplateAstByCode('standard-quote-by-location'),
+      source: 'quote',
+      standardCode: 'standard-quote-by-location',
+    });
+
+    const service = createPDFGenerationService(TENANT_ID);
+    await service.generatePDF({ quoteId: QUOTE_ID, userId: USER_ID });
+
+    const browser = await getBrowserMock.mock.results[0].value;
+    const context = await browser.createBrowserContext.mock.results[0].value;
+    const page = await context.newPage.mock.results[0].value;
+    const html = page.setContent.mock.calls[0][0] as string;
+    expect(html).toContain('QA Northstar Main');
+    expect(html).toContain('QA Northstar Branch');
+    // The band is named, not blank — localized here only when a locale pack
+    // loads, so the English label is what this asserts.
+    expect(html).toContain(UNASSIGNED_LOCATION_LABEL);
   });
 
   it('T084c: DOCUMENT_GENERATED carries the documents row id, not the file id', async () => {

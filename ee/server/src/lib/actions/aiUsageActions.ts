@@ -11,7 +11,7 @@
  */
 
 import { getSession } from '@alga-psa/auth';
-import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import { checkAccountManagementUpdatePermission } from '@alga-psa/auth/actions';
 import logger from '@alga-psa/core/logger';
 import type {
   AiAccountSummary,
@@ -52,7 +52,7 @@ async function requireTenant(): Promise<string> {
  */
 async function requireBillingTenant(): Promise<string> {
   const tenantId = await requireTenant();
-  if (!(await checkAccountManagementPermission())) {
+  if (!(await checkAccountManagementUpdatePermission())) {
     throw new Error('You do not have permission to manage AI usage billing');
   }
   return tenantId;
