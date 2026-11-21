@@ -144,7 +144,7 @@ export async function registerSlaCancellation(fn: (tenantId: string, ticketId: s
 // Reported as a bare string rather than returned as a payload, so withAuth's
 // boundary never sees the messageKey. Localize before flattening.
 async function ticketBulkFailureMessage(error: unknown, fallback: string): Promise<string> {
-  const expected = ticketActionErrorFrom(error);
+  const expected = isTicketActionError(error) ? error : ticketActionErrorFrom(error);
   if (expected) {
     const candidate = (await localizeActionError(expected)) as unknown as {
       actionError?: unknown;
@@ -2389,7 +2389,14 @@ export const moveTicketsToBoard = withAuth(async (
         updateData.subcategory_id = null;
       }
 
-      await updateTicketWithCache(ticketId, updateData, options);
+      const result = await updateTicketWithCache(ticketId, updateData, options);
+      if (isTicketActionError(result)) {
+        failed.push({
+          ticketId,
+          message: await ticketBulkFailureMessage(result, 'Failed to move ticket'),
+        });
+        continue;
+      }
 
       movedIds.push(ticketId);
     } catch (error: unknown) {

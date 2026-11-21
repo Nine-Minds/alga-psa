@@ -12,6 +12,8 @@ const createTagsForEntityWithTransactionMock = vi.fn();
 const findTagsByEntityIdsMock = vi.fn();
 const assignTeamToTicketMock = vi.fn();
 const removeTeamFromTicketMock = vi.fn();
+const deleteTicketTeamResourcesMock = vi.fn();
+const ticketTeamResourcesWhereMock = vi.fn();
 
 const getDefaultStatusIdMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn();
@@ -325,6 +327,33 @@ describe('ticketActions moveTicketsToBoard', () => {
     expect(result.movedIds).toEqual(['ticket-7']);
   });
 
+  it('T015: returned authorization errors fail individual moves and leave denied tickets unchanged', async () => {
+    const tickets = new Map<string, Record<string, any>>([
+      ['ticket-allowed', { ticket_id: 'ticket-allowed', tenant: 'tenant-1', board_id: 'board-source' }],
+      ['ticket-denied', { ticket_id: 'ticket-denied', tenant: 'tenant-1', board_id: 'board-source' }],
+    ]);
+    const deniedTicketBefore = { ...tickets.get('ticket-denied')! };
+    getDefaultStatusIdMock.mockResolvedValue('status-default');
+    updateTicketWithCacheMock.mockImplementation(async (ticketId: string, updates: Record<string, any>) => {
+      if (ticketId === 'ticket-denied') {
+        return { permissionError: 'Permission denied: Cannot access ticket' };
+      }
+      tickets.set(ticketId, { ...tickets.get(ticketId), ...updates });
+      return 'success';
+    });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(tickets)));
+
+    const { moveTicketsToBoard } = await import('./ticketActions');
+    const result = await moveTicketsToBoard(['ticket-allowed', 'ticket-denied'], 'board-dest', '');
+
+    expect(result).toEqual({
+      movedIds: ['ticket-allowed'],
+      failed: [{ ticketId: 'ticket-denied', message: 'Permission denied: Cannot access ticket' }],
+    });
+    expect(tickets.get('ticket-allowed')).toMatchObject({ board_id: 'board-dest', status_id: 'status-default' });
+    expect(tickets.get('ticket-denied')).toEqual(deniedTicketBefore);
+  });
+
   it('T042: forwards suppression flags to every moved ticket', async () => {
     const tickets = new Map<string, Record<string, any>>([
       ['ticket-9', { ticket_id: 'ticket-9', tenant: 'tenant-1', board_id: 'board-source' }],
@@ -364,7 +393,15 @@ describe('ticketActions bulk notification suppression options', () => {
     hasPermissionMock.mockResolvedValue(true);
     assignTeamToTicketMock.mockResolvedValue(undefined);
     removeTeamFromTicketMock.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback({}));
+    deleteTicketTeamResourcesMock.mockReset().mockResolvedValue(1);
+    ticketTeamResourcesWhereMock.mockReset().mockReturnThis();
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(((_table: string) => {
+      const query: any = {
+        where: ticketTeamResourcesWhereMock,
+        delete: deleteTicketTeamResourcesMock,
+      };
+      return query;
+    }) as any));
   });
 
   it('T029: bulk status update forwards silent options to each ticket update', async () => {
@@ -459,9 +496,14 @@ describe('ticketActions bulk notification suppression options', () => {
       expect.objectContaining({ user_id: 'internal-user-1' }),
       'tenant-1',
       'ticket-assignee',
-      { assigned_to: 'user-2' },
-      options,
+      { assigned_to: 'user-2', assigned_team_id: null },
+      {
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
     );
+    expect(deleteTicketTeamResourcesMock).toHaveBeenCalledTimes(1);
+    expect(ticketTeamResourcesWhereMock).toHaveBeenCalledWith({ ticket_id: 'ticket-assignee', role: 'team_member' });
   });
 
   it('T040: bulk team assignment forwards suppression options to the team assignment helper', async () => {
