@@ -987,12 +987,12 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       db.removeListener('query-response', queryListener as any);
     }
     expect(selectedQuoteRows).toBeLessThanOrEqual(1000);
-    expect(authBundleEvaluations).toBeLessThanOrEqual(selectedQuoteRows);
-    expect(teamMembershipLookups).toBeLessThanOrEqual(selectedQuoteRows);
+    expect(authBundleEvaluations).toBeLessThanOrEqual(200);
+    expect(teamMembershipLookups).toBeLessThanOrEqual(200);
     expect(subjectResolutionLookups).toBe(2);
   });
 
-  it('encrypts denied source-budget boundaries and resumes through denied-only rows into allowed results', async () => {
+  it('encrypts denied authorization-budget boundaries and resumes through multiple denied-only windows', async () => {
     const allowedClientId = await createClient(db, runtimeState.tenantId, 'Opaque Cursor Allowed Client');
     const deniedClientId = await createClient(db, runtimeState.tenantId, 'Opaque Cursor Denied Client');
     const bundleId = uuidv4();
@@ -1020,7 +1020,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     const boundaryQuoteId = uuidv4();
     const deniedRows = Array.from({ length: 1002 }, (_, index) => ({
       tenant: runtimeState.tenantId,
-      quote_id: index === 999 ? boundaryQuoteId : uuidv4(),
+      quote_id: index === 99 ? boundaryQuoteId : uuidv4(),
       quote_number: `Q-OPAQUE-DENIED-${index}`,
       client_id: deniedClientId,
       title: `Denied cursor fixture ${index}`,
@@ -1065,12 +1065,12 @@ describe('crm workflow runtime DB-backed action handlers', () => {
         details: { next_cursor: expect.any(String) },
       });
       continuation = failure.details.next_cursor;
-      expect(sourceRowsRead).toBe(1000);
+      expect(sourceRowsRead).toBe(100);
 
       const tokenPayload = Buffer.from(continuation.slice(3), 'base64url').toString('utf8');
       expect(continuation).toMatch(/^q2\./);
       expect(tokenPayload).not.toContain(boundaryQuoteId);
-      expect(tokenPayload).not.toContain('910999');
+      expect(tokenPayload).not.toContain('910099');
 
       const tampered = `${continuation.slice(0, -1)}${continuation.endsWith('A') ? 'B' : 'A'}`;
       await expect(invokeAction('crm.find_quotes', {
@@ -1079,16 +1079,119 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       await expect(invokeAction('crm.find_quotes', {
         pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', client_id: deniedClientId, cursor: continuation,
       })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
-      expect(sourceRowsRead).toBe(1000);
+      expect(sourceRowsRead).toBe(100);
 
-      sourceRowsRead = 0;
-      const resumed = await invokeAction('crm.find_quotes', {
-        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', cursor: continuation,
+      let cursor = continuation;
+      let depthFailures = 0;
+      let finalResponse: any;
+      for (let request = 0; request < 12 && !finalResponse; request += 1) {
+        sourceRowsRead = 0;
+        const result = await invokeAction('crm.find_quotes', {
+          pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', cursor,
+        }).catch((error) => error);
+        expect(sourceRowsRead).toBeLessThanOrEqual(100);
+        if (result.code === 'PAGINATION_DEPTH_EXCEEDED') {
+          depthFailures += 1;
+          cursor = result.details.next_cursor;
+          expect(cursor).toMatch(/^q2\./);
+          continue;
+        }
+        finalResponse = result;
+        expect(sourceRowsRead).toBe(4);
+      }
+      expect(depthFailures).toBe(9);
+      expect(finalResponse.quotes.map((quote: any) => quote.quote_id)).toEqual(allowedRows.map((row) => row.quote_id));
+      expect(finalResponse.quotes.every((quote: any) => quote.client_id === allowedClientId)).toBe(true);
+      expect(finalResponse.pagination).toMatchObject({ has_more: false, next_cursor: null });
+    } finally {
+      db.removeListener('query-response', queryListener as any);
+    }
+  });
+
+  it('returns partial authorized rows at the evaluation limit and resumes without omissions or duplicates', async () => {
+    const allowedClientId = await createClient(db, runtimeState.tenantId, 'Partial Cursor Allowed Client');
+    const deniedClientId = await createClient(db, runtimeState.tenantId, 'Partial Cursor Denied Client');
+    const bundleId = uuidv4();
+    const revisionId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, bundle_key: `quote-partial-${bundleId.slice(0, 8)}`,
+      name: 'Partial quote cursor restriction', is_system: false, status: 'active',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_revisions').insert({
+      tenant: runtimeState.tenantId, revision_id: revisionId, bundle_id: bundleId,
+      revision_number: 1, lifecycle_state: 'published',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').where({ bundle_id: bundleId })
+      .update({ published_revision_id: revisionId });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_rules').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, revision_id: revisionId,
+      resource_type: 'billing', action: 'read', template_key: 'selected_clients', effect: 'narrow',
+      config: JSON.stringify({ selectedClientIds: [allowedClientId] }), position: 0,
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_assignments').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, target_type: 'user',
+      target_id: runtimeState.actorUserId, status: 'active',
+    });
+
+    const deniedRows = Array.from({ length: 99 }, (_, index) => ({
+      tenant: runtimeState.tenantId,
+      quote_id: uuidv4(),
+      quote_number: `Q-PARTIAL-DENIED-${index}`,
+      client_id: deniedClientId,
+      title: `Denied partial fixture ${index}`,
+      description: 'Partial page budget regression',
+      quote_date: null,
+      status: 'draft',
+      version: 1,
+      subtotal: 100,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 910_000 + index,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: runtimeState.actorUserId,
+      updated_by: runtimeState.actorUserId,
+      created_at: new Date(Date.UTC(2026, 0, 1) + index).toISOString(),
+      updated_at: new Date(Date.UTC(2026, 0, 1) + index).toISOString(),
+    }));
+    const allowedRows = Array.from({ length: 31 }, (_, index) => ({
+      ...deniedRows[0],
+      quote_id: uuidv4(),
+      quote_number: `Q-PARTIAL-ALLOWED-${index}`,
+      client_id: allowedClientId,
+      title: `Allowed partial fixture ${index}`,
+      total_amount: 920_000 + index,
+    }));
+    await tenantTable(db, runtimeState.tenantId, 'quotes').insert([...deniedRows, ...allowedRows]);
+
+    let sourceRowsRead = 0;
+    const queryListener = (response: unknown, query: { sql?: string }) => {
+      if (/from\s+"?quotes"?/i.test(query.sql ?? '') && Array.isArray(response)) sourceRowsRead += response.length;
+    };
+    db.on('query-response', queryListener as any);
+    try {
+      const first = await invokeAction('crm.find_quotes', {
+        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc',
       });
-      expect(resumed.quotes.map((quote: any) => quote.quote_id)).toEqual(allowedRows.map((row) => row.quote_id));
-      expect(resumed.quotes.every((quote: any) => quote.client_id === allowedClientId)).toBe(true);
-      expect(sourceRowsRead).toBe(4);
-      expect(resumed.pagination).toMatchObject({ has_more: false, next_cursor: null });
+      expect(first.quotes.map((quote: any) => quote.quote_id)).toEqual([allowedRows[0].quote_id]);
+      expect(first.pagination).toMatchObject({ has_more: true, next_cursor: expect.stringMatching(/^q2\./) });
+      expect(sourceRowsRead).toBe(100);
+
+      const traversedIds = [...first.quotes.map((quote: any) => quote.quote_id)];
+      let cursor = first.pagination.next_cursor;
+      for (let request = 0; cursor && request < 5; request += 1) {
+        sourceRowsRead = 0;
+        const response = await invokeAction('crm.find_quotes', {
+          pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', cursor,
+        });
+        expect(sourceRowsRead).toBeLessThanOrEqual(100);
+        expect(response.quotes.every((quote: any) => quote.client_id === allowedClientId)).toBe(true);
+        traversedIds.push(...response.quotes.map((quote: any) => quote.quote_id));
+        cursor = response.pagination.next_cursor;
+      }
+      expect(cursor).toBeNull();
+      expect(traversedIds).toEqual(allowedRows.map((row) => row.quote_id));
+      expect(new Set(traversedIds).size).toBe(allowedRows.length);
     } finally {
       db.removeListener('query-response', queryListener as any);
     }

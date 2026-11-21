@@ -102,19 +102,24 @@ every `find_quotes` call, which matters independently of the DoS.
 
 ### 2.3 A hard scan budget (defense in depth)
 
-Two constants, both enforced in the handler and both returning a typed error rather
-than an empty page:
+Two constants are enforced in the handler. A budget hit returns a typed error when
+there are no authorized page rows to return; otherwise it returns those rows as a
+partial page with a safe continuation cursor:
 
 - `MAX_SOURCE_ROWS_PER_REQUEST = 1000` — raw rows read from `quotes` in one call.
-- `MAX_AUTHORIZED_ROWS_PER_REQUEST = pageSize * 4` (hard cap 800) — authorized rows
-  admitted or skipped while serving a legacy page. Denied rows are bounded by the
-  source-row limit, including denied-only windows.
+- `MAX_AUTHORIZED_ROWS_PER_REQUEST = pageSize * 4` (hard cap 800) — every row passed
+  through the authorization kernel, whether allowed or denied.
 
-Exceeding either raises `PAGINATION_DEPTH_EXCEEDED` (`ActionError`, retryable=false,
+When a budget is exceeded without authorized page rows to return, the action raises
+`PAGINATION_DEPTH_EXCEEDED` (`ActionError`, retryable=false,
 `details.next_cursor` when a cursor exists at the boundary, else null):
 "this page is beyond the depth this action scans in one request; continue from
-`next_cursor`". The `page` schema also gains `.max(10_000)` so absurd values are
-rejected by validation before any query runs.
+`next_cursor`" when no authorized page rows have been collected. If the budget is
+reached after collecting authorized rows that do not fill the page, return those rows
+as a partial page with `has_more: true` and a cursor after the last delivered row.
+This prevents an error response from discarding authorized rows while advancing past
+them. The `page` schema also gains `.max(10_000)` so absurd values are rejected by
+validation before any query runs.
 
 ### 2.4 Legacy `page` stays, but is bounded
 
@@ -204,9 +209,11 @@ together is a validation error (`page must be 1 when cursor is supplied`).
 - Confidentiality repair: cursor v2 is AES-256-GCM encrypted with authenticated
   tenant, actor, sort, direction, and filter context. Both response and depth-error
   cursors use the same opaque codec; old readable v1 tokens are rejected.
-- Confidentiality verification: the CRM DB suite passes 16/16, including a
-  restricted actor scanning 1,000 denied rows, rejecting tampered/incompatible
-  tokens without quote queries, and resuming to both allowed results. Shared
-  typecheck/build pass; changed-file ESLint reports 0 errors and existing warnings.
-- First review: restricted-authority source-budget exhaustion, especially denied
-  boundary confidentiality and continuation through denied-only and mixed windows.
+- Confidentiality verification: the CRM DB suite passes 17/17, including a
+  restricted actor traversing denied-only authorization windows, rejecting
+  tampered/incompatible tokens without quote queries, and resuming to allowed
+  results. A partial authorized page at the evaluation limit resumes without
+  omissions or duplicates. Shared typecheck/build pass; changed-file ESLint reports
+  0 errors.
+- First review: restricted-authority evaluation-budget exhaustion, especially
+  partial-result delivery and denied-boundary cursor confidentiality.

@@ -1866,32 +1866,36 @@ export function registerCrmActions(): void {
         const pageRows: Array<Record<string, unknown>> = [];
         let after = cursor;
         let sourceRows = 0;
-        let authorizedRows = 0;
+        let authorizationEvaluations = 0;
         let nextCursor: string | null = null;
         let hasMore = false;
+        let depthExceeded = false;
         let skippedAuthorized = 0;
         const legacySkip = cursor ? 0 : (page - 1) * pageSize;
         while (pageRows.length < pageSize) {
-          if (authorizedRows >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
-            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
+          if (authorizationEvaluations >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
+            depthExceeded = true;
+            break;
           }
           const batchSize = Math.min(Math.max(1, Math.min(pageSize * 2, 200)), MAX_SOURCE_ROWS_PER_REQUEST - sourceRows);
           if (batchSize <= 0) {
-            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
+            depthExceeded = true;
+            break;
           }
           const rows = await buildQuery(after).limit(batchSize);
           if (rows.length === 0) break;
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index] as Record<string, unknown>;
-            if (sourceRows >= MAX_SOURCE_ROWS_PER_REQUEST || authorizedRows >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
-              throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
+            if (sourceRows >= MAX_SOURCE_ROWS_PER_REQUEST || authorizationEvaluations >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
+              depthExceeded = true;
+              break;
             }
             sourceRows += 1;
             const sortKey = row.__quote_cursor_sort_key ?? row[sortBy];
             after = { v: 2, sortBy, order: sortOrder, key: sortKey == null ? null : sortKey instanceof Date ? sortKey.toISOString() : sortKey as string | number, id: String(row.quote_id) };
             const allowed = await authorize(row);
+            authorizationEvaluations += 1;
             if (allowed) {
-              authorizedRows += 1;
               if (skippedAuthorized < legacySkip) skippedAuthorized += 1;
               else pageRows.push(row);
             }
@@ -1902,9 +1906,26 @@ export function registerCrmActions(): void {
             }
           }
           if (pageRows.length >= pageSize) break;
+          if (depthExceeded) break;
           if (rows.length < batchSize) break;
         }
-        if (!nextCursor && after && sourceRows === MAX_SOURCE_ROWS_PER_REQUEST) nextCursor = encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity);
+
+        // An error cannot carry the page rows. Return any accumulated rows and resume
+        // after the last delivered row so their boundaries are never skipped.
+        if (depthExceeded && pageRows.length === 0) {
+          throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
+        }
+        if (depthExceeded && pageRows.length > 0) {
+          nextCursor = encodeQuoteCursor(sortBy, sortOrder, pageRows[pageRows.length - 1], cursorIdentity);
+          hasMore = true;
+        }
+        if (!nextCursor && after && sourceRows === MAX_SOURCE_ROWS_PER_REQUEST) {
+          if (pageRows.length === 0) {
+            throwPaginationDepthExceeded(encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity));
+          }
+          nextCursor = encodeQuoteCursor(sortBy, sortOrder, pageRows[pageRows.length - 1], cursorIdentity);
+          hasMore = true;
+        }
 
         if (pageRows.length === 0 && input.on_empty === 'error') {
           throwActionError(ctx, {
