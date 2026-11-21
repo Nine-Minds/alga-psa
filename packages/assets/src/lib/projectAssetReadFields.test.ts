@@ -31,6 +31,20 @@ describe('projectAssetReadFields', () => {
     expect(projectAssetReadFields(response, [])).toEqual(response);
   });
 
+  it('applies implicit nested-array masks and masks whole elements without shifting indices', () => {
+    const value = {
+      attributes: { entries: [{ secret: 'first-secret', public: 'first' }, { secret: 'second-secret', public: 'second' }] },
+      network_device: { vlan_config: { entries: [{ secret: 'extension-secret', public: 'extension' }] } },
+    };
+    expect(projectAssetReadFields(value, [
+      'attributes.entries.secret',
+      'network_device.vlan_config.entries.0',
+    ])).toEqual({
+      attributes: { entries: [{ public: 'first' }, { public: 'second' }] },
+      network_device: { vlan_config: { entries: [null] } },
+    });
+  });
+
   it('masks field-labelled historical deltas when a redaction covers an ancestor path', () => {
     expect(projectAssetReadFields({
       changes: [{ field: 'workstation.serial_number', before: 'SECRET', after: 'SECRET2' }],
@@ -123,6 +137,16 @@ describe('removeAssetReadMaskedFields', () => {
     });
     expect(removeAssetReadMaskedFields({ attributes: { private_note: 'hidden' } }, ['attributes'])).toEqual({});
   });
+
+  it('filters implicit array descendants and keeps whole-element placeholders at their indices', () => {
+    expect(removeAssetReadMaskedFields({
+      attributes: { entries: [{ secret: 'hidden', public: 'visible' }, { secret: 'hidden-2', public: 'visible-2' }] },
+      network_device: { vlan_config: { entries: [{ secret: 'hidden', public: 'visible' }, { public: 'keep' }] } },
+    }, ['attributes.entries.secret', 'network_device.vlan_config.entries.0'])).toEqual({
+      attributes: { entries: [{ public: 'visible' }, { public: 'visible-2' }] },
+      network_device: { vlan_config: { entries: [null, { public: 'keep' }] } },
+    });
+  });
 });
 
 describe('restoreAssetReadMaskedDescendants', () => {
@@ -154,6 +178,34 @@ describe('restoreAssetReadMaskedDescendants', () => {
       stored,
       ['attributes.entries.0.secret'],
     )).toEqual(stored);
+  });
+
+  it('restores implicit nested-array descendants and whole elements for attributes and extensions', () => {
+    const stored = {
+      attributes: { entries: [{ secret: 'KEEP-1', public: 'old-1' }, { secret: 'KEEP-2', public: 'old-2' }] },
+      network_device: { vlan_config: { entries: [{ secret: 'EXT-KEEP', public: 'old' }] } },
+    };
+    expect(restoreAssetReadMaskedDescendants({
+      attributes: { entries: [{ public: 'new-1' }, { public: 'new-2' }] },
+      network_device: { vlan_config: { entries: [{ public: 'extension-new' }] } },
+    }, stored, [
+      'attributes.entries.secret',
+      'network_device.vlan_config.entries.secret',
+    ])).toEqual({
+      attributes: { entries: [{ secret: 'KEEP-1', public: 'new-1' }, { secret: 'KEEP-2', public: 'new-2' }] },
+      network_device: { vlan_config: { entries: [{ secret: 'EXT-KEEP', public: 'extension-new' }] } },
+    });
+
+    expect(restoreAssetReadMaskedDescendants({
+      attributes: { entries: [null, { public: 'new-2' }] },
+      network_device: { vlan_config: { entries: [null] } },
+    }, stored, [
+      'attributes.entries.0',
+      'network_device.vlan_config.entries.0',
+    ])).toEqual({
+      attributes: { entries: [{ secret: 'KEEP-1', public: 'old-1' }, { public: 'new-2' }] },
+      network_device: { vlan_config: { entries: [{ secret: 'EXT-KEEP', public: 'old' }] } },
+    });
   });
 
   it('leaves ordinary updates unchanged when no redactions apply', () => {

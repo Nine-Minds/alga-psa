@@ -677,6 +677,97 @@ describe('updateAsset protects unreadable fields at the mutation boundary', () =
     expect(privilegedRead.network_device.vlan_config).toEqual({ secret: 'KEEP', public: 'new' });
   });
 
+  it('preserves implicit array masks in attributes and extension JSON through masked load and save', async () => {
+    seedAsset({ attributes: {
+      entries: [
+        { secret: 'ATTRIBUTE-KEEP-1', public: 'old-1' },
+        { secret: 'ATTRIBUTE-KEEP-2', public: 'old-2' },
+      ],
+    } });
+    seedNetworkDevice({ vlan_config: { entries: [{ secret: 'EXTENSION-KEEP', public: 'old' }] } });
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: [
+        'attributes.entries.secret',
+        'network_device.vlan_config.entries.secret',
+      ],
+    };
+
+    const maskedLoad = await getAsset(ASSET_ID) as any;
+    expect(maskedLoad.attributes.entries).toEqual([{ public: 'old-1' }, { public: 'old-2' }]);
+    expect(maskedLoad.network_device.vlan_config.entries).toEqual([{ public: 'old' }]);
+
+    const result = await updateAsset(ASSET_ID, {
+      name: 'Saved with implicit array masks',
+      attributes: { ...maskedLoad.attributes, entries: [
+        { ...maskedLoad.attributes.entries[0], public: 'new-1' },
+        { ...maskedLoad.attributes.entries[1], public: 'new-2' },
+      ] },
+      network_device: { vlan_config: { entries: [{ public: 'extension-new' }] } },
+    } as any) as any;
+
+    expect(result.name).toBe('Saved with implicit array masks');
+    expect(JSON.stringify(result)).not.toContain('ATTRIBUTE-KEEP');
+    expect(JSON.stringify(result)).not.toContain('EXTENSION-KEEP');
+    expect(h.dbState.assets[0].attributes.entries).toEqual([
+      { secret: 'ATTRIBUTE-KEEP-1', public: 'new-1' },
+      { secret: 'ATTRIBUTE-KEEP-2', public: 'new-2' },
+    ]);
+    expect(h.dbState.network_device_assets[0].vlan_config).toEqual({ entries: [
+      { secret: 'EXTENSION-KEEP', public: 'extension-new' },
+    ] });
+    expect(JSON.stringify(h.dbState.asset_history[0].changes)).not.toContain('ATTRIBUTE-KEEP');
+    expect(JSON.stringify(h.dbState.asset_history[0].changes)).not.toContain('EXTENSION-KEEP');
+  });
+
+  it('masks and preserves whole array elements at their original indices in attributes and extensions', async () => {
+    seedAsset({ attributes: { entries: [
+      { secret: 'ATTRIBUTE-ELEMENT-KEEP', public: 'old-1' },
+      { public: 'old-2' },
+    ] } });
+    seedNetworkDevice({ vlan_config: { entries: [
+      { secret: 'EXTENSION-ELEMENT-KEEP', public: 'old' },
+      { public: 'visible' },
+    ] } });
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: [
+        'attributes.entries.0',
+        'network_device.vlan_config.entries.0',
+      ],
+    };
+
+    const maskedLoad = await getAsset(ASSET_ID) as any;
+    expect(maskedLoad.attributes.entries).toEqual([null, { public: 'old-2' }]);
+    expect(maskedLoad.network_device.vlan_config.entries).toEqual([null, { public: 'visible' }]);
+    expect(JSON.stringify(maskedLoad)).not.toContain('ELEMENT-KEEP');
+
+    const result = await updateAsset(ASSET_ID, {
+      name: 'Saved with whole-element masks',
+      attributes: { entries: [null, { public: 'new-2' }] },
+      network_device: { vlan_config: { entries: [null, { public: 'extension-new' }] } },
+    } as any) as any;
+
+    expect(result.actionError).toBeUndefined();
+    expect(result.attributes.entries).toEqual([null, { public: 'new-2' }]);
+    expect(result.network_device.vlan_config.entries).toEqual([null, { public: 'extension-new' }]);
+    expect(JSON.stringify(result)).not.toContain('ELEMENT-KEEP');
+    expect(h.dbState.assets[0].attributes.entries).toEqual([
+      { secret: 'ATTRIBUTE-ELEMENT-KEEP', public: 'old-1' },
+      { public: 'new-2' },
+    ]);
+    expect(h.dbState.network_device_assets[0].vlan_config.entries).toEqual([
+      { secret: 'EXTENSION-ELEMENT-KEEP', public: 'old' },
+      { public: 'extension-new' },
+    ]);
+    expect(JSON.stringify(h.dbState.asset_history[0].changes)).not.toContain('ELEMENT-KEEP');
+
+    const history = await getAssetHistory(ASSET_ID) as any;
+    expect(JSON.stringify(history)).not.toContain('ELEMENT-KEEP');
+    expect(history[0].changes.attributes.entries[0]).toBeNull();
+    expect(history[0].changes.network_device.vlan_config.entries[0]).toBeNull();
+  });
+
   it('keeps a concealed required custom attribute while updating a readable sibling', async () => {
     seedAsset({
       asset_type: 'cloud_account',

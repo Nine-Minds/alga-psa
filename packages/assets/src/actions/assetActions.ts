@@ -72,6 +72,7 @@ import {
     projectAssetReadFields,
     removeAssetReadMaskedFields,
     restoreAssetReadMaskedDescendants,
+    isAssetReadFieldPathMasked,
 } from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
@@ -261,16 +262,23 @@ function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAss
     };
 }
 
-function pruneNullishValues(value: unknown): unknown {
+function pruneNullishValues(value: unknown, path = '', redactedFields: readonly string[] = []): unknown {
     if (Array.isArray(value)) {
         return value
-            .map((item) => pruneNullishValues(item))
+            .map((item, index) => {
+                const itemPath = path ? `${path}.${index}` : String(index);
+                // Masked array elements use null as an index-preserving
+                // placeholder until trusted stored values are restored.
+                if (item === null && isAssetReadFieldPathMasked(itemPath, redactedFields)) return null;
+                return pruneNullishValues(item, itemPath, redactedFields);
+            })
             .filter((item) => item !== undefined);
     }
 
     if (value && typeof value === 'object') {
         const entries = Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>((acc, [key, val]) => {
-            const cleanedValue = pruneNullishValues(val);
+            const childPath = path ? `${path}.${key}` : key;
+            const cleanedValue = pruneNullishValues(val, childPath, redactedFields);
             if (cleanedValue !== undefined) {
                 acc[key] = cleanedValue;
             }
@@ -292,7 +300,7 @@ const NULLABLE_EXTENSION_NUMBER_KEYS = {
     printer: ['max_paper_size', 'monthly_duty_cycle'],
 } as const;
 
-function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
+function sanitizeUpdatePayload(data: UpdateAssetRequest, redactedFields: readonly string[] = []): UpdateAssetRequest {
     const sanitized = {
         ...data,
         workstation: data.workstation ? (({ last_login, gpu_model, ...rest }) => ({
@@ -319,7 +327,7 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     };
 
     // A payload made only of explicit nulls prunes to undefined; restore the object so they can be re-attached.
-    const cleaned = (pruneNullishValues(sanitized) ?? {}) as UpdateAssetRequest;
+    const cleaned = (pruneNullishValues(sanitized, '', redactedFields) ?? {}) as UpdateAssetRequest;
     if (data.location_id === null) {
         cleaned.location_id = null;
     }
@@ -1351,7 +1359,7 @@ export async function updateAssetRecord(
             const protectedData = removeAssetReadMaskedFields(data, redactedFields);
             const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
             const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
-            const normalizedData = sanitizeUpdatePayload(protectedData);
+            const normalizedData = sanitizeUpdatePayload(protectedData, redactedFields);
             const validatedData = validateData(updateAssetSchema, normalizedData);
             // Validation and audit data use only caller-visible fields. Before
             // writing, restore masked descendants only inside JSON values the

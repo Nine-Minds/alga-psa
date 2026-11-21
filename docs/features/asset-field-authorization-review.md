@@ -29,7 +29,7 @@ No browser verification of this edit flow was performed during the repair assign
 
 ## Automated checks executed for the repair
 
-Focused behavioral suites passed: 67 tests in seven files. They cover the existing six read paths and record denial, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions, nested masked descendants in attributes and extension JSON columns, ancestor replacements, stable and reshaped arrays, history/workflow output redaction, readable nullable-field clearing, and form submission with a concealed required attribute. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed. A full server typecheck in the prior repair round exhausted Node's heap at both 4 GB and 8 GB.
+Focused behavioral suites passed: 72 tests in seven files. They cover the existing six read paths and record denial, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions, nested masked descendants in attributes and extension JSON columns, ancestor replacements, implicit nested-array masks, whole-element array masks with stable indices, history/workflow output redaction, readable nullable-field clearing, and form submission with a concealed required attribute. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed. A full server typecheck in the prior repair round exhausted Node's heap at both 4 GB and 8 GB.
 
 Commands:
 

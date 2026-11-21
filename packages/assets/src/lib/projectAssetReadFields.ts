@@ -15,7 +15,14 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
   };
 
   const project = (node: unknown, path: string): unknown => {
-    if (Array.isArray(node)) return node.map((item, index) => project(item, `${path}.${index}`));
+    if (Array.isArray(node)) return node.map((item, index) => {
+      const itemPath = `${path}.${index}`;
+      // Keep masked array positions stable. A null placeholder is omitted by
+      // object serialization but does not shift the meaning of numeric masks.
+      const historyElementMasked = (path === 'changes' || path.startsWith('changes.'))
+        && historyPathIsMasked(itemPath);
+      return isPathMasked(itemPath, paths) || historyElementMasked ? null : project(item, itemPath);
+    });
     if (!node || typeof node !== 'object') return node;
     const prototype = Object.getPrototypeOf(node);
     if (prototype !== Object.prototype && prototype !== null) return node;
@@ -26,10 +33,7 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
       // asset paths at any depth there, and also support flattened dotted keys.
       const isHistoryValue = path === 'changes' || path.startsWith('changes.');
       const historyFieldMatch = isHistoryValue && historyPathIsMasked(childPath);
-      const directFieldMatch = [...paths].some((redactedPath) =>
-        pathMatchesExactly(childPath.split('.'), redactedPath.split('.'))
-      );
-      if (directFieldMatch || historyFieldMatch) continue;
+      if (isPathMasked(childPath, paths) || historyFieldMatch) continue;
       if (isHistoryValue && (key === 'before' || key === 'after' || key === 'previous_value' || key === 'new_value' || key === 'old_value' || key === 'value')) {
         const field = (node as Record<string, unknown>).field ?? (node as Record<string, unknown>).field_name ?? (node as Record<string, unknown>).path;
         if (typeof field === 'string' && [...paths].some((redactedPath) => pathsOverlap(field, redactedPath))) continue;
@@ -77,18 +81,18 @@ export function createAssetReadFieldMask(redactedFields: readonly string[] = [])
 /** Remove every redacted path before update validation or normalization. */
 export function removeAssetReadMaskedFields<T>(value: T, redactedFields: readonly string[] = []): T {
   const mask = createAssetReadFieldMask(redactedFields);
-  const masksPath = (path: string) => [...mask.paths].some((redactedPath) =>
-    pathStartsWithMask(path.split('.'), redactedPath.split('.'))
-  );
   const visit = (node: unknown, path: string): unknown => {
-    if (Array.isArray(node)) return node.map((item, index) => visit(item, `${path}.${index}`));
+    if (Array.isArray(node)) return node.map((item, index) => {
+      const itemPath = `${path}.${index}`;
+      return isPathMasked(itemPath, mask.paths) ? null : visit(item, itemPath);
+    });
     if (!node || typeof node !== 'object') return node;
     const prototype = Object.getPrototypeOf(node);
     if (prototype !== Object.prototype && prototype !== null) return node;
     const result: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
       const childPath = path ? `${path}.${key}` : key;
-      if (masksPath(childPath)) continue;
+      if (isPathMasked(childPath, mask.paths)) continue;
       result[key] = visit(child, childPath);
     }
     return result;
@@ -112,19 +116,15 @@ function pathStartsWithMask(path: readonly string[], mask: readonly string[]): b
   return true;
 }
 
-function pathMatchesExactly(path: readonly string[], mask: readonly string[]): boolean {
-  let pathIndex = 0;
-  let maskIndex = 0;
-  while (pathIndex < path.length && maskIndex < mask.length) {
-    if (/^\d+$/.test(path[pathIndex]) && !/^\d+$/.test(mask[maskIndex])) {
-      pathIndex += 1;
-      continue;
-    }
-    if (path[pathIndex] !== mask[maskIndex]) return false;
-    pathIndex += 1;
-    maskIndex += 1;
-  }
-  return pathIndex === path.length && maskIndex === mask.length;
+/** True when a path reaches or descends from a redacted path. */
+function isPathMasked(path: string, masks: ReadonlySet<string>): boolean {
+  const segments = path.split('.');
+  return [...masks].some((mask) => pathStartsWithMask(segments, mask.split('.')));
+}
+
+/** Used by update normalization to retain null placeholders at masked array indices. */
+export function isAssetReadFieldPathMasked(path: string, redactedFields: readonly string[] = []): boolean {
+  return isPathMasked(path, createAssetReadFieldMask(redactedFields).paths);
 }
 
 /**
@@ -164,10 +164,9 @@ export function restoreAssetReadMaskedDescendants<T>(
     if (!isPlainRecord(candidateContainer) || !isPlainRecord(storedContainer)) continue;
     if (!Object.prototype.hasOwnProperty.call(candidateContainer, group.key)) continue;
     const existing = storedContainer[group.key];
-    const applicablePaths = group.paths.filter((path) => hasPath(existing, path));
-    if (applicablePaths.length === 0) continue;
+    if (!group.paths.some((path) => hasPath(existing, path))) continue;
     const nextContainer = { ...candidateContainer };
-    nextContainer[group.key] = restore(existing, candidateContainer[group.key], applicablePaths);
+    nextContainer[group.key] = restore(existing, candidateContainer[group.key], group.paths);
     candidateRoot[group.root] = nextContainer;
   }
 
@@ -181,18 +180,19 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function hasPath(value: unknown, path: readonly string[]): boolean {
-  let current = value;
-  for (const segment of path) {
-    if (Array.isArray(current)) {
-      if (!/^\d+$/.test(segment) || !Object.prototype.hasOwnProperty.call(current, Number(segment))) return false;
-      current = current[Number(segment)];
-    } else if (isPlainRecord(current) && Object.prototype.hasOwnProperty.call(current, segment)) {
-      current = current[segment];
-    } else {
-      return false;
+  if (path.length === 0) return true;
+  const [segment, ...remaining] = path;
+  if (Array.isArray(value)) {
+    if (/^\d+$/.test(segment)) {
+      const index = Number(segment);
+      return Object.prototype.hasOwnProperty.call(value, index) && hasPath(value[index], remaining);
     }
+    return value.some((item) => hasPath(item, path));
   }
-  return true;
+  if (isPlainRecord(value) && Object.prototype.hasOwnProperty.call(value, segment)) {
+    return hasPath(value[segment], remaining);
+  }
+  return false;
 }
 
 function cloneJsonValue(value: unknown): unknown {
@@ -202,7 +202,9 @@ function cloneJsonValue(value: unknown): unknown {
 }
 
 function restore(current: unknown, incoming: unknown, paths: readonly string[][]): unknown {
-  if (paths.some((path) => path.length === 0)) return cloneJsonValue(current);
+  const existingPaths = paths.filter((path) => hasPath(current, path));
+  if (existingPaths.length === 0) return cloneJsonValue(incoming);
+  if (existingPaths.some((path) => path.length === 0)) return cloneJsonValue(current);
 
   if (Array.isArray(current)) {
     // Index-based masks are stable only while the array shape is stable. A
@@ -210,15 +212,20 @@ function restore(current: unknown, incoming: unknown, paths: readonly string[][]
     if (!Array.isArray(incoming) || incoming.length !== current.length) return cloneJsonValue(current);
     const result = incoming.map(cloneJsonValue);
     const byIndex = new Map<number, string[][]>();
-    for (const path of paths) {
-      if (!/^\d+$/.test(path[0])) return cloneJsonValue(current);
-      const index = Number(path[0]);
-      const remaining = byIndex.get(index) ?? [];
-      remaining.push(path.slice(1));
-      byIndex.set(index, remaining);
+    const implicitPaths: string[][] = [];
+    for (const path of existingPaths) {
+      if (/^\d+$/.test(path[0])) {
+        const index = Number(path[0]);
+        const remaining = byIndex.get(index) ?? [];
+        remaining.push(path.slice(1));
+        byIndex.set(index, remaining);
+      } else {
+        implicitPaths.push(path);
+      }
     }
-    for (const [index, remaining] of byIndex) {
-      result[index] = restore(current[index], incoming[index], remaining);
+    for (let index = 0; index < current.length; index += 1) {
+      const itemPaths = [...(byIndex.get(index) ?? []), ...implicitPaths];
+      if (itemPaths.length > 0) result[index] = restore(current[index], incoming[index], itemPaths);
     }
     return result;
   }
@@ -228,7 +235,7 @@ function restore(current: unknown, incoming: unknown, paths: readonly string[][]
   const incomingRecord = isPlainRecord(incoming) ? incoming : {};
   const result: Record<string, unknown> = { ...incomingRecord };
   const byKey = new Map<string, string[][]>();
-  for (const path of paths) {
+  for (const path of existingPaths) {
     const remaining = byKey.get(path[0]) ?? [];
     remaining.push(path.slice(1));
     byKey.set(path[0], remaining);
