@@ -44,6 +44,12 @@ completion section below. No browser session, screenshots, recordings, or fresh 
 observations were produced for this repair: the app server was intentionally kept
 stopped. Manual review should use the current PR head and the following workflow.
 
+**Rechecked on 2026-11-21 at `1af352592df5`.** The Technician regression failed
+with only the old permission check restored (1 failed, 8 skipped; exit 1). With the
+repair restored, all 19 checks passed (9 database behavioral tests and 10 existing
+contract checks; exit 0). [Commands and output excerpts](./2026-11-10-2-findings-in-documentactions-ts-technician-verification.md)
+record the before/after result and cross-client denial coverage.
+
 ### Manual default Technician workflow
 
 1. Use the default MSP **Technician** role. Confirm it grants `document:create` and
