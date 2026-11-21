@@ -143,7 +143,12 @@ const h = vi.hoisted(() => {
 
     update(patch: Row) {
       const rows = this.filtered();
-      for (const row of rows) Object.assign(row, patch);
+      for (const row of rows) {
+        Object.assign(row, Object.fromEntries(Object.entries(patch).filter(([, value]) => !(value && typeof value === 'object' && (value as any).__raw))));
+        if (patch.attributes && (patch.attributes as any).__raw) {
+          row.attributes = { ...(row.attributes ?? {}), ...JSON.parse((patch.attributes as any).bindings) };
+        }
+      }
       return Promise.resolve(rows.length);
     }
 
@@ -547,6 +552,72 @@ describe('asset read redaction boundaries', () => {
     h.readDecisions[secondId] = { allowed: false, redactedFields: [] };
     const deniedList = await listAssets({ page: 1, limit: 10, include_extension_data: true } as any) as any;
     expect(deniedList.assets.some((asset: any) => asset.asset_id === secondId)).toBe(false);
+  });
+});
+
+describe('updateAsset protects unreadable fields at the mutation boundary', () => {
+  it('keeps masked base, extension and structured values through unrelated and hostile updates', async () => {
+    const storedPurchaseCost = 987654;
+    const storedAsset = seedAsset({
+      asset_type: 'network_device',
+      purchase_cost: storedPurchaseCost,
+      purchase_cost_currency: 'USD',
+      manufacturer: 'Private manufacturer',
+      attributes: { private_note: 'Private structured value', public_note: 'Public old value' },
+    });
+    seedNetworkDevice({ power_draw_watts: '42.50', management_ip: '10.40.56.123' });
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: ['purchase_cost', 'manufacturer', 'network_device.power_draw_watts', 'network_device.management_ip', 'attributes.private_note'],
+    };
+
+    const maskedLoad = await getAsset(ASSET_ID) as any;
+    expect(maskedLoad.purchase_cost).toBeUndefined();
+    expect(maskedLoad.manufacturer).toBeUndefined();
+    expect(maskedLoad.network_device.power_draw_watts).toBeUndefined();
+    expect(maskedLoad.network_device.management_ip).toBeUndefined();
+    expect(maskedLoad.attributes).toEqual({ public_note: 'Public old value' });
+
+    const saveResult = await updateAsset(ASSET_ID, {
+      name: 'Renamed switch',
+      purchase_cost: null,
+      manufacturer: 'Attacker replacement',
+      network_device: { power_draw_watts: 'not-a-number', management_ip: '' } as any,
+      attributes: { private_note: 'Attacker structured replacement', public_note: 'Public updated value' },
+    } as any) as any;
+
+    expect(saveResult.actionError).toBeUndefined();
+    expect(saveResult.name).toBe('Renamed switch');
+    expect(saveResult.purchase_cost).toBeUndefined();
+    expect(saveResult.manufacturer).toBeUndefined();
+    expect(saveResult.network_device.power_draw_watts).toBeUndefined();
+    expect(saveResult.network_device.management_ip).toBeUndefined();
+    expect(saveResult.attributes.private_note).toBeUndefined();
+    expect(saveResult.attributes.public_note).toBe('Public updated value');
+    expect(h.dbState.asset_history[0].changes.attributes).toEqual({ public_note: 'Public updated value' });
+    expect(storedAsset.name).toBe('Renamed switch');
+    expect(storedAsset.purchase_cost).toBe(storedPurchaseCost);
+    expect(storedAsset.purchase_cost_currency).toBe('USD');
+    expect(storedAsset.manufacturer).toBe('Private manufacturer');
+    expect(storedAsset.attributes).toEqual({ private_note: 'Private structured value', public_note: 'Public updated value' });
+    expect(h.dbState.network_device_assets[0]).toMatchObject({ power_draw_watts: '42.50', management_ip: '10.40.56.123' });
+
+    // Trusted verification is separate from the masked mutation response.
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
+    const privilegedRead = await getAsset(ASSET_ID) as any;
+    expect(privilegedRead.purchase_cost).toBe(storedPurchaseCost);
+    expect(privilegedRead.manufacturer).toBe('Private manufacturer');
+    expect(privilegedRead.network_device.power_draw_watts).toBe(42.5);
+    expect(privilegedRead.network_device.management_ip).toBe('10.40.56.123');
+    expect(privilegedRead.attributes.private_note).toBe('Private structured value');
+  });
+
+  it('still lets an authorized reader intentionally clear a readable nullable field', async () => {
+    seedAsset({ purchase_cost: 12345, purchase_cost_currency: 'USD' });
+    const result = await updateAsset(ASSET_ID, { purchase_cost: null } as any) as any;
+    expect(result.purchase_cost).toBeNull();
+    expect(h.dbState.assets[0].purchase_cost).toBeNull();
+    expect(h.dbState.assets[0].purchase_cost_currency).toBeNull();
   });
 });
 

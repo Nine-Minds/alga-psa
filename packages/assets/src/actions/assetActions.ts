@@ -68,7 +68,7 @@ import {
     skipMaintenanceOccurrence,
     setMaintenanceSchedulePaused,
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
-import { projectAssetReadFields } from '../lib/projectAssetReadFields';
+import { projectAssetReadFields, removeAssetReadMaskedFields } from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
@@ -1317,7 +1317,7 @@ export interface AssetWriteHooks {
      * user-scoped read-authorization context; sessionless callers (e.g. the
      * Hudu background sync) omit it and write as a full-access system actor.
      */
-    authorize?: (trx: Knex.Transaction) => Promise<void>;
+    authorize?: (trx: Knex.Transaction) => Promise<void | readonly string[]>;
 }
 
 /**
@@ -1336,11 +1336,16 @@ export async function updateAssetRecord(
 ): Promise<Asset> {
     try {
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
+            let redactedFields: readonly string[] = [];
             if (hooks?.authorize) {
-                await hooks.authorize(trx);
+                redactedFields = (await hooks.authorize(trx)) ?? [];
             }
 
-            const normalizedData = sanitizeUpdatePayload(data);
+            // A masked value is absent from the authorized read. Remove even
+            // caller-supplied replacements/nulls before defaults, coercion, or
+            // validation can turn them into a destructive update.
+            const protectedData = removeAssetReadMaskedFields(data, redactedFields);
+            const normalizedData = sanitizeUpdatePayload(protectedData);
             const validatedData = validateData(updateAssetSchema, normalizedData);
             const {
                 workstation,
@@ -1565,7 +1570,7 @@ export async function updateAssetRecord(
             return {
                 before: beforeFormatted,
                 after: afterFormatted,
-                updated,
+                updated: projectAssetReadFields(updated, redactedFields),
                 validatedUpdate: validatedData as unknown as Record<string, unknown>,
             };
         });
@@ -1699,7 +1704,8 @@ export const updateAsset = withAuth(async (
     // `await` so a rejection from the core lands in the catch below and is returned.
     return await updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
         authorize: async (trx) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            return decision.redactedFields;
         },
     });
     } catch (error) {

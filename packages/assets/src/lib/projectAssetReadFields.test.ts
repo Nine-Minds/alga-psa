@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectAssetReadFields } from './projectAssetReadFields';
+import { projectAssetReadFields, removeAssetReadMaskedFields } from './projectAssetReadFields';
 
 describe('projectAssetReadFields', () => {
   const response = {
@@ -104,5 +104,19 @@ describe('projectAssetReadFields', () => {
     expect(projectAssetReadFields(asset, ['client'])).toEqual({
       unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
     });
+  });
+});
+
+describe('removeAssetReadMaskedFields', () => {
+  it('removes masked leaves but retains permitted siblings and handles a masked parent', () => {
+    expect(removeAssetReadMaskedFields({
+      purchase_cost: null,
+      attributes: { private_note: 'hidden', public_note: 'visible' },
+      workstation: { serial_number: 'hidden', os_version: 'visible' },
+    }, ['purchase_cost', 'attributes.private_note', 'workstation.serial_number'])).toEqual({
+      attributes: { public_note: 'visible' },
+      workstation: { os_version: 'visible' },
+    });
+    expect(removeAssetReadMaskedFields({ attributes: { private_note: 'hidden' } }, ['attributes'])).toEqual({});
   });
 });

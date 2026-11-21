@@ -37,6 +37,7 @@ import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
 import { parseNumberInput } from '../lib/numberInput';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
+import { retainReadableAssetUpdateFields } from '../lib/assetFormPayload';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -1266,9 +1267,11 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
         )
       ) as UpdateAssetRequest;
 
+      const safeFormData = retainReadableAssetUpdateFields(cleanedData, asset);
+
       // updateAsset RETURNS expected failures (validation, permission, not found)
       // rather than throwing: Next.js masks thrown messages in production builds.
-      const result = await updateAsset(assetId, cleanedData);
+      const result = await updateAsset(assetId, safeFormData);
 
       if (isAssetValidationError(result)) {
         const nextFieldErrors: Record<string, string> = {};

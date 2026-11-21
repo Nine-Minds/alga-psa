@@ -1,14 +1,7 @@
 /** Remove policy-redacted paths from an asset and its nested response values. */
 export function projectAssetReadFields<T>(value: T, redactedFields: readonly string[] = []): T {
-  const paths = new Set(redactedFields.map((field) => field.replace(/^assets?\./, '').replace(/^asset\./, '')));
-  const aliases = [
-    ['contact_name_id', 'contact_name'],
-    ['client.client_name', 'client_name'],
-    ['client_id', 'client.client_id'],
-    ['vendor_id', 'vendor_name'],
-    ['billing_profile_id', 'billing_profile_name'],
-    ['name', 'maintenanceReport.asset_name'],
-  ];
+  const mask = createAssetReadFieldMask(redactedFields);
+  const paths = mask.paths;
   const pathsOverlap = (left: string, right: string) =>
     left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
   const historyPathIsMasked = (path: string) => {
@@ -16,26 +9,12 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
     const segments = assetPath.split('.');
     return [...paths].some((redactedPath) => segments.some((_, index) => {
       // Wrappers such as `fields` and `maintenance_data` are not asset path
-      // segments. Compare every suffix so complete asset paths still match.
+      // segments. Compare every suffix so full asset paths still match.
       const candidate = segments.slice(index).join('.');
       return candidate === redactedPath || candidate.startsWith(`${redactedPath}.`);
     }));
   };
-  const isMasked = (field: string) => [...paths].some((path) => pathsOverlap(field, path));
-  let expanded = true;
-  while (expanded) {
-    expanded = false;
-    for (const group of aliases) {
-      if (group.some(isMasked)) {
-        for (const field of group) {
-          if (!paths.has(field)) {
-            paths.add(field);
-            expanded = true;
-          }
-        }
-      }
-    }
-  }
+  const isMasked = (field: string) => mask.isMasked(field);
 
   const project = (node: unknown, path: string): unknown => {
     if (Array.isArray(node)) return node.map((item) => project(item, path));
@@ -60,4 +39,58 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
   };
 
   return project(value, '') as T;
+}
+
+const ASSET_READ_FIELD_ALIASES = [
+  ['contact_name_id', 'contact_name'],
+  ['client.client_name', 'client_name'],
+  ['client_id', 'client.client_id'],
+  ['vendor_id', 'vendor_name'],
+  ['billing_profile_id', 'billing_profile_name'],
+  ['name', 'maintenanceReport.asset_name'],
+] as const;
+
+/** The shared path interpretation used by read projection and safe mutations. */
+export function createAssetReadFieldMask(redactedFields: readonly string[] = []) {
+  const paths = new Set(redactedFields.map((field) => field.replace(/^assets?\./, '').replace(/^asset\./, '')));
+  const overlaps = (left: string, right: string) =>
+    left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
+  const isMasked = (field: string) => [...paths].some((path) => overlaps(field, path));
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    for (const group of ASSET_READ_FIELD_ALIASES) {
+      if (group.some(isMasked)) {
+        for (const field of group) {
+          if (!paths.has(field)) {
+            paths.add(field);
+            expanded = true;
+          }
+        }
+      }
+    }
+  }
+  return { paths, isMasked };
+}
+
+/** Remove every redacted path before update validation or normalization. */
+export function removeAssetReadMaskedFields<T>(value: T, redactedFields: readonly string[] = []): T {
+  const mask = createAssetReadFieldMask(redactedFields);
+  const masksPath = (path: string) => [...mask.paths].some((redactedPath) =>
+    path === redactedPath || path.startsWith(`${redactedPath}.`)
+  );
+  const visit = (node: unknown, path: string): unknown => {
+    if (Array.isArray(node)) return node.map((item) => visit(item, path));
+    if (!node || typeof node !== 'object') return node;
+    const prototype = Object.getPrototypeOf(node);
+    if (prototype !== Object.prototype && prototype !== null) return node;
+    const result: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
+      const childPath = path ? `${path}.${key}` : key;
+      if (masksPath(childPath)) continue;
+      result[key] = visit(child, childPath);
+    }
+    return result;
+  };
+  return visit(value, '') as T;
 }
