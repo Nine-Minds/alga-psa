@@ -1,7 +1,5 @@
 'use server';
 
-import { ensureMiscellaneousService } from '@alga-psa/db';
-
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
@@ -11,6 +9,11 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
+import {
+  getExperimentalFeaturesForTenant as getExperimentalFeaturesForTenantServer,
+  getTenantTimezone as getTenantTimezoneServer,
+  initializeTenantSettings as initializeTenantSettingsServer,
+} from './tenantSettings.server';
 import {
   actionError,
   permissionError,
@@ -70,25 +73,10 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
   return null;
 }
 
-const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
-  aiAssistant: false,
-};
-
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
-
-function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
-  if (!value || typeof value !== 'object') {
-    return { ...DEFAULT_EXPERIMENTAL_FEATURES };
-  }
-
-  const record = value as Record<string, unknown>;
-  return {
-    aiAssistant: record.aiAssistant === true,
-  };
-}
 
 const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSettings | null> => {
   const { knex } = await createTenantKnex(tenant);
@@ -116,31 +104,11 @@ export const getTenantSettings = withAuth(async (
   return getTenantSettingsForTenant(tenant);
 });
 
-export async function getTenantSettingsByTenantId(tenantId: string): Promise<TenantSettings | null> {
-  if (!tenantId) {
-    throw new Error('tenantId is required');
-  }
-  return getTenantSettingsForTenant(tenantId);
-}
-
-export const getExperimentalFeaturesForTenant = async (
-  tenant: string,
-  user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
-): Promise<ExperimentalFeatures> => {
-  const settings = await getTenantSettingsForTenant(tenant);
-  const features = normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
-  if (!(await canTenantActivateAiAssistant(tenant, user))) {
-    features.aiAssistant = false;
-  }
-
-  return features;
-};
-
 export const getExperimentalFeatures = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<ExperimentalFeatures> => {
-  return getExperimentalFeaturesForTenant(tenant, user);
+  return getExperimentalFeaturesForTenantServer(tenant, user);
 });
 
 export const canEnableAiAssistant = withAuth(async (
@@ -165,7 +133,7 @@ export const updateExperimentalFeatures = withAuth(async (
       return permissionError('Permission denied: Cannot enable AI Assistant for this tenant', 'msp/settings:errors.tenantSettings.permissions.enableAiAssistant');
     }
 
-    const current = await getExperimentalFeaturesForTenant(tenant, user);
+    const current = await getExperimentalFeaturesForTenantServer(tenant, user);
     const merged: ExperimentalFeatures = {
       ...current,
       ...features,
@@ -187,7 +155,7 @@ export const isExperimentalFeatureEnabled = withAuth(async (
   { tenant }: AuthContext,
   featureKey: string
 ): Promise<boolean> => {
-  const features = await getExperimentalFeaturesForTenant(tenant, user);
+  const features = await getExperimentalFeaturesForTenantServer(tenant, user);
   return (features as unknown as Record<string, unknown>)[featureKey] === true;
 });
 
@@ -365,11 +333,11 @@ const updateTenantAnalyticsSettingsInternal = withAuth(async (
   }
 });
 
-export async function updateTenantSettings(
+export const updateTenantSettings = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
   settings: Record<string, any>
-): Promise<void> {
-  return updateTenantSettingsInternal(settings);
-}
+): Promise<void> => updateTenantSettingsInternal(settings));
 
 export const getTenantAnalyticsSettings = withAuth(async (
   _user: IUserWithRoles,
@@ -379,20 +347,11 @@ export const getTenantAnalyticsSettings = withAuth(async (
   return settings?.settings?.analytics || null;
 });
 
-export async function updateTenantAnalyticsSettings(
+export const updateTenantAnalyticsSettings = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
   analyticsSettings: Record<string, any>
-): Promise<void> {
-  return updateTenantAnalyticsSettingsInternal(analyticsSettings);
-}
-
-/**
- * Get tenant timezone from settings JSONB (non-authenticated, for background processes).
- */
-export async function getTenantTimezone(tenantId: string): Promise<string | null> {
-  const settings = await getCurrentTenantSettingsJson(tenantId);
-  const tz = settings?.timezone;
-  return typeof tz === 'string' && tz.length > 0 ? tz : null;
-}
+): Promise<void> => updateTenantAnalyticsSettingsInternal(analyticsSettings));
 
 /**
  * Get tenant timezone (authenticated, for UI).
@@ -401,15 +360,17 @@ export const getTenantTimezoneAuth = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<string | null> => {
-  return getTenantTimezone(tenant);
+  return getTenantTimezoneServer(tenant);
 });
 
 /**
  * Set tenant timezone (authenticated, requires settings:update permission).
  */
-export async function setTenantTimezone(
+export const setTenantTimezone = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
   timezone: string
-): Promise<void | TenantSettingsActionError> {
+): Promise<void | TenantSettingsActionError> => {
   // Tenant timezone saves are always explicit, so always validate. UTC aliases
   // come back mapped to "UTC"; non-city IDs (EST, Etc/GMT+5, US/Eastern) are rejected.
   // Both failures are returned as action errors with a messageKey, so they never
@@ -429,34 +390,11 @@ export async function setTenantTimezone(
     return actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
   }
   return updateTenantSettings({ timezone: validation.timeZone });
-}
+});
 
-export async function initializeTenantSettings(tenantId: string): Promise<void> {
-  try {
-    const { knex } = await createTenantKnex(tenantId);
-    await ensureMiscellaneousService(knex, tenantId);
-    
-    // Use a literal timestamp for Citus compatibility
-    const now = new Date();
-    
-    // Initialize tenant settings with both onboarding flags set to false
-    await tenantSettingsQuery(knex, tenantId)
-      .insert({
-        tenant: tenantId,
-        onboarding_completed: false,
-        onboarding_skipped: false,
-        onboarding_data: null,
-        settings: JSON.stringify({
-          experimentalFeatures: DEFAULT_EXPERIMENTAL_FEATURES,
-        }),
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict('tenant')
-      .ignore(); // Don't overwrite if already exists
-
-  } catch (error) {
-    console.error('Error initializing tenant settings:', error);
-    throw error;
-  }
-}
+export const initializeTenantSettings = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<void> => {
+  return initializeTenantSettingsServer(tenant);
+});
