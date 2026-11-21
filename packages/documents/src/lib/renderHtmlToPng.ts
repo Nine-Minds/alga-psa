@@ -146,15 +146,44 @@ function collectRemoteAssetReferences(html: string): RemoteAssetReference[] {
   }
 
   const references = [...imageReferences];
+  let imageIndex = 0;
   for (const cssReference of cssReferences) {
-    const parentImage = imageReferences.find((image) =>
-      cssReference.index >= image.index && cssReference.end <= image.end
-    );
+    while (imageIndex < imageReferences.length && imageReferences[imageIndex].end <= cssReference.index) {
+      imageIndex += 1;
+    }
+    const candidateImage = imageReferences[imageIndex];
+    const overlapsSrcAttribute = candidateImage !== undefined &&
+      cssReference.index < candidateImage.srcAttributeEnd! &&
+      cssReference.end > candidateImage.srcAttributeStart!;
+    const parentImage = !overlapsSrcAttribute && candidateImage !== undefined &&
+      cssReference.index >= candidateImage.index &&
+      cssReference.end <= candidateImage.end
+      ? candidateImage
+      : undefined;
     if (parentImage) parentImage.nestedCss!.push(cssReference);
-    else references.push(cssReference);
+    else if (!overlapsSrcAttribute) references.push(cssReference);
   }
   references.sort((a, b) => a.index - b.index);
-  return references;
+  const nonOverlappingReferences: RemoteAssetReference[] = [];
+  let overlappingImageIndex = 0;
+  for (const reference of references) {
+    while (
+      overlappingImageIndex < imageReferences.length &&
+      imageReferences[overlappingImageIndex].end <= reference.index
+    ) {
+      overlappingImageIndex += 1;
+    }
+    const overlappingImage = imageReferences[overlappingImageIndex];
+    if (
+      reference.kind === 'css' &&
+      overlappingImage !== undefined &&
+      reference.end > overlappingImage.index
+    ) {
+      continue;
+    }
+    nonOverlappingReferences.push(reference);
+  }
+  return nonOverlappingReferences;
 }
 
 function getOrderedAssetUrls(references: RemoteAssetReference[]): string[] {
@@ -182,6 +211,9 @@ function applyTextReplacements(input: string, replacements: TextReplacement[]): 
   let output = '';
   let last = 0;
   for (const replacement of replacements.sort((a, b) => a.index - b.index)) {
+    if (replacement.index < last || replacement.end < replacement.index) {
+      throw new Error('Remote asset replacement ranges must not overlap');
+    }
     output += input.slice(last, replacement.index) + replacement.value;
     last = replacement.end;
   }

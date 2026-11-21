@@ -380,6 +380,57 @@ describe('renderHtmlToPng network policy', () => {
     expect(suppressed).not.toContain(tooLargeImage);
   });
 
+  it('does not treat CSS-looking text inside an img src as a second reference', async () => {
+    const url = 'https://assets.example/url(https://assets.example/inside.png)';
+    const imageBytes = Buffer.from([8, 9, 10]);
+    const fetched: string[] = [];
+    const output = await resolveRemoteAssets(`<img src="${url}" alt="photo">`, {
+      fetchAsset: async (assetUrl) => {
+        fetched.push(assetUrl);
+        return { bytes: imageBytes, contentType: 'image/png' };
+      },
+    });
+
+    expect(fetched).toEqual([url]);
+    expect(output).toBe(`<img src="data:image/png;base64,${imageBytes.toString('base64')}" alt="photo">`);
+  });
+
+  it('associates image and standalone CSS references linearly in a large block-mode render', async () => {
+    const count = 80_000;
+    const imageTags = Array.from({ length: count }, (_, index) =>
+      `<img src="https://a/${String(index).padStart(5, '0')}" alt="xxxxx">`
+    ).join('');
+    const cssReferences = Array.from({ length: count }, (_, index) =>
+      `<div style="background-image:url(https://b/${String(index).padStart(5, '0')})"></div>`
+    ).join('');
+    const html = imageTags + cssReferences;
+    const inputBytes = Buffer.byteLength(html);
+    const startedAt = performance.now();
+    let fetchCalls = 0;
+    const output = await resolveRemoteAssets(html, {
+      remoteAssets: 'block',
+      fetchAsset: async () => {
+        fetchCalls += 1;
+        throw new Error('block mode must not fetch assets');
+      },
+    });
+    const elapsedMs = Math.round(performance.now() - startedAt);
+
+    expect(inputBytes).toBeGreaterThan(7 * 1024 * 1024);
+    expect(fetchCalls).toBe(0);
+    expect(output.match(/role="img"/g)).toHaveLength(count);
+    expect(output.match(/url\("data:image\/png;base64,/g)).toHaveLength(count);
+    expect(output).not.toContain('https://a/');
+    expect(output).not.toContain('https://b/');
+    expect(output.indexOf('</span>')).toBeLessThan(output.indexOf('url("data:image/png;base64,'));
+    console.info('[renderHtmlToPng] large block-mode association probe', {
+      inputBytes,
+      imageReferences: count,
+      standaloneCssReferences: count,
+      elapsedMs,
+    });
+  });
+
   it('forwards the default and overridden per-asset timeout and rejects malformed values', async () => {
     const timeoutValues: Array<number | undefined> = [];
     const fetchAsset = async (_url: string, options?: { timeoutMs: number }) => {
