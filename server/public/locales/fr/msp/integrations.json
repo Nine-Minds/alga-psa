@@ -4386,15 +4386,18 @@
         "disconnect": "Déconnecter",
         "connect": "Connecter Stripe",
         "connecting": "Connexion…",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "updateApiKeys": "Mettre à jour les clés API"
       },
       "form": {
         "secretKeyLabel": "Clé secrète",
-        "secretKeyPlaceholder": "sk_live_... ou sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (ou clés de test)",
         "publishableKeyLabel": "Clé publique",
         "publishableKeyPlaceholder": "pk_live_... ou pk_test_...",
         "findKeyPrefix": "Trouvez-la dans votre",
-        "dashboardLink": "Tableau de bord Stripe → Clés API"
+        "dashboardLink": "Tableau de bord Stripe → Clés API",
+        "permissionHelp": "Clé restreinte ? Autorisations requises",
+        "checkedOnFirstUse": "vérifiée lors de la première utilisation"
       },
       "webhook": {
         "heading": "Configuration des webhooks",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "Stripe connecté ! Remarque : la configuration automatique des webhooks a échoué. Vous devrez peut-être les configurer manuellement dans le tableau de bord Stripe.",
         "disconnected": "Stripe déconnecté",
         "connectionSuccess": "Connexion réussie !",
-        "webhookConfigured": "Webhook configuré !"
+        "webhookConfigured": "Webhook configuré !",
+        "optionalPermissionsMissing": "Connecté. Ajoutez ces autorisations Stripe pour activer d’autres fonctionnalités : {{warnings}}"
       },
       "errors": {
         "loadConfig": "Échec du chargement de la configuration Stripe",
@@ -4426,7 +4430,7 @@
         "testConnection": "Échec du test de connexion",
         "configureWebhook": "Échec de la configuration du webhook",
         "bothKeysRequired": "Saisissez la clé secrète et la clé publique",
-        "secretKeyFormat": "La clé secrète doit commencer par sk_",
+        "secretKeyFormat": "La clé doit être une clé sk_live_, sk_test_, rk_live_ ou rk_test_ valide.",
         "publishableKeyFormat": "La clé publique doit commencer par pk_"
       }
     },

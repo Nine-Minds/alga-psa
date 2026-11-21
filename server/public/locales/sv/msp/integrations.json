@@ -4409,15 +4409,18 @@
         "disconnect": "Koppla från",
         "connect": "Anslut Stripe",
         "connecting": "Ansluter…",
-        "cancel": "Avbryt"
+        "cancel": "Avbryt",
+        "updateApiKeys": "Uppdatera API-nycklar"
       },
       "form": {
         "secretKeyLabel": "Hemlig nyckel",
-        "secretKeyPlaceholder": "sk_live_... eller sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (eller testnycklar)",
         "publishableKeyLabel": "Publicerbar nyckel",
         "publishableKeyPlaceholder": "pk_live_... eller pk_test_...",
         "findKeyPrefix": "Du hittar detta i din",
-        "dashboardLink": "Stripe Dashboard → API-nycklar"
+        "dashboardLink": "Stripe Dashboard → API-nycklar",
+        "permissionHelp": "Använder du en begränsad nyckel? Nödvändiga behörigheter",
+        "checkedOnFirstUse": "kontrolleras första gången den används"
       },
       "webhook": {
         "heading": "Webhook-konfiguration",
@@ -4440,7 +4443,8 @@
         "connectedWebhookFailed": "Stripe har anslutits. Obs! Automatisk webhook-konfiguration misslyckades – du kan behöva konfigurera webhookar manuellt i Stripe Dashboard.",
         "disconnected": "Stripe har kopplats från",
         "connectionSuccess": "Anslutningen lyckades.",
-        "webhookConfigured": "Webhooken har konfigurerats."
+        "webhookConfigured": "Webhooken har konfigurerats.",
+        "optionalPermissionsMissing": "Ansluten. Lägg till dessa Stripe-behörigheter för att aktivera fler funktioner: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Det gick inte att läsa in Stripe-konfigurationen",
@@ -4449,7 +4453,7 @@
         "testConnection": "Anslutningstestet misslyckades",
         "configureWebhook": "Det gick inte att konfigurera webhooken",
         "bothKeysRequired": "Ange både hemlig nyckel och publicerbar nyckel",
-        "secretKeyFormat": "Den hemliga nyckeln ska börja med sk_",
+        "secretKeyFormat": "Nyckeln måste vara en giltig sk_live_, sk_test_, rk_live_ eller rk_test_-nyckel.",
         "publishableKeyFormat": "Den publicerbara nyckeln ska börja med pk_"
       }
     },

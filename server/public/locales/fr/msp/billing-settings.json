@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Échec du chargement de la configuration de paiement",
       "keysRequired": "Veuillez saisir à la fois la clé secrète et la clé publiable",
-      "invalidSecretKey": "La clé secrète doit commencer par sk_",
+      "invalidSecretKey": "La clé doit être une clé sk_live_, sk_test_, rk_live_ ou rk_test_ valide.",
       "invalidPublishableKey": "La clé publiable doit commencer par pk_",
       "connectSuccess": "Stripe connecté et webhooks configurés automatiquement !",
       "connectPartialSuccess": "Stripe connecté ! Remarque : la configuration automatique du webhook a échoué — vous devrez peut-être configurer les webhooks manuellement dans le tableau de bord Stripe.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Clé secrète",
-        "secretKeyPlaceholder": "sk_live_... ou sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (ou clés de test)",
         "secretKeyHelpPrefix": "Trouvez-la dans votre",
         "secretKeyHelpLink": "Tableau de bord Stripe → Clés API",
         "publishableKeyLabel": "Clé publiable",
         "publishableKeyPlaceholder": "pk_live_... ou pk_test_...",
         "connecting": "Connexion en cours...",
         "connect": "Connecter Stripe",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "permissionHelp": "Clé restreinte ? Autorisations requises",
+        "checkedOnFirstUse": "vérifiée lors de la première utilisation",
+        "optionalPermissionsMissing": "Connecté. Ajoutez ces autorisations Stripe pour activer d’autres fonctionnalités : {{warnings}}"
       },
       "empty": {
         "description": "Connectez votre compte Stripe pour accepter les paiements en ligne pour les factures",

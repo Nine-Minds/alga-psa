@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Zahlungskonfiguration konnte nicht geladen werden",
       "keysRequired": "Bitte geben Sie sowohl den geheimen Schlüssel als auch den veröffentlichbaren Schlüssel ein",
-      "invalidSecretKey": "Der geheime Schlüssel sollte mit sk_ beginnen",
+      "invalidSecretKey": "Der geheime Schlüssel muss ein gültiger sk_live_-, sk_test_-, rk_live_- oder rk_test_-Schlüssel sein.",
       "invalidPublishableKey": "Der veröffentlichbare Schlüssel sollte mit pk_ beginnen",
       "connectSuccess": "Stripe verbunden und Webhooks automatisch konfiguriert!",
       "connectPartialSuccess": "Stripe verbunden! Hinweis: Automatische Webhook-Konfiguration fehlgeschlagen — Sie müssen Webhooks möglicherweise manuell im Stripe-Dashboard konfigurieren.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Geheimer Schlüssel",
-        "secretKeyPlaceholder": "sk_live_... oder sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (oder Testschlüssel)",
         "secretKeyHelpPrefix": "Sie finden ihn in Ihrem",
         "secretKeyHelpLink": "Stripe-Dashboard → API-Schlüssel",
         "publishableKeyLabel": "Veröffentlichbarer Schlüssel",
         "publishableKeyPlaceholder": "pk_live_... oder pk_test_...",
         "connecting": "Wird verbunden...",
         "connect": "Stripe verbinden",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "permissionHelp": "Eingeschränkter Schlüssel? Erforderliche Berechtigungen",
+        "checkedOnFirstUse": "bei erster Verwendung geprüft",
+        "optionalPermissionsMissing": "Verbunden. Füge diese Stripe-Berechtigungen hinzu, um weitere Funktionen zu aktivieren: {{warnings}}"
       },
       "empty": {
         "description": "Verbinden Sie Ihr Stripe-Konto, um Online-Zahlungen für Rechnungen zu akzeptieren",

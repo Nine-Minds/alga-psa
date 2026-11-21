@@ -1595,7 +1595,7 @@
     "messages": {
       "loadConfigFailed": "Falha ao carregar a configuração de pagamento",
       "keysRequired": "Insira a chave secreta e a chave publicável",
-      "invalidSecretKey": "A chave secreta deve começar com sk_",
+      "invalidSecretKey": "A chave deve ser válida: sk_live_, sk_test_, rk_live_ ou rk_test_.",
       "invalidPublishableKey": "A chave publicável deve começar com pk_",
       "connectSuccess": "Stripe conectado e webhooks configurados automaticamente!",
       "connectPartialSuccess": "Listra conectada! Observação: falha na configuração automática do webhook - pode ser necessário configurar webhooks manualmente no Stripe Dashboard.",
@@ -1676,14 +1676,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Chave secreta",
-        "secretKeyPlaceholder": "sk_live_... ou sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (ou chaves de teste)",
         "secretKeyHelpPrefix": "Encontre isso em seu",
         "secretKeyHelpLink": "Painel Stripe → Chaves de API",
         "publishableKeyLabel": "Chave publicável",
         "publishableKeyPlaceholder": "pk_live_... ou pk_test_...",
         "connecting": "Conectando...",
         "connect": "Conectar faixa",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "permissionHelp": "Usando uma chave restrita? Permissões necessárias",
+        "checkedOnFirstUse": "verificada no primeiro uso",
+        "optionalPermissionsMissing": "Conectado. Adicione estas permissões do Stripe para habilitar mais recursos: {{warnings}}"
       },
       "empty": {
         "description": "Conecte sua conta Stripe para aceitar pagamentos online de faturas",
