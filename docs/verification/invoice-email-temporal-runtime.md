@@ -1,5 +1,28 @@
 # Invoice email Temporal runtime verification
 
+## Invoice ZIP forwarded execution and artifact verification
+
+`invoice_zip` is executed by the app-side `InvoiceZipJobHandler`. Its forwarded event carries `executionId`; `MaintenanceJobSubscriber` claims that execution and passes the trusted value into handler data as `forwardedExecutionId`. The handler generates/stores one PDF per invoice, `ZipGenerationService` archives the stored files by `original_name`, and the handler uploads the archive as an `application/zip` system artifact and records a document. A bundle with one client is associated to that client; a mixed-client bundle has no client association. Every status write from this handler must preserve `forwardedExecutionId`, including per-invoice/ZIP progress, completion, and failure writes.
+
+### Repeat the persistence regression
+
+Prerequisites: the repository dependencies are installed and the local PostgreSQL test database configured by `server/.env.localtest` is reachable. This check does not start the application. From the worktree root run:
+
+```sh
+cd server
+npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose
+```
+
+The integration fixture creates an isolated tenant and job row, records `serverExecution` as failed with a known error, then calls the actual ZIP handler with that `forwardedExecutionId`. It lets the handler create its detail and issue its real progress update, then stops before PDF/storage work and reads the persisted job from PostgreSQL. The expected result is still `failed` with the same execution ID and failure error. The neighboring persistence case also applies late forwarded progress and completion writes to the real `JobService` and checks the same failed outcome; the ordinary-job case verifies normal completion transitions. These are handler/persistence checks, not ZIP artifact delivery evidence.
+
+### Verify actual ZIP delivery when the board permits the app service
+
+Prerequisites: use the active workflow step that declares `dev-server`; use its board-managed app and Temporal worker, the same tenant database/storage configuration, and a test invoice whose issued PDF can be generated. Do not run an alternate app process. Record the invoice ID, job ID, and Temporal execution ID without recording credentials. Schedule the ZIP from the authenticated billing UI, then correlate that job ID and execution ID with the persisted `jobs.metadata.serverExecution` and app handler logs. A Temporal completed state or published event alone is not delivery proof.
+
+Inspect the uploaded document and its associated stored file row for the same job outcome: require `mime_type=application/zip`, the stored byte size/path, and the `invoice_bundle_*.zip` document. Download those exact bytes through the configured storage provider, then run `unzip -t <downloaded-file>` and `unzip -Z1 <downloaded-file>`. Extract the archive and verify each expected invoice PDF is present using its stored `original_name`; use `pdfinfo` and `pdftotext` to confirm invoice number and intended invoice contents. Capture the output of those commands, the document/file identifiers, and execution correlation as evidence. For a single-client fixture require the document’s client association; for a mixed-client fixture require none. Remove only the downloaded local inspection copy. Retain the application artifact and job history as audit evidence; do not reset unrelated fixture data.
+
+**Evidence boundary for this repair round:** the application server was deliberately stopped and was not started. The PostgreSQL regression exercises actual handler status writes and real persistence but stops before PDF generation, archive creation, storage upload, document insertion, or authenticated UI scheduling. Therefore ZIP artifact validity, expected invoice contents, storage delivery, and authenticated application/Temporal end-to-end delivery remain unverified here. Do not mark ZIP delivery verified until the procedure above has been completed under the board-managed lifecycle.
+
 Use this runbook to connect a board-managed Alga PSA worktree and its built Temporal worker to a reachable local Temporal server. Keep the app and worker in board services. Do not launch a separate app server.
 
 The worker registers `invoice_email` by forwarding it over the event bus to the app's `MaintenanceJobSubscriber`. The app executes `InvoiceEmailHandler`, generates the PDF, and sends the email. Both processes must use the same database and Redis configuration. Worker health and Temporal workflow completion alone do not prove that the app executed the handler or delivered the message.
