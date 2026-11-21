@@ -21,7 +21,7 @@ Measured on real Postgres with the lock disabled: 8 concurrent
 (it throws for anything else). Its first statement takes the shared advisory lock:
 
 ```sql
-SELECT pg_advisory_xact_lock(hashtext(<tenant>))
+SELECT pg_advisory_xact_lock(hashtext('internal_user_seats'), hashtext(<tenant text>))
 ```
 
 - The transaction lock is held until commit or rollback and covers the
@@ -77,11 +77,21 @@ so the tripwire does not catch their race (the no-lock runs above show it passin
 
 ## Lock order
 
-Seat admission paths first take `pg_advisory_xact_lock(hashtext(tenant))`, a
-transaction-scoped per-tenant lock that does not participate in PostgreSQL's
-row-lock graph. The lock is held through admission and the corresponding write.
-Seat-defining user updates take this advisory lock before locking and reading the
-target user, then derive occupancy from that locked row plus the patch.
+Seat admission paths first take the established transaction-scoped two-int4
+advisory lock:
+`pg_advisory_xact_lock(hashtext('internal_user_seats'), hashtext(String(tenant)))`.
+PostgreSQL `hashtext(text)` returns `int4`, so these are the namespace and
+tenant hash keys of the two-`int4` overload. Both are required to preserve the
+production identity introduced by revision `831cc4494e`; the one-key overload
+`pg_advisory_xact_lock(hashtext(tenant))` is a different lock and does not
+contend with already-deployed consumers. Keep this identity while old and new
+applications may overlap.
+
+The shared lock does not participate in PostgreSQL's row-lock graph and is held
+through admission and the corresponding write. Seat-defining user updates take
+this advisory lock before locking and reading the target user, then derive
+occupancy from that locked row plus the patch. They do not take a tenant-row
+lock before the co-managed entitlement and relationship locks.
 
 Co-managed allocation and user-admission paths retain their row order: sponsor
 entitlement, sponsor tenant, provisioning operation, customer relationship, then
