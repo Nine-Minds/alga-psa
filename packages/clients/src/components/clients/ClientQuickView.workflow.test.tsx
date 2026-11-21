@@ -8,10 +8,15 @@ const actions = vi.hoisted(() => ({
   updateClient: vi.fn(async (_id: string, patch: any, _projectId?: string) => ({ client_id: _id, ...patch })),
   loadClientQuickView: vi.fn(),
   updateClientQuickView: vi.fn(),
+  loadClientQuickViewLocations: vi.fn(async () => []),
+  updateClientQuickViewLocation: vi.fn(async () => undefined),
+  getUnrestrictedLocations: vi.fn(async () => { throw new Error('quick-view must not use the unrestricted location action'); }),
   getSlaPolicies: vi.fn(async () => []),
   startEntraSync: vi.fn(),
   entraFeatureEnabled: false,
   entraCanManage: false,
+  toast: vi.fn(),
+  translate: (_key: string, options: any) => typeof options === 'string' ? options : options?.defaultValue ?? _key,
 }));
 
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({ findTagsByEntityId: vi.fn(async () => []) }));
@@ -32,11 +37,21 @@ vi.mock('@alga-psa/clients/actions/clientNameAliasActions', () => ({
   addClientNameAlias: vi.fn(), listClientNameAliases: vi.fn(async () => []), removeClientNameAlias: vi.fn(),
 }));
 vi.mock('@alga-psa/clients/actions/inboundTicketDestinationActions', () => ({ listInboundTicketDestinationOptions: vi.fn(async () => []) }));
+vi.mock('@alga-psa/clients/actions', () => ({
+  getClientLocations: (...args: any[]) => actions.getUnrestrictedLocations(...args),
+  createClientLocation: vi.fn(), updateClientLocation: vi.fn(), deleteClientLocation: vi.fn(), setDefaultClientLocation: vi.fn(),
+  getAllCountries: vi.fn(async () => [{ code: 'US', name: 'United States' }]),
+  getTenantDefaultCountry: vi.fn(async () => ({ code: 'US', name: 'United States' })),
+}));
+vi.mock('../../lib/billingHelpers', () => ({ getActiveTaxRegionsAsync: vi.fn(async () => []) }));
+vi.mock('@alga-psa/clients/actions/clientBillingProfileActions', () => ({ getClientBillingProfiles: vi.fn(async () => []) }));
 vi.mock('@alga-psa/clients/actions/entraClientSyncActions', () => ({ startClientEntraSync: (...args: any[]) => actions.startEntraSync(...args) }));
 vi.mock('../../context/ClientCrossFeatureContext', () => ({
   useClientCrossFeature: () => ({
     loadClientQuickView: actions.loadClientQuickView,
     updateClientQuickView: actions.updateClientQuickView,
+    loadClientQuickViewLocations: actions.loadClientQuickViewLocations,
+    updateClientQuickViewLocation: actions.updateClientQuickViewLocation,
     renderQuickAddTicket: ({ open, onOpenChange }: any) => open ? <button onClick={() => onOpenChange(false)}>Ticket form</button> : null,
     renderSurveySummaryCard: () => null,
     getSlaPolicies: actions.getSlaPolicies,
@@ -44,26 +59,34 @@ vi.mock('../../context/ClientCrossFeatureContext', () => ({
   }),
 }));
 vi.mock('@alga-psa/ui', () => ({
-  handleError: vi.fn(), useDrawer: () => ({}), DeleteEntityDialog: () => null,
+  handleError: vi.fn(), useDrawer: () => ({}), DeleteEntityDialog: () => null, useToast: () => ({ toast: actions.toast }),
 }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   getErrorMessage: (e: any) => String(e), isActionMessageError: () => false, isActionPermissionError: () => false,
 }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, options: any) => options?.defaultValue ?? _key }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: actions.translate }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: actions.entraFeatureEnabled }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock('@radix-ui/themes', () => ({ Heading: ({ children }: any) => <h1>{children}</h1> }));
 vi.mock('./useEntraSyncPermission', () => ({ useEntraSyncPermission: () => ({ canManage: actions.entraCanManage }) }));
-vi.mock('./ClientDetailsTabContent', () => ({
-  ClientDetailsTabContent: (props: any) => <section>
-    <output data-testid="client-data">{JSON.stringify(props.editedClient)}</output>
-    <button onClick={() => props.onFieldChange('client_name', 'Changed name')}>Edit client</button>
-    <button onClick={props.onSave}>Save client</button>
-    <button onClick={props.onManageLocations}>Manage locations</button>
-    <button onClick={props.onAddTicket}>Add ticket</button>
-  </section>,
-}));
-vi.mock('./ClientLocations', () => ({ default: () => <div>Client locations</div> }));
+vi.mock('./ClientDetailsTabContent', async () => {
+  const { default: QuickViewLocations } = await import('./ClientLocations');
+  return {
+    ClientDetailsTabContent: (props: any) => <section>
+      <output data-testid="client-data">{JSON.stringify(props.editedClient)}</output>
+      <button onClick={() => props.onFieldChange('client_name', 'Changed name')}>Edit client</button>
+      <button onClick={props.onSave}>Save client</button>
+      <button onClick={props.onManageLocations}>Manage locations</button>
+      <button onClick={props.onAddTicket}>Add ticket</button>
+      <QuickViewLocations
+        clientId={props.editedClient.client_id}
+        isEditing={false}
+        loadLocations={props.loadQuickViewLocations}
+        updateLocation={props.updateQuickViewLocation}
+      />
+    </section>,
+  };
+});
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: () => null }));
@@ -78,6 +101,7 @@ vi.mock('@alga-psa/ui/components/Spinner', () => ({ default: () => <div role="st
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({ usePageSaveShortcut: vi.fn(), usePanelSubmitShortcut: vi.fn() }));
 vi.mock('@alga-psa/ui/components/ModalityContext', () => ({ useInsideDrawer: () => true }));
 vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({ ReflectionContainer: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: () => ({ automationIdProps: {}, updateMetadata: vi.fn() }) }));
 vi.mock('@alga-psa/tags/components', () => ({ TagManager: () => null }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() }, toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -100,6 +124,11 @@ describe('ClientQuickView project drawer workflows', () => {
     actions.updateClient.mockReset().mockImplementation(async (_id: string, patch: any, _projectId?: string) => ({ client_id: _id, ...patch }));
     actions.loadClientQuickView.mockReset().mockImplementation((clientId: string, sourceProjectId?: string) => actions.loadClient(clientId, sourceProjectId));
     actions.updateClientQuickView.mockReset().mockImplementation((clientId: string, patch: any, sourceProjectId?: string) => actions.updateClient(clientId, patch, sourceProjectId));
+    actions.loadClientQuickViewLocations.mockReset().mockResolvedValue([{
+      location_id: 'location-1', client_id: 'client-1', location_name: 'HQ', email: null, phone: null,
+      address_line1: null, city: null, is_active: true, is_default: true,
+    }]);
+    actions.updateClientQuickViewLocation.mockReset().mockResolvedValue(undefined);
     actions.startEntraSync.mockReset();
     actions.entraFeatureEnabled = false;
     actions.entraCanManage = false;
@@ -113,8 +142,15 @@ describe('ClientQuickView project drawer workflows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
     await waitFor(() => expect(actions.updateClient).toHaveBeenCalledWith('client-1', { client_name: 'Changed name' }, 'project-1'));
 
+    expect(await screen.findByText('HQ')).toBeTruthy();
+    expect(actions.loadClientQuickViewLocations).toHaveBeenCalledWith('client-1', 'project-1');
+    expect(actions.getUnrestrictedLocations).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Manage locations' }));
-    expect(screen.getByText('Client locations')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Add Location' })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('SECRET-EMAIL');
+    expect(document.body.textContent).not.toContain('SECRET-PHONE');
+    expect(document.body.textContent).not.toContain('SECRET-ADDRESS');
+    expect(actions.loadClientQuickViewLocations.mock.calls.length).toBeGreaterThanOrEqual(2);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add ticket' }));
     expect(screen.getByRole('button', { name: 'Ticket form' })).toBeTruthy();

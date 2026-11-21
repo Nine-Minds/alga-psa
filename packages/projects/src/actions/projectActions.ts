@@ -6,6 +6,7 @@ import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 import type {
   IClient,
+  IClientLocation,
   IClientWithLocation,
   IProject,
   IProjectPhase,
@@ -31,6 +32,8 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-act
 import { getClientById } from '@alga-psa/clients/actions/queryActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- retain the existing client mutation workflow behind this authorization and redaction boundary
 import { updateClient } from '@alga-psa/clients/actions/clientActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- preserve location write semantics after applying this drawer's source and field authorization
+import { updateClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -72,10 +75,13 @@ type ProjectActionError = ActionMessageError | ActionPermissionError;
 const CLIENT_QUICK_VIEW_FIELD_ALIASES: Record<string, string[]> = {
   properties: ['url', 'properties.website'],
   location_email: ['email'],
-  location_phone: ['phone_no'],
-  location_phone_extension: ['phone_no'],
-  location_country_code: ['country'],
-  location_address: ['address'],
+  location_phone: ['phone', 'phone_no', 'fax'],
+  location_phone_extension: ['phone', 'phone_no', 'fax'],
+  location_country_code: ['country', 'country_code'],
+  location_address: [
+    'address', 'address_line1', 'address_line2', 'address_line3', 'city',
+    'state_province', 'postal_code', 'country', 'country_code', 'country_name', 'region_code',
+  ],
   account_manager_full_name: ['account_manager_id'],
   url: ['properties.website'],
   logoUrl: ['logo', 'properties.logo', 'client_name'],
@@ -494,6 +500,110 @@ export const getProjectClientQuickView = withAuth(async (
     masked.logoWideUrl = null;
   }
   return masked as unknown as IClientWithLocation;
+});
+
+/** Load drawer locations only after rechecking its client and optional project authorization. */
+export const getProjectClientLocationsQuickView = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  sourceProjectId?: string,
+): Promise<IClientLocation[] | null> => {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+  if (sourceProjectId && !await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const redactedFields = await authorizeProjectClientQuickView(
+      trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
+    );
+    if (!redactedFields) return null;
+
+    const locations = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
+      .where({ client_id: clientId, is_active: true })
+      .orderBy('is_default', 'desc')
+      .orderBy('location_name', 'asc');
+
+    return locations.map((location) => {
+      const masked = { ...location } as Record<string, any>;
+      if (isClientQuickViewFieldHidden(redactedFields, 'location_email')) masked.email = null;
+      if (isClientQuickViewFieldHidden(redactedFields, 'location_phone')) {
+        masked.phone = null;
+        masked.phone_extension = null;
+        masked.fax = null;
+        masked.fax_extension = null;
+      }
+      if (isClientQuickViewFieldHidden(redactedFields, 'location_address')) {
+        masked.address_line1 = null;
+        masked.address_line2 = null;
+        masked.address_line3 = null;
+        masked.city = null;
+        masked.state_province = null;
+        masked.postal_code = null;
+        masked.country_code = null;
+        masked.country_name = null;
+        masked.region_code = null;
+      }
+      return masked as IClientLocation;
+    });
+  });
+});
+
+export const updateProjectClientLocationQuickView = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  locationId: string,
+  updateData: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>,
+  sourceProjectId?: string,
+): Promise<void | ActionMessageError | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+  if (!await hasPermission(user, 'client', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update client locations');
+  }
+  if (sourceProjectId && !await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+
+  const authorization = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const redactedFields = await authorizeProjectClientQuickView(
+      trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
+    );
+    if (!redactedFields) return null;
+    const location = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
+      .where({ client_id: clientId, location_id: locationId, is_active: true })
+      .first();
+    return location ? { redactedFields } : null;
+  });
+  if (!authorization) return actionError('Location not found');
+
+  const safePatch = { ...updateData } as Record<string, unknown>;
+  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_email')) delete safePatch.email;
+  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_phone')) {
+    delete safePatch.phone;
+    delete safePatch.phone_extension;
+    delete safePatch.fax;
+    delete safePatch.fax_extension;
+  }
+  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_address')) {
+    for (const field of [
+      'address_line1', 'address_line2', 'address_line3', 'city', 'state_province',
+      'postal_code', 'country_code', 'country_name', 'region_code',
+    ]) delete safePatch[field];
+  }
+
+  const result = await updateClientLocation(locationId, safePatch as Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>);
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    return result as ActionMessageError | ActionPermissionError;
+  }
+  return;
 });
 
 /** Save only changed fields, keeping redacted database values server-side and returning a masked row. */

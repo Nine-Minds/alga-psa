@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 import type { IClientLocation } from '@alga-psa/types';
 import { 
@@ -56,6 +56,10 @@ function isClientLocationActionError(value: unknown): value is ClientLocationAct
 interface ClientLocationsProps {
   clientId: string;
   isEditing: boolean;
+  /** Quick-view callers must provide the authorized, field-masked loader. */
+  loadLocations?: () => Promise<IClientLocation[] | null>;
+  /** Quick-view caller applies source-project and field-mask checks before a location update. */
+  updateLocation?: (locationId: string, patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>) => Promise<void | ClientLocationActionError>;
 }
 
 /**
@@ -308,7 +312,7 @@ const initialFormData: LocationFormData = {
 
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
+export default function ClientLocations({ clientId, isEditing, loadLocations: loadAuthorizedLocations, updateLocation: updateAuthorizedLocation }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
@@ -324,6 +328,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
   const [locationToDelete, setLocationToDelete] = useState<IClientLocation | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const loadRequestRef = useRef(0);
   const { toast } = useToast();
 
   // Form field automation IDs
@@ -454,12 +459,6 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
   });
 
 
-  useEffect(() => {
-    loadLocations();
-    loadTaxRegions();
-    loadCountries();
-  }, [clientId]);
-
   const loadTaxRegions = async () => {
     try {
       const regions = await getActiveTaxRegionsAsync();
@@ -497,10 +496,15 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     }
   };
 
-  const loadLocations = async () => {
+  const loadLocations = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
+    setLocations([]);
     setIsLocationsLoading(true);
     try {
-      const fetchedLocations = await getClientLocations(clientId);
+      const fetchedLocations = loadAuthorizedLocations
+        ? await loadAuthorizedLocations()
+        : await getClientLocations(clientId);
+      if (requestId !== loadRequestRef.current) return;
       if (isClientLocationActionError(fetchedLocations)) {
         toast({
           title: t('status.error', 'Error'),
@@ -510,18 +514,36 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
         setLocations([]);
         return;
       }
+      if (!fetchedLocations) {
+        setLocations([]);
+        toast({
+          title: t('status.error', 'Error'),
+          description: t('clients.locations.errors.loadLocations', 'Failed to load client locations'),
+          variant: 'destructive',
+        });
+        return;
+      }
       setLocations(fetchedLocations);
     } catch (error) {
+      if (requestId !== loadRequestRef.current) return;
       console.error('Error loading locations:', error);
+      setLocations([]);
       toast({
         title: t('status.error', 'Error'),
         description: t('clients.locations.errors.loadLocations', 'Failed to load client locations'),
         variant: 'destructive',
       });
     } finally {
-      setIsLocationsLoading(false);
+      if (requestId === loadRequestRef.current) setIsLocationsLoading(false);
     }
-  };
+  }, [clientId, loadAuthorizedLocations, t, toast]);
+
+  useEffect(() => {
+    void loadLocations();
+    loadTaxRegions();
+    loadCountries();
+    return () => { loadRequestRef.current += 1; };
+  }, [clientId, loadLocations]);
 
   const handleAddLocation = () => {
     setEditingLocation(null);
@@ -619,7 +641,9 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
       if (editingLocation) {
         const { client_id, ...updateData } = locationData;
-        const result = await updateClientLocation(editingLocation.location_id, updateData);
+        const result = updateAuthorizedLocation
+          ? await updateAuthorizedLocation(editingLocation.location_id, updateData)
+          : await updateClientLocation(editingLocation.location_id, updateData);
         if (isClientLocationActionError(result)) {
           toast({
             title: t('status.error', 'Error'),

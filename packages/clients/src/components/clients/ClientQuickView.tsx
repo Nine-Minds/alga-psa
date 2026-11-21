@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DeletionValidationResult, IClient, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
+import type { DeletionValidationResult, IClient, IClientLocation, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
 import { findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
@@ -122,6 +122,8 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     renderClientCoManagedIntegration,
     loadClientQuickView,
     updateClientQuickView,
+    loadClientQuickViewLocations,
+    updateClientQuickViewLocation,
   } = useClientCrossFeature();
   const resolvedClientId = clientId ?? initialClient?.client_id;
   const [client, setClient] = useState<IClientWithLocation | IClient | null>(initialClient ?? null);
@@ -142,6 +144,21 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(initialPanel === 'locations');
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
+  const loadAuthorizedQuickViewLocations = useCallback(async () => {
+    if (!editedClient?.client_id || !loadClientQuickViewLocations) {
+      throw new Error('Secure client location actions are unavailable');
+    }
+    return loadClientQuickViewLocations(editedClient.client_id, sourceProjectId);
+  }, [editedClient?.client_id, loadClientQuickViewLocations, sourceProjectId]);
+  const updateAuthorizedQuickViewLocation = useCallback((
+    locationId: string,
+    patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>,
+  ) => {
+    if (!editedClient?.client_id || !updateClientQuickViewLocation) {
+      throw new Error('Secure client location actions are unavailable');
+    }
+    return updateClientQuickViewLocation(editedClient.client_id, locationId, patch, sourceProjectId);
+  }, [editedClient?.client_id, sourceProjectId, updateClientQuickViewLocation]);
   const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
@@ -1128,6 +1145,8 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 isLoadingSlaPolicies={isLoadingSlaPolicies}
                 isInDrawer={isInDrawer}
                 locationsRefreshKey={locationsRefreshKey}
+                loadQuickViewLocations={loadAuthorizedQuickViewLocations}
+                updateQuickViewLocation={updateAuthorizedQuickViewLocation}
                 surveySummary={null}
                 inboundDestinationOptions={inboundDestinationOptions}
                 isInboundDestinationOptionsLoading={isInboundDestinationOptionsLoading}
@@ -1179,7 +1198,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
           title={t('clientDetails.manageLocations', { defaultValue: 'Manage Locations' })}
         >
           <DialogContent className="max-w-4xl">
-            <ClientLocations clientId={editedClient.client_id} isEditing={true} />
+            <ClientLocations
+              clientId={editedClient.client_id}
+              isEditing={true}
+              loadLocations={loadAuthorizedQuickViewLocations}
+              updateLocation={updateAuthorizedQuickViewLocation}
+            />
           </DialogContent>
         </Dialog>
 

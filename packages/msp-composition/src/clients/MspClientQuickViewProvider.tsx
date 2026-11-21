@@ -11,9 +11,14 @@ import type {
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
-import { getProjectClientQuickView, updateProjectClientQuickView } from '@alga-psa/projects/actions';
+import {
+  getProjectClientQuickView,
+  getProjectClientLocationsQuickView,
+  updateProjectClientQuickView,
+  updateProjectClientLocationQuickView,
+} from '@alga-psa/projects/actions';
 
-// Lightweight cross-feature provider for the read-only client quick-view drawer
+// Lightweight cross-feature provider for the client quick-view drawer
 // (ClientQuickView), the only client surface the tickets list mounts. The full
 // MspClientCrossFeatureProvider statically pulls the rich-text editor, billing
 // contract wizard, assets, contact/client ticket lists, and scheduling actions into
@@ -76,6 +81,8 @@ export function MspClientQuickViewProvider({ children }: { children: ReactNode }
     () => ({
       loadClientQuickView: getProjectClientQuickView,
       updateClientQuickView: updateProjectClientQuickView,
+      loadClientQuickViewLocations: getProjectClientLocationsQuickView,
+      updateClientQuickViewLocation: updateProjectClientLocationQuickView,
       renderQuickAddTicket,
       renderSurveySummaryCard: noopRender,
       getSlaPolicies,

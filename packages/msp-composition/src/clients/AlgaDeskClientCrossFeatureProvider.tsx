@@ -17,6 +17,12 @@ import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
 import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
+import {
+  getProjectClientQuickView,
+  getProjectClientLocationsQuickView,
+  updateProjectClientQuickView,
+  updateProjectClientLocationQuickView,
+} from '@alga-psa/projects/actions';
 
 const renderNothing = () => null;
 
@@ -87,6 +93,10 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
 
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
+      loadClientQuickView: getProjectClientQuickView,
+      updateClientQuickView: updateProjectClientQuickView,
+      loadClientQuickViewLocations: getProjectClientLocationsQuickView,
+      updateClientQuickViewLocation: updateProjectClientLocationQuickView,
       renderQuickAddTicket,
       getTicketFormOptions,
       renderSurveySummaryCard: () => null,

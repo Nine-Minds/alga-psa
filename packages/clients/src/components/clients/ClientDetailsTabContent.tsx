@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { IClient, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { IClient, IClientLocation, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -178,6 +179,11 @@ export interface ClientDetailsTabContentProps {
   isLoadingSlaPolicies: boolean;
   isInDrawer: boolean;
   locationsRefreshKey: number;
+  loadQuickViewLocations?: () => Promise<IClientLocation[] | null>;
+  updateQuickViewLocation?: (
+    locationId: string,
+    patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>,
+  ) => Promise<void | ActionMessageError | ActionPermissionError>;
   surveySummary: SurveyClientSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
   inboundDestinationOptions: SelectOption[];
@@ -221,6 +227,8 @@ export function ClientDetailsTabContent({
   isLoadingSlaPolicies,
   isInDrawer,
   locationsRefreshKey,
+  loadQuickViewLocations,
+  updateQuickViewLocation,
   surveySummary,
   isAlgaDeskMode = false,
   inboundDestinationOptions,
@@ -684,6 +692,8 @@ export function ClientDetailsTabContent({
               key={locationsRefreshKey}
               clientId={editedClient.client_id}
               isEditing={false}
+              loadLocations={loadQuickViewLocations}
+              updateLocation={updateQuickViewLocation}
             />
           </div>
           {!isAlgaDeskMode ? renderSurveySummaryCard({ summary: surveySummary }) : null}
