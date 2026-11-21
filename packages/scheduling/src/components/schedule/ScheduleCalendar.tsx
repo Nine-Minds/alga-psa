@@ -119,6 +119,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
   const scheduleQueryGeneration = useRef(0);
   const entrySelectionGeneration = useRef(0);
   const previousEntrySelectionKey = useRef('');
+  const locallyDismissedEntrySelectionKey = useRef('');
   const pageRequestInFlight = useRef(false);
   const fetchEventsRef = useRef<() => Promise<void>>(async () => {});
   const [showEntryPopup, setShowEntryPopup] = useState(false);
@@ -626,11 +627,18 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
     const generation = ++entrySelectionGeneration.current;
     const selectionChanged = previousEntrySelectionKey.current !== entrySelectionKey;
     previousEntrySelectionKey.current = entrySelectionKey;
+    if (locallyDismissedEntrySelectionKey.current && locallyDismissedEntrySelectionKey.current !== entrySelectionKey) {
+      locallyDismissedEntrySelectionKey.current = '';
+    }
     if (selectionChanged) {
       setBusyEntry(null);
       setShowEntryPopup(false);
       setSelectedEvent(null);
     }
+    // Local navigation and dismissal can clear the URL asynchronously. Until
+    // the parent commits that change, the old props must not restore the
+    // selection or allow an in-flight lookup to reopen its dialog.
+    if (entrySelectionKey && locallyDismissedEntrySelectionKey.current === entrySelectionKey) return;
     if (!entrySelection) {
       setBusyEntry(null);
       setShowEntryPopup(false);
@@ -645,8 +653,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
     }
     const dateNeedsChange = calendarDateKey(date) !== entrySelection.date;
     const viewNeedsChange = view !== entrySelection.view;
-    if (dateNeedsChange) setDate(selectedDate);
-    if (viewNeedsChange) setView(entrySelection.view as View);
+    // URL date/view are applied when accepting a new selection. Query changes
+    // for the same selection (such as filters) may retry its bounded lookup,
+    // but must not undo local navigation while URL replacement is pending.
+    if (selectionChanged && dateNeedsChange) setDate(selectedDate);
+    if (selectionChanged && viewNeedsChange) setView(entrySelection.view as View);
     // Wait for the requested date and view to become the active query before
     // starting the lookup. Otherwise the initial request is immediately stale
     // and can race a second request for the settled query.
@@ -679,6 +690,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
       if (generation === entrySelectionGeneration.current) entrySelectionGeneration.current++;
     };
   }, [entrySelectionKey, scheduleQueryKey]);
+
+  const invalidateCurrentEntrySelection = useCallback(() => {
+    if (entrySelectionKey) locallyDismissedEntrySelectionKey.current = entrySelectionKey;
+    entrySelectionGeneration.current++;
+    setBusyEntry(null);
+    setShowEntryPopup(false);
+    setSelectedEvent(null);
+    setSelectedSlot(null);
+  }, [entrySelectionKey]);
 
   // Load the popup's assignee candidates when it opens. The entry's stored
   // assignees are passed through so their real names resolve even when they are
@@ -806,14 +826,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
   };
 
   const handleEntryPopupClose = () => {
-    setShowEntryPopup(false);
-    setSelectedEvent(null);
-    setSelectedSlot(null);
+    invalidateCurrentEntrySelection();
     onEntrySelectionChange?.(null);
   };
 
   const handleBusyEntryClose = () => {
-    setBusyEntry(null);
+    invalidateCurrentEntrySelection();
     onEntrySelectionChange?.(null);
   };
 
@@ -920,11 +938,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
   };
 
   const handleNavigate = useCallback((newDate: Date, view: View, action: NavigateAction) => {
+    if (entrySelectionKey) invalidateCurrentEntrySelection();
     setDate(newDate);
     if (entrySelectionKey) onEntrySelectionChange?.(null);
-  }, [entrySelectionKey, setDate]);
+  }, [entrySelectionKey, invalidateCurrentEntrySelection, onEntrySelectionChange]);
 
   const goToToday = () => {
+    if (entrySelectionKey) invalidateCurrentEntrySelection();
     setDate(new Date());
     if (entrySelection) onEntrySelectionChange?.(null);
   };
@@ -936,6 +956,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
     } else {
       newDate.setDate(date.getDate() - 7);
     }
+    if (entrySelectionKey) invalidateCurrentEntrySelection();
     setDate(newDate);
     if (entrySelection) onEntrySelectionChange?.(null);
   };
@@ -947,6 +968,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
     } else {
       newDate.setDate(date.getDate() + 7);
     }
+    if (entrySelectionKey) invalidateCurrentEntrySelection();
     setDate(newDate);
     if (entrySelection) onEntrySelectionChange?.(null);
   };
@@ -1563,7 +1585,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
                     scrollToTime={scrollToTime}
                     onView={(newView) => {
                       setView(newView);
-                      if (entrySelection) onEntrySelectionChange?.(null);
+                      if (entrySelection) {
+                        invalidateCurrentEntrySelection();
+                        onEntrySelectionChange?.(null);
+                      }
                     }}
                     onNavigate={handleNavigate}
                     selectable

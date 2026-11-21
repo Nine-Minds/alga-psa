@@ -716,17 +716,19 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
       view: 'week' as const,
     };
     const onEntrySelectionChange = vi.fn();
-    const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
+    render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
     await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(selection.entryId, undefined));
 
     await act(async () => calendarSurface.props.onNavigate(new Date('2026-09-11T00:00:00Z'), calendarSurface.props.view, 'NEXT'));
     expect(onEntrySelectionChange).toHaveBeenCalledWith(null);
-    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
     await act(async () => {
       resolveSelection(baseEntry({ entry_id: selection.entryId }));
       await pendingSelection;
     });
 
+    // Keep the old URL props through both navigation and resolution: the
+    // parent has not committed the replaceState yet.
+    expect(calendarSurface.props.date.toISOString().slice(0, 10)).toBe('2026-09-11');
     expect(document.getElementById('save-entry-btn')).toBeNull();
   });
 
@@ -767,7 +769,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Close' })).toBeNull());
   });
 
-  it('does not reopen a dismissed busy selection when its pending response arrives after a filter change', async () => {
+  it.each(['full', 'busy'] as const)('does not reopen a dismissed %s selection when a filter lookup resolves before URL props update', async (access) => {
     const selection = {
       entryId: '00000000-0000-4000-8000-000000000304',
       date: '2026-09-04',
@@ -775,18 +777,29 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     };
     let resolveSelection!: (value: any) => void;
     const pending = new Promise<any>(resolve => { resolveSelection = resolve; });
-    getScheduleEntryById.mockReturnValue(pending);
+    const initialEntry = baseEntry({ entry_id: selection.entryId, access: access === 'busy' ? 'busy' : undefined });
+    let filterStarted = false;
+    getScheduleEntryById.mockImplementation(() => filterStarted ? pending : Promise.resolve(initialEntry));
     const onEntrySelectionChange = vi.fn();
     const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
-    await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(selection.entryId, undefined));
+    if (access === 'busy') await screen.findByText('14:00 – 15:00');
+    else await screen.findByDisplayValue('Kickoff');
 
-    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
+    const lookupsBeforeFilter = getScheduleEntryById.mock.calls.length;
+    filterStarted = true;
     fireEvent.click(screen.getByTestId('test-calendar-filter'));
+    await waitFor(() => expect(getScheduleEntryById.mock.calls.length).toBeGreaterThan(lookupsBeforeFilter));
+    if (access === 'busy') fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    else fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
     await act(async () => {
-      resolveSelection(baseEntry({ entry_id: selection.entryId, access: 'busy' }));
+      resolveSelection(baseEntry({ entry_id: selection.entryId, access: access === 'busy' ? 'busy' : undefined }));
       await pending;
     });
+    // A later URL update is intentionally delayed until after the old response.
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    expect(document.getElementById('save-entry-btn')).toBeNull();
+    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
   });
 
   it('supports browser Back and Forward for entry selection using the real calendar', async () => {
