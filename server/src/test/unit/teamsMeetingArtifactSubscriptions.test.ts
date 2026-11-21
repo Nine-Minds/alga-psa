@@ -121,12 +121,14 @@ describe('Teams meeting artifact subscriptions', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toMatchObject({
+      changeType: 'created',
       resource: 'communications/onlineMeetings/getAllRecordings',
       notificationUrl: 'https://example.test/api/teams/webhooks/recordings',
       lifecycleNotificationUrl: 'https://example.test/api/teams/webhooks/recordings',
       clientState: buildTeamsArtifactClientState('tenant-1', 'recordings', 'known-secret'),
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({
+      changeType: 'created',
       resource: 'communications/onlineMeetings/getAllTranscripts',
       clientState: buildTeamsArtifactClientState('tenant-1', 'transcripts', 'known-secret'),
     });

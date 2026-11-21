@@ -166,7 +166,8 @@ async function createSubscription(params: {
     method: 'POST',
     path: '/subscriptions',
     body: {
-      changeType: 'created,updated',
+      // getAllRecordings/getAllTranscripts only support 'created'; Graph rejects 'updated'.
+      changeType: 'created',
       notificationUrl: params.notificationUrl,
       // Graph requires a lifecycle URL for these resources when expiration exceeds one hour.
       lifecycleNotificationUrl: params.notificationUrl,
