@@ -101,13 +101,19 @@ vi.mock('@alga-psa/scheduling/actions', () => ({
   declineAppointmentRequest,
 }));
 
+const preferenceActions = vi.hoisted(() => ({
+  getUserPreference: vi.fn(),
+  setUserPreference: vi.fn(),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
+  ...preferenceActions,
   getCurrentUser,
   getCurrentUserPermissions,
   getUserAvatarUrlsBatchAction,
 }));
 
-vi.mock('@alga-psa/user-composition/hooks', () => {
+vi.mock('@alga-psa/user-composition/hooks', async () => {
   // Stable references: ScheduleCalendar feeds hook results into memo/effect
   // dependency chains (fetchEvents depends on them transitively), so a mock
   // returning fresh objects per render would refetch in an infinite loop.
@@ -118,10 +124,9 @@ vi.mock('@alga-psa/user-composition/hooks', () => {
     loading: false,
     error: null,
   };
-  const preferenceResult = { value: 'week', setValue: vi.fn(), isLoading: false };
   return {
     useUsers: () => usersResult,
-    useUserPreference: () => preferenceResult,
+    useUserPreference: (await import('../../user-composition/src/hooks/useUserPreference')).useUserPreference,
   };
 });
 
@@ -399,6 +404,9 @@ const notesField = () => document.getElementById('notes') as HTMLTextAreaElement
 
 describe('ScheduleCalendar refreshes its events after a Teams meeting is created', () => {
   beforeEach(() => {
+    window.localStorage.clear();
+    preferenceActions.getUserPreference.mockReset().mockResolvedValue(null);
+    preferenceActions.setUserPreference.mockReset().mockResolvedValue(undefined);
     serverEvents = [];
     serverMeetings = {};
     getCurrentUser.mockResolvedValue({ user_id: 'tech-1' });
@@ -730,6 +738,66 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     // parent has not committed the replaceState yet.
     expect(calendarSurface.props.date.toISOString().slice(0, 10)).toBe('2026-09-11');
     expect(document.getElementById('save-entry-btn')).toBeNull();
+  });
+
+  it.each(['before', 'after'] as const)('keeps the linked day when saved preferences arrive %s the entry response', async (preferenceOrder) => {
+    const selection = {
+      entryId: '00000000-0000-4000-8000-000000000306',
+      date: '2026-09-04',
+      view: 'day' as const,
+    };
+    let resolvePreference!: (value: string) => void;
+    const pendingPreference = new Promise<string>(resolve => { resolvePreference = resolve; });
+    preferenceActions.getUserPreference.mockImplementation((_userId: string, key: string) =>
+      key === 'defaultScheduleView' ? pendingPreference : Promise.resolve(null));
+    let resolveEntry!: (value: any) => void;
+    const pendingEntry = new Promise(resolve => { resolveEntry = resolve; });
+    getScheduleEntryById.mockReturnValue(pendingEntry);
+
+    render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={vi.fn()} />);
+    await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(selection.entryId, undefined));
+    await waitFor(() => expect(preferenceActions.getUserPreference).toHaveBeenCalledWith('tech-1', 'defaultScheduleView'));
+
+    const finishPreference = () => act(async () => { resolvePreference('week'); await pendingPreference; });
+    const finishEntry = () => act(async () => {
+      resolveEntry(baseEntry({ entry_id: selection.entryId, title: 'Linked day appointment' }));
+      await pendingEntry;
+    });
+    if (preferenceOrder === 'before') {
+      await finishPreference();
+      await finishEntry();
+    } else {
+      await finishEntry();
+      await finishPreference();
+    }
+
+    expect(calendarSurface.props.view).toBe('day');
+    expect(calendarSurface.props.date.toISOString().slice(0, 10)).toBe(selection.date);
+    await screen.findByDisplayValue('Linked day appointment');
+    expect(preferenceActions.setUserPreference).not.toHaveBeenCalled();
+  });
+
+  it('uses the saved view when there is no explicit navigation', async () => {
+    preferenceActions.getUserPreference.mockImplementation(async (_userId: string, key: string) =>
+      key === 'defaultScheduleView' ? 'month' : null);
+
+    render(<ScheduleCalendar />);
+
+    await waitFor(() => expect(calendarSurface.props.view).toBe('month'));
+  });
+
+  it('keeps an explicit view change when the saved preference arrives later', async () => {
+    let resolvePreference!: (value: string) => void;
+    const pendingPreference = new Promise<string>(resolve => { resolvePreference = resolve; });
+    preferenceActions.getUserPreference.mockImplementation((_userId: string, key: string) =>
+      key === 'defaultScheduleView' ? pendingPreference : Promise.resolve(null));
+    render(<ScheduleCalendar />);
+    await waitFor(() => expect(preferenceActions.getUserPreference).toHaveBeenCalledWith('tech-1', 'defaultScheduleView'));
+
+    act(() => calendarSurface.props.onView('day'));
+    await act(async () => { resolvePreference('week'); await pendingPreference; });
+
+    expect(calendarSurface.props.view).toBe('day');
   });
 
   it.each([

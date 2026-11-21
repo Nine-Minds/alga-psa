@@ -98,11 +98,9 @@ interface ScheduleCalendarProps {
 const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, entrySelection = null, onEntrySelectionChange }): React.ReactElement | null => {
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
-  // Use the custom hook for schedule view preference
-  const { 
-    value: view, 
-    setValue: setView,
-    isLoading: isViewPreferenceLoading 
+  const {
+    value: preferredView,
+    setValue: setPreferredView,
   } = useUserPreference<View>(
     'defaultScheduleView',
     {
@@ -111,6 +109,15 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
       debounceMs: 300
     }
   );
+
+  // Preferences supply the default; explicit navigation owns this page's view.
+  // A late preference load must not replace a URL or a user's view choice.
+  const [navigationView, setNavigationView] = useState<View | null>(entrySelection?.view ?? null);
+  const view = navigationView ?? preferredView;
+  const setView = useCallback((nextView: View) => {
+    setNavigationView(nextView);
+    setPreferredView(nextView);
+  }, [setPreferredView]);
   
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [scheduleCursor, setScheduleCursor] = useState<string | null>(null);
@@ -657,7 +664,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, 
     // for the same selection (such as filters) may retry its bounded lookup,
     // but must not undo local navigation while URL replacement is pending.
     if (selectionChanged && dateNeedsChange) setDate(selectedDate);
-    if (selectionChanged && viewNeedsChange) setView(entrySelection.view as View);
+    if (selectionChanged) setNavigationView(entrySelection.view);
     // Wait for the requested date and view to become the active query before
     // starting the lookup. Otherwise the initial request is immediately stale
     // and can race a second request for the settled query.
