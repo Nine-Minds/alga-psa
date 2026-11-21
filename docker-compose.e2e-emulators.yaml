@@ -160,6 +160,10 @@ services:
     ports: !reset []
   postgres:
     ports: !reset []
+    # Both editions run the application, Temporal, workers and direct fixture
+    # connections against this disposable database. The default 100 sessions
+    # can exhaust at startup and reject real browser sign-ins.
+    command: postgres -c password_encryption=md5 -c max_connections=200
   # This frontend owns separate Temporal schemas in this job's disposable
   # PostgreSQL instance. It has no host ports or live provider access.
   temporal-dev:
