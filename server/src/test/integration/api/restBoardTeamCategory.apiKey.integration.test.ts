@@ -47,13 +47,14 @@ let userId: string;
 let apiKey: Awaited<ReturnType<typeof createTestApiKey>>;
 
 beforeAll(async () => {
-    db = await createTestDbConnection({ recreate: false });
+  db = await createTestDbConnection({ recreate: false });
   tenant = (await db('tenants').first<{ tenant: string }>('tenant'))!.tenant;
 }, 300_000);
 
 beforeEach(async () => {
   connection.tenant = tenant;
   connection.db = await db.transaction();
+  await ensureDefaultRoles();
   userId = randomUUID();
   await connection.db('users').insert({
     tenant, user_id: userId, username: `rest-${userId}`, email: `${userId}@example.test`,
@@ -76,6 +77,29 @@ async function grantPermissions(permissions: Array<[string, string]>) {
     await trx('role_permissions').insert({ tenant, role_id: roleId, permission_id: permission.permission_id });
   }
   await trx('user_roles').insert({ tenant, role_id: roleId, user_id: userId });
+}
+
+async function ensureDefaultRoles() {
+  const trx = connection.db!;
+  for (const role of [
+    { role_name: 'Admin', msp: true, client: false },
+    { role_name: 'Admin', msp: false, client: true },
+  ]) {
+    const existing = await trx('roles').where({ tenant, ...role }).first('role_id');
+    if (!existing) {
+      await trx('roles').insert({
+        tenant,
+        role_id: randomUUID(),
+        ...role,
+        description: 'API key integration fixture',
+      });
+    }
+  }
+}
+
+async function reconcilePermissions() {
+  const migration = await import('../../../../migrations/20261120120100_backfill_rest_api_permissions.cjs');
+  await migration.up(connection.db!);
 }
 
 async function assignAdminRole() {
@@ -133,8 +157,7 @@ describe('REST routes with real API-key authentication and authorization', () =>
   });
 
   it('creates a team for a full-permission API-key principal and persists supported board update fields', async () => {
-    const migration = await import('../../../../migrations/20261120120100_backfill_rest_api_permissions.cjs');
-    await migration.up(connection.db!);
+    await reconcilePermissions();
     await assignAdminRole();
 
     const createResponse = await createTeam(request('/api/v1/teams', 'POST', {
@@ -160,12 +183,14 @@ describe('REST routes with real API-key authentication and authorization', () =>
   });
 
   it('continues to deny team creation when the API-key principal has no team:create grant', async () => {
+    await reconcilePermissions();
     await grantPermissions([['team', 'read']]);
     const response = await createTeam(request('/api/v1/teams', 'POST', { team_name: 'Must remain denied' }));
     expect(response.status).toBe(403);
   });
 
   it('returns the hierarchy for unscoped and board-scoped category trees', async () => {
+    await reconcilePermissions();
     await grantPermissions([['ticket_settings', 'read']]);
     const trx = connection.db!;
     const board = await trx('boards').where({ tenant }).first<{ board_id: string }>('board_id');
