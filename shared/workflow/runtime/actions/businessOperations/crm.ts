@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { Buffer } from 'node:buffer';
+import { env } from 'node:process';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
@@ -43,6 +44,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import type { TaggedEntityType } from '@alga-psa/types';
+import { decryptActionReplay, encryptActionReplay, type ActionReplayIdentity } from '../../utils/actionReplayCipher';
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const visibilitySchema = z.enum(['internal', 'client_visible']);
@@ -996,7 +998,7 @@ function toQuoteAuthorizationRecord(quote: Record<string, unknown>): QuoteAuthor
 const MAX_SOURCE_ROWS_PER_REQUEST = 1000;
 const MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP = 800;
 type QuoteSortBy = 'quote_date' | 'total_amount' | 'status' | 'created_at';
-type QuoteCursor = { v: 1; sortBy: QuoteSortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
+type QuoteCursor = { v: 2; sortBy: QuoteSortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
 
 const POSTGRES_BIGINT_MIN = -9_223_372_036_854_775_808n;
 const POSTGRES_BIGINT_MAX = 9_223_372_036_854_775_807n;
@@ -1030,14 +1032,50 @@ function isPostgresTimestampCursorKey(value: unknown): value is string {
     offsetHour <= 15 && offsetMinute <= 59;
 }
 
-function decodeQuoteCursor(value: string, sortBy: QuoteSortBy, order: 'asc' | 'desc'): QuoteCursor {
+function getQuoteCursorIdentity(
+  tx: TenantTxContext,
+  input: z.infer<typeof findQuotesInputSchema>,
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc'
+): ActionReplayIdentity {
+  return {
+    tenantId: tx.tenantId,
+    invocationId: JSON.stringify([
+      'crm.find_quotes', 2, tx.actorUserId, sortBy, order,
+      input.is_template,
+      input.quote_id ?? null,
+      input.quote_number ?? null,
+      input.client_id ?? null,
+      input.status ?? null,
+      input.date_from?.toISOString() ?? null,
+      input.date_to?.toISOString() ?? null,
+    ]),
+  };
+}
+
+function quoteCursorEncryptionKey(): string {
+  const secret = env.NEXTAUTH_SECRET?.trim();
+  if (!secret) throw new Error('NEXTAUTH_SECRET is required to encrypt CRM quote cursors');
+  return secret;
+}
+
+function decodeQuoteCursor(
+  value: string,
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc',
+  identity: ActionReplayIdentity
+): QuoteCursor {
   try {
-    if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) throw new Error();
-    const bytes = Buffer.from(value, 'base64url');
-    if (bytes.toString('base64url') !== value) throw new Error();
-    const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as Partial<QuoteCursor>;
+    if (!value.startsWith('q2.') || !/^[A-Za-z0-9_-]+$/.test(value.slice(3))) throw new Error();
+    const encodedEnvelope = value.slice(3);
+    if (encodedEnvelope.length % 4 === 1) throw new Error();
+    const envelopeBytes = Buffer.from(encodedEnvelope, 'base64url');
+    if (envelopeBytes.toString('base64url') !== encodedEnvelope) throw new Error();
+    const envelope = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(envelopeBytes)) as Record<string, unknown>;
+    if (!envelope || Array.isArray(envelope) || Object.keys(envelope).sort().join(',') !== 'ciphertext,nonce,tag,version') throw new Error();
+    const parsed = decryptActionReplay(envelope, quoteCursorEncryptionKey(), identity) as Partial<QuoteCursor>;
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',') !== 'id,key,order,sortBy,v' ||
-      parsed.v !== 1 || parsed.sortBy !== sortBy || parsed.order !== order ||
+      parsed.v !== 2 || parsed.sortBy !== sortBy || parsed.order !== order ||
       typeof parsed.id !== 'string' || !uuidSchema.safeParse(parsed.id).success) throw new Error();
     const key = parsed.key;
     if (key !== null) {
@@ -1057,10 +1095,16 @@ function throwInvalidQuoteCursor(): never {
   throw { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid or incompatible quote cursor', details: null };
 }
 
-function encodeQuoteCursor(sortBy: QuoteSortBy, order: 'asc' | 'desc', row: Record<string, unknown>): string {
+function encodeQuoteCursor(
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc',
+  row: Record<string, unknown>,
+  identity: ActionReplayIdentity
+): string {
   const key = row.__quote_cursor_sort_key ?? row[sortBy];
-  const payload: QuoteCursor = { v: 1, sortBy, order, key: key == null ? null : key instanceof Date ? key.toISOString() : key as string | number, id: String(row.quote_id ?? row.id) };
-  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const payload: QuoteCursor = { v: 2, sortBy, order, key: key == null ? null : key instanceof Date ? key.toISOString() : key as string | number, id: String(row.quote_id ?? row.id) };
+  const envelope = encryptActionReplay(payload, quoteCursorEncryptionKey(), identity);
+  return `q2.${Buffer.from(JSON.stringify(envelope)).toString('base64url')}`;
 }
 
 function throwPaginationDepthExceeded(nextCursor: string | null): never {
@@ -1780,14 +1824,16 @@ export function registerCrmActions(): void {
     },
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
-        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
-
         const page = input.page ?? 1;
         const pageSize = input.pageSize ?? 25;
         const sortBy = input.sortBy ?? 'quote_date';
         const sortOrder = input.sortOrder ?? 'desc';
         if (input.cursor !== undefined && page !== 1) throwInvalidQuoteCursor();
-        const cursor = input.cursor !== undefined ? decodeQuoteCursor(input.cursor, sortBy, sortOrder) : null;
+        const cursorIdentity = getQuoteCursorIdentity(tx, input, sortBy, sortOrder);
+        const cursor = input.cursor !== undefined ? decodeQuoteCursor(input.cursor, sortBy, sortOrder, cursorIdentity) : null;
+
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
         const MAX_AUTHORIZED_ROWS_PER_REQUEST = Math.min(pageSize * 4, MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP);
         const authorize = await createQuoteReadAuthorizer(tx.trx, tx.tenantId, tx.actorUserId);
 
@@ -1827,38 +1873,38 @@ export function registerCrmActions(): void {
         const legacySkip = cursor ? 0 : (page - 1) * pageSize;
         while (pageRows.length < pageSize) {
           if (authorizedRows >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
-            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }) : null);
+            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
           }
           const batchSize = Math.min(Math.max(1, Math.min(pageSize * 2, 200)), MAX_SOURCE_ROWS_PER_REQUEST - sourceRows);
           if (batchSize <= 0) {
-            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }) : null);
+            throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
           }
           const rows = await buildQuery(after).limit(batchSize);
           if (rows.length === 0) break;
           for (let index = 0; index < rows.length; index += 1) {
             const row = rows[index] as Record<string, unknown>;
             if (sourceRows >= MAX_SOURCE_ROWS_PER_REQUEST || authorizedRows >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
-              throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }) : null);
+              throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
             }
             sourceRows += 1;
             const sortKey = row.__quote_cursor_sort_key ?? row[sortBy];
-            after = { v: 1, sortBy, order: sortOrder, key: sortKey == null ? null : sortKey instanceof Date ? sortKey.toISOString() : sortKey as string | number, id: String(row.quote_id) };
+            after = { v: 2, sortBy, order: sortOrder, key: sortKey == null ? null : sortKey instanceof Date ? sortKey.toISOString() : sortKey as string | number, id: String(row.quote_id) };
             const allowed = await authorize(row);
-            authorizedRows += 1;
             if (allowed) {
+              authorizedRows += 1;
               if (skippedAuthorized < legacySkip) skippedAuthorized += 1;
               else pageRows.push(row);
             }
             if (pageRows.length >= pageSize) {
               hasMore = index < rows.length - 1 || rows.length === batchSize;
-              nextCursor = hasMore ? encodeQuoteCursor(sortBy, sortOrder, row) : null;
+              nextCursor = hasMore ? encodeQuoteCursor(sortBy, sortOrder, row, cursorIdentity) : null;
               break;
             }
           }
           if (pageRows.length >= pageSize) break;
           if (rows.length < batchSize) break;
         }
-        if (!nextCursor && after && sourceRows === MAX_SOURCE_ROWS_PER_REQUEST) nextCursor = encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key });
+        if (!nextCursor && after && sourceRows === MAX_SOURCE_ROWS_PER_REQUEST) nextCursor = encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity);
 
         if (pageRows.length === 0 && input.on_empty === 'error') {
           throwActionError(ctx, {

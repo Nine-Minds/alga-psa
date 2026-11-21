@@ -795,8 +795,8 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     const maxBigintFirst = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc',
     });
-    const maxBigintCursor = JSON.parse(Buffer.from(maxBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
-    expect(maxBigintCursor.key).toBe(maxBigint);
+    expect(maxBigintFirst.pagination.next_cursor).toMatch(/^q2\./);
+    expect(maxBigintFirst.pagination.next_cursor).not.toContain(maxBigint);
     const maxBigintSecond = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc', cursor: maxBigintFirst.pagination.next_cursor,
     });
@@ -809,8 +809,8 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     const minBigintFirst = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc',
     });
-    const minBigintCursor = JSON.parse(Buffer.from(minBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
-    expect(minBigintCursor.key).toBe(minBigint);
+    expect(minBigintFirst.pagination.next_cursor).toMatch(/^q2\./);
+    expect(minBigintFirst.pagination.next_cursor).not.toContain(minBigint);
     const minBigintSecond = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc', cursor: minBigintFirst.pagination.next_cursor,
     });
@@ -825,8 +825,8 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     const microsecondFirst = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc',
     });
-    const microsecondCursor = JSON.parse(Buffer.from(microsecondFirst.pagination.next_cursor, 'base64url').toString('utf8'));
-    expect(microsecondCursor.key).toContain('.123456');
+    expect(microsecondFirst.pagination.next_cursor).toMatch(/^q2\./);
+    expect(microsecondFirst.pagination.next_cursor).not.toContain('.123456');
     const microsecondSecond = await invokeAction('crm.find_quotes', {
       client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc', cursor: microsecondFirst.pagination.next_cursor,
     });
@@ -987,9 +987,111 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       db.removeListener('query-response', queryListener as any);
     }
     expect(selectedQuoteRows).toBeLessThanOrEqual(1000);
-    expect(authBundleEvaluations).toBeLessThanOrEqual(200);
-    expect(teamMembershipLookups).toBeLessThanOrEqual(200);
+    expect(authBundleEvaluations).toBeLessThanOrEqual(selectedQuoteRows);
+    expect(teamMembershipLookups).toBeLessThanOrEqual(selectedQuoteRows);
     expect(subjectResolutionLookups).toBe(2);
+  });
+
+  it('encrypts denied source-budget boundaries and resumes through denied-only rows into allowed results', async () => {
+    const allowedClientId = await createClient(db, runtimeState.tenantId, 'Opaque Cursor Allowed Client');
+    const deniedClientId = await createClient(db, runtimeState.tenantId, 'Opaque Cursor Denied Client');
+    const bundleId = uuidv4();
+    const revisionId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, bundle_key: `quote-opaque-${bundleId.slice(0, 8)}`,
+      name: 'Opaque quote cursor restriction', is_system: false, status: 'active',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_revisions').insert({
+      tenant: runtimeState.tenantId, revision_id: revisionId, bundle_id: bundleId,
+      revision_number: 1, lifecycle_state: 'published',
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundles').where({ bundle_id: bundleId })
+      .update({ published_revision_id: revisionId });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_rules').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, revision_id: revisionId,
+      resource_type: 'billing', action: 'read', template_key: 'selected_clients', effect: 'narrow',
+      config: JSON.stringify({ selectedClientIds: [allowedClientId] }), position: 0,
+    });
+    await tenantTable(db, runtimeState.tenantId, 'authorization_bundle_assignments').insert({
+      tenant: runtimeState.tenantId, bundle_id: bundleId, target_type: 'user',
+      target_id: runtimeState.actorUserId, status: 'active',
+    });
+
+    const boundaryQuoteId = uuidv4();
+    const deniedRows = Array.from({ length: 1002 }, (_, index) => ({
+      tenant: runtimeState.tenantId,
+      quote_id: index === 999 ? boundaryQuoteId : uuidv4(),
+      quote_number: `Q-OPAQUE-DENIED-${index}`,
+      client_id: deniedClientId,
+      title: `Denied cursor fixture ${index}`,
+      description: 'Confidential cursor regression',
+      quote_date: null,
+      status: 'draft',
+      version: 1,
+      subtotal: 100,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 910_000 + index,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: runtimeState.actorUserId,
+      updated_by: runtimeState.actorUserId,
+      created_at: new Date(Date.UTC(2026, 0, 1) + index).toISOString(),
+      updated_at: new Date(Date.UTC(2026, 0, 1) + index).toISOString(),
+    }));
+    const allowedRows = [0, 1].map((index) => ({
+      ...deniedRows[0],
+      quote_id: uuidv4(),
+      quote_number: `Q-OPAQUE-ALLOWED-${index}`,
+      client_id: allowedClientId,
+      title: `Allowed cursor fixture ${index}`,
+      total_amount: 920_000 + index,
+    }));
+    await tenantTable(db, runtimeState.tenantId, 'quotes').insert([...deniedRows, ...allowedRows]);
+
+    let sourceRowsRead = 0;
+    const queryListener = (response: unknown, query: { sql?: string }) => {
+      if (/from\s+"?quotes"?/i.test(query.sql ?? '') && Array.isArray(response)) sourceRowsRead += response.length;
+    };
+    db.on('query-response', queryListener as any);
+    let continuation: string;
+    try {
+      const failure = await invokeAction('crm.find_quotes', {
+        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc',
+      }).catch((error) => error);
+      expect(failure).toMatchObject({
+        code: 'PAGINATION_DEPTH_EXCEEDED',
+        retryable: false,
+        details: { next_cursor: expect.any(String) },
+      });
+      continuation = failure.details.next_cursor;
+      expect(sourceRowsRead).toBe(1000);
+
+      const tokenPayload = Buffer.from(continuation.slice(3), 'base64url').toString('utf8');
+      expect(continuation).toMatch(/^q2\./);
+      expect(tokenPayload).not.toContain(boundaryQuoteId);
+      expect(tokenPayload).not.toContain('910999');
+
+      const tampered = `${continuation.slice(0, -1)}${continuation.endsWith('A') ? 'B' : 'A'}`;
+      await expect(invokeAction('crm.find_quotes', {
+        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', cursor: tampered,
+      })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      await expect(invokeAction('crm.find_quotes', {
+        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', client_id: deniedClientId, cursor: continuation,
+      })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(sourceRowsRead).toBe(1000);
+
+      sourceRowsRead = 0;
+      const resumed = await invokeAction('crm.find_quotes', {
+        pageSize: 25, sortBy: 'total_amount', sortOrder: 'asc', cursor: continuation,
+      });
+      expect(resumed.quotes.map((quote: any) => quote.quote_id)).toEqual(allowedRows.map((row) => row.quote_id));
+      expect(resumed.quotes.every((quote: any) => quote.client_id === allowedClientId)).toBe(true);
+      expect(sourceRowsRead).toBe(4);
+      expect(resumed.pagination).toMatchObject({ has_more: false, next_cursor: null });
+    } finally {
+      db.removeListener('query-response', queryListener as any);
+    }
   });
 
   it('matches complete legacy traversal across mixed bundle authority, ties and null sort keys', async () => {

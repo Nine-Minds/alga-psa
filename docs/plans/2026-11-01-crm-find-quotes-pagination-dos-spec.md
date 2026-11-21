@@ -53,11 +53,19 @@ turns one action call into a full-table authorization sweep.
 ### 2.1 Keyset pagination becomes the primary contract
 
 Add a `cursor` input and a `next_cursor` / `has_more` output. The cursor is an opaque,
-versioned, base64url JSON payload:
+versioned, authenticated-encryption envelope (`q2.` plus base64url JSON envelope):
 
 ```ts
-type QuoteCursor = { v: 1; sortBy: SortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
+type QuoteCursor = { v: 2; sortBy: SortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
 ```
+
+The payload uses the workflow action replay AES-256-GCM helper and `NEXTAUTH_SECRET`.
+Authenticated context binds it to the tenant, actor, sort, direction, and filters.
+The cursor boundary is confidential because a source-budget boundary can be a
+quote that the actor is not allowed to read. The prior readable v1 base64 JSON token
+format is deliberately obsolete; callers must restart pagination after deployment.
+Malformed, altered, obsolete, or context-incompatible tokens return
+`VALIDATION_ERROR` before quote queries run.
 
 The scan key is the sort column followed by `quote_id`, which is already the
 tiebreaker in `buildQuery()`, so the ordering stays total and stable. The next page
@@ -98,8 +106,9 @@ Two constants, both enforced in the handler and both returning a typed error rat
 than an empty page:
 
 - `MAX_SOURCE_ROWS_PER_REQUEST = 1000` — raw rows read from `quotes` in one call.
-- `MAX_AUTHORIZED_ROWS_PER_REQUEST = pageSize * 4` (hard cap 800) — rows evaluated
-  through the authorization kernel.
+- `MAX_AUTHORIZED_ROWS_PER_REQUEST = pageSize * 4` (hard cap 800) — authorized rows
+  admitted or skipped while serving a legacy page. Denied rows are bounded by the
+  source-row limit, including denied-only windows.
 
 Exceeding either raises `PAGINATION_DEPTH_EXCEEDED` (`ActionError`, retryable=false,
 `details.next_cursor` when a cursor exists at the boundary, else null):
@@ -181,10 +190,10 @@ together is a validation error (`page must be 1 when cursor is supplied`).
 - Draft status: keyset pagination, request scan/authorization budgets, and per-call
   authorization context reuse are implemented in `crm.ts`; behavioral regression
   coverage is in `businessOperations.crm.db.test.ts`.
-- Verification: the isolated CRM DB test file passed 14/14; ESLint completed with
-  no errors (existing warnings remain); a scoped TypeScript check covering the
-  changed implementation and DB test passed. A full server typecheck was attempted
-  but exceeded Node's 4 GB heap limit.
+- Original pagination verification: the isolated CRM DB test file passed 14/14;
+  ESLint completed with no errors (existing warnings remain); a scoped TypeScript
+  check covering the changed implementation and DB test passed. A full server
+  typecheck was attempted but exceeded Node's 4 GB heap limit.
 - Verification note: `psa-spec-outcome-recorded` previously exited 1 without output.
   The workflow card records that its command checks a literal `{{state.psaSpecOutcome}}`
   case expression without substituting state, so rerunning it cannot verify the
@@ -192,5 +201,12 @@ together is a validation error (`page must be 1 when cursor is supplied`).
   substituted (`case linked in linked|skipped-no-ticket|skipped-no-spec`) and passed;
   the workflow verification attempt is recorded on the Draft Implementation run.
   The underlying template interpolation defect remains for the workflow maintainer.
-- First review: cursor boundary behavior for nullable sort keys and authorization
-  exhaustion cursors; confirm the workflow verifier fix separately.
+- Confidentiality repair: cursor v2 is AES-256-GCM encrypted with authenticated
+  tenant, actor, sort, direction, and filter context. Both response and depth-error
+  cursors use the same opaque codec; old readable v1 tokens are rejected.
+- Confidentiality verification: the CRM DB suite passes 16/16, including a
+  restricted actor scanning 1,000 denied rows, rejecting tampered/incompatible
+  tokens without quote queries, and resuming to both allowed results. Shared
+  typecheck/build pass; changed-file ESLint reports 0 errors and existing warnings.
+- First review: restricted-authority source-budget exhaustion, especially denied
+  boundary confidentiality and continuation through denied-only and mixed windows.
