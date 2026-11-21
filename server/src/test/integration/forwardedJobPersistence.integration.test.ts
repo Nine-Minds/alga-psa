@@ -94,7 +94,7 @@ describe('forwarded job persistence', () => {
     ]);
   });
 
-  it('keeps a ZIP handler progress write from replacing a forwarded workflow failure', async () => {
+  it('preserves a workflow failure across late ZIP progress and completion', async () => {
     const executionId = uuidv4();
     const jobId = await insertJob({
       serverExecution: { executionId, status: 'failed', error: 'ZIP delivery outcome is unknown' },
@@ -103,12 +103,20 @@ describe('forwarded job persistence', () => {
     const handler = new InvoiceZipJobHandler(jobService, {} as StorageService);
     const zipPath = path.join(os.tmpdir(), `forwarded-zip-${uuidv4()}.zip`);
     const updateJobStatus = jobService.updateJobStatus.bind(jobService);
-    const persistedSnapshots: Array<{ status: JobStatus; serverExecution: unknown }> = [];
+    const persistedSnapshots: Array<{
+      status: JobStatus;
+      serverExecution: unknown;
+      stepResults: unknown[];
+    }> = [];
     const updateStatusSpy = vi.spyOn(jobService, 'updateJobStatus').mockImplementation(async (...args) => {
       await updateJobStatus(...args);
       const persisted = await getJob(jobId);
       const metadata = typeof persisted.metadata === 'string' ? JSON.parse(persisted.metadata) : persisted.metadata;
-      persistedSnapshots.push({ status: persisted.status, serverExecution: metadata.serverExecution });
+      persistedSnapshots.push({
+        status: persisted.status,
+        serverExecution: metadata.serverExecution,
+        stepResults: metadata.stepResults,
+      });
     });
     const uploadSpy = vi.spyOn(StorageService, 'uploadFile').mockResolvedValue({
       file_id: uuidv4(), storage_path: 'test/invoice-bundle.zip', file_size: 4,
@@ -137,6 +145,19 @@ describe('forwarded job persistence', () => {
         expect(snapshot.status).toBe(JobStatus.Failed);
         expect(snapshot.serverExecution).toEqual({ executionId, status: 'failed', error: 'ZIP delivery outcome is unknown' });
       }
+      expect(persistedSnapshots[0].stepResults).toEqual([
+        { step: 'zip', status: 'started', details: 'Creating ZIP archive for 0 invoice(s)' },
+      ]);
+      expect(persistedSnapshots[1].stepResults).toEqual([
+        { step: 'zip', status: 'started', details: 'Creating ZIP archive for 0 invoice(s)' },
+        expect.objectContaining({
+          step: 'zip',
+          status: 'completed',
+          file_id: expect.any(String),
+          storage_path: 'test/invoice-bundle.zip',
+        }),
+      ]);
+      expect(persistedSnapshots[2].stepResults).toEqual(persistedSnapshots[1].stepResults);
       const persisted = await getJob(jobId);
       expect(persisted.status).toBe(JobStatus.Failed);
     } finally {
