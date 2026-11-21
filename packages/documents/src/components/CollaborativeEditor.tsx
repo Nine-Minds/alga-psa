@@ -155,6 +155,11 @@ export function CollaborativeEditor({
   const { provider, ydoc } = useMemo(
     () =>
       createYjsProvider(roomName, {
+        // The server's onAuthenticate hook makes it wait for an Auth protocol
+        // message, which the provider only sends when `token` is set. Document
+        // rooms are gated by the tenantId URL parameter, so the value itself
+        // is not verified there; any non-empty string satisfies the handshake.
+        token: userId,
         parameters: {
           tenantId,
           userId,
