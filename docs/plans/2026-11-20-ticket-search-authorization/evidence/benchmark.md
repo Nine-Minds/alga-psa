@@ -201,3 +201,40 @@ SEARCH_BENCH_REVISION=9e3d592e9083af4c2b68d1f75aef4b63d737f9e6 \
 ```
 
 These measurements are sequential integration evidence, not production traffic. The application server remained stopped; no browser smoke or production validation is claimed.
+
+## Mixed search at 150, 500 and 1,500 total candidates
+
+This follow-up closes the mixed-search latency gap left by the earlier project-growth and index-ACL-only measurements. It extends the existing `searchAuthorizationProductionBenchmark.integration.test.ts` harness; no visibility-engine implementation was changed for this run. The measured application source revision is `cc641b43be4bc197b533b245bab5823da07541e5`. The follow-up harness change is included with the evidence in the later benchmark-only repair commit.
+
+The fixture uses the production `tickets`, `comments`, `projects` and `app_search_index` tables. A single `runAppSearch` request searches ticket, ticket-comment and project results together. The size is the **total number of matching source candidates across all three types**, with the composition shown below (not a per-type size). The largest fixture has 500 live source rows of each type plus one stale project index row that is excluded from candidates and results.
+
+Each size runs under unrestricted internal-user access and a selected-client ticket-read bundle. The restricted user can read all projects and tickets on the selected client; comments inherit the parent ticket decision. One successful warmup and five successful timed requests ran sequentially (concurrency 1) per size and policy, using the first page (`cursor` omitted) at page size 100. Every warmup and timed response asserts the exact total and group counts, a nonempty page with unique fixture IDs, and exclusion of restricted ticket and comment IDs on denied parents. Thus every size has live ticket, comment and project matches and authorized results under both policies. The timing boundary is `performance.now()` immediately around `runAppSearch`, including principal/policy resolution, authorization, exact counts and the page query; fixture setup, policy changes and warmups are outside it. SQL counts are Knex query events during that same request. PostgreSQL was 15.4 (`Debian 15.4-2.pgdg120+1`). p95 uses nearest rank; with five samples it is the maximum.
+
+| Total matching candidates | Ticket / comment / project candidates | Policy | Authorized groups (ticket / comment / project) | Authorized total | p95 ms (5 samples) | SQL statements/request |
+|---:|---:|---|---:|---:|---:|---:|
+| 150 | 50 / 50 / 50 | Unrestricted | 50 / 50 / 50 | 150 | 21.37 | 9 |
+| 150 | 50 / 50 / 50 | Selected-client bundle | 5 / 50 / 50 | 105 | 78.50 | 10 |
+| 500 | 167 / 167 / 166 | Unrestricted | 167 / 167 / 166 | 500 | 23.70 | 9 |
+| 500 | 167 / 167 / 166 | Selected-client bundle | 16 / 50 / 166 | 232 | 64.69 | 10 |
+| 1,500 | 500 / 500 / 500 | Unrestricted | 500 / 500 / 500 | 1,500 | 20.24 | 9 |
+| 1,500 | 500 / 500 / 500 | Selected-client bundle | 50 / 50 / 500 | 600 | 69.21 | 10 |
+
+Raw wall-clock samples (ms), in request order:
+
+| Total candidates | Unrestricted | Selected-client bundle |
+|---:|---|---|
+| 150 | `[15.94, 21.37, 19.34, 15.70, 14.65]` | `[78.50, 67.47, 59.86, 63.59, 60.13]` |
+| 500 | `[17.21, 16.22, 16.81, 23.70, 18.54]` | `[61.86, 62.93, 61.39, 64.69, 63.12]` |
+| 1,500 | `[18.89, 18.46, 20.24, 19.11, 18.84]` | `[62.59, 64.60, 69.21, 65.45, 67.50]` |
+
+Raw statement samples were `[9, 9, 9, 9, 9]` unrestricted and `[10, 10, 10, 10, 10]` with the selected-client bundle at each size. Statement counts supplement the elapsed timings; they are not used as a latency substitute. Full provenance, authorized per-type totals and raw samples are in [index-acl-measurements.json](index-acl-measurements.json).
+
+Reproduce from `server/` at the measured application source revision with:
+
+```sh
+SEARCH_BENCH_REVISION=cc641b43be4bc197b533b245bab5823da07541e5 \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+These results are a small sequential integration sample, not a production performance claim or a comparison against an unmeasured revision. The existing fallback scan remains for documents and custom/replacement verifiers that do not have a matching SQL visibility compiler; this benchmark does not establish that every fallback has been eliminated.

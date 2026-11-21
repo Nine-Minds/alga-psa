@@ -168,6 +168,58 @@
       }
     ]
   },
+  "mixed_search_total_candidate_run": {
+    "measured_on_utc_date": "2026-11-21",
+    "application_revision": "cc641b43be4bc197b533b245bab5823da07541e5",
+    "harness_change": "Extended the existing production PostgreSQL benchmark harness in the working tree to include 150, 500 and 1,500 total mixed candidates; the added harness and this evidence are part of the follow-up repair commit.",
+    "postgres_version": "15.4 (Debian 15.4-2.pgdg120+1)",
+    "fixture": {
+      "candidate_semantics": "Total live matches across ticket, ticket_comment and project, not per-type counts.",
+      "matching_by_size": [
+        { "total_candidates": 150, "ticket": 50, "ticket_comment": 50, "project": 50 },
+        { "total_candidates": 500, "ticket": 167, "ticket_comment": 167, "project": 166 },
+        { "total_candidates": 1500, "ticket": 500, "ticket_comment": 500, "project": 500 }
+      ],
+      "maximum_fixture_source_rows": { "tickets": 500, "comments": 500, "projects": 500 },
+      "stale_project_index_rows": 1,
+      "source_tables": ["public.tickets", "public.comments", "public.projects", "public.app_search_index"]
+    },
+    "procedure": {
+      "request": "One runAppSearch call includes ticket, ticket_comment and project results together.",
+      "policies": ["unrestricted internal user", "selected-client bundle-restricted internal user; comments inherit parent ticket visibility"],
+      "warmup_requests_per_size_and_policy": 1,
+      "measured_requests_per_size_and_policy": 5,
+      "concurrency": 1,
+      "page_size": 100,
+      "cursor": "omitted (first page)",
+      "timing_boundary": "performance.now around runAppSearch, including principal and policy resolution, authorization, counts and the result page; fixture, assignment changes and warmup excluded.",
+      "statement_method": "Knex query events attached to the transaction connection during each measured runAppSearch request.",
+      "percentile": "Nearest-rank p95; with five samples this is the maximum."
+    },
+    "measurements": [
+      {
+        "total_candidates": 150,
+        "matching_by_type": { "ticket": 50, "ticket_comment": 50, "project": 50 },
+        "unrestricted": { "authorized_by_type": { "ticket": 50, "ticket_comment": 50, "project": 50 }, "authorized_total": 150, "raw_latency_samples_ms": [15.94, 21.37, 19.34, 15.70, 14.65], "p95_ms": 21.37, "raw_query_count_samples": [9, 9, 9, 9, 9], "median_statements": 9 },
+        "bundle_restricted": { "authorized_by_type": { "ticket": 5, "ticket_comment": 50, "project": 50 }, "authorized_total": 105, "raw_latency_samples_ms": [78.50, 67.47, 59.86, 63.59, 60.13], "p95_ms": 78.50, "raw_query_count_samples": [10, 10, 10, 10, 10], "median_statements": 10 }
+      },
+      {
+        "total_candidates": 500,
+        "matching_by_type": { "ticket": 167, "ticket_comment": 167, "project": 166 },
+        "unrestricted": { "authorized_by_type": { "ticket": 167, "ticket_comment": 167, "project": 166 }, "authorized_total": 500, "raw_latency_samples_ms": [17.21, 16.22, 16.81, 23.70, 18.54], "p95_ms": 23.70, "raw_query_count_samples": [9, 9, 9, 9, 9], "median_statements": 9 },
+        "bundle_restricted": { "authorized_by_type": { "ticket": 16, "ticket_comment": 50, "project": 166 }, "authorized_total": 232, "raw_latency_samples_ms": [61.86, 62.93, 61.39, 64.69, 63.12], "p95_ms": 64.69, "raw_query_count_samples": [10, 10, 10, 10, 10], "median_statements": 10 }
+      },
+      {
+        "total_candidates": 1500,
+        "matching_by_type": { "ticket": 500, "ticket_comment": 500, "project": 500 },
+        "unrestricted": { "authorized_by_type": { "ticket": 500, "ticket_comment": 500, "project": 500 }, "authorized_total": 1500, "raw_latency_samples_ms": [18.89, 18.46, 20.24, 19.11, 18.84], "p95_ms": 20.24, "raw_query_count_samples": [9, 9, 9, 9, 9], "median_statements": 9 },
+        "bundle_restricted": { "authorized_by_type": { "ticket": 50, "ticket_comment": 50, "project": 500 }, "authorized_total": 600, "raw_latency_samples_ms": [62.59, 64.60, 69.21, 65.45, 67.50], "p95_ms": 69.21, "raw_query_count_samples": [10, 10, 10, 10, 10], "median_statements": 10 }
+      }
+    ],
+    "validation": "Every warmup and timed response asserted exact per-type groups and authorized total, page length, unique result IDs, known fixture identity membership, and no restricted ticket/comment ID from a denied parent. Every size has nonzero ticket, comment and project groups under both policies.",
+    "reproduction": "From server/: SEARCH_BENCH_REVISION=cc641b43be4bc197b533b245bab5823da07541e5 npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts --coverage.enabled=false --reporter=verbose --silent=false",
+    "limits": ["Sequential PostgreSQL integration measurements are not production latency or load-test evidence.", "The benchmark change adds measurement and fixture coverage only; it does not refactor the visibility engine."]
+  },
   "limits": [
     "The diagnostic and corrected measurements use different ACL fixtures; no latency improvement is inferred between them.",
     "Statement counts include the complete runAppSearch request, including principal and policy resolution.",

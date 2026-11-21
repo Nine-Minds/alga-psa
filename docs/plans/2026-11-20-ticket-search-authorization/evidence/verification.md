@@ -34,6 +34,19 @@ The production-path benchmark is recorded separately in [benchmark.md](benchmark
 
 The application server was not started. No fresh browser walkthrough or production handoff was performed. The November 3 live-smoke recording in the external guide remains historical evidence for the baseline only.
 
+## Mixed-search latency follow-up
+
+The latest mixed-search benchmark measures application revision `cc641b43be4bc197b533b245bab5823da07541e5`; the only application-side content added afterward is the benchmark fixture and assertions. See [benchmark.md](benchmark.md#mixed-search-at-150-500-and-1500-total-candidates) and [raw measurements](index-acl-measurements.json) for six scenarios (three total candidate sizes, two policies), individual elapsed samples, p95 calculations and SQL statement counts.
+
+- `cd server && SEARCH_BENCH_REVISION=cc641b43be4bc197b533b245bab5823da07541e5 npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts --coverage.enabled=false --reporter=verbose --silent=false` — passed, 8 tests. The new total-candidate scenarios passed six combinations with one warmup and five timed requests each; all exact per-type authorization totals and page behavior were asserted.
+- Search unit regressions (`searchAuthorizationRegression`, `searchActions`, `apiSearchController`, `searchAcl`, `searchQuery`, `runAppSearch`) — passed, 79 tests.
+- PostgreSQL search behavior (`searchAuthorizationProduction.integration.test.ts`, `searchRankingCursor.db.test.ts`, `--no-file-parallelism`) — passed, 8 tests.
+- Ticket authorization regressions (`ticketBentoActions.authz`, tenant-scoped Bento contract, sibling reads, `ticketRecordAuthorization`) — passed, 20 tests.
+- `npx tsc --noEmit -p packages/search/tsconfig.json` and `npx tsc --noEmit -p packages/tickets/tsconfig.json` — passed.
+- `npx nx run search:build` and `npx nx run tickets:build` — passed. Nx reported cached dependency outputs for all 31 search tasks and all 29 tickets tasks; no build tasks needed to execute.
+- JSON parse validation and `git diff --check` passed. Existing unrelated `package-lock.json` and `server/.next-review/` changes were preserved and excluded from the repair commit.
+- The application server stayed stopped. No approved plan was attached. `alga-dev` exposes generic workflow verification recording but does not expose a `security-finding-resolved` check, so that check was not run. No browser/production validation or external CI result is claimed; later CI observations belong to the subsequent owner.
+
 ## Review correction round at `46aac638eb6823db6645e81c8a147a78c90a4abd`
 
 - Added PostgreSQL behavioral regressions for replacing a compiled project verifier with deny-all and for documents with a denied association followed by an allowed association. The supplied reproductions failed at pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb`: project search returned total 500 instead of 0, and document SQL included a row the verifier rejected (`/tmp/pr4133-lead-round1-repro.log`). Both new regressions pass at this revision.

@@ -122,7 +122,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
     }
     commentIds = comments;
     const indexRows = tickets.map((ticket, offset) => ({
-      body: offset + 1 <= SMALL_MATCHES ? 'needle support small' : 'needle support broad',
+      body: ['needle', offset + 1 <= 50 ? 'mixsmall' : '', offset + 1 <= 167 ? 'mixmedium' : '', 'mixlarge', offset + 1 <= SMALL_MATCHES ? 'support small' : 'support broad'].filter(Boolean).join(' '),
       tenant: ctx.tenantId,
       object_type: 'ticket',
       object_id: ticket.ticket_id,
@@ -131,12 +131,10 @@ describe('production search authorization PostgreSQL benchmark', () => {
       source_updated_at: FIXED_RANKING,
       metadata: JSON.stringify({}),
       required_permission: 'ticket:read',
-      search_vector: db.raw(offset + 1 <= SMALL_MATCHES
-        ? "to_tsvector('english', 'needle support small')"
-        : "to_tsvector('english', 'needle support broad')"),
+      search_vector: db.raw("to_tsvector('english', ?)", [['needle', offset + 1 <= 50 ? 'mixsmall' : '', offset + 1 <= 167 ? 'mixmedium' : '', 'mixlarge', offset + 1 <= SMALL_MATCHES ? 'support small' : 'support broad'].filter(Boolean).join(' ')]),
     }));
     indexRows.push(...projects.map((project, offset) => ({
-      body: offset + 1 <= SMALL_MATCHES ? 'needle migration small' : 'needle migration broad',
+      body: ['needle', offset + 1 <= 50 ? 'mixsmall' : '', offset + 1 <= 166 ? 'mixmedium' : '', 'mixlarge', offset + 1 <= SMALL_MATCHES ? 'migration small' : 'migration broad'].filter(Boolean).join(' '),
       tenant: ctx.tenantId,
       object_type: 'project',
       object_id: project.project_id,
@@ -145,9 +143,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
       source_updated_at: FIXED_RANKING,
       metadata: JSON.stringify({}),
       required_permission: 'project:read',
-      search_vector: db.raw(offset + 1 <= SMALL_MATCHES
-        ? "to_tsvector('english', 'needle migration small')"
-        : "to_tsvector('english', 'needle migration broad')"),
+      search_vector: db.raw("to_tsvector('english', ?)", [['needle', offset + 1 <= 50 ? 'mixsmall' : '', offset + 1 <= 166 ? 'mixmedium' : '', 'mixlarge', offset + 1 <= SMALL_MATCHES ? 'migration small' : 'migration broad'].filter(Boolean).join(' ')]),
     })));
     indexRows.push({
       body: 'needle stale project', tenant: ctx.tenantId, object_type: 'project',
@@ -155,11 +151,11 @@ describe('production search authorization PostgreSQL benchmark', () => {
       source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'project:read',
       search_vector: db.raw("to_tsvector('english', 'needle stale project')"),
     });
-    indexRows.push(...comments.map((commentId) => ({
-      body: 'needle resolution comment', tenant: ctx.tenantId, object_type: 'ticket_comment',
+    indexRows.push(...comments.map((commentId, offset) => ({
+      body: ['needle', offset < 50 ? 'mixsmall' : '', 'mixmedium', 'mixlarge', 'resolution comment'].filter(Boolean).join(' '), tenant: ctx.tenantId, object_type: 'ticket_comment',
       object_id: commentId, title: 'Needle resolution comment', url: `/msp/tickets/${commentId}`,
       source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'ticket:read',
-      search_vector: db.raw("to_tsvector('english', 'needle resolution comment')"),
+      search_vector: db.raw("to_tsvector('english', ?)", [['needle', offset < 50 ? 'mixsmall' : '', 'mixmedium', 'mixlarge', 'resolution comment'].filter(Boolean).join(' ')]),
     })));
     await db.batchInsert('app_search_index', indexRows, 500);
     allowedIds = tickets.filter((ticket) => ticket.client_id === fixture.clientId).map((ticket) => ticket.ticket_id);
@@ -384,6 +380,123 @@ describe('production search authorization PostgreSQL benchmark', () => {
         fixture: { matching_tickets: BROAD_MATCHES, matching_comments: commentIds.length, matching_projects: MIXED_NON_TICKET_MATCHES, indexed_project_candidates: MIXED_NON_TICKET_MATCHES + 1, stale_project_index_rows: 1, project_growth_queries: [SMALL_MATCHES, MIXED_NON_TICKET_MATCHES], sources: ['public.tickets', 'public.comments', 'public.projects', 'public.app_search_index'] },
         procedure: { warmups: 1, samples: SAMPLES, concurrency: 1, statement_method: 'Knex query events during runAppSearch, including principal and policy resolution, count and result SQL; fixture and cursor setup excluded', latency_method: 'performance.now wall-clock request duration; nearest-rank p95, sample 5 of 5' },
         measurements, project_match_growth: scaling,
+      }));
+    });
+  }, 900_000);
+
+  it('measures one mixed ticket, comment and project search at 150, 500 and 1500 total candidates', async () => {
+    await runWithTenant(ctx.tenantId, async () => {
+      // The original fixture contributes 50 comments on readable tickets. Add
+      // one comment on each denied ticket so the largest query has 500 live
+      // matches of every type while the restrictive policy still hides those
+      // comments through their ticket parent.
+      const moreComments: string[] = [];
+      for (let sequence = 1; sequence <= 500; sequence += 1) {
+        if (sequence % 10 === 0) continue;
+        moreComments.push(await insertResolutionComment(db, fixture, uuidAt(sequence), {
+          is_internal: sequence % 2 === 0,
+          publish_state: 'published',
+        }));
+      }
+      expect(moreComments).toHaveLength(450);
+      const additionalIndexRows = moreComments.map((commentId, offset) => {
+        const sequence = offset + 1;
+        const body = [sequence <= 117 ? 'mixmedium' : '', 'mixlarge', 'resolution comment'].filter(Boolean).join(' ');
+        return {
+          body, tenant: ctx.tenantId, object_type: 'ticket_comment', object_id: commentId,
+          title: 'Needle resolution comment', url: `/msp/tickets/${commentId}`,
+          source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'ticket:read',
+          search_vector: db.raw("to_tsvector('english', ?)", [body]),
+        };
+      });
+      await db.batchInsert('app_search_index', additionalIndexRows, 500);
+      const allCommentIds = [...commentIds, ...moreComments];
+      const deniedCommentIds = new Set(moreComments);
+      const scenarios = [
+        { query: 'mixsmall', totalCandidates: 150, perType: { ticket: 50, ticket_comment: 50, project: 50 } },
+        { query: 'mixmedium', totalCandidates: 500, perType: { ticket: 167, ticket_comment: 167, project: 166 } },
+        { query: 'mixlarge', totalCandidates: 1500, perType: { ticket: 500, ticket_comment: 500, project: 500 } },
+      ] as const;
+      const types = ['ticket', 'ticket_comment', 'project'] as any;
+      const measurements: Array<Record<string, unknown>> = [];
+
+      for (const scenario of scenarios) {
+        const assignment = tenantDb(db, ctx.tenantId).table('authorization_bundle_assignments').where({ bundle_id: bundleId });
+        await assignment.delete();
+        const request = () => runAppSearch(db, ctx.tenantId, ctx.user, {
+          query: scenario.query, types, limit: 100,
+        }, SEARCH_INDEX);
+        const validate = (result: Awaited<ReturnType<typeof runAppSearch>>, restrictive: boolean) => {
+          const authorizedTickets = restrictive ? Math.floor(scenario.perType.ticket / 10) : scenario.perType.ticket;
+          const authorizedComments = restrictive
+            ? scenario.perType.ticket_comment - [...allCommentIds.slice(0, scenario.perType.ticket_comment)].filter((id) => deniedCommentIds.has(id)).length
+            : scenario.perType.ticket_comment;
+          const expectedTotal = authorizedTickets + authorizedComments + scenario.perType.project;
+          expect(result.totalCount, `${scenario.query} total`).toBe(expectedTotal);
+          expect(result.groups.ticket, `${scenario.query} tickets`).toBe(authorizedTickets);
+          expect(result.groups.ticket_comment, `${scenario.query} comments`).toBe(authorizedComments);
+          expect(result.groups.project, `${scenario.query} projects`).toBe(scenario.perType.project);
+          expect(result.results).toHaveLength(Math.min(100, expectedTotal));
+          expect(new Set(result.results.map(({ id }) => id)).size).toBe(result.results.length);
+          expect(result.results.every(({ type, id }) =>
+            (type === 'ticket' && unrestrictedIds.includes(id))
+            || (type === 'ticket_comment' && allCommentIds.includes(id))
+            || (type === 'project' && projectIds.includes(id)))).toBe(true);
+          if (restrictive) {
+            expect(result.results.every(({ type, id }) => type !== 'ticket' || allowedIds.includes(id))).toBe(true);
+            expect(result.results.every(({ type, id }) => type !== 'ticket_comment' || !deniedCommentIds.has(id))).toBe(true);
+          }
+          return { expectedTotal, authorizedTickets, authorizedComments };
+        };
+
+        for (const restrictive of [false, true]) {
+          if (restrictive) {
+            await createBundleAssignment(db, { tenant: ctx.tenantId, bundleId, targetType: 'user', targetId: ctx.user.user_id, actorUserId: ctx.user.user_id });
+          } else {
+            await assignment.delete();
+          }
+          const expected = validate(await request(), restrictive);
+          const latencies: number[] = [];
+          const statementCounts: number[] = [];
+          for (let sample = 0; sample < SAMPLES; sample += 1) {
+            let statements = 0;
+            const onQuery = () => { statements += 1; };
+            db.on('query', onQuery);
+            const started = performance.now();
+            const result = await request();
+            latencies.push(performance.now() - started);
+            db.removeListener('query', onQuery);
+            statementCounts.push(statements);
+            validate(result, restrictive);
+          }
+          const sortedLatencies = [...latencies].sort((a, b) => a - b);
+          const sortedStatements = [...statementCounts].sort((a, b) => a - b);
+          measurements.push({
+            scenario: `${scenario.query}-${restrictive ? 'bundle-restricted' : 'unrestricted'}`,
+            candidate_semantics: 'total matching candidates across ticket, ticket_comment and project',
+            total_candidates: scenario.totalCandidates,
+            matching_by_type: scenario.perType,
+            authorized_by_type: { ticket: expected.authorizedTickets, ticket_comment: expected.authorizedComments, project: scenario.perType.project },
+            authorized_total: expected.expectedTotal,
+            raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
+            p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
+            raw_query_count_samples: statementCounts,
+            median_statements: sortedStatements[Math.floor(SAMPLES / 2)],
+            warmup_requests: WARMUPS,
+            measured_requests: SAMPLES,
+            concurrency: 1,
+            page_size: 100,
+          });
+        }
+      }
+
+      expect(allCommentIds).toHaveLength(500);
+      console.log(JSON.stringify({
+        revision: process.env.SEARCH_BENCH_REVISION ?? 'unrecorded',
+        postgresVersion: (await db.raw('SHOW server_version')).rows[0].server_version,
+        mixed_total_candidate_measurements: measurements,
+        fixture: { matching_tickets: 500, matching_comments: 500, matching_projects: 500, stale_project_index_rows: 1, sources: ['public.tickets', 'public.comments', 'public.projects', 'public.app_search_index'] },
+        procedure: { warmups: WARMUPS, samples: SAMPLES, concurrency: 1, page_size: 100, policy: 'unrestricted internal user and selected-client bundle-restricted internal user; comments inherit parent ticket visibility', timing_boundary: 'performance.now around runAppSearch including principal/policy resolution, authorization, counts and page query; fixture and policy setup excluded', percentile: 'nearest-rank p95; with five samples this is the maximum' },
       }));
     });
   }, 900_000);
