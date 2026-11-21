@@ -27,7 +27,9 @@ describe('bulk invoice controller lifecycle integration', () => {
 
   beforeAll(async () => {
     wireLocalTestDbEnv();
-    db = await createTestDbConnection();
+    // Integration suites share one bootstrapped database. Recreating it here
+    // can erase fixtures while other Vitest workers are using the same DB.
+    db = await createTestDbConnection({ recreate: false });
     primary = await createTestTenant(db, { companyName: `Bulk invoice actor ${uuidv4().slice(0, 8)}` });
     other = await createTestTenant(db, { companyName: `Bulk invoice other ${uuidv4().slice(0, 8)}` });
     const tenant = primary.tenant.tenantId;
