@@ -62,34 +62,37 @@ const example: ExternalCalendarEvent = {
   attendees: [{ email: 'customer@example.test', name: 'Customer', responseStatus: 'accepted' }],
 };
 
+/** OAuth dance plus a connected adapter, as a provider row would hold it. */
+async function connect(Adapter: any, authUrl: any, expired = false) {
+  const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
+  await controlPost('seed/client', { clientId, clientSecret });
+  const redirectUri = 'http://localhost/calendar-callback';
+  const url = await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: 'common' });
+  expect(new URL(url).origin).toBe(base);
+  const authorization = await fetch(url, { redirect: 'manual' });
+  expect(authorization.status).toBe(302);
+  const callback = new URL(authorization.headers.get('location')!);
+  expect(callback.searchParams.get('state')).toBe('calendar-state');
+  const tokenResponse = await fetch(`${base}/common/oauth2/v2.0/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code: callback.searchParams.get('code')!, redirect_uri: redirectUri }) });
+  expect(tokenResponse.ok).toBe(true);
+  const token = await tokenResponse.json();
+  const config: CalendarProviderConfig = {
+    id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
+    provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
+    connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    provider_config: { clientId, clientSecret, accessToken: token.access_token, refreshToken: token.refresh_token, tokenExpiresAt: new Date(expired ? 0 : Date.now() + 3600000).toISOString() },
+  };
+  const adapter = new Adapter(config);
+  await adapter.connect();
+  return { adapter, oldToken: token.access_token, config };
+}
+
 for (const { name, Adapter, authUrl } of [
   { name: 'shared', Adapter: SharedAdapter, authUrl: sharedAuthUrl },
   { name: 'enterprise', Adapter: EnterpriseAdapter, authUrl: enterpriseAuthUrl },
 ]) {
   describe(`${name} Microsoft calendar adapter over Graph wire`, () => {
-    async function connected(expired = false) {
-      const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
-      await controlPost('seed/client', { clientId, clientSecret });
-      const redirectUri = 'http://localhost/calendar-callback';
-      const url = await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: 'common' });
-      expect(new URL(url).origin).toBe(base);
-      const authorization = await fetch(url, { redirect: 'manual' });
-      expect(authorization.status).toBe(302);
-      const callback = new URL(authorization.headers.get('location')!);
-      expect(callback.searchParams.get('state')).toBe('calendar-state');
-      const tokenResponse = await fetch(`${base}/common/oauth2/v2.0/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code: callback.searchParams.get('code')!, redirect_uri: redirectUri }) });
-      expect(tokenResponse.ok).toBe(true);
-      const token = await tokenResponse.json();
-      const config: CalendarProviderConfig = {
-        id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
-        provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
-        connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        provider_config: { clientId, clientSecret, accessToken: token.access_token, refreshToken: token.refresh_token, tokenExpiresAt: new Date(expired ? 0 : Date.now() + 3600000).toISOString() },
-      };
-      const adapter = new Adapter(config);
-      await adapter.connect();
-      return { adapter, oldToken: token.access_token, config };
-    }
+    const connected = (expired = false) => connect(Adapter, authUrl, expired);
 
     it('creates, reloads, lists, updates and deletes the primary-calendar event', async () => {
       const { adapter } = await connected();
@@ -155,6 +158,87 @@ for (const { name, Adapter, authUrl } of [
     });
   });
 }
+
+/**
+ * A series created in Outlook, not by Alga: no AlgaRRULE extended property, so
+ * recognising it depends entirely on Graph's own `recurrence` object and on the
+ * delta window returning expanded occurrences (`type`, `seriesMasterId`,
+ * `originalStart`). Before the recurring-series fix the adapter saw only
+ * standalone events here, which is what imported one entry per occurrence.
+ */
+describe('enterprise adapter over a native Outlook recurring series', () => {
+  async function seedSeries() {
+    const { adapter } = await connect(EnterpriseAdapter, enterpriseAuthUrl);
+    const master = (await controlPost('actions/calendar-change', {
+      changeType: 'created',
+      event: {
+        subject: 'Go over advisories in Git @alga',
+        start: { dateTime: '2026-10-01T14:15:00', timeZone: 'UTC' },
+        end: { dateTime: '2026-10-01T14:45:00', timeZone: 'UTC' },
+        recurrence: {
+          pattern: { type: 'relativeMonthly', interval: 1, daysOfWeek: ['thursday'], index: 'first' },
+          range: { type: 'noEnd', startDate: '2026-10-01' },
+        },
+      },
+    })).event;
+    return { adapter: adapter as InstanceType<typeof EnterpriseAdapter>, master };
+  }
+
+  it('reads the master as recurring and every delta item as an occurrence of it', async () => {
+    const { adapter, master } = await seedSeries();
+
+    const fetched = await adapter.getEvent(master.id);
+    expect(fetched.instanceType).toBe('master');
+    expect(fetched.recurrence).toEqual(['RRULE:FREQ=MONTHLY;BYDAY=1TH']);
+    expect(fetched.recurringEventId).toBeUndefined();
+
+    const { changes } = await adapter.fetchDeltaChanges();
+    expect(changes.length).toBeGreaterThan(1);
+    expect(changes.every(change => change.changeType === 'updated')).toBe(true);
+    // Every change names the master, so one series costs one import.
+    expect(new Set(changes.map(change => change.recurringEventId))).toEqual(new Set([master.id]));
+    expect(changes.every(change => Boolean(change.originalStart))).toBe(true);
+    expect(changes.map(change => change.id)).not.toContain(master.id);
+
+    const occurrence = await adapter.getEvent(changes[0].id);
+    expect(occurrence.instanceType).toBe('occurrence');
+    expect(occurrence.recurringEventId).toBe(master.id);
+  });
+
+  it('reports one cancelled occurrence as a removal and a moved one as an exception', async () => {
+    const { adapter, master } = await seedSeries();
+    const initial = await adapter.fetchDeltaChanges();
+    const cancelled = initial.changes[1];
+    const moved = initial.changes[2];
+
+    await controlPost('seed/calendar-occurrence', {
+      action: 'cancel', seriesMasterId: master.id, originalStart: cancelled.originalStart,
+    });
+    await controlPost('seed/calendar-occurrence', {
+      action: 'override',
+      seriesMasterId: master.id,
+      originalStart: moved.originalStart,
+      event: {
+        subject: 'Advisories (moved) @alga',
+        start: { dateTime: '2026-12-04T15:15:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-12-04T15:45:00Z', timeZone: 'UTC' },
+      },
+    });
+
+    const next = await adapter.fetchDeltaChanges(initial.deltaLink);
+    // Graph gives up the series identity on a removal: only the opaque id
+    // arrives, which is why the master's mapping carries an occurrence index.
+    expect(next.changes).toEqual(expect.arrayContaining([
+      { id: cancelled.id, changeType: 'deleted' },
+      expect.objectContaining({ id: moved.id, changeType: 'updated', recurringEventId: master.id }),
+    ]));
+    const exception = await adapter.getEvent(moved.id);
+    expect(exception.instanceType).toBe('exception');
+    expect(exception.title).toBe('Advisories (moved) @alga');
+    // The master is untouched by either single-occurrence change.
+    expect((await adapter.getEvent(master.id)).recurrence).toEqual(['RRULE:FREQ=MONTHLY;BYDAY=1TH']);
+  });
+});
 
 // Authority selection: the profile's tenant for tenant-owned apps, `common` otherwise.
 // Authorize and code exchange go through the real URL builders / token URL and the

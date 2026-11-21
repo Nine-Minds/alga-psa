@@ -39,3 +39,26 @@ export function computeVisibleTagCount(tagTexts: string[], containerWidth: numbe
   }
   return 1;
 }
+
+type PartyTag = { tag_id: string; tag_text: string; background_color?: string | null; text_color?: string | null };
+
+/**
+ * The chip tags a ticket row shows for its parties: the requester's first (that
+ * is who the tech is about to talk to), then the client's, minus repeats by
+ * text. "VIP" is usually ruled for both contact and client, and a row that
+ * names only the client should not read "VIP VIP".
+ */
+export function mergePartyDisplayTags(
+  contactTags: readonly PartyTag[] | null | undefined,
+  clientTags: readonly PartyTag[] | null | undefined,
+): PartyTag[] {
+  const seen = new Set<string>();
+  const merged: PartyTag[] = [];
+  for (const tag of [...(contactTags ?? []), ...(clientTags ?? [])]) {
+    const key = tag.tag_text.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(tag);
+  }
+  return merged;
+}

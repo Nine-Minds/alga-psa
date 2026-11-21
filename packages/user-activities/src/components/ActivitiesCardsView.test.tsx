@@ -22,7 +22,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_k: string, o: any) => o?.defaultValue ?? _k }),
 }));
 vi.mock('@alga-psa/user-composition/hooks', () => ({
-  useUserPreference: (_k: string, opts: any) => ({ value: opts.defaultValue, setValue: mocks.setSaved, hasLoadedInitial: true }),
+  useUserPreference: (_k: string, opts: any) => ({ value: opts.defaultValue, setValue: mocks.setSaved, hasLoadedInitial: true, hasResolved: true }),
 }));
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,
@@ -65,7 +65,7 @@ import { useActivityFilterState } from '../hooks/useActivityFilterState';
 import { DEFAULT_TABLE_TYPES } from './constants';
 
 const emptyOptions = {
-  priorities: [], clients: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
+  priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
 };
 
 function Harness({ focus = false, onViewAll = vi.fn() }: { focus?: boolean; onViewAll?: any }) {

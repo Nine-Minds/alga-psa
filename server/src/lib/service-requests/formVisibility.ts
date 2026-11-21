@@ -11,6 +11,12 @@
  * only observe fields decided before it (plus raw values of non-field keys), cycles are
  * structurally impossible and the browser and the server always agree.
  * Do NOT replace this with a repeat-until-stable loop unless both sides change together.
+ *
+ * Rules reach the evaluator from two places and are simply concatenated:
+ * - the form schema itself, where an element carries its own `visibleWhen` list. This is where
+ *   the builder writes, so conditional elements work on every definition and in every edition.
+ * - the EE advanced form-behavior provider's `visibilityRules` config, which published
+ *   definitions still carry and which keeps evaluating exactly as before.
  */
 
 export type VisibilityRuleOperator =
@@ -26,6 +32,63 @@ export interface VisibilityRule {
   source: string;
   operator: VisibilityRuleOperator;
   value?: unknown;
+}
+
+/** A rule stored on the element it governs; the element's own key is the target. */
+export type ElementVisibilityRule = Omit<VisibilityRule, 'fieldKey'>;
+
+export function isVisibilityRuleOperator(candidate: unknown): candidate is VisibilityRuleOperator {
+  return (
+    candidate === 'equals' ||
+    candidate === 'not-equals' ||
+    candidate === 'is-true' ||
+    candidate === 'is-false' ||
+    candidate === 'has-value' ||
+    candidate === 'is-empty'
+  );
+}
+
+/** The `visibleWhen` list of one schema element, with anything malformed dropped. */
+export function parseElementVisibilityRules(raw: unknown): ElementVisibilityRule[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.flatMap((candidate) => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      return [];
+    }
+    const rule = candidate as Record<string, unknown>;
+    if (typeof rule.source !== 'string' || !isVisibilityRuleOperator(rule.operator)) {
+      return [];
+    }
+    const source = rule.source.trim();
+    if (!source) {
+      return [];
+    }
+    return [
+      {
+        source,
+        operator: rule.operator,
+        ...(rule.value !== undefined ? { value: rule.value } : {}),
+      } satisfies ElementVisibilityRule,
+    ];
+  });
+}
+
+/** Every element's own `visibleWhen` rules, flattened into evaluator form. */
+export function collectElementVisibilityRules(
+  fields: ReadonlyArray<{ key?: unknown; visibleWhen?: unknown }>
+): VisibilityRule[] {
+  const rules: VisibilityRule[] = [];
+  for (const field of fields) {
+    if (typeof field?.key !== 'string' || !field.key) {
+      continue;
+    }
+    for (const rule of parseElementVisibilityRules(field.visibleWhen)) {
+      rules.push({ ...rule, fieldKey: field.key });
+    }
+  }
+  return rules;
 }
 
 export interface VisibilityContext {
@@ -166,19 +229,26 @@ export function evaluateVisibilityRule(rule: VisibilityRule, sourceValue: unknow
 /**
  * Returns the keys of visible fields, in form order. See the module header for the
  * single-pass, top-down semantics.
+ *
+ * A `section` block owns everything after it until the next section, so hiding a section hides
+ * its questions too — the same grouping `groupFormElementsBySection` draws.
  */
 export function computeVisibleFieldKeys(
-  fields: ReadonlyArray<{ key?: unknown }>,
+  fields: ReadonlyArray<{ key?: unknown; type?: unknown }>,
   rules: ReadonlyArray<VisibilityRule>,
   values: Record<string, unknown>,
   context: VisibilityContext
 ): string[] {
-  const fieldKeys = fields
-    .map((field) => (typeof field?.key === 'string' ? field.key : null))
-    .filter((fieldKey): fieldKey is string => !!fieldKey);
+  const entries = fields
+    .map((field) =>
+      typeof field?.key === 'string' && field.key
+        ? { key: field.key, isSection: field.type === 'section' }
+        : null
+    )
+    .filter((entry): entry is { key: string; isSection: boolean } => entry !== null);
 
   if (rules.length === 0) {
-    return fieldKeys;
+    return entries.map((entry) => entry.key);
   }
 
   const rulesByField = new Map<string, VisibilityRule[]>();
@@ -190,34 +260,26 @@ export function computeVisibleFieldKeys(
 
   const effectiveValues: Record<string, unknown> = { ...values };
   const visible: string[] = [];
-  for (const fieldKey of fieldKeys) {
-    const fieldRules = rulesByField.get(fieldKey);
-    const isVisible =
+  let insideHiddenSection = false;
+
+  for (const entry of entries) {
+    const fieldRules = rulesByField.get(entry.key);
+    const passesOwnRules =
       !fieldRules ||
       fieldRules.every((rule) =>
         evaluateVisibilityRule(rule, resolveVisibilitySourceValue(rule.source, effectiveValues, context))
       );
-    if (isVisible) {
-      visible.push(fieldKey);
+
+    if (entry.isSection) {
+      insideHiddenSection = !passesOwnRules;
+    }
+
+    if (passesOwnRules && (entry.isSection || !insideHiddenSection)) {
+      visible.push(entry.key);
     } else {
       // A hidden field counts as empty for every rule evaluated after it.
-      delete effectiveValues[fieldKey];
+      delete effectiveValues[entry.key];
     }
   }
   return visible;
-}
-
-/**
- * Whether a required (non-file) field's submitted value counts as missing. Shared so the
- * browser blocks exactly the submissions the server would reject. An unchecked checkbox
- * (`false`) is a value, not a missing answer.
- */
-export function isMissingRequiredValue(value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  if (typeof value === 'string') {
-    return value.trim().length === 0;
-  }
-  return false;
 }

@@ -2,21 +2,27 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 import type { IDisplayTag, ITag } from '@alga-psa/types';
 
 import { AsyncSearchableSelect, type SelectOption } from './AsyncSearchableSelect';
 import CustomSelect from './CustomSelect';
-import { Button } from './Button';
+import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import type { EntityAvatarProps } from './EntityAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientNames } from '../hooks/useClientNames';
 import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import { useTranslation } from '../lib/i18n/client';
 import type { AutomationProps } from '../ui-reflection/types';
 
 export type ClientPickerStatusFilter = 'all' | 'active' | 'inactive';
 export type ClientPickerTypeFilter = 'all' | 'company' | 'individual';
+
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
 /** Slim row returned by the server-side picker search. */
 export interface PickerClientOption {
@@ -25,6 +31,9 @@ export interface PickerClientOption {
   client_type?: string | null;
   is_inactive?: boolean;
   logoUrl?: string | null;
+  /** Read by id for the picked client (see `PickerClient` in the shared model). */
+  lifecycle_status?: string | null;
+  default_currency_code?: string | null;
   /** Chip tags for the viewer, already filtered by the display rules. */
   displayTags?: IDisplayTag[];
 }
@@ -46,15 +55,13 @@ export type ClientPickerSearchFn = (
   params: ClientPickerSearchParams
 ) => Promise<{ clients: PickerClientOption[]; total: number }>;
 
-export interface AsyncClientPickerProps {
+interface AsyncClientPickerBaseProps {
   id?: string;
   /**
    * Server search (`searchClientsForPicker`). Optional: falls back to the searcher supplied by
    * `ClientPickerSearchProvider` (mounted in the MSP shells). An explicit prop wins.
    */
   searchClients?: ClientPickerSearchFn;
-  onSelect: (clientId: string | null) => void;
-  selectedClientId: string | null;
   filterState?: ClientPickerStatusFilter;
   onFilterStateChange?: (state: ClientPickerStatusFilter) => void;
   clientTypeFilter?: ClientPickerTypeFilter;
@@ -67,11 +74,46 @@ export interface AsyncClientPickerProps {
   className?: string;
   placeholder?: string;
   modal?: boolean;
+  /** Trigger sizes itself to its content instead of filling the row. */
+  fitContent?: boolean;
+  /** Avatar size on the trigger. */
+  size?: EntityAvatarProps['size'];
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerButtonClassName?: string;
   onAddNew?: () => void;
   disabled?: boolean;
   pageSize?: number;
   debounceMs?: number;
+  /** Rendered in the list footer, above "Add new client" (multi mode: once something is selected). */
+  footerContent?: React.ReactNode;
+  /** Rewrites the trigger text once something is selected, e.g. to mark an exclusion. */
+  formatSelectedLabel?: (label: string) => string;
+  /**
+   * Rows the caller has already resolved by id (`lookupClientsByIds`). A screen with one picker per
+   * row passes them so the pickers do not each look their selection up.
+   */
+  knownClients?: readonly PickerClientOption[];
 }
+
+/** One client; picking a row commits it and closes the list. */
+interface AsyncClientPickerSingleProps {
+  onSelect: (clientId: string | null) => void;
+  selectedClientId: string | null;
+  selectedClientIds?: undefined;
+  onSelectedClientIdsChange?: undefined;
+}
+
+/** Many clients; picking a row toggles it and the list stays open. */
+interface AsyncClientPickerMultiProps {
+  selectedClientIds: string[];
+  onSelectedClientIdsChange: (clientIds: string[]) => void;
+  onSelect?: undefined;
+  selectedClientId?: undefined;
+}
+
+export type AsyncClientPickerProps = AsyncClientPickerBaseProps &
+  (AsyncClientPickerSingleProps | AsyncClientPickerMultiProps);
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -80,6 +122,12 @@ const missingSearcher: ClientPickerSearchFn = async () => {
     'AsyncClientPicker has no searcher: pass `searchClients` or mount ClientPickerSearchProvider'
   );
 };
+
+// The picker panel is z-[99999]; a select's option list defaults to z-[10001] and would open underneath it.
+const ABOVE_PICKER_PANEL = { content: 'z-[100000]' };
+// Room for the status and type selects plus the tag filter side by side under a narrow trigger:
+// at their natural widths that row needs ~344px, and the panel clips what does not fit.
+const PANEL_MIN_WIDTH = 360;
 
 function PickerFilters({
   id,
@@ -134,39 +182,46 @@ function PickerFilters({
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
-      <CustomSelect
-        id={`${id}-state-filter`}
-        value={status}
-        onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
-        options={statusOptions}
-        placeholder="Filter"
-        className="flex-1 min-w-0"
-      />
-      <CustomSelect
-        id={`${id}-type-filter`}
-        value={clientType}
-        onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
-        options={typeOptions}
-        placeholder="Type"
-        className="flex-1 min-w-0"
-      />
-      {tagOptions.length > 0 && (
-        <TagFilter
-          id={`${id}-tag-filter`}
-          tags={tagOptions}
-          selectedTags={selectedTags}
-          onToggleTag={(tagText) =>
-            onSelectedTagsChange(
-              selectedTags.includes(tagText)
-                ? selectedTags.filter((text) => text !== tagText)
-                : [...selectedTags, tagText]
-            )
-          }
-          onClearTags={() => onSelectedTagsChange([])}
-          modal
-          align="start"
-          contentClassName="z-[100000]"
+      {/* The selects truncate so the tag filter is never pushed past the panel edge, which clips it. */}
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-state-filter`}
+          value={status}
+          onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
+          options={statusOptions}
+          placeholder="Filter"
+          customStyles={ABOVE_PICKER_PANEL}
         />
+      </div>
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-type-filter`}
+          value={clientType}
+          onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
+          options={typeOptions}
+          placeholder="Type"
+          customStyles={ABOVE_PICKER_PANEL}
+        />
+      </div>
+      {tagOptions.length > 0 && (
+        <div className="shrink-0">
+          <TagFilter
+            id={`${id}-tag-filter`}
+            tags={tagOptions}
+            selectedTags={selectedTags}
+            onToggleTag={(tagText) =>
+              onSelectedTagsChange(
+                selectedTags.includes(tagText)
+                  ? selectedTags.filter((text) => text !== tagText)
+                  : [...selectedTags, tagText]
+              )
+            }
+            onClearTags={() => onSelectedTagsChange([])}
+            modal
+            align="start"
+            contentClassName="z-[100000]"
+          />
+        </div>
       )}
     </div>
   );
@@ -181,7 +236,9 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   id = 'client-picker',
   searchClients: searchClientsProp,
   onSelect,
-  selectedClientId,
+  selectedClientId = null,
+  selectedClientIds,
+  onSelectedClientIdsChange,
   filterState,
   onFilterStateChange,
   clientTypeFilter,
@@ -192,10 +249,19 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   className = '',
   placeholder = 'Select Client',
   modal = true,
+  fitContent = false,
+  size = 'sm',
+  triggerVariant = 'outline',
+  triggerSize,
+  triggerButtonClassName = '',
   onAddNew,
   disabled = false,
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs,
+  footerContent: extraFooter,
+  formatSelectedLabel,
+  knownClients,
+  'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
   const contextSearch = useClientPickerSearch();
@@ -207,38 +273,16 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   const status = filterState ?? internalStatus;
   const clientType = clientTypeFilter ?? internalType;
 
-  // Every client we've seen (loaded pages + hydrated), for labels/avatars of the selection.
-  const [known, setKnown] = useState<Record<string, PickerClientOption>>({});
-  const hydratedRef = useRef<Set<string>>(new Set());
+  // Every client we've seen (loaded pages + hydrated), for labels/avatars of the selection. Names
+  // for selected ids that are off the loaded page come from one batched `ids` lookup.
+  const isMulti = selectedClientIds !== undefined;
+  const selectedIds = useMemo(
+    () => (selectedClientIds !== undefined ? selectedClientIds : selectedClientId ? [selectedClientId] : []),
+    [selectedClientIds, selectedClientId],
+  );
   const searchRef = useRef(searchClients);
   searchRef.current = searchClients;
-
-  const remember = useCallback((clients: PickerClientOption[]) => {
-    if (clients.length === 0) return;
-    setKnown((prev) => {
-      const next = { ...prev };
-      for (const c of clients) next[c.client_id] = c;
-      return next;
-    });
-  }, []);
-
-  // Hydrate the selected value once per id when it isn't known yet.
-  useEffect(() => {
-    if (!selectedClientId || known[selectedClientId] || hydratedRef.current.has(selectedClientId)) return;
-    hydratedRef.current.add(selectedClientId);
-    let cancelled = false;
-    searchRef
-      .current({ ids: [selectedClientId] })
-      .then((result) => {
-        if (!cancelled) remember(result.clients);
-      })
-      .catch((error) => {
-        console.error('[AsyncClientPicker] Failed to load selected client:', error);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedClientId, known, remember]);
+  const { clients: known, remember } = useClientNames(selectedIds, searchClients, knownClients);
 
   // Disabled state is presentation only: read through refs and keyed by content, so a new-but-equal
   // Set (or a tooltip change) from a parent re-render never re-issues the server query.
@@ -293,6 +337,27 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   );
 
   const selected = selectedClientId ? known[selectedClientId] : undefined;
+  // Multi trigger: the one client's name, or a count. Wording is translated here, not by the select.
+  const multiLabel =
+    selectedIds.length === 0
+      ? undefined
+      : selectedIds.length === 1
+        ? known[selectedIds[0]]?.client_name
+        : t('pickers.clientsSelectedCount', { count: selectedIds.length, defaultValue: '{{count}} clients' });
+  const selectionProps = isMulti
+    ? {
+        values: selectedIds,
+        onValuesChange: (ids: string[]) => {
+          // Disabled rows are not selectable, but a selection already holding one may drop it.
+          onSelectedClientIdsChange!(ids.filter((cid) => !disabledClientIds?.has(cid) || selectedIds.includes(cid)));
+        },
+      }
+    : {
+        value: selectedClientId ?? '',
+        onChange: (value: string) => {
+          if (value !== selectedClientId && !disabledClientIds?.has(value)) onSelect!(value);
+        },
+      };
 
   const handleStatus = (state: ClientPickerStatusFilter) => {
     if (filterState === undefined) setInternalStatus(state);
@@ -307,23 +372,23 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
     <AsyncSearchableSelect
       id={id}
       triggerId={`${id}-trigger`}
-      value={selectedClientId ?? ''}
-      onChange={(value) => {
-        if (value !== selectedClientId && !disabledClientIds?.has(value)) onSelect(value);
-      }}
+      {...selectionProps}
       loadOptions={loadOptions}
       limit={pageSize}
       debounceMs={debounceMs}
       placeholder={placeholder}
-      selectedLabel={selected?.client_name}
-      selectedTrailing={<EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
+      selectedLabel={(() => {
+        const label = isMulti ? multiLabel : selected?.client_name;
+        return label && formatSelectedLabel ? formatSelectedLabel(label) : label;
+      })()}
+      selectedTrailing={isMulti ? undefined : <EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
       selectedIcon={
-        selected ? (
+        !isMulti && selected ? (
           <ClientAvatar
             clientId={selected.client_id}
             clientName={selected.client_name}
             logoUrl={selected.logoUrl ?? null}
-            size="sm"
+            size={size === 'xs' ? 'xs' : 'sm'}
           />
         ) : undefined
       }
@@ -331,7 +396,14 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       emptyMessage="No clients found."
       className={className}
       disabled={disabled}
+      fitContent={fitContent}
+      triggerVariant={triggerVariant}
+      triggerSize={triggerSize}
+      triggerClassName={triggerButtonClassName}
+      triggerDataAutomationType={dataAutomationType}
       dropdownMode={modal ? 'overlay' : 'inline'}
+      overlayMinWidth={PANEL_MIN_WIDTH}
+      overlayFlip
       headerContent={
         <PickerFilters
           id={id}
@@ -344,24 +416,29 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
         />
       }
       footerContent={
-        onAddNew
+        onAddNew || (extraFooter && (!isMulti || selectedIds.length > 0))
           ? ({ close }) => (
-              <Button
-                id="client-picker-add-new-btn"
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 rounded-none text-primary"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  close();
-                  onAddNew();
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
-              </Button>
+              <>
+                {(!isMulti || selectedIds.length > 0) && extraFooter}
+                {onAddNew && (
+                  <Button
+                    id="client-picker-add-new-btn"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 rounded-none text-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      close();
+                      onAddNew();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
+                  </Button>
+                )}
+              </>
             )
           : undefined
       }

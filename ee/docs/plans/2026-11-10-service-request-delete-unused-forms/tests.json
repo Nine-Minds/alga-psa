@@ -1,0 +1,58 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration (serviceRequestDefinitionManagement.integration.test.ts): a published definition with a version, an answer mapping and an audience tag reference, never submitted, is deleted. Result deleted=true; definition, versions, answer mapping and tag_references rows are gone for that tenant; SERVICE_REQUEST_DEFINITION_DELETED published once",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: a definition with one service_request_submissions row is refused. Result canDelete=false, code DEPENDENCIES_EXIST, a 'submission' dependency with count 1, an 'archive' alternative; definition and versions still exist; no delete event published",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: a never-submitted definition referenced by a checklist_template_apply_rules.where predicate (service_request_definition_id equals/in) is refused with a 'checklist apply rule' dependency; a second tenant's identical rule does not count",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: deleting another tenant's definition id from tenant A returns code NOT_FOUND and the other tenant's definition survives (tenant scoping); a random unknown id also returns NOT_FOUND",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit (packages/auth preCheckDeletion.test.ts): preCheckDeletion('service_request_definition', id) checks hasPermission(user, 'service', 'delete') and returns PERMISSION_DENIED when it is false",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Component test for the shared delete dialog: blocked validation on an archived form renders the submission count with no Archive button; blocked on a draft form renders Archive which calls the archive action; allowed validation confirm calls the delete action and fires onDeleted",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012"
+    ]
+  }
+]

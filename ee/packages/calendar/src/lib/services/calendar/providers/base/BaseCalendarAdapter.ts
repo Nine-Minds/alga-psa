@@ -2,6 +2,20 @@ import { toSafeMicrosoftOAuthFailure } from '@alga-psa/shared/services/email/mic
 import type { CalendarProviderConfig, ExternalCalendarEvent, IScheduleEntry } from '@alga-psa/types';
 
 /**
+ * One change reported by a provider's incremental sync. Series hints travel with
+ * the change so a cancelled occurrence can be applied to its master instead of
+ * being mistaken for a delete of the whole series.
+ */
+export interface CalendarEventChange {
+  id: string;
+  changeType: 'updated' | 'deleted';
+  /** Google `recurringEventId` / Graph `seriesMasterId`, when the change is an instance. */
+  recurringEventId?: string;
+  /** The occurrence slot the instance was generated for (ISO or YYYY-MM-DD). */
+  originalStart?: string;
+}
+
+/**
  * Base abstract class for calendar provider adapters
  * Provides common functionality and enforces interface implementation
  */

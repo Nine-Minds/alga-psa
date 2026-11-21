@@ -50,6 +50,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({
     formatCurrency: (value: number) => `$${value.toFixed(2)}`,
     formatDate: (value: string) => value,
+    formatCalendarDate: (value: string) => value,
   }),
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string; count?: number }) => {

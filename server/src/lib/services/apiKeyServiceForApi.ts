@@ -4,6 +4,7 @@ import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { shouldTouchApiKeyLastUsed } from '@alga-psa/auth';
 import { getConnection } from '../db/db';
 import { servicePrincipalKeyGate } from '@product/service-principals/entry';
+import { mayHoldApiCredentials, principalMemberColumns, type ApiCredentialInput } from '@alga-psa/authorization/subject/principalKind';
 import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 
 interface ApiKey {
@@ -85,7 +86,7 @@ export class ApiKeyServiceForApi {
         throw coManagedAcceptancePendingError();
       }
 
-      const gateReason = await this.getKeyGateReason(knex, tenantId, record.user_id);
+      const gateReason = await this.getKeyGateReason(knex, tenantId, record.user_id, { purpose: record.purpose, plaintext: plaintextKey });
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${tenantId}`);
         if (gateReason === 'client_owner') {
@@ -168,7 +169,7 @@ export class ApiKeyServiceForApi {
         throw coManagedAcceptancePendingError();
       }
 
-      const gateReason = await this.getKeyGateReason(knex, record.tenant, record.user_id);
+      const gateReason = await this.getKeyGateReason(knex, record.tenant, record.user_id, { purpose: record.purpose, plaintext: plaintextKey });
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${record.tenant}`);
         if (gateReason === 'client_owner') {
@@ -217,14 +218,18 @@ export class ApiKeyServiceForApi {
   private static async getKeyGateReason(
     knex: Knex,
     tenant: string,
-    userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
+    userId: string,
+    credential: ApiCredentialInput
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'principal_refused' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive', 'user_type');
+      .first('is_inactive', 'user_type', ...principalMemberColumns(knex, { tenant, userId }));
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // REST refuses a key whose owner's principal kind may not hold API credentials, including a key issued
+    // before the owner became that kind.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: user.principal_member, credential }))) return 'principal_refused';
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {

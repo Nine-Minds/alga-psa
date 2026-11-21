@@ -145,10 +145,17 @@ export type ComputeQuoteTotalsItem = QuoteTotalsRowInput & {
   /**
    * Tax the row carries when included, in minor units, already resolved by the
    * server's tax engine (region, composite/threshold rates and `Math.ceil`
-   * rounding all live there). Tax is computed per row on its gross amount, so
-   * it does not depend on which other rows are selected.
+   * rounding all live there), on the row's gross amount — so it does not depend
+   * on which other rows are selected.
    */
   taxAmountIfIncluded?: number | string | null;
+  /**
+   * Exact tax percentage behind `taxAmountIfIncluded`. Discounts apply before
+   * tax and the share a row absorbs depends on the selection, so this is what
+   * lets a preview re-derive the row's tax for a selection the server has not
+   * seen. See `discountedRowTax`.
+   */
+  taxRateIfIncluded?: number | string | null;
 };
 
 export interface ComputeQuoteTotalsGroup {
@@ -169,6 +176,28 @@ export interface ComputeQuoteTotalsResult {
 }
 
 /**
+ * Tax of one row on its discounted base: a seller-funded discount lowers the
+ * taxable base of the rows it applies to, and the share a row absorbs depends
+ * on the selection, which only this function knows.
+ *
+ * `resolved` is the server's tax for the row at `gross`. When that number is
+ * reproducible as `ceil(gross * rate / 100)` — the flat path the tax engine
+ * takes when the rate carries no thresholds — the same formula at the reduced
+ * base is exactly what the recalculation will persist, so the preview of any
+ * selection agrees with the server. A row whose tax is not rate proportional
+ * (threshold or composite rates), or one already taxed on its discounted base
+ * by the caller, keeps the resolved amount.
+ */
+function discountedRowTax(item: ComputeQuoteTotalsItem, share: number): number {
+  const resolved = toFiniteNumber(item.taxAmountIfIncluded);
+  if (share <= 0) return resolved;
+  const gross = rowGrossAmount(item);
+  const rate = toFiniteNumber(item.taxRateIfIncluded);
+  if (rate <= 0 || Math.ceil((gross * rate) / 100) !== resolved) return resolved;
+  return Math.ceil((Math.max(0, gross - share) * rate) / 100);
+}
+
+/**
  * Pure, synchronous derivation of a quote's totals from rows whose tax is
  * already resolved. Used by `recalculateQuoteFinancials` (which resolves tax
  * through the DB) and by the client portal's local optional-item preview, so
@@ -177,13 +206,19 @@ export interface ComputeQuoteTotalsResult {
 export function computeQuoteTotals(items: ComputeQuoteTotalsItem[]): ComputeQuoteTotalsResult {
   const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.id);
   const discountAmountById = new Map<string, number>();
+  const discountShareById = new Map<string, number>();
   for (const result of allocation.discounts) {
     discountAmountById.set(result.discountId, result.resolvedAmount);
+    for (const part of result.allocations) {
+      discountShareById.set(part.baseItemId, (discountShareById.get(part.baseItemId) ?? 0) + part.amount);
+    }
   }
+  const taxOf = (item: ComputeQuoteTotalsItem): number =>
+    discountedRowTax(item, discountShareById.get(item.id) ?? 0);
 
   const summary = summarizeQuoteTotals(items, {
     amountOf: (item) => rowGrossAmount(item),
-    taxOf: (item) => toFiniteNumber(item.taxAmountIfIncluded),
+    taxOf,
     discountTotal: allocation.totalDiscount,
   });
 
@@ -203,7 +238,7 @@ export function computeQuoteTotals(items: ComputeQuoteTotalsItem[]): ComputeQuot
     if (item.is_discount || !isQuoteItemIncluded(item)) continue;
     const entry = groupEntry(item.groupKey ?? '');
     entry.subtotal += rowGrossAmount(item);
-    entry.tax += toFiniteNumber(item.taxAmountIfIncluded);
+    entry.tax += taxOf(item);
   }
   for (const discount of allocation.discounts) {
     for (const part of discount.allocations) {

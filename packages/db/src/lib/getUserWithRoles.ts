@@ -1,8 +1,8 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
-import type { IUser, IRole, IUserWithRoles } from '@alga-psa/types';
+import type { AuthenticatedUser, IRole, AuthenticatedUserWithRoles } from '@alga-psa/types';
+import { AUTHENTICATED_USER_FIELD_NAMES } from '@alga-psa/types';
 import { createTenantKnex } from './tenant';
 import { withTransaction } from './tenant';
 import { tenantDb } from './tenantDb';
@@ -10,6 +10,8 @@ import { tenantDb } from './tenantDb';
 /**
  * Session-independent function to get a user with their roles.
  * This can be called from any package without creating circular dependencies.
+ * Includes credential-free authorization metadata; public actions must project
+ * the result with sanitizeUserForResponse before returning it to a client.
  *
  * @param userId - The user ID to fetch
  * @param tenantId - The tenant ID for the user
@@ -20,7 +22,7 @@ export async function getUserWithRoles(
   userId: string,
   tenantId: string,
   getAvatarUrl?: (userId: string, tenant: string) => Promise<string | null>
-): Promise<IUserWithRoles | null> {
+): Promise<AuthenticatedUserWithRoles | null> {
   const { knex, tenant } = await createTenantKnex(tenantId);
 
   // Verify tenant matches for security
@@ -32,8 +34,8 @@ export async function getUserWithRoles(
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenantId);
 
-    const user = await scopedDb.table<IUser>('users')
-      .select(...USER_RESPONSE_FIELD_NAMES)
+    const user = await scopedDb.table<AuthenticatedUser>('users')
+      .select(...AUTHENTICATED_USER_FIELD_NAMES)
       .where('user_id', userId)
       .first();
 
@@ -88,14 +90,14 @@ export async function getUserWithRolesByEmail(
   tenantId: string,
   userType?: string,
   getAvatarUrl?: (userId: string, tenant: string) => Promise<string | null>
-): Promise<IUserWithRoles | null> {
+): Promise<AuthenticatedUserWithRoles | null> {
   const { knex } = await createTenantKnex(tenantId);
 
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenantId);
 
-    let query = scopedDb.table<IUser>('users')
-      .select(...USER_RESPONSE_FIELD_NAMES)
+    let query = scopedDb.table<AuthenticatedUser>('users')
+      .select(...AUTHENTICATED_USER_FIELD_NAMES)
       .where('email', email.toLowerCase());
 
     if (userType) {

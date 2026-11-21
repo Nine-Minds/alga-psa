@@ -28,13 +28,20 @@ import { fileURLToPath } from 'node:url';
 export const ALLOWED_PREFIXES = ['ee/', 'packages/product-service-principals/', 'packages/ee/'];
 
 // This guard and its test necessarily spell out the forbidden names.
+// The generated Enterprise OpenAPI documents describe the EE-only act-as header and error
+// codes by design; they are produced from the EE decorator under
+// packages/product-service-principals/ee (sdk/scripts/generate-openapi.ts --edition ee).
+// The Community documents (alga-openapi.{ce,}.*) stay subject to the guard.
 export const SELF_EXEMPT_PATHS = [
   'scripts/guard-service-principals-boundary.mjs',
   'server/src/test/unit/editionBoundary/servicePrincipalsBoundary.guard.test.ts',
+  'sdk/docs/openapi/alga-openapi.ee.json',
+  'sdk/docs/openapi/alga-openapi.ee.yaml',
 ];
 
 const SCANNED_EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|json|sql|ya?ml|sh)$/;
 const SKIPPED_FILES = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml)$/;
+const NEXT_BUILD_OUTPUT = /(^|\/)\.next(?:-[^/]+)?\//;
 
 // The 'service' key purpose is a quoted 'service' literal with the word
 // "purpose" on the same line or within PURPOSE_WINDOW lines of it (so a purpose
@@ -103,7 +110,7 @@ export function collectRepoFiles(root) {
   }
   const files = [];
   for (const path of result.stdout.split('\0')) {
-    if (!path || !SCANNED_EXTENSIONS.test(path) || SKIPPED_FILES.test(path) || isAllowedPath(path)) continue;
+    if (!path || !SCANNED_EXTENSIONS.test(path) || SKIPPED_FILES.test(path) || NEXT_BUILD_OUTPUT.test(path) || isAllowedPath(path)) continue;
     try {
       files.push({ path, content: readFileSync(join(root, path), 'utf8') });
     } catch {

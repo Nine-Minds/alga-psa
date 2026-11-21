@@ -20,8 +20,16 @@ const mockGetClientMaintenanceSummaries = vi.fn();
 const mockGetAssetTypes = vi.fn();
 const mockGetAssetCountsByType = vi.fn();
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
+vi.mock('../actions/assetNumberingActions', () => ({
+  createMinimalAssetForLabelIntake: vi.fn(),
+  completeScannedAssetReservation: vi.fn(),
+  findAssetByScannedTag: vi.fn(),
+}));
+
 vi.mock('../actions/assetActions', () => ({
   listAssets: (...args: unknown[]) => mockListAssets(...args),
   bulkUpdateAssets: vi.fn(),
@@ -297,8 +305,9 @@ describe('AssetDashboardClient custom types (T314)', () => {
       const matching = search
         ? allAssets.filter((item) => item.name.toLowerCase().includes(search))
         : allAssets;
-      const filtered = params?.asset_type
-        ? matching.filter((item) => item.asset_type === params.asset_type)
+      const typeFilter = params?.asset_types ?? (params?.asset_type ? [params.asset_type] : []);
+      const filtered = typeFilter.length > 0
+        ? matching.filter((item) => typeFilter.includes(item.asset_type))
         : matching;
       const asset_type_counts: Record<string, number> = {};
       for (const item of matching) {
@@ -361,7 +370,7 @@ describe('AssetDashboardClient custom types (T314)', () => {
 
     await waitFor(() => {
       expect(mockListAssets).toHaveBeenLastCalledWith(
-        expect.objectContaining({ asset_type: 'door_access' })
+        expect.objectContaining({ asset_types: ['door_access'] })
       );
     });
 
@@ -371,6 +380,38 @@ describe('AssetDashboardClient custom types (T314)', () => {
       expect(table.textContent).not.toContain('WS-1');
       expect(table.textContent).not.toContain('Mystery Box');
     });
+  });
+
+  it('joins the results of every selected type bubble in one request per click', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+
+    const doorChip = await waitFor(() => {
+      const el = document.getElementById('asset-type-breakdown-door_access');
+      expect(el).toBeTruthy();
+      return el as HTMLButtonElement;
+    });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+    mockListAssets.mockClear();
+
+    await userEvent.click(doorChip);
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenLastCalledWith(expect.objectContaining({ asset_types: ['door_access'] }));
+    });
+    await userEvent.click(document.getElementById('asset-type-breakdown-workstation')!);
+
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenLastCalledWith(
+        expect.objectContaining({ asset_types: ['door_access', 'workstation'] })
+      );
+    });
+    const table = document.getElementById('asset-table')!;
+    await waitFor(() => {
+      expect(table.textContent).toContain('Door 42');
+      expect(table.textContent).toContain('WS-1');
+      expect(table.textContent).not.toContain('Mystery Box');
+    });
+    expect(mockListAssets).toHaveBeenCalledTimes(2);
+    expect(mockListAssets.mock.calls.every(([params]) => params.asset_type === undefined)).toBe(true);
   });
 
   it('shows the by-type breakdown with registry labels (F313 wiring)', async () => {

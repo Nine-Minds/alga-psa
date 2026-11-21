@@ -3,6 +3,8 @@
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   permissionError,
@@ -15,6 +17,7 @@ import {
   queryDeployments,
   queryGhostWeek,
   queryOverdueLoaners,
+  queryOverdueAdvanceVendorReturns,
   queryPipeline,
   queryPriceCreep,
   queryRmaReceivables,
@@ -31,6 +34,8 @@ import {
   totalMoneyByCurrency,
 } from '../lib/dashboardQueries';
 import { resolveTenantCurrency } from '../lib/tenantCurrency';
+import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
+import { overdueVendorReturnAttention } from '../lib/overdueVendorReturnAttention';
 
 /**
  * Consolidated data feed for the Inventory dashboard ("money before lunch").
@@ -55,6 +60,7 @@ export type AttentionKind =
   | 'ghost_tech'
   | 'rma_vendor'
   | 'rma_client'
+  | 'rma_vendor_return'
   | 'price_creep_so'
   | 'price_creep_quotes'
   | 'price_creep_bill'
@@ -375,6 +381,13 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const unbilled = await queryUnbilled(trx, tenant, ghost_week);
     const priceCreep = await queryPriceCreep(trx, tenant);
     const rma_receivables = await queryRmaReceivables(trx, tenant);
+    const rmaReadScope = await resolveRmaReadScope(user);
+    const effectiveTimeZone = await resolveEffectiveTimeZone(trx, tenant, user.user_id);
+    const today = toCalendarDateStringInTimeZone(new Date(), effectiveTimeZone);
+    const overdueVendorReturnRows = rmaReadScope.allowed
+      ? await queryOverdueAdvanceVendorReturns(trx, tenant, today)
+      : [];
+    const readableOverdueVendorReturns = await filterReadableRmaCases(trx, tenant, user, overdueVendorReturnRows, rmaReadScope);
     const deployments = await queryDeployments(trx, tenant);
     const pipeline = await queryPipeline(trx, tenant);
     const deadStock = await queryDeadStock(trx, tenant, currency_code);
@@ -425,7 +438,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .leftJoin('service_catalog as sc', function () {
         this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
       })
+      // Stock-unit track only; advance-track vendor return deadlines have their own attention signal above.
       .where({ 'r.tenant': tenant, 'r.status': 'dead_unit_owed' })
+      .whereNotNull('r.returned_unit_id')
       .select<any[]>(
         'r.rma_id as rma_id',
         'r.rma_reference as rma_reference',
@@ -613,6 +628,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         action: { key: 'chase', href: ROUTES.rmaVendorCredits },
       });
     }
+
+    // Advance-track warranty returns are obligations to the vendor, separate from stock/client dead-unit debts.
+    attention.push(...overdueVendorReturnAttention(readableOverdueVendorReturns));
 
     // Dead units owed to clients (advance replacement clock).
     for (const r of deadOwedRows) {

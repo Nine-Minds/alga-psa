@@ -30,4 +30,16 @@ describe('portal invitation setup tenant-scoped query contract', () => {
     expect(section).not.toMatch(/knex\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('roles'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
   });
+
+  it('relinks an orphaned portal account through the shared tenant-scoped lookup', () => {
+    const section = sectionBetween('export async function completePortalSetup', 'export const getPortalInvitations');
+
+    expect(section).toContain('const existingEmailOwner = await findPortalEmailOwner(knex, tenant, contact.email);');
+    expect(section).toContain("classifyPortalEmailOwner(existingEmailOwner, contact.contact_name_id) === 'orphaned'");
+    expect(section).toContain('completeSetupForExistingUser(existingEmailOwner, contact.contact_name_id)');
+    expect(section).toContain('relinkOrphanedPortalUser(trx, tenant, existingUser.user_id, relinkContactId)');
+    expect(section).toContain("errorCode: 'PORTAL_USER_ALREADY_EXISTS'");
+    // The hand-scoped `knex('users').where({ tenant })` owner probe is gone.
+    expect(section).not.toContain("await knex('users')");
+  });
 });

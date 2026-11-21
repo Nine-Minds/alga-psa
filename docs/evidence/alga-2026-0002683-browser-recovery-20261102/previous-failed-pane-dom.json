@@ -1,0 +1,20 @@
+{
+  "paneId": "c8b5a26d-b238-4df9-87f0-4d0b95e3b67d",
+  "success": true,
+  "result": {
+    "url": "chrome-error://chromewebdata/",
+    "title": "",
+    "tree": {
+      "uid": "e0",
+      "tag": "body",
+      "visible": true,
+      "bounds": {
+        "x": 8,
+        "y": 8,
+        "width": 2620,
+        "height": 1037
+      },
+      "selector": "body"
+    }
+  }
+}

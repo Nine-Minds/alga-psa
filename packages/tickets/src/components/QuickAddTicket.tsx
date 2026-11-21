@@ -13,11 +13,10 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
-import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
-import { getContactsByClient, getClientLocations, getClientById } from '../actions/clientLookupActions';
+import { getContactsByClient, getClientLocations, getContactEffectiveLocation, getClientById } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketDuplicateSource } from '../actions/ticketActions';
 import { getTicketTemplateForCreate, listTicketTemplatesForCreate } from '../actions/ticketTemplateActions';
@@ -45,6 +44,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
+import { getBoardDefaultPriorityId } from '../lib/boardDefaultPriority';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -145,36 +145,6 @@ const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | n
   );
 };
 
-const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: 'custom' | 'itil'): string => {
-  if (!availablePriorities.length) return '';
-
-  if (priorityType === 'itil') {
-    const itilPriorities = availablePriorities.filter(priority => priority.is_from_itil_standard);
-    const mediumItilPriority = itilPriorities.find(priority => priority.itil_priority_level === 3);
-    return mediumItilPriority?.priority_id || itilPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
-  }
-
-  const customPriorities = availablePriorities.filter(priority => !priority.is_from_itil_standard);
-  return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
-};
-
-const getBoardDefaultPriorityId = (board: IBoard | undefined, availablePriorities: IPriority[]): string => {
-  if (!availablePriorities.length) return '';
-
-  const boardDefault = board?.default_priority_id || '';
-  if (boardDefault) {
-    const match = availablePriorities.find(p => p.priority_id === boardDefault);
-    if (match) {
-      // Guard against misconfiguration: only use ITIL defaults for ITIL boards and vice versa.
-      const priorityType = board?.priority_type || 'custom';
-      if (priorityType === 'itil' && match.is_from_itil_standard) return boardDefault;
-      if (priorityType !== 'itil' && !match.is_from_itil_standard) return boardDefault;
-    }
-  }
-
-  return getDefaultPriorityId(availablePriorities, board?.priority_type);
-};
-
 interface QuickAddTicketProps {
   id?: string;
   open: boolean;
@@ -255,6 +225,7 @@ export function QuickAddTicket({
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // True once a "Create + View" navigation has been handed to onViewCreatedTicket. The
   // navigation is a slow RSC fetch during which this modal is still mounted; keep the actions
@@ -274,6 +245,7 @@ export function QuickAddTicket({
   );
   const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
+  const [assignedToWasEdited, setAssignedToWasEdited] = useState(Boolean(prefilledAssignedTo));
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
   const [tempAdditionalAgents, setTempAdditionalAgents] = useState<
     { user_id: string; first_name: string; last_name: string; temp_id: string }[]
@@ -320,6 +292,18 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
+  // Who put the location there. A location the dispatcher chose by hand is never replaced when the
+  // contact changes; one the contact filled is replaced, or cleared when the contact is cleared.
+  // A ref, not state: the duplicate/prefill sequence reads it in the same pass that writes it, and
+  // a state value would still be the pre-render one there (the bug that left a prefilled contact's
+  // location unresolved). Nothing renders from it.
+  const locationSourceRef = useRef<'user' | 'contact' | null>(null);
+  const applyLocation = (nextLocationId: string | null, source: 'user' | 'contact' | null) => {
+    locationSourceRef.current = source;
+    setLocationId(nextLocationId);
+  };
+  const [contactLocationIds, setContactLocationIds] = useState<string[]>([]);
+  const [contactPrimaryLocationId, setContactPrimaryLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
@@ -463,6 +447,7 @@ export function QuickAddTicket({
         }
         if (prefilledAssignedTo) {
           setAssignedTo(prefilledAssignedTo);
+          setAssignedToWasEdited(true);
         }
         if (prefilledDueDate) {
           setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -482,6 +467,15 @@ export function QuickAddTicket({
           } else {
             applyTemplateSource(templateResult);
           }
+        }
+
+        // Last, so a duplicate's own location (hand-picked) still wins: a contact that arrived
+        // prefilled fills the Location select exactly as picking that contact here would.
+        const effectiveContactId = duplicateResult && !isReturnedActionError(duplicateResult)
+          ? duplicateResult.contact?.id ?? null
+          : prefilledContact?.id ?? null;
+        if (effectiveContactId) {
+          await loadContactLocations(effectiveContactId);
         }
       } catch (error) {
         console.error('Error fetching form data:', error);
@@ -692,14 +686,15 @@ export function QuickAddTicket({
     if (!updateMetadata) return;
 
     updateMetadata({
-      helperText: error || undefined,
+      helperText: error || validationErrors.join('\n') || undefined,
       open: open,
     });
-  }, [error, open]);
+  }, [error, validationErrors, open]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError(null);
+      setValidationErrors([]);
     }
   };
 
@@ -720,7 +715,9 @@ export function QuickAddTicket({
     setExtraAssetIds([]);
     setContactId(null);
     // The location belongs to the client that was selected before.
-    setLocationId(null);
+    applyLocation(null, null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     clearErrorIfSubmitted();
 
     setSelectedClientType(null);
@@ -756,24 +753,6 @@ export function QuickAddTicket({
     clearErrorIfSubmitted();
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
-
-    // Pre-fill assigned agent and team from board's defaults if not already set
-    if (!assignedTo && newBoardId) {
-      if (selectedBoard?.default_assigned_team_id) {
-        // Resolve current team lead dynamically
-        const defaultTeam = teams.find(t => t.team_id === selectedBoard.default_assigned_team_id);
-        if (defaultTeam?.manager_id) {
-          setAssignedTo(defaultTeam.manager_id);
-        } else if (selectedBoard.default_assigned_to) {
-          setAssignedTo(selectedBoard.default_assigned_to);
-        }
-      } else if (selectedBoard?.default_assigned_to) {
-        setAssignedTo(selectedBoard.default_assigned_to);
-      }
-    }
-    if (!assignedTeamId && selectedBoard?.default_assigned_team_id) {
-      setAssignedTeamId(selectedBoard.default_assigned_team_id);
-    }
 
     const priorityType = selectedBoard?.priority_type || 'custom';
     const defaultPriorityId = getBoardDefaultPriorityId(selectedBoard, priorities);
@@ -838,8 +817,10 @@ export function QuickAddTicket({
     setSelectedClientName(source.client.name || null);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
-    setLocationId(source.location_id ?? null);
+    // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
+    applyLocation(source.location_id ?? null, source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
+    setAssignedToWasEdited(source.assigned_to != null);
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
       source.additional_agents.map((agent) => ({
@@ -850,6 +831,69 @@ export function QuickAddTicket({
       }))
     );
   }
+
+  /**
+   * Where this person works, marked in the select and filled in when the field is empty or the
+   * previous contact filled it — the same rule the model applies on save. Used both when the
+   * dispatcher picks a contact and when one arrives prefilled (the contact page's Create Ticket,
+   * an interaction), because to the operator those are the same thing.
+   */
+  const loadContactLocations = async (contactIdToLoad: string) => {
+    try {
+      const effective = await getContactEffectiveLocation(contactIdToLoad);
+      setContactLocationIds(effective.locations.map((location) => location.location_id));
+      setContactPrimaryLocationId(
+        effective.locations.find((location) => location.is_primary)?.location_id ?? null,
+      );
+      if (locationSourceRef.current !== 'user') {
+        applyLocation(effective.locationId, effective.locationId ? 'contact' : null);
+      }
+    } catch (error) {
+      console.error('Error resolving the contact effective location:', error);
+    }
+  };
+
+  /** Clearing the contact clears a contact-filled location and leaves a hand-picked one alone. */
+  const handleContactSelect = async (nextContactId: string | null) => {
+    setContactId(nextContactId);
+
+    if (!nextContactId) {
+      setContactLocationIds([]);
+      setContactPrimaryLocationId(null);
+      if (locationSourceRef.current === 'contact') {
+        applyLocation(null, null);
+      }
+      return;
+    }
+
+    await loadContactLocations(nextContactId);
+  };
+
+  // The contact's own sites first and marked, then everything else the client has.
+  const contactLocationIdSet = useMemo(() => new Set(contactLocationIds), [contactLocationIds]);
+  const locationOptions = useMemo(() => {
+    const label = (location: IClientLocation) =>
+      formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location'))
+      + (location.location_id === contactPrimaryLocationId
+        ? ` ${t('quickAdd.contactPrimaryLocationSuffix', "(contact's primary)")}`
+        : contactLocationIdSet.has(location.location_id)
+          ? ` ${t('quickAdd.contactLocationSuffix', "(contact's location)")}`
+          : '')
+      + (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '');
+
+    const contactLocations = locations.filter((location) => contactLocationIdSet.has(location.location_id));
+    const contactsFirst = [
+      // Primary ahead of the contact's other sites, so the row the model would pick reads first.
+      ...contactLocations.filter((location) => location.location_id === contactPrimaryLocationId),
+      ...contactLocations.filter((location) => location.location_id !== contactPrimaryLocationId),
+      ...locations.filter((location) => !contactLocationIdSet.has(location.location_id)),
+    ];
+
+    return [
+      ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
+      ...contactsFirst.map((location) => ({ value: location.location_id, label: label(location) })),
+    ];
+  }, [locations, contactLocationIdSet, contactPrimaryLocationId, t]);
 
   // The ticket fields a duplicate and a template have in common. Same rule as above: state is set
   // directly, never through handleBoardChange, so the copied priority / category survive and the
@@ -951,6 +995,7 @@ export function QuickAddTicket({
     setDescriptionContent(parseTicketRichTextContent(prefilledDescription || ''));
     setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
+    setAssignedToWasEdited(Boolean(prefilledAssignedTo));
     setAssignedTeamId(null);
     setTempAdditionalAgents(
       prefilledAdditionalAgents?.length
@@ -973,7 +1018,10 @@ export function QuickAddTicket({
     setClientId(prefilledClient?.id || '');
     setSelectedClientName(prefilledClient?.name ?? null);
     setContactId(prefilledContact?.id || null);
-    setLocationId(null);
+    // Nobody has said anything about the location yet, so the next contact may fill it again.
+    applyLocation(null, null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     setLocations([]);
     setContacts([]);
     // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
@@ -1003,6 +1051,7 @@ export function QuickAddTicket({
       setDueDate(undefined);
     }
     setError(null);
+    setValidationErrors([]);
     setHasAttemptedSubmit(false);
     ticketCreatedRef.current = false;
     setTicketCreated(false);
@@ -1196,11 +1245,13 @@ export function QuickAddTicket({
     }
     setHasAttemptedSubmit(true);
 
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join('\n'));
+    const missingFields = validateForm();
+    setValidationErrors(missingFields);
+    if (missingFields.length > 0) {
+      setError(null);
       return;
     }
+    setError(null);
 
     createInFlightRef.current = true;
     setIsSubmitting(true);
@@ -1216,7 +1267,12 @@ export function QuickAddTicket({
         : descriptionContent;
 
       formData.append('description', serializeTicketRichTextContent(descriptionForCreate));
-      formData.append('assigned_to', assignedTo);
+      // An untouched empty picker means the caller omitted assignment, so the
+      // shared create path can apply board defaults. A deliberate clear keeps
+      // the empty value to preserve explicit-unassigned intent.
+      if (assignedTo || assignedToWasEdited) {
+        formData.append('assigned_to', assignedTo);
+      }
       formData.append('board_id', boardId);
       formData.append('status_id', statusId);
 
@@ -1232,6 +1288,9 @@ export function QuickAddTicket({
 
       if (locationId) {
         formData.append('location_id', locationId);
+      } else if (locationSourceRef.current === 'user') {
+        // An explicit None, not an untouched field: the model must keep null rather than resolve.
+        formData.append('location_id', 'none');
       }
 
       if (selectedCategories.length > 0) {
@@ -1259,6 +1318,9 @@ export function QuickAddTicket({
       }
       if (watcherIds.length > 0) {
         formData.append('watcher_ids', JSON.stringify(watcherIds));
+      }
+      if (tempAdditionalAgents.length > 0) {
+        formData.append('additional_agent_ids', JSON.stringify(tempAdditionalAgents.map((agent) => agent.user_id)));
       }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
@@ -1334,20 +1396,6 @@ export function QuickAddTicket({
           toast.error(teamError instanceof Error
             ? teamError.message
             : t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
-        }
-      }
-
-      // Add additional agents as ticket resources
-      if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
-        for (const agent of tempAdditionalAgents) {
-          try {
-            const resourceResult = await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
-            if (isReturnedActionError(resourceResult)) {
-              throw new Error(getErrorMessage(resourceResult));
-            }
-          } catch (agentError) {
-            console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
-          }
         }
       }
 
@@ -1529,16 +1577,22 @@ export function QuickAddTicket({
             </div>
           ) : (
             <>
-                  {hasAttemptedSubmit && error && (
+              {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
                     <p className="font-medium mb-2">{t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      {error.split('\n').map((err, index) => (
+                      {validationErrors.map((err, index) => (
                         <li key={index}>{err}</li>
                       ))}
                     </ul>
                   </AlertDescription>
+                </Alert>
+              )}
+
+              {hasAttemptedSubmit && error && (
+                <Alert variant="destructive" className="mb-4" data-testid="quick-add-ticket-error">
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
@@ -1696,7 +1750,7 @@ export function QuickAddTicket({
                       contacts={contacts}
                       value={contactId || ''}
                       onValueChange={(value) => {
-                        setContactId(value || null);
+                        handleContactSelect(value || null);
                         clearErrorIfSubmitted();
                       }}
                       clientId={clientId}
@@ -1714,17 +1768,11 @@ export function QuickAddTicket({
                       id={`${id}-location`}
                       value={locationId || ''}
                       onValueChange={(value) => {
-                        setLocationId(value === 'none' ? null : value || null);
+                        // Including an explicit None: the dispatcher said it, so nothing overwrites it.
+                        applyLocation(value === 'none' ? null : value || null, 'user');
                         clearErrorIfSubmitted();
                       }}
-                      options={[
-                        ...(locations.length > 0 ? [{ value: 'none', label: t('quickAdd.none', 'None') }] : []),
-                        ...locations.map(location => ({
-                          value: location.location_id,
-                          label: formatLocationDisplay(location, t('quickAdd.unnamedLocation', 'Unnamed Location')) +
-                            (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '')
-                        }))
-                      ]}
+                      options={locationOptions}
                       placeholder={locations.length === 0
                         ? t('quickAdd.noLocationsForClient', 'No locations for selected client')
                         : t('quickAdd.selectLocation', 'Select location')}
@@ -1750,13 +1798,16 @@ export function QuickAddTicket({
                         value={assignedTo}
                         onValueChange={(value) => {
                           setAssignedTo(value);
+                          setAssignedToWasEdited(true);
                           setAssignedTeamId(null);
                           clearErrorIfSubmitted();
                         }}
                         onTeamSelect={(teamId) => {
+                          setAssignedToWasEdited(true);
                           const team = teams.find(t => t.team_id === teamId);
                           if (team?.manager_id) {
                             setAssignedTo(team.manager_id);
+                            setAssignedToWasEdited(true);
                           }
                           setAssignedTeamId(teamId);
                           // Expand team members into additional agents
@@ -1815,6 +1866,7 @@ export function QuickAddTicket({
                             const team = teams.find(t => t.team_id === teamId);
                             if (team?.manager_id) {
                               setAssignedTo(team.manager_id);
+                              setAssignedToWasEdited(true);
                             }
                             setAssignedTeamId(teamId);
                             const members = team?.members || [];
@@ -2255,7 +2307,7 @@ export function QuickAddTicket({
             }
             return [...prevContacts, newContact];
           });
-          setContactId(newContact.contact_name_id);
+          void handleContactSelect(newContact.contact_name_id);
           setIsQuickAddContactOpen(false);
         },
         selectedClientId: clientId,

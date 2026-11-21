@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   ensureWorkflowScheduleStateTable,
   resetWorkflowRuntimeTables

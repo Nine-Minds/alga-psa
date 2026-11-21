@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Invoice Line Description",
         "invoiceLineDescriptionPlaceholder": "e.g. Monthly phone system maintenance per 2019 agreement",
         "nameLabel": "Contract Line Name *",
-        "namePlaceholder": "e.g. Managed Support - Gold"
+        "namePlaceholder": "e.g. Managed Support - Gold",
+        "invoiceLineSubtitleLabel": "Invoice Line Subtitle",
+        "invoiceLineSubtitlePlaceholder": "e.g. Managed endpoint and backup services",
+        "invoiceLineSubtitleHelp": "Shown as a muted second line under the title when this fixed line appears on an invoice."
       },
       "cardTitle": "Edit Contract Line: {{name}} (Fixed)",
       "errors": {

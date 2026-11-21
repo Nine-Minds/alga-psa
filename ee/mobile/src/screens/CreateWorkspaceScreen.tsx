@@ -597,7 +597,7 @@ export function CreateWorkspaceScreen() {
       <View style={{ marginTop: theme.spacing.xl }}>
         <PrimaryButton
           onPress={() => void onSubscribe()}
-          disabled={busy /* TEMP: removed `|| !product` so the email check can be tested before Apple makes the product available; revert before merging */}
+          disabled={busy || !product}
           accessibilityLabel={t("subscribe", "Subscribe")}
         >
           {busy ? busyLabel : t("subscribe", "Subscribe")}

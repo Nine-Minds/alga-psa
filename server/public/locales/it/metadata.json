@@ -232,6 +232,9 @@
       "title": "Richieste di servizio",
       "detail": {
         "fallbackTitle": "Richiesta di servizio"
+      },
+      "formBuilder": {
+        "title": "Editor del modulo"
       }
     },
     "surveys": {
@@ -375,6 +378,10 @@
       "title": "Asset",
       "custody": {
         "title": "Apparecchiature in custodia"
+      },
+      "audits": {
+        "title": "Audit delle sedi",
+        "detailTitle": "Audit della sede"
       }
     },
     "chat": {
@@ -521,7 +528,10 @@
       "defaultTitle": "Dashboard | AlgaPSA"
     },
     "coManaged": {
-      "title": "IT cogestita"
+      "title": "IT cogestita",
+      "archive": {
+        "title": "Archivio IT co-gestita"
+      }
     },
     "coManagement": {
       "title": "Accesso cogestito",
@@ -542,8 +552,17 @@
         "taskTitle": "Attività condivisa",
         "projectTitle": "Progetto condiviso"
       },
+      "departure": {
+        "title": "Termina l’IT co-gestita"
+      },
+      "sla": {
+        "title": "Priorità SLA cogestite"
+      },
       "export": {
         "title": "Esporta area di lavoro"
+      },
+      "upgrade": {
+        "title": "Passa ad AlgaPSA"
       }
     }
   },

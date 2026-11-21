@@ -24,6 +24,10 @@
       "types": "./src/components/bento/index.ts",
       "import": "./dist/components/bento/index.mjs"
     },
+    "./components/designer": {
+      "types": "./src/components/designer/index.ts",
+      "import": "./dist/components/designer/index.mjs"
+    },
     "./components/*": {
       "types": "./src/components/*.tsx",
       "import": "./dist/components/*.mjs"
@@ -95,6 +99,14 @@
     "./editor/*": {
       "types": "./src/editor/*.tsx",
       "import": "./dist/editor/*.mjs"
+    },
+    "./form-fields": {
+      "types": "./src/form-fields/index.ts",
+      "import": "./dist/form-fields/index.mjs"
+    },
+    "./form-fields/*": {
+      "types": "./src/form-fields/*.ts",
+      "import": "./dist/form-fields/*.mjs"
     }
   },
   "scripts": {
@@ -106,6 +118,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/predicates": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
     "@blocknote/core": "^0.47.3",

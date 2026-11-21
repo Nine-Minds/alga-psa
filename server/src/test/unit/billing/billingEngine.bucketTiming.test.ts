@@ -20,6 +20,7 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   builder.whereIn = vi.fn().mockImplementation(() => builder);
   builder.whereNot = vi.fn().mockImplementation(() => builder);
   builder.whereNull = vi.fn().mockImplementation(() => builder);
+  builder.whereRaw = vi.fn().mockImplementation(() => builder);
   builder.whereNotIn = vi.fn().mockImplementation(() => builder);
   builder.whereNotNull = vi.fn().mockImplementation(() => builder);
   builder.leftJoin = vi.fn().mockImplementation(() => builder);

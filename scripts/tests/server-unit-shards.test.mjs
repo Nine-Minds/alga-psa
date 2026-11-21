@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { coverageProviderArgs } from '../run-server-unit-shard.mjs';
+
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 
 // Drives the real shard runner, merge script, `vitest --merge-reports` and both
@@ -20,10 +22,10 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     'scripts/verify-server-unit-execution.mjs', 'scripts/verify-server-unit-aggregate.mjs',
     'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/test-revision.mjs',
     'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/vitest-flaky-reporter.mjs',
-    'scripts/lib/flaky-policy.mjs', 'scripts/lib/test-discovery.mjs',
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/flaky-error.mjs', 'scripts/lib/test-discovery.mjs',
     'scripts/lib/candidate-execution-artifacts.mjs', 'scripts/lib/candidate-execution-gate.mjs',
     'scripts/lib/node-test-execution.mjs', 'scripts/lib/playwright-execution-evidence.mjs',
-    'scripts/lib/jsdom-test-globs.mjs',
+    'scripts/lib/jsdom-test-globs.mjs', 'scripts/lib/vitest-coverage-provider.mjs', 'scripts/lib/server-unit-durations.mjs',
     'server/vitest.server-unit-shard.config.ts',
   ]) cpSync(path.join(repository, file), path.join(root, file));
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
@@ -49,10 +51,19 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     '  projects: environmentProjects(partitionByEnvironment(files, __dirname)) } };',
   ].join('\n'));
   writeFileSync(path.join(root, 'server/src/lib.ts'), 'export const double = (value: number) => value * 2;\n');
+  // Loaded by no test: only the merge job's crawl can put it in the report.
+  writeFileSync(path.join(root, 'server/src/untested.ts'), 'export const triple = (value: number) => value * 3;\n');
   for (const [index, behavior] of ['creates', 'updates', 'deletes'].entries()) {
     writeFileSync(path.join(root, `server/src/test/unit/${behavior}.test.ts`),
       `import { double } from '../../lib';\ntest('${behavior} an item', () => expect(double(${index})).toBe(${index * 2}));\n`);
   }
+  // Committed main-run durations balance the shards; these weigh the four files
+  // so that the balanced split is creates+recovers / deletes+updates, the same
+  // sets the modulo split gives, which the assertions below rely on.
+  writeFileSync(path.join(root, 'scripts/server-unit-durations.json'), JSON.stringify({ schemaVersion: 1,
+    generatedAt: '2026-11-05T07:41:40.000Z', source: { runId: 41983121491 }, files: 4,
+    durationsMs: { 'server/src/test/unit/creates.test.ts': 40, 'server/src/test/unit/deletes.test.ts': 30,
+      'server/src/test/unit/updates.test.ts': 20, 'server/src/test/unit/recovers.test.ts': 10 } }));
   // Fails its first attempt only. The marker lives in gitignored test-results/
   // so the deliberate flake cannot dirty the fixture checkout. Sorted, this
   // file falls to shard 1.
@@ -93,18 +104,28 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     assert.deepEqual(evidence.selection.shard, { index, total: 2 });
     assert.equal(evidence.selection.allFiles.length, 4);
     assert.equal(evidence.expectedFiles.length, 2);
+    const shard = readJson('test-results/server-coverage/shard.json');
+    assert.deepEqual(shard.weights, { generatedAt: '2026-11-05T07:41:40.000Z', source: { runId: 41983121491 } });
+    assert.deepEqual(shard.assigned, index === 1
+      ? ['server/src/test/unit/creates.test.ts', 'server/src/test/unit/recovers.test.ts']
+      : ['server/src/test/unit/deletes.test.ts', 'server/src/test/unit/updates.test.ts']);
     assert.ok(existsSync(path.join(root, 'test-results/server-coverage/blob.json')));
+    // The shard's map holds what it loaded; the untested crawl and the report
+    // belong to the merge below.
+    assert.doesNotMatch(readFileSync(path.join(root, 'test-results/server-coverage/blob.json'), 'utf8'), /untested\.ts/);
+    assert.doesNotMatch(result.stdout, /Coverage report from/);
+    assert.equal(existsSync(path.join(root, 'server/coverage')), false);
     // On a pull request the retried file leaves the shard green with a warning
     // naming it; flaky-tests.json is the only record its first attempt failed.
     const flaky = readJson('test-results/server-coverage/flaky-tests.json');
     assert.deepEqual({ ...flaky, tests: undefined }, { schemaVersion: 1, suite: 'server-unit',
       job: `server-unit shard ${index}/2`, shard: { index, total: 2 }, revision, runId: null, runAttempt: null,
       eventName: 'pull_request', branch: 'feature/flakes', tests: undefined });
-    assert.equal(/::warning::Flaky test passed only on retry: src\/test\/unit\/recovers\.test\.ts > recovers on retry/
+    assert.equal(/::warning::Flaky test passed only on retry: src\/test\/unit\/recovers\.test\.ts > recovers on retry — deliberate first-attempt failure/
       .test(result.stderr), index === 1, result.stderr);
     assert.deepEqual(flaky.tests, index === 1
       ? [{ testId: 'src/test/unit/recovers.test.ts > recovers on retry', file: 'src/test/unit/recovers.test.ts',
-        name: 'recovers on retry', retryCount: 1 }]
+        name: 'recovers on retry', retryCount: 1, error: 'deliberate first-attempt failure' }]
       : []);
     // Only the shard that retried publishes the upload copy the weekly report
     // downloads, and shard 2 must not inherit shard 1's.
@@ -121,7 +142,7 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   assert.equal(onPush.status, 1, onPush.stdout + onPush.stderr);
   const pushed = readJson('test-results/server-coverage/evidence.json');
   assert.equal(pushed.status, 'failed');
-  assert.deepEqual(pushed.failures, ['retry-only pass on push run: src/test/unit/recovers.test.ts > recovers on retry']);
+  assert.deepEqual(pushed.failures, ['retry-only pass on push run: src/test/unit/recovers.test.ts > recovers on retry — deliberate first-attempt failure']);
   const pushedFlaky = readJson('test-results/server-coverage/flaky-tests.json');
   assert.deepEqual([pushedFlaky.eventName, pushedFlaky.branch], ['push', 'main']);
   assert.equal(existsSync(path.join(root, 'test-results/server-unit-flaky/flaky-tests.json')), true);
@@ -146,12 +167,20 @@ test('server unit shards partition, reunite and verify as one full-selection bun
 
   const vitest = path.join(root, 'node_modules/vitest/vitest.mjs');
   const replay = spawnSync(process.execPath, [vitest, 'run', '--merge-reports', '../test-results/server-unit-blobs',
-    '--coverage.enabled=true', '--coverage.reporter=json-summary', '--reporter=json', '--outputFile.json=./test-results.json'],
+    '--coverage.enabled=true', ...coverageProviderArgs(root),
+    '--coverage.reporter=json-summary', '--reporter=json', '--outputFile.json=./test-results.json'],
   { cwd: path.join(root, 'server'), encoding: 'utf8', timeout: 60000, env });
   assert.equal(replay.status, 0, replay.stdout + replay.stderr);
   const report = readJson('server/test-results.json');
   assert.equal(report.numTotalTests, 4);
-  assert.equal(readJson('server/coverage/coverage-summary.json').total.lines.covered > 0, true);
+  const summary = readJson('server/coverage/coverage-summary.json');
+  assert.equal(summary.total.lines.covered > 0, true);
+  // The merged report is what the stock provider rendered: the loaded module
+  // with its hits, and the file no shard loaded at zero.
+  // Keyed by the resolved absolute path, which on macOS is /private/var for a /var tmpdir.
+  const linesOf = file => Object.entries(summary).find(([key]) => key.endsWith(`/${file}`))?.[1].lines;
+  assert.equal(linesOf('server/src/lib.ts').covered > 0, true, JSON.stringify(Object.keys(summary)));
+  assert.deepEqual(linesOf('server/src/untested.ts'), { total: 1, covered: 0, skipped: 0, pct: 0 }, JSON.stringify(Object.keys(summary)));
 
   const verified = node(['scripts/verify-server-unit-execution.mjs'], { SERVER_UNIT_RUN_OUTCOME: 'success' });
   assert.equal(verified.status, 0, verified.stdout + verified.stderr);

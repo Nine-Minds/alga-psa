@@ -1,5 +1,5 @@
 import { applyEmailPalette } from './applyEmailPalette';
-import { classifyTenantTemplate } from './classifyTenantTemplate';
+import { classifyTenantTemplate, copiedFromSystemRowFor, type CopiedFromTemplates } from './classifyTenantTemplate';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type { EmailPaletteTokens, TenantTemplateState } from './types';
 
@@ -78,6 +78,8 @@ export interface EmailBrandingApplyPlanInput {
   scope: EmailBrandingApplyScope;
   /** Enterprise logo/attribution pass, run after the color rewrite. */
   decorate?: (html: string) => string;
+  /** Client template name -> the template its tenant rows were copied from at a split. */
+  copiedFrom?: CopiedFromTemplates | null;
 }
 
 const rowKey = (name: string, language: string) => `${name}::${language}`;
@@ -97,9 +99,12 @@ const rowKey = (name: string, language: string) => `${name}::${language}`;
  * - a name in `scope.overwrite` overrules the two rules above: the row is
  *   rebuilt from the standard template, subject and plain text included, which
  *   is the only way to repaint colors a tenant chose themselves.
+ * - a `branded` row that is an untouched copy of the template this one was
+ *   split from (`copiedFrom`) is rebuilt the same way: it moves to this
+ *   template's own layout, subject and plain text, in the tenant's colors.
  */
 export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): EmailBrandingApplyPlan {
-  const { systemRows, tenantRows, target, appliedPalette, scope, decorate } = input;
+  const { systemRows, tenantRows, target, appliedPalette, scope, decorate, copiedFrom } = input;
 
   const names = new Set(scope.names);
   const languages = new Set(scope.languages);
@@ -114,7 +119,12 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
     if (!names.has(systemRow.name) || !languages.has(systemRow.language_code)) continue;
 
     const tenantRow = tenantByKey.get(rowKey(systemRow.name, systemRow.language_code));
-    const { state } = classifyTenantTemplate({ tenantRow, systemRow, appliedPalette: appliedPalette ?? null });
+    const { state, copyOfSplitSource } = classifyTenantTemplate({
+      tenantRow,
+      systemRow,
+      appliedPalette: appliedPalette ?? null,
+      copiedFromSystemRow: copiedFromSystemRowFor(systemRows, copiedFrom, systemRow.name, systemRow.language_code),
+    });
     const language = systemRow.language_code;
     const forced = overwritten.has(systemRow.name);
 
@@ -148,7 +158,7 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
     const html = rebuild
       ? decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target))
       : decorateHtml(applyEmailPalette(tenantRow!.html_content, sourceMaps, target));
-    const restored = forced
+    const restored = forced || copyOfSplitSource
       ? { subject: systemRow.subject, text: systemRow.text_content }
       : null;
 
@@ -174,6 +184,7 @@ export function planEmailBrandingRemoval(input: {
   systemRows: BrandableSystemRow[];
   tenantRows: BrandableTenantRow[];
   appliedPalette?: EmailPaletteTokens | null;
+  copiedFrom?: CopiedFromTemplates | null;
 }): { deletable: BrandableTenantRow[]; kept: BrandableTenantRow[] } {
   const systemByKey = new Map(input.systemRows.map((row) => [rowKey(row.name, row.language_code), row]));
   const deletable: BrandableTenantRow[] = [];
@@ -190,6 +201,9 @@ export function planEmailBrandingRemoval(input: {
       tenantRow,
       systemRow,
       appliedPalette: input.appliedPalette ?? null,
+      copiedFromSystemRow: copiedFromSystemRowFor(
+        input.systemRows, input.copiedFrom, tenantRow.name, tenantRow.language_code,
+      ),
     });
 
     if (state === 'branded') deletable.push(tenantRow);

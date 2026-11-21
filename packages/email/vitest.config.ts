@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
@@ -15,6 +15,8 @@ export default defineConfig({
       NODE_ENV: 'test',
     },
     include: ['src/**/*.test.{ts,tsx}'],
+    // Infrastructure-backed suites execute in scripts/run-workspace-db-tests.mjs.
+    exclude: [...configDefaults.exclude, '**/*.db.test.?(c|m)[jt]s?(x)'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },

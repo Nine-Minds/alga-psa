@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { CoManagedAdmissionError } from '@alga-psa/licensing';
 import {
+  admitInternalUserSeat,
   assertInternalUserSeatsWithinLimit,
-  checkInternalUserLicenseLimit,
   isInternalUserLicenseLimitRejected,
   lockInternalUserSeats,
 } from '@alga-psa/users/lib/internalUserLicenseGuard';
@@ -470,7 +471,14 @@ export class ScimProvisioningService {
         });
     } else if (link.scim_inactive_at) {
       if (user.is_inactive) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, this.connection.tenant);
+        // The one admission primitive, so a directory-provisioned seat technician is admitted
+        // against the arrangement's allocation like every other reactivation.
+        const licenseCheck = await admitInternalUserSeat(trx, this.connection.tenant, {
+          email: user.email, kind: 'user', existingUserId: link.user_id,
+        }).catch((error) => {
+          if (error instanceof CoManagedAdmissionError) throw new ScimError(409, error.message);
+          throw error;
+        });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
           throw new ScimError(409, licenseCheck.error);
         }
@@ -478,7 +486,7 @@ export class ScimProvisioningService {
           is_inactive: false,
           updated_at: trx.fn.now(),
         });
-        await assertInternalUserSeatsWithinLimit(trx, this.connection.tenant);
+        await assertInternalUserSeatsWithinLimit(trx, this.connection.tenant, licenseCheck);
         lifecycleOperation = 'reactivate';
       }
       scimInactiveAt = null;

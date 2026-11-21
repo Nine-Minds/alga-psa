@@ -1,5 +1,6 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { countLicensedInternalUsers } from './licensed-internal-users';
 
 export interface LicenseUsage {
   limit: number | null;
@@ -24,14 +25,7 @@ export async function getLicenseUsage(
     throw new Error(`Tenant not found: ${tenantId}`);
   }
 
-  const usedResult = await db.table('users')
-    .where({
-      user_type: 'internal',
-      is_inactive: false
-    })
-    .count('* as count');
-
-  const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
+  const used = await countLicensedInternalUsers(knex, tenantId);
   const limit = tenant.licensed_user_count;
   const remaining = limit !== null ? Math.max(0, limit - used) : null;
 

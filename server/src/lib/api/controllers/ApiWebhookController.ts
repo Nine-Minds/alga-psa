@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication for webhook management
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
@@ -38,21 +39,7 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertApiPrincipal,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  ConflictError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
 import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
@@ -68,15 +55,23 @@ import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
+const WEBHOOK_PERMISSION_ACTIONS = [
+  'read', 'create', 'update', 'delete', 'test', 'retry', 'system_settings',
+  'analytics', 'bulk_update', 'manage_subscriptions', 'verify',
+  'manage_security', 'export', 'trigger',
+] as const;
+
 export class ApiWebhookController {
   private webhookService: WebhookService;
 
   constructor() {
-    this.webhookService = new WebhookService(
-      undefined as any, // DatabaseService - would be injected
-      undefined as any, // EventBusService - would be injected  
-      undefined as any  // AuditLogService - would be injected
-    );
+    // Persistence is webhookModel; the event bus and audit log are optional and not wired for the REST API.
+    this.webhookService = new WebhookService();
+  }
+
+  /** Runtime permission contract for this controller's custom authorization path. */
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return WEBHOOK_PERMISSION_ACTIONS.map((action) => ({ resource: 'webhook', action }));
   }
 
   /**
@@ -109,14 +104,14 @@ export class ApiWebhookController {
     }
 
     // Get user within tenant context
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    assertApiPrincipal(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user
     };
@@ -133,7 +128,14 @@ export class ApiWebhookController {
   /**
    * Check permissions
    */
+  // LEVERAGE: friction webhook-controller-off-base — this class re-implements ApiBaseController's authenticate and
+  // checkPermission instead of extending it: it has no BaseService/CrudOptions, its authenticate builds a narrower
+  // context (no rate limit, ProductAccessError rather than the base product gate) and every handler is typed on
+  // ApiRequest. Folding it in changes auth behaviour, so the base needs a service-less/option-less mode first.
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+    if (!(WEBHOOK_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared webhook permission action: ${action}`);
+    }
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
@@ -141,7 +143,7 @@ export class ApiWebhookController {
     // Get a connection within the current tenant context
     const knex = await getConnection(req.context.tenant);
     
-    const hasAccess = await hasPermission(req.context.user, 'webhook', action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, 'webhook', action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} webhook`);
     }
@@ -180,6 +182,20 @@ export class ApiWebhookController {
     }
     
     return id;
+  }
+
+  /**
+   * Extract the template id from /webhooks/templates/{id}. extractIdFromPath reads the segment after
+   * 'webhooks', which on these routes is the literal 'templates'.
+   */
+  private extractTemplateIdFromPath(req: ApiRequest): string {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const templateId = pathParts[pathParts.findIndex(part => part === 'templates') + 1] || '';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(templateId)) {
+      throw new ValidationError('Invalid webhook template ID format');
+    }
+    return templateId;
   }
 
   // ============================================================================
@@ -770,6 +786,87 @@ export class ApiWebhookController {
           );
           
           return createSuccessResponse(template.data, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get webhook template detail. Templates are not persisted, so an id never resolves: 404.
+   */
+  getTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          const template = await this.webhookService.getWebhookTemplate(templateId, apiRequest.context!.tenant);
+
+          return createSuccessResponse(template.data);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update webhook template. Not implemented (no template storage): 501 after the RBAC check.
+   */
+  updateTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'system_settings');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          const templateData = await this.validateData(apiRequest, webhookTemplateSchema.omit({
+            template_id: true,
+            created_at: true,
+            updated_at: true
+          }).partial());
+
+          const template = await this.webhookService.updateWebhookTemplate(
+            templateId,
+            templateData,
+            apiRequest.context!.tenant,
+            apiRequest.context!.userId
+          );
+
+          return createSuccessResponse(template.data);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete webhook template. Not implemented (no template storage): 501 after the RBAC check.
+   */
+  deleteTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'system_settings');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          await this.webhookService.deleteWebhookTemplate(
+            templateId,
+            apiRequest.context!.tenant,
+            apiRequest.context!.userId
+          );
+
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);

@@ -31,7 +31,6 @@ import {
   ISlaReportingFilters
 } from '@alga-psa/sla/types';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
-import { getAllClients } from '@alga-psa/clients/actions/queryActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -59,9 +58,8 @@ export default function SlaSettingsPage() {
   const [editingPolicy, setEditingPolicy] = useState<ISlaPolicy | null>(null);
   const [isAddingPolicy, setIsAddingPolicy] = useState(false);
 
-  // Board/client reference data for SlaPolicyForm
+  // Board reference data for SlaPolicyForm (clients are searched on the server by the form's picker)
   const [boardOptions, setBoardOptions] = useState<{ board_id: string; name: string }[]>([]);
-  const [clientOptions, setClientOptions] = useState<{ client_id: string; client_name: string; logoUrl: string | null }[]>([]);
 
   // Dashboard state
   const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -190,19 +188,10 @@ export default function SlaSettingsPage() {
   // Fetch board/client data when the policy form is about to be shown
   useEffect(() => {
     if (isAddingPolicy || editingPolicy !== null) {
-      Promise.all([
-        getAllBoards(true).then(boards => boards
-          .filter((b): b is typeof b & { board_id: string; board_name: string } => !!b.board_id && !!b.board_name)
-          .map(b => ({ board_id: b.board_id, name: b.board_name }))),
-        getAllClients(false).then(clients => clients.map(c => ({
-          client_id: c.client_id,
-          client_name: c.client_name,
-          logoUrl: (c as any).logoUrl ?? null
-        })))
-      ]).then(([boards, clients]) => {
-        setBoardOptions(boards);
-        setClientOptions(clients);
-      });
+      getAllBoards(true).then(boards => boards
+        .filter((b): b is typeof b & { board_id: string; board_name: string } => !!b.board_id && !!b.board_name)
+        .map(b => ({ board_id: b.board_id, name: b.board_name }))
+      ).then(setBoardOptions);
     }
   }, [isAddingPolicy, editingPolicy]);
 
@@ -232,7 +221,6 @@ export default function SlaSettingsPage() {
           <SlaPolicyForm
             policyId={editingPolicy?.sla_policy_id}
             boards={boardOptions}
-            clients={clientOptions}
             onSave={handleFormSave}
             onCancel={handleFormCancel}
           />
