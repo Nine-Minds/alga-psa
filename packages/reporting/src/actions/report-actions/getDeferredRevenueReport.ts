@@ -17,6 +17,7 @@ export type {
   CurrencySection,
   CreditDetailRow,
   BucketDetailRow,
+  HourBlockDetailRow,
   MovementColumns,
   FeeSource,
   CreditSourceKind,
