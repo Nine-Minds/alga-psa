@@ -143,6 +143,11 @@ export type TimeSourceMethod<F extends (...args: any[]) => any> = (
 
 /** `time_sheets` and their approval lifecycle. */
 export interface TimeSourceSheets {
+  /** Resolve the owner from this source's authoritative sheet record for comment authorization. */
+  commentSubject: (
+    ctx: TimeSourceContext,
+    timeSheetId: string,
+  ) => Promise<TimeSourceValue<TimeSheetCommentSubject | null>>;
   read: TimeSourceMethod<typeof fetchTimeSheet>;
   list: TimeSourceMethod<typeof fetchTimeSheets>;
   listAll: TimeSourceMethod<typeof fetchAllTimeSheets>;
@@ -155,11 +160,27 @@ export interface TimeSourceSheets {
   requestChanges: TimeSourceMethod<typeof requestChangesForTimeSheet>;
   reverseApproval: TimeSourceMethod<typeof reverseTimeSheetApproval>;
   remove: TimeSourceMethod<typeof deleteTimeSheets>;
-  comment: TimeSourceMethod<typeof addCommentToTimeSheet>;
+  comment: (
+    ctx: TimeSourceContext,
+    timeSheetId: string,
+    comment: string,
+    commenter: TimeSheetCommenter,
+  ) => Promise<TimeSourceValue<Awaited<ReturnType<typeof addCommentToTimeSheet>>>>;
   comments: TimeSourceMethod<typeof fetchTimeSheetComments>;
   listWorkItems: TimeSourceMethod<typeof fetchWorkItemsForTimeSheet>;
   addWorkItem: TimeSourceMethod<typeof addWorkItem>;
   removeWorkItem: TimeSourceMethod<typeof deleteWorkItem>;
+}
+
+/** Server-authenticated attribution passed to a time-source comment writer. */
+export interface TimeSheetCommenter {
+  user_id: string;
+  is_approver: boolean;
+}
+
+/** Trusted ownership data returned by the sheet-owning source, never caller input. */
+export interface TimeSheetCommentSubject {
+  user_id: string;
 }
 
 /** `time_periods` and their settings. */

@@ -364,12 +364,7 @@ export function TimeSheetApproval({
     if (newComment.trim() && !isAddingComment) {
       setIsAddingComment(true);
       try {
-        const addedComment = await addCommentToTimeSheet(
-          timeSheet.id,
-          currentUser.user_id,
-          newComment,
-          true
-        );
+        const addedComment = await addCommentToTimeSheet(timeSheet.id, newComment);
         if (showReturnedActionError(addedComment)) {
           return;
         }
