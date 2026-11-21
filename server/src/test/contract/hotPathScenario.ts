@@ -1,7 +1,7 @@
 /**
  * Hot-path query-budget scenario (CM L0g, plan section 5 "Decision 4").
  *
- * Sixteen canonical psa-tenant steps run sequentially inside ONE outer
+ * Eighteen canonical psa-tenant steps run sequentially inside ONE outer
  * transaction that is always rolled back, so the fixture is identical every
  * run. Each step calls the REAL product code path (server actions, models,
  * services); only external I/O is stubbed, and the stubs live in the runner
@@ -61,9 +61,54 @@ export const STEP_NAMES = [
   'portal.ticketView',
   'inbound.replyHandling',
   'maintenance.fanoutTick',
+  'client.list',
+  'search.query',
 ] as const;
 
 export type StepName = (typeof STEP_NAMES)[number];
+
+/**
+ * Neutrality fence (F034 / T021). The steps a seat-aware slice (D/E/F) is most
+ * likely to touch: native ticket list, ticket detail, comment write and
+ * time-entry create.
+ */
+export const NEUTRALITY_FENCED_STEPS = ['ticket.list', 'ticket.open', 'comment.add', 'timeEntry.create'] as const satisfies readonly StepName[];
+
+/**
+ * A named tenant posture is a scenario dimension: the same 18 steps run with
+ * the `co-managed-seat` gate's real inputs set to one of these states. Each
+ * posture is an "unserved" tenant, so each must cost exactly what the posture-less
+ * psa-canonical run costs. `expect` is what the real gate must answer for the
+ * fixture tenant; the runner probes it before measuring so a posture cannot
+ * silently degrade into some other state.
+ */
+export interface TenantPosture {
+  name: string;
+  description: string;
+  /** Value the release flag (`release-v2-0-feature`) evaluates to for the tenant. */
+  releaseFlag: boolean;
+  expect: { admitted: string; served: string };
+}
+
+export const UNSERVED_POSTURES: readonly TenantPosture[] = [
+  {
+    name: 'seat-flag-off',
+    description: 'release flag off: the gate never reaches eligibility or participation',
+    releaseFlag: false,
+    expect: { admitted: 'flag-off', served: 'not-participating' },
+  },
+  {
+    name: 'seat-flag-on-unentitled',
+    description: 'release flag on, tenant has no co-managed-seat entitlement or arrangement',
+    releaseFlag: true,
+    expect: { admitted: 'not-eligible', served: 'not-participating' },
+  },
+];
+
+export interface RunScenarioOptions {
+  /** Called once the fixture tenant exists and before any step is measured; not captured. */
+  afterFixture?: (tenant: string) => Promise<void>;
+}
 
 export interface StepResult {
   name: string;
@@ -250,6 +295,7 @@ async function loadProduct() {
     timeSheetActions,
     timeSheetOps,
     invoiceGeneration,
+    billingAndTax,
     contractWizard,
     recurringSync,
     portalTickets,
@@ -257,6 +303,8 @@ async function loadProduct() {
     fanout,
     ticketModel,
     lifecycle,
+    clientActions,
+    searchActions,
   ] = await Promise.all([
     import('@alga-psa/auth'),
     import('@alga-psa/licensing'),
@@ -267,6 +315,7 @@ async function loadProduct() {
     import('@alga-psa/scheduling/actions/timeSheetActions'),
     import('@alga-psa/scheduling/actions/timeSheetOperations'),
     import('@alga-psa/billing/actions/invoiceGeneration'),
+    import('@alga-psa/billing/actions/billingAndTax'),
     import('@alga-psa/billing/actions/contractWizardActions'),
     import('@alga-psa/billing/actions/recurringServicePeriodSync'),
     import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets'),
@@ -274,6 +323,8 @@ async function loadProduct() {
     import('@alga-psa/jobs/fanout'),
     import('@alga-psa/shared/models/ticketModel'),
     import('@alga-psa/shared/lib/tickets/ticketLifecycleEvents'),
+    import('@alga-psa/clients/actions/clientActions'),
+    import('../../lib/actions/searchActions'),
   ]);
   return {
     auth,
@@ -285,6 +336,7 @@ async function loadProduct() {
     timeSheetActions,
     timeSheetOps,
     invoiceGeneration,
+    billingAndTax,
     contractWizard,
     recurringSync,
     portalTickets,
@@ -292,6 +344,8 @@ async function loadProduct() {
     fanout,
     ticketModel,
     lifecycle,
+    clientActions,
+    searchActions,
   };
 }
 
@@ -642,7 +696,7 @@ async function withIdentity<T>(identity: SessionIdentity, fn: () => Promise<T>):
 }
 
 /**
- * The sixteen steps. Each `measure(...)` wraps exactly the product call named in
+ * The eighteen steps. Each `measure(...)` wraps exactly the product call named in
  * the comment above it; anything outside `measure` is fixture glue.
  */
 const STEPS: Record<StepName, StepFn> = {
@@ -813,13 +867,32 @@ const STEPS: Record<StepName, StepFn> = {
     unwrap(result, 'approveTimeSheet');
   },
 
-  // generateInvoice: the automatic-invoice engine for the January cycle, billing
-  // the approved two hours from the contract line set up in the fixture.
+  // Automatic invoice generation selects due recurring work first, then sends
+  // those concrete selections through the generation action. Cycle IDs are no
+  // longer accepted by the generation API.
   'invoice.generate': async ({ fixture, actAs, measure, product }) => {
     actAs(fixture.admin);
-    const invoice = await measure(() => product.invoiceGeneration.generateInvoice(fixture.billingCycleId));
-    const created = unwrap(invoice, 'generateInvoice') as { invoice_id?: string } | null;
-    if (!created?.invoice_id) throw new Error('hot-path scenario: generateInvoice produced no invoice');
+    const invoice = await measure(async () => {
+      const dueWork = unwrap(
+        await product.billingAndTax.getAvailableRecurringDueWork({ page: 1, pageSize: 100 }),
+        'getAvailableRecurringDueWork',
+      ) as { invoiceCandidates?: Array<{ clientId: string; windowStart: string; windowEnd: string; members: Array<{ selectorInput: unknown }> }> };
+      const candidate = dueWork.invoiceCandidates?.find((item) =>
+        item.clientId === fixture.clientId &&
+        item.windowStart.slice(0, 10) === '2025-01-01' &&
+        item.windowEnd.slice(0, 10) === '2025-02-01',
+      );
+      if (!candidate || candidate.members.length === 0) {
+        throw new Error('hot-path scenario: no January recurring due work for fixture client');
+      }
+      return product.invoiceGeneration.generateInvoiceForSelectionInputs(
+        candidate.members.map((member) => member.selectorInput as never),
+        {},
+        { billingCycleId: fixture.billingCycleId },
+      );
+    });
+    const created = unwrap(invoice, 'generateInvoiceForSelectionInputs') as { invoice_id?: string } | null;
+    if (!created?.invoice_id) throw new Error('hot-path scenario: invoice generation produced no invoice');
   },
 
   // getClientTicketDetails as the client-portal user (portal visibility
@@ -894,13 +967,33 @@ const STEPS: Record<StepName, StepFn> = {
       throw new Error(`hot-path scenario: maintenance fanout reported failures: ${JSON.stringify(outcome)}`);
     }
   },
+
+  // MSP client list page loader (getAllClientsPaginated). Added by the subject
+  // resolver slice so later client-scope segments are measured against main.
+  'client.list': async ({ actAs, measure, product, fixture }) => {
+    actAs(fixture.admin);
+    const result = await measure(() =>
+      product.clientActions.getAllClientsPaginated({ page: 1, pageSize: 25, loadLogos: false }),
+    );
+    unwrap(result, 'getAllClientsPaginated');
+  },
+
+  // MSP full search (searchAppAction -> runAppSearch).
+  'search.query': async ({ actAs, measure, product, fixture }) => {
+    actAs(fixture.admin);
+    const result = await measure(() => product.searchActions.searchAppAction({ query: 'printer' } as never));
+    unwrap(result, 'searchAppAction');
+  },
 };
 
 /**
  * Runs the whole scenario once, in one outer transaction that is always rolled
  * back, and returns per-step statement and lock counts.
  */
-export async function runHotPathScenarioOnce(connection: Knex): Promise<ScenarioResult> {
+export async function runHotPathScenarioOnce(
+  connection: Knex,
+  options: RunScenarioOptions = {},
+): Promise<ScenarioResult> {
   const product = await loadProduct();
   const trx = await connection.transaction();
   const capture = attachQueryCapture(connection);
@@ -909,6 +1002,7 @@ export async function runHotPathScenarioOnce(connection: Knex): Promise<Scenario
     const fixture = await buildFixture(trx, product);
     scenarioRuntime.tenant = fixture.tenant;
     scenarioRuntime.session = fixture.admin;
+    await options.afterFixture?.(fixture.tenant);
 
     const steps: StepResult[] = [];
     for (const name of STEP_NAMES) {
@@ -929,6 +1023,9 @@ export async function runHotPathScenarioOnce(connection: Knex): Promise<Scenario
         },
       };
       await STEPS[name](ctx);
+      if (process.env.HOT_PATH_BUDGET_TRACE === '1') {
+        console.info(`[hot-path SQL] ${name}`, captured.map((s, i) => `${i + 1}. ${s.sql}`).join('\n'));
+      }
       if (captured.length === 0) {
         throw new Error(`hot-path scenario: step ${name} executed no statements`);
       }

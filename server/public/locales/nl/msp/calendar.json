@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Voordat u verbindt",
+          "intro": "Voeg in de registratie van uw Microsoft Entra-app deze omleidings-URI toe en verleen deze gedelegeerde machtigingen.",
+          "redirectUri": "Omleidings-URI",
+          "copy": "Kopiëren",
+          "copied": "Gekopieerd",
+          "copyFailed": "Kopiëren mislukt",
+          "unavailable": "Niet beschikbaar",
+          "permissions": "Gedelegeerde machtigingen (Microsoft Graph)",
+          "tenancy": "De app kan single-tenant of multitenant zijn. Aanmelden volgt de map-ID (tenant-ID) van het Microsoft-profiel dat aan Calendar is gekoppeld.",
+          "openProviders": "Microsoft-providerinstellingen openen"
+        },
+        "adminConsentPending": {
+          "title": "Goedkeuring door een beheerder is nog in behandeling.",
+          "body": "Een Microsoft 365-beheerder moet de aan Calendar gekoppelde app-registratie nog goedkeuren. Vraag deze beheerder beheerderstoestemming te verlenen voor de onderstaande machtigingen en kom daarna terug om Outlook Calendar te verbinden.",
+          "openSettings": "Microsoft-providerinstellingen openen"
         }
       }
     }

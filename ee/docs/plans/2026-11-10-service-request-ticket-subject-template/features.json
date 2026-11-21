@@ -1,0 +1,189 @@
+[
+  {
+    "id": "F001",
+    "description": "Token engine (packages/tickets/src/lib/titleTokens.ts) exports listTokens(template) returning every {{token}} in first-seen order",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Token engine exports formatCalendarDate(ymd, locale, style), a floating-UTC calendar-date formatter with locale fallback to en; ticketTitleTokens.ts {{due_date}}/{{month}}/{{year}} use it with unchanged output",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "getServiceRequestTemplateFields(formSchema) returns { key, label, type } for every non-file-upload field in form order",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "findUnknownServiceRequestTemplateTokens(template, formSchema) returns tokens that are not insertable fields, including file-upload keys; tolerates whitespace inside braces",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "renderServiceRequestTemplate renders short-text/long-text answers as trimmed strings",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "renderServiceRequestTemplate renders a select answer as its option label, falling back to the raw value when no option matches",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "renderServiceRequestTemplate renders a YYYY-MM-DD date answer as a long-style floating calendar date in the supplied locale; unparseable values render raw",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "renderServiceRequestTemplate renders a checkbox answer as the supplied localized yes/no labels",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "renderServiceRequestTemplate renders missing/hidden answers, unknown tokens and file-upload tokens as empty text and never throws",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "normalizeTicketSubject collapses all whitespace (including newlines), trims, and caps at 255 characters (254 + ellipsis, code-point safe)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Shared renderer"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "ServiceRequestExecutionContext carries formSchema; submissionService passes the published version's form schema snapshot",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Ticket-only provider"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Ticket-only provider resolves the tenant default locale (on the provider transaction via new optional knex arg to getTenantDefaultLocale) and common yes/no labels once per execution",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Ticket-only provider"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "buildTicketTitle renders titleTemplate through the shared renderer; empty result falls back to titleFieldKey, first non-empty string answer, then 'Service Request <id8>'; final subject from any branch is normalized and capped",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Ticket-only provider"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "buildTicketDescription renders descriptionPrefix placeholders with the shared renderer, preserving line breaks; answer summary unchanged",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Ticket-only provider"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "New standard component @alga-psa/ui/components/TemplateTokenInput: input (or TextArea when multiline) plus Insert field DropdownMenu listing { token, label, secondary } items, inserting {{token}} at the caret / replacing selection / completing a started {{ / appending when no caret, with an error slot",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Ticket Routing panel replaces 'Title Field Key' with a full-width 'Ticket subject' TemplateTokenInput whose menu lists form fields by label (key as secondary text), with helper text and new msp/service-requests strings in all locales",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements > Editor"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Description prefix uses TemplateTokenInput (multiline) with the same Insert field menu",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Editor shows an inline unknown-field error under the subject template and description prefix",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Save Ticket Routing and Save All refuse to save routing while unknown tokens exist (toast / failures list)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Editor"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "editorHelpers: TicketRoutingConfigInput uses titleTemplate; buildTicketRoutingExecutionConfig writes titleTemplate when non-blank and always removes legacy titleFieldKey",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Editor"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "editorHelpers.resolveTicketSubjectTemplate loads titleTemplate, else '{{<titleFieldKey>}}' for legacy configs, else empty",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Editor"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Publish validation rejects ticket-creating definitions (executionMode ticket-only / ticket-plus-workflow) whose titleTemplate or descriptionPrefix references fields not insertable from the form",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > Publish validation"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "LEVERAGE pattern markers (template-token-insert / template-token-render) at BatchDuplicateTicketDialog insertToken, CannedResponseEditor insertMergeField, EE WorkflowTextTemplateEditor insertTextTemplateField and shared/rmm/alerts/ticketCreator.ts template render",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "UX / UI Notes"
+    ]
+  }
+]

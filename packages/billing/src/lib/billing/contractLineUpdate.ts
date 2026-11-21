@@ -106,7 +106,19 @@ export interface ContractLineUpdateOutcome {
     updatedFields: string[];
     /** True when the line is a contract template line (no service periods to rebuild). */
     isTemplate: boolean;
+    /**
+     * True when only invoice text changed. Text is presentation, not billing
+     * data: callers must not rematerialize service periods for it (the line
+     * may already be invoiced).
+     */
+    presentationOnly: boolean;
 }
+
+const INVOICE_TEXT_KEYS = new Set(['invoice_line_description', 'invoice_line_subtitle']);
+
+/** Blank invoice text means "use the default" (the line name / no subtitle). */
+const normalizeInvoiceText = (value: unknown): string | null | undefined =>
+    value === undefined ? undefined : typeof value === 'string' ? value.trim() || null : null;
 
 /**
  * The line-field update of `updateContractLine`, run on a caller-owned
@@ -130,6 +142,8 @@ export async function updateContractLineInTransaction(
         if (updateData.contract_line_name !== undefined) templatePatch.template_line_name = updateData.contract_line_name;
         if (updateData.billing_frequency !== undefined) templatePatch.billing_frequency = updateData.billing_frequency;
         if (updateData.is_active !== undefined) templatePatch.is_active = updateData.is_active;
+        if (updateData.invoice_line_description !== undefined) templatePatch.invoice_line_description = normalizeInvoiceText(updateData.invoice_line_description);
+        if (updateData.invoice_line_subtitle !== undefined) templatePatch.invoice_line_subtitle = normalizeInvoiceText(updateData.invoice_line_subtitle);
         if (updateData.minimum_billable_time !== undefined) templatePatch.minimum_billable_time = updateData.minimum_billable_time;
         if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
         if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
@@ -168,10 +182,12 @@ export async function updateContractLineInTransaction(
             contract_line_type: updatedTemplateLine.line_type ?? 'Fixed',
             service_category: updatedTemplateLine.service_category ?? null,
             is_active: updatedTemplateLine.is_active ?? true,
+            invoice_line_description: updatedTemplateLine.invoice_line_description ?? null,
+            invoice_line_subtitle: updatedTemplateLine.invoice_line_subtitle ?? null,
             created_at: updatedTemplateLine.created_at,
             updated_at: updatedTemplateLine.updated_at,
         } as IContractLine;
-        return { line: templateLine, updatedFields: Object.keys(templatePatch), isTemplate: true };
+        return { line: templateLine, updatedFields: Object.keys(templatePatch), isTemplate: true, presentationOnly: false };
     }
 
     // Fetch the existing plan to check its type
@@ -183,6 +199,19 @@ export async function updateContractLineInTransaction(
         throw new Error(`Contract Line with ID ${planId} not found.`);
     }
     await assertContractLineIsAuthorable(trx, tenant, planId);
+
+    // Invoice text only: write it and stop. It must not re-resolve recurring
+    // policy or touch the line window.
+    const patchKeys = Object.keys(updateData).filter((key) => key !== 'tenant' && (updateData as Record<string, unknown>)[key] !== undefined);
+    if (patchKeys.length > 0 && patchKeys.every((key) => INVOICE_TEXT_KEYS.has(key))) {
+        const textPatch: Record<string, unknown> = {};
+        for (const key of patchKeys) textPatch[key] = normalizeInvoiceText((updateData as Record<string, unknown>)[key]);
+        const [textUpdated] = await tenantDb(trx, tenant).table('contract_lines')
+            .where({ contract_line_id: planId })
+            .update({ ...textPatch, updated_at: trx.fn.now() })
+            .returning('*');
+        return { line: normalizeLiveRecurringStorage(textUpdated), updatedFields: patchKeys, isTemplate: false, presentationOnly: true };
+    }
 
     // Remove tenant field if present in updateData to prevent override
     const { tenant: _, ...safeUpdateData } = updateData;
@@ -235,6 +264,9 @@ export async function updateContractLineInTransaction(
     if (typeof safeUpdateData.invoice_line_description === 'string') {
         safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;
     }
+    if (typeof safeUpdateData.invoice_line_subtitle === 'string') {
+        safeUpdateData.invoice_line_subtitle = safeUpdateData.invoice_line_subtitle.trim() || null;
+    }
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
         // Post-update type: a type change to Hourly/Usage resets inherited advance.
         lineType: safeUpdateData.contract_line_type ?? existingPlan.contract_line_type ?? null,
@@ -257,7 +289,7 @@ export async function updateContractLineInTransaction(
     const plan = await ContractLine.update(trx, planId, safeUpdateData);
     const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
-    return { line: enrichedPlan, updatedFields: Object.keys(safeUpdateData), isTemplate: false };
+    return { line: enrichedPlan, updatedFields: Object.keys(safeUpdateData), isTemplate: false, presentationOnly: false };
 }
 
 export type ContractLineActionError = ActionMessageError | ActionPermissionError;

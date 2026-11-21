@@ -1,0 +1,110 @@
+[
+  {
+    "id": "F001",
+    "description": "Move the supported SSO provider id list, its type and isSupportedProvider into the pure packages/auth/src/lib/sso/types.ts; mspSsoResolution.ts re-exports them so existing imports are unchanged.",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F002",
+    "description": "TenantAuthPolicy gains clientPortalSsoProviders: SsoProviderId[] | null (null = offer every available provider); DEFAULT_TENANT_AUTH_POLICY sets it to null.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "normalizeTenantAuthPolicy reads settings.sso.clientPortalSsoProviders: non-array -> null; array -> supported ids only, deduplicated, canonical order (google, azure-ad, keycloak).",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F004",
+    "description": "applyPolicyChange carries clientPortalSsoProviders through (undefined keeps previous, explicit array or null replaces).",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F005",
+    "description": "validatePolicyChange rejects a requested clientPortalSsoProviders list containing an unsupported id with guard code client_portal_sso_provider_invalid.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F006",
+    "description": "Pure offeredClientPortalSsoProviders(available, policy): available when the list is null, otherwise available intersected with the list, canonical order.",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F007",
+    "description": "saveTenantAuthPolicy persists the whole normalized policy object into settings.sso instead of a hand-enumerated field list, so clientPortalSsoProviders is saved and audited with before/after.",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F008",
+    "description": "listClientPortalAvailableSsoProviders(tenantId): on EE, each of google/azure-ad/keycloak where tenant credentials OR app fallback credentials exist (tenant Keycloak realm now counts); [] on CE.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F009",
+    "description": "discoverClientPortalSsoProviders(tenantId) returns offeredClientPortalSsoProviders(available, loadTenantAuthPolicy(tenantId)), so the signed discovery cookie and therefore /resolve only carry offered providers.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F010",
+    "description": "getClientPortalSignInSsoProviders({ tenantSlug, portalDomain }) resolves tenant context via resolveClientPortalSsoTenantContext and returns the offered list; returns [] and logs a warning on any failure.",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F011",
+    "description": "Client portal sign-in page computes the offered list server-side and passes it through ClientPortalSignIn and ClientLoginForm to SsoProviderButtons as offeredProviders.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F012",
+    "description": "SsoProviderButtons: when offeredProviders is supplied, visible set = edition set intersected with offeredProviders from the first render, and /api/auth/providers is not fetched; discovery still drives enabled/disabled; MSP behavior unchanged when the prop is absent.",
+    "implemented": true,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F013",
+    "description": "LoginPolicyState gains availableClientPortalSsoProviders (from listClientPortalAvailableSsoProviders); get/update login policy actions return it and LoginPolicyUpdate accepts clientPortalSsoProviders.",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  },
+  {
+    "id": "F014",
+    "description": "LoginPolicySettings renders a 'Client portal sign-in options' Checkbox group (one per available provider, checked = in effective list; muted note when none available); toggling saves the full resulting list and reverts with the existing alerts on failure; card description reworded to cover SSO options.",
+    "implemented": true,
+    "prdRefs": ["FR13", "UX / UI Notes"]
+  },
+  {
+    "id": "F015",
+    "description": "Add loginPolicy.clientPortalSso.* strings (title, body, provider labels, none-available note) and loginPolicy.guard.client_portal_sso_provider_invalid to every msp/settings locale incl. pseudo xx/yy; validate-translations passes.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "FR4"]
+  },
+  {
+    "id": "F016",
+    "description": "CE stubs (packages/ee/src/lib/actions/auth/loginPolicy.ts) mirror the new LoginPolicyState/LoginPolicyUpdate fields and guard code.",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F017",
+    "description": "Delete ee/server/src/components/auth/SsoProviderButtons.tsx; @alga-psa/auth/sso/entry resolves to packages/auth/src/components/SsoProviderButtons.tsx in both editions (server/next.config.mjs both alias blocks + webpack resolve-plugin rewrite, ee/server/next.config.mjs); remove the LEVERAGE sso-provider-buttons marker.",
+    "implemented": true,
+    "prdRefs": ["FR16"]
+  },
+  {
+    "id": "F018",
+    "description": "Update tests encoding the old CE/EE split: editionSwapping.test.ts expects the shared SSO entry in both editions; ssoProviderEditionGate.unit.test.tsx renders the single component under both editions; delete ssoProviderButtons.ceEeParity.test.ts.",
+    "implemented": true,
+    "prdRefs": ["FR17"]
+  }
+]

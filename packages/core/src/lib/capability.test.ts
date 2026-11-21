@@ -168,10 +168,25 @@ describe('capabilityGate', () => {
       expect(logger.warn).toHaveBeenCalledWith('capability_decision_failed', expect.objectContaining({ resolver: 'featureFlag', mode: 'admits' }));
     });
 
-    it('no PostHog client (no checker registered) is flag-off', async () => {
+    it('no PostHog client (no checker registered) is unavailable rather than evaluated flag-off', async () => {
       wire({ flag: null, eligible: true });
       const d = await admits(CAP, 't1');
-      expect(d).toMatchObject({ admitted: false, reasons: { admitted: 'flag-off' } });
+      expect(d).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
+    });
+
+    it('detailed registration does not admit a capability using a default-enabled flag fallback', async () => {
+      const { FeatureFlags } = await import('./featureFlagRuntime');
+      const flags = new FeatureFlags({ clientResolver: () => null });
+      wire({ eligible: true });
+      registerFeatureFlagChecker((flag, context) => flags.evaluate(flag, context));
+      registerCapabilityGate({ capability: CAP, featureFlag: 'enable_time_tracking' });
+      try {
+        expect(await flags.isEnabled('enable_time_tracking', { tenantId: 't1' })).toBe(true);
+        expect(await admits(CAP, 't1')).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
+        expect(eligibility).not.toHaveBeenCalled();
+      } finally {
+        registerCapabilityGate({ capability: CAP, featureFlag: FLAG });
+      }
     });
 
     it('a throwing eligibility resolver fails closed with eligibility-error', async () => {

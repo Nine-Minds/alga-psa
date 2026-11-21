@@ -16,23 +16,6 @@ export async function getClientById(
   return { ...client, properties: (client as any).properties ?? {} } as IClient;
 }
 
-export async function getAllClients(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  includeInactive: boolean = true
-): Promise<IClient[]> {
-  const query = tenantDb(knexOrTrx, tenant).table<IClient>('clients')
-    .orderBy('client_name', 'asc')
-    .select('*');
-
-  if (!includeInactive) {
-    query.andWhere({ is_inactive: false });
-  }
-
-  const rows = await query;
-  return rows.map((c) => ({ ...c, properties: (c as any).properties ?? {} } as IClient));
-}
-
 export async function getAllClientsPaginated(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,

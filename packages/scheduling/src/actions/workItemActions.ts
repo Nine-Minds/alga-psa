@@ -3,6 +3,8 @@
 'use server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { narrowTicketsToReadable } from '../lib/ticketReadNarrowing';
+import { canReadScheduleEntry } from '../lib/scheduleEntryReadMask';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
@@ -243,6 +245,7 @@ export const searchDispatchWorkItems = withAuth(async (
         join.andOn('se_ticket.work_item_type', '=', db.raw("'ticket'"));
       },
     });
+    await narrowTicketsToReadable(db, tenant, user, ticketsQuery);
 
     const countQuery = ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first();
     const countResult = await countQuery;
@@ -465,6 +468,7 @@ export const searchPickerWorkItems = withAuth(async (
       tenantScopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
       tenantScopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
       tenantScopedDb.tenantJoin(ticketsQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
+      await narrowTicketsToReadable(db, tenant, user, ticketsQuery);
 
       let projectTasksQuery = tenantScopedDb.table('project_tasks as pt')
       .whereNotIn('pt.task_id', availableWorkItemIds)
@@ -918,6 +922,7 @@ export const getWorkItemById = withAuth(async (
       tenantScopedDb.tenantJoin(ticketQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
       tenantScopedDb.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
       tenantScopedDb.tenantJoin(ticketQuery, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
+      await narrowTicketsToReadable(db, tenant, user, ticketQuery);
       workItem = await ticketQuery.first();
     } else if (workItemType === 'project_task') {
       const projectTaskQuery = tenantScopedDb.table('project_tasks as pt')
@@ -959,6 +964,9 @@ export const getWorkItemById = withAuth(async (
       tenantScopedDb.tenantJoin(projectTaskQuery, 'service_catalog as project_service', 'p.service_id', 'project_service.service_id', { type: 'left' });
       workItem = await projectTaskQuery.first();
     } else if (workItemType === 'ad_hoc') {
+      // The "ad-hoc work item" is the schedule entry itself, looked up by entry id. An entry the schedule shows as
+      // busy time (its work item is outside the reader's client scope) looks the same as a missing one here.
+      if (!await canReadScheduleEntry(db, tenant, user, workItemId)) return null;
       workItem = await tenantScopedDb.table('schedule_entries as se')
         .where({
           'se.entry_id': workItemId,

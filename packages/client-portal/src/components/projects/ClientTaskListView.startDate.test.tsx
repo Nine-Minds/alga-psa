@@ -14,6 +14,8 @@ vi.mock('@alga-psa/ui', () => ({ getDateFnsLocale: () => undefined }));
 vi.mock('@alga-psa/ui/hooks', () => ({
   // Every column fits; what shows is then decided by the project's settings alone.
   useResponsiveColumns: () => ({ containerRef: { current: null }, isColumnVisible: () => true, hiddenColumnCount: 0 }),
+  // Each task row hosts the requester task-thread slot, gated on the co-managed capability; off here.
+  useCapability: () => ({ enabled: false }),
 }));
 vi.mock('@alga-psa/ui/components/Tooltip', () => ({ Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({
@@ -53,7 +55,7 @@ const tasks = [
 
 function renderList(fields: string[]) {
   const config: IClientPortalConfig = { show_phases: true, show_tasks: true, visible_task_fields: fields };
-  const { container } = render(<ClientTaskListView phases={phases} tasks={tasks} config={config} />);
+  const { container } = render(<ClientTaskListView projectId="proj-1" phases={phases} tasks={tasks} config={config} />);
   // Status groups start collapsed; open them all to reach the task rows.
   let guard = 0;
   while (!container.textContent?.includes('Rack the switch') && guard < 5) {

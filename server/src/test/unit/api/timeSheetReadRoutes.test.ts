@@ -37,7 +37,7 @@ function makeService() {
       entries_by_day: {},
       approval_ready: true,
     })),
-    search: vi.fn().mockResolvedValue([{ id: sheetB, notes: 'weekly' }]),
+    search: vi.fn().mockResolvedValue([{ id: sheetB }]),
   };
 }
 
@@ -120,7 +120,7 @@ describe('time sheet read controllers', () => {
   it('search passes the query and filters to the service', async () => {
     const res = await controller.search()(get(`/api/v1/time-sheets/search?query=weekly&fields=user_name&user_ids=${userId}&approval_statuses=DRAFT,SUBMITTED&include_entries=true&limit=5`));
     expect(res.status).toBe(200);
-    expect((await res.json()).data).toEqual([{ id: sheetB, notes: 'weekly' }]);
+    expect((await res.json()).data).toEqual([{ id: sheetB }]);
     expect(service.search).toHaveBeenCalledWith(
       expect.objectContaining({
         query: 'weekly',
@@ -133,6 +133,17 @@ describe('time sheet read controllers', () => {
       expect.anything(),
     );
     expect(service.list).not.toHaveBeenCalled();
+  });
+
+  it('search normalizes repeated and comma-separated array parameters at the controller boundary', async () => {
+    const second = '00000000-0000-4000-8000-000000000002';
+    const period = '00000000-0000-4000-8000-000000000003';
+    const res = await controller.search()(get(`/api/v1/time-sheets/search?query=weekly&fields=user_name,note&fields=user_name&user_ids=${userId},${second}&user_ids=${userId}&period_ids=${period}&approval_statuses=DRAFT&approval_statuses=SUBMITTED`));
+    expect(res.status).toBe(200);
+    expect(service.search).toHaveBeenCalledWith(expect.objectContaining({
+      fields: ['user_name', 'note', 'user_name'], user_ids: [userId, second, userId],
+      period_ids: [period], approval_statuses: ['DRAFT', 'SUBMITTED'],
+    }), expect.anything());
   });
 
   it.each(['notes', 'approval_notes'])('search with non-column fields=%s is 400 and never reaches the service', async (field) => {
@@ -158,12 +169,10 @@ describe('time sheet read controllers', () => {
   it('search response schema describes the real row, not timeSheetResponseSchema', () => {
     const row = {
       tenant: userId, id: sheetA, user_id: userId, period_id: sheetB, approval_status: 'DRAFT',
-      submitted_at: null, approved_at: null, approved_by: null, notes: null, user_name: 'Alice Zebra',
+      submitted_at: null, approved_at: null, approved_by: null, user_name: 'Alice Zebra',
     };
     expect(timeSheetSearchRowSchema.strict().safeParse(row).success).toBe(true);
-    expect(timeSheetSearchRowSchema.strict().safeParse({ ...row, notes: 'Covered on-call' }).success).toBe(true);
-    // time_sheets.notes (20261028135300) is selected via time_sheets.*, so the row always carries it.
-    expect(timeSheetSearchRowSchema.safeParse({ ...row, notes: undefined }).success).toBe(false);
+    expect(timeSheetSearchRowSchema.strict().safeParse({ ...row, notes: 'Covered on-call' }).success).toBe(false);
     expect(timeSheetSearchRowSchema.safeParse({ ...row, user_name: undefined }).success).toBe(false);
   });
 

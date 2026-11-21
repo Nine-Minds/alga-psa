@@ -20,6 +20,13 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 vi.mock('@alga-psa/client-portal/actions', () => ({
   createClientTicket: vi.fn(),
+  finalizeClientTicketDescription: vi.fn(),
+}));
+
+// The dialog reads the portal user from the session to upload pasted images;
+// the portal layout supplies the provider, the test supplies the id.
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { id: 'client-user-1' } }, status: 'authenticated' }),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketFormActions', () => ({

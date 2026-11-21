@@ -5,8 +5,10 @@ import { buildRelevanceRequest } from '../../services/smartSearch/scoreBatch';
 import { TICKET_RELEVANCE } from '../../services/smartSearch/entities/ticket';
 
 vi.mock('@alga-psa/search/acl', () => ({
-  resolveSearchAclPrincipal: vi.fn(async () => ({ userId: 'reader', permissions: ['ticket:read'] })),
   aclPredicateSql: vi.fn(() => ({ sql: 'TRUE', bindings: [] })),
+}));
+vi.mock('@alga-psa/search/runAppSearch', () => ({
+  resolveSearchPrincipal: vi.fn(async () => ({ userId: 'reader', permissions: ['ticket:read'], clientAccess: { mode: 'all' } })),
 }));
 
 import { loadTicketCandidates } from '../../services/smartSearch/entities/ticket';

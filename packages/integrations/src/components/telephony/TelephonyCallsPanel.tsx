@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { IClient } from '@alga-psa/types';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -15,7 +14,6 @@ import {
   linkTelephonyCallToTicket,
   listTelephonyChats,
   listTelephonyLinkableTickets,
-  listTelephonyResolutionTargets,
   resolveTelephonyCall,
   resolveTelephonyChat,
 } from '../../actions/integrations/telephonyActions';
@@ -24,7 +22,6 @@ import type {
   TelephonyChatSummary,
   TelephonyLinkableTicket,
   TelephonyOverview,
-  TelephonyResolutionTarget,
 } from '../../actions/integrations/telephonyActions';
 
 function DirectionIcon({ direction }: { direction: string }) {
@@ -55,8 +52,6 @@ export function TelephonyCallsPanel({
   // Call currently showing the ticket picker, and the options loaded for it.
   const [linkingCallId, setLinkingCallId] = useState<string | null>(null);
   const [linkableTickets, setLinkableTickets] = useState<TelephonyLinkableTicket[]>([]);
-  // Active clients backing the standard attribution picker shared by all rows.
-  const [targets, setTargets] = useState<TelephonyResolutionTarget[]>([]);
   // Chats the matcher could not place; they share the assign picker with calls.
   const [chats, setChats] = useState<TelephonyChatSummary[]>([]);
 
@@ -131,40 +126,6 @@ export function TelephonyCallsPanel({
       setBusy(false);
     }
   };
-
-  const loadResolutionClients = useCallback(async () => {
-    const result = await listTelephonyResolutionTargets({ clientsOnly: true });
-    if (!result.success) {
-      setError(result.error ?? null);
-      setTargets([]);
-      return;
-    }
-    setTargets(result.targets);
-  }, []);
-
-  useEffect(() => {
-    if (!canResolve || (!overview?.unresolvedCalls.length && !chats.length)) {
-      setTargets([]);
-      return;
-    }
-    void loadResolutionClients();
-  }, [canResolve, overview?.unresolvedCalls.length, chats.length, loadResolutionClients]);
-
-  const resolutionClients = useMemo<IClient[]>(() => targets.flatMap((target) => {
-    if (target.contactId || !target.clientId) return [];
-    return [{
-      client_id: target.clientId,
-      client_name: target.label,
-      client_type: target.clientType ?? null,
-      url: '',
-      is_inactive: false,
-      created_at: '',
-      updated_at: '',
-      billing_cycle: 'monthly',
-      is_tax_exempt: false,
-      tenant: '',
-    }];
-  }), [targets]);
 
   const resolveCall = async (call: TelephonyCallSummary, contactId: string | null, clientId: string | null) => {
     setBusy(true);
@@ -345,7 +306,6 @@ export function TelephonyCallsPanel({
                   <div className="max-w-sm">
                     <ClientPicker
                       id={`telephony-resolve-client-${call.callRecordId}`}
-                      clients={resolutionClients}
                       selectedClientId={null}
                       onSelect={(clientId) => {
                         if (clientId) void resolveCall(call, null, clientId);
@@ -394,7 +354,6 @@ export function TelephonyCallsPanel({
                   <div className="max-w-sm">
                     <ClientPicker
                       id={`telephony-resolve-chat-client-${chat.chatRecordId}`}
-                      clients={resolutionClients}
                       selectedClientId={null}
                       onSelect={(clientId) => {
                         if (clientId) void resolveChat(chat, null, clientId);

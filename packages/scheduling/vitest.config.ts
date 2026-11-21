@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -33,6 +34,9 @@ export default defineConfig({
       'tests/newWorkItemTimeEntry.test.tsx',
       'tests/stopwatchProvider.test.tsx',
       'tests/timeEntryDialog.saveLifecycle.test.tsx',
+      'tests/timeEntryDialog.operationalMode.test.tsx',
+      'tests/timeEntryEditForm.operationalMode.test.tsx',
+      'tests/timeSheetHeader.operationalMode.test.tsx',
       'tests/workItemDrawer.adHocAssignees.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
@@ -61,10 +65,10 @@ export default defineConfig({
       // to resolve @alga-psa/core/server.
       { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
-      // The generic db rule below maps subpaths straight into src, but the
-      // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
-      // exports map), so it needs resolving before the catch-all.
-      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
+      // The generic db rule below maps subpaths straight into src, but most
+      // published db subpaths live under src/lib; resolve them from the
+      // package's exports map before the catch-all.
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },
@@ -78,9 +82,13 @@ export default defineConfig({
       // alias billing/tickets/integrations already use.
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/workflows(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/workflows/src$1') },
+      // Vitest does not consult the TypeScript path aliases; mirror the OSS
+      // entry selected by the workspace package export.
+      { find: /^@product\/service-principals\/entry$/, replacement: path.resolve(__dirname, '../product-service-principals/oss/entry.ts') },
     ],
   },
 });

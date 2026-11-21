@@ -27,7 +27,6 @@ import { IDS, NOW, EARLIER } from '../fixtures';
 const DOCUMENT_ACTIONS = 'packages/documents/src/actions/documentActions.ts';
 const STORAGE = 'packages/storage/src/StorageService.ts';
 const PREVIEW = 'packages/documents/src/lib/documentPreviewGenerator.ts';
-const PREVIEW_SERVER = 'server/src/lib/utils/documentPreviewGenerator.ts';
 
 type DocumentEventType =
   | 'DOCUMENT_UPLOADED'
@@ -244,8 +243,8 @@ export const documentContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${PREVIEW}#generateDocumentPreviews`,
-        ctx: { ...user, occurredAt: NOW },
+        site: `${PREVIEW}#generatePreviewsForDocument`,
+        ctx: { ...system, occurredAt: NOW },
         build: () =>
           buildMediaProcessingSucceededPayload({
             fileId: IDS.file,
@@ -256,11 +255,6 @@ export const documentContracts = {
               { type: 'preview', fileId: IDS.document },
             ],
           }),
-      },
-      {
-        site: `${PREVIEW_SERVER}#generateDocumentPreviews`,
-        ctx: { ...system, occurredAt: NOW },
-        build: () => buildMediaProcessingSucceededPayload({ fileId: IDS.file, processedAt: NOW, durationMs: 12 }),
       },
       {
         site: `${STORAGE}#StorageService.uploadFile`,
@@ -286,19 +280,7 @@ export const documentContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${PREVIEW}#generateDocumentPreviews`,
-        ctx: { ...user, occurredAt: NOW },
-        build: () =>
-          buildMediaProcessingFailedPayload({
-            fileId: IDS.file,
-            failedAt: NOW,
-            errorCode: 'DOCUMENT_PREVIEW_GENERATION_FAILED',
-            errorMessage: 'Unsupported PDF encryption',
-            retryable: true,
-          }),
-      },
-      {
-        site: `${PREVIEW_SERVER}#generateDocumentPreviews`,
+        site: `${PREVIEW}#generatePreviewsForDocument`,
         ctx: { ...system, occurredAt: NOW },
         build: () =>
           buildMediaProcessingFailedPayload({

@@ -172,6 +172,23 @@ describe('mapDattoDeviceToSnapshot', () => {
     expect(snapshot.extension?.pendingPatches).toBeNull();
   });
 
+  it('promotes the Datto warranty date to the snapshot and keeps it in systemInfo', () => {
+    const snapshot = snapshotOf();
+    expect(snapshot.warrantyEndDate).toBe('2028-01-01');
+    expect(snapshot.extension?.systemInfo).toMatchObject({ warrantyDate: '2028-01-01' });
+  });
+
+  it('leaves the warranty date null when Datto omits it or sends something unparseable', () => {
+    expect(snapshotOf({ warrantyDate: undefined }).warrantyEndDate).toBeNull();
+    expect(snapshotOf({ warrantyDate: null }).warrantyEndDate).toBeNull();
+    expect(snapshotOf({ warrantyDate: '' }).warrantyEndDate).toBeNull();
+    expect(snapshotOf({ warrantyDate: 'not-a-date' }).warrantyEndDate).toBeNull();
+    // Epoch milliseconds are not a Datto warranty shape; never read as digits.
+    expect(snapshotOf({ warrantyDate: '1830297600000' }).warrantyEndDate).toBeNull();
+    // Date would roll this into March; the mapper rejects it instead.
+    expect(snapshotOf({ warrantyDate: '2028-02-31' }).warrantyEndDate).toBeNull();
+  });
+
   it('omits hardware fields from the extension when no audit ran', () => {
     const ext = snapshotOf().extension as Record<string, unknown>;
     for (const key of ['manufacturer', 'model', 'cpuModel', 'cpuCores', 'ramGb', 'diskUsage']) {

@@ -9,6 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Lightbulb, LayoutGrid, List } from 'lucide-react';
 import { TimeSheetDateNavigatorState } from './types';
+import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 
 export type TimeSheetViewMode = 'grid' | 'list';
@@ -51,6 +52,7 @@ export function TimeSheetHeader({
     onViewModeChange
 }: TimeSheetHeaderProps): React.JSX.Element {
     const { t } = useTranslation('msp/time-entry');
+    const operationalTime = useTimeEntryMode() === 'operational';
     // Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
     const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
         DRAFT: { variant: 'outline', label: t('common.states.inProgress', { defaultValue: 'In Progress' }) },
@@ -192,7 +194,8 @@ export function TimeSheetHeader({
                         />
                     )}
 
-                    {isEditable && (
+                    {/* Operational (seat technician) time is never submitted for approval: the button does not exist for them. The server refuses submission by principal too. */}
+                    {isEditable && !operationalTime && (
                         <Button
                             id="submit-timesheet-button"
                             onClick={onSubmit}

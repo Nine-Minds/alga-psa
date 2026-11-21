@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
-import msgraph from '@alga-psa/emulator-msgraph';
+import msgraph, { registerTenantedClient, setSignedInUser, authorizeOverHttp, exchangeCodeOverHttp } from '@alga-psa/emulator-msgraph';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter as SharedAdapter } from '@alga-psa/integrations/services/calendar/providers/MicrosoftCalendarAdapter';
 import { MicrosoftCalendarAdapter as EnterpriseAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { generateMicrosoftCalendarAuthUrl as sharedAuthUrl } from '@alga-psa/integrations/utils/calendar/oauthHelpers';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { generateMicrosoftCalendarAuthUrl as enterpriseAuthUrl } from '@alga-psa/ee-calendar/lib/utils/calendar/oauthHelpers';
 
 const { persistTokens } = vi.hoisted(() => ({ persistTokens: vi.fn(async () => undefined) }));
@@ -16,12 +18,13 @@ vi.mock('@alga-psa/integrations/services/calendar/CalendarProviderService', () =
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class { updateProvider = persistTokens; },
 }));
+const defaultProfile = {
+  status: 'ready', tenantId: 'calendar-tenant', consumerType: 'calendar',
+  clientId: 'calendar-client', clientSecret: 'synthetic-calendar-secret',
+  microsoftTenantId: 'common',
+} as Record<string, unknown>;
 vi.mock('@alga-psa/ee-calendar/lib/microsoftConsumerProfileResolution', () => ({
-  resolveMicrosoftConsumerProfileConfig: vi.fn(async () => ({
-    status: 'ready', tenantId: 'calendar-tenant', consumerType: 'calendar',
-    clientId: 'calendar-client', clientSecret: 'synthetic-calendar-secret',
-    microsoftTenantId: 'common',
-  })),
+  resolveMicrosoftConsumerProfileConfig: vi.fn(async () => defaultProfile),
 }));
 
 let host: EmulatorHost;
@@ -59,34 +62,37 @@ const example: ExternalCalendarEvent = {
   attendees: [{ email: 'customer@example.test', name: 'Customer', responseStatus: 'accepted' }],
 };
 
+/** OAuth dance plus a connected adapter, as a provider row would hold it. */
+async function connect(Adapter: any, authUrl: any, expired = false) {
+  const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
+  await controlPost('seed/client', { clientId, clientSecret });
+  const redirectUri = 'http://localhost/calendar-callback';
+  const url = await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: 'common' });
+  expect(new URL(url).origin).toBe(base);
+  const authorization = await fetch(url, { redirect: 'manual' });
+  expect(authorization.status).toBe(302);
+  const callback = new URL(authorization.headers.get('location')!);
+  expect(callback.searchParams.get('state')).toBe('calendar-state');
+  const tokenResponse = await fetch(`${base}/common/oauth2/v2.0/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code: callback.searchParams.get('code')!, redirect_uri: redirectUri }) });
+  expect(tokenResponse.ok).toBe(true);
+  const token = await tokenResponse.json();
+  const config: CalendarProviderConfig = {
+    id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
+    provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
+    connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    provider_config: { clientId, clientSecret, accessToken: token.access_token, refreshToken: token.refresh_token, tokenExpiresAt: new Date(expired ? 0 : Date.now() + 3600000).toISOString() },
+  };
+  const adapter = new Adapter(config);
+  await adapter.connect();
+  return { adapter, oldToken: token.access_token, config };
+}
+
 for (const { name, Adapter, authUrl } of [
   { name: 'shared', Adapter: SharedAdapter, authUrl: sharedAuthUrl },
   { name: 'enterprise', Adapter: EnterpriseAdapter, authUrl: enterpriseAuthUrl },
 ]) {
   describe(`${name} Microsoft calendar adapter over Graph wire`, () => {
-    async function connected(expired = false) {
-      const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
-      await controlPost('seed/client', { clientId, clientSecret });
-      const redirectUri = 'http://localhost/calendar-callback';
-      const url = await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: 'common' });
-      expect(new URL(url).origin).toBe(base);
-      const authorization = await fetch(url, { redirect: 'manual' });
-      expect(authorization.status).toBe(302);
-      const callback = new URL(authorization.headers.get('location')!);
-      expect(callback.searchParams.get('state')).toBe('calendar-state');
-      const tokenResponse = await fetch(`${base}/common/oauth2/v2.0/token`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code: callback.searchParams.get('code')!, redirect_uri: redirectUri }) });
-      expect(tokenResponse.ok).toBe(true);
-      const token = await tokenResponse.json();
-      const config: CalendarProviderConfig = {
-        id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
-        provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
-        connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        provider_config: { clientId, clientSecret, accessToken: token.access_token, refreshToken: token.refresh_token, tokenExpiresAt: new Date(expired ? 0 : Date.now() + 3600000).toISOString() },
-      };
-      const adapter = new Adapter(config);
-      await adapter.connect();
-      return { adapter, oldToken: token.access_token, config };
-    }
+    const connected = (expired = false) => connect(Adapter, authUrl, expired);
 
     it('creates, reloads, lists, updates and deletes the primary-calendar event', async () => {
       const { adapter } = await connected();
@@ -152,3 +158,153 @@ for (const { name, Adapter, authUrl } of [
     });
   });
 }
+
+/**
+ * A series created in Outlook, not by Alga: no AlgaRRULE extended property, so
+ * recognising it depends entirely on Graph's own `recurrence` object and on the
+ * delta window returning expanded occurrences (`type`, `seriesMasterId`,
+ * `originalStart`). Before the recurring-series fix the adapter saw only
+ * standalone events here, which is what imported one entry per occurrence.
+ */
+describe('enterprise adapter over a native Outlook recurring series', () => {
+  async function seedSeries() {
+    const { adapter } = await connect(EnterpriseAdapter, enterpriseAuthUrl);
+    const master = (await controlPost('actions/calendar-change', {
+      changeType: 'created',
+      event: {
+        subject: 'Go over advisories in Git @alga',
+        start: { dateTime: '2026-10-01T14:15:00', timeZone: 'UTC' },
+        end: { dateTime: '2026-10-01T14:45:00', timeZone: 'UTC' },
+        recurrence: {
+          pattern: { type: 'relativeMonthly', interval: 1, daysOfWeek: ['thursday'], index: 'first' },
+          range: { type: 'noEnd', startDate: '2026-10-01' },
+        },
+      },
+    })).event;
+    return { adapter: adapter as InstanceType<typeof EnterpriseAdapter>, master };
+  }
+
+  it('reads the master as recurring and every delta item as an occurrence of it', async () => {
+    const { adapter, master } = await seedSeries();
+
+    const fetched = await adapter.getEvent(master.id);
+    expect(fetched.instanceType).toBe('master');
+    expect(fetched.recurrence).toEqual(['RRULE:FREQ=MONTHLY;BYDAY=1TH']);
+    expect(fetched.recurringEventId).toBeUndefined();
+
+    const { changes } = await adapter.fetchDeltaChanges();
+    expect(changes.length).toBeGreaterThan(1);
+    expect(changes.every(change => change.changeType === 'updated')).toBe(true);
+    // Every change names the master, so one series costs one import.
+    expect(new Set(changes.map(change => change.recurringEventId))).toEqual(new Set([master.id]));
+    expect(changes.every(change => Boolean(change.originalStart))).toBe(true);
+    expect(changes.map(change => change.id)).not.toContain(master.id);
+
+    const occurrence = await adapter.getEvent(changes[0].id);
+    expect(occurrence.instanceType).toBe('occurrence');
+    expect(occurrence.recurringEventId).toBe(master.id);
+  });
+
+  it('reports one cancelled occurrence as a removal and a moved one as an exception', async () => {
+    const { adapter, master } = await seedSeries();
+    const initial = await adapter.fetchDeltaChanges();
+    const cancelled = initial.changes[1];
+    const moved = initial.changes[2];
+
+    await controlPost('seed/calendar-occurrence', {
+      action: 'cancel', seriesMasterId: master.id, originalStart: cancelled.originalStart,
+    });
+    await controlPost('seed/calendar-occurrence', {
+      action: 'override',
+      seriesMasterId: master.id,
+      originalStart: moved.originalStart,
+      event: {
+        subject: 'Advisories (moved) @alga',
+        start: { dateTime: '2026-12-04T15:15:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-12-04T15:45:00Z', timeZone: 'UTC' },
+      },
+    });
+
+    const next = await adapter.fetchDeltaChanges(initial.deltaLink);
+    // Graph gives up the series identity on a removal: only the opaque id
+    // arrives, which is why the master's mapping carries an occurrence index.
+    expect(next.changes).toEqual(expect.arrayContaining([
+      { id: cancelled.id, changeType: 'deleted' },
+      expect.objectContaining({ id: moved.id, changeType: 'updated', recurringEventId: master.id }),
+    ]));
+    const exception = await adapter.getEvent(moved.id);
+    expect(exception.instanceType).toBe('exception');
+    expect(exception.title).toBe('Advisories (moved) @alga');
+    // The master is untouched by either single-occurrence change.
+    expect((await adapter.getEvent(master.id)).recurrence).toEqual(['RRULE:FREQ=MONTHLY;BYDAY=1TH']);
+  });
+});
+
+// Authority selection: the profile's tenant for tenant-owned apps, `common` otherwise.
+// Authorize and code exchange go through the real URL builders / token URL and the
+// emulator, which enforces single-tenant audiences; refresh runs the real adapters.
+const DIRECTORY = '11111111-2222-3333-4444-555555555555';
+const authorityCases = [
+  { name: 'single-tenant BYO profile', source: 'binding', tenantId: DIRECTORY, expected: DIRECTORY, singleTenant: true },
+  { name: 'BYO profile without a tenant', source: 'binding', tenantId: '', expected: 'common', singleTenant: false },
+  { name: 'multitenant BYO profile', source: 'binding', tenantId: 'common', expected: 'common', singleTenant: false },
+  { name: 'platform-managed profile carrying a tenant id', source: 'app', tenantId: DIRECTORY, expected: 'common', singleTenant: false },
+];
+
+describe.each(authorityCases)('calendar OAuth authority: $name', ({ source, tenantId, expected, singleTenant }) => {
+  const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
+  const redirectUri = 'http://localhost/calendar-callback';
+
+  async function seed() {
+    await registerTenantedClient(control, singleTenant
+      ? { clientId, clientSecret, signInAudience: 'AzureADMyOrg', homeTenantId: DIRECTORY }
+      : { clientId, clientSecret });
+    await setSignedInUser(control, { userPrincipalName: 'jamie@cedar.example', tenantId: DIRECTORY });
+  }
+  const authority = () => resolveMicrosoftOAuthAuthority({ issuerKind: microsoftIssuerKindFromSource(source), profileTenantId: tenantId });
+
+  it.each([['shared', sharedAuthUrl], ['enterprise', enterpriseAuthUrl]] as const)('%s authorize URL and token exchange use the resolved authority', async (_n, authUrl) => {
+    await seed();
+    expect(authority()).toBe(expected);
+    const url = new URL(await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: authority() }));
+    expect(url.pathname).toBe(`/${expected}/oauth2/v2.0/authorize`);
+    expect(url.searchParams.get('scope')).not.toMatch(/Mail\.Read/);
+    const outcome = await authorizeOverHttp(base, expected, { clientId, redirectUri, scope: url.searchParams.get('scope')!, state: 'calendar-state' });
+    expect(outcome.error).toBeUndefined();
+    expect(outcome.code).toBeTruthy();
+    const tokenUrl = getMicrosoftTokenUrl(authority());
+    expect(new URL(tokenUrl).pathname).toBe(`/${expected}/oauth2/v2.0/token`);
+    const tokens = await exchangeCodeOverHttp(base, expected, { clientId, clientSecret, code: outcome.code!, redirectUri });
+    expect(tokens.status).toBe(200);
+    expect(tokens.body.access_token).toBeTruthy();
+  });
+
+  it.each([['shared', SharedAdapter], ['enterprise', EnterpriseAdapter]] as const)('%s adapter refresh uses the resolved authority', async (_n, Adapter) => {
+    await seed();
+    const outcome = await authorizeOverHttp(base, expected, { clientId, redirectUri, scope: 'Calendars.ReadWrite offline_access', state: 's' });
+    const tokens = await exchangeCodeOverHttp(base, expected, { clientId, clientSecret, code: outcome.code!, redirectUri });
+    Object.assign(defaultProfile, { credentialSource: source, microsoftTenantId: tenantId });
+    const config: CalendarProviderConfig = {
+      id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
+      provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
+      connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      provider_config: {
+        clientId, clientSecret, tenantId, accessToken: 'stale', refreshToken: tokens.body.refresh_token,
+        tokenExpiresAt: new Date(0).toISOString(),
+      },
+    };
+    try {
+      const adapter = new Adapter(config);
+      await adapter.connect();
+      expect(config.provider_config!.accessToken).not.toBe('stale');
+    } finally {
+      Object.assign(defaultProfile, { credentialSource: undefined, microsoftTenantId: 'common' });
+    }
+  });
+});
+
+it('a single-tenant calendar app is rejected on /common, which is why the profile tenant must be used', async () => {
+  await registerTenantedClient(control, { clientId: 'st-client', clientSecret: 's', signInAudience: 'AzureADMyOrg', homeTenantId: DIRECTORY });
+  const outcome = await authorizeOverHttp(base, 'common', { clientId: 'st-client', redirectUri: 'http://localhost/calendar-callback', scope: 'Calendars.ReadWrite offline_access' });
+  expect(outcome.code).toBeUndefined();
+});

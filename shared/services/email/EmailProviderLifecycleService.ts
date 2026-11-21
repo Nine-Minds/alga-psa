@@ -13,6 +13,7 @@ import {
 import { persistIngressPointer } from './inboundEmailProducer';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
+import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from './imapOutboundTarget';
 import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
@@ -88,7 +89,7 @@ export const INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE =
  */
 const MICROSOFT_RECOVERY_MAX_PASSES = 500;
 
-interface GooglePausedIntervalReconciliation {
+interface GoogleDeliveryGapReconciliation {
   queuedMessages: number;
   usedFallbackQuery: boolean;
 }
@@ -608,10 +609,10 @@ export class EmailProviderLifecycleService {
           queuedMessages: result.queuedMessages,
         };
       } else if (provider.provider_type === 'google') {
-        const result = await this.reconcileGooglePausedInterval({
+        const result = await this.reconcileGoogleDeliveryGap({
           providerId,
           tenant,
-          pausedAt,
+          since: pausedAt,
           savedHistoryId,
         });
         reconciliation = {
@@ -699,13 +700,21 @@ export class EmailProviderLifecycleService {
       throw new Error('IMAP provider config not found');
     }
 
+    const imapTarget = await assertSafeImapHost(imapConfig.host, Number(imapConfig.port));
+    if (imapConfig.auth_type === 'oauth2') {
+      assertImapOauthCredentialIssuerBound(imapConfig);
+    }
+
     const knex = await getAdminConnection();
     let accessToken = typeof imapConfig.access_token === 'string' && imapConfig.access_token.trim()
       ? imapConfig.access_token
       : null;
 
     if (imapConfig.auth_type === 'oauth2' && (!accessToken || isImapTokenExpired(imapConfig.token_expires_at))) {
-      accessToken = await refreshImapAccessToken({ provider: imapConfig, db: knex });
+      accessToken = await refreshImapAccessToken({
+        provider: { ...imapConfig, id: providerId, tenant },
+        db: knex,
+      });
     }
 
     const auth: any = { user: imapConfig.username };
@@ -728,12 +737,17 @@ export class EmailProviderLifecycleService {
       port: Number(imapConfig.port),
       secure: Boolean(imapConfig.secure),
       auth,
+      tls: {
+        lookup: imapTarget.lookup as any,
+        ...(imapConfig.secure || imapConfig.allow_starttls
+          ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' }
+          : {}),
+      },
       disableAutoIdle: true,
       logger: false,
       connectionTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       greetingTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
       socketTimeout: IMAP_VALIDATION_SOCKET_TIMEOUT_MS,
-      tls: imapConfig.secure || imapConfig.allow_starttls ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' } : undefined,
     });
 
     try {
@@ -803,22 +817,28 @@ export class EmailProviderLifecycleService {
   }
 
   /**
-   * Google reconciliation: list changes from the pre-watch history cursor and
-   * enqueue the resulting message ids through the unified durable path. If
-   * Gmail rejects the old cursor, fall back to a mailbox query bounded by the
-   * pause timestamp rather than silently accepting a gap.
+   * Google reconciliation of a delivery gap — the shared reconciler for every
+   * way a mailbox can stop ingesting: an auth-failure pause
+   * (recoverAuthPausedProvider) and a recovery from `status='error'`
+   * (configureGmailProvider). It lists changes from the pre-watch history
+   * cursor and enqueues the resulting message ids through the unified durable
+   * path. If Gmail rejects the old cursor (or there is none), it falls back to
+   * a mailbox query bounded below by `since`, the last time delivery was
+   * known good (the pause timestamp, or email_providers.last_sync_at).
    *
-   * Both listing paths paginate the FULL paused interval — there is no batch
-   * cap to truncate it. Every discovered id is handed off through the durable
-   * dedupe path, so a large backlog is reconciled completely and re-running
-   * the reconciliation is safe.
+   * Both listing paths paginate the FULL gap — there is no batch cap to
+   * truncate it. Every discovered id is handed off through the durable dedupe
+   * path (one ingress row per message id), so a large backlog is reconciled
+   * completely and re-running the reconciliation, or running it over mail that
+   * was already ingested, is safe.
    */
-  private async reconcileGooglePausedInterval(params: {
+  async reconcileGoogleDeliveryGap(params: {
     providerId: string;
     tenant: string;
-    pausedAt: Date;
+    /** Lower bound of the time-query fallback: when delivery was last known good. */
+    since: Date;
     savedHistoryId?: string | null;
-  }): Promise<GooglePausedIntervalReconciliation> {
+  }): Promise<GoogleDeliveryGapReconciliation> {
     const loaded = await this.loadProvider(params.providerId, params.tenant);
     if (!loaded) throw new Error('Provider not found');
 
@@ -841,17 +861,17 @@ export class EmailProviderLifecycleService {
         messageIds = await adapter.listMessagesSince(savedHistoryId);
       } catch (error) {
         if (!isGmailHistoryIdRejected(error)) throw error;
-        console.info('[EmailProviderLifecycle] Gmail paused-interval cursor rejected; falling back to pause-bounded query', {
+        console.info('[EmailProviderLifecycle] Gmail paused-interval cursor rejected; falling back to time-bounded query', {
           tenant: params.tenant,
           providerId: params.providerId,
           savedHistoryId,
         });
         usedFallbackQuery = true;
-        messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, undefined, { paginateAll: true });
+        messageIds = await adapter.listMessageIdsSinceTime(params.since, undefined, { paginateAll: true });
       }
     } else {
       usedFallbackQuery = true;
-      messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, undefined, { paginateAll: true });
+      messageIds = await adapter.listMessageIdsSinceTime(params.since, undefined, { paginateAll: true });
     }
 
     let queuedMessages = 0;

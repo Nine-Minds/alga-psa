@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { materializeState, neverActivated, type CoManagedEntitlementState } from './co-managed-entitlements';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 /** The Stripe adapter must validate customer, product, price, payment state and the sponsoring
  * PSA Pro subscription before returning this snapshot. */
@@ -11,6 +12,8 @@ export interface HostedCoManagedSnapshot {
   lapseSince?: Date;
   /** `metadata.operation_id` of the subscription: binds a checkout-created subscription to its operation. */
   operationId?: string;
+  trialId?: string;
+  terminalFailure?: boolean;
 }
 
 async function databaseNow(trx: Knex.Transaction): Promise<Date> {
@@ -27,16 +30,18 @@ async function databaseNow(trx: Knex.Transaction): Promise<Date> {
 export async function reconcileHostedCoManagedEntitlement(
   db: Knex, sponsor: string, subscriptionId: string,
   loadCurrent: () => Promise<HostedCoManagedSnapshot>,
+  onVerified?: (trx: Knex.Transaction, sponsor: string, snapshot: HostedCoManagedSnapshot) => Promise<void>,
 ): Promise<CoManagedEntitlementState> {
   if (!subscriptionId) throw new Error('Co-managed subscription identity is required');
   return db.transaction(async (trx) => {
     const scoped = tenantDb(trx, sponsor);
+    const existing = await lockCoManagedSponsorPool(trx, sponsor);
     const initialNow = await databaseNow(trx);
     // write-admission: exempt — sponsor entitlement lifecycle owned by licensing
     await scoped.table('co_managed_entitlements').insert({ tenant: sponsor, source: 'hosted',
       source_reference: subscriptionId, capacity: 0, verified_at: initialNow, valid_until: initialNow,
     }).onConflict('tenant').ignore();
-    const row = await scoped.table('co_managed_entitlements').forUpdate().first();
+    const row = existing ?? await scoped.table('co_managed_entitlements').where('tenant', sponsor).forUpdate().first();
     if (row.source !== 'hosted' || row.source_reference !== subscriptionId) {
       throw new Error('Co-managed entitlement belongs to a different subscription');
     }
@@ -73,11 +78,21 @@ export async function reconcileHostedCoManagedEntitlement(
       await scoped.table('co_managed_purchase_operations')
         .whereIn('state', ['preparing', 'checkout', 'payment_failed'])
         .where('quantity', snapshot.capacity)
+        .where(match => {
+          match.whereNull('trial_id');
+          if (snapshot.trialId && snapshot.operationId) {
+            match.orWhere({ trial_id: snapshot.trialId, operation_id: snapshot.operationId });
+          }
+        })
         .where((match) => {
           match.where('provider_reference', subscriptionId);
           if (snapshot.operationId) match.orWhere('operation_id', snapshot.operationId);
         })
         .update({ state: 'completed', provider_reference: subscriptionId, updated_at: now });
+    }
+    if ((snapshot.active || snapshot.terminalFailure) && snapshot.trialId && onVerified) {
+      await onVerified(trx, sponsor, snapshot);
+      return materializeState(trx, sponsor, { ...row, ...update }, now);
     }
     return state;
   });
@@ -89,7 +104,7 @@ export async function recordCoManagedPaymentFailure(db: Knex, sponsor: string): 
   await db.transaction(async (trx) => {
     // write-admission: exempt — purchase bookkeeping owned by licensing
     await tenantDb(trx, sponsor).table('co_managed_purchase_operations')
-      .whereIn('state', ['preparing', 'checkout'])
+      .whereNull('trial_id').whereIn('state', ['preparing', 'checkout'])
       .update({ state: 'payment_failed', updated_at: trx.fn.now() });
   });
 }

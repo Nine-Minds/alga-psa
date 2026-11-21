@@ -48,6 +48,7 @@ describe('ticket list and hydration SQL projection', () => {
         CREATE TEMP TABLE categories (tenant uuid, category_id uuid, category_name text) ON COMMIT DROP;
         CREATE TEMP TABLE clients (tenant uuid, client_id uuid, client_name text) ON COMMIT DROP;
         CREATE TEMP TABLE contacts (tenant uuid, contact_name_id uuid, full_name text) ON COMMIT DROP;
+        CREATE TEMP TABLE client_locations (tenant uuid, location_id uuid, location_name text) ON COMMIT DROP;
         CREATE TEMP TABLE users (tenant uuid, user_id uuid, first_name text, last_name text) ON COMMIT DROP;
         CREATE TEMP TABLE teams (tenant uuid, team_id uuid, team_name text) ON COMMIT DROP;
         CREATE TEMP TABLE ticket_resources (tenant uuid, ticket_id uuid, additional_user_id uuid) ON COMMIT DROP;
@@ -106,6 +107,7 @@ describe('ticket list and hydration SQL projection', () => {
         ['categories as cat', 't.category_id', 'cat.category_id'],
         ['clients as comp', 't.client_id', 'comp.client_id'],
         ['contacts as cn', 't.contact_name_id', 'cn.contact_name_id'],
+        ['client_locations as tloc', 't.location_id', 'tloc.location_id'],
         ['users as u', 't.entered_by', 'u.user_id'],
         ['users as au', 't.assigned_to', 'au.user_id'],
         ['teams as tm', 't.assigned_team_id', 'tm.team_id'],

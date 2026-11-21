@@ -1,13 +1,17 @@
+import { View } from "react-native";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
+import { HomeScreen, HomeSearchButton } from "../screens/HomeScreen";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
 import { ScheduleScreen } from "../screens/ScheduleScreen";
+import { ProjectsScreen } from "../screens/ProjectsScreen";
 import { InteractionsScreen } from "../screens/InteractionsScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
 import { ContactsListScreen } from "../screens/ContactsListScreen";
+import { AssetsScreen } from "../screens/AssetsScreen";
 import { InventoryScreen } from "../screens/InventoryScreen";
 import { OpportunitiesScreen } from "../screens/OpportunitiesScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
@@ -15,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
+import { SIDEBAR_WIDTH, useWindowLayout } from "../ui/layout";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -30,15 +35,32 @@ export function DrawerNavigator() {
   const { t: tSettings } = useTranslation("settings");
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
+  const { t: tProjects } = useTranslation("projects");
+  const { t: tAssets } = useTranslation("assets");
+  const { t: tHome } = useTranslation("home");
   const { features } = useCapabilities();
+  // A co-managed seat technician's session reaches tickets, projects, assets and their own time only.
+  const operationalOnly = features.operationalOnly;
+  // The widest windows keep the navigation as a permanent sidebar; everything
+  // else keeps the slide-in drawer and its header toggle.
+  const { permanentSidebar } = useWindowLayout();
+  // A seat session has no Home and starts on Tickets. The key restarts the drawer there when the capabilities
+  // arrive after it mounted, rather than dropping the focused screen under the user.
   return (
     <Drawer.Navigator
+      key={operationalOnly ? "operational" : "full"}
+      initialRouteName={operationalOnly ? "TicketsTab" : "HomeTab"}
       screenOptions={{
+        drawerType: permanentSidebar ? "permanent" : "front",
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSecondary,
         drawerStyle: {
           backgroundColor: theme.colors.card,
+          width: permanentSidebar ? SIDEBAR_WIDTH : undefined,
+          borderRightWidth: permanentSidebar ? 1 : 0,
+          borderRightColor: theme.colors.border,
         },
+        headerLeft: permanentSidebar ? () => null : undefined,
         headerStyle: {
           backgroundColor: theme.colors.card,
         },
@@ -53,6 +75,24 @@ export function DrawerNavigator() {
         headerRight: () => <HeaderTimerChip />,
       }}
     >
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="HomeTab"
+          component={HomeScreen}
+          options={({ navigation }) => ({
+            title: tHome("title", "Home"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+            ),
+            headerRight: () => (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <HomeSearchButton onPress={() => navigation.getParent()?.navigate("Search")} />
+                <HeaderTimerChip />
+              </View>
+            ),
+          })}
+        />
+      )}
       <Drawer.Screen
         name="TicketsTab"
         component={TicketsStackNavigator}
@@ -64,36 +104,54 @@ export function DrawerNavigator() {
           ),
         }}
       />
-      <Drawer.Screen
-        name="UserActivitiesTab"
-        component={UserActivitiesScreen}
-        options={{
-          title: tUserActivities("title", "Activities"),
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="check-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="ScheduleTab"
-        component={ScheduleScreen}
-        options={{
-          title: tSchedule("title", "Schedule"),
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar-blank-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="InteractionsTab"
-        component={InteractionsScreen}
-        options={{
-          title: tInteractions("title", "Interactions"),
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="phone-message-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="UserActivitiesTab"
+          component={UserActivitiesScreen}
+          options={{
+            title: tUserActivities("title", "Activities"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="check-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="ScheduleTab"
+          component={ScheduleScreen}
+          options={{
+            title: tSchedule("title", "Schedule"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="calendar-blank-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {features.projects ? (
+        <Drawer.Screen
+          name="ProjectsTab"
+          component={ProjectsScreen}
+          options={{
+            title: tProjects("title", "Projects"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="clipboard-list-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="InteractionsTab"
+          component={InteractionsScreen}
+          options={{
+            title: tInteractions("title", "Interactions"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="phone-message-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
       <Drawer.Screen
         name="TimeEntriesTab"
         component={TimeEntriesScreen}
@@ -104,26 +162,42 @@ export function DrawerNavigator() {
           ),
         }}
       />
-      <Drawer.Screen
-        name="ClientsTab"
-        component={ClientsListScreen}
-        options={{
-          title: tClients("title", "Clients"),
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="briefcase-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="ContactsTab"
-        component={ContactsListScreen}
-        options={{
-          title: tContacts("title", "Contacts"),
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="ClientsTab"
+          component={ClientsListScreen}
+          options={{
+            title: tClients("title", "Clients"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="briefcase-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {operationalOnly ? null : (
+        <Drawer.Screen
+          name="ContactsTab"
+          component={ContactsListScreen}
+          options={{
+            title: tContacts("title", "Contacts"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {features.assets ? (
+        <Drawer.Screen
+          name="AssetsTab"
+          component={AssetsScreen}
+          options={{
+            title: tAssets("list.title", "Assets"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="devices" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       {features.inventory ? (
         <Drawer.Screen
           name="InventoryTab"

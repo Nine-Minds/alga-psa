@@ -566,8 +566,8 @@ describe('Quote item catalog-description snapshot', () => {
       const hasOptionalMarker = code === 'standard-quote-grouped' && tableId === 'cadence-band-items';
       expect(column.lines?.map((line: any) => line.value.path)).toEqual(
         hasOptionalMarker
-          ? ['service_name', 'catalog_description', 'optional_label']
-          : ['service_name', 'catalog_description'],
+          ? ['description', 'catalog_description', 'optional_label']
+          : ['description', 'catalog_description'],
       );
       if (hasOptionalMarker) {
         expect(column.lines[2].supplemental).toBe(true);
@@ -722,7 +722,7 @@ describe('Quote item catalog-description snapshot', () => {
       .find((node: any) => node.id === 'line-items')?.columns
       .find((column: any) => column.id === 'description');
     expect(descriptionColumn.lines.map((line: any) => line.value.path)).toEqual([
-      'service_name',
+      'description',
       'catalog_description',
     ]);
 

@@ -43,7 +43,7 @@ async function createAuthorizationFixture(
     CREATE TEMP TABLE time_entries (
       tenant uuid, entry_id uuid, user_id uuid, work_item_type text, work_item_id uuid,
       start_time timestamptz, end_time timestamptz, work_date date, billable_duration integer,
-      notes text, approval_status text, service_id uuid
+      notes text, approval_status text, service_id uuid, billing_mode text
     ) ON COMMIT DROP;
     CREATE TEMP TABLE service_catalog (tenant uuid, service_id uuid, service_name text) ON COMMIT DROP;
     CREATE TEMP TABLE authorization_bundle_assignments (
@@ -53,8 +53,11 @@ async function createAuthorizationFixture(
       tenant uuid, bundle_id uuid, status text, published_revision_id uuid
     ) ON COMMIT DROP;
     CREATE TEMP TABLE authorization_bundle_rules (
-      tenant uuid, rule_id uuid, revision_id uuid, resource_type text, action text,
+      tenant uuid, rule_id uuid, bundle_id uuid, revision_id uuid, resource_type text, action text,
       template_key text, constraint_key text, config jsonb
+    ) ON COMMIT DROP;
+    CREATE TEMP TABLE authorization_bundle_revisions (
+      tenant uuid, bundle_id uuid, revision_id uuid, baseline text
     ) ON COMMIT DROP;
   `);
   await trx('users').insert([
@@ -80,9 +83,16 @@ async function createAuthorizationFixture(
     target_id: kind === 'role' ? ROLE : TEAM,
     status: 'active',
   });
+  await trx('authorization_bundle_revisions').insert({
+    tenant: TENANT,
+    bundle_id: BUNDLE,
+    revision_id: REVISION,
+    baseline: 'open',
+  });
   await trx('authorization_bundle_rules').insert({
     tenant: TENANT,
     rule_id: RULE,
+    bundle_id: BUNDLE,
     revision_id: REVISION,
     resource_type: 'time_entry',
     action,

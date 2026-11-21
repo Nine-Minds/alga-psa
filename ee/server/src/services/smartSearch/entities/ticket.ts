@@ -12,7 +12,8 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { aclPredicateSql, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { resolveSearchPrincipal } from '@alga-psa/search/runAppSearch';
 import { getAllMatchingTicketIds, getTicketReadTargetsByIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ticketReadFieldHidden } from '@alga-psa/tickets/lib';
 import { ticketListFiltersSchema } from '@alga-psa/tickets/schemas/ticket.schema';
@@ -181,20 +182,21 @@ async function loadVisibleCommentRows(
   ticketIds: string[]
 ): Promise<CommentIndexRow[]> {
   const acl = aclPredicateSql(principal);
+  // LEVERAGE: friction search-acl-alias — aclPredicateSql's board clause assumes the index is aliased `s`; every reader must match it.
   // Newest first per ticket, capped per ticket so a 400-comment thread does not
   // pull 400 rows the budget will throw away. ROW_NUMBER keeps the query one
   // round trip for the whole chunk; the outer filter is on the ranked set.
   const ranked = tenantDb(trx, tenant)
-    .table('app_search_index as si')
-    .where('si.object_type', 'ticket_comment')
-    .whereIn('si.parent_id', ticketIds)
+    .table('app_search_index as s')
+    .where('s.object_type', 'ticket_comment')
+    .whereIn('s.parent_id', ticketIds)
     .whereRaw(acl.sql, acl.bindings)
     .select(
-      'si.parent_id',
-      'si.body',
-      'si.metadata',
-      'si.source_updated_at',
-      trx.raw('ROW_NUMBER() OVER (PARTITION BY si.parent_id ORDER BY si.source_updated_at DESC) AS rn')
+      's.parent_id',
+      's.body',
+      's.metadata',
+      's.source_updated_at',
+      trx.raw('ROW_NUMBER() OVER (PARTITION BY s.parent_id ORDER BY s.source_updated_at DESC) AS rn')
     )
     .as('ranked');
 
@@ -226,13 +228,13 @@ export async function loadTicketCandidates(
   }
   const ticketRows: TicketTextRow[] = [];
   const commentsByTicket = new Map<string, TicketComment[]>();
+  const principal = await resolveSearchPrincipal(trx, tenant, user);
   for (const group of groups.values()) {
     const mask = ticketReadMask(group.redactedFields);
     if (mask.dropResource) continue;
     ticketRows.push(...await loadTicketTextRows(trx, tenant, group.ids, group.redactedFields));
     // Comments have no independent field projection. Do not query their bodies for any redacted ticket.
     if (group.redactedFields.length > 0) continue;
-    const principal = await resolveSearchAclPrincipal(trx, user);
     const commentRows = await loadVisibleCommentRows(trx, tenant, principal, group.ids);
     for (const row of commentRows) {
       const text = normalizeRichText(row.body);

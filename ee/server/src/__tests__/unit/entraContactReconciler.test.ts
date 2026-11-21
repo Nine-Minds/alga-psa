@@ -48,6 +48,7 @@ type KnexHarness = {
 function setupReconcilerKnexHarness(params?: {
   existingLinkedContactId?: string | null;
   existingClientContactId?: string | null;
+  existingPhoneRows?: Array<Record<string, unknown>>;
 }): KnexHarness {
   const existingLinkedContactId = params?.existingLinkedContactId || null;
   const existingClientContactId = params?.existingClientContactId || null;
@@ -92,7 +93,7 @@ function setupReconcilerKnexHarness(params?: {
       // phone-sync cases here exercise.
       const chain = {
         orderBy: vi.fn(),
-        select: vi.fn(async () => [] as Array<Record<string, unknown>>),
+        select: vi.fn(async () => params?.existingPhoneRows ?? ([] as Array<Record<string, unknown>>)),
       };
       chain.orderBy.mockReturnValue(chain);
       return withTenantScope({
@@ -106,10 +107,11 @@ function setupReconcilerKnexHarness(params?: {
   trxMock.fn = { now: vi.fn(() => 'db-now') };
   trxMock.raw = vi.fn(() => 'RAW');
 
-  const knexMock = {
+  // Callable like a real Knex instance: the preview reads straight off `knex(table)`.
+  const knexMock = Object.assign((table: string) => trxMock(table), {
     fn: { now: vi.fn(() => 'db-now') },
     transaction: vi.fn(async (cb: (trx: typeof trxMock) => Promise<unknown>) => cb(trxMock)),
-  };
+  });
   createTenantKnexMock.mockResolvedValue({ knex: knexMock });
 
   return {
@@ -294,6 +296,40 @@ describe('reconcileEntraUserToContact', () => {
       'tenant-phone-sync',
       expect.anything()
     );
+  });
+
+  it('T006: a phone row that differs only in extension is a change in the real run and the preview', async () => {
+    const candidate = {
+      contactNameId: 'contact-ext',
+      clientId: 'client-ext',
+      email: 'ext@example.com',
+      fullName: 'Ext User',
+      isInactive: false,
+    };
+    const user = buildUser({ email: 'ext@example.com', businessPhones: ['+14165551234;ext=228'] });
+    const storedRow = (extension: string | null) => ({
+      phone_number: '+14165551234',
+      canonical_type: 'work',
+      extension,
+    });
+    const { previewLinkedContactChange, linkExistingMatchedContact } = await import(
+      '@ee/lib/integrations/entra/sync/contactReconciler'
+    );
+
+    // Stored row has no extension yet: both paths see a change.
+    setupReconcilerKnexHarness({ existingLinkedContactId: 'contact-ext', existingPhoneRows: [storedRow(null)] });
+    const changedPreview = await previewLinkedContactChange('tenant-ext', candidate, user, { phone: true });
+    expect(changedPreview.fieldsWouldChange).toBe(true);
+    const changedReal = await linkExistingMatchedContact('tenant-ext', 'client-ext', candidate, user, { phone: true });
+    expect(changedReal.fieldsUpdated).toBe(true);
+
+    // Stored row already carries the extension: no change anywhere.
+    updateContactMock.mockClear();
+    setupReconcilerKnexHarness({ existingLinkedContactId: 'contact-ext', existingPhoneRows: [storedRow('228')] });
+    const samePreview = await previewLinkedContactChange('tenant-ext', candidate, user, { phone: true });
+    expect(samePreview.fieldsWouldChange).toBe(false);
+    const sameReal = await linkExistingMatchedContact('tenant-ext', 'client-ext', candidate, user, { phone: true });
+    expect(sameReal.fieldsUpdated).toBe(false);
   });
 
   it('T097: multiple plausible matches queue an ambiguous reconciliation item', async () => {
