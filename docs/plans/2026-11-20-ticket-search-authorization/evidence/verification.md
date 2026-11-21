@@ -2,6 +2,23 @@
 
 Governing specification: [PRD](../PRD.md). Tested implementation revision: `e3ad618d24d244e7e4161dfc7a1b7e67de75385e`.
 
+## Mixed-search performance repair
+
+Repair commit: `86abc71008a370b0765ac850fb8642ea48daa953`.
+
+- The PostgreSQL mixed-search benchmark passed at the repair revision: two tests, including eight request scenarios (limit 5 and 100, first and subsequent pages, unrestricted and selected-client bundle-restricted internal users), a complete cursor walk, stale project index exclusion, and exact per-type totals. PostgreSQL 15.4; one warmup and five measured sequential requests per scenario.
+- The same harness failed its candidate-growth assertion against baseline `bdca35983cc22c75f9b07ffd797aedc8463b2129`: 160 SQL statements at 150 project matches and 515 at 500. The repair measures 10 statements at both sizes. See [raw mixed-search performance evidence](benchmark.md#mixed-search-repair-round) for every timing and SQL sample plus reproduction commands.
+- Search unit suites: six files, 79 tests passed (`searchAuthorizationRegression`, search actions, ACL, query, `runAppSearch`, API search controller).
+- PostgreSQL authorization suite: `searchAuthorizationProduction.integration.test.ts`, five tests passed. This retains real UUID ticket/comment correlation, portal audience, cross-tenant comment, deleted/missing parent, unsupported ticket rule, and resolver-failure checks.
+- PostgreSQL cursor suite: `searchRankingCursor.db.test.ts`, three tests passed, including delayed scan ranking and the 205-row 100/100/5 public cursor traversal.
+- Seven-read authorization regressions: ticket record authorization, Bento actions and sibling ticket actions; three files, 23 tests passed.
+- `npx tsc --noEmit -p packages/search/tsconfig.json` — passed. `npx tsc --noEmit -p packages/tickets/tsconfig.json` — passed.
+- `npx nx run search:build` and `npx nx run tickets:build` — passed. The tickets build used its supported Nx target; its direct package script is not a configured tsup input build.
+- `git diff --check` — passed before the repair commit.
+- The server remained stopped. The November 3 live walkthrough mentioned in older material is historical baseline evidence only. No browser smoke or production validation was performed for this repair.
+
+Reviewers should start with the [repair review guide](review-guide.md), then the mixed-search section of the benchmark report.
+
 ## Completed checks at the tested revision
 
 - `npx tsc --noEmit -p packages/tickets/tsconfig.json` — passed.

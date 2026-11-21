@@ -1,4 +1,4 @@
-# Production-path ticket search authorization benchmark
+# Search authorization performance evidence
 
 Governing specification: [PRD](../PRD.md). The earlier synthetic 1,500-row candidate-query benchmark is retained as [supplementary evidence](benchmark-query-path-supplementary.md); the measurements here use production ticket/comment authorization code and the real indexed tables.
 
@@ -42,6 +42,88 @@ Raw SQL statement samples were constant in each scenario: baseline `[3507, 3507,
 | Revised compiled path | 500 | 50 | 10 |
 
 The four scenario assertions verify identical expected IDs and authorized totals on baseline and revised runs: 500 unrestricted and 50 restrictive, including each later page. The revised path reduces measured p95 by 96.98%–98.60% and request SQL statements from 3,507–4,007 to 9–10. Its request SQL count remains flat as matches grow from 150 to 500.
+
+## Mixed-search repair round
+
+The ticket-only measurements above are historical evidence for the prior ticket authorization repair. They do not measure the separate full-search cost from source-record verifiers on non-ticket types. This section measures that mixed path before and after commit `86abc71008a370b0765ac850fb8642ea48daa953`.
+
+### Fixture and method
+
+- Baseline source revision: `bdca35983cc22c75f9b07ffd797aedc8463b2129`.
+- Repair source revision: `86abc71008a370b0765ac850fb8642ea48daa953`.
+- PostgreSQL: 15.4 (`Debian 15.4-2.pgdg120+1`).
+- Each run used an isolated TestContext database fixture against production `tickets`, `comments`, `projects` and `app_search_index` schemas. The fixture contained 500 matching tickets (50 admitted by the selected-client bundle rule and 450 denied), 50 published comments on the 50 admitted tickets, 500 matching projects, and one stale project index row with no project source record. The mixed indexed candidate set therefore had 1,051 rows; the exact authorized total was 1,050 unrestricted and 600 under the bundle-restricted policy.
+- The user had ticket and project read permissions. The unrestricted cases removed the benchmark bundle assignment; restricted cases kept its selected-client rule active. Project rows remained readable for both internal-user policies. Comment visibility still depended on the parent ticket and shared ticket/comment policy.
+- Eight requests covered first and subsequent pages at typeahead size 5 and maximum size 100 for both policies. Cursor setup was outside the timing window. Each scenario used one warmup followed by five measured requests, sequentially (concurrency 1). Results, groups and exact totals were asserted on every request. A separate cursor walk checked the complete 1,050-row unrestricted result set, no duplicate identities, no omissions, and termination.
+- The growth check queried 150 and 500 live projects (the broad query also had the stale index row). Each sample measured the entire `runAppSearch` request. SQL counts came from Knex `query` events and included principal/policy resolution, source authorization, counts and result pages. Latency used `performance.now()` wall-clock request duration. p95 is nearest-rank sample 5 of 5. Fixture creation and cursor generation were excluded.
+- On the pre-repair source, the same behavioral benchmark failed its flat-growth assertion: 160 statements at 150 projects and 515 at 500. This directly reproduces the review hold. The old path queried the source verifier once per matching project while continuing through all candidates to produce exact groups and totals.
+
+### Mixed request results
+
+| Request | Policy | Baseline p95 ms | Baseline SQL/request | Repair p95 ms | Repair SQL/request |
+|---|---|---:|---:|---:|---:|
+| First page, limit 5 | Unrestricted | 133.04 | 516 | 21.21 | 9 |
+| First page, limit 5 | Bundle restricted | 105.99 | 517 | 20.95 | 10 |
+| Subsequent page, limit 5 | Unrestricted | 107.38 | 516 | 26.19 | 9 |
+| Subsequent page, limit 5 | Bundle restricted | 107.21 | 517 | 24.77 | 10 |
+| First page, limit 100 | Unrestricted | 113.45 | 516 | 20.45 | 9 |
+| Subsequent page, limit 100 | Unrestricted | 103.60 | 516 | 23.49 | 9 |
+| First page, limit 100 | Bundle restricted | 107.13 | 517 | 20.99 | 10 |
+| Subsequent page, limit 100 | Bundle restricted | 108.75 | 517 | 24.52 | 10 |
+
+### Raw latency samples (ms)
+
+| Request | Baseline samples | Repair samples |
+|---|---|---|
+| First page, limit 5, unrestricted | `[133.04, 125.36, 113.05, 114.25, 117.06]` | `[18.86, 21.21, 18.75, 18.14, 17.77]` |
+| First page, limit 5, bundle restricted | `[103.64, 96.86, 105.99, 96.22, 102.09]` | `[20.49, 20.95, 17.73, 16.65, 17.16]` |
+| Subsequent page, limit 5, unrestricted | `[107.38, 101.47, 106.02, 102.57, 105.90]` | `[23.85, 21.33, 21.22, 21.83, 26.19]` |
+| Subsequent page, limit 5, bundle restricted | `[98.01, 101.05, 100.86, 87.77, 107.21]` | `[21.25, 23.25, 23.79, 21.01, 24.77]` |
+| First page, limit 100, unrestricted | `[98.05, 95.21, 104.35, 113.45, 103.02]` | `[20.45, 18.45, 16.96, 18.23, 18.46]` |
+| Subsequent page, limit 100, unrestricted | `[100.05, 95.21, 102.66, 103.60, 102.99]` | `[23.49, 20.94, 22.13, 21.78, 22.73]` |
+| First page, limit 100, bundle restricted | `[96.89, 99.41, 102.12, 104.54, 107.13]` | `[16.95, 17.21, 18.37, 19.74, 20.99]` |
+| Subsequent page, limit 100, bundle restricted | `[106.71, 94.30, 104.14, 108.75, 103.38]` | `[23.48, 24.52, 22.68, 21.24, 21.52]` |
+
+SQL statement samples were constant within each scenario: baseline `[516, 516, 516, 516, 516]` unrestricted and `[517, 517, 517, 517, 517]` restricted; repair `[9, 9, 9, 9, 9]` unrestricted and `[10, 10, 10, 10, 10]` restricted.
+
+### Candidate growth and raw measurements
+
+| Live project matches | Baseline SQL samples | Baseline latency samples (ms) | Repair SQL samples | Repair latency samples (ms) |
+|---:|---|---|---|---|
+| 150 | `[160, 160, 160, 160, 160]` | `[22.07, 19.69, 21.55, 21.67, 21.24]` | `[10, 10, 10, 10, 10]` | `[11.82, 9.71, 9.93, 9.86, 8.81]` |
+| 500 (+ 1 stale index entry) | `[515, 515, 515, 515, 515]` | `[91.68, 82.89, 82.41, 92.00, 82.18]` | `[10, 10, 10, 10, 10]` | `[9.74, 9.48, 9.64, 10.09, 9.13]` |
+
+The repaired path applies source visibility in the same SQL used for ranking/pages and exact counts. Project statement counts remain flat at 10 while matches grow from 150 to 500; a missing project source row stays excluded from results and totals. Ticket/comment counts and metadata continue through the shared ticket read policy. No raw candidate cap or partial total was introduced.
+
+### Reproduction
+
+Run the repair benchmark from the repository's `server/` directory:
+
+```sh
+SEARCH_BENCH_REVISION=86abc71008a370b0765ac850fb8642ea48daa953 \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+To run the same harness against the baseline source, create a detached baseline worktree, copy the committed benchmark harness into it, and link the current dependencies and test environment:
+
+```sh
+git worktree add --detach /tmp/alga-pr4133-mixed-baseline bdca35983cc22c75f9b07ffd797aedc8463b2129
+git show 86abc71008a370b0765ac850fb8642ea48daa953:server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  > /tmp/alga-pr4133-mixed-baseline/server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts
+ln -s "$PWD/node_modules" /tmp/alga-pr4133-mixed-baseline/node_modules
+ln -s "$PWD/.env.localtest" /tmp/alga-pr4133-mixed-baseline/.env.localtest
+cd /tmp/alga-pr4133-mixed-baseline/server
+SEARCH_BENCH_REVISION=bdca35983cc22c75f9b07ffd797aedc8463b2129 \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+The baseline run is expected to fail only the regression assertion comparing the 150- and 500-project statement counts; its measurements are printed before that assertion. Remove the detached worktree after review with `git worktree remove /tmp/alga-pr4133-mixed-baseline`.
+
+### Limits
+
+These are sequential PostgreSQL integration measurements with five samples, not a production traffic load test. The fixture exercises project source verification at scale and mixed ticket/comment authorization, but does not assign large match sets to every searchable entity type. The SQL compiler covers the registered verifier-backed types whose current checks are expressible in SQL; a future/custom verifier without a compiled predicate remains on the batched fail-closed scan path. The application server was not started, and no new browser smoke or production validation was performed.
 
 ## Reproducibility and limitations
 
