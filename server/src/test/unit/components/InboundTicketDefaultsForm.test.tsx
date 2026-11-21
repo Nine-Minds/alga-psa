@@ -17,7 +17,7 @@ const {
   mockUpdateInboundTicketDefaults,
   mockGetAllPriorities,
   mockGetAllUsersBasic,
-  mockGetIntegrationClients,
+  pickerClients,
   mockGetUserAvatarUrlsBatchAction,
 } = vi.hoisted(() => ({
   mockGetTicketFieldOptions: vi.fn(),
@@ -27,7 +27,8 @@ const {
   mockUpdateInboundTicketDefaults: vi.fn(),
   mockGetAllPriorities: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
-  mockGetIntegrationClients: vi.fn(),
+  // Options the mocked ClientPicker offers; the real picker searches on the server.
+  pickerClients: { current: [] as any[] },
   mockGetUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
@@ -60,7 +61,6 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
   ClientPicker: ({
     id,
-    clients = [],
     selectedClientId,
     onSelect,
     placeholder,
@@ -72,7 +72,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
       onChange={(event) => onSelect(event.target.value ? event.target.value : null)}
     >
       <option value="">{placeholder ?? 'Select Client'}</option>
-      {clients.map((client: any) => (
+      {pickerClients.current.map((client: any) => (
         <option key={client.client_id || client.id} value={client.client_id || client.id}>
           {client.client_name || client.name}
         </option>
@@ -179,11 +179,6 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   updateInboundTicketDefaults: mockUpdateInboundTicketDefaults,
 }));
 
-vi.mock('../../../../../packages/integrations/src/actions/clientLookupActions', () => ({
-  __esModule: true,
-  getIntegrationClients: mockGetIntegrationClients,
-}));
-
 vi.mock('@alga-psa/reference-data/actions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
@@ -239,7 +234,7 @@ describe('InboundTicketDefaultsForm', () => {
       return { statuses: [] };
     });
     mockGetCategoriesByBoard.mockResolvedValue({ categories: [] });
-    mockGetIntegrationClients.mockResolvedValue(sampleClients);
+    pickerClients.current = sampleClients;
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
     mockGetUserAvatarUrlsBatchAction.mockResolvedValue({});
@@ -370,10 +365,10 @@ describe('InboundTicketDefaultsForm', () => {
         locations: [{ id: 'loc-1', name: 'Acme HQ', client_id: 'client-1' }],
       },
     });
-    mockGetIntegrationClients.mockResolvedValue([
+    pickerClients.current = [
       ...sampleClients,
       { client_id: 'client-2', client_name: 'Unmatched senders', is_inactive: false },
-    ]);
+    ];
     mockUpdateInboundTicketDefaults.mockResolvedValue({
       defaults: { id: 'defaults-1', client_id: 'client-2', location_id: null },
     });

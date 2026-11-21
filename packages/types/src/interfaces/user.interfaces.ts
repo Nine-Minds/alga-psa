@@ -1,3 +1,6 @@
+import type { AllowlistedUserField } from '../lib/userResponse';
+export type { AllowlistedUserField } from '../lib/userResponse';
+
 /**
  * Canonical User Interfaces
  * These are the canonical definitions for user-related types used across the codebase.
@@ -23,6 +26,8 @@ export interface IUser {
   two_factor_required_new_device?: boolean;
   is_google_user?: boolean;
   is_inactive: boolean;
+  /** A seat assignment that is not revoked binds this user (database-enforced; see migration 20261113130000). `false` on a loaded row means MSP staff. */
+  seat_reader?: boolean;
   tenant: string;
   user_type: 'internal' | 'client' | 'service';
   reports_to?: string | null;
@@ -36,6 +41,9 @@ export interface IUser {
   last_login_at?: Date | string;
   last_login_method?: string;
 }
+
+/** Browser-safe fields used by user directory pickers and dropdowns. */
+export type IUserBasic = Pick<IUser, AllowlistedUserField>;
 
 /**
  * Role entity interface

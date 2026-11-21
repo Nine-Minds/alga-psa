@@ -13,28 +13,34 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+const model = vi.hoisted(() => ({
+  getById: vi.fn(),
+  countDeliveries: vi.fn(async () => 0),
+}));
+vi.mock('@/lib/webhooks/webhookModel', async (orig) => {
+  const actual: any = await orig();
+  return { ...actual, webhookModel: { ...actual.webhookModel, ...model } };
+});
+
 const webhookRow = {
-  webhook_id: WEBHOOK_ID,
+  webhookId: WEBHOOK_ID,
   tenant: TENANT_ID,
   name: 'Ticket updates',
   url: 'https://example.test/hook',
   method: 'POST',
-  event_types: ['ticket.updated'],
-  is_active: true,
-  verify_ssl: true,
-  total_deliveries: 0,
-  successful_deliveries: 0,
-  failed_deliveries: 0,
+  eventTypes: ['ticket.updated'],
+  isActive: true,
+  verifySsl: true,
+  totalDeliveries: 0,
+  successfulDeliveries: 0,
+  failedDeliveries: 0,
 };
 
 describe('WebhookService.getWebhook HATEOAS links', () => {
   it('advertises only actions backed by real routes, including the bulk retry', async () => {
     const { WebhookService } = await import('../../../lib/api/services/WebhookService');
-    const stubDb = {
-      findOne: vi.fn(async () => ({ ...webhookRow })),
-      count: vi.fn(async () => 0),
-    };
-    const service = new WebhookService(stubDb as any, {} as any, {} as any);
+    model.getById.mockResolvedValue({ ...webhookRow });
+    const service = new WebhookService();
 
     const result = await service.getWebhook(WEBHOOK_ID, TENANT_ID);
     const links = (result.data as any)._links as Record<string, { href: string; method: string }>;

@@ -1,8 +1,9 @@
 'use server';
 
+import { projectedPeopleAsUsers, projectedPeopleForCaller } from '@alga-psa/user-composition/lib/seatPeople';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import type { IClient, IUser, ITeam } from '@alga-psa/types';
+import type { IUser, ITeam } from '@alga-psa/types';
 
 export type InboundWebhookLookupEntityType =
   | 'client'
@@ -332,21 +333,12 @@ export const listInboundWebhookLookup = withAuth(
   },
 );
 
-export const listClientsForInboundWebhook = withAuth(
-  async (_user, { tenant }): Promise<IClient[]> => {
-    const { knex } = await createTenantKnex(tenant);
-    const rows = await tenantDb(knex, tenant).table<IClient>('clients')
-      .orderBy([
-        { column: 'is_inactive', order: 'asc' },
-        { column: 'client_name', order: 'asc' },
-      ]);
-    return rows;
-  },
-);
-
 export const listUsersForInboundWebhook = withAuth(
-  async (_user, { tenant }): Promise<IUser[]> => {
+  async (currentUser, { tenant }): Promise<IUser[]> => {
     const { knex } = await createTenantKnex(tenant);
+    // This lookup checks no permission, so it is reachable by a seat technician: they get the people projection.
+    const seatPeople = await projectedPeopleForCaller(knex, tenant, currentUser, { kinds: ['msp_staff', 'client_technician'] });
+    if (seatPeople) return projectedPeopleAsUsers(seatPeople, tenant);
     const rows = await tenantDb(knex, tenant).table<IUser>('users')
       .andWhere('user_type', 'internal')
       .orderBy([

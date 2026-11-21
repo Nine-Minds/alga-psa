@@ -19,7 +19,7 @@ const {
 }));
 
 vi.mock('server/src/app/api/auth/[...nextauth]/auth', () => ({ auth: authMock }));
-vi.mock('@alga-psa/auth/actions/auth', () => ({ authenticateUser: vi.fn() }));
+vi.mock('@alga-psa/auth/lib/authenticateUserForAuth', () => ({ authenticateUserForAuth: vi.fn() }));
 vi.mock('server/src/utils/authenticator/authenticator', () => ({ verifyAuthenticator: vi.fn() }));
 vi.mock('server/src/lib/auth/sessionCookies', () => ({ getNextAuthSecret: vi.fn(async () => 'secret') }));
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({ assertTierAccess: vi.fn(async () => undefined) }));

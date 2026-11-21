@@ -2,9 +2,8 @@
 
 import React from 'react';
 import type { ITag } from '@alga-psa/types';
-import { Button } from '@alga-psa/ui/components/Button';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { WhereModeSwitch, useWhereSelectionLabel } from './WhereModeSwitch';
 import type { WhereTagMode, WhereTagSelection } from '../lib/ticketWhereFilters';
 
 interface WhereTagFilterProps {
@@ -22,8 +21,8 @@ interface WhereTagFilterProps {
  * mapped here.
  */
 export function WhereTagFilter({ id, label, definitions, selection, onChange }: WhereTagFilterProps) {
-  const { t } = useTranslation('features/tickets');
   const mode: WhereTagMode = selection?.mode ?? 'in';
+  const selectionLabel = useWhereSelectionLabel();
   const idByText = new Map(definitions.map((d) => [d.tag_text, d.tag_id as string]));
   const textById = new Map(definitions.map((d) => [d.tag_id as string, d.tag_text]));
   const selectedTexts = (selection?.ids ?? []).map((tagId) => textById.get(tagId)).filter((x): x is string => Boolean(x));
@@ -34,31 +33,19 @@ export function WhereTagFilter({ id, label, definitions, selection, onChange }: 
   };
 
   return (
-    <div id={id} className="inline-flex items-center gap-1">
+    <div id={id} className="inline-flex items-center">
       <TagFilter
         id={`${id}-tags`}
         tags={definitions}
         selectedTags={selectedTexts}
         triggerLabel={label}
-        selectedLabel={`${label}: ${selectedTexts.length}`}
+        selectedLabel={selectionLabel(selection, `${label}: ${selectedTexts.length}`)}
         onToggleTag={(text: string) =>
           emit(mode, selectedTexts.includes(text) ? selectedTexts.filter((x) => x !== text) : [...selectedTexts, text])
         }
         onClearTags={() => onChange(null)}
+        footerContent={<WhereModeSwitch id={id} selection={selection} onChange={onChange} />}
       />
-      {selection && (
-        <Button
-          id={`${id}-mode`}
-          variant="outline"
-          size="sm"
-          className="h-9 whitespace-nowrap"
-          onClick={() => emit(mode === 'in' ? 'not_in' : 'in', selectedTexts)}
-        >
-          {mode === 'in'
-            ? t('filters.tagModeAny', 'Any of')
-            : t('filters.tagModeNone', 'None of')}
-        </Button>
-      )}
     </div>
   );
 }

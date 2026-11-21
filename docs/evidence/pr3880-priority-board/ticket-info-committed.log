@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/packages/tickets
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  13:54:36
+   Duration  1.95s (transform 505ms, setup 181ms, import 1.19s, tests 270ms, environment 223ms)
+

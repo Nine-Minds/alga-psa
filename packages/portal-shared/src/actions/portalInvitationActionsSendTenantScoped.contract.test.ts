@@ -41,6 +41,31 @@ describe('portal invitation send flow tenant-scoped query contract', () => {
     expect(section).toContain('fromName: `${tenantDefaultClient.client_name} Portal`');
   });
 
+  it('resolves the email owner through a tenant-scoped left join and relinks orphans structurally', () => {
+    expect(source).toContain("const scopedDb = tenantDb(db, tenant);");
+    expect(source).toContain("scopedDb.table('users as u')");
+    expect(source).toContain(
+      "scopedDb.tenantJoin(ownerQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });"
+    );
+    expect(source).toContain("await tenantDb(db, tenant).table('users')");
+    expect(source).toContain(".update({ contact_id: contactId, updated_at: db.raw('now()') });");
+    expect(source).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant\s*\}\)/);
+  });
+
+  it('adopts an orphaned portal account instead of refusing the invitation', () => {
+    const section = sectionBetween('export const sendPortalInvitation', 'export async function verifyPortalToken');
+
+    expect(section).toContain('findPortalEmailOwner(knex, tenant, contact.email)');
+    expect(section).toContain('classifyPortalEmailOwner(emailOwner, contactId)');
+    expect(section).toContain("errorCode: 'PORTAL_USER_ALREADY_EXISTS'");
+    // The relink shares the invitation transaction: a failed send must not leave
+    // the account half-adopted.
+    expect(section).toContain('relinkOrphanedPortalUser(trx, tenant, orphanedUserIdToRelink, contactId)');
+    expect(section.indexOf('relinkOrphanedPortalUser(trx')).toBeGreaterThan(
+      section.indexOf('const scopedDb = tenantDb(trx, tenant);')
+    );
+  });
+
   it('rejects shared mailbox contacts in every portal invitation entry point', () => {
     expect(source).toContain('isSharedMailboxContact(knex, tenant, params.contactId)');
     expect(source).toContain('isSharedMailboxContact(knex, tenant, contactId)');

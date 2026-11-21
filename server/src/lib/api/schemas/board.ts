@@ -19,10 +19,12 @@ export const createBoardSchema = z.object({
   display_itil_urgency: z.boolean().optional(),
   enable_live_ticket_timer: z.boolean().optional().describe('Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board\'s tickets; a stopwatch already running keeps running. Defaults to true.'),
   client_portal_visible: z.boolean().optional(),
-});
+}).strict(); // unknown keys (tenant, board_id, made-up columns) are rejected, not silently dropped
 
 // Update board schema (all fields optional)
-export const updateBoardSchema = createUpdateSchema(createBoardSchema);
+export const updateBoardSchema = createUpdateSchema(createBoardSchema).extend({
+  default_assigned_team_id: uuidSchema.nullable().optional(),
+});
 
 // Board response schema
 export const boardResponseSchema = z.object({
@@ -37,6 +39,7 @@ export const boardResponseSchema = z.object({
   display_itil_impact: z.boolean().nullable(),
   display_itil_urgency: z.boolean().nullable(),
   default_assigned_to: uuidSchema.nullable(),
+  default_assigned_team_id: uuidSchema.nullable(),
   inbound_reply_reopen_enabled: z.boolean().optional(),
   inbound_reply_reopen_cutoff_hours: z.number().int().optional(),
   inbound_reply_reopen_status_id: uuidSchema.nullable().optional(),

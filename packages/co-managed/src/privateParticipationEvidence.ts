@@ -55,11 +55,11 @@ export async function retainCoManagedPrivateHistoryAtClosure(context: CoManagedC
   for (const comment of comments) {
     const key = { customer_tenant: customerTenant, relationship_id: relationshipId, resource_type: comment.resource_type, resource_id: comment.resource_id };
     const prior = await home.table('co_managed_participation_evidence').where(key).where('client_id', relationship.sponsor_client_id)
-      .whereRaw("COALESCE(payload->>'resourceTitle', CASE WHEN source_type = 'time_entry' THEN payload->>'title' END) IS NOT NULL")
+      .whereRaw("payload->>'resourceTitle' IS NOT NULL")
       .orderBy('captured_at', 'desc').first('payload');
     await capturePrivateComment(trx, { tenant: sponsorTenant, ...key, client_id: relationship.sponsor_client_id, operation_id: operationId,
       source_id: randomUUID(), event_type: 'private_comment_archived', occurred_at: new Date(cutoffAt),
-      resourceTitle: prior?.payload.resourceTitle ?? prior?.payload.title ?? null, ticketNumber: prior?.payload.ticketNumber ?? null, snapshot: true },
+      resourceTitle: prior?.payload.resourceTitle ?? null, ticketNumber: prior?.payload.ticketNumber ?? null, snapshot: true },
     { ...comment, parent_comment_id: comment.retained_parent_id });
   }
 }

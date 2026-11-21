@@ -444,6 +444,10 @@ function makeColdStartLedger(invoiceMapping: any): any {
     }),
     findByAlgaId: vi.fn(async () => undefined),
     findByAlgaIdAnyRealm: vi.fn(async () => []),
+    // The invoice mapping above was never unlinked, so the applier's
+    // "reversed in AlgaPSA only" guard finds nothing and the cold-start
+    // payment lands as usual.
+    findTombstonedByExternalId: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn(),
@@ -453,6 +457,7 @@ function makeColdStartLedger(invoiceMapping: any): any {
     update: ledger.update,
     findByExternalId: ledger.findByExternalId,
     findByAlgaId: ledger.findByAlgaId,
+    findTombstonedByExternalId: ledger.findTombstonedByExternalId,
     withKnex: ledger.withKnex,
   }));
   return ledger;

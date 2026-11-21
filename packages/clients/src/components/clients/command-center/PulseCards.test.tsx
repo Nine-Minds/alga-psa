@@ -57,7 +57,7 @@ vi.mock('@alga-psa/ui/components/bento', () => ({
       <span>{label}</span>
     </div>
   ),
-  BentoChip: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  BentoChip: ({ id, children }: { id?: string; children: React.ReactNode }) => <span id={id}>{children}</span>,
   BentoFooterLinks: ({ idPrefix, links }: {
     idPrefix: string;
     links: Array<{ id: string; label: string; onClick: () => void } | null | undefined>;
@@ -219,8 +219,22 @@ describe('InstallBaseCard', () => {
     recentUnits: [],
   };
 
-  const renderInstallBase = (data: ClientPulseInstallBase, onOpenAsset = vi.fn()) => {
-    render(<InstallBaseCard id="ib" data={data} onOpen={null} onOpenAssetList={null} onOpenAsset={onOpenAsset} t={t} />);
+  const renderInstallBase = (
+    data: ClientPulseInstallBase,
+    onOpenAsset = vi.fn(),
+    extra: { onOpenAudits?: (() => void) | null } = {},
+  ) => {
+    render(
+      <InstallBaseCard
+        id="ib"
+        data={data}
+        onOpen={null}
+        onOpenAssetList={null}
+        onOpenAudits={extra.onOpenAudits ?? null}
+        onOpenAsset={onOpenAsset}
+        t={t}
+      />,
+    );
     return onOpenAsset;
   };
 
@@ -239,6 +253,41 @@ describe('InstallBaseCard', () => {
 
     expect(document.getElementById('ib-warranty')).toHaveTextContent('2 out of warranty');
     expect(document.getElementById('ib-warranty')).toHaveTextContent('(of 9 tracked)');
+  });
+
+  it('says nothing about audits when the reader cannot see assets', () => {
+    // `lastAudit` absent (not null) is the no-asset:read case: silence, not
+    // "Never audited", which would be a claim the reader cannot verify.
+    renderInstallBase(base);
+    expect(document.getElementById('ib-last-audit')).toBeNull();
+  });
+
+  it('says so when a client with asset visibility has never been audited', () => {
+    renderInstallBase({ ...base, lastAudit: null });
+    expect(document.getElementById('ib-last-audit')).toHaveTextContent('Never audited');
+  });
+
+  it('reports the last completed audit and what it was missing', () => {
+    renderInstallBase({
+      ...base,
+      lastAudit: { audit_id: 'au-1', completed_at: '2026-10-12T12:00:00.000Z', missing_count: 3 },
+    });
+
+    expect(document.getElementById('ib-last-audit')).toHaveTextContent('3 missing');
+    expect(document.getElementById('ib-last-audit')).toHaveTextContent(/Last audit/);
+  });
+
+  it('offers no Site audits link when the client has no Audits tab', () => {
+    renderInstallBase({ ...base, lastAudit: null });
+    expect(document.getElementById('ib-link-audits')).toBeNull();
+  });
+
+  it('opens the Audits focus view from the footer link', () => {
+    const onOpenAudits = vi.fn();
+    renderInstallBase({ ...base, lastAudit: null }, vi.fn(), { onOpenAudits });
+
+    fireEvent.click(document.getElementById('ib-link-audits')!);
+    expect(onOpenAudits).toHaveBeenCalled();
   });
 
   it('opens a unit’s asset when it has one', () => {
@@ -315,6 +364,7 @@ describe('LocationsCard', () => {
   const location = (id: string): ClientPulseLocation => ({
     location_id: id, location_name: `Site ${id}`, address_line1: '1 Main St', city: 'Springfield',
     phone: null, phone_extension: null, country_code: null, email: null, is_default: false, is_billing: false, is_shipping: false,
+    contact_count: 0,
   });
 
   it('shows an empty state with no locations', () => {
@@ -329,6 +379,31 @@ describe('LocationsCard', () => {
     expect(screen.getByText('Site c')).toBeInTheDocument();
     expect(screen.queryByText('Site d')).toBeNull();
     expect(document.getElementById('loc-more')).toHaveTextContent('+2 more');
+  });
+
+  it('shows how many contacts work at a location, and nothing when none do', () => {
+    render(<LocationsCard id="loc" locations={[
+      { ...location('a'), contact_count: 3 },
+      { ...location('b'), contact_count: 1 },
+      { ...location('c'), contact_count: 0 },
+    ]} onManage={null} t={t} />);
+
+    expect(document.getElementById('loc-contact-count-a')).toHaveTextContent('3 contacts');
+    expect(document.getElementById('loc-contact-count-b')).toHaveTextContent('1 contact');
+    expect(document.getElementById('loc-contact-count-c')).toBeNull();
+  });
+
+  it('states when each site was last audited, and when it never was', () => {
+    render(<LocationsCard id="loc" locations={[
+      { ...location('a'), last_audit_at: '2026-10-12T12:00:00.000Z' },
+      { ...location('b'), last_audit_at: null },
+      { ...location('c') },
+    ]} onManage={null} t={t} />);
+
+    expect(document.getElementById('loc-last-audit-a')).toHaveTextContent(/Audited/);
+    expect(document.getElementById('loc-last-audit-b')).toHaveTextContent('Never audited');
+    // No asset:read: the row says nothing about audits at all.
+    expect(document.getElementById('loc-last-audit-c')).toBeNull();
   });
 
   it('formats extensions and national legacy numbers using the location country', () => {

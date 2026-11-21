@@ -295,11 +295,14 @@ export type EntraRunResultOutcome = 'failed' | 'partial' | 'running' | 'review' 
 export function entraRunResultOutcome(result: {
   status?: string;
   ambiguous?: number;
+  failed?: number;
 }): EntraRunResultOutcome {
   const status = (result.status || '').toLowerCase();
   if (status === 'failed') return 'failed';
   if (status === 'partial') return 'partial';
   if (status === 'running') return 'running';
+  // A completed run that dropped individual contacts is not a plain success.
+  if ((result.failed || 0) > 0) return 'partial';
   return (result.ambiguous || 0) > 0 ? 'review' : 'done';
 }
 

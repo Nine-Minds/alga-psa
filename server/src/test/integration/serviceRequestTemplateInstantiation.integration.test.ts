@@ -120,12 +120,15 @@ describe('service request template instantiation', () => {
       titleTemplate: 'Hardware Request: {{requested_for}} - {{hardware_type}}',
       includeFormResponsesInDescription: true,
     });
+    // The refreshed starter pack ships schema v2: quantity is a real number input with its own
+    // bounds, and the instantiated draft carries both through untouched.
     expect(storedHardware?.form_schema).toMatchObject({
       fields: expect.arrayContaining([
         expect.objectContaining({
           key: 'quantity',
-          type: 'short-text',
+          type: 'number',
           defaultValue: '1',
+          validation: expect.objectContaining({ min: 1, max: 50 }),
         }),
       ]),
     });

@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
@@ -10,6 +11,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      'server-only': serverOnlyAlias.replacement,
       // Resolve to source so tests see user-type predicates without a rebuilt dist.
       '@alga-psa/types': path.resolve(__dirname, '../types/src'),
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),
@@ -18,14 +20,17 @@ export default defineConfig({
       '@alga-psa/notifications': path.resolve(__dirname, '../notifications/src'),
       '@alga-psa/ui': path.resolve(__dirname, '../ui/src'),
       '@alga-psa/users': path.resolve(__dirname, '../users/src'),
+      '@alga-psa/authorization': path.resolve(__dirname, '../authorization/src'),
       '@alga-psa/documents/lib/avatarUtils': path.resolve(__dirname, '../documents/src/lib/avatarUtils.ts'),
       '@alga-psa/documents/actions/documentActions': path.resolve(__dirname, '../documents/src/actions/documentActions.ts'),
       '@alga-psa/client-portal/models/PortalDomainModel': path.resolve(
         __dirname,
         '../client-portal/src/models/PortalDomainModel.ts'
       ),
+      '@product/service-principals/entry': path.resolve(__dirname, '../product-service-principals/oss/entry.ts'),
       '@alga-psa/shared': path.resolve(__dirname, '../../shared'),
       '@shared': path.resolve(__dirname, '../../shared'),
+      '@enterprise': path.resolve(__dirname, '../ee/src'),
       '@ee': path.resolve(__dirname, '../ee/src'),
       '@': path.resolve(__dirname, '../../server/src'),
       'server/src': path.resolve(__dirname, '../../server/src'),

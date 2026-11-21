@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { getCurrentUser } from '@alga-psa/auth';
 
 const mockedTenantConnection = vi.hoisted(() => ({
@@ -950,6 +951,26 @@ describe('client pulse infrastructure', () => {
         created_at: isoOffset(-25),
         updated_at: NOW.toISOString(),
       },
+      {
+        // S28: an operational (seat technician) entry is never unbilled work, even one carrying billable minutes
+        // (adversarial: a real operational write stores 0) and older than every commercial row.
+        tenant: context.tenantId,
+        entry_id: randomUUID(),
+        user_id: context.userId,
+        start_time: isoOffset(-40),
+        end_time: new Date(new Date(isoOffset(-40)).getTime() + 120 * 60_000).toISOString(),
+        notes: 'Operational seat technician time',
+        work_item_id: ticketId,
+        billable_duration: 120,
+        billing_mode: 'operational',
+        work_item_type: 'ticket',
+        approval_status: 'APPROVED',
+        invoiced: false,
+        work_date: dateOffset(-40),
+        work_timezone: 'UTC',
+        created_at: isoOffset(-40),
+        updated_at: NOW.toISOString(),
+      },
     ]);
 
     await context.db('ticket_materials').insert([
@@ -1014,12 +1035,11 @@ describe('client pulse infrastructure', () => {
     await seedDeliveredUnit(context, serviceId, `SN-T008-SOON-${id}`, 30);
     await seedDeliveredUnit(context, serviceId, `SN-T008-NONE-${id}`, null);
 
-    await context.db('assets').insert({
+    await insertTestAssets(context.db, {
       tenant: context.tenantId,
-      asset_id: randomUUID(),
+      asset_tag: `AST-T008-${id}`,
       client_id: context.clientId,
       asset_type: 'workstation',
-      asset_tag: `AST-T008-${id}`,
       name: 'Warranty tracked workstation',
       status: 'active',
       warranty_end_date: isoOffset(200),
@@ -1063,12 +1083,11 @@ describe('client pulse infrastructure', () => {
       updated_at: NOW.toISOString(),
     });
 
-    await context.db('assets').insert({
+    await insertTestAssets(context.db, {
       tenant: context.tenantId,
-      asset_id: randomUUID(),
+      asset_tag: `AST-T008-NONE-${id}`,
       client_id: clientWithoutWarrantyId,
       asset_type: 'workstation',
-      asset_tag: `AST-T008-NONE-${id}`,
       name: 'Warranty untracked workstation',
       status: 'active',
       warranty_end_date: null,

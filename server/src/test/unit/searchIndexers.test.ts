@@ -29,7 +29,16 @@ import { timeEntryIndexer } from '@alga-psa/search/indexers/time_entry';
 import { userIndexer } from '@alga-psa/search/indexers/user';
 import { workflowTaskIndexer } from '@alga-psa/search/indexers/workflow_task';
 
-function createFirstRowKnex(row: unknown) {
+import { ownershipQuery, withClientPaths, type ClientPathRow } from '../helpers/clientOwnershipKnex';
+
+/**
+ * The rows the manifest's row -> client lookup reads for a client-scoped indexer: `{ key, client_id }`
+ * for a client column, `{ key, discriminator, id }` for a resolver (polymorphic) table.
+ */
+type OwnerRow = { key: string; client_id?: string | null; discriminator?: string | null; id?: string | null };
+
+function createFirstRowKnex(row: unknown, ownerRows: OwnerRow[] = []) {
+  const ownership = ownershipQuery(ownerRows);
   const joinBuilder = {
     on: vi.fn().mockReturnThis(),
     andOn: vi.fn().mockReturnThis(),
@@ -51,15 +60,18 @@ function createFirstRowKnex(row: unknown) {
     groupBy: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
+    // The client-scope lookup (resolveRowClients) is the only bulk `whereIn` read on this table.
+    whereIn: vi.fn(() => ownership),
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
   Object.assign(knex, {
     raw: vi.fn((sql: string) => ({ sql })),
   });
-  return { knex, queryBuilder, joinBuilder };
+  return { knex, queryBuilder, joinBuilder, ownershipLookup: queryBuilder.whereIn };
 }
 
-function createBatchKnex(rows: unknown[]) {
+function createBatchKnex(rows: unknown[], ownerRows: OwnerRow[] = []) {
+  const ownership = ownershipQuery(ownerRows);
   const queryBuilder = {
     distinctOn: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
@@ -69,13 +81,20 @@ function createBatchKnex(rows: unknown[]) {
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     then: vi.fn((resolve, reject) => Promise.resolve(rows).then(resolve, reject)),
+    whereIn: vi.fn(() => ownership),
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
-  return { knex, queryBuilder };
+  return { knex, queryBuilder, ownershipLookup: queryBuilder.whereIn };
 }
 
 /** Contacts load in two queries: the contact row, then its 1:N phone rows. */
-function createContactKnex(row: unknown, phoneRows: unknown[]) {
+function createContactKnex(
+  row: unknown,
+  phoneRows: unknown[],
+  locationRows: unknown[] = [],
+  ownerRows: OwnerRow[] = [],
+) {
+  const ownership = ownershipQuery(ownerRows);
   const joinBuilder = {
     on: vi.fn().mockReturnThis(),
     andOn: vi.fn().mockReturnThis(),
@@ -92,6 +111,7 @@ function createContactKnex(row: unknown, phoneRows: unknown[]) {
     limit: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
     then: vi.fn((resolve, reject) => Promise.resolve(row ? [row] : []).then(resolve, reject)),
+    whereIn: vi.fn(() => ownership),
   };
   const phoneBuilder = {
     select: vi.fn().mockReturnThis(),
@@ -100,24 +120,40 @@ function createContactKnex(row: unknown, phoneRows: unknown[]) {
     orderBy: vi.fn().mockReturnThis(),
     then: vi.fn((resolve, reject) => Promise.resolve(phoneRows).then(resolve, reject)),
   };
-  const knex = vi.fn((tableExpression: string) =>
-    tableExpression.startsWith('contact_phone_numbers') ? phoneBuilder : contactBuilder);
+  // The location join is an inner join (unlike the client left join above), so
+  // this builder needs its own `join`, matching tenantJoinIndexerTable's call.
+  const locationBuilder = {
+    join: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return locationBuilder;
+    }),
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    then: vi.fn((resolve, reject) => Promise.resolve(locationRows).then(resolve, reject)),
+  };
+  const knex = vi.fn((tableExpression: string) => {
+    if (tableExpression.startsWith('contact_phone_numbers')) return phoneBuilder;
+    if (tableExpression.startsWith('contact_locations')) return locationBuilder;
+    return contactBuilder;
+  });
   Object.assign(knex, {
     raw: vi.fn((sql: string) => ({ sql })),
   });
-  return { knex, contactBuilder, phoneBuilder };
+  return { knex, contactBuilder, phoneBuilder, locationBuilder, ownershipLookup: contactBuilder.whereIn };
 }
 
 describe('search entity indexers', () => {
   it('T027 client loadOne maps client fields into a SearchDoc', async () => {
-    const { knex, queryBuilder } = createFirstRowKnex({
+    const { knex, queryBuilder, ownershipLookup } = createFirstRowKnex({
       client_id: 'client-1',
       client_name: 'ACME Corp',
       billing_email: 'support@acme.example',
       notes: 'Managed firewall customer',
       created_at: '2026-05-12T10:00:00.000Z',
       updated_at: '2026-05-13T10:00:00.000Z',
-    });
+    }, [{ key: 'client-1', client_id: 'client-1' }]);
 
     const doc = await clientIndexer.loadOne(
       knex as never,
@@ -140,13 +176,15 @@ describe('search entity indexers', () => {
       subtitle: 'support@acme.example',
       body: 'Managed firewall customer',
       url: '/msp/clients/client-1',
-      acl: { requiredPermission: 'client:read' },
+      // A client row is its own client scope, read through the manifest's client column.
+      acl: { requiredPermission: 'client:read', clientScopeId: 'client-1' },
     });
+    expect(ownershipLookup).toHaveBeenCalledWith('client_id', ['client-1']);
     expect(doc?.sourceUpdatedAt.toISOString()).toBe('2026-05-13T10:00:00.000Z');
   });
 
   it('T028 client loadBatch maps every seeded tenant client row for backfill', async () => {
-    const { knex, queryBuilder } = createBatchKnex([
+    const { knex, queryBuilder, ownershipLookup } = createBatchKnex([
       {
         client_id: 'client-1',
         client_name: 'ACME Corp',
@@ -163,6 +201,9 @@ describe('search entity indexers', () => {
         notes: 'Second client',
         updated_at: '2026-05-13T11:00:00.000Z',
       },
+    ], [
+      { key: 'client-1', client_id: 'client-1' },
+      { key: 'client-2', client_id: 'client-2' },
     ]);
 
     const docs = await clientIndexer.loadBatch(
@@ -183,10 +224,14 @@ describe('search entity indexers', () => {
     expect(docs.map((doc) => doc.objectId)).toEqual(['client-1', 'client-2']);
     expect(docs.every((doc) => doc.objectType === 'client')).toBe(true);
     expect(docs.every((doc) => doc.acl.requiredPermission === 'client:read')).toBe(true);
+    // One bulk client-scope lookup for the whole batch, each doc scoped to its own client.
+    expect(ownershipLookup).toHaveBeenCalledTimes(1);
+    expect(ownershipLookup).toHaveBeenCalledWith('client_id', ['client-1', 'client-2']);
+    expect(docs.map((doc) => doc.acl.clientScopeId)).toEqual(['client-1', 'client-2']);
   });
 
   it('T029 contact doc carries email, role, client name, phone digits and notes', async () => {
-    const { knex, contactBuilder, phoneBuilder } = createContactKnex(
+    const { knex, contactBuilder, phoneBuilder, ownershipLookup } = createContactKnex(
       {
         contact_name_id: 'contact-1',
         full_name: 'Ada Lovelace',
@@ -197,6 +242,8 @@ describe('search entity indexers', () => {
         updated_at: '2026-05-13T10:00:00.000Z',
       },
       [{ contact_name_id: 'contact-1', phone_number: '+61 433 521 762' }],
+      [],
+      [{ key: 'contact-1', client_id: 'client-1' }],
     );
 
     const doc = await contactIndexer.loadOne(
@@ -219,8 +266,9 @@ describe('search entity indexers', () => {
       title: 'Ada Lovelace',
       subtitle: 'ada@example.com | Primary Contact | ACME Corp',
       url: '/msp/contacts/contact-1',
-      acl: { requiredPermission: 'contact:read' },
+      acl: { requiredPermission: 'contact:read', clientScopeId: 'client-1' },
     });
+    expect(ownershipLookup).toHaveBeenCalledWith('contact_name_id', ['contact-1']);
     // Digits-only form is indexed alongside the formatted number so a search
     // for the number without its spacing still hits.
     expect(doc?.body).toBe('+61 433 521 762 61433521762 Prefers SMS after hours');
@@ -250,6 +298,7 @@ describe('search entity indexers', () => {
       ticket_id: 'ticket-1',
       ticket_number: 'TIC-1023',
       title: 'Exchange outage',
+      client_id: 'client-1',
       client_name: 'ACME Corp',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
@@ -276,8 +325,9 @@ describe('search entity indexers', () => {
       subtitle: 'ACME Corp | TIC-1023',
       url: '/msp/tickets/ticket-1',
       metadata: { identifier: 'TIC-1023' },
-      acl: { requiredPermission: 'ticket:read' },
+      acl: { requiredPermission: 'ticket:read', clientScopeId: 'client-1' },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id');
   });
 
   it('T032 ticket-comment indexer marks internal comments as internal-only', async () => {
@@ -288,6 +338,7 @@ describe('search entity indexers', () => {
       is_internal: true,
       ticket_title: 'Exchange outage',
       ticket_number: 'TIC-1023',
+      ticket_client_id: 'client-1',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
 
@@ -317,8 +368,10 @@ describe('search entity indexers', () => {
       acl: {
         requiredPermission: 'ticket:read',
         isInternalOnly: true,
+        clientScopeId: 'client-1',
       },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id as ticket_client_id');
   });
 
   it('L4a ticket-comment indexer is internal-only unless the resolved audience is requester', async () => {
@@ -807,28 +860,49 @@ describe('search entity indexers', () => {
     expect(doc?.body).toHaveLength(65_536);
   });
 
-  it('T045 document indexer requires document:read and defers client scope to the visibility verifier', async () => {
-    const { knex } = createFirstRowKnex({
+  it('T045 document indexer requires document:read and scopes the document to the one client its associations reach', async () => {
+    const documentRow = {
       document_id: 'document-2',
       document_name: 'Client runbook',
       content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Runbook' }] }]),
       block_data: null,
       side_content: null,
       updated_at: '2026-05-13T10:00:00.000Z',
-    });
+    };
+    const clientPaths: Record<string, ClientPathRow[]> = {
+      clients: [{ id: 'client-1', client_id: 'client-1' }],
+      tickets: [{ id: 'ticket-1', client_id: 'client-1' }, { id: 'ticket-2', client_id: 'client-2' }],
+    };
+    const load = async (associations: OwnerRow[]) => {
+      const { knex, ownershipLookup } = createFirstRowKnex(documentRow, associations);
+      const from = withClientPaths(knex, clientPaths);
+      const doc = await documentIndexer.loadOne(knex as never, '11111111-1111-4111-8111-111111111111', 'document-2');
+      return { doc, ownershipLookup, from };
+    };
 
-    const doc = await documentIndexer.loadOne(
-      knex as never,
-      '11111111-1111-4111-8111-111111111111',
-      'document-2',
-    );
+    // Linked to a client directly and to that client's ticket: one owner.
+    const single = await load([
+      { key: 'document-2', discriminator: 'client', id: 'client-1' },
+      { key: 'document-2', discriminator: 'ticket', id: 'ticket-1' },
+    ]);
+    expect(single.ownershipLookup).toHaveBeenCalledWith('document_id', ['document-2']);
+    expect(single.from).toHaveBeenCalledWith('clients as p0');
+    expect(single.from).toHaveBeenCalledWith('tickets as p0');
+    expect(single.doc?.acl).toMatchObject({ requiredPermission: 'document:read', clientScopeId: 'client-1' });
+    expect(single.doc?.acl).not.toHaveProperty('isPrivate');
+    expect(single.doc?.acl).not.toHaveProperty('visibleToUserIds');
 
-    expect(doc?.acl).toMatchObject({
-      requiredPermission: 'document:read',
-    });
-    expect(doc?.acl).not.toHaveProperty('clientScopeId');
-    expect(doc?.acl).not.toHaveProperty('isPrivate');
-    expect(doc?.acl).not.toHaveProperty('visibleToUserIds');
+    // Linked to tickets of two clients: the owner is ambiguous, so no client scope.
+    const ambiguous = await load([
+      { key: 'document-2', discriminator: 'ticket', id: 'ticket-1' },
+      { key: 'document-2', discriminator: 'ticket', id: 'ticket-2' },
+    ]);
+    expect(ambiguous.doc?.acl.requiredPermission).toBe('document:read');
+    expect(ambiguous.doc?.acl.clientScopeId).toBeUndefined();
+
+    // Linked only to something that reaches no client (a user): no client scope.
+    const unowned = await load([{ key: 'document-2', discriminator: 'user', id: 'user-1' }]);
+    expect(unowned.doc?.acl.clientScopeId).toBeUndefined();
   });
 
   it('T181 document indexer strips 10MB embedded image data and caps the body', async () => {
@@ -1132,7 +1206,7 @@ describe('search entity indexers', () => {
   });
 
   it('T197 interaction indexer flattens BlockNote notes without JSON syntax', async () => {
-    const { knex, queryBuilder } = createFirstRowKnex({
+    const { knex, queryBuilder, ownershipLookup } = createFirstRowKnex({
       interaction_id: 'interaction-1',
       title: 'Laser support follow-up',
       notes: JSON.stringify([
@@ -1148,7 +1222,7 @@ describe('search entity indexers', () => {
       ticket_number: 'TIC-1023',
       ticket_title: 'Laser onboarding',
       updated_at: '2026-05-13T10:00:00.000Z',
-    });
+    }, [{ key: 'interaction-1', client_id: 'client-1' }]);
 
     const doc = await interactionIndexer.loadOne(
       knex as never,
@@ -1165,8 +1239,9 @@ describe('search entity indexers', () => {
       subtitle: 'Phone call | ACME Corp | Ada Lovelace | TIC-1023 | Laser onboarding',
       body: 'Added Sciton Tribrid Laser',
       url: '/msp/interactions/interaction-1',
-      acl: { requiredPermission: 'interaction:read' },
+      acl: { requiredPermission: 'interaction:read', clientScopeId: 'client-1' },
     });
+    expect(ownershipLookup).toHaveBeenCalledWith('interaction_id', ['interaction-1']);
     expect(doc?.body).not.toContain('{');
     expect(doc?.body).not.toContain('"type"');
   });
@@ -1188,7 +1263,7 @@ describe('search entity indexers', () => {
   });
 
   it('T053 time-entry indexer produces a row for any non-empty notes string', async () => {
-    const { knex } = createFirstRowKnex({
+    const { knex, ownershipLookup } = createFirstRowKnex({
       entry_id: 'time-entry-2',
       user_id: '11111111-1111-4111-8111-111111111111',
       start_time: '2026-05-13T10:00:00.000Z',
@@ -1202,7 +1277,9 @@ describe('search entity indexers', () => {
       project_id: null,
       interaction_title: null,
       updated_at: '2026-05-13T10:00:00.000Z',
-    });
+    }, [{ key: 'time-entry-2', discriminator: 'ticket', id: 'ticket-1' }]);
+    // A time entry reaches its client through its work item (the manifest's work_item resolver).
+    const from = withClientPaths(knex, { tickets: [{ id: 'ticket-1', client_id: 'client-1' }] });
 
     const doc = await timeEntryIndexer.loadOne(
       knex as never,
@@ -1219,8 +1296,11 @@ describe('search entity indexers', () => {
       acl: {
         requiredPermission: 'time:read',
         visibleToUserIds: ['11111111-1111-4111-8111-111111111111'],
+        clientScopeId: 'client-1',
       },
     });
+    expect(ownershipLookup).toHaveBeenCalledWith('entry_id', ['time-entry-2']);
+    expect(from).toHaveBeenCalledWith('tickets as p0');
   });
 
   it("T054 board, category, and tag indexers only require 'ticket:read'", async () => {

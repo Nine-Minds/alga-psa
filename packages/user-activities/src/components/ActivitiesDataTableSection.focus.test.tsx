@@ -25,12 +25,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUserPreference: (key: string, opts: any) => {
     if (key === 'activitiesListViewMode') {
-      return { value: 'flat', setValue: mocks.setListViewMode, hasLoadedInitial: true };
+      return { value: 'flat', setValue: mocks.setListViewMode, hasLoadedInitial: true, hasResolved: true };
     }
     if (key === 'activitiesTableFilters') {
-      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: mocks.prefs.filtersLoaded };
+      return { value: opts.defaultValue, setValue: mocks.setSavedFilters, hasLoadedInitial: mocks.prefs.filtersLoaded, hasResolved: mocks.prefs.filtersLoaded };
     }
-    return { value: opts.defaultValue, setValue: vi.fn(), hasLoadedInitial: true };
+    return { value: opts.defaultValue, setValue: vi.fn(), hasLoadedInitial: true, hasResolved: true };
   },
 }));
 vi.mock('../actions/activityServerActions', () => ({ fetchActivities: mocks.getActivities }));
@@ -38,7 +38,6 @@ vi.mock('./MyActivityGroupsProvider', () => ({ useMyActivityGroups: () => mocks.
 vi.mock('./ActivityDrawerProvider', () => ({ useActivityDrawer: () => ({ openActivityDrawer: vi.fn() }) }));
 vi.mock('@alga-psa/ui/context', () => ({
   useActivityCrossFeature: () => ({
-    getAllClients: async () => [],
     getProjectsWithPhases: async () => [],
   }),
 }));

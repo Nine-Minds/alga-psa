@@ -92,6 +92,7 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       'automaticInvoices.incompatibilityReasons.currencyDiffers',
       'automaticInvoices.incompatibilityReasons.taxTreatmentDiffers',
       'automaticInvoices.incompatibilityReasons.exportShapeDiffers',
+      'automaticInvoices.incompatibilityReasons.billingProfileDiffers',
     ];
 
     expect(source).toContain('AUTOMATIC_INVOICE_GROUP_LABELS');

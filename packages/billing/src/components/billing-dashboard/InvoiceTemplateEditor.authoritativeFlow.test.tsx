@@ -61,6 +61,14 @@ vi.mock('../invoice-designer/DesignerShell', () => ({
   DesignerShell: () => <div data-testid="designer-shell-mock">Designer Shell</div>,
 }));
 
+// The preview is the printed pages, drawn server-side and shown in an iframe. jsdom has no iframe
+// document to lay out, so the frame is stubbed and the HTML it was handed is asserted instead.
+vi.mock('../invoice-designer/preview/PreviewSheetFrame', () => ({
+  PreviewSheetFrame: (props: { html: string }) => (
+    <div data-automation-id="preview-sheet-frame-mock">{props.html}</div>
+  ),
+}));
+
 const installLocalStorageMock = () => {
   const backing = new Map<string, string>();
   const storageMock: Storage = {
@@ -186,6 +194,8 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
         status: 'success',
         html: `<div>${invoiceData?.invoiceNumber ?? 'N/A'}</div>`,
         css: '',
+        // The preview surface renders the paginated document the action returns.
+        documentHtml: `<html><body><div>${invoiceData?.invoiceNumber ?? 'N/A'}</div></body></html>`,
       },
       verification: {
         status: 'pass',
@@ -322,7 +332,9 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
     await openExistingInvoiceSelect();
-    fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.'));
+    // The picker loads its options behind a 300 ms debounce; the default 1 s
+    // wait left no room for a loaded shard.
+    fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.', {}, { timeout: 5000 }));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-existing-1'));
     await waitFor(() =>
@@ -331,7 +343,12 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       )
     );
 
-    const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
-    expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
+    // The call above is observed the moment it is made; the rendered HTML lands
+    // only after its promise settles, so the output still read "Shaping and
+    // rendering preview..." when a shard checked it synchronously (run 41375685791).
+    await waitFor(() => {
+      const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+      expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
+    });
   });
 });
