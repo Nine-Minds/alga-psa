@@ -33,8 +33,10 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/storage', () => ({ uploadEntityImage: vi.fn(), deleteEntityImage: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
-import { runWithTenant } from '@alga-psa/db';
+import { createSystemContext, runAsSystem, runWithTenant } from '@alga-psa/db';
 import { updateUser as updateUserAction } from '@alga-psa/users/actions/user-actions/userActions';
+import { UserService } from '../../../../packages/users/src/services/UserService';
+import { countCoManagedCommittedSeats } from '../../../../packages/licensing/src/lib/co-managed-admission';
 
 // Production runs actions inside the request's tenant context; User.update reads it.
 const updateUser = (userId: string, data: Parameters<typeof updateUserAction>[1]) =>
@@ -46,6 +48,7 @@ const databaseName = `update_user_active_state_test_${randomUUID().replaceAll('-
 beforeAll(async () => {
   db = await createTestDbConnection({ databaseName, runSeeds: false });
   context.db = db;
+  process.env.DB_NAME_SERVER = databaseName;
 }, 180_000);
 
 afterAll(async () => {
@@ -55,7 +58,10 @@ afterAll(async () => {
     user: process.env.DB_USER_ADMIN || 'postgres',
     password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123'), database: 'postgres',
   }, pool: { min: 0, max: 1 } });
-  try { await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]); }
+  try {
+    await admin.raw('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()', [databaseName]);
+    await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]);
+  }
   finally { await admin.destroy(); }
 });
 
@@ -117,6 +123,57 @@ async function seedOtherActiveInternalUser(): Promise<void> {
 const setSeatLimit = (limit: number | null) =>
   db('tenants').where({ tenant: context.tenant }).update({ licensed_user_count: limit });
 
+async function seedCoManagedSeatWorld() {
+  const sponsor = randomUUID();
+  context.tenant = randomUUID();
+  await db('tenants').insert([
+    { tenant: sponsor, client_name: 'Sponsor', email: `${sponsor}@example.test`, product_code: 'psa', plan: 'pro' },
+    { tenant: context.tenant, client_name: 'Customer', email: `${context.tenant}@example.test`, product_code: 'co_managed', licensed_user_count: 1 },
+  ]);
+  await db('co_managed_entitlements').insert({ tenant: sponsor, source: 'admin_grant', source_reference: randomUUID(), capacity: 1,
+    verified_at: db.fn.now(), valid_until: db.raw("now() + interval '1 year'") });
+  const relationshipId = randomUUID();
+  const operationId = randomUUID();
+  const allocationId = randomUUID();
+  const sponsorAdminId = randomUUID();
+  await db('co_management_relationships').insert({ tenant: context.tenant, relationship_id: relationshipId,
+    sponsor_tenant: sponsor, sponsor_client_id: randomUUID(), state: 'active', accepted_by: randomUUID(), accepted_at: db.fn.now() });
+  await db('co_managed_provisioning_operations').insert({ tenant: sponsor, operation_id: operationId, allocation_id: allocationId,
+    customer_tenant: context.tenant, relationship_id: relationshipId, requested_by: sponsorAdminId,
+    escalation_board_id: randomUUID(), customer_board_id: randomUUID(), customer_client_id: randomUUID(),
+    administrator_invitation_id: randomUUID(), request_fingerprint: 'a'.repeat(64), request: {}, state: 'pending_acceptance' });
+  await db('co_managed_allocations').insert({ tenant: sponsor, allocation_id: allocationId, operation_id: operationId,
+    request_fingerprint: 'a'.repeat(64), customer_tenant: context.tenant, relationship_id: relationshipId, seats: 1, state: 'active' });
+
+  const roleId = randomUUID();
+  await db('roles').insert({ tenant: context.tenant, role_id: roleId, role_name: `Seat member ${roleId}` });
+  const email = `member-${randomUUID()}@example.test`;
+  const invitationToken = randomUUID();
+  const duplicateInvitationId = randomUUID();
+  await db('user_invitations').insert([
+    { tenant: context.tenant, invitation_id: randomUUID(), email, email_normalized: email, invited_user_id: null,
+      first_name: 'Seat', last_name: 'Member', role_id: roleId, token: invitationToken,
+      expires_at: db.raw("now() + interval '1 day'") },
+    { tenant: context.tenant, invitation_id: duplicateInvitationId, email, email_normalized: email, invited_user_id: null,
+      first_name: 'Seat', last_name: 'Member', role_id: roleId, token: randomUUID(),
+      expires_at: db.raw("now() + interval '1 day'") },
+  ]);
+  return { sponsor, relationshipId, email, invitationToken, duplicateInvitationId, roleId };
+}
+
+async function acceptCoManagedInvitation(email: string, invitationToken: string, roleId: string) {
+  return runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () => db.transaction(trx =>
+    new UserService().createFromInvitation({ username: email, email, password: 'Passw0rd!x', first_name: 'Seat',
+      last_name: 'Member', user_type: 'internal', is_inactive: false, role_ids: [roleId] },
+    createSystemContext(context.tenant), trx, invitationToken))));
+}
+
+async function expectAcceptedReservationState(userId: string, duplicateInvitationId: string) {
+  expect(await db('user_invitations').where({ tenant: context.tenant, invitation_id: duplicateInvitationId })
+    .first('invited_user_id', 'used_at')).toMatchObject({ invited_user_id: userId, used_at: null });
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, context.tenant))).toBe(1);
+}
+
 it('refuses to reactivate an internal user when the seat limit is reached', async () => {
   await seedUser(true);
   await seedOtherActiveInternalUser();
@@ -132,6 +189,50 @@ it('reactivates an internal user while a seat is free', async () => {
   await setSeatLimit(2);
   await expect(updateUser(context.userId, { is_inactive: false })).resolves.toMatchObject({ success: true });
   expect(await storedActiveState()).toBe(false);
+});
+
+it('reactivates an accepted member through the action while its retained duplicate reservation fills allocation', async () => {
+  const { email, invitationToken, duplicateInvitationId, roleId } = await seedCoManagedSeatWorld();
+  const accepted = await acceptCoManagedInvitation(email, invitationToken, roleId);
+  context.userId = accepted.user.user_id;
+  await expectAcceptedReservationState(context.userId, duplicateInvitationId);
+
+  await expect(updateUser(context.userId, { is_inactive: true })).resolves.toMatchObject({ success: true });
+  expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('is_inactive')).toEqual({ is_inactive: true });
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, context.tenant))).toBe(1);
+
+  await expect(updateUser(context.userId, { is_inactive: false })).resolves.toMatchObject({ success: true });
+  expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('is_inactive')).toEqual({ is_inactive: false });
+  await expectAcceptedReservationState(context.userId, duplicateInvitationId);
+  const outsiderEmail = `outsider-${randomUUID()}@example.test`;
+  await expect(runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
+    new UserService().create({ username: outsiderEmail, email: outsiderEmail, password: 'Passw0rd!x',
+      first_name: 'Outside', last_name: 'Member', user_type: 'internal' }, createSystemContext(context.tenant))))).rejects.toMatchObject({
+    code: 'CO_MANAGED_SEAT_LIMIT',
+  });
+});
+
+it('reactivates an accepted member through UserService at full allocation and rejects unrelated admission', async () => {
+  const { email, invitationToken, duplicateInvitationId, roleId } = await seedCoManagedSeatWorld();
+  const accepted = await acceptCoManagedInvitation(email, invitationToken, roleId);
+  const userId = accepted.user.user_id;
+  await expectAcceptedReservationState(userId, duplicateInvitationId);
+
+  await runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
+    new UserService().update(userId, { is_inactive: true } as any, createSystemContext(context.tenant))));
+  expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, context.tenant))).toBe(1);
+
+  await expect(runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
+    new UserService().update(userId, { is_inactive: false } as any, createSystemContext(context.tenant))))).resolves.toMatchObject({ user_id: userId });
+  expect(await db('users').where({ tenant: context.tenant, user_id: userId }).first('is_inactive')).toEqual({ is_inactive: false });
+  await expectAcceptedReservationState(userId, duplicateInvitationId);
+
+  const outsiderEmail = `outsider-${randomUUID()}@example.test`;
+  await expect(runWithTenant(context.tenant, () => runAsSystem('co-managed-seat-test', async () =>
+    new UserService().create({ username: outsiderEmail, email: outsiderEmail, password: 'Passw0rd!x',
+      first_name: 'Outside', last_name: 'Member', user_type: 'internal' }, createSystemContext(context.tenant))))).rejects.toMatchObject({
+    code: 'CO_MANAGED_SEAT_LIMIT',
+  });
 });
 
 it('does not refuse an unrelated edit by an already-active user at the seat limit', async () => {

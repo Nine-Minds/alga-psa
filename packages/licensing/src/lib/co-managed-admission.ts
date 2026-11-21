@@ -47,7 +47,12 @@ export async function lockCoManagedSeatScope(trx: Knex.Transaction, customerTena
 
 /** Active customer technicians plus distinct unexpired invitations. Requesters
  * are free; an invitation for an already-active technician reserves no extra seat. */
-export async function countCoManagedCommittedSeats(trx: Knex.Transaction, tenant: string, excludeNormalizedIdentity?: string): Promise<number> {
+export async function countCoManagedCommittedSeats(
+  trx: Knex.Transaction,
+  tenant: string,
+  excludeNormalizedIdentity?: string,
+  excludeInvitedUserId?: string,
+): Promise<number> {
   const db = tenantDb(trx, tenant);
   const users = await db.table('users').where({ user_type: 'internal', is_inactive: false }).count('* as count').first();
   const pending = db.table('user_invitations as invitation').whereNull('invitation.used_at')
@@ -55,6 +60,7 @@ export async function countCoManagedCommittedSeats(trx: Knex.Transaction, tenant
     .whereNotExists(db.table('users as member').select(trx.raw('1')).where({ 'member.user_type': 'internal', 'member.is_inactive': false })
       .whereRaw('member.user_id = invitation.invited_user_id'));
   if (excludeNormalizedIdentity) pending.where('invitation.email_normalized', '<>', excludeNormalizedIdentity);
+  if (excludeInvitedUserId) pending.whereRaw('invitation.invited_user_id IS DISTINCT FROM ?', [excludeInvitedUserId]);
   const invitations = await pending.countDistinct({ count: 'invitation.email_normalized' }).first();
   return Number(users?.count || 0) + Number(invitations?.count || 0);
 }
@@ -76,11 +82,13 @@ export async function assertCoManagedSeatAdmission(trx: Knex.Transaction, tenant
   const scope = await lockCoManagedSeatScope(trx, tenant);
   if (!scope) return { managed: false };
   const customer = tenantDb(trx, tenant);
+  let reactivatingUserId: string | undefined;
   // Repeated reactivation of an already active technician is not a new seat.
   if (input.existingUserId) {
     const existing = await customer.table('users').where('user_id', input.existingUserId).forUpdate().first();
     if (!existing) throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
     if (existing.user_type === 'internal' && existing.is_inactive === false) return { managed: true };
+    if (existing.user_type === 'internal' && existing.is_inactive === true) reactivatingUserId = existing.user_id;
   }
   let invitation;
   if (input.invitationToken) {
@@ -104,7 +112,7 @@ export async function assertCoManagedSeatAdmission(trx: Knex.Transaction, tenant
     reservationIdentity = (await customer.table('user_invitations').where({ invitation_id: input.existingInvitationId, used_at: null })
       .forUpdate().first('email_normalized'))?.email_normalized;
   }
-  if (await countCoManagedCommittedSeats(trx, tenant, reservationIdentity) >= Number(scope.allocation.seats)) {
+  if (await countCoManagedCommittedSeats(trx, tenant, reservationIdentity, reactivatingUserId) >= Number(scope.allocation.seats)) {
     throw new CoManagedAdmissionError('CO_MANAGED_SEAT_LIMIT');
   }
   return { managed: true, ...(invitation ? { invitation: { invitation_id: invitation.invitation_id,
