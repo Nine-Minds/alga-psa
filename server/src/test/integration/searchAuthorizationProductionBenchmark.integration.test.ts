@@ -416,6 +416,31 @@ describe('production search authorization PostgreSQL benchmark', () => {
     }
   }, 60_000);
 
+  it('does not retain a superseded project predicate for an allowing replacement verifier', async () => {
+    const restoreVerifier = registerSearchVisibilityVerifier('project', async () => true);
+    try {
+      await runWithTenant(ctx.tenantId, async () => {
+        const orphanProjectId = randomUUID();
+        await db('app_search_index').insert({
+          tenant: ctx.tenantId, object_type: 'project', object_id: orphanProjectId,
+          title: 'Allow replacement candidate', body: 'allowreplacement', url: `/msp/projects/${orphanProjectId}`,
+          source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'project:read',
+          search_vector: db.raw("to_tsvector('english', 'allowreplacement')"),
+        });
+        expect(canCompileSearchVisibility('project')).toBe(false);
+
+        const result = await runAppSearch(db, ctx.tenantId, ctx.user, {
+          query: 'allowreplacement', types: ['project'] as any, limit: 5,
+        });
+        expect(result.results.map(({ id }) => id)).toEqual([orphanProjectId]);
+        expect(result.groups.project).toBe(1);
+        expect(result.totalCount).toBe(1);
+      });
+    } finally {
+      restoreVerifier();
+    }
+  }, 60_000);
+
   it('keeps document association decisions on fallback when SQL cannot match first-row semantics', async () => {
     await runWithTenant(ctx.tenantId, async () => {
       const portalUserId = await createUser(db, ctx.tenantId, { user_type: 'client', contact_id: fixture.contactId });
