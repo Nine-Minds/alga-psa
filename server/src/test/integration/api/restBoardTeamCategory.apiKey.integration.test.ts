@@ -48,13 +48,19 @@ let apiKey: Awaited<ReturnType<typeof createTestApiKey>>;
 
 beforeAll(async () => {
   db = await createTestDbConnection({ recreate: false });
-  tenant = (await db('tenants').first<{ tenant: string }>('tenant'))!.tenant;
+  await db.migrate.latest();
+  const tenantFixture = await db('tenants')
+    .whereExists(db('boards').select(db.raw('1')).whereRaw('boards.tenant = tenants.tenant'))
+    .whereExists(db('roles').select(db.raw('1')).whereRaw('roles.tenant = tenants.tenant')
+      .andWhere({ role_name: 'Admin', msp: true, client: false }))
+    .first<{ tenant: string }>('tenant');
+  if (!tenantFixture) throw new Error('The integration database has no seeded PSA tenant with a board and Admin role');
+  tenant = tenantFixture.tenant;
 }, 300_000);
 
 beforeEach(async () => {
   connection.tenant = tenant;
   connection.db = await db.transaction();
-  await ensureDefaultRoles();
   userId = randomUUID();
   await connection.db('users').insert({
     tenant, user_id: userId, username: `rest-${userId}`, email: `${userId}@example.test`,
@@ -77,24 +83,6 @@ async function grantPermissions(permissions: Array<[string, string]>) {
     await trx('role_permissions').insert({ tenant, role_id: roleId, permission_id: permission.permission_id });
   }
   await trx('user_roles').insert({ tenant, role_id: roleId, user_id: userId });
-}
-
-async function ensureDefaultRoles() {
-  const trx = connection.db!;
-  for (const role of [
-    { role_name: 'Admin', msp: true, client: false },
-    { role_name: 'Admin', msp: false, client: true },
-  ]) {
-    const existing = await trx('roles').where({ tenant, ...role }).first('role_id');
-    if (!existing) {
-      await trx('roles').insert({
-        tenant,
-        role_id: randomUUID(),
-        ...role,
-        description: 'API key integration fixture',
-      });
-    }
-  }
 }
 
 async function reconcilePermissions() {
@@ -120,6 +108,9 @@ describe('REST routes with real API-key authentication and authorization', () =>
   it('restores team:create for an existing tenant idempotently without changing custom-role assignments', async () => {
     const migration = await import('../../../../migrations/20261120120100_backfill_rest_api_permissions.cjs');
     const trx = connection.db!;
+    // Start from a tenant with the current catalog, then simulate the missing
+    // team:create row that this backfill is meant to restore.
+    await migration.up(trx);
     const existingCreate = await trx('permissions').where({ tenant, resource: 'team', action: 'create', msp: true, client: false }).first<{ permission_id: string }>();
     if (existingCreate) {
       await trx('role_permissions').where({ tenant, permission_id: existingCreate.permission_id }).delete();
