@@ -22,6 +22,10 @@ The regression covers:
 - Fail-closed behavior for a legacy direct reader without the raw collection; its handler is asserted not to run.
 - Foreign-tenant nested entries/comments attached to an authorized sheet are removed, and aggregates are derived only from the remaining scoped entries.
 - Provider registry cleanup after each test.
+- Delegated sorting maps API fields to the registered collection shape (`period_start` / `period_end`), sorts before pagination, and reports the filtered total.
+- Nullable `submitted_at` and `approved_at` values remain last for ascending and descending sorts.
+- Submission and approval ranges compare full instants, including timezone offsets, and exclude null timestamps for either bound; period ranges retain calendar-date semantics.
+- Unsupported created/updated range filters reject even when the registered collection has no rows.
 
 | Actor class | Scope | Observed provider result |
 | --- | --- | --- |
@@ -32,16 +36,20 @@ The regression covers:
 
 Mutation evidence removes both tenant and subject filtering from the shared collection adapter. The registered provider regression then returns an unrelated sheet in the ordinary reader’s first page and fails. Restoring the adapter makes the focused regression pass. See `evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `evidence/scoped-collection-adapter-b32ef96-restored-pass.log`.
 
+The list-sorting and range-filter behavioral regressions use the same registered provider collection and assert returned IDs, filtered totals, ordering across pagination, timestamp boundary behavior, timezone-offset equivalence, null exclusion, and rejection against an empty collection.
+
 ## Commands and results
 
 The collection-enforcement implementation is [`aaac6d4731`](https://github.com/Nine-Minds/alga-psa/commit/aaac6d4731), following the initially published repair commit [`74a14f348ea857a402755d3b70698f98421a41b9`](https://github.com/Nine-Minds/alga-psa/commit/74a14f348ea857a402755d3b70698f98421a41b9).
 
+The delegated list sorting/range repair is [`ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0`](https://github.com/Nine-Minds/alga-psa/commit/ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0). The complete focused suite passed on this revision: 6 files and 59 tests, including the registered mixed-data provider regression, 37 real-Postgres tests, and route/lifecycle regressions.
+
 ```sh
 cd server
-NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts --coverage.enabled=false --maxWorkers=1
+NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-Result: the combined focused run passed 59 tests across 6 files, including 37 real-Postgres tests and 22 route/lifecycle regressions. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
+Result at `ceaad14bf1e9379ce071a7a2e0c18b57b1e937b0`: the combined focused run passed 59 tests across 6 files, including 37 real-Postgres tests and 22 route/lifecycle regressions. The registered collection test file has 27 passing tests and now includes sorting/range behavior coverage. The registered-collection and missing-collection focused cases passed after the enforcement change. The app server was not started. A mutation removing the adapter tenant and subject checks caused the raw-provider regression to return an unrelated sheet and fail; restoring the adapter passed it. Evidence: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/scoped-collection-adapter-b32ef96-mutation-red.log` and `scoped-collection-adapter-b32ef96-restored-pass.log`.
 
 The native read-route and lifecycle regression command was:
 
@@ -50,9 +58,9 @@ cd server
 NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts --coverage.enabled=false --maxWorkers=1
 ```
 
-Result: 2 files passed, 22 tests passed. The server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server`; the 8192 MB attempt aborted with V8 heap exhaustion and no diagnostics.
+The combined six-file run includes both commands above. The server typecheck passed in this repair round with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server` (exit 0).
 
-`NODE_OPTIONS=--max-old-space-size=12288 npm run build -w server` compiled the production bundle and generated all 74 static pages, then exited 1 at Next.js's `SecurityFatalError` for installed Next.js 16.4.2. Retrying the same command reached the same security stop. The build remains a failure, not a successful build. The latest exact-HEAD run is recorded at `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/server-build-b32ef96.log`; this repair round did not repeat the 17-minute compile because the changed collection enforcement does not alter build dependencies. The build recommendation was `next upgrade --agent=security`; that separate dependency upgrade is outside this focused repair.
+The last production build attempt at revision `b32ef96dbc879f800ef4d178e8b89b8027756d0c` compiled the production bundle and generated all 74 static pages, then exited 1 at Next.js's `SecurityFatalError` for installed Next.js 16.4.2. Retrying the same command reached the same security stop. The build remains a failure, not a successful build. Evidence is recorded at `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/server-build-b32ef96.log`; this repair round did not rerun the build. The build recommendation was `next upgrade --agent=security`; that separate dependency upgrade is outside this focused repair.
 
 ## Smoke and CI limits
 
