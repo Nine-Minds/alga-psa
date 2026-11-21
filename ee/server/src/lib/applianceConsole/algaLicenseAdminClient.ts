@@ -234,7 +234,7 @@ async function get<T>(path: string): Promise<{ status: number; data: T | null }>
   return { status: res.status, data: (await res.json()) as T };
 }
 
-async function send<T>(method: 'POST' | 'PATCH', path: string, body: unknown): Promise<T> {
+async function send<T>(method: 'POST' | 'PATCH' | 'PUT', path: string, body: unknown): Promise<T> {
   const config = configFromEnv();
   let res: Response;
   try {
@@ -386,4 +386,30 @@ export async function updateApplianceEntitlementSeats(
   seats: number,
 ): Promise<{ stripe_sub_id: string; tier: string; seats: number | null }> {
   return send('PATCH', `/tenants/${encodeURIComponent(tenantId)}/entitlement`, { seats });
+}
+
+/** Result of the issuer's decision on a co-managed fulfillment. */
+export interface CoManagedFulfillmentAck {
+  result: 'applied' | 'duplicate' | 'stale';
+  /** Unix seconds `exp` of the re-signed license, when one was issued. Appliances pick it up via check-in. */
+  license_exp?: number | null;
+}
+
+/**
+ * Deliver an absolute, verified co-managed seat count to the licensing service, which dedupes by
+ * `idempotency_key`, rejects stale requests and re-signs the entitlement's license preserving base
+ * seats and every other claim (see `@alga-psa/licensing` co-managed-fulfillment-contract).
+ *
+ * PROPOSED issuer route: it must exist in the deployed alga-license before this is enabled; until
+ * then the platform outbox keeps the fulfillment pending and retries. Never charges anything.
+ */
+export async function applyCoManagedFulfillment(request: {
+  idempotencyKey: string; entitlementId: string; licenseTenantId: string; purchaseId: string;
+  stripeSubscriptionId: string; sequence: number; paidPeriodEnd: string; coManagedSeats: number;
+}): Promise<CoManagedFulfillmentAck> {
+  return send<CoManagedFulfillmentAck>('PUT', `/entitlements/${encodeURIComponent(request.entitlementId)}/co-managed-fulfillment`, {
+    idempotency_key: request.idempotencyKey, license_tenant_id: request.licenseTenantId, purchase_id: request.purchaseId,
+    stripe_subscription_id: request.stripeSubscriptionId, sequence: request.sequence,
+    paid_period_end: request.paidPeriodEnd, co_managed_seats: request.coManagedSeats,
+  });
 }

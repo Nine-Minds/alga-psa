@@ -15,6 +15,8 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({ table: (t: string) => conn(t) }),
   assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  // Covered by packages/db clientPortalAdminFlag.test.ts and the policyActions wiring suite.
+  syncContactClientAdminFlag: async () => undefined,
 }));
 
 vi.mock('@alga-psa/auth', () => ({

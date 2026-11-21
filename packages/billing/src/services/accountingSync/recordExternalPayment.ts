@@ -25,7 +25,9 @@ import { buildExternalPaymentRecordedPayload } from '../../lib/paymentRecordedEv
  */
 
 import { computeBalanceDue } from '../../lib/balanceDue';
+import { loadReversedPaymentIds, reversalReferenceFor } from '../../lib/payments/paymentSources';
 export { computeBalanceDue };
+export { reversalReferenceFor };
 export type { InvoiceBalanceInputs } from '../../lib/balanceDue';
 
 export interface ExternalPaymentInput {
@@ -383,13 +385,21 @@ export interface ExternalPaymentReversalInput {
   notes?: string;
   transactionMetadata?: Record<string, unknown>;
   transactionDescription?: string;
+  /**
+   * The invoice_payments row this reversal offsets. Set by the user-facing
+   * "Reverse payment" action: it links the two rows and makes the reversal
+   * idempotent under concurrency (a second attempt returns alreadyRecorded
+   * instead of zeroing the invoice twice).
+   */
+  reversedPaymentRowId?: string;
 }
 
 /**
  * Reverse a previously recorded external payment (edited or deleted in the
- * external system). Mirrors the refund pattern: an offsetting negative
- * invoice_payments row (audit trail preserved), a payment_reversal
- * transaction, and a status recompute.
+ * external system, or reversed by the MSP in AlgaPSA). Mirrors the refund
+ * pattern: an offsetting negative invoice_payments row (audit trail
+ * preserved), a payment_reversal transaction, and a status recompute. The
+ * single copy of that logic — every reversal path lands here.
  */
 export async function reverseExternalPayment(
   knex: Knex,
@@ -401,11 +411,38 @@ export async function reverseExternalPayment(
     return { success: false, paymentRecorded: false, error: `Invoice not found: ${input.invoiceId}` };
   }
 
-  const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
+  const { paymentId, newStatus, totalPaid, alreadyRecorded } = await knex.transaction(async (trx) => {
     await tenantDb(trx, tenantId).table('invoices')
       .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
+
+    // Under the invoice lock, so two reversals of the same payment row queue
+    // and the loser sees that it is already spent rather than crediting the
+    // invoice twice. Deliberately the shared reading of "already reversed":
+    // the accounting sync keys its reversal rows on the EXTERNAL payment, so
+    // the marker reference alone would not recognize its work as a reversal of
+    // this row.
+    if (input.reversedPaymentRowId) {
+      const reversed = await loadReversedPaymentIds(trx, tenantId, input.invoiceId);
+      if (reversed.has(input.reversedPaymentRowId)) {
+        const existing = await tenantDb(trx, tenantId).table('invoice_payments')
+          .where({
+            invoice_id: input.invoiceId,
+            reference_number: reversalReferenceFor(input.reversedPaymentRowId)
+          })
+          .first<{ payment_id: string } | undefined>();
+        const paid = await sumPayments(trx, tenantId, input.invoiceId);
+        return {
+          // Absent when the sync wrote the reversal: its row is keyed on the
+          // external payment, and the caller refuses on alreadyRecorded anyway.
+          paymentId: existing?.payment_id,
+          newStatus: invoice.status,
+          totalPaid: paid,
+          alreadyRecorded: true
+        };
+      }
+    }
 
     const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
       .insert({
@@ -419,7 +456,10 @@ export async function reverseExternalPayment(
         payment_date: new Date(),
         reference_number: input.referenceNumber,
         notes: input.notes ?? null,
-        status: 'reversed'
+        status: 'reversed',
+        ...(input.reversedPaymentRowId
+          ? { metadata: { reversed_payment_id: input.reversedPaymentRowId } }
+          : {})
       })
       .returning('payment_id');
 
@@ -436,19 +476,26 @@ export async function reverseExternalPayment(
       metadata: {
         payment_provider: input.provider,
         reference_number: input.referenceNumber,
+        ...(input.reversedPaymentRowId ? { reversed_payment_id: input.reversedPaymentRowId } : {}),
         ...(input.transactionMetadata ?? {})
       }
     });
 
-    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid };
+    return {
+      paymentId: payment.payment_id as string,
+      newStatus: status,
+      totalPaid: paid,
+      alreadyRecorded: false
+    };
   });
 
   return {
     success: true,
-    paymentRecorded: true,
+    paymentRecorded: !alreadyRecorded,
     paymentId,
     newStatus,
     totalPaid,
-    clientId: invoice.client_id
+    clientId: invoice.client_id,
+    ...(alreadyRecorded ? { alreadyRecorded: true } : {})
   };
 }

@@ -1,228 +1,26 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import {
+  normalizeBasicFormSchema,
+  slugifyFieldKey,
+  withUniqueFieldKey,
+  type BasicFormField,
+  type BasicFormSchema,
+  type BasicFormSettings,
+} from './formSchema';
 import { saveServiceRequestDefinitionDraft, type ServiceRequestDefinitionManagementRow } from './definitionManagement';
 
-export type BasicFormFieldType =
-  | 'short-text'
-  | 'long-text'
-  | 'select'
-  | 'checkbox'
-  | 'date'
-  | 'file-upload';
-
-export interface BasicFormFieldOption {
-  label: string;
-  value: string;
-}
-
-export interface BasicFormField {
-  key: string;
-  type: BasicFormFieldType;
-  label: string;
-  helpText?: string | null;
-  required?: boolean;
-  defaultValue?: string | boolean | null;
-  options?: BasicFormFieldOption[];
-}
-
-export interface BasicFormSchema {
-  fields: BasicFormField[];
-}
+/**
+ * Draft persistence for the schema v2 form builder.
+ *
+ * The schema itself — types, normalization, validation, section grouping — lives in
+ * `./formSchema`, which imports nothing server-side so client components can read it.
+ * Everything there is re-exported here, so existing importers keep working.
+ */
+export * from './formSchema';
 
 interface DraftFormSchemaRow {
   form_schema: Record<string, unknown> | null;
-}
-
-const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
-const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>([
-  'short-text',
-  'long-text',
-  'select',
-  'checkbox',
-  'date',
-  'file-upload',
-]);
-
-function slugifyFieldKey(source: string): string {
-  const normalized = source
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return normalized || 'field';
-}
-
-function withUniqueFieldKey(base: string, existingKeys: Set<string>): string {
-  if (!existingKeys.has(base)) {
-    return base;
-  }
-
-  let suffix = 2;
-  while (existingKeys.has(`${base}_${suffix}`)) {
-    suffix += 1;
-  }
-  return `${base}_${suffix}`;
-}
-
-export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
-  if (!schema || typeof schema !== 'object' || !Array.isArray((schema as any).fields)) {
-    return { fields: [] };
-  }
-
-  const rawFields = (schema as any).fields as unknown[];
-  const normalizedFields: BasicFormField[] = [];
-  const seenKeys = new Set<string>();
-
-  for (const raw of rawFields) {
-    if (!raw || typeof raw !== 'object') {
-      continue;
-    }
-
-    const rawKey = typeof (raw as any).key === 'string' ? (raw as any).key.trim() : '';
-    const fallbackLabel = typeof (raw as any).label === 'string' ? (raw as any).label : 'field';
-    const nextKey = rawKey
-      ? rawKey
-      : withUniqueFieldKey(slugifyFieldKey(fallbackLabel), seenKeys);
-    seenKeys.add(nextKey);
-
-    const rawType = (raw as any).type;
-    const type: BasicFormFieldType = SUPPORTED_FIELD_TYPES.has(rawType)
-      ? (rawType as BasicFormFieldType)
-      : 'short-text';
-
-    const label = typeof (raw as any).label === 'string' && (raw as any).label.trim()
-      ? (raw as any).label.trim()
-      : nextKey;
-
-    const field: BasicFormField = {
-      key: nextKey,
-      type,
-      label,
-      helpText: typeof (raw as any).helpText === 'string' ? (raw as any).helpText : null,
-      required: Boolean((raw as any).required),
-    };
-
-    if ((raw as any).defaultValue !== undefined) {
-      field.defaultValue = (raw as any).defaultValue as string | boolean | null;
-    }
-    if (Array.isArray((raw as any).options)) {
-      field.options = (raw as any).options
-        .map((option: any) => ({
-          label: typeof option?.label === 'string' ? option.label : '',
-          value: typeof option?.value === 'string' ? option.value : '',
-        }))
-        .filter((option: BasicFormFieldOption) => option.label && option.value);
-    }
-
-    normalizedFields.push(field);
-  }
-
-  return { fields: normalizedFields };
-}
-
-export interface BasicFormSchemaValidationResult {
-  isValid: boolean;
-  errors: string[];
-}
-
-export function resolveStaticDefaultValues(
-  schema: unknown
-): Record<string, string | boolean | null> {
-  const normalized = normalizeBasicFormSchema(schema);
-  const initialValues: Record<string, string | boolean | null> = {};
-
-  for (const field of normalized.fields) {
-    if (field.defaultValue === undefined) {
-      continue;
-    }
-
-    if (field.type === 'file-upload') {
-      continue;
-    }
-
-    if (
-      field.type === 'checkbox' &&
-      (typeof field.defaultValue === 'boolean' || field.defaultValue === null)
-    ) {
-      initialValues[field.key] = field.defaultValue;
-      continue;
-    }
-
-    if (
-      field.type !== 'checkbox' &&
-      (typeof field.defaultValue === 'string' || field.defaultValue === null)
-    ) {
-      initialValues[field.key] = field.defaultValue;
-    }
-  }
-
-  return initialValues;
-}
-
-export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidationResult {
-  const normalized = normalizeBasicFormSchema(schema);
-  const errors: string[] = [];
-  const seenKeys = new Set<string>();
-
-  normalized.fields.forEach((field, index) => {
-    const fieldRef = `Field #${index + 1}`;
-
-    if (!FIELD_KEY_PATTERN.test(field.key)) {
-      errors.push(`${fieldRef} has invalid key "${field.key}"`);
-    }
-    if (seenKeys.has(field.key)) {
-      errors.push(`Duplicate field key: ${field.key}`);
-    }
-    seenKeys.add(field.key);
-
-    if (!SUPPORTED_FIELD_TYPES.has(field.type)) {
-      errors.push(`${fieldRef} has unsupported type "${String(field.type)}"`);
-    }
-    if (!field.label?.trim()) {
-      errors.push(`${fieldRef} is missing a label`);
-    }
-
-    const defaultValue = field.defaultValue;
-    if (defaultValue !== undefined && defaultValue !== null) {
-      if (field.type === 'checkbox' && typeof defaultValue !== 'boolean') {
-        errors.push(`Field "${field.key}" defaultValue must be boolean for checkbox`);
-      }
-      if (field.type !== 'checkbox' && typeof defaultValue !== 'string') {
-        errors.push(`Field "${field.key}" defaultValue must be string for ${field.type}`);
-      }
-      if (field.type === 'file-upload') {
-        errors.push(`Field "${field.key}" does not support a static default value`);
-      }
-    }
-
-    if (field.type === 'select') {
-      if (!field.options || field.options.length === 0) {
-        errors.push(`Field "${field.key}" must include at least one option`);
-      }
-      const optionValues = new Set<string>();
-      for (const option of field.options ?? []) {
-        if (!option.label.trim() || !option.value.trim()) {
-          errors.push(`Field "${field.key}" has an option with missing label/value`);
-          continue;
-        }
-        if (optionValues.has(option.value)) {
-          errors.push(`Field "${field.key}" has duplicate option value "${option.value}"`);
-        }
-        optionValues.add(option.value);
-      }
-      if (
-        typeof defaultValue === 'string' &&
-        defaultValue &&
-        !optionValues.has(defaultValue)
-      ) {
-        errors.push(`Field "${field.key}" defaultValue must match an option value`);
-      }
-    }
-  });
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
 }
 
 async function getDefinitionFormSchema(
@@ -246,9 +44,11 @@ export async function replaceBasicFormSchemaForDefinitionDraft(input: {
   tenant: string;
   definitionId: string;
   fields: BasicFormField[];
+  /** Form-level settings (width, submit label, success message). Omitted leaves none stored. */
+  settings?: BasicFormSettings;
   updatedBy?: string | null;
 }): Promise<ServiceRequestDefinitionManagementRow> {
-  const normalized = normalizeBasicFormSchema({ fields: input.fields });
+  const normalized = normalizeBasicFormSchema({ fields: input.fields, settings: input.settings });
   return saveServiceRequestDefinitionDraft({
     knex: input.knex,
     tenant: input.tenant,
@@ -273,6 +73,7 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
   const baseKey = slugifyFieldKey(input.field.key?.trim() || input.field.label || input.field.type);
   const key = withUniqueFieldKey(baseKey, existingKeys);
   const nextField: BasicFormField = {
+    ...input.field,
     key,
     type: input.field.type,
     label: input.field.label,
@@ -292,6 +93,7 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -320,6 +122,7 @@ export async function updateBasicFormFieldInDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -339,6 +142,7 @@ export async function removeBasicFormFieldFromDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: nextFields,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }
@@ -371,6 +175,7 @@ export async function reorderBasicFormFieldsInDefinitionDraft(input: {
     tenant: input.tenant,
     definitionId: input.definitionId,
     fields: reordered,
+    settings: schema.settings,
     updatedBy: input.updatedBy,
   });
 }

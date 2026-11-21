@@ -2437,7 +2437,10 @@
       "tickets",
       "Firmware",
       "Natural",
-      "Ticket {{number}}"
+      "Ticket {{number}}",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "api",

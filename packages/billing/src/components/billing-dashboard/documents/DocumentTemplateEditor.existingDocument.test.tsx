@@ -153,6 +153,7 @@ describe('DocumentTemplateEditor existing-document preview', () => {
       />,
     );
     // The Letter page the template declares makes it a worksheet, so the worksheet-only fields render.
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
     const serial = await waitFor(() => {
       const element = screen.getByLabelText('Full asset serial number') as HTMLInputElement;
       expect(element.disabled).toBe(true);
@@ -162,6 +163,7 @@ describe('DocumentTemplateEditor existing-document preview', () => {
     const description = screen.getByLabelText('Ticket description') as HTMLInputElement;
     expect(description.checked).toBe(false);
     expect(description.disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
 
     await openPreviewTab();
     await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
@@ -188,7 +190,9 @@ describe('DocumentTemplateEditor existing-document preview', () => {
       />,
     );
     // A 4 x 2 in page is a tag, so the worksheet-only fields never appear.
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
     expect(screen.queryByLabelText('Full asset serial number')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
     await openPreviewTab();
     await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
     expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({
@@ -213,8 +217,10 @@ describe('DocumentTemplateEditor existing-document preview', () => {
       />,
     );
     // The A4 page the template declares is worksheet paper: the fields render and can be toggled.
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
     await waitFor(() => expect(screen.getByLabelText('Full asset serial number')).toBeTruthy());
     fireEvent.click(screen.getByLabelText('Full asset serial number'));
+    fireEvent.click(screen.getByRole('button', { name: 'Label settings' }));
     await openPreviewTab();
     await waitFor(() => expect(runAuthoritativeTemplatePreviewMock).toHaveBeenCalled());
     expect(runAuthoritativeTemplatePreviewMock.mock.calls.at(-1)?.[1].metadata.labelSettings).toMatchObject({

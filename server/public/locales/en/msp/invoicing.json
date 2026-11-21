@@ -606,7 +606,8 @@
       "downloadPdf": "Download PDF",
       "sendEmail": "Send Email",
       "unfinalize": "Unfinalize",
-      "recordPayment": "Record Payment"
+      "recordPayment": "Record Payment",
+      "viewPayments": "Payments"
     },
     "status": {
       "finalized": "Finalized"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Reason for voiding...",
       "cancel": "Cancel",
       "confirm": "Void Invoice",
-      "voiding": "Voiding..."
+      "voiding": "Voiding...",
+      "algaOnly": "Void in AlgaPSA only (unlink from {{provider}})",
+      "algaOnlyWarning": "The {{provider}} document is left exactly as it is and this invoice is unlinked from it, so AlgaPSA and {{provider}} will disagree about it."
     },
     "history": {
       "title": "History",
@@ -1793,7 +1796,9 @@
           "actual": "100%",
           "label": "Preview zoom",
           "fitWithScale": "Fit ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Page {{page}} of {{total}}",
+        "frameTitle": "Invoice preview"
       },
       "tabs": {
         "design": "Design",
@@ -1889,6 +1894,10 @@
       "spacer": {
         "label": "Spacer",
         "description": "Empty space for layout adjustment."
+      },
+      "page-break": {
+        "label": "Page Break",
+        "description": "Starts the next block on a new page."
       },
       "container": {
         "label": "Box Container",
@@ -2212,6 +2221,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Pagination",
+          "fields": {
+            "breakBefore": {
+              "label": "Start on a new page"
+            },
+            "breakInside": {
+              "label": "Keep together on one page"
+            }
+          }
         }
       }
     },
@@ -2405,6 +2425,8 @@
       "signatureLabel": "Signature",
       "attachmentsLabel": "Attachments",
       "spacerLabel": "Spacer",
+      "pageBreakLabel": "Page break",
+      "pageBreakBefore": "Starts on a new page",
       "companyLogo": "Company logo",
       "insertionMarker": "The next block you add goes here",
       "emptyContainer": "Empty — select it and add blocks from the left panel",
@@ -2887,31 +2909,26 @@
     "editor": {
       "titles": {
         "create": "New {{type}} Layout",
-        "edit": "Edit {{type}} Layout"
-      },
-      "description": "Design the {{type}} layout using the visual editor, then preview with sample data.",
-      "errorTitle": "{{type}} Layout Editor",
-      "sections": {
-        "details": "Layout Details"
+        "edit": "Edit Layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Created {{time}}",
         "labelClass": "Label class",
         "labelFields": "Fields shown on the label",
         "labelFieldsHint": "The record link (QR code) and the identifier are always shown.",
         "worksheetPageHint": "A ticket work tag with portrait paper at least 210 mm wide (A4, Letter, Legal or qualifying custom paper) prints as a full-page customer worksheet, adding the full asset serial and ticket description fields. Smaller pages print as tags.",
-        "worksheetFieldsHint": "Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description."
+        "worksheetFieldsHint": "Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description.",
+        "notSaved": "Not saved yet",
+        "savedAt": "Saved {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "{{type}} Template"
       },
       "actions": {
-        "back": "Back to Layouts",
+        "back": "Back to {{type}} Layouts",
+        "labelSettings": "Label settings",
         "save": "Save Layout"
-      },
-      "labels": {
-        "created": "Created: {{date}}",
-        "lastUpdated": "Last Updated: {{date}}"
       },
       "preview": {
         "sampleNote": "Rendered against representative {{type}} sample data.",
@@ -3036,6 +3053,25 @@
       "statusNotPayable": "Cannot record a payment for an invoice with status: {{status}}.",
       "overpaymentNotConfirmed": "This payment is more than the balance due. Confirm the overpayment to record it.",
       "recordFailed": "Failed to record the payment. Please try again."
+    },
+    "void": {
+      "paymentsRecorded": "Unwind payments before voiding.",
+      "paymentsRecordedManual": "Reverse the payments recorded in AlgaPSA ({{sources}}) before voiding this invoice.",
+      "paymentsRecordedIntegration": "This invoice has payments from your accounting system ({{sources}}). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.",
+      "paymentsRecordedGateway": "This invoice has payments taken through a payment provider ({{sources}}). Refund them there before voiding.",
+      "paymentsRecordedMixed": "Unwind the payments on this invoice ({{sources}}) before voiding it.",
+      "creditNoteCreditApplied": "This credit note has applied credit. Unapply the credit before voiding."
+    },
+    "reversePayment": {
+      "permissionDenied": "Permission denied: reversing invoice payments requires the invoice payment permission.",
+      "reasonRequired": "A reason is required to reverse a payment.",
+      "paymentNotFound": "Payment not found. It may have been updated or deleted. Please refresh and try again.",
+      "notReversible": "This payment cannot be reversed.",
+      "alreadyReversed": "This payment has already been reversed.",
+      "gatewayRefundRequired": "This payment was taken through a payment provider ({{method}}). Refund it there instead.",
+      "integrationOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it in {{provider}} and the next sync will reverse it here.",
+      "remoteMutateRequired": "Permission denied: reversing a synced payment in AlgaPSA only requires the accounting remote-mutate permission.",
+      "reverseFailed": "Failed to reverse the payment. Please try again."
     }
   },
   "periodTotal": {
@@ -3095,6 +3131,37 @@
     },
     "toasts": {
       "recorded": "Payment recorded"
+    }
+  },
+  "invoicePayments": {
+    "title": "Payments",
+    "titleForInvoice": "Payments — {{invoiceNumber}}",
+    "loading": "Loading payments...",
+    "empty": "No payments have been recorded for this invoice.",
+    "sources": {
+      "manual": "Recorded in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Payment provider"
+    },
+    "fields": {
+      "reason": "Reason"
+    },
+    "actions": {
+      "reverse": "Reverse payment",
+      "confirmReverse": "Reverse payment",
+      "algaOnly": "Reverse in AlgaPSA only",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "notes": {
+      "gatewayRefund": "Taken through a payment provider ({{method}}): refund it there instead.",
+      "alreadyReversed": "Already reversed.",
+      "providerOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it there and the next sync will reverse it here.",
+      "algaOnlyWarning": "AlgaPSA and {{provider}} will disagree about this payment: the {{provider}} record is left exactly as it is and the payment is unlinked here."
+    },
+    "toasts": {
+      "reversed": "Payment reversed"
     }
   }
 }

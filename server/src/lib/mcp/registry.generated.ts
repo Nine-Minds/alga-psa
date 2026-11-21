@@ -3467,9 +3467,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_users_bulk_create",
     "method": "post",
     "path": "/api/v1/users/bulk/create",
-    "displayName": "Bulk create users (route currently mapped to single create)",
-    "summary": "Bulk create users (route currently mapped to single create)",
-    "description": "Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.",
+    "displayName": "Bulk create users",
+    "summary": "Bulk create users",
+    "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates every user and creates nothing.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3478,66 +3478,38 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "password": {
-          "type": "string",
-          "minLength": 8
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "users": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AccessCreateUserBodyV1"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "send_welcome_email": {
+              "type": "boolean",
+              "description": "Default true. Mails each created user a link to set their own password."
+            },
+            "force_password_reset": {
+              "type": "boolean",
+              "description": "Default false. Records the must_change_password preference on each account, the same flag an admin-initiated password reset sets. Nothing enforces it at sign-in yet, so pair it with send_welcome_email to make the owner choose their own password."
+            },
+            "skip_invalid": {
+              "type": "boolean",
+              "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
+            },
+            "dry_run": {
+              "type": "boolean",
+              "description": "Validates every user and creates nothing."
+            }
+          }
         }
       },
       "required": [
-        "username",
-        "email",
-        "password",
-        "role_ids"
+        "users"
       ]
     },
     "responseBodySchema": {
@@ -3572,9 +3544,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_users_bulk_deactivate",
     "method": "put",
     "path": "/api/v1/users/bulk/deactivate",
-    "displayName": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+    "displayName": "Bulk deactivate users",
+    "summary": "Bulk deactivate users",
+    "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3583,57 +3555,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "user_ids": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "deactivate": {
+          "type": "boolean",
+          "description": "Default true; false reactivates the listed users (subject to seat limits)."
         }
-      }
+      },
+      "required": [
+        "user_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -15952,6 +15890,170 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_portalinvitations",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/portal-invitations",
+    "displayName": "Invite a client's contacts to the client portal",
+    "summary": "Invite a client's contacts to the client portal",
+    "description": "Sends client portal invitations for one client: either every eligible contact (all_eligible) or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite. Ids that do not belong to the client in the path come back as skipped, never invited."
+        },
+        "all_eligible": {
+          "type": "boolean",
+          "description": "Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given."
+        }
+      },
+      "description": "Supply contact_ids, or all_eligible=true. One of the two is required."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_portalinvitations_bulk",
+    "method": "post",
+    "path": "/api/v1/portal-invitations/bulk",
+    "displayName": "Invite contacts to the client portal in bulk",
+    "summary": "Invite contacts to the client portal in bulk",
+    "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite, in any client. Each contact is authorized against its own client."
+        }
+      },
+      "required": [
+        "contact_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
         },
         "meta": {
           "type": "object",

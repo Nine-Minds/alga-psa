@@ -643,7 +643,8 @@
       "downloadPdf": "Descargar PDF",
       "sendEmail": "Enviar correo electrónico",
       "unfinalize": "Desfinalizar",
-      "recordPayment": "Registrar pago"
+      "recordPayment": "Registrar pago",
+      "viewPayments": "Pagos"
     },
     "status": {
       "finalized": "Finalizada"
@@ -948,7 +949,9 @@
       "reasonPlaceholder": "Motivo de la anulación...",
       "cancel": "Cancelar",
       "confirm": "Anular factura",
-      "voiding": "Anulando…"
+      "voiding": "Anulando…",
+      "algaOnly": "Anular solo en AlgaPSA (desvincular de {{provider}})",
+      "algaOnlyWarning": "El documento de {{provider}} queda tal como está y esta factura se desvincula de él, por lo que AlgaPSA y {{provider}} no coincidirán."
     },
     "history": {
       "title": "Historial",
@@ -1830,7 +1833,9 @@
           "actual": "100 %",
           "label": "Zoom de la vista previa",
           "fitWithScale": "Ajustar ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Vista previa de la factura"
       },
       "tabs": {
         "design": "Diseño",
@@ -1926,6 +1931,10 @@
       "spacer": {
         "label": "Espaciador",
         "description": "Espacio vacío para ajustar el diseño."
+      },
+      "page-break": {
+        "label": "Salto de página",
+        "description": "Inicia el siguiente bloque en una página nueva."
       },
       "container": {
         "label": "Contenedor caja",
@@ -2249,6 +2258,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginación",
+          "fields": {
+            "breakBefore": {
+              "label": "Comenzar en una página nueva"
+            },
+            "breakInside": {
+              "label": "Mantener junto en una sola página"
+            }
+          }
         }
       }
     },
@@ -2442,6 +2462,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Adjuntos",
       "spacerLabel": "Espaciador",
+      "pageBreakLabel": "Salto de página",
+      "pageBreakBefore": "Comienza en una página nueva",
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
@@ -2924,31 +2946,26 @@
     "editor": {
       "titles": {
         "create": "Nuevo diseño de {{type}}",
-        "edit": "Editar diseño de {{type}}"
-      },
-      "description": "Diseñe el formato de {{type}} con el editor visual y luego obtenga una vista previa con datos de ejemplo.",
-      "errorTitle": "Editor de diseños de {{type}}",
-      "sections": {
-        "details": "Detalles del diseño"
+        "edit": "Editar diseño: {{name}}"
       },
       "fields": {
-        "version": "Versión",
+        "created": "Creado {{time}}",
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
         "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
         "worksheetPageHint": "Una etiqueta de trabajo de ticket con una página vertical de al menos 210 mm de ancho (A4, Letter, Legal o papel personalizado que cumpla el requisito) se imprime como una hoja de trabajo del cliente a página completa, con los campos de número de serie completo del activo y descripción del ticket. Las páginas más pequeñas se imprimen como etiquetas.",
-        "worksheetFieldsHint": "Ocultar la terminación de serie también oculta el número completo; ocultar el detalle también oculta la descripción del ticket."
+        "worksheetFieldsHint": "Ocultar la terminación de serie también oculta el número completo; ocultar el detalle también oculta la descripción del ticket.",
+        "notSaved": "Aún no guardado",
+        "savedAt": "Guardado {{time}}",
+        "version": "Versión"
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
       },
       "actions": {
-        "back": "Volver a los diseños",
+        "back": "Volver a diseños de {{type}}",
+        "labelSettings": "Ajustes de etiqueta",
         "save": "Guardar diseño"
-      },
-      "labels": {
-        "created": "Creado: {{date}}",
-        "lastUpdated": "Última actualización: {{date}}"
       },
       "preview": {
         "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",
@@ -3015,6 +3032,25 @@
       "statusNotPayable": "No se puede registrar un pago para una factura con estado: {{status}}.",
       "overpaymentNotConfirmed": "Este pago es mayor que el saldo pendiente. Confirme el pago en exceso para registrarlo.",
       "recordFailed": "No se pudo registrar el pago. Inténtelo de nuevo."
+    },
+    "void": {
+      "paymentsRecorded": "Revierta los pagos antes de anular.",
+      "paymentsRecordedManual": "Revierta los pagos registrados en AlgaPSA ({{sources}}) antes de anular esta factura.",
+      "paymentsRecordedIntegration": "Esta factura tiene pagos de su sistema contable ({{sources}}). Elimínelos o edítelos allí y la próxima sincronización los revertirá aquí, o reviértalos solo en AlgaPSA.",
+      "paymentsRecordedGateway": "Esta factura tiene pagos cobrados mediante un proveedor de pagos ({{sources}}). Reembólselos allí antes de anular.",
+      "paymentsRecordedMixed": "Revierta los pagos de esta factura ({{sources}}) antes de anularla.",
+      "creditNoteCreditApplied": "Esta nota de crédito tiene crédito aplicado. Desaplique el crédito antes de anular."
+    },
+    "reversePayment": {
+      "permissionDenied": "Permiso denegado: para revertir pagos de facturas necesita el permiso de pago de facturas.",
+      "reasonRequired": "Se requiere un motivo para revertir un pago.",
+      "paymentNotFound": "No se encontró el pago. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "notReversible": "Este pago no se puede revertir.",
+      "alreadyReversed": "Este pago ya se revirtió.",
+      "gatewayRefundRequired": "Este pago se cobró mediante un proveedor de pagos ({{method}}). Reembólselo allí.",
+      "integrationOwned": "Este pago proviene del pago {{reference}} de {{provider}}. Elimínelo o edítelo en {{provider}} y la próxima sincronización lo revertirá aquí.",
+      "remoteMutateRequired": "Permiso denegado: revertir un pago sincronizado solo en AlgaPSA requiere el permiso de modificación remota de contabilidad.",
+      "reverseFailed": "No se pudo revertir el pago. Inténtelo de nuevo."
     },
     "permissions": {
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
@@ -3095,6 +3131,37 @@
     "blocked": {
       "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",
       "exporting": "Se está preparando una exportación contable para esta factura. Espere a que termine antes de cambiarla."
+    }
+  },
+  "invoicePayments": {
+    "title": "Pagos",
+    "titleForInvoice": "Pagos — {{invoiceNumber}}",
+    "loading": "Cargando los pagos...",
+    "empty": "No se han registrado pagos para esta factura.",
+    "sources": {
+      "manual": "Registrado en AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Proveedor de pagos"
+    },
+    "fields": {
+      "reason": "Motivo"
+    },
+    "actions": {
+      "reverse": "Revertir pago",
+      "confirmReverse": "Revertir pago",
+      "algaOnly": "Revertir solo en AlgaPSA",
+      "cancel": "Cancelar",
+      "close": "Cerrar"
+    },
+    "notes": {
+      "gatewayRefund": "Cobrado mediante un proveedor de pagos ({{method}}): reembólselo allí.",
+      "alreadyReversed": "Ya revertido.",
+      "providerOwned": "Este pago proviene del pago {{reference}} de {{provider}}. Elimínelo o edítelo allí y la próxima sincronización lo revertirá aquí.",
+      "algaOnlyWarning": "AlgaPSA y {{provider}} no coincidirán en este pago: el registro de {{provider}} queda tal como está y el pago se desvincula aquí."
+    },
+    "toasts": {
+      "reversed": "Pago revertido"
     }
   }
 }

@@ -44,7 +44,7 @@ describe("ticket email variable audience", () => {
 
   it("lets an entry cover its subtree", () => {
     expect(ticketVariableAudience("ticket.assets[].serialNumber")).toBe("client");
-    expect(ticketVariableAudience("ticket.timeEntries[].technician")).toBe("msp");
+    expect(ticketVariableAudience("ticket.timeEntries[].technician")).toBe("client");
     expect(ticketVariableAudience("ticket.materials[].rate")).toBe("msp");
   });
 
@@ -83,8 +83,6 @@ describe("projectTicketEmailContext", () => {
       "internalNotes.anything",
       "ticket.materialsTotal",
       "ticket.somethingNew",
-      "ticket.timeEntries",
-      "ticket.totalTimeWorked",
     ]);
   });
 
@@ -95,6 +93,8 @@ describe("projectTicketEmailContext", () => {
         title: "Printer offline",
         url: "https://msp.example.com/msp/tickets/1",
         assets: [{ name: "HP-01", serialNumber: "X1" }],
+        timeEntries: [{ technician: "Morgan", worked: 30 }],
+        totalTimeWorked: 90,
       },
       comment: { id: "c1", content: "<p>Hi</p>" },
     });
@@ -180,9 +180,9 @@ describe("templateVariablesHiddenFromClients", () => {
   it("names MSP-only and unclassified ticket variables, in any Handlebars form", () => {
     expect(
       templateVariablesHiddenFromClients(
-        "{{ticket.totalTimeWorked}} {{{ ticket.internalNote }}} {{#each ticket.timeEntries}}{{technician}}{{/each}} {{#if comment.authorType}}y{{/if}} {{ticket.totalTimeWorked}}",
+        "{{ticket.materialsTotal}} {{{ ticket.internalNote }}} {{#each ticket.materials}}{{rate}}{{/each}} {{#if comment.authorType}}y{{/if}} {{ticket.somethingNew}}",
       ),
-    ).toEqual(["comment.authorType", "ticket.internalNote", "ticket.timeEntries", "ticket.totalTimeWorked"]);
+    ).toEqual(["comment.authorType", "ticket.internalNote", "ticket.materials", "ticket.materialsTotal", "ticket.somethingNew"]);
   });
 
   it("ignores names it cannot place: relative names and other roots", () => {
@@ -192,7 +192,16 @@ describe("templateVariablesHiddenFromClients", () => {
   it("finds nothing in any stock ticket template", () => {
     for (const [name, entry] of ticketTemplates) {
       const text = entry.variables.map((variable) => `{{${variable.path}}}`).join(" ");
-      expect(templateVariablesHiddenFromClients(text), name).toEqual([]);
+      const hidden = templateVariablesHiddenFromClients(text);
+      if (CLIENT_TICKET_EMAIL_TEMPLATES.has(name)) {
+        expect(hidden, name).toEqual([]);
+      } else {
+        // Internal templates may carry the MSP-only material blocks; nothing
+        // else they list may be hidden from clients.
+        for (const path of hidden) {
+          expect(ticketVariableAudience(path), `${name}: ${path}`).toBe("msp");
+        }
+      }
     }
   });
 });

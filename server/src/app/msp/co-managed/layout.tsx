@@ -17,7 +17,8 @@ export default async function Layout({ children }: Readonly<LayoutProps>) {
   if (!tenant) notFound();
   // Commercial first-purchase eligibility is a second way in, for the overview root only: the archive page
   // keeps its own `serves` gate, so this layout never opens it. Same per-request decision as the page.
-  if (!(await resolveCoManagedRootAccess(tenant)).commercial) {
+  const access = await resolveCoManagedRootAccess(tenant);
+  if (!access.commercial && !access.trial) {
     await requireCapabilityForPage('co-managed', tenant, 'serves');
   }
   const boundary = await enforceServerProductRoute({ pathname: '/msp/co-managed', scope: 'msp' });

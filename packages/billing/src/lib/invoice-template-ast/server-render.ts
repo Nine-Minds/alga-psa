@@ -6,7 +6,12 @@ import { renderEvaluatedTemplateAst } from './react-renderer';
 import type { RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 import { localizeTemplateAstForLocale } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
-import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
+import {
+  DOCUMENT_PRINT_GEOMETRY_CSS,
+  resolveCustomPageCssFromAst,
+  type TemplatePreviewSheet,
+  type TemplatePrintGeometry,
+} from './printSettings';
 import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
 import { PDF_FONT_FACE_CSS } from '../pdf-fonts';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
@@ -50,6 +55,13 @@ export interface TemplateHtmlDocumentOptions {
    * Never set on a path that produces a PDF.
    */
   previewSheet?: TemplatePreviewSheet;
+  /**
+   * How this document reaches paper. `document` (the default, and every caller of this function
+   * except the work-tag preview) prints onto a page box that carries the margin, so the markup is
+   * stripped of its own for print. A `label-cell` template keeps the renderer's root padding —
+   * that padding is the label's margin.
+   */
+  printGeometry?: TemplatePrintGeometry;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +151,25 @@ export async function inlineDocumentImageUrls(
     (fullMatch, id: string) => replacements.get(id) ?? fullMatch,
   );
 }
+
+/**
+ * Inline the tenant's images into a preview document, the way the PDF path inlines them.
+ *
+ * The preview is chunked into pages by the same pooled Chromium the PDF is printed by, and that
+ * browser is launched with no route to the app (ISOLATED_RENDERER_BROWSER_ARGS black-holes its
+ * egress). So a logo left as a `/api/documents/view/...` URL loads for nobody but the author's own
+ * iframe, and the sheets get chunked around a header shorter than the one that prints. An
+ * un-inlined preview still beats no preview, so a failure here degrades rather than throws.
+ */
+export const inlinePreviewDocumentImages = async (html: string): Promise<string> => {
+  try {
+    const { createTenantKnex } = await import('@alga-psa/db');
+    const { knex } = await createTenantKnex();
+    return await inlineDocumentImageUrls(html, { knex });
+  } catch {
+    return html;
+  }
+};
 
 // A value that is, in its entirety, a document view URL (optionally `?t=...`).
 const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?$/i;
@@ -285,17 +316,24 @@ export const renderTemplateAstFragment = async (
   return { html, css, locale };
 };
 
-export const renderTemplateAstHtmlDocument = async (
+/**
+ * Wrap an already-rendered fragment in its HTML document, with the page geometry the template prints
+ * by. Separate from the render so a caller that already holds the fragment (the designer previews,
+ * which also hand it to their own status pipeline) does not render the template a second time.
+ */
+export const buildTemplateHtmlDocument = (
   ast: TemplateAst,
-  evaluation: TemplateEvaluationResult,
+  fragment: { html: string; css: string; locale?: string },
   options: TemplateHtmlDocumentOptions = {}
-): Promise<string> => {
-  const { html, css, locale } = await renderTemplateAstFragment(ast, evaluation, options);
+): string => {
+  const { html, css, locale } = fragment;
   const title = escapeHtml(options.title ?? 'Invoice');
   // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
   const customPageCss = resolveCustomPageCssFromAst(ast);
+  // The page box carries the margin for every page of a document, so the markup carries none.
+  const printGeometryCss = (options.printGeometry ?? 'document') === 'document' ? DOCUMENT_PRINT_GEOMETRY_CSS : null;
   const previewSheetCss = options.previewSheet ? buildPreviewSheetCss(options.previewSheet) : null;
-  const additionalCss = [customPageCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
+  const additionalCss = [customPageCss, printGeometryCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
   const bodyHtml = options.previewSheet ? wrapInPreviewSheet(html, options.previewSheet) : html;
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 
@@ -305,7 +343,7 @@ export const renderTemplateAstHtmlDocument = async (
   const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || '';
   const baseTag = baseUrl ? `\n    <base href="${escapeHtml(baseUrl)}" />` : '';
 
-  let renderedHtml = `<!doctype html>
+  return `<!doctype html>
 <html lang="${escapeHtml(locale ?? 'en')}">
   <head>
     <meta charset="utf-8" />${baseTag}
@@ -321,10 +359,19 @@ ${additionalCss}
 ${bodyHtml}
   </body>
 </html>`;
+};
+
+export const renderTemplateAstHtmlDocument = async (
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: TemplateHtmlDocumentOptions = {}
+): Promise<string> => {
+  const fragment = await renderTemplateAstFragment(ast, evaluation, options);
+  const renderedHtml = buildTemplateHtmlDocument(ast, fragment, options);
 
   // Inline document images as base64 so Puppeteer can render them without auth.
   if (options.knex) {
-    renderedHtml = await inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
+    return inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
   }
 
   return renderedHtml;

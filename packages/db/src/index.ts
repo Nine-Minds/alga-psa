@@ -109,6 +109,10 @@ export {
 } from './lib/userRoleFloor';
 export type { UserRoleFloorChange, UserRoleFloorResult, UserRoleFloorViolation } from './lib/userRoleFloor';
 
+// contacts.is_client_admin mirrors the client portal 'Admin' role; every
+// user_roles writer re-derives it in the same transaction as its write.
+export { syncContactClientAdminFlag } from './lib/clientPortalAdminFlag';
+
 // A live co-managed seat technician holds only the seat role and joins no MSP team; every
 // user_roles / team_members writer runs this first.
 export {

@@ -10,7 +10,15 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
-import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { sendEventEmail, resolveEventEmailLocale, SendEmailParams } from '../../notifications/sendEventEmail';
+import {
+  buildTicketEmailDetailBlocksFromRows,
+  emptyTicketEmailDetailBlocks,
+  fetchTicketEmailDetailRows,
+  type TicketEmailDetailBlocks,
+  type TicketDetailRows,
+  type HourBlockMinutesResolver,
+} from '../../notifications/ticketEmailDetailBlocks';
 import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
@@ -30,6 +38,7 @@ import {
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
@@ -42,6 +51,7 @@ import {
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
@@ -94,7 +104,12 @@ type TicketEmailAudience = ReadonlyArray<AudienceContent<Record<string, unknown>
  * copied address) or `msp` (staff). A send names the internal template and the person; the
  * template, the variables and `recipient.isInternal` follow in `sendTicketEmailMessage`.
  */
-type AudiencedSendEmailParams = SendEmailParams & { audienceContent?: TicketEmailAudience; addressedAs: TicketRendering };
+type TicketDetailsForLocale = (locale: SupportedLocale) => Promise<TicketEmailDetailBlocks>;
+type AudiencedSendEmailParams = SendEmailParams & {
+  audienceContent?: TicketEmailAudience;
+  addressedAs: TicketRendering;
+  detailBlocksForLocale?: TicketDetailsForLocale;
+};
 type TicketNotificationParams = Omit<AudiencedSendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
 
 /** Stable ledger consumer id for the ticket email subscriber. */
@@ -692,7 +707,7 @@ async function sendTicketEmailMessage(
   recipientUserId?: string
 ): Promise<boolean> {
   // `audienceContent` and `addressedAs` are read here and never travel further (email service, retry queue).
-  const { audienceContent, addressedAs, ...unaudienced } = audiencedParams;
+  const { audienceContent, addressedAs, detailBlocksForLocale, ...unaudienced } = audiencedParams;
   let params: SendEmailParams = unaudienced;
   try {
     const scopedDb = tenantDb(knex, params.tenantId);
@@ -738,6 +753,24 @@ async function sendTicketEmailMessage(
             },
           },
         } : {}),
+      };
+    }
+
+    if (detailBlocksForLocale) {
+      const locale = await resolveEventEmailLocale({ ...params, recipientUserId });
+      const details = await detailBlocksForLocale(locale);
+      const ticketContext = params.context.ticket;
+      if (!ticketContext || typeof ticketContext !== 'object' || Array.isArray(ticketContext)) {
+        throw new Error('Ticket email details require a ticket context');
+      }
+      params = {
+        ...params,
+        locale,
+        recipientUserId,
+        context: {
+          ...params.context,
+          ticket: { ...ticketContext, ...toPortal(details) },
+        },
       };
     }
 
@@ -3885,6 +3918,55 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
+    // One hour-block lookup per client per event, shared by the master ticket
+    // and every bundled child (bundle children normally share the master's client).
+    const hourBlockByClient = new Map<string, Promise<number>>();
+    const resolveHourBlockMinutes: HourBlockMinutesResolver = (clientId) => {
+      let lookup = hourBlockByClient.get(clientId);
+      if (!lookup) {
+        lookup = getAvailableHourBlockMinutes(db, tenantId, clientId);
+        hourBlockByClient.set(clientId, lookup);
+      }
+      return lookup;
+    };
+
+    // Fetch each ticket's data once; format it after the actual recipient and locale are known.
+    const masterDetailRows = await fetchTicketEmailDetailRows(
+      db, tenantId, [ticket.ticket_id],
+    ).catch((error): Map<string, TicketDetailRows> | null => {
+      logger.warn('[TicketEmailSubscriber] Failed to fetch ticket email detail rows; sending without details:', {
+        ticketId: ticket.ticket_id,
+        tenantId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    });
+    const detailBlocksByTicketAndLocale = new Map<string, Promise<TicketEmailDetailBlocks>>();
+    const detailsForTicket = (
+      ticketId: string,
+      clientId: string | null | undefined,
+      rows: Map<string, TicketDetailRows> | null,
+    ): TicketDetailsForLocale => (locale) => {
+      const key = JSON.stringify([ticketId, locale]);
+      let blocks = detailBlocksByTicketAndLocale.get(key);
+      if (!blocks) {
+        blocks = rows
+          ? buildTicketEmailDetailBlocksFromRows(
+            ticketId, clientId, rows, emailTimeZone, locale, resolveHourBlockMinutes,
+          ).catch((error) => {
+            logger.warn('[TicketEmailSubscriber] Failed to build ticket email detail blocks; sending without details:', {
+              ticketId,
+              tenantId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            return emptyTicketEmailDetailBlocks(locale);
+          })
+          : Promise.resolve(emptyTicketEmailDetailBlocks(locale));
+        detailBlocksByTicketAndLocale.set(key, blocks);
+      }
+      return blocks;
+    };
+    const masterDetailsForLocale = detailsForTicket(ticket.ticket_id, ticket.client_id, masterDetailRows);
     const baseTicketContext = {
       id: ticket.ticket_number,
       title: ticket.title,
@@ -3909,6 +3991,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       locationSummary,
       changes,
       closedBy,
+      ...emptyTicketEmailDetailBlocks(emailLocale),
       // Client-safe by default: every context that spreads this base is
       // external except internalContext, which overrides the body below.
       resolution: externalResolutionHtml
@@ -3970,6 +4053,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       // fallback below never treats a gated send as "the requester was reached".
       return sendNotificationIfEnabled({
         ...params,
+        detailBlocksForLocale: params.detailBlocksForLocale ?? masterDetailsForLocale,
         audienceContent: params.context === internalContext ? internalCloseAudience : TICKET_FACTS_AUDIENCE,
         mailClass: 'ticket',
         boardId: params.boardId ?? ticket.board_id,
@@ -4017,6 +4101,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
+        recipientClientId: ticket.client_id || undefined,
         to: primaryEmail,
         addressedAs: 'client',
         subject: `Ticket Closed: ${ticket.title}`,
@@ -4082,6 +4167,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
+        // Same supplemental rule as the master: one batched fetch for every
+        // child; if it fails, children are still sent without details.
+        const childDetailRows = await fetchTicketEmailDetailRows(
+          db, tenantId, bundleChildren.map((child) => child.ticket_id),
+        ).catch((error): Map<string, TicketDetailRows> | null => {
+          logger.warn('[TicketEmailSubscriber] Failed to fetch bundled child detail rows; sending without details:', {
+            ticketIds: bundleChildren.map((child) => child.ticket_id),
+            tenantId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return null;
+        });
         for (const child of bundleChildren) {
           const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
           if (!childPrimaryEmail) continue;
@@ -4096,11 +4193,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           }
 
           const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
-
           await sendIfUnique({
             tenantId,
             entityType: 'ticket',
             entityId: child.ticket_id,
+            detailBlocksForLocale: detailsForTicket(child.ticket_id, child.client_id, childDetailRows),
             to: childPrimaryEmail,
             addressedAs: 'client',
             subject: `Ticket Closed: ${ticket.title}`,

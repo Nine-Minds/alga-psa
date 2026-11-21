@@ -398,6 +398,48 @@
     "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
   },
   "coManaged": {
+    "trial": {
+      "title": "Essai de 15 jours pour un poste cogéré",
+      "description": "Invitez un technicien du client à travailler sur les tableaux de votre choix. Les 15 jours commencent à sa première connexion. Un abonnement de base ou un essai de l’offre de base doit être actif pour permettre l’accès.",
+      "terms": "Un poste payant coûte {{amount}} par mois. L’essai se termine sans frais, sauf si vous confirmez l’utilisation d’un poste payant.",
+      "status": {
+        "active": "Actif",
+        "pending": "En attente de la première connexion",
+        "base_paused": "Abonnement de base suspendu",
+        "expired": "Essai expiré",
+        "paid": "Poste payant en cours d’utilisation",
+        "ended": "Essai terminé",
+        "checkout_pending": "En attente de paiement"
+      },
+      "purchaseAwaitingVerification": "Achat en attente de vérification",
+      "conversionFailed": "Le passage à un poste payant n’a pas abouti. Vérifiez les postes payants disponibles ou réessayez le paiement.",
+      "deadline": "L’essai du poste se termine le {{date}}.",
+      "baseUntil": "L’accès de base actuel se termine le {{date}}.",
+      "openSetup": "Ouvrir la configuration du poste client",
+      "invite": "Inviter le technicien pour 15 jours",
+      "resend": "Renvoyer l’invitation",
+      "replace": "Remplacer le technicien",
+      "cancelInvitation": "Annuler l’invitation",
+      "restoreBase": "Rétablir l’accès de base dans Compte",
+      "resumePurchase": "Reprendre l’achat",
+      "cancelConversion": "Annuler le passage à un poste payant",
+      "spareSeatTerms": "Utilisez maintenant un poste payant disponible. Le nombre total de postes dans le groupe reste le même.",
+      "confirmSpareSeat": "Confirmer l’utilisation d’un poste payant",
+      "keepSeat": "Conserver ce poste",
+      "refresh": "Actualiser l’essai",
+      "returnToTrial": "Revenir à l’essai du poste client",
+      "notice": {
+        "invitationSaved": "Invitation enregistrée. Réessayez l’envoi ci-dessous.",
+        "deliveryFailed": "L’envoi a échoué. Vous pouvez réessayer.",
+        "replacementSent": "Invitation envoyée au technicien remplaçant.",
+        "replacementSaved": "Technicien remplaçant enregistré. Réessayez d’envoyer l’invitation."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossible de charger les tableaux disponibles.",
+        "actionFailed": "Impossible de terminer cette action. Actualisez l’essai et réessayez.",
+        "paymentFailed": "Le paiement n’a pas abouti. Vérifiez l’état de l’essai."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Cet espace de travail n’a pas de pool cogéré. Ajoutez des postes cogérés pour l’utiliser.",
@@ -694,6 +736,8 @@
     "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
     "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
     "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
+    "termsChanged": "Le prix a changé depuis votre vérification. Vérifiez les nouvelles conditions avant de confirmer.",
+    "offerUnavailable": "L’achat de nouvelles places est temporairement indisponible. Aucun montant n’a été débité.",
     "checkoutExpired": "Ce paiement a expiré. Lancez un nouvel achat pour continuer.",
     "grace": "Renouvelez votre licence ou résolvez le déficit de capacité avant le {{date}} pour que les espaces de travail clients restent modifiables.",
     "readOnly": "La période de grâce s'est terminée le {{date}}. Rétablissez la capacité sous licence pour reprendre les modifications des espaces de travail clients.",
@@ -709,6 +753,11 @@
       "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
     },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "billingCustomerUnlinked": "Impossible de vérifier un compte de facturation Stripe pour cet espace de travail. Contactez l’assistance pour le faire associer.",
+    "proSubscriptionRequired": "Les sièges cogérés nécessitent un abonnement Pro en cours. Vérifiez votre abonnement dans la gestion du compte.",
+    "offerPaused": "Les nouveaux achats de sièges sont suspendus. Contactez votre gestionnaire de compte pour en savoir plus.",
+    "offerMisconfigured": "L’offre de sièges co-gérés est mal configurée. Contactez le support.",
+    "offerTemporarilyUnavailable": "Le service de tarification est temporairement indisponible. Veuillez réessayer sous peu.",
     "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
     "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
     "purchaseUnavailable": "L'achat de cogestion hébergée n'est pas disponible dans ce déploiement.",

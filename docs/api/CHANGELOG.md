@@ -2,6 +2,61 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
+
+**Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call
+
+The attach endpoint copies a line that belongs to a contract template onto the contract; it does not move an existing line. Passing the id of an ordinary (non-template) contract line used to fail with an opaque `500`.
+
+**Changes:**
+
+- An existing contract line that is not a contract-template line returns `400 VALIDATION_ERROR`, with a message naming the line id.
+- An id that does not exist at all still returns `404`.
+- The same translation applies when lines are supplied while creating a contract.
+
+## 2026-11-20 — `POST /api/v1/users/bulk/create` and `PUT /api/v1/users/bulk/deactivate` work as documented
+
+**Affected endpoints:** `POST /api/v1/users/bulk/create`, `PUT /api/v1/users/bulk/deactivate`
+
+Both routes were wired to the single-user handlers. Bulk create validated against the single-user schema, so it created at most one user, and bulk deactivate failed on the literal path segment `bulk`, so it could not be used. Both now have their own handlers and request schemas.
+
+**Changes:**
+
+- Bulk create takes `users` (1–100 single-user create bodies) and optional `options`. A single-user body is rejected with `400`. Omitting `options` gives the same defaults as sending `{}`: `skip_invalid: true`, `send_welcome_email: true`, `force_password_reset: false`, `dry_run: false`.
+- The batch runs in one transaction with a savepoint per user. With `skip_invalid: true` a rejected user rolls back only its own rows and is listed in `errors` by `index`; with `skip_invalid: false` the whole batch rolls back. Users created earlier in a batch are visible to later ones.
+- `dry_run: true` validates every entry and returns the summary without opening a transaction.
+- `force_password_reset` now sets the account's must-change-password preference. `send_welcome_email` now sends each new account a password-setup link after the batch commits, so a mail failure never undoes an account.
+- A duplicate email that stops the batch returns `409` (as single-user create does) instead of `500`. A seat-limit refusal still returns `403 LICENSE_LIMIT_REACHED`. Success returns `201` with `total_processed`, `successful`, `failed`, `errors` and `results`.
+- New users can no longer be given a role from the other portal, for example an MSP role on a client-portal user. This applies to single and bulk create.
+- Bulk deactivate takes `user_ids` (1–100) and `deactivate` (default `true`; `false` reactivates). Reactivating internal users is checked against the seat limit, and an over-limit request fails as a whole.
+
+## 2026-11-19 — Bulk client portal invitations
+
+**New endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
+
+Integrations could only invite one contact at a time. Both endpoints send invitations one by one, so a bad address or a contact the caller may not invite never blocks the rest of the batch.
+
+**Changes:**
+
+- `POST /clients/{id}/portal-invitations` takes `contact_ids` (1–500) or `all_eligible: true` (every active contact of the client with no portal user yet). One is required; `all_eligible` is ignored when `contact_ids` is given. Ids that do not belong to the client in the path are skipped.
+- `POST /portal-invitations/bulk` takes `contact_ids` (1–500) across any clients; each contact is authorized against its own client.
+- Both require `user:invite`. Explicit ids are checked against the caller's client scope the same way as "all eligible", and a contact outside that scope is reported as not found.
+- The response is always `200` with `total`, `sent`, `skipped`, `failed` and a per-contact `results` array (`contact_id`, `email`, `status` of `sent`/`skipped`/`failed`, `invitation_id`, `error_code`, `message`). Skips cover missing or invalid email, an existing portal user, a shared mailbox, or a contact outside the client.
+- `400` for an empty target set (`NO_TARGETS_SELECTED`), more than 500 contacts (`BATCH_LIMIT_EXCEEDED`), an invalid payload, or a tenant not configured to send invitations. `403` when the caller lacks `user:invite`.
+- Both routes are marked `x-chat-approval-required`, so the AI assistant and MCP clients must get approval before calling them.
+
+## 2026-11-19 — `DELETE /api/v1/contacts/{id}` checks dependencies
+
+**Affected endpoint:** `DELETE /api/v1/contacts/{id}`
+
+The REST delete removed the contact row without the dependency check or the cleanup that the MSP app runs. A contact with a portal user could be deleted, leaving an account that could neither sign in nor be invited again.
+
+**Changes:**
+
+- A contact with dependent records (portal user, tickets, interactions, documents, survey records, asset links and similar) is no longer deleted. The call returns `409 CONFLICT` with `details.code`, `details.dependencies` and `details.alternatives`.
+- A successful delete now runs the same cascade as the MSP app: phone numbers, additional email addresses, comments, portal invitations, asset and group links, RMM mapping, notes document and Entra reconciliation entries.
+- Portal accounts already orphaned this way are recovered rather than blocked: inviting or creating a portal user for a contact with the same email relinks the existing account to that contact.
+
 ## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
 
 **Affected endpoint:** `POST /api/v1/tickets`

@@ -172,6 +172,57 @@ export class SyncMappingLedger {
   }
 
   /**
+   * Tombstoned (unlinked) rows for an external entity in this realm. The
+   * live lookups deliberately ignore them, so this is how a caller can tell
+   * "never seen" from "deliberately unlinked here" — e.g. a payment reversed
+   * in AlgaPSA only, which a later sync of the same external payment must not
+   * silently re-apply.
+   */
+  async findTombstonedByExternalId(
+    algaEntityType: string,
+    externalEntityId: string,
+    targetRealm?: string | null
+  ): Promise<ExternalEntityMappingRow[]> {
+    const query = this.table<ExternalEntityMappingRow>()
+      .where({
+        integration_type: this.integrationType,
+        alga_entity_type: algaEntityType,
+        external_entity_id: externalEntityId,
+      })
+      .whereNotNull('deleted_at');
+
+    const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
+    this.applyRealmScope(query, targetRealm, aliases);
+
+    return query.orderBy('id');
+  }
+
+  /**
+   * Unlink a mapping without losing it: the row stays as evidence of what was
+   * linked, `deleted_at` takes it out of every live lookup, and the metadata
+   * records who unlinked it and why. Used by the AlgaPSA-only reversal/void,
+   * which deliberately leaves the remote document untouched.
+   */
+  async tombstone(
+    id: string,
+    params: { syncStatus?: string; metadata?: Record<string, unknown> } = {}
+  ): Promise<void> {
+    const existing = await this.table<ExternalEntityMappingRow>().where({ id }).first();
+    if (!existing || existing.deleted_at) {
+      return;
+    }
+
+    await this.table()
+      .where({ id })
+      .update({
+        deleted_at: this.knex.fn.now(),
+        sync_status: params.syncStatus ?? 'unlinked',
+        metadata: { ...(existing.metadata ?? {}), ...(params.metadata ?? {}) },
+        updated_at: this.knex.fn.now(),
+      });
+  }
+
+  /**
    * Diagnostic lookup across realms (including legacy null-realm rows). Never
    * use the result to address an external write — it exists so callers can
    * distinguish "never mapped" from "mapped to a different realm" and report

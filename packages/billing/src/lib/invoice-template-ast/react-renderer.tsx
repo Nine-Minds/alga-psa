@@ -60,6 +60,13 @@ type RenderContext = {
   barcodes?: Record<string, string>;
   /** Placeholders and diagnostics for rich-text content the converter cannot render. */
   richText?: RichTextRenderOptions;
+  /**
+   * Node ids that nothing drawing ink follows: the document's last inked child,
+   * its own last inked child, and so on, plus the inkless blocks trailing each
+   * of them. A forced page break on any of these opens a page there is nothing
+   * to put on, so honouring it would print an empty final page.
+   */
+  trailingNodeIds: Set<string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -221,6 +228,77 @@ const resolveFieldBorderStyle = (
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+  };
+};
+
+/** The designer's Page Break block: a rule-less divider whose only job is the break. */
+const isPageBreakDivider = (node: TemplateNode): boolean =>
+  node.type === 'divider' && isRecord(node.style?.inline) && node.style.inline.breakAfter === 'page';
+
+/**
+ * True when a node puts nothing on the page it would open. Conservative: only a
+ * Page Break block (and a wrapper holding nothing but those) is known to draw
+ * no ink — anything else is assumed to print something.
+ */
+const drawsNoInk = (node: TemplateNode): boolean => {
+  if (isPageBreakDivider(node)) return true;
+  const children: TemplateNode[] = Array.isArray(node.children) ? node.children : [];
+  return children.length > 0 && children.every(drawsNoInk);
+};
+
+/**
+ * The nodes that close the document: its last child that draws ink, that
+ * child's own last inked child, and so on — plus the inkless blocks trailing
+ * each of them. Only these can carry a forced break with nothing after it.
+ *
+ * Skipping the inkless trailing blocks is what keeps a Page Break dropped after
+ * a block that already ended with one from printing a blank sheet: the first
+ * break would otherwise open a page occupied solely by the second (itself
+ * dropped for being last).
+ */
+export const collectTrailingNodeIds = (root: TemplateNode): Set<string> => {
+  const ids = new Set<string>();
+  const addSubtree = (node: TemplateNode) => {
+    ids.add(node.id);
+    (Array.isArray(node.children) ? node.children : []).forEach(addSubtree);
+  };
+
+  let current: TemplateNode | undefined = root;
+  while (current) {
+    const children: TemplateNode[] = Array.isArray(current.children) ? current.children : [];
+    let index = children.length - 1;
+    while (index >= 0 && drawsNoInk(children[index])) {
+      // Every break inside an inkless block is equally pointless, however deeply
+      // the author nested it.
+      addSubtree(children[index]);
+      index -= 1;
+    }
+    const lastInked = index >= 0 ? children[index] : undefined;
+    if (!lastInked) break;
+    ids.add(lastInked.id);
+    current = lastInked;
+  }
+  return ids;
+};
+
+/**
+ * Strip a forced break that would open a page with nothing on it: a
+ * `break-after: page` nothing inked follows, or a `break-before: page` on a
+ * block that itself draws no ink and is followed by none either.
+ */
+const dropPointlessPageBreak = (
+  style: React.CSSProperties | undefined,
+  node: TemplateNode,
+  ctx: RenderContext
+): React.CSSProperties | undefined => {
+  if (!style || !ctx.trailingNodeIds.has(node.id)) return style;
+  const dropsAfter = style.breakAfter === 'page';
+  const dropsBefore = style.breakBefore === 'page' && drawsNoInk(node);
+  if (!dropsAfter && !dropsBefore) return style;
+  return {
+    ...style,
+    ...(dropsAfter ? { breakAfter: 'auto' as const } : {}),
+    ...(dropsBefore ? { breakBefore: 'auto' as const } : {}),
   };
 };
 
@@ -783,7 +861,11 @@ const renderNode = (
   rootDocumentStyleOverride?: React.CSSProperties
 ): React.ReactNode => {
   const nodeTypeClass = `ast-node ast-node-type-${sanitizeCssIdentifier(node.type)}`;
-  const { className: styleClassName, style } = resolveStyleRef(node.style);
+  const { className: styleClassName, style: authoredStyle } = resolveStyleRef(node.style);
+  // A forced break with nothing inked after it is dropped here rather than in a
+  // stylesheet: whether it is the last thing in the document is a fact about
+  // document order, which no selector can ask about.
+  const style = dropPointlessPageBreak(authoredStyle, node, ctx);
   const elementClassName = joinClassNames(nodeTypeClass, styleClassName);
 
   switch (node.type) {
@@ -996,8 +1078,21 @@ const renderNode = (
         />
       );
     }
-    case 'divider':
-      return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
+    case 'divider': {
+      // The designer's Page Break block exports as a rule-less divider whose only job is
+      // the forced break, so it is marked as one in the output — the same way every node
+      // carries its `ast-node-type-*` class. No stylesheet selects it today: the one rule
+      // it needs, dropping a break with nothing after it, depends on document order rather
+      // than on a selector, so it is applied inline (dropPointlessPageBreak) instead.
+      return (
+        <hr
+          key={node.id}
+          id={node.id}
+          className={joinClassNames(elementClassName, isPageBreakDivider(node) && 'ast-page-break') || undefined}
+          style={style}
+        />
+      );
+    }
     case 'table': {
       const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
@@ -1189,7 +1284,15 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes, richText },
+        {
+          ast,
+          currencyCode,
+          locale,
+          dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
+          barcodes,
+          richText,
+          trailingNodeIds: collectTrailingNodeIds(ast.layout),
+        },
         rootDocumentStyleOverride
       )}
     </div>
@@ -1228,6 +1331,7 @@ export const resolveTemplateExpressionValue = (
     currencyCode,
     locale,
     dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+    trailingNodeIds: new Set<string>(),
   });
 };
 

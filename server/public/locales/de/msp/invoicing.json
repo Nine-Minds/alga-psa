@@ -606,7 +606,8 @@
       "downloadPdf": "PDF herunterladen",
       "sendEmail": "E-Mail senden",
       "unfinalize": "Abschließen aufheben",
-      "recordPayment": "Zahlung erfassen"
+      "recordPayment": "Zahlung erfassen",
+      "viewPayments": "Zahlungen"
     },
     "status": {
       "finalized": "Finalisiert"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Grund für die Stornierung...",
       "cancel": "Abbrechen",
       "confirm": "Rechnung stornieren",
-      "voiding": "Wird storniert…"
+      "voiding": "Wird storniert…",
+      "algaOnly": "Nur in AlgaPSA stornieren (Verknüpfung mit {{provider}} aufheben)",
+      "algaOnlyWarning": "Das Dokument in {{provider}} bleibt unverändert und diese Rechnung wird davon entkoppelt, sodass AlgaPSA und {{provider}} dabei voneinander abweichen."
     },
     "history": {
       "title": "Verlauf",
@@ -1793,7 +1796,9 @@
           "actual": "100 %",
           "label": "Vorschau-Zoom",
           "fitWithScale": "Einpassen ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Seite {{page}} von {{total}}",
+        "frameTitle": "Rechnungsvorschau"
       },
       "tabs": {
         "design": "Entwurf",
@@ -1889,6 +1894,10 @@
       "spacer": {
         "label": "Abstandshalter",
         "description": "Leerraum zur Layout-Anpassung."
+      },
+      "page-break": {
+        "label": "Seitenumbruch",
+        "description": "Beginnt den nächsten Block auf einer neuen Seite."
       },
       "container": {
         "label": "Box-Container",
@@ -2212,6 +2221,17 @@
               "label": "Farbe"
             }
           }
+        },
+        "pagination": {
+          "title": "Seitenumbrüche",
+          "fields": {
+            "breakBefore": {
+              "label": "Auf neuer Seite beginnen"
+            },
+            "breakInside": {
+              "label": "Auf einer Seite zusammenhalten"
+            }
+          }
         }
       }
     },
@@ -2405,6 +2425,8 @@
       "signatureLabel": "Unterschrift",
       "attachmentsLabel": "Anhänge",
       "spacerLabel": "Abstandshalter",
+      "pageBreakLabel": "Seitenumbruch",
+      "pageBreakBefore": "Beginnt auf einer neuen Seite",
       "companyLogo": "Firmenlogo",
       "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
       "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
@@ -2887,31 +2909,26 @@
     "editor": {
       "titles": {
         "create": "Neues Layout für {{type}}",
-        "edit": "Layout für {{type}} bearbeiten"
-      },
-      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
-      "errorTitle": "Layout-Editor für {{type}}",
-      "sections": {
-        "details": "Layoutdetails"
+        "edit": "Layout bearbeiten: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Erstellt {{time}}",
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
         "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
         "worksheetPageHint": "Ein Ticket-Etikett mit einer Hochformatseite von mindestens 210 mm Breite (A4, Letter, Legal oder geeignetes benutzerdefiniertes Papier) wird als kundenbezogenes Arbeitsblatt auf einem ganzen Blatt gedruckt; dadurch kommen die Felder für vollständige Seriennummer und Ticketbeschreibung hinzu. Kleinere Seiten werden als Etiketten gedruckt.",
-        "worksheetFieldsHint": "Das Ausblenden der Seriennummern-Endung blendet auch die vollständige Nummer aus; das Ausblenden des Details auch die Ticketbeschreibung."
+        "worksheetFieldsHint": "Das Ausblenden der Seriennummern-Endung blendet auch die vollständige Nummer aus; das Ausblenden des Details auch die Ticketbeschreibung.",
+        "notSaved": "Noch nicht gespeichert",
+        "savedAt": "Gespeichert {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
       },
       "actions": {
-        "back": "Zurück zu den Layouts",
+        "back": "Zurück zu {{type}}-Layouts",
+        "labelSettings": "Etiketteneinstellungen",
         "save": "Layout speichern"
-      },
-      "labels": {
-        "created": "Erstellt: {{date}}",
-        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
       },
       "preview": {
         "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
@@ -3036,6 +3053,25 @@
       "statusNotPayable": "Für eine Rechnung mit dem Status {{status}} kann keine Zahlung erfasst werden.",
       "overpaymentNotConfirmed": "Diese Zahlung ist höher als der offene Betrag. Bestätigen Sie die Überzahlung, um sie zu erfassen.",
       "recordFailed": "Die Zahlung konnte nicht erfasst werden. Bitte versuchen Sie es erneut."
+    },
+    "void": {
+      "paymentsRecorded": "Machen Sie die Zahlungen rückgängig, bevor Sie stornieren.",
+      "paymentsRecordedManual": "Stornieren Sie die in AlgaPSA erfassten Zahlungen ({{sources}}), bevor Sie diese Rechnung stornieren.",
+      "paymentsRecordedIntegration": "Für diese Rechnung gibt es Zahlungen aus Ihrem Buchhaltungssystem ({{sources}}). Löschen oder bearbeiten Sie sie dort – die nächste Synchronisierung storniert sie dann hier – oder stornieren Sie sie nur in AlgaPSA.",
+      "paymentsRecordedGateway": "Für diese Rechnung gibt es Zahlungen über einen Zahlungsanbieter ({{sources}}). Erstatten Sie sie dort, bevor Sie stornieren.",
+      "paymentsRecordedMixed": "Machen Sie die Zahlungen zu dieser Rechnung ({{sources}}) rückgängig, bevor Sie sie stornieren.",
+      "creditNoteCreditApplied": "Für diese Gutschrift wurde bereits Guthaben verwendet. Heben Sie die Guthabenverwendung auf, bevor Sie stornieren."
+    },
+    "reversePayment": {
+      "permissionDenied": "Zugriff verweigert: Zum Stornieren von Rechnungszahlungen ist die Berechtigung für Rechnungszahlungen erforderlich.",
+      "reasonRequired": "Zum Stornieren einer Zahlung ist ein Grund erforderlich.",
+      "paymentNotFound": "Zahlung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notReversible": "Diese Zahlung kann nicht storniert werden.",
+      "alreadyReversed": "Diese Zahlung wurde bereits storniert.",
+      "gatewayRefundRequired": "Diese Zahlung wurde über einen Zahlungsanbieter abgewickelt ({{method}}). Erstatten Sie sie stattdessen dort.",
+      "integrationOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie in {{provider}}; die nächste Synchronisierung storniert sie dann hier.",
+      "remoteMutateRequired": "Zugriff verweigert: Zum Stornieren einer synchronisierten Zahlung nur in AlgaPSA ist die Berechtigung für Remote-Änderungen der Buchhaltung erforderlich.",
+      "reverseFailed": "Die Zahlung konnte nicht storniert werden. Bitte versuchen Sie es erneut."
     }
   },
   "periodTotal": {
@@ -3095,6 +3131,37 @@
     },
     "toasts": {
       "recorded": "Zahlung erfasst"
+    }
+  },
+  "invoicePayments": {
+    "title": "Zahlungen",
+    "titleForInvoice": "Zahlungen — {{invoiceNumber}}",
+    "loading": "Zahlungen werden geladen...",
+    "empty": "Für diese Rechnung wurden keine Zahlungen erfasst.",
+    "sources": {
+      "manual": "In AlgaPSA erfasst",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Zahlungsanbieter"
+    },
+    "fields": {
+      "reason": "Grund"
+    },
+    "actions": {
+      "reverse": "Zahlung stornieren",
+      "confirmReverse": "Zahlung stornieren",
+      "algaOnly": "Nur in AlgaPSA stornieren",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "notes": {
+      "gatewayRefund": "Über einen Zahlungsanbieter abgewickelt ({{method}}): Erstatten Sie die Zahlung stattdessen dort.",
+      "alreadyReversed": "Bereits storniert.",
+      "providerOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie dort; die nächste Synchronisierung storniert sie dann hier.",
+      "algaOnlyWarning": "AlgaPSA und {{provider}} weichen bei dieser Zahlung voneinander ab: Der Datensatz in {{provider}} bleibt unverändert und die Zahlung wird hier entkoppelt."
+    },
+    "toasts": {
+      "reversed": "Zahlung storniert"
     }
   }
 }

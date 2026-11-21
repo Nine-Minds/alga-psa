@@ -5,6 +5,7 @@ namespace: msp
 nameOverride: ""
 fullnameOverride: ""
 host: "localhost"
+publicWebhookBaseUrl: "" # Optional public origin for provider callback URLs.
 
 bootstrap:
   mode: recover

@@ -45,14 +45,11 @@ vi.mock('../../invoice-designer/transforms/TransformsWorkspace', () => ({
   default: () => <div data-automation-id="transforms-workspace-mock">Transforms</div>,
 }));
 
-vi.mock('../PaperInvoice', () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-automation-id="paper-invoice-mock">{children}</div>
+vi.mock('../../invoice-designer/preview/PreviewSheetFrame', () => ({
+  // The preview is the printed pages, drawn server-side and shown in an iframe jsdom cannot lay out.
+  PreviewSheetFrame: (props: any) => (
+    <div data-automation-id="preview-sheet-frame-mock">{props?.html}</div>
   ),
-}));
-
-vi.mock('../TemplateRenderer', () => ({
-  TemplateRenderer: () => <div data-automation-id="template-renderer-mock" />,
 }));
 
 // Stable identities: the editor's preview effect lists `t` in its dependency array, and
@@ -95,7 +92,7 @@ describe('QuoteDocumentTemplateEditor tenant branding preview', () => {
       sourceHash: 'hash',
       generatedSource: '{}',
       compile: { status: 'success', diagnostics: [] },
-      render: { status: 'success', html: '<div />', css: '' },
+      render: { status: 'success', html: '<div />', css: '', documentHtml: '<html><body /></html>' },
       verification: { status: 'pass', mismatches: [] },
     });
   });

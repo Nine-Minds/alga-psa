@@ -2625,7 +2625,12 @@ export const renderQuotePreview = withAuth(async (
   { tenant },
   quoteId: string,
   templateId?: string,
-): Promise<{ html: string; css: string } | QuoteActionError> => {
+  /**
+   * `paginate` also returns the render as the pages it prints as (`documentHtml`), so a
+   * layout with page breaks is read as separate sheets rather than one endless roll.
+   */
+  options?: { paginate?: boolean },
+): Promise<{ html: string; css: string; documentHtml?: string } | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
@@ -2650,6 +2655,21 @@ export const renderQuotePreview = withAuth(async (
 
   const service = createPDFGenerationService(tenant);
   const preview = await service.renderQuotePreview({ quoteId: quote.quote_id, templateAst });
-  return { html: preview.html, css: preview.css };
+  if (!options?.paginate || !preview.templateAst) {
+    return { html: preview.html, css: preview.css };
+  }
+
+  // The reader sees the pages this quote prints as, chunked by the engine that prints them.
+  // Images are inlined first, or the chunker measures a header the reader's frame draws taller.
+  const locale = (await service.resolveRenderLocale({ quoteId: quote.quote_id })) ?? undefined;
+  const { buildTemplateHtmlDocument, inlinePreviewDocumentImages } = await import('../lib/invoice-template-ast/server-render');
+  const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+  const paginated = await paginateDocumentPreviewHtml(
+    await inlinePreviewDocumentImages(
+      buildTemplateHtmlDocument(preview.templateAst, { html: preview.html, css: preview.css, locale }, { title: 'Quote preview' }),
+    ),
+    preview.templateAst,
+  );
+  return { html: preview.html, css: preview.css, documentHtml: paginated.html };
   });
 });

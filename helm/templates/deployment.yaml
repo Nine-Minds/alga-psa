@@ -679,6 +679,10 @@ spec:
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
             value: "{{ $publicAppUrl }}"
+          {{- if .Values.publicWebhookBaseUrl }}
+          - name: PUBLIC_WEBHOOK_BASE_URL
+            value: "{{ .Values.publicWebhookBaseUrl }}"
+          {{- end }}
           # App URL for Stripe redirects (can differ from host for blue/green testing)
           - name: NEXT_PUBLIC_APP_URL
             value: "{{ $publicAppUrl }}"
