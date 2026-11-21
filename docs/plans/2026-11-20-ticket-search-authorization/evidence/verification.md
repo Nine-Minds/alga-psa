@@ -44,6 +44,16 @@ The application server was not started. No fresh browser walkthrough or producti
 - `npx tsc --noEmit -p packages/search/tsconfig.json` and `npx tsc --noEmit -p packages/tickets/tsconfig.json` passed. `npx nx run search:build` and `npx nx run tickets:build` passed; tickets used the supported Nx target because its direct package build is not configured as a tsup input build.
 - `git diff --check` passed before committing the correction. The app server remained stopped. No fresh browser smoke, production validation, or `security-finding-resolved` check is claimed.
 
+## Index-ACL-only correction at `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6`
+
+- `canCompileSearchVisibility` now distinguishes absent verifier registrations from registered verifiers without SQL compilers. The former use the shared index ACL count/page route; the latter remain on source-verifier fallback. No entity-specific client special case was added.
+- Added a PostgreSQL behavioral growth regression for the index-ACL-only `client` type. It checks permission and user-visibility filtering, exact totals (90/300/900 from 150/500/1,500 candidates), bounded first pages, and a complete 900-result cursor walk at page size 100. It fails on the pre-fix 10/14/24 statement growth and passes with 10 statements at every size.
+- Full affected search behavior and PostgreSQL tests passed: eight files, 87 tests. The benchmark file passed seven tests, including its original mixed scenarios, index-ACL growth case, verifier replacement protections, document fallback, and compiled visibility parity.
+- Seven-read ticket authorization regressions passed: four files, 20 tests. Search/tickets TypeScript checks and `npx nx run search:build` plus `npx nx run tickets:build` passed.
+- Mixed benchmark rerun at this revision used PostgreSQL 15.4, one warmup, five sequential samples, concurrency 1. Mixed queries remained at 9/10 statements, project growth at 10/10, and index-ACL-only client growth at 10/10/10 across 150/500/1,500 matches. Raw output is retained at `/tmp/pr4133-9e3d-benchmark.log`; report tables include raw timings and counts.
+- The first benchmark attempt overlapped a second database integration invocation, which reset the shared test database and failed with `database "test_database" does not exist`. That attempt was discarded; the recorded benchmark above was rerun alone and passed.
+- No browser smoke or production validation was performed, and no `security-finding-resolved` check is claimed.
+
 ## Pre-fix behavioral reproductions
 
 Both regressions were run against pre-fix implementation revision `7b20448d1e490793c31fcc1048c8493b0e7b9d1e` in an isolated detached worktree:

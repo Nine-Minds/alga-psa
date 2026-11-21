@@ -173,3 +173,29 @@ SEARCH_BENCH_REVISION=46aac638eb6823db6645e81c8a147a78c90a4abd \
 ```
 
 Raw command output from this run was retained at `/tmp/pr4133-46aac-benchmark.log` in the implementation environment. The older review hold reproductions were run against pre-correction `574c387258c6d10e684fa46721ea52c4f33786bb` and failed with the mismatches described above. Historical live demonstrations remain historical; this correction has no fresh browser smoke or production validation.
+
+## Index-ACL-only search correction
+
+Review found that `canCompileSearchVisibility` treated an absent verifier like a verifier requiring fallback. The supplied reproduction at `2e4ad092a5d99ac2c443ec15ce27e52b6da1cd0c` measured ordinary client-index searches at 10, 14, and 24 statements for 150, 500, and 1,500 matches. The correction at `9e3d592e9083af4c2b68d1f75aef4b63d737f9e6` distinguishes no registration (the shared index ACL is sufficient for SQL counts/pages) from an explicit verifier lacking a compiler (record-check fallback remains required).
+
+The PostgreSQL fixture created 1,500 client source rows and index entries in production schemas. Queries matched 150, 500, and 1,500 index candidates. For each candidate set, 20% were hidden by `required_permission` and a separate 20% by `visible_to_user_ids`; exact visible totals were 90, 300, and 900. Each growth measurement used one warmup and five sequential samples at concurrency 1. Knex query events counted the complete `runAppSearch` request; latency was wall-clock `performance.now()`, with nearest-rank p95. The same test walked all 900 authorized results in pages of 100, asserted exact totals/groups, no duplicate or omitted IDs, and verified the denied index entries never appeared.
+
+| Matching client candidates | Authorized total | Baseline SQL samples | Corrected SQL samples | Corrected raw latency samples (ms) | Corrected p95 ms |
+|---:|---:|---|---|---|---:|
+| 150 | 90 | `[10, 10, 10, 10, 10]` | `[10, 10, 10, 10, 10]` | `[11.97, 10.89, 13.75, 11.56, 11.77]` | 13.75 |
+| 500 | 300 | `[14, 14, 14, 14, 14]` | `[10, 10, 10, 10, 10]` | `[11.87, 11.05, 10.46, 11.71, 10.94]` | 11.87 |
+| 1,500 | 900 | `[24, 24, 24, 24, 24]` | `[10, 10, 10, 10, 10]` | `[11.79, 12.20, 10.66, 12.71, 11.76]` | 12.71 |
+
+The baseline query samples at 150/500/1,500 come from `/tmp/pr4133-lead-round2-index-acl.log`; the corrected raw output is `/tmp/pr4133-9e3d-benchmark.log`. The new growth test fails against the pre-correction path because statement count grows from 10 to 24; it passes at the corrected revision with 10 statements across all three candidate sizes.
+
+The full mixed ticket/comment/project benchmark was rerun at the same corrected revision. The existing 1,051-candidate fixture retained exact 1,050/600 unrestricted/restricted totals, first and subsequent pages at limits 5 and 100, and full cursor traversal. Project growth remained 10 statements at both 150 and 500 matches. The raw log also records these mixed measurements.
+
+Reproduce the complete PostgreSQL benchmark from `server/` with:
+
+```sh
+SEARCH_BENCH_REVISION=9e3d592e9083af4c2b68d1f75aef4b63d737f9e6 \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+These measurements are sequential integration evidence, not production traffic. The application server remained stopped; no browser smoke or production validation is claimed.
