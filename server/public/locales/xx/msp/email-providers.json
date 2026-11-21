@@ -418,6 +418,7 @@
         "oauthStatus": "⟦ȮȦŭŧħ Şŧȧŧŭş⟧",
         "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",
         "notConnected": "⟦Ƞȯŧ ƈȯƞƞḗƈŧḗḓ⟧",
+        "reauthorizationRequired": "⟦Řḗȧŭŧħȯřīẑȧŧīȯƞ řḗʠŭīřḗḓ⟧",
         "reconnectOauth": "⟦Řḗƈȯƞƞḗƈŧ ȮȦŭŧħ⟧",
         "authorizeUrl": "⟦Ȧŭŧħȯřīẑḗ ŬŘĿ⟧",
         "tokenUrl": "⟦Ŧȯķḗƞ ŬŘĿ⟧",
@@ -574,6 +575,7 @@
       "statusLabel": "⟦ȮȦŭŧħ Şŧȧŧŭş⟧",
       "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",
       "notConnected": "⟦Ƞȯŧ ƈȯƞƞḗƈŧḗḓ⟧",
+      "reauthorizationRequired": "⟦Řḗȧŭŧħȯřīẑȧŧīȯƞ řḗʠŭīřḗḓ⟧",
       "authorizing": "⟦Ȧŭŧħȯřīẑīƞɠ...⟧",
       "reconnect": "⟦Řḗƈȯƞƞḗƈŧ ȮȦŭŧħ⟧"
     },

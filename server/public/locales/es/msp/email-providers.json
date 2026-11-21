@@ -418,6 +418,7 @@
         "oauthStatus": "Estado de OAuth",
         "connected": "Conectado",
         "notConnected": "No conectado",
+        "reauthorizationRequired": "Se requiere una nueva autorización",
         "reconnectOauth": "Reconectar OAuth",
         "authorizeUrl": "Autorizar URL",
         "tokenUrl": "URL del token",
@@ -574,6 +575,7 @@
       "statusLabel": "Estado de OAuth",
       "connected": "Conectado",
       "notConnected": "No conectado",
+      "reauthorizationRequired": "Se requiere una nueva autorización",
       "authorizing": "Autorizando...",
       "reconnect": "Reconectar OAuth"
     },

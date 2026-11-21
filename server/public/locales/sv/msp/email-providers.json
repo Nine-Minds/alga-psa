@@ -418,6 +418,7 @@
         "oauthStatus": "OAuth-status",
         "connected": "Ansluten",
         "notConnected": "Inte ansluten",
+        "reauthorizationRequired": "Ny auktorisering krävs",
         "reconnectOauth": "Återanslut OAuth",
         "authorizeUrl": "Auktoriserings-URL",
         "tokenUrl": "Token-URL",
@@ -574,6 +575,7 @@
       "statusLabel": "OAuth-status",
       "connected": "Ansluten",
       "notConnected": "Inte ansluten",
+      "reauthorizationRequired": "Ny auktorisering krävs",
       "authorizing": "Auktoriserar…",
       "reconnect": "Återanslut OAuth"
     },

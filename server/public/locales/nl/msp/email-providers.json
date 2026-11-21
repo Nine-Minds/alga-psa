@@ -418,6 +418,7 @@
         "oauthStatus": "OAuth-status",
         "connected": "Aangesloten",
         "notConnected": "Niet verbonden",
+        "reauthorizationRequired": "Opnieuw autoriseren vereist",
         "reconnectOauth": "Maak opnieuw verbinding met OAuth",
         "authorizeUrl": "Autoriseer URL",
         "tokenUrl": "Token-URL",
@@ -574,6 +575,7 @@
       "statusLabel": "OAuth-status",
       "connected": "Verbonden",
       "notConnected": "Niet verbonden",
+      "reauthorizationRequired": "Opnieuw autoriseren vereist",
       "authorizing": "Autoriseren...",
       "reconnect": "Maak opnieuw verbinding met OAuth"
     },
