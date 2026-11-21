@@ -123,6 +123,7 @@ describe('Teams meeting artifact subscriptions', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toMatchObject({
       resource: 'communications/onlineMeetings/getAllRecordings',
       notificationUrl: 'https://example.test/api/teams/webhooks/recordings',
+      lifecycleNotificationUrl: 'https://example.test/api/teams/webhooks/recordings',
       clientState: buildTeamsArtifactClientState('tenant-1', 'recordings', 'known-secret'),
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({
@@ -233,6 +234,38 @@ describe('Teams meeting artifact subscriptions', () => {
       ['POST', 'https://graph.microsoft.com/v1.0/subscriptions'],
     ]);
     expect(updates.at(-1)).toMatchObject({ transcripts_subscription_id: 'tr-new' });
+  });
+
+  it('force renews subscriptions that are not near expiry', async () => {
+    const farFuture = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const { knex } = buildKnex({
+      tenant: 'tenant-1',
+      install_status: 'active',
+      selected_profile_id: 'profile-1',
+      default_meeting_organizer_upn: 'organizer@example.com',
+      default_meeting_organizer_object_id: 'organizer-object-id',
+      meeting_artifact_webhook_secret: 'known-secret',
+      recordings_subscription_id: 'rec-live',
+      recordings_subscription_expires_at: farFuture,
+      transcripts_subscription_id: 'tr-live',
+      transcripts_subscription_expires_at: farFuture,
+    });
+    createTenantKnexMock.mockResolvedValue({ knex });
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify({
+      id: url.split('/').pop(), expirationDateTime: '2026-06-03T00:00:00.000Z',
+    }), { status: 200 }));
+    global.fetch = fetchMock as any;
+
+    await expect(renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1' })).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const result = await renewTeamsMeetingArtifactSubscriptions({ tenantId: 'tenant-1', force: true });
+
+    expect(result.map((row) => row.action)).toEqual(['renewed', 'renewed']);
+    expect(fetchMock.mock.calls.map((call) => [call[1].method, call[0]])).toEqual([
+      ['PATCH', 'https://graph.microsoft.com/v1.0/subscriptions/rec-live'],
+      ['PATCH', 'https://graph.microsoft.com/v1.0/subscriptions/tr-live'],
+    ]);
   });
 
   it('T081/T082 resolves the meeting from resourceData or decrypted resource data, while clientState only routes tenant/kind', async () => {

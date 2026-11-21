@@ -168,6 +168,8 @@ async function createSubscription(params: {
     body: {
       changeType: 'created,updated',
       notificationUrl: params.notificationUrl,
+      // Graph requires a lifecycle URL for these resources when expiration exceeds one hour.
+      lifecycleNotificationUrl: params.notificationUrl,
       resource: metadata.resource,
       expirationDateTime,
       clientState: buildTeamsArtifactClientState(params.tenantId, params.kind, params.clientStateSecret),
@@ -238,8 +240,10 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   tenantId: string;
   lookAheadMinutes?: number;
   notificationUrl?: string;
+  // Renew every existing subscription regardless of expiry, e.g. after a lifecycle notification.
+  force?: boolean;
 }): Promise<TeamsMeetingArtifactSubscriptionResult[]> {
-  const { tenantId, lookAheadMinutes = 180 } = input;
+  const { tenantId, lookAheadMinutes = 180, force = false } = input;
   const config = await resolveTeamsMeetingGraphConfig(tenantId);
   if (!config) {
     logger.info('[TeamsMeetingArtifacts] Skipping subscription renewal because Teams is not configured', { tenantId });
@@ -278,7 +282,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     const columns = subscriptionColumn(kind);
     const currentId = normalizeString(row[columns.idColumn]);
     const currentExpiry = row[columns.expiryColumn];
-    if (currentId && !shouldRenew(currentExpiry, lookAheadMinutes)) {
+    if (currentId && !force && !shouldRenew(currentExpiry, lookAheadMinutes)) {
       continue;
     }
 
