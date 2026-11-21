@@ -7,11 +7,13 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   ticketProps: [] as any[],
   navigateToTicket: null as null | ((id: string) => Promise<void>),
+  navigateToDocument: null as null | ((id: string, name: string) => void),
+  getBlockContent: vi.fn(),
   fetchActivities: vi.fn(),
 }));
 
@@ -25,12 +27,12 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...p }: any) => <button {...p}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Spinner', () => ({ default: () => <div /> }));
-vi.mock('@alga-psa/ui/editor', () => ({ RichTextViewer: () => null, TextEditor: () => null }));
+vi.mock('@alga-psa/ui/editor', () => ({ RichTextViewer: ({ content }: any) => <div>{JSON.stringify(content)}</div>, TextEditor: () => null }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
-  getErrorMessage: () => 'err',
+  getErrorMessage: (value: any) => value.permissionError ?? value.actionError ?? 'err',
   handleError: vi.fn(),
-  isActionMessageError: () => false,
-  isActionPermissionError: () => false,
+  isActionMessageError: (value: any) => typeof value?.actionError === 'string',
+  isActionPermissionError: (value: any) => typeof value?.permissionError === 'string',
   isReturnedActionError: () => false,
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
@@ -39,8 +41,9 @@ vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
 }));
 vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@alga-psa/notifications/components', () => ({
-  NotificationDetailView: ({ onNavigateToTicket }: any) => {
+  NotificationDetailView: ({ onNavigateToTicket, onNavigateToDocument }: any) => {
     mocks.navigateToTicket = onNavigateToTicket;
+    mocks.navigateToDocument = onNavigateToDocument;
     return <div data-testid="notification" />;
   },
 }));
@@ -60,6 +63,7 @@ vi.mock('./AdHocDetailPanel', () => ({ AdHocDetailPanel: () => null }));
 vi.mock('./OpportunityActivityPanel', () => ({ OpportunityActivityPanel: () => null }));
 
 const crossFeature = {
+  getBlockContent: mocks.getBlockContent,
   getConsolidatedTicketData: vi.fn(async () => ({ ticket: { ticket_id: 't1' } })),
   renderTicketDetails: (props: any) => {
     mocks.ticketProps.push(props);
@@ -116,7 +120,37 @@ async function expectSavedCallbackRefreshes(props: any, onActionComplete: any) {
 beforeEach(() => {
   mocks.ticketProps.length = 0;
   mocks.navigateToTicket = null;
+  mocks.navigateToDocument = null;
+  mocks.getBlockContent.mockReset();
   mocks.fetchActivities.mockReset().mockResolvedValue({ activities: [], totalCount: 0 });
+});
+
+describe('ActivityDetailViewerDrawer document read failure', () => {
+  it('shows the permission error for a directly opened document', async () => {
+    mocks.getBlockContent.mockResolvedValue({ permissionError: 'Cannot read this document' });
+    renderDrawer('document');
+    await screen.findByText('Cannot read this document');
+    expect(screen.queryByText('Edit')).toBeNull();
+  });
+  it.each(['permissionError', 'actionError'])('shows a returned %s instead of stale document content and can recover', async (key) => {
+    mocks.getBlockContent.mockResolvedValue({ block_data: [{ type: 'paragraph', content: 'Stored document content' }] });
+    renderDrawer('notification');
+    await waitFor(() => expect(mocks.navigateToDocument).toBeTruthy());
+    await act(async () => { mocks.navigateToDocument!('doc-1', 'Review document'); });
+    await screen.findByText(/Stored document content/);
+
+    mocks.getBlockContent.mockResolvedValue({ [key]: 'Document access is denied' });
+    await act(async () => { mocks.navigateToDocument!('doc-1', 'Review document'); });
+    await screen.findByText('Document access is denied');
+    expect(screen.queryByText(/Stored document content/)).toBeNull();
+
+    mocks.getBlockContent.mockResolvedValue({ block_data: [{ type: 'paragraph', content: 'Recovered document content' }] });
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await screen.findByTestId('notification');
+    expect(screen.queryByText('Document access is denied')).toBeNull();
+    await act(async () => { mocks.navigateToDocument!('doc-1', 'Review document'); });
+    await screen.findByText(/Recovered document content/);
+  });
 });
 afterEach(cleanup);
 

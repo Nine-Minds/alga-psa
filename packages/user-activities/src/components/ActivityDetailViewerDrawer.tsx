@@ -553,7 +553,8 @@ export function ActivityDetailViewerDrawer({
             // Load the document content
             const content = await ctx.getBlockContent(documentId);
             if (isReturnedActionError(content)) {
-              throw new Error(getErrorMessage(content));
+              setError(getErrorMessage(content));
+              return;
             }
             let parsedContent: PartialBlock[] = [{
               type: "paragraph",
@@ -829,18 +830,6 @@ export function ActivityDetailViewerDrawer({
     } catch (error) {
       console.error('Error loading activity details:', error);
       setError(t('drawer.errorLoadingMessage', { defaultValue: 'Failed to load activity details. Please try again later.' }));
-      setContent(
-        <div className="h-full p-6">
-          <Alert variant="destructive">
-            <AlertDescription>
-              <p className="font-medium">{t('drawer.errorLoadingTitle', { defaultValue: 'Error loading activity details' })}</p>
-              <p className="mt-1">
-                {t('drawer.retryLater', { defaultValue: 'Please try again later.' })}
-              </p>
-            </AlertDescription>
-          </Alert>
-        </div>
-      );
     } finally {
       setIsLoading(false);
     }
@@ -860,8 +849,20 @@ export function ActivityDetailViewerDrawer({
         </div>
       );
     }
+    if (error) {
+      return (
+        <div className="h-full p-6 space-y-4">
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button id="activity-detail-retry" variant="outline" onClick={() => void loadContent()}>
+            {t('drawer.tryAgain', { defaultValue: 'Try again' })}
+          </Button>
+        </div>
+      );
+    }
     return content;
-  }, [isLoading, content]);
+  }, [isLoading, error, content, loadContent, t]);
 
   return (
     <div className="min-w-auto h-full bg-white">
