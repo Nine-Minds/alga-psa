@@ -11,6 +11,7 @@ import type {
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
+import { getProjectClientQuickView, updateProjectClientQuickView } from '@alga-psa/projects/actions';
 
 // Lightweight cross-feature provider for the read-only client quick-view drawer
 // (ClientQuickView), the only client surface the tickets list mounts. The full
@@ -73,6 +74,8 @@ export function MspClientQuickViewProvider({ children }: { children: ReactNode }
 
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
+      loadClientQuickView: getProjectClientQuickView,
+      updateClientQuickView: updateProjectClientQuickView,
       renderQuickAddTicket,
       renderSurveySummaryCard: noopRender,
       getSlaPolicies,

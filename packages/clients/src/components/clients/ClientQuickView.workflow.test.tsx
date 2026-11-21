@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const actions = vi.hoisted(() => ({ updateClient: vi.fn(async (_id: string, client: any) => client) }));
+const actions = vi.hoisted(() => ({
+  loadClient: vi.fn(async (_id?: string, _projectId?: string) => null),
+  updateClient: vi.fn(async (_id: string, patch: any, _projectId?: string) => ({ client_id: _id, ...patch })),
+  loadClientQuickView: vi.fn(),
+  updateClientQuickView: vi.fn(),
+  getSlaPolicies: vi.fn(async () => []),
+  startEntraSync: vi.fn(),
+  entraFeatureEnabled: false,
+  entraCanManage: false,
+}));
 
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({ findTagsByEntityId: vi.fn(async () => []) }));
 vi.mock('@alga-psa/tags/actions/tagActionErrors', () => ({ isTagActionError: () => false }));
@@ -11,7 +20,7 @@ vi.mock('../../lib/usersHelpers', () => ({ getAllUsersBasicAsync: vi.fn(async ()
 vi.mock('@shared/interfaces/user.interfaces', () => ({}));
 vi.mock('@alga-psa/clients/actions/clientActions', () => ({
   deleteClient: vi.fn(), deleteClientLogo: vi.fn(), markClientActiveWithContacts: vi.fn(),
-  markClientInactiveWithContacts: vi.fn(), recropClientLogo: vi.fn(), updateClient: (...args: any[]) => actions.updateClient(...args),
+  markClientInactiveWithContacts: vi.fn(), recropClientLogo: vi.fn(),
   uploadClientLogo: vi.fn(), validateClientDeletion: vi.fn(),
 }));
 vi.mock('@alga-psa/clients/actions/queryActions', () => ({ getContactsByClient: vi.fn(async () => []), getClientById: vi.fn(async () => null) }));
@@ -23,12 +32,14 @@ vi.mock('@alga-psa/clients/actions/clientNameAliasActions', () => ({
   addClientNameAlias: vi.fn(), listClientNameAliases: vi.fn(async () => []), removeClientNameAlias: vi.fn(),
 }));
 vi.mock('@alga-psa/clients/actions/inboundTicketDestinationActions', () => ({ listInboundTicketDestinationOptions: vi.fn(async () => []) }));
-vi.mock('@alga-psa/clients/actions/entraClientSyncActions', () => ({ startClientEntraSync: vi.fn() }));
+vi.mock('@alga-psa/clients/actions/entraClientSyncActions', () => ({ startClientEntraSync: (...args: any[]) => actions.startEntraSync(...args) }));
 vi.mock('../../context/ClientCrossFeatureContext', () => ({
   useClientCrossFeature: () => ({
+    loadClientQuickView: actions.loadClientQuickView,
+    updateClientQuickView: actions.updateClientQuickView,
     renderQuickAddTicket: ({ open, onOpenChange }: any) => open ? <button onClick={() => onOpenChange(false)}>Ticket form</button> : null,
     renderSurveySummaryCard: () => null,
-    getSlaPolicies: vi.fn(async () => []),
+    getSlaPolicies: actions.getSlaPolicies,
     renderClientCoManagedIntegration: null,
   }),
 }));
@@ -39,12 +50,13 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   getErrorMessage: (e: any) => String(e), isActionMessageError: () => false, isActionPermissionError: () => false,
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, options: any) => options?.defaultValue ?? _key }) }));
-vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: false }) }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: actions.entraFeatureEnabled }) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock('@radix-ui/themes', () => ({ Heading: ({ children }: any) => <h1>{children}</h1> }));
-vi.mock('./useEntraSyncPermission', () => ({ useEntraSyncPermission: () => ({ canManage: false }) }));
+vi.mock('./useEntraSyncPermission', () => ({ useEntraSyncPermission: () => ({ canManage: actions.entraCanManage }) }));
 vi.mock('./ClientDetailsTabContent', () => ({
   ClientDetailsTabContent: (props: any) => <section>
+    <output data-testid="client-data">{JSON.stringify(props.editedClient)}</output>
     <button onClick={() => props.onFieldChange('client_name', 'Changed name')}>Edit client</button>
     <button onClick={props.onSave}>Save client</button>
     <button onClick={props.onManageLocations}>Manage locations</button>
@@ -71,16 +83,35 @@ vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() 
 
 import ClientQuickView from './ClientQuickView';
 
+function renderQuickView(client: any) {
+  return render(<ClientQuickView client={client} isInDrawer quickView sourceProjectId="project-1" />);
+}
+
 describe('ClientQuickView project drawer workflows', () => {
-  beforeEach(() => { actions.updateClient.mockClear(); });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  beforeEach(() => {
+    cleanup();
+    actions.loadClient.mockReset();
+    actions.updateClient.mockReset().mockImplementation(async (_id: string, patch: any, _projectId?: string) => ({ client_id: _id, ...patch }));
+    actions.loadClientQuickView.mockReset().mockImplementation((clientId: string, sourceProjectId?: string) => actions.loadClient(clientId, sourceProjectId));
+    actions.updateClientQuickView.mockReset().mockImplementation((clientId: string, patch: any, sourceProjectId?: string) => actions.updateClient(clientId, patch, sourceProjectId));
+    actions.startEntraSync.mockReset();
+    actions.entraFeatureEnabled = false;
+    actions.entraCanManage = false;
+  });
 
   it('renders the full client quick view and keeps editing, location management, and ticket creation wired', async () => {
-    const client = { client_id: 'client-1', client_name: 'Acme', client_type: 'company', properties: {} } as any;
-    render(<ClientQuickView client={client} isInDrawer quickView />);
+    const client = { client_id: 'client-1', client_name: 'Acme', client_type: 'company', properties: {}, tax_id_number: null } as any;
+    renderQuickView(client);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
-    await waitFor(() => expect(actions.updateClient).toHaveBeenCalledWith('client-1', expect.objectContaining({ client_name: 'Changed name' })));
+    await waitFor(() => expect(actions.updateClient).toHaveBeenCalledWith('client-1', { client_name: 'Changed name' }, 'project-1'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage locations' }));
     expect(screen.getByText('Client locations')).toBeTruthy();
@@ -88,4 +119,57 @@ describe('ClientQuickView project drawer workflows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add ticket' }));
     expect(screen.getByRole('button', { name: 'Ticket form' })).toBeTruthy();
   });
+
+  it('keeps a redacted field out of the patch and uses the masked mutation response', async () => {
+    actions.updateClient.mockResolvedValueOnce({
+      client_id: 'client-1', client_name: 'Changed name', properties: {}, tax_id_number: null,
+    });
+    renderQuickView({ client_id: 'client-1', client_name: 'Acme', properties: {}, tax_id_number: null } as any);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
+    await waitFor(() => expect(actions.updateClient).toHaveBeenCalled());
+    expect(actions.updateClient.mock.calls[0][1]).toEqual({ client_name: 'Changed name' });
+    expect(screen.getByTestId('client-data').textContent).not.toContain('SECRET-TAX');
+  });
+
+  it('loads details through the authorization boundary when mounted by ID', async () => {
+    actions.loadClient.mockImplementation(async () => ({
+      client_id: 'client-1', client_name: 'Acme', properties: {}, tax_id_number: null,
+    } as any));
+    render(<ClientQuickView clientId="client-1" isInDrawer quickView sourceProjectId="project-1" />);
+
+    await waitFor(() => expect(actions.loadClient).toHaveBeenCalledWith('client-1', 'project-1'));
+    expect(screen.getByTestId('client-data').textContent).toContain('Acme');
+    expect(screen.getByTestId('client-data').textContent).not.toContain('SECRET-TAX');
+  });
+
+  it('clears cached details when save reauthorization denies the source project', async () => {
+    actions.updateClient.mockRejectedValueOnce(new Error('Permission denied: Cannot read project client'));
+    renderQuickView({ client_id: 'client-1', client_name: 'Acme', properties: {} } as any);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save client' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Failed to load client details');
+    expect(screen.queryByTestId('client-data')).toBeNull();
+  });
+
+  it('uses the authorized loader on refresh and clears cached details when access is revoked', async () => {
+    vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
+    actions.entraFeatureEnabled = true;
+    actions.entraCanManage = true;
+    actions.startEntraSync.mockResolvedValue({ success: true, data: { workflowId: 'run-1' } });
+    actions.loadClient.mockRejectedValue(new Error('Permission denied: Cannot read project client'));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ status: 'completed' }) })));
+    renderQuickView({
+      client_id: 'client-1', client_name: 'Acme', properties: {}, entra_tenant_id: 'entra-tenant-1', tax_id_number: null,
+    } as any);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sync Entra Now' }));
+    await waitFor(() => expect(actions.startEntraSync).toHaveBeenCalled());
+    await waitFor(() => expect(actions.loadClient).toHaveBeenCalledWith('client-1', 'project-1'), { timeout: 6000 });
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.queryByTestId('client-data')).toBeNull();
+  }, 8000);
 });

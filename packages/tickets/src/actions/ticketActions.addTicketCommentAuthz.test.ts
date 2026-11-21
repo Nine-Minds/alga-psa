@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { addTicketComment } from './ticketActions';
+import { addTicket, addTicketComment } from './ticketActions';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -182,5 +182,24 @@ describe('addTicketComment (ticketActions) authorization', () => {
     expect(await addTicketComment('ticket-1', CONTENT, true)).toBeUndefined();
     expect(comments()[0].row.author_type).toBe('internal');
     expect(comments()[0].row.is_internal).toBe(true);
+  });
+});
+
+describe('addTicket (ticketActions) authorization', () => {
+  beforeEach(() => {
+    inserts = [];
+    currentUser = internalUser;
+    hasPermissionMock.mockReset().mockImplementation(async (_user: unknown, resource: string, action: string) =>
+      resource === 'ticket' && action === 'read');
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    withTransactionMock.mockReset().mockImplementation(async (_knex: any, callback: any) => callback(makeTrx()));
+  });
+
+  it('does not create a ticket when the user has read access but lacks ticket:create', async () => {
+    const result: any = await addTicket(new FormData());
+
+    expect(JSON.stringify(result)).toMatch(/Cannot create ticket|permission/i);
+    expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'ticket', 'create', expect.anything());
+    expect(inserts).toEqual([]);
   });
 });

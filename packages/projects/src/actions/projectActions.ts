@@ -29,6 +29,8 @@ import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions/us
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- secure Projects client quick-view loader composes the existing detailed client query after its own authorization decision
 import { getClientById } from '@alga-psa/clients/actions/queryActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- retain the existing client mutation workflow behind this authorization and redaction boundary
+import { updateClient } from '@alga-psa/clients/actions/clientActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -66,6 +68,34 @@ import { isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjec
 import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
+
+const CLIENT_QUICK_VIEW_FIELD_ALIASES: Record<string, string[]> = {
+  properties: ['url', 'properties.website'],
+  location_email: ['email'],
+  location_phone: ['phone_no'],
+  location_phone_extension: ['phone_no'],
+  location_country_code: ['country'],
+  location_address: ['address'],
+  account_manager_full_name: ['account_manager_id'],
+  url: ['properties.website'],
+  logoUrl: ['logo', 'properties.logo', 'client_name'],
+  logoWideUrl: ['logo_wide_url', 'properties.logo', 'client_name'],
+};
+const CLIENT_QUICK_VIEW_READ_ONLY_FIELDS = new Set([
+  'client_id', 'tenant', 'created_at', 'updated_at', 'account_manager_full_name',
+  'logoUrl', 'logoWideUrl', 'location_email', 'location_phone', 'location_phone_extension',
+  'location_country_code', 'location_address',
+]);
+
+function isClientQuickViewFieldHidden(redactedFields: readonly string[], field: string): boolean {
+  const aliases = CLIENT_QUICK_VIEW_FIELD_ALIASES[field] ?? [];
+  return isCoManagedReadFieldHidden(redactedFields, [
+    field,
+    `clients.${field}`,
+    ...aliases,
+    ...aliases.map((alias) => `clients.${alias}`),
+  ]);
+}
 
 type ProjectScheduleAmountRow = {
     schedule_entry_id: string;
@@ -444,26 +474,8 @@ export const getProjectClientQuickView = withAuth(async (
     throw new Error('Permission denied: Cannot read project');
   }
 
-  const decision = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (sourceProjectId) {
-      const project = await loadAuthorizedProjectRow(trx, tenant, user as IUserWithRoles, sourceProjectId);
-      if (!project || project.client_id !== clientId || !project.client_name) {
-        throw new Error('Permission denied: Cannot read project client');
-      }
-    }
-    const identity = await tenantScopedTable(trx, 'clients', tenant)
-      .where({ client_id: clientId })
-      .first<{ client_id: string }>('client_id');
-    if (!identity) return null;
-    const decide = await createClientReadDecider(trx, tenant, user as IUserWithRoles);
-    const result = await decide(identity);
-    if (!result.allowed
-      || isCoManagedResourceHidden(result.redactedFields, ['client', 'clients'])
-      || isCoManagedReadFieldHidden(result.redactedFields, ['client_id', 'clients.client_id', 'id'])) {
-      throw new Error('Permission denied: Cannot read clients');
-    }
-    return result.redactedFields;
-  });
+  const decision = await withTransaction(knex, (trx: Knex.Transaction) =>
+    authorizeProjectClientQuickView(trx, tenant, user as IUserWithRoles, clientId, sourceProjectId));
   if (!decision) return null;
 
   // This detailed action is called only after both coarse and record authorization. Mask again at the
@@ -472,17 +484,103 @@ export const getProjectClientQuickView = withAuth(async (
   if (!client) return null;
   const masked = { ...client } as Record<string, unknown>;
   for (const field of Object.keys(masked)) {
-    if (isCoManagedReadFieldHidden(decision, [field, `clients.${field}`])) masked[field] = null;
+    if (isClientQuickViewFieldHidden(decision, field)) masked[field] = null;
   }
-  const identitySensitiveImage = isCoManagedReadFieldHidden(decision, [
-    'client_name', 'clients.client_name', 'logo', 'logo_url', 'logoUrl', 'logo_wide_url', 'logoWideUrl',
-  ]);
+  const identitySensitiveImage = isClientQuickViewFieldHidden(decision, 'client_name')
+    || isClientQuickViewFieldHidden(decision, 'logoUrl')
+    || isClientQuickViewFieldHidden(decision, 'logoWideUrl');
   if (identitySensitiveImage) {
     masked.logoUrl = null;
     masked.logoWideUrl = null;
   }
   return masked as unknown as IClientWithLocation;
 });
+
+/** Save only changed fields, keeping redacted database values server-side and returning a masked row. */
+export const updateProjectClientQuickView = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  updateData: Partial<Omit<IClient, 'account_manager_full_name'>>,
+  sourceProjectId?: string,
+): Promise<IClientWithLocation | IClient | ActionMessageError | ActionPermissionError | null> => {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+  if (!await hasPermission(user, 'client', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update clients');
+  }
+  if (sourceProjectId && !await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+
+  const authorized = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const redactedFields = await authorizeProjectClientQuickView(
+      trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
+    );
+    if (!redactedFields) return null;
+    const billingFields = await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: clientId })
+      .first<{ billing_contact_id?: string | null; billing_email?: string | null }>(
+        'billing_contact_id', 'billing_email',
+      );
+    return billingFields ? { redactedFields, billingFields } : null;
+  });
+  if (!authorized) return null;
+
+  const safePatch = { ...updateData } as Record<string, unknown>;
+  for (const field of Object.keys(safePatch)) {
+    if (CLIENT_QUICK_VIEW_READ_ONLY_FIELDS.has(field) || isClientQuickViewFieldHidden(authorized.redactedFields, field)) {
+      delete safePatch[field];
+    }
+  }
+  // updateClient historically treats omitted billing values as clears. This boundary
+  // supplies the stored values so omitted or redacted billing fields stay unchanged.
+  if (!Object.prototype.hasOwnProperty.call(safePatch, 'billing_contact_id')) {
+    safePatch.billing_contact_id = authorized.billingFields.billing_contact_id ?? null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(safePatch, 'billing_email')) {
+    safePatch.billing_email = authorized.billingFields.billing_email ?? null;
+  }
+
+  const updateResult = await updateClient(clientId, safePatch as Partial<Omit<IClient, 'account_manager_full_name'>>);
+  if (!updateResult || typeof updateResult !== 'object' || !('client_id' in updateResult)) {
+    return updateResult as ActionMessageError | ActionPermissionError | null;
+  }
+
+  // Reload through the read boundary: neither the mutation's full row nor hidden
+  // fields from it become part of this browser action response.
+  return getProjectClientQuickView(clientId, sourceProjectId);
+});
+
+async function authorizeProjectClientQuickView(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  clientId: string,
+  sourceProjectId?: string,
+): Promise<string[] | null> {
+  if (sourceProjectId) {
+    const project = await loadAuthorizedProjectRow(trx, tenant, user, sourceProjectId);
+    if (!project || project.client_id !== clientId || !project.client_name) {
+      throw new Error('Permission denied: Cannot read project client');
+    }
+  }
+
+  const identity = await tenantScopedTable(trx, 'clients', tenant)
+    .where({ client_id: clientId })
+    .first<{ client_id: string }>('client_id');
+  if (!identity) return null;
+  const decide = await createClientReadDecider(trx, tenant, user);
+  const result = await decide(identity);
+  if (!result.allowed
+    || isCoManagedResourceHidden(result.redactedFields, ['client', 'clients'])
+    || isCoManagedReadFieldHidden(result.redactedFields, ['client_id', 'clients.client_id', 'id'])) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+  return result.redactedFields;
+}
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
     try {

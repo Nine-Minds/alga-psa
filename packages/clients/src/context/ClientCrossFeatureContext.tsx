@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
+import type { IClient, IClientWithLocation, ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ClientSoftwareSummaryParams, ClientSoftwareSummaryResponse } from '@alga-psa/types';
 
@@ -168,6 +168,14 @@ export interface ClientCoManagedIntegrationProps {
 export type RenderClientCoManagedIntegration = (props: ClientCoManagedIntegrationProps) => ReactNode;
 
 export interface ClientCrossFeatureCallbacks {
+  /** Server boundary for client quick-view reads; checks client and optional source-project access and masks fields. */
+  loadClientQuickView?: (clientId: string, sourceProjectId?: string) => Promise<IClientWithLocation | null>;
+  /** Server boundary for partial quick-view updates; preserves hidden fields and returns a masked row. */
+  updateClientQuickView?: (
+    clientId: string,
+    patch: Partial<Omit<IClient, 'account_manager_full_name'>>,
+    sourceProjectId?: string,
+  ) => Promise<IClientWithLocation | IClient | ActionMessageError | ActionPermissionError | null>;
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;

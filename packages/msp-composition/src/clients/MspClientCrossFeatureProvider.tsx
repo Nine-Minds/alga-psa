@@ -26,6 +26,7 @@ import { getClientSoftwareSummary } from '@alga-psa/assets/actions/softwareActio
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
+import { getProjectClientQuickView, updateProjectClientQuickView } from '@alga-psa/projects/actions';
 
 export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegration }: {
   children: ReactNode;
@@ -193,6 +194,8 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
 
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
+      loadClientQuickView: getProjectClientQuickView,
+      updateClientQuickView: updateProjectClientQuickView,
       renderQuickAddTicket,
       getTicketFormOptions,
       renderSurveySummaryCard,

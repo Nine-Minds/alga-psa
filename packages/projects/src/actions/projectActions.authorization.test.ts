@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   getByIds: vi.fn(),
   getById: vi.fn(),
   getQuickViewClient: vi.fn(),
+  updateQuickViewClient: vi.fn(),
   getPhases: vi.fn(async () => [{ phase_id: 'phase1', project_id: 'p1', phase_name: 'Phase', wbs_code: '1' }]),
   getMaskedByIds: vi.fn(),
   queryTable: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock('../models/projectTask', () => ({ default: {
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getAllUsers: vi.fn(async () => []), findUserById: vi.fn() }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ getContactByContactNameId: vi.fn() }));
 vi.mock('@alga-psa/clients/actions/queryActions', () => ({ getClientById: (...args: any[]) => state.getQuickViewClient(...args) }));
+vi.mock('@alga-psa/clients/actions/clientActions', () => ({ updateClient: (...args: any[]) => state.updateQuickViewClient(...args) }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: Function) => (...args: any[]) => handler(state.user, { tenant: state.tenant }, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => state.permission(...args) }));
 vi.mock('@alga-psa/validation', () => ({ validateArray: vi.fn(), validateData: vi.fn() }));
@@ -88,7 +90,7 @@ vi.mock('../lib/projectReadAuthorization', () => ({
 }));
 vi.mock('@alga-psa/inventory/lib/staging', () => ({ countActiveStockClaims: vi.fn() }));
 
-import { getAllClientsForProjects, getProjectClientQuickView, getProjects, getProject, getProjectMetadata, getProjectDetails, getProjectsWithPhases, getProjectTreeData } from './projectActions';
+import { getAllClientsForProjects, getProjectClientQuickView, updateProjectClientQuickView, getProjects, getProject, getProjectMetadata, getProjectDetails, getProjectsWithPhases, getProjectTreeData } from './projectActions';
 import { coManagedProjectFamilyMask, coManagedHiddenColumns, CO_MANAGED_PROJECT_COLUMNS } from '@alga-psa/co-managed/projectFieldMask';
 
 describe('project action authorization boundaries', () => {
@@ -101,6 +103,7 @@ describe('project action authorization boundaries', () => {
     state.getByIds.mockReset();
     state.getById.mockReset();
     state.getQuickViewClient.mockReset();
+    state.updateQuickViewClient.mockReset();
     state.getPhases.mockClear();
     state.getMaskedByIds.mockReset();
     state.queryTable.mockReset();
@@ -158,13 +161,14 @@ describe('project action authorization boundaries', () => {
 
   it('getProjectClientQuickView restores detailed data only after coarse and record authorization, then masks fields', async () => {
     state.clientRows = [{ client_id: 'c1' }];
-    state.clientDecisions.set('c1', { allowed: true, redactedFields: ['fields.phone_no', 'client_name'] });
+    state.clientDecisions.set('c1', { allowed: true, redactedFields: ['fields.phone_no', 'fields.email', 'client_name'] });
     state.getQuickViewClient.mockResolvedValue({
-      client_id: 'c1', client_name: 'Acme', phone_no: '555-0100', logoUrl: '/logo.png', logoWideUrl: '/wide.png',
+      client_id: 'c1', client_name: 'Acme', phone_no: '555-0100', location_email: 'secret@example.test',
+      logoUrl: '/logo.png', logoWideUrl: '/wide.png',
     });
 
     await expect(getProjectClientQuickView('c1')).resolves.toEqual({
-      client_id: 'c1', client_name: null, phone_no: null, logoUrl: null, logoWideUrl: null,
+      client_id: 'c1', client_name: null, phone_no: null, location_email: null, logoUrl: null, logoWideUrl: null,
     });
     expect(state.permission).toHaveBeenCalledWith(state.user, 'client', 'read', expect.anything());
     expect(state.getQuickViewClient).toHaveBeenCalledWith('c1');
@@ -204,6 +208,64 @@ describe('project action authorization boundaries', () => {
 
     await expect(getProjectClientQuickView('c1', 'p1')).rejects.toThrow('Permission denied: Cannot read project client');
     expect(state.getQuickViewClient).not.toHaveBeenCalled();
+  });
+
+  it('preserves hidden and omitted billing fields and returns a masked row after a visible-field edit', async () => {
+    state.clientRows = [{ client_id: 'c1', billing_contact_id: 'billing-1', billing_email: 'billing@example.test' }];
+    state.clientDecisions.set('c1', { allowed: true, redactedFields: ['fields.tax_id_number', 'fields.billing_email'] });
+    state.getQuickViewClient.mockResolvedValue({
+      client_id: 'c1', client_name: 'Changed name', tax_id_number: 'SECRET-TAX', billing_email: 'SECRET-BILLING',
+      billing_contact_id: 'billing-1', properties: {},
+    });
+    state.updateQuickViewClient.mockResolvedValue({
+      client_id: 'c1', client_name: 'Changed name', tax_id_number: 'SECRET-TAX', billing_email: 'SECRET-BILLING',
+    });
+
+    const result = await updateProjectClientQuickView('c1', {
+      client_name: 'Changed name', tax_id_number: null, billing_email: null,
+    });
+
+    expect(state.updateQuickViewClient).toHaveBeenCalledWith('c1', expect.objectContaining({
+      client_name: 'Changed name',
+      billing_contact_id: 'billing-1',
+      billing_email: 'billing@example.test',
+    }));
+    const submittedPatch = state.updateQuickViewClient.mock.calls[0][1];
+    expect(submittedPatch).not.toHaveProperty('tax_id_number');
+    expect(submittedPatch.billing_email).toBe('billing@example.test');
+    expect(result).toMatchObject({ client_id: 'c1', client_name: 'Changed name', tax_id_number: null, billing_email: null });
+    expect(JSON.stringify(result)).not.toContain('SECRET');
+  });
+
+  it('requires client:update before the quick-view mutation runs', async () => {
+    state.permission.mockImplementation(async (_user: unknown, resource: string, action: string) =>
+      resource !== 'client' || action !== 'update');
+
+    await expect(updateProjectClientQuickView('c1', { client_name: 'Changed name' }))
+      .rejects.toThrow('Permission denied: Cannot update clients');
+    expect(state.updateQuickViewClient).not.toHaveBeenCalled();
+  });
+
+  it('requires client-record read authorization before the quick-view mutation runs', async () => {
+    state.clientRows = [{ client_id: 'c1', billing_contact_id: null, billing_email: null }];
+    state.clientDecisions.set('c1', { allowed: false, redactedFields: [] });
+
+    await expect(updateProjectClientQuickView('c1', { client_name: 'Changed name' }))
+      .rejects.toThrow('Permission denied: Cannot read clients');
+    expect(state.updateQuickViewClient).not.toHaveBeenCalled();
+  });
+
+  it('does not mutate through a project whose client name is redacted', async () => {
+    state.projectRows = [{ project_id: 'p1', assigned_to: null, client_id: 'c1' }];
+    state.clientRows = [{ client_id: 'c1', billing_contact_id: null, billing_email: null }];
+    state.projectDecisions.set('p1', { allowed: true, redactedFields: ['fields.client_name'] });
+    state.getMaskedByIds.mockImplementation(async (_trx, _tenant, ids: string[]) => ids.map((project_id) => ({
+      project_id, client_id: 'c1', client_name: null,
+    })));
+
+    await expect(updateProjectClientQuickView('c1', { client_name: 'Changed name' }, 'p1'))
+      .rejects.toThrow('Permission denied: Cannot read project client');
+    expect(state.updateQuickViewClient).not.toHaveBeenCalled();
   });
 
   it.each([

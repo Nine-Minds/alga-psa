@@ -42,6 +42,7 @@ export function MspClientDrawerProvider({ children }: { children: ReactNode }) {
             client={clientData}
             isInDrawer={true}
             quickView={true}
+            sourceProjectId={options?.projectId}
             initialPanel={options?.initialPanel}
           />
         </MspClientCrossFeatureProvider>,

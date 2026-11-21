@@ -18,7 +18,10 @@ vi.mock('@alga-psa/ui', async () => {
     useClientDrawer: () => ReactModule.useContext(clientDrawerContext),
   };
 });
-vi.mock('@alga-psa/projects/actions', () => ({ getProjectClientQuickView: (...args: any[]) => state.loadClient(...args) }));
+vi.mock('@alga-psa/projects/actions', () => ({
+  getProjectClientQuickView: (...args: any[]) => state.loadClient(...args),
+  updateProjectClientQuickView: vi.fn(),
+}));
 vi.mock('@alga-psa/clients/components/clients/ClientQuickView', () => ({
   default: ({ client }: any) => <article aria-label="Full client quick view">{client.client_name} details</article>,
 }));

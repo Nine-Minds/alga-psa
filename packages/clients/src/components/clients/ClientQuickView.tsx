@@ -12,11 +12,10 @@ import {
   markClientActiveWithContacts,
   markClientInactiveWithContacts,
   recropClientLogo,
-  updateClient,
   uploadClientLogo,
   validateClientDeletion,
 } from '@alga-psa/clients/actions/clientActions';
-import { getContactsByClient, getClientById } from '@alga-psa/clients/actions/queryActions';
+import { getContactsByClient } from '@alga-psa/clients/actions/queryActions';
 import {
   addClientInboundEmailDomain,
   listClientInboundEmailDomains,
@@ -71,12 +70,30 @@ function isClientActionError(value: unknown): value is ActionMessageError | Acti
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+const CLIENT_QUICK_VIEW_NON_PATCH_FIELDS = new Set([
+  'client_id', 'tenant', 'created_at', 'updated_at', 'account_manager_full_name',
+  'logoUrl', 'logoWideUrl', 'location_email', 'location_phone', 'location_phone_extension',
+  'location_country_code', 'location_address',
+]);
+
+function changedClientFields(saved: IClient, edited: IClient): Partial<Omit<IClient, 'account_manager_full_name'>> {
+  const patch: Partial<Omit<IClient, 'account_manager_full_name'>> = {};
+  for (const [field, value] of Object.entries(edited)) {
+    if (CLIENT_QUICK_VIEW_NON_PATCH_FIELDS.has(field)) continue;
+    if (JSON.stringify(value) === JSON.stringify((saved as Record<string, unknown>)[field])) continue;
+    (patch as Record<string, unknown>)[field] = value;
+  }
+  return patch;
+}
+
 interface ClientQuickViewProps {
   clientId?: string;
   client?: IClient;
   id?: string;
   isInDrawer?: boolean;
   quickView?: boolean;
+  /** Source project for rechecking project authorization on each load and save. */
+  sourceProjectId?: string;
   onClose?: () => void;
   /**
    * Opens a sub-panel on mount. 'locations' opens the manage-locations dialog,
@@ -93,11 +110,19 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   isInDrawer = true,
   onClose,
   initialPanel,
+  sourceProjectId,
 }) => {
   const { t } = useTranslation('msp/clients');
   const router = useRouter();
   const drawer = useDrawer();
-  const { renderQuickAddTicket, renderSurveySummaryCard, getSlaPolicies, renderClientCoManagedIntegration } = useClientCrossFeature();
+  const {
+    renderQuickAddTicket,
+    renderSurveySummaryCard,
+    getSlaPolicies,
+    renderClientCoManagedIntegration,
+    loadClientQuickView,
+    updateClientQuickView,
+  } = useClientCrossFeature();
   const resolvedClientId = clientId ?? initialClient?.client_id;
   const [client, setClient] = useState<IClientWithLocation | IClient | null>(initialClient ?? null);
   const savedClientRef = useRef<IClient | null>(initialClient ?? null);
@@ -165,7 +190,8 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const data = await getClientById(resolvedClientId);
+        if (!loadClientQuickView) throw new Error('Secure client quick-view actions are unavailable');
+        const data = await loadClientQuickView(resolvedClientId, sourceProjectId);
         if (cancelled) return;
         if (!data) {
           setError(t('clientQuickView.notFound', { defaultValue: 'Client not found' }));
@@ -192,7 +218,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [resolvedClientId, initialClient, t]);
+  }, [resolvedClientId, initialClient, loadClientQuickView, sourceProjectId, t]);
 
   useEffect(() => {
     const fetchAllUsers = async () => {
@@ -356,17 +382,23 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     if (!client?.client_id) return;
 
     try {
-      const latestClientData = await getClientById(client.client_id);
-      if (latestClientData) {
-        setClient(latestClientData);
-        savedClientRef.current = latestClientData;
-        setEditedClient(latestClientData);
-        setHasUnsavedChanges(false);
-      }
+      if (!loadClientQuickView) throw new Error('Secure client quick-view actions are unavailable');
+      const latestClientData = await loadClientQuickView(client.client_id, sourceProjectId);
+      if (!latestClientData) throw new Error('Client not found');
+      setClient(latestClientData);
+      savedClientRef.current = latestClientData;
+      setEditedClient(latestClientData);
+      setHasUnsavedChanges(false);
+      setError(null);
     } catch (err) {
       console.error('Error refreshing client data:', err);
+      setClient(null);
+      savedClientRef.current = null;
+      setEditedClient(null);
+      setHasUnsavedChanges(false);
+      setError(t('clientQuickView.loadError', { defaultValue: 'Failed to load client details' }));
     }
-  }, [client?.client_id]);
+  }, [client?.client_id, loadClientQuickView, sourceProjectId, t]);
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -561,13 +593,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     setFieldErrors({});
     setIsSaving(true);
     try {
-      const { account_manager_full_name, ...restOfEditedClient } = editedClientRef.current;
-      const dataToUpdate: Partial<Omit<IClient, 'account_manager_full_name'>> = {
-        ...restOfEditedClient,
-        properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
-        account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
-      };
       if (!savedClientRef.current) return;
+      const dataToUpdate = changedClientFields(savedClientRef.current, editedClientRef.current);
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate, 'properties') && dataToUpdate.properties) {
+        dataToUpdate.properties = { ...dataToUpdate.properties };
+      }
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate, 'account_manager_id')) {
+        dataToUpdate.account_manager_id = editedClientRef.current.account_manager_id === ''
+          ? null
+          : editedClientRef.current.account_manager_id;
+      }
       const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, savedClientRef.current);
       if (!websiteFields.changed) {
         delete dataToUpdate.url;
@@ -579,11 +614,22 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
           website: websiteFields.website,
         };
       }
-      const updateResult = await updateClient(client.client_id, dataToUpdate);
+      if (!updateClientQuickView) throw new Error('Secure client quick-view actions are unavailable');
+      const updateResult = await updateClientQuickView(client.client_id, dataToUpdate, sourceProjectId);
       if (isClientActionError(updateResult)) {
+        const message = getErrorMessage(updateResult);
+        if (message.includes('Cannot read')) {
+          setClient(null);
+          savedClientRef.current = null;
+          setEditedClient(null);
+          setHasUnsavedChanges(false);
+          setError(t('clientQuickView.loadError', { defaultValue: 'Failed to load client details' }));
+          return;
+        }
         handleError(updateResult);
         return;
       }
+      if (!updateResult) throw new Error('Client not found');
 
       const updatedClient = updateResult as IClient;
       savedClientRef.current = updatedClient;
@@ -594,11 +640,15 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       toast.success(t('clientDetails.saveSuccess', { defaultValue: 'Client details saved successfully.' }));
     } catch (err) {
       console.error('Error saving client:', err);
-      toast.error(t('clientDetails.saveError', { defaultValue: 'Failed to save client details. Please try again.' }));
+      setClient(null);
+      savedClientRef.current = null;
+      setEditedClient(null);
+      setHasUnsavedChanges(false);
+      setError(t('clientQuickView.loadError', { defaultValue: 'Failed to load client details' }));
     } finally {
       setIsSaving(false);
     }
-  }, [client?.client_id, t]);
+  }, [client?.client_id, updateClientQuickView, sourceProjectId, t]);
 
   // Quick views are drawer-hosted, where the panel scope suppresses page.save.
   const insideDrawer = useInsideDrawer();

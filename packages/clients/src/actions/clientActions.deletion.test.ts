@@ -204,6 +204,43 @@ describe('client deletion actions', () => {
       expect(withTransactionMock).not.toHaveBeenCalled();
     });
 
+    it('persists a visible-field partial edit without overwriting omitted hidden or billing columns', async () => {
+      const currentClient = {
+        client_id: 'client-1', tenant: 'tenant-1', client_name: 'Original', url: '', is_inactive: false,
+        properties: {}, tax_id_number: 'stored-secret-tax', billing_contact_id: 'billing-1',
+        billing_email: 'billing@example.test', created_at: '2026-01-01', updated_at: '2026-01-01',
+      };
+      let persistedClient = { ...currentClient };
+      let updateObject: Record<string, unknown> = {};
+      createTenantKnexMock.mockResolvedValue({ knex: {} });
+      withTransactionMock.mockImplementation(async (_db: unknown, callback: TransactionCallback) => {
+        const trx = ((table: string) => ({
+          where: vi.fn(() => ({
+            first: vi.fn(async () => currentClient),
+            update: vi.fn((value: Record<string, unknown>) => {
+              updateObject = value;
+              persistedClient = { ...persistedClient, ...value };
+              return { returning: vi.fn(async () => [persistedClient]) };
+            }),
+          })),
+        })) as LookupTransaction;
+        return callback(trx);
+      });
+
+      const { updateClient } = await import('./clientActions');
+      await updateClient('client-1', {
+        client_name: 'Visible edit',
+        billing_contact_id: 'billing-1',
+        billing_email: 'billing@example.test',
+      });
+
+      expect(updateObject).toMatchObject({ client_name: 'Visible edit' });
+      expect(persistedClient).toMatchObject({
+        client_name: 'Visible edit', tax_id_number: 'stored-secret-tax',
+        billing_contact_id: 'billing-1', billing_email: 'billing@example.test',
+      });
+    });
+
     it('limits client portal updates to self-service client fields', async () => {
       authUserRef.value = {
         user_id: 'client-user-1',
