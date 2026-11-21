@@ -99,6 +99,7 @@ import {
   compileTenantScopedResourceReadAuthorizationSql,
   type AuthorizationRecord,
   type AuthorizationSubject,
+  type TrustedAuthorizationMembershipSnapshot,
   type RelationshipRule,
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
@@ -216,32 +217,44 @@ async function resolveAuthorizationSubjectForUser(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-    .where({ user_id: user.user_id })
-    .select<{ role_id: string }[]>('role_id')
-    .catch(() => []);
+): Promise<{ subject: AuthorizationSubject; trustedMembershipSnapshot?: TrustedAuthorizationMembershipSnapshot }> {
+  const [roleMemberships, teamMemberships, managedRows] = await Promise.all([
+    tenantScopedTable(trx, 'user_roles', tenant)
+      .where({ user_id: user.user_id })
+      .select<{ role_id: string }[]>('role_id')
+      .then(
+        (rows) => ({ rows, complete: true as const }),
+        () => ({ rows: [] as Array<{ role_id: string }>, complete: false as const }),
+      ),
+    tenantScopedTable(trx, 'team_members', tenant)
+      .where({ user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id')
+      .then(
+        (rows) => ({ rows, complete: true as const }),
+        () => ({ rows: [] as Array<{ team_id: string }>, complete: false as const }),
+      ),
+    tenantScopedTable(trx, 'users', tenant)
+      .where({ reports_to: user.user_id })
+      .select<{ user_id: string }[]>('user_id')
+      .catch(() => []),
+  ]);
 
-  const teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-    .where({ user_id: user.user_id })
-    .select<{ team_id: string }[]>('team_id')
-    .catch(() => []);
-
-  const managedRows = await tenantScopedTable(trx, 'users', tenant)
-    .where({ reports_to: user.user_id })
-    .select<{ user_id: string }[]>('user_id')
-    .catch(() => []);
-
-  return {
+  const roleIds = roleMemberships.rows.map((row) => row.role_id);
+  const teamIds = teamMemberships.rows.map((row) => row.team_id);
+  const subject: AuthorizationSubject = {
     tenant,
     userId: user.user_id,
     userType: user.user_type,
-    roleIds: roleRows.map((row) => row.role_id),
-    teamIds: teamRows.map((row) => row.team_id),
+    roleIds,
+    teamIds,
     managedUserIds: managedRows.map((row) => row.user_id),
     clientId: user.clientId ?? null,
     portfolioClientIds: [],
   };
+  const trustedMembershipSnapshot = roleMemberships.complete && teamMemberships.complete
+    ? { complete: true as const, tenant, userId: user.user_id, roleIds, teamIds }
+    : undefined;
+  return { subject, trustedMembershipSnapshot };
 }
 
 function toTicketAuthorizationRecord(
@@ -293,7 +306,7 @@ async function createTicketAuthorizationContext(
   requestCache: RequestLocalAuthorizationCache;
   ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const { subject: authorizationSubject, trustedMembershipSnapshot } = await resolveAuthorizationSubjectForUser(trx, tenant, user);
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
@@ -308,6 +321,7 @@ async function createTicketAuthorizationContext(
     selectedBoardIds,
     contactVisibility,
     requestCache,
+    trustedMembershipSnapshot,
     knex: trx,
   });
 
@@ -327,6 +341,7 @@ async function createTicketAuthorizationContext(
             return await resolveBundleNarrowingRulesForEvaluation(trx, {
               ...input,
               requestCache,
+              trustedMembershipSnapshot,
               knex: trx,
             });
           } catch {

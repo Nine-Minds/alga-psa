@@ -29,6 +29,19 @@ export interface AuthorizationSubject {
   subjectType?: 'user' | 'agent';
 }
 
+/**
+ * Complete role/team memberships resolved for one authorization request.
+ * Callers may pass this only when both sets were successfully loaded from the
+ * database; empty arrays are meaningful and must not stand in for placeholders.
+ */
+export interface TrustedAuthorizationMembershipSnapshot {
+  readonly complete: true;
+  readonly tenant: string;
+  readonly userId: string;
+  readonly roleIds: readonly string[];
+  readonly teamIds: readonly string[];
+}
+
 export interface AuthorizationResourceRef {
   type: string;
   action: string;
@@ -94,6 +107,7 @@ export interface AuthorizationEvaluationInput {
   selectedTeamIds?: string[];
   mutation?: AuthorizationMutationInput;
   requestCache?: AuthorizationRequestCache;
+  trustedMembershipSnapshot?: TrustedAuthorizationMembershipSnapshot;
   knex?: Knex | Knex.Transaction;
 }
 
