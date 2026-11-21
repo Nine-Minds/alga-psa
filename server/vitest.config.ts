@@ -458,7 +458,9 @@ export default defineConfig({
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
       {
         find: '@product/service-principals/entry',
-        replacement: path.resolve(__dirname, process.env.EDITION === 'enterprise'
+        replacement: path.resolve(__dirname, process.env.EDITION === 'ee'
+          || process.env.EDITION === 'enterprise'
+          || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? '../packages/product-service-principals/ee/entry.ts'
           : '../packages/product-service-principals/oss/entry.ts'),
       },

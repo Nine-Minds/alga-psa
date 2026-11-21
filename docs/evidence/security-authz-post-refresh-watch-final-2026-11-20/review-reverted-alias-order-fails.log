@@ -1,0 +1,31 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1795219650544"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ↓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'community'
+ ↓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via EDITION=ee'
+ ↓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via NEXT_PUBLIC_EDITION'
+ × |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via EDITION=enterprise' 91ms 14 MB heap used
+   → expected 3 to be less than 1
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via EDITION=enterprise'
+AssertionError: expected 3 to be less than 1
+ ❯ src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts:163:65
+    161|         const aliasKeys = configuredAliases.map(([key]) => key);
+    162|         expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeGr…
+    163|         expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeLe…
+       |                                                                 ^
+    164|       }
+    165|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  00:07:35
+   Duration  2.33s (transform 194ms, setup 235ms, import 10ms, tests 1.99s, environment 0ms)

@@ -1,0 +1,15 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1795219675479"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via NEXT_PUBLIC_EDITION' 3827ms 14 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via EDITION=enterprise' 3935ms 14 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'enterprise via EDITION=ee' 4062ms 15 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > compiles the actual ordered resolver aliases for 'community' 3924ms 15 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  00:08:00
+   Duration  16.73s (transform 71ms, setup 109ms, import 10ms, tests 16.51s, environment 0ms)

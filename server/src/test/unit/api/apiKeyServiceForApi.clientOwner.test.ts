@@ -51,6 +51,9 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import { ApiKeyServiceForApi } from '../../../lib/services/apiKeyServiceForApi';
+import * as configuredServicePrincipals from '@product/service-principals/entry';
+import * as communityServicePrincipals from '../../../../../packages/product-service-principals/oss/entry';
+import * as enterpriseServicePrincipals from '../../../../../packages/product-service-principals/ee/entry';
 
 describe('ApiKeyServiceForApi client-owner rejection', () => {
   const knex: any = () => undefined;
@@ -69,6 +72,18 @@ describe('ApiKeyServiceForApi client-owner rejection', () => {
       usage_count: 0,
     };
     mocks.userRow = { is_inactive: false, user_type: 'internal' };
+  });
+
+  it('resolves the configured service-principal entry using the production edition selectors', () => {
+    const isEnterprise = process.env.EDITION === 'ee'
+      || process.env.EDITION === 'enterprise'
+      || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const expected = isEnterprise ? enterpriseServicePrincipals : communityServicePrincipals;
+
+    expect(configuredServicePrincipals.servicePrincipalKeyGate)
+      .toBe(expected.servicePrincipalKeyGate);
+    expect(configuredServicePrincipals.resolveServicePrincipalApiContext)
+      .toBe(expected.resolveServicePrincipalApiContext);
   });
 
   it('rejects a client-owned key via validateApiKeyForTenant (with x-tenant-id)', async () => {

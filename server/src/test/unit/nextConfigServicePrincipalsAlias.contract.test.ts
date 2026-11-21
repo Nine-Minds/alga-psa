@@ -8,27 +8,32 @@ const serverDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const repoRoot = path.resolve(serverDir, '..');
 const nextBin = path.join(repoRoot, 'node_modules/next/dist/bin/next');
 
-function loadConfiguredAlias(edition: string): { entry: string; ee: string; eeServicePrincipals?: string } {
+type ResolverAlias = [string, string];
+
+function loadConfiguredAliases(editionEnvironment: { EDITION?: string; NEXT_PUBLIC_EDITION?: string }): ResolverAlias[] {
   const script = `
     import config from './next.config.mjs';
-    console.log(JSON.stringify({
-      entry: config.turbopack.resolveAlias['@product/service-principals/entry'],
-      ee: config.turbopack.resolveAlias['@ee'],
-      eeServicePrincipals: config.turbopack.resolveAlias['@ee/lib/service-principals'],
-    }));
+    const relevant = new Set([
+      '@product/service-principals/entry',
+      '@ee/lib/service-principals',
+      '@ee',
+      '@ee/',
+    ]);
+    console.log(JSON.stringify(Object.entries(config.turbopack.resolveAlias)
+      .filter(([key]) => relevant.has(key))));
   `;
   const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
     cwd: serverDir,
     encoding: 'utf8',
     env: {
       ...process.env,
-      EDITION: edition === 'enterprise' ? 'enterprise' : 'community',
-      NEXT_PUBLIC_EDITION: edition,
+      EDITION: editionEnvironment.EDITION ?? '',
+      NEXT_PUBLIC_EDITION: editionEnvironment.NEXT_PUBLIC_EDITION ?? '',
     },
   });
 
   if (result.status !== 0) {
-    throw new Error(`Could not load Next config for ${edition}: ${result.stderr}`);
+    throw new Error(`Could not load Next config for ${JSON.stringify(editionEnvironment)}: ${result.stderr}`);
   }
 
   return JSON.parse(result.stdout.trim());
@@ -89,13 +94,7 @@ function createFixture(): { fixtureRoot: string; fixtureServer: string } {
       turbopack: {
         root: process.env.FIXTURE_TURBOPACK_ROOT,
         resolveAlias: {
-          '@product/service-principals/entry': process.env.FIXTURE_ENTRY_ALIAS,
-          '@product/service-principals/types': '../packages/product-service-principals/types.ts',
-          // Keep the specific EE API-auth target before the broad prefixes;
-          // Turbopack resolves the earlier prefix otherwise.
-          '@ee/lib/service-principals': '../ee/server/src/lib/service-principals',
-          '@ee': '../ee/server/src',
-          '@ee/': '../ee/server/src/',
+          ...Object.fromEntries(JSON.parse(process.env.FIXTURE_RESOLVE_ALIASES || '[]')),
         },
       },
     };
@@ -106,9 +105,9 @@ function createFixture(): { fixtureRoot: string; fixtureServer: string } {
 
 function compileFixture(
   fixtureServer: string,
-  aliasTarget: string,
+  aliases: ResolverAlias[],
   distDir: string,
-  edition: string,
+  edition: 'community' | 'enterprise',
 ): ReturnType<typeof spawnSync> {
   return spawnSync(process.execPath, [
     nextBin,
@@ -129,7 +128,7 @@ function compileFixture(
       NEXT_BUILD_CPUS: '1',
       EDITION: edition === 'enterprise' ? 'enterprise' : 'community',
       NEXT_PUBLIC_EDITION: edition,
-      FIXTURE_ENTRY_ALIAS: aliasTarget,
+      FIXTURE_RESOLVE_ALIASES: JSON.stringify(aliases),
       FIXTURE_DIST_DIR: distDir,
       FIXTURE_TURBOPACK_ROOT: path.dirname(fixtureServer),
     },
@@ -147,36 +146,43 @@ describe('service-principals Turbopack entry alias', () => {
     if (fixture) fs.rmSync(fixture.fixtureRoot, { recursive: true, force: true });
   });
 
-  it.each(['community', 'enterprise'])(
-    'rejects the former absolute alias and compiles the configured alias for %s',
-    (edition) => {
-      const configuredAlias = loadConfiguredAlias(edition);
-      const absoluteAlias = path.resolve(serverDir, configuredAlias.entry);
-      const { fixtureServer } = fixture;
-      const fixtureRelativeAlias = `../packages/product-service-principals/${edition === 'enterprise' ? 'ee' : 'oss'}/entry.ts`;
-      const fixtureRelativeEe = edition === 'enterprise' ? '../ee/server/src' : '../packages/ee/src';
-      expect(configuredAlias.entry).toBe(fixtureRelativeAlias);
-      expect(configuredAlias.ee).toBe(fixtureRelativeEe);
-      if (edition === 'enterprise') {
-        expect(configuredAlias.eeServicePrincipals).toBe('../ee/server/src/lib/service-principals');
-      }
-      const fixtureConfigPath = path.join(fixtureServer, 'next.config.mjs');
-      const fixtureConfig = fs.readFileSync(fixtureConfigPath, 'utf8')
-        .replace("'../packages/ee/src'", JSON.stringify(fixtureRelativeEe))
-        .replace("'../ee/server/src/'", JSON.stringify(`${fixtureRelativeEe}/`))
-        .replace("'../packages/ee/src/'", JSON.stringify(`${fixtureRelativeEe}/`));
-      fs.writeFileSync(fixtureConfigPath, fixtureConfig);
+  it.each([
+    { name: 'community', editionEnvironment: { EDITION: 'community', NEXT_PUBLIC_EDITION: 'community' }, implementation: 'oss' },
+    { name: 'enterprise via EDITION=enterprise', editionEnvironment: { EDITION: 'enterprise' }, implementation: 'ee' },
+    { name: 'enterprise via EDITION=ee', editionEnvironment: { EDITION: 'ee' }, implementation: 'ee' },
+    { name: 'enterprise via NEXT_PUBLIC_EDITION', editionEnvironment: { NEXT_PUBLIC_EDITION: 'enterprise' }, implementation: 'ee' },
+  ])('compiles the actual ordered resolver aliases for $name', ({ name, editionEnvironment, implementation }) => {
+    const edition = implementation === 'ee' ? 'enterprise' : 'community';
+    const configuredAliases = loadConfiguredAliases(editionEnvironment);
+    const configuredEntry = configuredAliases.find(([key]) => key === '@product/service-principals/entry')?.[1];
+    const expectedEntry = `../packages/product-service-principals/${implementation}/entry.ts`;
+    expect(configuredEntry).toBe(expectedEntry);
+    if (edition === 'enterprise') {
+      const aliasKeys = configuredAliases.map(([key]) => key);
+      expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeGreaterThanOrEqual(0);
+      expect(aliasKeys.indexOf('@ee/lib/service-principals')).toBeLessThan(aliasKeys.indexOf('@ee'));
+    }
 
-      const brokenBuild = compileFixture(fixtureServer, absoluteAlias, `.next-absolute-${edition}`, edition);
-      const brokenOutput = `${brokenBuild.stdout ?? ''}\n${brokenBuild.stderr ?? ''}`;
-      expect(brokenBuild.status, brokenOutput).not.toBe(0);
-      expect(brokenOutput).toMatch(/@product\/service-principals\/entry|service-principals\/.*entry\.ts/);
+    const fixtureAliases: ResolverAlias[] = [
+      ...configuredAliases,
+      // Test-fixture plumbing: the production config gets this target from
+      // tsconfig paths; the isolated fixture has no project tsconfig.
+      ['@product/service-principals/types', '../packages/product-service-principals/types.ts'],
+    ];
+    const { fixtureServer } = fixture;
 
-      const repairedBuild = compileFixture(fixtureServer, fixtureRelativeAlias, `.next-relative-${edition}`, edition);
-      const repairedOutput = `${repairedBuild.stdout ?? ''}\n${repairedBuild.stderr ?? ''}`;
-      expect(repairedBuild.error, repairedOutput).toBeUndefined();
-      expect(repairedBuild.status, repairedOutput).toBe(0);
-    },
-    360_000,
-  );
+    const brokenAliases = fixtureAliases.map(([key, target]) => [
+      key,
+      key === '@product/service-principals/entry' ? path.resolve(serverDir, target) : target,
+    ] as ResolverAlias);
+    const brokenBuild = compileFixture(fixtureServer, brokenAliases, `.next-absolute-${name.replaceAll(/[^a-z0-9]+/gi, '-')}`, edition);
+    const brokenOutput = `${brokenBuild.stdout ?? ''}\n${brokenBuild.stderr ?? ''}`;
+    expect(brokenBuild.status, brokenOutput).not.toBe(0);
+    expect(brokenOutput).toMatch(/@product\/service-principals\/entry|service-principals\/.*entry\.ts/);
+
+    const repairedBuild = compileFixture(fixtureServer, fixtureAliases, `.next-configured-${name.replaceAll(/[^a-z0-9]+/gi, '-')}`, edition);
+    const repairedOutput = `${repairedBuild.stdout ?? ''}\n${repairedBuild.stderr ?? ''}`;
+    expect(repairedBuild.error, repairedOutput).toBeUndefined();
+    expect(repairedBuild.status, repairedOutput).toBe(0);
+  }, 360_000);
 });

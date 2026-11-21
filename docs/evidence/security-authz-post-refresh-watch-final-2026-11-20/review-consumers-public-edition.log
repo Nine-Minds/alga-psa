@@ -1,0 +1,28 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1795219541801"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > rejects an owner of type service (CE stub never approves) 2ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > rejects a client owner 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > rejects an owner of type null (CE stub never approves) 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > rejects an owner of type undefined (CE stub never approves) 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > rejects an owner of type agent (CE stub never approves) 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > keeps the inactive and suspended-tenant gates 0ms 20 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.keyGateAllowList.test.ts > T037: ApiKeyService.getKeyGateReason allow-list (oss entry) > passes an active internal owner 0ms 20 MB heap used
+ ✓ |node| src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts > ApiKeyServiceForApi client-owner rejection > rejects a client-owned key via validateApiKeyForTenant (with x-tenant-id) 3ms 14 MB heap used
+ ✓ |node| src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts > ApiKeyServiceForApi client-owner rejection > accepts an internal-owned key via both paths and records use 1ms 14 MB heap used
+ ✓ |node| src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts > ApiKeyServiceForApi client-owner rejection > rejects a client-owned key via validateApiKeyAnyTenant (without x-tenant-id) 0ms 14 MB heap used
+ ✓ |node| src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts > ApiKeyServiceForApi client-owner rejection > rejects a service-principal-owned key via both paths without recording use 1ms 15 MB heap used
+ ✓ |node| src/test/unit/api/apiKeyServiceForApi.clientOwner.test.ts > ApiKeyServiceForApi client-owner rejection > resolves the configured service-principal entry using the production edition selectors 0ms 15 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts > ApiKeyService service-owner rejection (F041: internal-owner-only) > refuses to mint a key for a service owner (purpose mobile) 2ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts > ApiKeyService service-owner rejection (F041: internal-owner-only) > refuses to mint a key for a service owner (purpose undefined) 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts > ApiKeyService service-owner rejection (F041: internal-owner-only) > refuses to mint a key for a service owner (purpose mobile_ott) 0ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts > ApiKeyService service-owner rejection (F041: internal-owner-only) > refuses an unknown or missing owner type 1ms 19 MB heap used
+ ✓ |node| ../packages/auth/src/services/apiKeyService.F041.serviceOwner.test.ts > ApiKeyService service-owner rejection (F041: internal-owner-only) > refuses to mint a key for a service owner (purpose general) 0ms 19 MB heap used
+
+ Test Files  3 passed (3)
+      Tests  17 passed (17)
+   Start at  00:05:47
+   Duration  866ms (transform 313ms, setup 180ms, import 417ms, tests 18ms, environment 0ms)

@@ -1,5 +1,5 @@
 /**
- * T037 (CE build, oss entry) — key-gate half, packages/auth copy of getKeyGateReason.
+ * T037 — key-gate half, packages/auth copy of getKeyGateReason.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +24,7 @@ import { ApiKeyService } from './apiKeyService';
 const gate = (): Promise<string | null> =>
   (ApiKeyService as any).getKeyGateReason({}, 'tenant-1', 'owner-1');
 
-describe('T037: ApiKeyService.getKeyGateReason allow-list (oss entry)', () => {
+describe('T037: ApiKeyService.getKeyGateReason allow-list (configured service-principal entry)', () => {
   beforeEach(() => {
     mocks.isTenantSuspended.mockReset().mockResolvedValue(false);
   });

@@ -1,0 +1,50 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1795219620400"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > exempts the Datto RMM route exactly, never a prefixed or deeper sibling 2ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows 3CX CRM template routes (per-tenant Bearer ApiKey verified in the route) 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the ticket original-email view to use session auth 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows workflow run APIs to use MSP session auth 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the Datto RMM webhook route (X-Alga-Webhook-Secret authenticated in-route) 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets the session-authenticated RMA document route through, and only that shape 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets recipient-bound attachment links authenticate in their session-aware handler 0ms 23 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > keeps sibling RMM + payment webhook routes and unrelated APIs gated 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets the session-authenticated staging box manifest through, and only that shape 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows SCIM routes to perform Bearer authentication in the route handler 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the Teams package download route to use session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route) 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the Teams online-meeting recording proxy to use session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > exempts the Level.io route exactly, never a prefixed or deeper sibling 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the Teams artifact webhook (Microsoft Graph notifications, clientState-authenticated) 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows document preview routes to use session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows workflow definition APIs to use MSP session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets the smart ticket search stream authenticate its session in the route handler 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows document download/content routes to use session auth (e.g. meeting transcripts) 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows ticket live token APIs to use MSP session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows the email watch refresh route to use session auth 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets only client portal document file and export handlers authenticate the portal session 0ms 24 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > lets the session-authenticated label endpoints (pdf, templates, linked-assets) through, and only those 0ms 25 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > allows public appointment calendar downloads from email links 0ms 25 MB heap used
+ ✓ |node| src/test/unit/middleware.apiKeyAuth.test.ts > shouldSkipApiKeyAuth > still requires an API key for unrelated API routes 0ms 25 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies a client user before parsing an empty body 4ms 14 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > does not consume provider throttle capacity for a denied client user 3ms 15 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > does not refresh a provider that is not visible in the caller tenant 1ms 15 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies an internal user without ticket_settings:update before parsing an empty body 0ms 15 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > allows an administrator to force-refresh a provider from their tenant 1ms 15 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies a tenant user without ticket_settings:update before provider lookup or external work 1ms 16 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies client users even if permission data says they have the permission 1ms 16 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > rejects unauthenticated requests before database or external work 0ms 16 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > limits repeated refreshes per tenant and provider while isolating tenants and providers 2ms 17 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies a client user before parsing malformed JSON 0ms 17 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > denies an internal user without ticket_settings:update before parsing malformed JSON 0ms 17 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > does not consume provider throttle capacity for a denied internal user 1ms 17 MB heap used
+ ✓ |node| src/app/api/email/refresh-watch/route.test.ts > POST /api/email/refresh-watch authorization and rate limit > returns the throttle response and allows refresh again after the interval 3ms 18 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  39 passed (39)
+   Start at  00:07:05
+   Duration  759ms (transform 336ms, setup 141ms, import 417ms, tests 27ms, environment 0ms)
