@@ -14,6 +14,7 @@
     "communityEditionDescription": "Die selbst gehostete Community Edition bietet unbegrenzt viele Benutzer ohne Lizenzbeschränkungen oder zusätzliche Kosten."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Unbegrenzt",
     "metaTitle": "Kauf erfolgreich",
     "scheduledTitle": "Änderung erfolgreich geplant!",
     "updatedTitle": "Aktualisierung erfolgreich!",

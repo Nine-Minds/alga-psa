@@ -14,6 +14,7 @@
     "communityEditionDescription": "Community Edition med egen drift har obegränsat antal användare utan licensbegränsningar eller extra kostnader."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Obegränsat",
     "metaTitle": "Köpet har genomförts",
     "scheduledTitle": "Ändringen har schemalagts",
     "updatedTitle": "Uppdateringen har slutförts",
