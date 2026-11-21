@@ -32,9 +32,8 @@ const trxMock = vi.fn((table: string) => {
   }
 
   return {
-    where: vi.fn().mockReturnValue({
-      update: updateTicketStateMock,
-    }),
+    select: () => ({ where: () => ({ first: async () => ({ response_state: null }) }) }),
+    where: vi.fn().mockReturnValue({ update: updateTicketStateMock }),
   };
 });
 
@@ -45,6 +44,7 @@ const createCommentMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
+  registerAfterCommit: vi.fn(),
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
   tenantDb: (trx: any) => ({

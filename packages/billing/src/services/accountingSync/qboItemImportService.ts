@@ -1,7 +1,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- QBO item import intentionally bridges billing catalog and the QuickBooks integration client */
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, lockQboItemTargets, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { QboItem } from '@alga-psa/integrations/lib/qbo/types';
@@ -112,6 +112,7 @@ async function buildTaxRateMap(knex: Knex, tenant: string, realm: string): Promi
         alga_entity_type: 'tax_code',
         external_realm_id: realm
       })
+      .whereNull('deleted_at')
       .select('alga_entity_id', 'external_entity_id');
 
   if (taxMappings.length === 0) return new Map();
@@ -147,6 +148,7 @@ async function loadExistingItemMappings(
       alga_entity_type: 'service',
       external_realm_id: realm
     })
+    .whereNull('deleted_at')
     .select('id', 'alga_entity_id', 'external_entity_id');
 }
 
@@ -255,15 +257,29 @@ async function applyResolution(params: {
     const ledger = new SyncMappingLedger(trx, tenant, SYNC_ADAPTER_TYPE);
     const metadata = mappingMetadataFor(resolution.qboItem);
 
+    // Serialize with every writer of this item's mapping set (create, edit,
+    // relink, unlink), then re-derive the decision from the locked state.
+    await lockQboItemTargets(trx, tenant, [{ realm, itemId: resolution.qboItem.Id }]);
+    const liveMappings = await ledger.findAllByExternalId('service', resolution.qboItem.Id, realm);
+    const plannedMappingId = resolution.existingMappingId ?? null;
+    const lockedMapping = liveMappings[0];
+    if (
+      liveMappings.length !== (plannedMappingId ? 1 : 0) ||
+      (plannedMappingId && lockedMapping.id !== plannedMappingId) ||
+      (resolution.action !== 'create' && lockedMapping && lockedMapping.alga_entity_id !== resolution.matchedServiceId)
+    ) {
+      throw new Error(
+        'The mappings for this QBO item changed after the preview; it was not imported. Run the import again.'
+      );
+    }
+
     const upsertLedger = async (serviceId: string) => {
-      // No upsert helper on the ledger — re-check inside the transaction so a
-      // re-run of the import updates rather than duplicates.
-      const existing = resolution.existingMappingId
-        ? { id: resolution.existingMappingId }
-        : await ledger.findByExternalId('service', resolution.qboItem.Id, realm);
-      if (existing) {
-        await trx('tenant_external_entity_mappings')
-          .where({ id: existing.id })
+      if (lockedMapping) {
+        // Re-point exactly the mapping row the decision was made on, and only
+        // while it still names the entity the decision saw.
+        const updated = await trx('tenant_external_entity_mappings')
+          .where({ tenant, id: lockedMapping.id, alga_entity_id: lockedMapping.alga_entity_id })
+          .whereNull('deleted_at')
           .update({
             alga_entity_id: serviceId,
             sync_status: 'synced',
@@ -271,6 +287,9 @@ async function applyResolution(params: {
             metadata,
             updated_at: trx.fn.now()
           });
+        if (updated !== 1) {
+          throw new Error('The QBO item mapping changed while importing; it was not imported. Run the import again.');
+        }
       } else {
         await ledger.insert({
           algaEntityType: 'service',

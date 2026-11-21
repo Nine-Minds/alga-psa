@@ -23,14 +23,24 @@ function clientSinceDateString<T extends Record<string, any>>(row: T): T {
   return { ...row, client_since: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` };
 }
 
+/**
+ * ANDs the caller's row restriction (e.g. a bundle client scope) onto the model's own query, so
+ * the narrowing sits in the same SQL that produces the rows.
+ */
+export interface ClientReadOptions {
+  narrowQuery?: (query: Knex.QueryBuilder) => void;
+}
+
 export async function getClientById(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  clientId: string
+  clientId: string,
+  options: ClientReadOptions = {}
 ): Promise<IClient | null> {
-  const client = await tenantScopedTable(knexOrTrx, tenant, 'clients')
-    .where({ client_id: clientId })
-    .first();
+  const query = tenantScopedTable(knexOrTrx, tenant, 'clients')
+    .where({ client_id: clientId });
+  options.narrowQuery?.(query);
+  const client = await query.first();
 
   if (!client) return null;
   return clientSinceDateString({ ...client, properties: (client as any).properties ?? {} }) as IClient;
@@ -39,11 +49,13 @@ export async function getClientById(
 export async function getAllClients(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  includeInactive: boolean = true
+  includeInactive: boolean = true,
+  options: ClientReadOptions = {}
 ): Promise<IClient[]> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'clients')
     .orderBy('client_name', 'asc')
     .select('*');
+  options.narrowQuery?.(query);
 
   if (!includeInactive) {
     query.andWhere({ is_inactive: false });

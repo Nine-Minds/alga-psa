@@ -43,13 +43,19 @@ describe('client bundle guard', () => {
     expect(specs.filter((s) => forbidden.test(s))).toEqual([]);
   });
 
+  it('the template editor reaches Hudu only through the @enterprise alias, never an EE path', () => {
+    const specs = runtimeImports(readFileSync(path.resolve(src, 'components/templates/TicketTemplateEditor.tsx'), 'utf8'));
+    expect(specs).toContain('@enterprise/components/integrations/hudu/HuduArticlePicker');
+    expect(specs.filter((s) => /(^|\/)ee\/server|^@ee\//.test(s))).toEqual([]);
+  });
+
   it('ticketTemplateSchema.ts imports only zod and the token module (plus type-only imports)', () => {
     const specs = runtimeImports(readFileSync(path.resolve(src, 'lib/ticketTemplateSchema.ts'), 'utf8'));
     expect(specs).toEqual(['zod', './ticketTitleTokens']);
   });
 
-  it('ticketTitleTokens.ts has no runtime imports, so the client bundle can use it', () => {
+  it('ticketTitleTokens.ts imports only the shared pure token engine, so the client bundle can use it', () => {
     const specs = runtimeImports(readFileSync(path.resolve(src, 'lib/ticketTitleTokens.ts'), 'utf8'));
-    expect(specs).toEqual([]);
+    expect(specs).toEqual(['./titleTokens']);
   });
 });

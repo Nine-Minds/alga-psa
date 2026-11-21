@@ -67,6 +67,7 @@ async function lockCoManagedHomeIdentity(trx: Knex.Transaction, actor: CoManaged
   const memberships = await home.table('team_members').where('user_id', actor.userId).forShare().select('team_id');
   const roles = await home.table('user_roles').where('user_id', actor.userId).forShare().select('role_id');
   const managed = await home.table('users').where({ reports_to: actor.userId, user_type: 'internal', is_inactive: false }).forShare().select('user_id');
+// LEVERAGE: pattern authorization-subject-resolution — co-managed home identity hand-builds a subject under share locks; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
   return { tenant: actor.tenant, userId: actor.userId, userType: 'internal', roleIds: roles.map(row => row.role_id),
     teamIds: memberships.map(row => row.team_id), managedUserIds: managed.map(row => row.user_id) };
 }

@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { workedMinutes } from '@alga-psa/core';
+import { isCommercialTimeEntry } from '@alga-psa/types';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -56,6 +57,7 @@ interface TicketTimeEntryDurationRow {
   end_time: string | Date | null;
   billable_duration: number | string | null;
   invoiced: unknown;
+  billing_mode?: string | null;
 }
 
 function assertInternalUser(user: { user_type?: string }): void {
@@ -312,11 +314,15 @@ export const getTicketBillingRollup = withAuth(
           work_item_id: ticketId,
           work_item_type: 'ticket',
         })
-        .select('entry_id', 'start_time', 'end_time', 'billable_duration', 'invoiced')) as TicketTimeEntryDurationRow[];
+        .select('entry_id', 'start_time', 'end_time', 'billable_duration', 'invoiced', 'billing_mode')) as TicketTimeEntryDurationRow[];
 
       const rollup = timeEntryRows.reduce<TicketBillingRollupTotals>(
         (acc, row) => {
-          const billableDuration = normalizeNumberOrZero(row.billable_duration, 'time_entries.billable_duration');
+          // Logged time counts every entry; billable and not-invoiced time count commercial entries only, so an
+          // operational (seat technician) entry never reads as billable on the ticket (S28 / F068, `isCommercialTimeEntry`).
+          const billableDuration = isCommercialTimeEntry(row)
+            ? normalizeNumberOrZero(row.billable_duration, 'time_entries.billable_duration')
+            : 0;
           acc.totalMinutes += workedMinutes(row);
           acc.billableMinutes += billableDuration;
           acc.entryCount += 1;

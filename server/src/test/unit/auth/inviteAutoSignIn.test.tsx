@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   completePortal: vi.fn(),
   signIn: vi.fn(),
   push: vi.fn(),
+  assign: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   search: { current: 'token=test-token' },
@@ -78,14 +79,25 @@ beforeEach(() => {
   mocks.completePortal.mockResolvedValue({ success: true, username: 'pat@example.test' });
   mocks.signIn.mockResolvedValue({ ok: true, error: undefined, url: '/' });
 });
-afterEach(cleanup);
+const originalLocation = window.location;
+beforeEach(() => {
+  // jsdom does not navigate; the team page hands off to the MSP app with a full page load.
+  Object.defineProperty(window, 'location', { configurable: true, value: { ...originalLocation, assign: mocks.assign } });
+});
+afterEach(() => {
+  cleanup();
+  Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+});
 
 describe('team invitation auto sign-in', () => {
-  it('signs in with the fields the credentials provider reads and lands on the MSP dashboard', async () => {
+  it('signs in with the fields the credentials provider reads and lands on the MSP dashboard with a full page load', async () => {
     render(<TeamSetupPage />);
     await submitSetupForm('create-team-account-button');
 
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/msp/dashboard'));
+    // A full load lets the server land the new principal (a seat technician goes to its surface home); a
+    // client-side push straight after signIn looped on that redirect.
+    await waitFor(() => expect(mocks.assign).toHaveBeenCalledWith('/msp/dashboard'));
+    expect(mocks.push).not.toHaveBeenCalled();
     expect(mocks.completeTeam).toHaveBeenCalledWith('test-token', PASSWORD);
     expect(mocks.signIn).toHaveBeenCalledTimes(1);
     expect(mocks.signIn).toHaveBeenCalledWith('credentials', {
@@ -103,7 +115,7 @@ describe('team invitation auto sign-in', () => {
 
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/auth/msp/signin'));
     expect(mocks.toastSuccess).toHaveBeenCalledWith('teamSetup.accountReady');
-    expect(mocks.push).not.toHaveBeenCalledWith('/msp/dashboard');
+    expect(mocks.assign).not.toHaveBeenCalled();
   });
 
   it('falls back to the sign-in page when signIn throws', async () => {

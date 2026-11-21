@@ -29,7 +29,9 @@ const { getTemplate: ticketAssigned } = require('../../migrations/utils/template
 const { getTemplate: ticketUpdated } = require('../../migrations/utils/templates/email/tickets/ticketUpdated.cjs');
 const { getTemplate: ticketUpdatedClient } = require('../../migrations/utils/templates/email/tickets/ticketUpdatedClient.cjs');
 const { getTemplate: ticketClosed } = require('../../migrations/utils/templates/email/tickets/ticketClosed.cjs');
+const { getTemplate: ticketClosedClient } = require('../../migrations/utils/templates/email/tickets/ticketClosedClient.cjs');
 const { getTemplate: ticketCommentAdded } = require('../../migrations/utils/templates/email/tickets/ticketCommentAdded.cjs');
+const { getTemplate: ticketCommentAddedClient } = require('../../migrations/utils/templates/email/tickets/ticketCommentAddedClient.cjs');
 const { getTemplate: ticketAgentAssignedClient } = require('../../migrations/utils/templates/email/tickets/ticketAgentAssignedClient.cjs');
 const { getTemplate: ticketAutoCloseWarning } = require('../../migrations/utils/templates/email/tickets/ticketAutoCloseWarning.cjs');
 const { getTemplate: ticketTeamAssigned } = require('../../migrations/utils/templates/email/tickets/ticketTeamAssigned.cjs');
@@ -90,7 +92,9 @@ const TEMPLATE_GETTERS = [
   ticketUpdated,
   ticketUpdatedClient,
   ticketClosed,
+  ticketClosedClient,
   ticketCommentAdded,
+  ticketCommentAddedClient,
   ticketAgentAssignedClient,
   ticketAutoCloseWarning,
   ticketTeamAssigned,

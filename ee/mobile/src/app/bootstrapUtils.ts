@@ -21,3 +21,13 @@ export function shouldRefreshOnResume(expiresAtMs: number, nowMs: number, skewMs
   return expiresAtMs - nowMs <= skewMs;
 }
 
+/**
+ * A persisted route is replayed on relaunch, but not after a sign-in: that
+ * session opens on the drawer's initial route (Home) instead of wherever the
+ * previous one stopped. A pending deep link skips it too — React Navigation
+ * ignores links when an initial state is supplied.
+ */
+export function skipRestoredNavState(options: { freshSignIn: boolean; pendingDeepLink: boolean }): boolean {
+  return options.freshSignIn || options.pendingDeepLink;
+}
+

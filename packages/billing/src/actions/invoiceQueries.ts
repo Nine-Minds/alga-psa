@@ -8,11 +8,14 @@ import { Temporal } from '@js-temporal/polyfill';
 import {
   IInvoice,
   InvoiceViewModel,
-  IInvoiceCharge
+  IInvoiceCharge,
+  InvoiceBundleRowsLayout
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate, formatLocationAddress } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
+import { templateUsesComponentPricing, decideBundleLoad } from '@alga-psa/billing/lib/invoice-template-ast/componentPricing';
+import { extractBundleRowsLayout } from '@alga-psa/billing/lib/invoice-template-ast/bundleChildRows';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
@@ -796,6 +799,67 @@ export const fetchInvoicesByContract = withAuth(async (
   }
 });
 
+/**
+ * The one definition of "which template renders this client's invoices": the
+ * client's own assignment, else the tenant default, else the first template.
+ * Shared by the portal's template id lookup and the bundle price gate so the
+ * data a client receives always matches the template that renders it.
+ */
+async function resolveClientInvoiceTemplate(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string | null | undefined,
+): Promise<{ templateId: string | null; templates: Awaited<ReturnType<typeof Invoice.getAllTemplates>> }> {
+  let assigned: string | null = null;
+  if (clientId) {
+    try {
+      const client = await tenantDb(knex, tenant).table('clients')
+        .select('invoice_template_id')
+        .where({ client_id: clientId, tenant })
+        .first();
+      assigned = client?.invoice_template_id ?? null;
+    } catch {
+      // Fall back to tenant default template selection below.
+    }
+  }
+  const templates = await Invoice.getAllTemplates(knex, tenant);
+  if (assigned) return { templateId: assigned, templates };
+  const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
+  return { templateId: defaultTemplate?.template_id ?? null, templates };
+}
+
+/**
+ * Bundle-component load options for an invoice read.
+ *
+ * Component names/quantities always load. Component *prices* are client-visible
+ * data once serialized to the portal browser, so for client-portal callers they
+ * load only when the invoice's resolved template binds one
+ * (`templateUsesComponentPricing`). MSP users already see every price.
+ */
+async function resolveBundleLoadOptions(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: InvoiceQueryUser,
+  invoiceId: string,
+): Promise<{
+  includeBundlePresentation: boolean;
+  includeBundleComponentAmounts: boolean;
+  /** Client readers only: how their template draws component rows, for non-template surfaces. */
+  bundleRowsLayout?: InvoiceBundleRowsLayout | null;
+}> {
+  if (!isClientUserType(user.user_type)) return decideBundleLoad('msp', null);
+  const invoice = await tenantDb(knex, tenant).table('invoices').where({ invoice_id: invoiceId }).first('client_id');
+  const { templateId, templates } = await resolveClientInvoiceTemplate(knex, tenant, invoice?.client_id);
+  const template = templates.find((entry) => entry.template_id === templateId);
+  const ast = (template?.templateAst ?? null) as Parameters<typeof templateUsesComponentPricing>[0] | null;
+  // Unknown/missing template fails closed; see decideBundleLoad.
+  const decision = decideBundleLoad('client', ast);
+  return {
+    ...decision,
+    bundleRowsLayout: decision.includeBundlePresentation ? extractBundleRowsLayout(ast) : null,
+  };
+}
+
 export const getInvoiceForRendering = withAuth(async (
   user,
   { tenant },
@@ -819,7 +883,11 @@ export const getInvoiceForRendering = withAuth(async (
 
     // Existing-invoice preview refresh and rerender must hydrate through the full
     // detail-aware reader so canonical recurring periods survive after persistence.
-    const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    const { bundleRowsLayout, ...bundleLoad } = await resolveBundleLoadOptions(knex, tenant, user, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId, bundleLoad);
+    if (bundleRowsLayout !== undefined) {
+      invoice.bundle_rows_layout = bundleRowsLayout;
+    }
     return enrichInvoiceWithProjectRenderingData(
       knex,
       tenant,
@@ -850,7 +918,13 @@ export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
 
   let loadedInvoice: InvoiceViewModel;
   try {
-    loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    loadedInvoice = await Invoice.getFullInvoiceById(
+      knex,
+      tenant,
+      invoiceId,
+      // The WASM view model is template-rendered; it needs no separate row layout.
+      (({ bundleRowsLayout: _layout, ...bundleLoad }) => bundleLoad)(await resolveBundleLoadOptions(knex, tenant, user, invoiceId)),
+    );
   } catch (error) {
     // A draft can be hard-deleted while its preview request is still in
     // flight. Missing is a normal terminal state for this nullable reader,
@@ -932,39 +1006,16 @@ export const getResolvedInvoiceTemplateId = withSerializableAuth(withAuth(async 
     return denied;
   }
 
-  const db = tenantDb(knex, tenant);
-
-  const invoice = await db.table('invoices')
+  const invoice = await tenantDb(knex, tenant).table('invoices')
     .select('client_id')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
+    .where({ invoice_id: invoiceId, tenant })
     .first();
 
   if (!invoice?.client_id) {
     return null;
   }
 
-  try {
-    const client = await db.table('clients')
-      .select('invoice_template_id')
-      .where({
-        client_id: invoice.client_id,
-        tenant
-      })
-      .first();
-
-    if (client?.invoice_template_id) {
-      return client.invoice_template_id;
-    }
-  } catch {
-    // Fall back to tenant default template selection below.
-  }
-
-  const templates = await Invoice.getAllTemplates(knex, tenant);
-  const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
-  return defaultTemplate?.template_id ?? null;
+  return (await resolveClientInvoiceTemplate(knex, tenant, invoice.client_id)).templateId;
 }));
 
 export type InvoicePurchaseOrderSummary = {

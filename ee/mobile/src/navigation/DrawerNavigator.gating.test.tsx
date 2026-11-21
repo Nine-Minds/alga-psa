@@ -6,8 +6,8 @@ const registeredScreens: string[] = [];
 
 vi.mock("@react-navigation/drawer", () => ({
   createDrawerNavigator: () => ({
-    Navigator: (props: { children?: React.ReactNode }) =>
-      React.createElement("Navigator", null, props.children),
+    Navigator: (props: { children?: React.ReactNode; initialRouteName?: string }) =>
+      React.createElement("Navigator", { initialRouteName: props.initialRouteName }, props.children),
     Screen: (props: { name: string }) => {
       registeredScreens.push(props.name);
       return null;
@@ -27,10 +27,13 @@ vi.mock("../screens/ContactsListScreen", () => ({ ContactsListScreen: () => null
 vi.mock("../screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
 vi.mock("../screens/InventoryScreen", () => ({ InventoryScreen: () => null }));
 vi.mock("../screens/OpportunitiesScreen", () => ({ OpportunitiesScreen: () => null }));
+vi.mock("../screens/ProjectsScreen", () => ({ ProjectsScreen: () => null }));
+vi.mock("../screens/AssetsScreen", () => ({ AssetsScreen: () => null }));
+vi.mock("../screens/HomeScreen", () => ({ HomeScreen: () => null, HomeSearchButton: () => null }));
 vi.mock("./TicketsStackNavigator", () => ({ TicketsStackNavigator: () => null }));
 vi.mock("../features/timer/components/HeaderTimerChip", () => ({ HeaderTimerChip: () => null }));
 
-let features = { inventory: false, opportunities: false };
+let features: Record<string, boolean> = { inventory: false, opportunities: false, projects: false, assets: false };
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features, loaded: true, refresh: vi.fn() }),
 }));
@@ -48,28 +51,71 @@ function renderDrawer(): ReactTestRenderer {
 
 describe("DrawerNavigator capability gating", () => {
   beforeEach(() => {
-    features = { inventory: false, opportunities: false };
+    features = { inventory: false, opportunities: false, projects: false, assets: false };
   });
 
-  it("hides Inventory and Opportunities tabs when capabilities are false", () => {
+  it("hides Inventory, Opportunities and Projects tabs when capabilities are false", () => {
     renderDrawer();
     expect(registeredScreens).not.toContain("InventoryTab");
     expect(registeredScreens).not.toContain("OpportunitiesTab");
+    expect(registeredScreens).not.toContain("ProjectsTab");
+    expect(registeredScreens).not.toContain("AssetsTab");
     expect(registeredScreens).toContain("TicketsTab");
     expect(registeredScreens).toContain("SettingsTab");
   });
 
   it("shows InventoryTab when the inventory capability is true", () => {
-    features = { inventory: true, opportunities: false };
+    features = { inventory: true, opportunities: false, projects: false, assets: false };
     renderDrawer();
     expect(registeredScreens).toContain("InventoryTab");
     expect(registeredScreens).not.toContain("OpportunitiesTab");
   });
 
   it("shows OpportunitiesTab when the opportunities capability is true", () => {
-    features = { inventory: false, opportunities: true };
+    features = { inventory: false, opportunities: true, projects: false, assets: false };
     renderDrawer();
     expect(registeredScreens).toContain("OpportunitiesTab");
     expect(registeredScreens).not.toContain("InventoryTab");
+  });
+
+  it("T005 shows ProjectsTab when the projects capability is true", () => {
+    features = { inventory: false, opportunities: false, projects: true, assets: false };
+    renderDrawer();
+    expect(registeredScreens).toContain("ProjectsTab");
+    expect(registeredScreens).not.toContain("AssetsTab");
+    expect(registeredScreens.indexOf("ProjectsTab")).toBeGreaterThan(registeredScreens.indexOf("ScheduleTab"));
+  });
+
+  it("T076 lists HomeTab first and makes it the initial route", () => {
+    const tree = renderDrawer();
+    expect(registeredScreens[0]).toBe("HomeTab");
+    const navigator = tree.root.find((node) => String(node.type) === "Navigator");
+    expect(navigator.props.initialRouteName).toBe("HomeTab");
+  });
+
+  it("T005 shows AssetsTab when the assets capability is true", () => {
+    features = { inventory: false, opportunities: false, projects: false, assets: true };
+    renderDrawer();
+    expect(registeredScreens).toContain("AssetsTab");
+    expect(registeredScreens).not.toContain("ProjectsTab");
+    expect(registeredScreens.indexOf("AssetsTab")).toBeGreaterThan(registeredScreens.indexOf("ContactsTab"));
+  });
+
+  it("keeps an operational-only (co-managed seat) session to tickets, projects, assets and time", () => {
+    features = { inventory: false, opportunities: false, projects: true, assets: true, operationalOnly: true };
+    renderDrawer();
+    for (const closed of ["HomeTab", "UserActivitiesTab", "ScheduleTab", "InteractionsTab", "ClientsTab", "ContactsTab", "InventoryTab", "OpportunitiesTab"]) {
+      expect(registeredScreens).not.toContain(closed);
+    }
+    for (const open of ["TicketsTab", "ProjectsTab", "TimeEntriesTab", "AssetsTab", "SettingsTab"]) {
+      expect(registeredScreens).toContain(open);
+    }
+  });
+
+  it("starts an operational-only session on Tickets", () => {
+    features = { inventory: false, opportunities: false, projects: true, assets: true, operationalOnly: true };
+    const tree = renderDrawer();
+    const navigator = tree.root.find((node) => String(node.type) === "Navigator");
+    expect(navigator.props.initialRouteName).toBe("TicketsTab");
   });
 });

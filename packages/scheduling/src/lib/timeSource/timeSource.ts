@@ -234,6 +234,16 @@ export interface TimeSourceTimer {
   updateDraft: TimeSourceMethod<typeof updateStopwatchDraft>;
 }
 
+/** How a provider-owned work item reads in a time sheet, an approval list or the entry editor. */
+export interface TimeSourceWorkItemDescription {
+  work_item_id: string;
+  name: string;
+  description: string;
+  type: string;
+  ticket_number?: string;
+  [extra: string]: unknown;
+}
+
 /** Work-item lookup. */
 export interface TimeSourceWork {
   /** Which work item time for this ticket is booked against. Pure: no I/O. */
@@ -245,6 +255,43 @@ export interface TimeSourceWork {
     ctx: TimeSourceContext,
     ...args: Parameters<typeof getWorkItemBillingContext>
   ) => Promise<TimeSourceValue<WorkItemBillingContext>>;
+  /**
+   * Resolve a work item the native switch does not know (`ctx.workItemType` is a provider-owned type) for display.
+   * Native always misses, so the caller keeps its own "unknown work item type" failure.
+   */
+  describeItem: (
+    ctx: TimeSourceContext,
+    db: Knex,
+    workItemType: string,
+    workItemId: string,
+  ) => Promise<TimeSourceValue<TimeSourceWorkItemDescription>>;
+  /**
+   * Provider-owned work items booked on a time sheet, to append to the native list. Native misses (0 statements).
+   */
+  listSheetItems: (
+    ctx: TimeSourceContext,
+    db: Knex,
+    timeSheetId: string,
+  ) => Promise<TimeSourceValue<TimeSourceWorkItemDescription[]>>;
+  /**
+   * Whether time on this work item may be saved without a service (the entry is then recorded by the provider as
+   * operational, non-billable time). Native always misses, so the service stays required.
+   */
+  serviceOptional: (
+    ctx: TimeSourceContext,
+    workItemType: string,
+    workItemId: string,
+  ) => Promise<TimeSourceValue<boolean>>;
+  /**
+   * Whether a registered source serves THIS tenant for THIS work item, so the tenant-level product guard
+   * (`assertPsaOnlyTenantAccess`) must not refuse a read of that work item's time. Generic: the caller never learns
+   * why. Native always misses (0 statements), so the guard runs exactly as before.
+   */
+  servesWorkItem: (
+    ctx: TimeSourceContext,
+    workItemType: string,
+    workItemId: string,
+  ) => Promise<TimeSourceValue<boolean>>;
 }
 
 /** L2's access-reduction retainer registry is called here; this card registers nothing into it. */

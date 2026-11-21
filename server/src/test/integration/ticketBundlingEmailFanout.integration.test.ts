@@ -49,6 +49,9 @@ vi.mock('server/src/lib/notifications/sendEventEmail', () => ({
   sendEventEmail: vi.fn(async (params: any) => {
     sentEmails.push(params);
   }),
+  // The closure fanout builds per-recipient detail blocks, which resolve the
+  // recipient locale through this export; the mock has to carry it too.
+  resolveEventEmailLocale: vi.fn(async (params: { locale?: string }) => params.locale ?? 'en'),
 }));
 
 type SubHandler = (event: any) => Promise<void>;

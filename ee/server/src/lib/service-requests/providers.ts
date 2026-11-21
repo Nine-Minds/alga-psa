@@ -8,6 +8,7 @@ import type {
   ServiceRequestVisibilityProvider,
 } from 'server/src/lib/service-requests/providers/contracts';
 import {
+  collectElementVisibilityRules,
   computeVisibleFieldKeys,
   parseVisibilityRules,
   validateVisibilityRules,
@@ -235,7 +236,13 @@ const advancedFormBehaviorProvider: ServiceRequestFormBehaviorProvider = {
       ? ((formSchema as any).fields as any[])
       : [];
     const parsed = parseAdvancedFormBehaviorConfig(config);
-    return computeVisibleFieldKeys(fields, parsed.visibilityRules ?? [], values, context);
+    // The elements' own conditions apply here too; this provider only adds its config list.
+    return computeVisibleFieldKeys(
+      fields,
+      [...collectElementVisibilityRules(fields), ...(parsed.visibilityRules ?? [])],
+      values,
+      context
+    );
   },
 };
 

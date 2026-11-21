@@ -66,10 +66,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, selectedClientId, clients, onSelect }: any) => (
+  ClientPicker: ({ id, selectedClientId, onSelect }: any) => (
     <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
       <option value="">Select</option>
-      {clients.map((client: any) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
+      <option value="client-1">Acme</option>
     </select>
   ),
 }));
@@ -105,7 +105,6 @@ afterEach(() => {
 const props = {
   initialSos: [],
   locations: [],
-  clients: [{ client_id: 'client-1', client_name: 'Acme', default_currency_code: 'USD' } as any],
   services: [
     {
       service_id: 'svc-1',

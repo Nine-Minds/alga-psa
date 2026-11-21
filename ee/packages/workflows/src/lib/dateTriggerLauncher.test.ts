@@ -163,7 +163,10 @@ describe('date trigger launcher', () => {
       tenantId: 'tenant', today: '2026-09-23', now: new Date('2026-09-23T00:30:00Z'), timezone: 'UTC', knex: {} as any, sources: [source],
     });
 
-    expect(findOccurrences).toHaveBeenCalledWith({}, 'tenant', '2026-09-19', '2026-09-22');
+    // Window sources get the scan context too (a source may need the clock to tell what is still ahead).
+    expect(findOccurrences).toHaveBeenCalledWith({}, 'tenant', '2026-09-19', '2026-09-22', {
+      params: undefined, today: '2026-09-22', timezone: 'America/Los_Angeles', now: new Date('2026-09-23T00:30:00Z'),
+    });
     expect(mocks.launch).not.toHaveBeenCalled();
   });
 
@@ -215,7 +218,7 @@ describe('date trigger launcher', () => {
       await run(source, knex);
       expect(findOccurrences).toHaveBeenCalledWith(knex, 'tenant', '2026-09-23', '2026-09-23', {
         params: { statusName: 'waiting for client', days: 7, boardId: null, repeatEveryDays: null, requireNoActivity: false },
-        today: '2026-09-23', timezone: 'UTC',
+        today: '2026-09-23', timezone: 'UTC', now: new Date('2026-09-23T12:00:00Z'),
       });
       expect(mocks.launch).toHaveBeenCalledTimes(1);
       const call = mocks.launch.mock.calls[0][1];

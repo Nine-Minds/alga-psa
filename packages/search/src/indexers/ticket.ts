@@ -8,6 +8,7 @@ interface TicketSearchRow {
   ticket_id: string;
   ticket_number: string | null;
   title: string | null;
+  client_id: string | null;
   client_name: string | null;
   entered_at?: Date | string | null;
   updated_at?: Date | string | null;
@@ -37,6 +38,7 @@ function toSearchDoc(tenant: string, row: TicketSearchRow): SearchDoc {
     metadata: identifier ? { identifier } : undefined,
     acl: {
       requiredPermission: 'ticket:read',
+      clientScopeId: row.client_id ?? undefined,
     },
     sourceUpdatedAt: toSourceUpdatedAt(row),
   };
@@ -53,6 +55,7 @@ function baseTicketQuery(knex: Knex, tenant: string) {
       't.title',
       't.entered_at',
       't.updated_at',
+      't.client_id',
       'c.client_name',
     );
 }
