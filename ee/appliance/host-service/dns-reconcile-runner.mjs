@@ -14,8 +14,11 @@
  *     rollouts verified by the helper) or `failed`.
  *
  * Invariants:
- *  - Activation never runs while a setup workflow owns the host, so a reconcile
- *    tick cannot restart k3s out from under an in-progress install.
+ *  - Activation never runs while a setup workflow or an app update owns the
+ *    host, so a reconcile tick cannot restart k3s or roll workloads (the control
+ *    plane running that engine included) out from under it.
+ *  - It is the only owner of activation: the storage reconcile those engines
+ *    run does not trigger it.
  *  - Single-flight: overlapping ticks cannot launch two reconcile Jobs. Because
  *    the durable activation is resumable, a tick that dies with the control
  *    plane is picked up by the next one without a second k3s restart.
@@ -58,7 +61,10 @@ function summarizeActivation(activation) {
     fingerprint: activation.fingerprint || null,
     configFingerprint: activation.configFingerprint || null,
     updatedAt: activation.updatedAt || null,
-    error: activation.error || null
+    error: activation.error || null,
+    // Workloads that were already unready when the activation reached them;
+    // they keep their previous pods until their own rollout succeeds.
+    preexistingUnready: Array.isArray(activation.preexistingUnready) ? activation.preexistingUnready : []
   };
 }
 
@@ -74,8 +80,9 @@ export function createDnsReconciler(options = {}) {
   const logFile = options.logFile || defaultLogFile(options.stateFile);
   const activationFile = options.activationFile || defaultActivationFile(options.stateFile);
   // The launcher waits for the staging Job to complete. That Job only writes the
-  // helper and starts the host-owned activation unit, so it finishes before the
-  // k3s restart and reports staging failure honestly.
+  // helper and enqueues the host-owned activation unit (systemd-run --no-block),
+  // so it finishes before the k3s restart and reports staging failure honestly.
+  // shouldSkip returns a truthy value (a string names the reason) to hold off.
   const runArgs = options.runArgs || [];
   const intervalMs = Number(options.intervalMs || DEFAULT_DNS_RECONCILE_INTERVAL_MS);
   const startupDelayMs = Number(options.startupDelayMs ?? DEFAULT_DNS_RECONCILE_STARTUP_DELAY_MS);
@@ -249,7 +256,7 @@ export function createDnsReconciler(options = {}) {
       skip = false;
     }
     if (skip) {
-      return Promise.resolve({ skipped: 'setup-in-progress' });
+      return Promise.resolve({ skipped: typeof skip === 'string' ? skip : 'setup-in-progress' });
     }
 
     running = true;
