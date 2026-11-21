@@ -1123,9 +1123,14 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     e.preventDefault();
     if (!asset) return;
 
-    // F309: required enforcement for custom-type schema fields, inline.
+    // Edit payloads merge into stored attributes, so omitted required fields
+    // (including redacted fields) are not missing writes. Provided required
+    // fields still fail when blank. Switching to another type is a create-like
+    // operation for that schema, so all of its required fields must be set.
     const attributeIssues = customTypeFields.length > 0
-      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
+      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, {
+          requireAll: formData.asset_type !== asset.asset_type,
+        })
       : [];
     if (attributeIssues.length > 0) {
       setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));

@@ -16,7 +16,7 @@ export function retainReadableAssetUpdateFields(
     'billing_profile_id',
   ];
   for (const key of readableBaseFields) {
-    if (!Object.prototype.hasOwnProperty.call(asset, key)) delete safe[key];
+    if (!Object.prototype.hasOwnProperty.call(asset, key) && isEmptyFormValue(safe[key])) delete safe[key];
   }
 
   for (const extensionKey of ['workstation', 'network_device', 'server', 'mobile_device', 'printer'] as const) {
@@ -45,4 +45,8 @@ export function retainReadableAssetUpdateFields(
   }
 
   return safe as UpdateAssetRequest;
+}
+
+function isEmptyFormValue(value: unknown): boolean {
+  return value === undefined || value === null || value === '';
 }

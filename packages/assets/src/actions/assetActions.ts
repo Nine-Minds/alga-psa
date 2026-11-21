@@ -68,7 +68,11 @@ import {
     skipMaintenanceOccurrence,
     setMaintenanceSchedulePaused,
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
-import { projectAssetReadFields, removeAssetReadMaskedFields } from '../lib/projectAssetReadFields';
+import {
+    projectAssetReadFields,
+    removeAssetReadMaskedFields,
+    restoreAssetReadMaskedDescendants,
+} from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
@@ -1345,8 +1349,14 @@ export async function updateAssetRecord(
             // caller-supplied replacements/nulls before defaults, coercion, or
             // validation can turn them into a destructive update.
             const protectedData = removeAssetReadMaskedFields(data, redactedFields);
+            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
+            const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
             const normalizedData = sanitizeUpdatePayload(protectedData);
             const validatedData = validateData(updateAssetSchema, normalizedData);
+            // Validation and audit data use only caller-visible fields. Before
+            // writing, restore masked descendants only inside JSON values the
+            // database will replace (attributes keys and extension columns).
+            const writeData = restoreAssetReadMaskedDescendants(validatedData, beforeCompleteAsset, redactedFields);
             const {
                 workstation,
                 network_device,
@@ -1355,10 +1365,7 @@ export async function updateAssetRecord(
                 printer,
                 attributes: attributesPayload,
                 ...baseCandidate
-            } = validatedData;
-
-            const beforeCompleteAsset = await getAssetWithExtensions(trx, tenant, asset_id);
-            const beforeFormatted = formatAssetForOutput(beforeCompleteAsset) as unknown as Record<string, unknown>;
+            } = writeData;
 
             const extensionPayloads = {
                 workstation,
@@ -1384,10 +1391,10 @@ export async function updateAssetRecord(
             const customTypeEntry = await resolveAttributeSchemaForWrite(trx, tenant, {
                 nextAssetType: typeof baseCandidate.asset_type === 'string' ? baseCandidate.asset_type : undefined,
                 storedAssetType: asset.asset_type,
-                attributesProvided: attributesPayload !== undefined,
+                attributesProvided: validatedData.attributes !== undefined,
             });
-            const attributeIssues = attributesPayload !== undefined
-                ? validateAttributesForWrite(customTypeEntry, attributesPayload, 'merge')
+            const attributeIssues = validatedData.attributes !== undefined
+                ? validateAttributesForWrite(customTypeEntry, validatedData.attributes, 'merge')
                 : [];
             if (attributeIssues.length > 0) {
                 throw attributeValidationError(attributeIssues);
@@ -1554,7 +1561,7 @@ export async function updateAssetRecord(
                 asset_id,
                 changed_by: actorUserId,
                 change_type: 'updated',
-                changes: validatedData,
+                changes: removeAssetReadMaskedFields(validatedData, redactedFields),
                 changed_at: knex.fn.now()
             });
 
@@ -1572,6 +1579,7 @@ export async function updateAssetRecord(
                 after: afterFormatted,
                 updated: projectAssetReadFields(updated, redactedFields),
                 validatedUpdate: validatedData as unknown as Record<string, unknown>,
+                redactedFields,
             };
         });
 
@@ -1589,8 +1597,8 @@ export async function updateAssetRecord(
         const updatedPaths = collectAssetUpdatedPaths(result.validatedUpdate);
         const updatePayload = buildAssetUpdatedPayload({
             assetId: asset_id,
-            before: result.before,
-            after: result.after,
+            before: projectAssetReadFields(result.before, result.redactedFields),
+            after: projectAssetReadFields(result.after, result.redactedFields),
             updatedPaths,
             updatedByUserId: actorUserId,
             updatedAt: occurredAt,

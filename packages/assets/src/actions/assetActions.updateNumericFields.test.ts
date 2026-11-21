@@ -273,6 +273,7 @@ vi.mock('@alga-psa/authorization/pagination', () => ({
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
 
 import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, getAssetHistory, getAssetMaintenanceReport, listAssets, listEntityAssets, updateAsset } from './assetActions';
+import { buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 
 function seedAsset(overrides: Row = {}): Row {
   const row: Row = {
@@ -618,6 +619,99 @@ describe('updateAsset protects unreadable fields at the mutation boundary', () =
     expect(result.purchase_cost).toBeNull();
     expect(h.dbState.assets[0].purchase_cost).toBeNull();
     expect(h.dbState.assets[0].purchase_cost_currency).toBeNull();
+  });
+
+  it('preserves masked descendants when JSON attributes and extension columns are replaced', async () => {
+    seedAsset({ attributes: {
+      config: { secret: 'KEEP', public: 'old' },
+      entries: [{ secret: 'ARRAY-KEEP', public: 'old' }],
+    } });
+    seedNetworkDevice({ vlan_config: { secret: 'KEEP', public: 'old' } });
+    const redactedFields = ['attributes.config.secret', 'attributes.entries.0.secret', 'network_device.vlan_config.secret'];
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields };
+
+    const maskedLoad = await getAsset(ASSET_ID) as any;
+    expect(maskedLoad.attributes.config).toEqual({ public: 'old' });
+    expect(maskedLoad.attributes.entries).toEqual([{ public: 'old' }]);
+    expect(maskedLoad.network_device.vlan_config).toEqual({ public: 'old' });
+
+    const result = await updateAsset(ASSET_ID, {
+      name: 'Updated name',
+      attributes: { config: { public: 'new' }, entries: [{ public: 'new' }] },
+      network_device: { vlan_config: { public: 'new' } },
+    } as any) as any;
+
+    expect(result.name).toBe('Updated name');
+    expect(result.attributes.config).toEqual({ public: 'new' });
+    expect(result.attributes.entries).toEqual([{ public: 'new' }]);
+    expect(result.network_device.vlan_config).toEqual({ public: 'new' });
+    expect(h.dbState.assets[0].attributes).toEqual({
+      config: { secret: 'KEEP', public: 'new' },
+      entries: [{ secret: 'ARRAY-KEEP', public: 'new' }],
+    });
+    expect(h.dbState.network_device_assets[0].vlan_config).toEqual({ secret: 'KEEP', public: 'new' });
+    expect(h.dbState.asset_history[0].changes.attributes.config).toEqual({ public: 'new' });
+    expect(h.dbState.asset_history[0].changes.network_device.vlan_config).toEqual({ public: 'new' });
+    const eventInput = vi.mocked(buildAssetUpdatedPayload).mock.calls.at(-1)?.[0];
+    expect(eventInput?.after.attributes).toEqual({
+      config: { public: 'new' },
+      entries: [{ public: 'new' }],
+    });
+    expect((eventInput?.after.network_device as any).vlan_config).toEqual({ public: 'new' });
+
+    const ancestorReplacement = await updateAsset(ASSET_ID, {
+      attributes: { config: 'replacement', entries: [] },
+    } as any) as any;
+    expect(ancestorReplacement.attributes.config).toEqual({ public: 'new' });
+    expect(ancestorReplacement.attributes.entries).toEqual([{ public: 'new' }]);
+    expect(h.dbState.assets[0].attributes).toEqual({
+      config: { secret: 'KEEP', public: 'new' },
+      entries: [{ secret: 'ARRAY-KEEP', public: 'new' }],
+    });
+    expect(h.dbState.asset_history[1].changes.attributes).toEqual({ config: 'replacement', entries: [] });
+
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
+    const privilegedRead = await getAsset(ASSET_ID) as any;
+    expect(privilegedRead.attributes.config).toEqual({ secret: 'KEEP', public: 'new' });
+    expect(privilegedRead.attributes.entries).toEqual([{ secret: 'ARRAY-KEEP', public: 'new' }]);
+    expect(privilegedRead.network_device.vlan_config).toEqual({ secret: 'KEEP', public: 'new' });
+  });
+
+  it('keeps a concealed required custom attribute while updating a readable sibling', async () => {
+    seedAsset({
+      asset_type: 'cloud_account',
+      attributes: { account_name: 'Concealed required value', seats: 12 },
+    });
+    h.dbState.asset_type_registry.push({
+      tenant: TENANT,
+      type_id: 'e0000000-0000-4000-8000-00000000000e',
+      slug: 'cloud_account',
+      name: 'Cloud Account',
+      icon: null,
+      fields_schema: JSON.stringify([
+        { key: 'account_name', label: 'Account Name', kind: 'text', required: true },
+        { key: 'seats', label: 'Seats', kind: 'number' },
+      ]),
+      is_builtin: false,
+      display_order: 0,
+    });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['attributes.account_name'] };
+
+    const maskedLoad = await getAsset(ASSET_ID) as any;
+    expect(maskedLoad.attributes).toEqual({ seats: 12 });
+    const result = await updateAsset(ASSET_ID, {
+      asset_type: 'cloud_account',
+      name: 'Renamed cloud account',
+      attributes: { seats: 14 },
+    } as any) as any;
+
+    expect(result.name).toBe('Renamed cloud account');
+    expect(result.attributes.account_name).toBeUndefined();
+    expect(h.dbState.assets[0].attributes).toEqual({
+      account_name: 'Concealed required value',
+      seats: 14,
+    });
+    expect(h.dbState.asset_history[0].changes.attributes).toEqual({ seats: 14 });
   });
 });
 

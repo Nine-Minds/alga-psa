@@ -12,6 +12,7 @@ describe('retainReadableAssetUpdateFields', () => {
     } as any;
     const serializedForm = {
       name: 'Renamed switch',
+      warranty_end_date: '2026-12-31T00:00:00.000Z',
       purchase_cost: null,
       manufacturer: null,
       network_device: { device_type: 'switch', management_ip: '', port_count: null },
@@ -20,6 +21,7 @@ describe('retainReadableAssetUpdateFields', () => {
 
     expect(retainReadableAssetUpdateFields(serializedForm, authorizedRead)).toEqual({
       name: 'Renamed switch',
+      warranty_end_date: '2026-12-31T00:00:00.000Z',
       purchase_cost: null,
       network_device: { device_type: 'switch', port_count: null },
       attributes: { public_note: 'updated' },

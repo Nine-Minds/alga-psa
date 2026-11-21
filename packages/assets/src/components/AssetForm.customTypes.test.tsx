@@ -339,6 +339,24 @@ describe('AssetForm custom asset types', () => {
     expect(payload.workstation).toBeUndefined();
   });
 
+  it('submits an unrelated edit when a required custom attribute is concealed', async () => {
+    const user = userEvent.setup();
+    // The authorization projector omitted account_name. Its required schema
+    // metadata must not block an unrelated edit in the form.
+    mockGetAsset.mockResolvedValue({ ...cloudAccountAsset, attributes: { seats: 12 } });
+    await renderForm();
+
+    await user.clear(screen.getByLabelText('name'));
+    await user.type(screen.getByLabelText('name'), 'Renamed cloud account');
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    const [, payload] = mockUpdateAsset.mock.calls[0];
+    expect(payload.name).toBe('Renamed cloud account');
+    expect(payload.attributes).toEqual({ seats: 12 });
+    expect(document.getElementById('asset-edit-field-account_name-error')).toBeNull();
+  });
+
   it('T312: built-in regression — workstation extension panel renders and submits unchanged, no attributes', async () => {
     const user = userEvent.setup();
     mockGetAsset.mockResolvedValue(workstationAsset);

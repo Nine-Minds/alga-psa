@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { projectAssetReadFields, removeAssetReadMaskedFields } from './projectAssetReadFields';
+import {
+  projectAssetReadFields,
+  removeAssetReadMaskedFields,
+  restoreAssetReadMaskedDescendants,
+} from './projectAssetReadFields';
 
 describe('projectAssetReadFields', () => {
   const response = {
@@ -118,5 +122,42 @@ describe('removeAssetReadMaskedFields', () => {
       workstation: { os_version: 'visible' },
     });
     expect(removeAssetReadMaskedFields({ attributes: { private_note: 'hidden' } }, ['attributes'])).toEqual({});
+  });
+});
+
+describe('restoreAssetReadMaskedDescendants', () => {
+  it('restores hidden descendants under object replacements without overwriting public siblings', () => {
+    expect(restoreAssetReadMaskedDescendants(
+      { attributes: { config: { public: 'new' } } },
+      { attributes: { config: { secret: 'KEEP', public: 'old' } } },
+      ['attributes.config.secret'],
+    )).toEqual({ attributes: { config: { secret: 'KEEP', public: 'new' } } });
+  });
+
+  it('keeps an ancestor replacement when its shape cannot retain a masked descendant', () => {
+    expect(restoreAssetReadMaskedDescendants(
+      { attributes: { config: 'replacement' } },
+      { attributes: { config: { secret: 'KEEP', public: 'old' } } },
+      ['attributes.config.secret'],
+    )).toEqual({ attributes: { config: { secret: 'KEEP', public: 'old' } } });
+  });
+
+  it('restores masked array items only at a stable shape and preserves a replaced array safely', () => {
+    const stored = { attributes: { entries: [{ secret: 'KEEP', public: 'old' }] } };
+    expect(restoreAssetReadMaskedDescendants(
+      { attributes: { entries: [{ public: 'new' }] } },
+      stored,
+      ['attributes.entries.0.secret'],
+    )).toEqual({ attributes: { entries: [{ secret: 'KEEP', public: 'new' }] } });
+    expect(restoreAssetReadMaskedDescendants(
+      { attributes: { entries: [] } },
+      stored,
+      ['attributes.entries.0.secret'],
+    )).toEqual(stored);
+  });
+
+  it('leaves ordinary updates unchanged when no redactions apply', () => {
+    const candidate = { attributes: { config: { public: 'new' } } };
+    expect(restoreAssetReadMaskedDescendants(candidate, { attributes: { config: { secret: 'KEEP' } } }, [])).toEqual(candidate);
   });
 });

@@ -29,7 +29,7 @@ No browser verification of this edit flow was performed during the repair assign
 
 ## Automated checks executed for the repair
 
-Focused behavioral suites passed: 38 tests in four files. They cover the existing read authorization cases, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions for masked fields, persisted base/extension/structured values, readable nullable-field clearing, form payload omission, and custom attribute merge semantics. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed; the full server typecheck exhausted Node's heap twice (at 4 GB and 8 GB).
+Focused behavioral suites passed: 67 tests in seven files. They cover the existing six read paths and record denial, masked loads, unrelated updates with explicit null/blank/invalid/replacement submissions, nested masked descendants in attributes and extension JSON columns, ancestor replacements, stable and reshaped arrays, history/workflow output redaction, readable nullable-field clearing, and form submission with a concealed required attribute. The action test's in-memory row store verifies values after the update transaction; live privileged database verification remains part of the pending walkthrough. The assets package build and typecheck passed. A full server typecheck in the prior repair round exhausted Node's heap at both 4 GB and 8 GB.
 
 Commands:
 
@@ -39,5 +39,8 @@ npx vitest run \
   ../packages/assets/src/actions/assetActions.updateNumericFields.test.ts \
   ../packages/assets/src/lib/projectAssetReadFields.test.ts \
   ../packages/assets/src/lib/assetFormPayload.test.ts \
-  ../packages/assets/src/actions/assetActions.customTypes.test.ts
+  ../packages/assets/src/actions/assetActions.customTypes.test.ts \
+  ../packages/assets/src/components/AssetForm.customTypes.test.tsx \
+  ../packages/assets/src/components/AssetForm.procurement.test.tsx \
+  ../packages/assets/src/components/AssetForm.drawerActions.test.tsx
 ```
