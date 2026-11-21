@@ -916,9 +916,16 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
+  // Subject membership is resolved by the request's authorization context. Reuse
+  // it for read-only evaluation instead of repeating the same membership reads;
+  // mutation paths still resolve under row locks before evaluating assignments.
   const [roleIds, teamIds] = await Promise.all([
-    resolveRoleIdsForUser(knex, tenant, userId, options.lock),
-    resolveTeamIdsForUser(knex, tenant, userId, options.lock),
+    !options.lock && input.subject.roleIds !== undefined
+      ? Promise.resolve(input.subject.roleIds)
+      : resolveRoleIdsForUser(knex, tenant, userId, options.lock),
+    !options.lock && input.subject.teamIds !== undefined
+      ? Promise.resolve(input.subject.teamIds)
+      : resolveTeamIdsForUser(knex, tenant, userId, options.lock),
   ]);
 
   const targetClauses: Array<{ target_type: AuthorizationBundleTargetType; ids: string[] }> = [

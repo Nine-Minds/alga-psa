@@ -15,12 +15,12 @@
     },
     {
       "name": "ticket.list",
-      "statements": 17,
+      "statements": 16,
       "locks": 0
     },
     {
       "name": "ticket.open",
-      "statements": 34,
+      "statements": 32,
       "locks": 0
     },
     {
@@ -60,7 +60,7 @@
     },
     {
       "name": "timeEntry.approve",
-      "statements": 25,
+      "statements": 19,
       "locks": 0
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 466,
+    "statements": 457,
     "locks": 17
   },
   "denylist": [

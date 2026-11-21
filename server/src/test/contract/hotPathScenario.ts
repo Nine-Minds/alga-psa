@@ -684,7 +684,10 @@ const STEPS: Record<StepName, StepFn> = {
         25,
       ),
     );
-    unwrap(result, 'getTicketsForList');
+    const page = unwrap(result, 'getTicketsForList');
+    if (!page.tickets.some((ticket) => ticket.ticket_id === fixture.ticketId)) {
+      throw new Error('hot-path scenario: ticket.list omitted the fixture ticket after authorization');
+    }
   },
 
   // MSP ticket detail page loader (getConsolidatedTicketData).

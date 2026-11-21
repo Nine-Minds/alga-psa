@@ -396,6 +396,17 @@ async function decideTicketReadTargets(
   if (ids.length === 0) return [];
   const rows = await tenantScopedTable(trx, 'tickets as t', tenant).whereIn('t.ticket_id', ids)
     .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes"));
+  return decideTicketReadTargetsFromRows(trx, context, ids, rows);
+}
+
+async function decideTicketReadTargetsFromRows(
+  trx: Knex.Transaction,
+  context: TicketAuthorizationContext,
+  ticketIds: string[],
+  rows: Array<Partial<ITicket> & { ticket_id?: string | null }>
+): Promise<TicketReadTarget[]> {
+  const ids = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return [];
   const decisions = await Promise.all(rows.map(async (ticket: any) => ({
     ticket,
     decision: ticket.ticket_id ? await context.authorizationKernel.authorizeResource({
@@ -2275,19 +2286,23 @@ export const getTicketsForList = withAuth(async (
         .countDistinct<{ count: string | number }[]>({ count: 't.ticket_id' })
         .first();
 
-      const pageIdsQuery = applyTicketListSort(
+      const pageReadInputsQuery = applyTicketListSort(
         buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user)),
         tenant,
         validatedFilters
       )
         .clearSelect()
-        .select('t.ticket_id')
+        .select(
+          't.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id',
+          't.board_id', 't.assigned_team_id', 't.billing_profile_id',
+          trx.raw("jsonb_build_object('watch_list', t.attributes->'watch_list') as attributes")
+        )
         .limit(normalizedPageSize)
         .offset(offset);
 
-      const [countRow, pageIds] = await Promise.all([countQuery, pageIdsQuery]);
-      const orderedIds = pageIds.map((row: { ticket_id: string }) => row.ticket_id);
-      const targets = await decideTicketReadTargets(trx, tenant, authorizationContext, orderedIds);
+      const [countRow, pageReadInputs] = await Promise.all([countQuery, pageReadInputsQuery]);
+      const orderedIds = pageReadInputs.map((row: { ticket_id: string }) => row.ticket_id);
+      const targets = await decideTicketReadTargetsFromRows(trx, authorizationContext, orderedIds, pageReadInputs);
       const pageTickets = await loadTicketRowsByReadTargets(
         trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user), targets, orderedIds
       );
