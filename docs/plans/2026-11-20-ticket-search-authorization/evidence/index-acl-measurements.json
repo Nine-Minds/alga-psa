@@ -225,5 +225,266 @@
     "Statement counts include the complete runAppSearch request, including principal and policy resolution.",
     "Latency samples are wall-clock milliseconds; p95 uses nearest rank, the maximum of five samples.",
     "These sequential PostgreSQL integration measurements are not a production traffic test."
-  ]
+  ],
+  "document_fallback_run": {
+    "measured_on_utc_date": "2026-11-21",
+    "application_revision": "ac9a7ff01da020e4d7118b580e5d7a45f79d031a",
+    "harness": "server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts",
+    "postgres_version": "15.4 (Debian 15.4-2.pgdg120+1)",
+    "fixture": {
+      "candidate_semantics": "Matching indexed document candidates per query, before source-record verification.",
+      "matching_by_size": [
+        150,
+        500,
+        1500
+      ],
+      "maximum_fixture_rows": {
+        "indexed_candidates": 1500,
+        "source_documents": 1350,
+        "stale_index_candidates": 150,
+        "client_associations": 1350
+      },
+      "stale_candidate_distribution": "Every tenth matching index candidate has no documents source row; every live source document has one client association to the unselected client.",
+      "source_tables": [
+        "public.documents",
+        "public.document_associations",
+        "public.document_types",
+        "public.app_search_index"
+      ]
+    },
+    "authorization_contexts": {
+      "unrestricted": "Internal user with document:read; clientAccess is all.",
+      "ticket_bundle_restricted": "Same internal user with the existing selected-client ticket:read bundle assigned. The bundle has no document:read rule, and internal clientAccess remains all, so document associations do not reduce this context’s visible document set."
+    },
+    "procedure": {
+      "request": "One runAppSearch call requests document results only.",
+      "warmup_requests_per_size_and_context": 1,
+      "measured_requests_per_size_and_context": 5,
+      "concurrency": 1,
+      "page_size": 100,
+      "timing_boundary": "performance.now immediately around runAppSearch, including principal and policy resolution, batched candidate retrieval, source verification, totals and result page; fixture setup, authorization assignment changes and warmup are excluded.",
+      "statement_method": "Knex query events on the transaction connection during each timed request; full statement counts plus documents and document_associations source SELECTs are recorded.",
+      "fallback_confirmation": "canCompileSearchVisibility(document) is false. Every measured request issued one documents lookup per indexed candidate and one document_associations lookup per live document. No compiled document visibility predicate admitted these candidates.",
+      "percentile": "Nearest-rank p95; with five samples this is the maximum."
+    },
+    "measurements": [
+      {
+        "matching_document_candidates": 150,
+        "stale_index_candidates_denied": 15,
+        "source_documents_present": 135,
+        "authorized_total": 135,
+        "unrestricted": {
+          "raw_latency_samples_ms": [
+            59.56,
+            57.51,
+            69.23,
+            61.46,
+            55.23
+          ],
+          "p95_ms": 69.23,
+          "raw_statement_count_samples": [
+            294,
+            294,
+            294,
+            294,
+            294
+          ],
+          "median_statements": 294,
+          "raw_document_source_read_samples": [
+            150,
+            150,
+            150,
+            150,
+            150
+          ],
+          "raw_association_source_read_samples": [
+            135,
+            135,
+            135,
+            135,
+            135
+          ]
+        },
+        "ticket_bundle_restricted": {
+          "raw_latency_samples_ms": [
+            50.12,
+            54.32,
+            61.06,
+            47.1,
+            48.25
+          ],
+          "p95_ms": 61.06,
+          "raw_statement_count_samples": [
+            295,
+            295,
+            295,
+            295,
+            295
+          ],
+          "median_statements": 295,
+          "raw_document_source_read_samples": [
+            150,
+            150,
+            150,
+            150,
+            150
+          ],
+          "raw_association_source_read_samples": [
+            135,
+            135,
+            135,
+            135,
+            135
+          ]
+        }
+      },
+      {
+        "matching_document_candidates": 500,
+        "stale_index_candidates_denied": 50,
+        "source_documents_present": 450,
+        "authorized_total": 450,
+        "unrestricted": {
+          "raw_latency_samples_ms": [
+            168.34,
+            169.06,
+            161.01,
+            153.94,
+            155.76
+          ],
+          "p95_ms": 169.06,
+          "raw_statement_count_samples": [
+            963,
+            963,
+            963,
+            963,
+            963
+          ],
+          "median_statements": 963,
+          "raw_document_source_read_samples": [
+            500,
+            500,
+            500,
+            500,
+            500
+          ],
+          "raw_association_source_read_samples": [
+            450,
+            450,
+            450,
+            450,
+            450
+          ]
+        },
+        "ticket_bundle_restricted": {
+          "raw_latency_samples_ms": [
+            144.73,
+            155.13,
+            155,
+            153.5,
+            156.2
+          ],
+          "p95_ms": 156.2,
+          "raw_statement_count_samples": [
+            964,
+            964,
+            964,
+            964,
+            964
+          ],
+          "median_statements": 964,
+          "raw_document_source_read_samples": [
+            500,
+            500,
+            500,
+            500,
+            500
+          ],
+          "raw_association_source_read_samples": [
+            450,
+            450,
+            450,
+            450,
+            450
+          ]
+        }
+      },
+      {
+        "matching_document_candidates": 1500,
+        "stale_index_candidates_denied": 150,
+        "source_documents_present": 1350,
+        "authorized_total": 1350,
+        "unrestricted": {
+          "raw_latency_samples_ms": [
+            658.61,
+            627.32,
+            630.52,
+            713.8,
+            714.03
+          ],
+          "p95_ms": 714.03,
+          "raw_statement_count_samples": [
+            2873,
+            2873,
+            2873,
+            2873,
+            2873
+          ],
+          "median_statements": 2873,
+          "raw_document_source_read_samples": [
+            1500,
+            1500,
+            1500,
+            1500,
+            1500
+          ],
+          "raw_association_source_read_samples": [
+            1350,
+            1350,
+            1350,
+            1350,
+            1350
+          ]
+        },
+        "ticket_bundle_restricted": {
+          "raw_latency_samples_ms": [
+            690.78,
+            729.44,
+            979.35,
+            742.77,
+            726.81
+          ],
+          "p95_ms": 979.35,
+          "raw_statement_count_samples": [
+            2874,
+            2874,
+            2874,
+            2874,
+            2874
+          ],
+          "median_statements": 2874,
+          "raw_document_source_read_samples": [
+            1500,
+            1500,
+            1500,
+            1500,
+            1500
+          ],
+          "raw_association_source_read_samples": [
+            1350,
+            1350,
+            1350,
+            1350,
+            1350
+          ]
+        }
+      }
+    ],
+    "validation": "Each warmup and timed response asserted the exact authorized total and document group, page size, unique returned IDs, membership in the expected live fixture IDs, and exclusion of stale index-only IDs. Timed source query samples asserted one documents lookup per candidate and one association lookup per live document.",
+    "reproduction": "From server/: SEARCH_BENCH_REVISION=ac9a7ff01da020e4d7118b580e5d7a45f79d031a npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts --coverage.enabled=false --reporter=verbose --silent=false -t \"default document source-verification fallback\"",
+    "limits": [
+      "These sequential PostgreSQL integration measurements cover the default document verifier and the two internal-user contexts described above.",
+      "They do not measure client-portal document visibility, ticket/comment fallback behavior, or arbitrary custom/replacement verifiers without matching SQL compilers.",
+      "The samples are not production traffic or load-test evidence."
+    ]
+  }
 }

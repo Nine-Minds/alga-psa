@@ -113,7 +113,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
       };
     });
     await db.batchInsert('projects', projects, 500);
-    const comments = [];
+    const comments: string[] = [];
     for (let sequence = 1; sequence <= 50; sequence += 1) {
       comments.push(await insertResolutionComment(db, fixture, uuidAt(sequence * 10), {
         is_internal: sequence % 2 === 0,
@@ -773,4 +773,168 @@ describe('production search authorization PostgreSQL benchmark', () => {
       }
     });
   }, 60_000);
+
+  it('measures the default document source-verification fallback at 150, 500 and 1500 candidates', async () => {
+    await runWithTenant(ctx.tenantId, async () => {
+      const sizes = [150, 500, 1500] as const;
+      const documentTypeId = randomUUID();
+      const documentPermissionId = randomUUID();
+      const documentRoleId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('document_types').insert({
+        tenant: ctx.tenantId, type_id: documentTypeId, type_name: `Search fallback benchmark ${documentTypeId}`,
+      });
+      await tenantDb(db, ctx.tenantId).table('roles').insert({
+        tenant: ctx.tenantId, role_id: documentRoleId, role_name: `Document search reader ${documentRoleId}`, msp: true, client: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('permissions').insert({
+        tenant: ctx.tenantId, permission_id: documentPermissionId, resource: 'document', action: 'read', msp: true, client: false,
+      });
+      await tenantDb(db, ctx.tenantId).table('role_permissions').insert({
+        tenant: ctx.tenantId, role_id: documentRoleId, permission_id: documentPermissionId,
+      });
+      await tenantDb(db, ctx.tenantId).table('user_roles').insert({
+        tenant: ctx.tenantId, user_id: ctx.user.user_id, role_id: documentRoleId,
+      });
+
+      const documentIds: string[] = Array.from({ length: 1500 }, () => randomUUID());
+      const documents = documentIds.flatMap((documentId, offset) => {
+        // Keep every tenth index candidate stale so source-record verification
+        // must reject it and the reported totals prove more than query routing.
+        if ((offset + 1) % 10 === 0) return [];
+        return [{
+          tenant: ctx.tenantId, document_id: documentId, document_name: `Search fallback document ${offset + 1}`,
+          type_id: documentTypeId, user_id: ctx.user.user_id, created_by: ctx.user.user_id,
+          entered_at: FIXED_RANKING, updated_at: FIXED_RANKING, content: 'benchmark fixture',
+        }];
+      });
+      await db.batchInsert('documents', documents, 500);
+      await db.batchInsert('document_associations', documents.map(({ document_id }) => ({
+        tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: deniedClient, entity_type: 'client',
+      })), 500);
+      const indexRows = documentIds.map((documentId, offset) => {
+        const sequence = offset + 1;
+        const body = [
+          'fallback',
+          'large',
+          sequence <= 500 ? 'medium' : '',
+          sequence <= 150 ? 'small' : '',
+        ].filter(Boolean).join(' ');
+        return {
+          tenant: ctx.tenantId, object_type: 'document', object_id: documentId,
+          title: `Search fallback document ${sequence}`, body, url: `/msp/documents/${documentId}`,
+          source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'document:read',
+          search_vector: db.raw("to_tsvector('english', ?)", [body]),
+        };
+      });
+      await db.batchInsert('app_search_index', indexRows, 500);
+
+      expect(canCompileSearchVisibility('document')).toBe(false);
+      const scenarios: Array<{ size: typeof sizes[number]; query: string }> = [
+        { size: 150, query: 'small' },
+        { size: 500, query: 'medium' },
+        { size: 1500, query: 'large' },
+      ];
+      const measurements: Array<Record<string, unknown>> = [];
+      for (const scenario of scenarios) {
+        const expectedDocumentIds = documentIds.slice(0, scenario.size).filter((_, index) => (index + 1) % 10 !== 0);
+        const expectedTotal = expectedDocumentIds.length;
+        for (const restrictive of [false, true]) {
+          const assignment = tenantDb(db, ctx.tenantId).table('authorization_bundle_assignments').where({ bundle_id: bundleId });
+          if (restrictive) {
+            if (!(await assignment.first())) await createBundleAssignment(db, {
+              tenant: ctx.tenantId, bundleId, targetType: 'user', targetId: ctx.user.user_id, actorUserId: ctx.user.user_id,
+            });
+          } else {
+            await assignment.delete();
+          }
+          const context = restrictive ? 'ticket_bundle_restricted' : 'unrestricted';
+          const request = () => runAppSearch(db, ctx.tenantId, ctx.user, {
+            query: scenario.query, types: ['document'] as any, limit: 100,
+          }, SEARCH_INDEX);
+          const validate = (result: Awaited<ReturnType<typeof runAppSearch>>) => {
+            expect(result.groups.document, `${context}/${scenario.size} document total`).toBe(expectedTotal);
+            expect(result.totalCount, `${context}/${scenario.size} authorized total`).toBe(expectedTotal);
+            expect(result.results).toHaveLength(Math.min(100, expectedTotal));
+            expect(new Set(result.results.map(({ id }) => id)).size).toBe(result.results.length);
+            expect(result.results.every(({ type, id }) => type === 'document' && expectedDocumentIds.includes(id))).toBe(true);
+          };
+          validate(await request()); // one unmeasured warmup per size and context
+
+          const latencies: number[] = [];
+          const statementCounts: number[] = [];
+          const documentSourceStatements: number[] = [];
+          const associationSourceStatements: number[] = [];
+          for (let sample = 0; sample < SAMPLES; sample += 1) {
+            let statements = 0;
+            let documentReads = 0;
+            let associationReads = 0;
+            const onQuery = (query: { sql: string }) => {
+              statements += 1;
+              if (/\bfrom\s+["']?documents\b/i.test(query.sql)) documentReads += 1;
+              if (/\bfrom\s+["']?document_associations\b/i.test(query.sql)) associationReads += 1;
+            };
+            db.on('query', onQuery);
+            try {
+              const started = performance.now();
+              const result = await request();
+              latencies.push(performance.now() - started);
+              validate(result);
+            } finally {
+              db.removeListener('query', onQuery);
+            }
+            statementCounts.push(statements);
+            documentSourceStatements.push(documentReads);
+            associationSourceStatements.push(associationReads);
+            // The default verifier performs one tenant-scoped document lookup
+            // per candidate and one client-association lookup per live row.
+            expect(documentReads, `${context}/${scenario.size} document source reads`).toBe(scenario.size);
+            expect(associationReads, `${context}/${scenario.size} association source reads`).toBe(expectedTotal);
+          }
+          const sortedLatencies = [...latencies].sort((a, b) => a - b);
+          const sortedStatements = [...statementCounts].sort((a, b) => a - b);
+          measurements.push({
+            scenario: `${scenario.size}-${context}`,
+            authorization_context: restrictive
+              ? 'Internal user with selected-client ticket:read bundle; documents remain unrestricted because the bundle has no document:read rule and internal clientAccess is all.'
+              : 'Unrestricted internal user; clientAccess is all.',
+            matching_document_candidates: scenario.size,
+            source_documents_present: expectedTotal,
+            stale_index_candidates_denied: scenario.size - expectedTotal,
+            authorized_total: expectedTotal,
+            returned_identity_validation: 'Every returned row is a unique document ID in the expected live fixture identity set; stale index-only IDs are denied.',
+            raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
+            p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
+            raw_statement_count_samples: statementCounts,
+            median_statements: sortedStatements[Math.floor(SAMPLES / 2)],
+            raw_document_source_read_samples: documentSourceStatements,
+            raw_association_source_read_samples: associationSourceStatements,
+            warmup_requests: WARMUPS,
+            measured_requests: SAMPLES,
+            concurrency: 1,
+            page_size: 100,
+          });
+          console.log(JSON.stringify({ document_fallback_sample: measurements[measurements.length - 1] }));
+        }
+      }
+
+      await tenantDb(db, ctx.tenantId).table('authorization_bundle_assignments').where({ bundle_id: bundleId }).delete();
+      console.log(JSON.stringify({
+        revision: process.env.SEARCH_BENCH_REVISION ?? 'unrecorded',
+        postgresVersion: (await db.raw('SHOW server_version')).rows[0].server_version,
+        fixture: {
+          matching_document_candidates: 1500, source_documents: documents.length,
+          stale_index_candidates: 150, document_client_associations: documents.length,
+          sources: ['public.documents', 'public.document_associations', 'public.document_types', 'public.app_search_index'],
+        },
+        procedure: {
+          warmups: WARMUPS, samples: SAMPLES, concurrency: 1, page_size: 100,
+          timing_boundary: 'performance.now around runAppSearch, including principal and policy resolution, the batched-candidate scan, source verification, totals and result page; fixture, policy assignment changes and warmups excluded.',
+          statement_method: 'Knex query events on the transaction connection during each timed runAppSearch request; document and association source SELECTs counted separately.',
+          percentile: 'Nearest-rank p95; with five samples the p95 is the maximum.',
+          fallback_confirmation: 'canCompileSearchVisibility(document) is false; each timed request issued one documents source lookup per matching candidate and one document_associations lookup per live source document.',
+        },
+        measurements,
+      }));
+    });
+  }, 900_000);
 });

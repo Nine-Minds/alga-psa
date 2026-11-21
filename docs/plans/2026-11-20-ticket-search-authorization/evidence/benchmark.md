@@ -237,4 +237,40 @@ SEARCH_BENCH_REVISION=cc641b43be4bc197b533b245bab5823da07541e5 \
   --coverage.enabled=false --reporter=verbose --silent=false
 ```
 
-These results are a small sequential integration sample, not a production performance claim or a comparison against an unmeasured revision. The existing fallback scan remains for documents and custom/replacement verifiers that do not have a matching SQL visibility compiler; this benchmark does not establish that every fallback has been eliminated.
+These results are a small sequential integration sample, not a production performance claim or a comparison against an unmeasured revision. The default document verifier and any custom or replacement verifier registration without a matching SQL compiler use the candidate scan; the test-only client verifier in the ranking-cursor fixture is one such registration. Ticket and comment searches also use their evaluator fallback when the shared ticket policy cannot be compiled or resolved. The measurements above cover only the compiled mixed ticket/comment/project path.
+
+## Default document fallback at 150, 500 and 1,500 candidates
+
+The same committed PostgreSQL production-path harness measured document-only searches through the default document source verifier. The application source revision was `ac9a7ff01da020e4d7118b580e5d7a45f79d031a`; PostgreSQL was 15.4 (`Debian 15.4-2.pgdg120+1`). The isolated fixture contains 1,500 matching `app_search_index` document rows, 1,350 corresponding `documents` source records, and one client association for each source record. Every tenth matching index row lacks its source document, so authorization must deny 15, 50 and 150 stale candidates at the three tested sizes.
+
+Each query requests documents only and uses page size 100. The two existing internal-user contexts were measured: unrestricted, and the selected-client `ticket:read` bundle used by the mixed benchmark. That bundle has no `document:read` rule. Internal `clientAccess` remains `all`, so the client associations do not restrict either document result set. The bundle context therefore returns the same authorized document totals as unrestricted access; it does not model client-portal document access.
+
+Each size and context used one validated warmup followed by five sequential timed requests at concurrency 1. `performance.now()` surrounds `runAppSearch`, including principal and policy resolution, candidate scan, source verification, totals and page result. Fixture setup, assignment changes and warmups are outside the timing boundary. Knex query events record all SQL statements during each timed request. The harness also asserts that `canCompileSearchVisibility('document')` is false and that every request issues one `documents` lookup per matching candidate plus one `document_associations` lookup per live source document. These counts confirm that timing traverses source-record verification instead of a compiled visibility predicate. Returned IDs are checked for uniqueness and fixture membership, and stale index-only IDs must not appear. Nearest-rank p95 is the maximum of the five samples.
+
+| Matching document candidates | Stale index candidates denied | Authorized total | Context | p95 ms (n=5) | SQL statements/request | Document / association source SELECTs/request |
+|---:|---:|---:|---|---:|---:|---:|
+| 150 | 15 | 135 | Unrestricted internal user | 69.23 | 294 | 150 / 135 |
+| 150 | 15 | 135 | Selected-client ticket bundle | 61.06 | 295 | 150 / 135 |
+| 500 | 50 | 450 | Unrestricted internal user | 169.06 | 963 | 500 / 450 |
+| 500 | 50 | 450 | Selected-client ticket bundle | 156.20 | 964 | 500 / 450 |
+| 1,500 | 150 | 1,350 | Unrestricted internal user | 714.03 | 2,873 | 1,500 / 1,350 |
+| 1,500 | 150 | 1,350 | Selected-client ticket bundle | 979.35 | 2,874 | 1,500 / 1,350 |
+
+Raw wall-clock samples in request order:
+
+| Matching candidates | Unrestricted internal user | Selected-client ticket bundle |
+|---:|---|---|
+| 150 | `[59.56, 57.51, 69.23, 61.46, 55.23]` | `[50.12, 54.32, 61.06, 47.10, 48.25]` |
+| 500 | `[168.34, 169.06, 161.01, 153.94, 155.76]` | `[144.73, 155.13, 155.00, 153.50, 156.20]` |
+| 1,500 | `[658.61, 627.32, 630.52, 713.80, 714.03]` | `[690.78, 729.44, 979.35, 742.77, 726.81]` |
+
+The raw full statement samples and source-query samples are preserved in [index-acl-measurements.json](index-acl-measurements.json). Reproduce from `server/` with:
+
+```sh
+SEARCH_BENCH_REVISION=ac9a7ff01da020e4d7118b580e5d7a45f79d031a \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false \
+  -t "default document source-verification fallback"
+```
+
+This evidence covers the default document verifier at these three sizes and the two internal contexts listed above. It does not measure client-portal document visibility, ticket/comment evaluator fallback, or custom/replacement verifier registrations without matching SQL compilers, including the test-only client verifier used by the cursor fixture. It does not establish a latency bound for those implementations or for candidate sets larger than the measured fixture. These sequential PostgreSQL results are not production traffic or load-test evidence.
