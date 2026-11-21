@@ -1,5 +1,5 @@
-import { SET_OPERATORS, isPredicateGroup, operatorTakesList, operatorTakesValue } from './types';
 import type { Knex } from 'knex';
+import { SET_OPERATORS, isPredicateGroup, operatorTakesList, operatorTakesValue } from './types';
 import type { PredicateClause, PredicateLiteral, PredicateNode, PredicateOperator } from './types';
 
 export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestamp';
@@ -7,6 +7,7 @@ export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestam
 /** A fragment of SQL with positional `?` bindings and `??` identifier bindings (knex syntax). */
 export interface SqlFragment {
   sql: string;
+  /** Bindings accepted by Knex's raw SQL adapter, including `??` identifiers. */
   bindings: Knex.RawBinding[];
 }
 

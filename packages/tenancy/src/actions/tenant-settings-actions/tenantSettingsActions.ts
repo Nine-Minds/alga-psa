@@ -1,6 +1,5 @@
 'use server';
 
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
@@ -8,6 +7,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { hasTenantSettingsUpdate } from '../tenant-actions/tenantSettingsAuthorization';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
 import { mergeTenantSettingsJson, readTenantSettingsJson, readTenantSettingsRow } from '../../server/tenantSettingsStore';
 import { isLicensedUserType } from '@alga-psa/types';
@@ -166,8 +166,7 @@ export const updateExperimentalFeatures = withAuth(async (
       (features.aiAssistant !== undefined && typeof features.aiAssistant !== 'boolean')) {
       return actionError('Invalid experimental feature settings.');
     }
-    const permissions = await getCurrentUserPermissions();
-    if (!permissions.includes('settings:update')) {
+    if (!(await hasTenantSettingsUpdate(user, tenant))) {
       return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
     }
 
@@ -330,7 +329,7 @@ export const setTenantTimezone = withAuth(async (
   { tenant }: AuthContext,
   timezone: string
 ): Promise<void | TenantSettingsActionError> => {
-  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) {
+  if (!isLicensedUserType(user.user_type) || !(await hasTenantSettingsUpdate(user, tenant))) {
     return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
   }
   if (typeof timezone !== 'string') return actionError('Invalid timezone value.');
