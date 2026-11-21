@@ -13,26 +13,14 @@ type TechnicianFilterRow = {
   full_name: string | null;
 };
 
-export type SurveyFilterClient = {
-  client_id: string;
-  client_name: string;
-  client_type: 'company' | 'individual';
-  is_inactive: boolean;
-  logoUrl: string | null;
-};
-
-type ClientFilterRow = Omit<SurveyFilterClient, 'logoUrl'>;
-
 export type SurveyFilterOptions = {
   templates: FilterOption[];
   technicians: FilterOption[];
-  clients: SurveyFilterClient[];
 };
 
 const TEMPLATES_TABLE = 'survey_templates';
 const RESPONSES_TABLE = 'survey_responses';
 const TICKETS_TABLE = 'tickets';
-const CLIENTS_TABLE = 'clients';
 const USERS_TABLE = 'users';
 
 export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promise<SurveyFilterOptions> => {
@@ -55,13 +43,7 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
     rootTenantColumn: 'sr.tenant',
   });
 
-  const clientQuery = db.table(`${RESPONSES_TABLE} as sr`);
-  db.tenantJoin(clientQuery, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
-    type: 'left',
-    rootTenantColumn: 'sr.tenant',
-  });
-
-  const [templates, technicianRowsRaw, clientRowsRaw] = await Promise.all([
+  const [templates, technicianRowsRaw] = await Promise.all([
     db.table(TEMPLATES_TABLE)
       .where({ enabled: true })
       .select(['template_id', 'template_name'])
@@ -71,18 +53,8 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
       .distinct('u.user_id as user_id')
       .select(knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as full_name"))
       .orderBy('full_name', 'asc'),
-    clientQuery
-      .whereNotNull('sr.client_id')
-      .distinct(
-        'sr.client_id as client_id',
-        'c.client_name',
-        'c.client_type',
-        'c.is_inactive'
-      )
-      .orderBy('c.client_name', 'asc'),
   ]);
   const technicianRows = technicianRowsRaw as unknown as TechnicianFilterRow[];
-  const clientRows = clientRowsRaw as unknown as ClientFilterRow[];
 
   return {
     templates: templates.map((template) => ({
@@ -94,15 +66,6 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
       .map((row) => ({
         value: row.user_id,
         label: row.full_name?.trim() || 'Unassigned',
-      })),
-    clients: clientRows
-      .filter((row) => row.client_id)
-      .map((row) => ({
-        client_id: row.client_id,
-        client_name: row.client_name ?? 'Unnamed Client',
-        client_type: row.client_type === 'individual' ? 'individual' : 'company',
-        is_inactive: Boolean(row.is_inactive),
-        logoUrl: null,
       })),
   };
 });

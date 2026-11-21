@@ -3,7 +3,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '@alga-psa/auth';
 import crypto from 'crypto';
 import { Knex } from 'knex';
-import { isCoManagedInvitationServed } from '../lib/coManagedInvitationCapability';
+import { isCoManagedInvitationServed, isCoManagedSeatInvitationServed, seatAssignmentOfInvitation } from '../lib/coManagedInvitationCapability';
 
 export interface UserInvitation {
   invitation_id: string;
@@ -191,6 +191,12 @@ export class UserInvitationService {
             error: 'Invalid or expired invitation token',
             errorCode: 'INVALID_OR_EXPIRED_TOKEN' as const
           };
+        }
+
+        // A seat invitation is the seat shape's: it closes with `co-managed-seat`, before the invitee's
+        // details are exposed, exactly where the co-managed product check above closes for workspaces.
+        if (seatAssignmentOfInvitation(invitation.metadata) && !await isCoManagedSeatInvitationServed(tokenTenant)) {
+          return { valid: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' };
         }
 
         return {

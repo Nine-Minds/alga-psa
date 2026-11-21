@@ -27,6 +27,11 @@ describe('serializeEntraSyncRunProgress', () => {
           updated: 0 as unknown as number,
           ambiguous: 0 as unknown as number,
           inactivated: 0 as unknown as number,
+          failed: 2 as unknown as number,
+          userIssues: [
+            { severity: 'failure', stage: 'create', entraObjectId: 'o1', userPrincipalName: 'a@example.com', displayName: 'A', message: 'boom' },
+            'junk' as never,
+          ],
           errorMessage: null,
           startedAt: '2026-02-20T00:00:00.000Z',
           completedAt: '2026-02-20T00:01:00.000Z',
@@ -57,6 +62,8 @@ describe('serializeEntraSyncRunProgress', () => {
           updated: Number.NaN,
           ambiguous: Number.NaN,
           inactivated: Number.NaN,
+          failed: Number.NaN,
+          userIssues: undefined as never,
           errorMessage: 'adapter timeout',
           startedAt: null,
           completedAt: undefined as unknown as string | null,
@@ -86,7 +93,14 @@ describe('serializeEntraSyncRunProgress', () => {
       failedTenants: 1,
       summary: {},
     });
+    expect(success.tenantResults[0]).toMatchObject({
+      failed: 2,
+      userIssues: [expect.objectContaining({ stage: 'create', message: 'boom' })],
+    });
+    expect(success.tenantResults[0].userIssues).toHaveLength(1);
     expect(failure.tenantResults[0]).toMatchObject({
+      failed: 0,
+      userIssues: [],
       status: 'failed',
       created: 0,
       linked: 0,

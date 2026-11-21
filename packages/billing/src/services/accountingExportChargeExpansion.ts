@@ -6,8 +6,23 @@ import { applyContractChangeDescriptionSources } from '../lib/billing/contractCh
 type Charge = {
   item_id: string; service_id?: string | null; is_manual?: boolean | null; is_discount?: boolean | null;
   net_amount?: number | string | null; tax_amount?: number | string | null; description?: string | null;
-  adjustment_source_kind?: string | null;
+  adjustment_source_kind?: string | null; invoice_id?: string | null;
 };
+
+/** Human label for the invoice a mismatched parent sits on; failure path only. */
+async function describeInvoiceForCharge(
+  db: ReturnType<typeof tenantDb>, charge: Charge,
+): Promise<string> {
+  try {
+    const invoiceId = charge.invoice_id
+      ?? (await db.table('invoice_charges').where({ item_id: charge.item_id }).select('invoice_id').first())?.invoice_id;
+    if (!invoiceId) return 'unknown';
+    const invoice = await db.table('invoices').where({ invoice_id: invoiceId }).select('invoice_number').first();
+    return (invoice?.invoice_number as string | undefined) ?? String(invoiceId);
+  } catch {
+    return 'unknown';
+  }
+}
 
 /** Expand only canonical fixed-plan parents, using persisted allocations, never rates.
  * Export batch line identity stays the parent; detail identity identifies remote splits.
@@ -53,7 +68,12 @@ export async function expandAccountingExportCharges<T extends Charge>(
     const net = children.reduce((sum, row) => sum + Number(row.allocated_amount), 0);
     const tax = children.reduce((sum, row) => sum + Number(row.tax_amount ?? 0), 0);
     if (net !== Number(parent.net_amount) || tax !== Number(parent.tax_amount ?? 0)) {
-      throw new Error(`Fixed-plan allocation totals do not match charge ${parent.item_id}; repair the invoice before export.`);
+      // Strict equality protects against dropped or duplicated revenue; name both
+      // sides so support can see which level disagrees without reading the rows.
+      const invoiceLabel = await describeInvoiceForCharge(db, parent);
+      throw new Error(`Fixed-plan allocation totals do not match charge ${parent.item_id} on invoice ${invoiceLabel}: `
+        + `parent net ${Number(parent.net_amount)} / tax ${Number(parent.tax_amount ?? 0)}, `
+        + `allocations net ${net} / tax ${tax}; repair the invoice before export.`);
     }
     for (const child of children) {
       const amount = Number(child.allocated_amount);

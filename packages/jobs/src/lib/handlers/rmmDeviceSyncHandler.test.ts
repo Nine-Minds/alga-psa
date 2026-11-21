@@ -121,6 +121,18 @@ describe('rmmDeviceSyncHandler', () => {
     }
   });
 
+  it('runs a registered unifi strategy and does not advance the cursor when it reports failure by throwing', async () => {
+    // UniFi's full-sync strategy converts RmmSyncResult.success === false into a throw.
+    const unifiSync = vi.fn().mockRejectedValue(new Error('UniFi device sync reported failure (1 failed)'));
+    registerRmmDeviceSyncStrategy('unifi', { syncDevicesIncremental: unifiSync });
+    await expect(rmmDeviceSyncHandler('job-1', { ...data, provider: 'unifi' })).rejects.toThrow('UniFi device sync');
+
+    expect(unifiSync).toHaveBeenCalledTimes(1);
+    for (const [patch] of updateSpy.mock.calls) {
+      expect(patch).not.toHaveProperty('last_incremental_sync_at');
+    }
+  });
+
   it('rethrows so the runner records the attempt as failed', async () => {
     // Swallowing would let the backend count a failed sync as a success and
     // report a healthy schedule.

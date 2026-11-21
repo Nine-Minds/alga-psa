@@ -3,6 +3,12 @@
  */
 
 import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+// Money formatting lives in one place so the product's currency symbols
+// ("ZAR (R)" → "R") are identical wherever an amount is rendered.
+import {
+  formatCurrency as formatCurrencyCore,
+  formatCurrencyFromMinorUnits as formatCurrencyFromMinorUnitsCore,
+} from '@alga-psa/core/formatters';
 
 /**
  * System default locale used as the final fallback when a caller does not
@@ -25,12 +31,7 @@ export function formatCurrency(
   locale: string = DEFAULT_LOCALE,
   currency: string = 'USD'
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
+  return formatCurrencyCore(value, locale, currency);
 }
 
 /**
@@ -42,15 +43,7 @@ export function formatCurrencyFromMinorUnits(
   locale: string = DEFAULT_LOCALE,
   currency: string = 'USD'
 ): string {
-  const resolved = new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions();
-  const fractionDigits = resolved.maximumFractionDigits ?? 2;
-  const value = minorUnits / Math.pow(10, fractionDigits);
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
+  return formatCurrencyFromMinorUnitsCore(minorUnits, locale, currency);
 }
 
 /**

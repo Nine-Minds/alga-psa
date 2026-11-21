@@ -40,12 +40,18 @@ afterAll(async () => {
   finally { await admin.destroy(); }
 });
 
+/** The role every created user is given: a user is never created without one. */
+const tenantRole = new Map<string, string>();
+
 async function seedTenant(opts: { limit: number | null; plan?: string; product?: string }): Promise<string> {
   const tenant = randomUUID();
   await db('tenants').insert({
     tenant, client_name: 'Seats', email: `${tenant}@example.test`,
     product_code: opts.product ?? 'psa', licensed_user_count: opts.limit, plan: opts.plan ?? 'pro',
   });
+  const roleId = randomUUID();
+  await db('roles').insert({ tenant, role_id: roleId, role_name: 'Technician', msp: true, client: false });
+  tenantRole.set(tenant, roleId);
   return tenant;
 }
 const seedUser = (tenant: string, email: string, inactive = false) => db('users').insert({
@@ -58,7 +64,10 @@ const activeInternal = async (tenant: string) =>
 function createUser(tenant: string, email: string) {
   return runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
     new UserService().create(
-      { username: email, email, password: 'Passw0rd!x', first_name: 'N', last_name: 'U', user_type: 'internal' },
+      {
+        username: email, email, password: 'Passw0rd!x', first_name: 'N', last_name: 'U',
+        user_type: 'internal', role_ids: [tenantRole.get(tenant)!],
+      },
       createSystemContext(tenant),
     )));
 }

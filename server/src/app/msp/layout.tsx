@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { cookies } from "next/headers.js";
+import { cookies, headers } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { isLicensedUserType } from "@alga-psa/types";
@@ -7,9 +7,12 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-act
 import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { TimeEntryModeProvider } from "@alga-psa/scheduling/context/TimeEntryModeContext";
+import { timeEntryModeForSurfaceKind } from "@alga-psa/scheduling/lib/timeEntryMode";
 import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
 import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
-import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { getCurrentProductPrincipal } from "@/lib/productAccess";
+import { assertPrincipalRouteOpen } from "@/lib/serverProductRouteGuard";
 import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
@@ -22,6 +25,7 @@ import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actio
 import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getDontNotifyCustomerDefaultAction } from '@alga-psa/notifications/actions/notification-actions/notificationActions';
 
 /**
  * Client-portal branding must never leak into the staff app by itself. The
@@ -74,11 +78,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MspLayout({
   children,
   modal,
+  surface,
 }: Readonly<{
   children: React.ReactNode;
   // Parallel slot for app-wide intercepting modal routes (e.g. create-ticket). Falls back
   // to @modal/default.tsx (null) on routes that don't open a modal.
   modal: React.ReactNode;
+  // Parallel slot holding the principal-kind surface gate. Renders nothing; it exists to run on every navigation.
+  surface: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
   const session =
@@ -100,7 +107,17 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
-  const productCode = await getCurrentTenantProduct();
+  // One read answers the tenant's product and the user's principal kind: the route guard, the menu and the
+  // action guards all decide from this principal.
+  const principal = await getCurrentProductPrincipal();
+  const productCode = principal.productCode;
+
+  // A principal kind's surface is enforced here, before any page renders, on a hard load. Soft navigation does
+  // not re-run a layout; the @surface slot below re-runs on every navigation and applies the same gate.
+  if (principal.surfaceKind) {
+    const pathname = (await headers()).get('x-pathname');
+    if (pathname) assertPrincipalRouteOpen(principal, pathname);
+  }
 
   // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
   // A failed or gated read is no notice: the shell must never block on it.
@@ -142,6 +159,9 @@ export default async function MspLayout({
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
   // Digit order / separator / clock follow the tenant's country, never the language.
   const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
+  // Seeds every "Don't notify the customer" checkbox in the MSP portal. A
+  // failed read falls back to the unticked default rather than blocking the shell.
+  const dontNotifyCustomerDefault = await getDontNotifyCustomerDefaultAction().catch(() => false);
 
   const tenantId = session.user.tenant;
   const { mspWhiteLabel, tenantBranding } = tenantId
@@ -149,13 +169,18 @@ export default async function MspLayout({
     : { mspWhiteLabel: false, tenantBranding: null };
   const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise, mspWhiteLabel });
 
+  // The time-entry dialog's mode comes from the principal resolved above, exactly as `surfaceKind` does. It wraps
+  // the whole shell so a dialog opened from a drawer, a ticket or the time sheet reads the same server answer.
   return (
+    <TimeEntryModeProvider mode={timeEntryModeForSurfaceKind(principal.surfaceKind)}>
     <MspLayoutClient
       mspBranding={mspBranding}
       session={session}
       currencyCode={currencyCode}
       dateFormat={dateFormat}
+      dontNotifyCustomerDefault={dontNotifyCustomerDefault}
       productCode={productCode}
+      surfaceKind={principal.surfaceKind ?? null}
       workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}
       canRunOnboarding={canRunOnboarding}
@@ -167,6 +192,8 @@ export default async function MspLayout({
     >
       {children}
       {modal}
+      {surface}
     </MspLayoutClient>
+    </TimeEntryModeProvider>
   );
 }

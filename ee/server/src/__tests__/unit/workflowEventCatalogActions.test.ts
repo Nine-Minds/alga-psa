@@ -179,6 +179,18 @@ describe('createWorkflowFromEventAction', () => {
     expect(definition.payloadSchemaRef).toBe('payload.Ticket.v1');
     expect(definition.trigger).toMatchObject({ type: 'event', eventName: 'TICKET_CREATED' });
   });
+
+  it('creates a maintenance date workflow from the Event Catalog instead of subscribing to a nonexistent event', async () => {
+    await createWorkflowFromEventAction({
+      eventType: 'ASSET_MAINTENANCE_DUE',
+      payloadSchemaRef: 'payload.Wrong.v1',
+    });
+    const { definition } = vi.mocked(createWorkflowDefinitionAction).mock.calls[0][0];
+    expect(definition.payloadSchemaRef).toBe('payload.AssetMaintenanceDue.v1');
+    expect(definition.trigger).toEqual({
+      type: 'date', source: 'asset.maintenance_due', offsetDays: -30, localTime: '08:00',
+    });
+  });
 });
 
 describe('buildTriggerForCatalogEvent', () => {
@@ -210,14 +222,17 @@ describe('buildTriggerForCatalogEvent', () => {
     await expect(buildTriggerForCatalogEvent({ eventName: 'X_EVENT' })).rejects.toThrow('no payload schema');
   });
 
-  it('builds a date trigger for a date-source catalog row', async () => {
+  it.each([
+    ['TICKET_STATUS_AGE', 'ticket.status_age', 'payload.TicketStatusAge.v1'],
+    ['ASSET_MAINTENANCE_DUE', 'asset.maintenance_due', 'payload.AssetMaintenanceDue.v1'],
+  ])('builds a date trigger for the %s catalog row', async (eventName, source, schemaRef) => {
     vi.spyOn(EventCatalogModel, 'getByEventType').mockResolvedValue({
-      event_type: 'TICKET_STATUS_AGE',
+      event_type: eventName,
       payload_schema_ref: 'payload.Wrong.v1'
     } as any);
-    const result = await buildTriggerForCatalogEvent({ eventName: 'TICKET_STATUS_AGE' });
-    expect(result.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
-    expect(result.trigger).toMatchObject({ type: 'date', source: 'ticket.status_age' });
-    expect(result.dateSourceId).toBe('ticket.status_age');
+    const result = await buildTriggerForCatalogEvent({ eventName });
+    expect(result.payloadSchemaRef).toBe(schemaRef);
+    expect(result.trigger).toMatchObject({ type: 'date', source });
+    expect(result.dateSourceId).toBe(source);
   });
 });

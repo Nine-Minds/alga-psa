@@ -12,6 +12,15 @@ function buildPagedFetcher<T>(rows: T[]) {
 }
 
 describe('authorization-aware pagination', () => {
+  it('fails closed when an untyped caller supplies field policies without a projector', async () => {
+    await expect(buildAuthorizationAwarePage({
+      page: 1,
+      limit: 1,
+      fetchPage: buildPagedFetcher([{ project_id: 'p1', description: 'Secret' }]),
+      authorizeRecord: async () => ({ allowed: true, redactedFields: ['description'] }),
+    } as any)).rejects.toThrow('require a record projector');
+  });
+
   it('T012: keeps ticket list pagination coherent and does not strand authorized rows behind filtered source pages', async () => {
     const rows = [
       { ticket_id: 't-1' },

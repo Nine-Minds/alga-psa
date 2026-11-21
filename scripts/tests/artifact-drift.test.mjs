@@ -3,10 +3,55 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import YAML from 'yaml';
 
 import { applyAllow, formatReport, nonAdditiveChanges, readAllow, repoRoot } from '../ci/artifact-drift.mjs';
 import { writeDocument } from '../../sdk/scripts/lib/write-openapi-document.mjs';
+
+test('published pseudo-locales serve the current English messages with locale transforms', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'pseudo-locale-artifacts-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  // Run the real generator in isolation, so stale published messages cannot be
+  // silently repaired before we compare what the application actually serves.
+  for (const relative of [
+    'scripts/generate-pseudo-locales.cjs',
+    'tools/i18n/lib/pseudo-locale.mjs',
+    'server/public/locales/en',
+  ]) {
+    const target = path.join(directory, relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(path.join(repoRoot, relative), target, { recursive: true });
+  }
+  execFileSync(process.execPath, [path.join(directory, 'scripts/generate-pseudo-locales.cjs')]);
+
+  for (const locale of ['xx', 'yy']) {
+    const generated = path.join(directory, 'server/public/locales', locale);
+    for (const entry of fs.readdirSync(generated, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const file = path.join(entry.parentPath, entry.name);
+      const relative = path.relative(directory, file);
+      assert.deepEqual(
+        JSON.parse(fs.readFileSync(path.join(repoRoot, relative), 'utf8')),
+        JSON.parse(fs.readFileSync(file, 'utf8')),
+        `${relative}: published messages must preserve current wording, interpolation and layout expansion`,
+      );
+    }
+  }
+});
+
+test('published OpenAPI formats describe the same API and the default document is CE', () => {
+  const directory = path.join(repoRoot, 'sdk/docs/openapi');
+  const documents = new Map();
+  for (const name of ['alga-openapi.ce', 'alga-openapi.ee', 'alga-openapi']) {
+    const json = JSON.parse(fs.readFileSync(path.join(directory, `${name}.json`), 'utf8'));
+    const yaml = YAML.parse(fs.readFileSync(path.join(directory, `${name}.yaml`), 'utf8'));
+    assert.deepEqual(yaml, json, `${name}: YAML and JSON consumers must see the same API contract`);
+    documents.set(name, json);
+  }
+  assert.deepEqual(documents.get('alga-openapi'), documents.get('alga-openapi.ce'),
+    'default and CE consumers must see the same API contract');
+});
 
 test('OpenAPI artifacts are identical for shared and copied schema values and preserve their data', (t) => {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openapi-output-'));

@@ -7,10 +7,12 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
   INTERACTIVE_USER_TYPES,
+  getRoleAssignmentViolation,
   isInteractiveUserType,
   isLicensedUserType,
 } from '@alga-psa/types';
@@ -37,12 +39,15 @@ import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import User from '@alga-psa/db/models/user';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
 import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
 import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
+
+const USER_TENANT_DISCOVERY = 'tenant-discovery';
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
@@ -71,6 +76,35 @@ class ValidationError extends Error {
   readonly name = 'ValidationError';
   readonly statusCode = 400;
   readonly code = 'VALIDATION_ERROR';
+}
+class ConflictError extends Error {
+  readonly name = 'ConflictError';
+  readonly statusCode = 409;
+  readonly code = 'CONFLICT';
+}
+
+/**
+ * Both role floors, in the one place the API service reports them: a last-role
+ * refusal is a 400 the caller can fix by assigning another role first, a
+ * last-admin refusal is a 409 on the tenant's state.
+ */
+function throwOnUserRoleFloor(violation: UserRoleFloorViolation, message: string): never {
+  if (violation === 'last_msp_admin') {
+    throw new ConflictError(message);
+  }
+  throw new ValidationError(message);
+}
+
+async function enforceUserRoleFloor(
+  trx: Knex.Transaction,
+  tenant: string,
+  change: UserRoleFloorChange,
+  options?: { alsoAffectedUserIds?: readonly string[] }
+): Promise<void> {
+  const floor = await assertUserRoleFloor(trx, tenant, change, options);
+  if (isUserRoleFloorRejected(floor)) {
+    throwOnUserRoleFloor(floor.violation, floor.message);
+  }
 }
 
 function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
@@ -309,6 +343,15 @@ export class UserService extends BaseService<IUser> {
         throw new Error('A user with this email address already exists');
       }
 
+      // The same email may not exist for this user type in another tenant
+      // either, as userActions.addUser already enforces. Sign-in and password
+      // reset find an account by email + user type alone, so a second tenant's
+      // copy would leave the new user's welcome/reset link acting on whichever
+      // account that lookup returns first.
+      if (await this.emailExistsInAnotherTenant(data.email, targetUserType, context.tenant)) {
+        throw new Error('A user with this email address already exists');
+      }
+
       // Validate username uniqueness within tenant + user_type (allow same username across different types)
       const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
         .andWhere('username', data.username.toLowerCase())
@@ -320,6 +363,12 @@ export class UserService extends BaseService<IUser> {
         throw new Error('A user with this username already exists for this user type');
       }
 
+      // There is no "no roles" state: a user is created with at least one role
+      // (belt for callers that bypass createUserSchema).
+      if (!data.role_ids || data.role_ids.length === 0) {
+        throw new ValidationError('At least one role is required');
+      }
+
       // Validate role IDs if provided
       if (data.role_ids && data.role_ids.length > 0) {
         const roles = await tenantDb(trx, context.tenant).table('roles')
@@ -328,6 +377,20 @@ export class UserService extends BaseService<IUser> {
 
         if (roles.length !== data.role_ids.length) {
           throw new Error('One or more invalid role IDs provided');
+        }
+
+        // A role has to belong to the portal the new user lives in; existing
+        // role_ids are not enough, or a client user could be created holding
+        // only MSP roles and see nothing in its own portal.
+        // LEVERAGE: pattern role-assignment-user-type — same decision in policyActions.assignRoleToUser, users roleActions.assignRoleToUser and userActions.addUser (inline)
+        for (const role of roles) {
+          const roleViolation = getRoleAssignmentViolation(targetUserType, role);
+          if (roleViolation === 'portal_role_on_msp_user') {
+            throw new ValidationError('Cannot assign a client portal role to an MSP user.');
+          }
+          if (roleViolation === 'msp_role_on_portal_user') {
+            throw new ValidationError('Cannot assign an MSP role to a client portal user.');
+          }
         }
       }
 
@@ -358,7 +421,7 @@ export class UserService extends BaseService<IUser> {
 
       // Tripwire: roll back if the insert left the tenant over its seat limits.
       if (isLicensedUserType(targetUserType) && !userData.is_inactive) {
-        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant, admission);
       }
 
       // Assign roles
@@ -390,6 +453,25 @@ export class UserService extends BaseService<IUser> {
       }, trx);
 
       return { user: enhancedUser as unknown as IUser, admission };
+  }
+
+  /**
+   * Whether `email` already belongs to a `userType` user of another tenant.
+   * Reads on the admin connection, outside the caller's transaction: the
+   * same-tenant case is checked in that transaction by the caller.
+   */
+  private async emailExistsInAnotherTenant(
+    email: string,
+    userType: 'internal' | 'client',
+    tenant: string
+  ): Promise<boolean> {
+    const db = await getAdminConnection();
+    const existing = await tenantDb(db, USER_TENANT_DISCOVERY)
+      .unscoped('users', 'global identity email uniqueness check before tenant selection')
+      .where({ email: email.toLowerCase(), user_type: userType })
+      .whereNot('tenant', tenant)
+      .first('user_id');
+    return Boolean(existing);
   }
 
   /**
@@ -460,8 +542,14 @@ export class UserService extends BaseService<IUser> {
         (data.user_type ?? existingUser.user_type) === 'internal'
         && ((data as { is_inactive?: boolean }).is_inactive ?? existingUser.is_inactive) === false;
       const takesNewSeat = occupiesSeatAfter && !occupiesSeatNow;
+      // The mirror image: a change that gives up an active internal seat must
+      // not take the tenant's last admin with it.
+      if (occupiesSeatNow && !occupiesSeatAfter) {
+        await enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id });
+      }
+      let licenseCheck: InternalUserLicenseLimitResult | null = null;
       if (takesNewSeat) {
-        const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
+        licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
           throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
         }
@@ -474,7 +562,7 @@ export class UserService extends BaseService<IUser> {
         .returning(USER_RESPONSE_FIELD_NAMES);
 
       if (takesNewSeat) {
-        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
       }
 
       // Log user update activity
@@ -517,6 +605,8 @@ export class UserService extends BaseService<IUser> {
       if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
         throw new NotFoundError('User not found');
       }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'delete_user', userId: id });
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
@@ -767,6 +857,13 @@ export class UserService extends BaseService<IUser> {
         throw new Error('One or more invalid role IDs provided');
       }
 
+      // Assignment replaces the role set, so the floors are decided on the
+      // final set: Admin -> Admin+other passes, Admin -> other on the last
+      // admin does not, and an empty list never does.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
+
       // Remove existing roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -810,6 +907,18 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Verify user exists
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
+        .select('user_id')
+        .first();
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
+
       // Remove specified roles
       await tenantDb(trx, context.tenant).table('user_roles')
         .where({ user_id: userId })
@@ -1093,11 +1202,35 @@ export class UserService extends BaseService<IUser> {
     const results: any[] = [];
     const errors: any[] = [];
 
-    return withTransaction(knex, async (trx) => {
+    const summary = await withTransaction(knex, async (trx) => {
       for (let i = 0; i < users.length; i++) {
         const userData = users[i];
         try {
-          const createdUser = await this.create(userData, context);
+          // Each user gets its own savepoint inside the batch transaction: a
+          // rejected user rolls back only its own rows and leaves the outer
+          // transaction usable for the users that follow (skip_invalid), while
+          // a rethrow below still rolls the whole batch back.
+          const createdUser = await withSavepoint(
+            trx,
+            async (userTrx) => (await this.createUsingTransaction(userData, context, userTrx)).user
+          );
+          // Same pair an admin-initiated password reset records. Nothing reads
+          // must_change_password at sign-in yet, so send_welcome_email is what
+          // actually gets the owner off the password the importer chose.
+          if (options.force_password_reset) {
+            await UserPreferences.upsert(trx, {
+              user_id: createdUser.user_id,
+              setting_name: 'must_change_password',
+              setting_value: true,
+              updated_at: new Date()
+            });
+            await UserPreferences.upsert(trx, {
+              user_id: createdUser.user_id,
+              setting_name: 'has_reset_password',
+              setting_value: false,
+              updated_at: new Date()
+            });
+          }
           results.push(createdUser);
         } catch (error: any) {
           errors.push({
@@ -1120,6 +1253,38 @@ export class UserService extends BaseService<IUser> {
         results
       };
     });
+
+    // After the batch commits: an outbound send must never be held open by a
+    // transaction, and a mail failure must not undo a created account.
+    if (options.send_welcome_email) {
+      await this.sendBulkWelcomeEmails(results);
+    }
+
+    return summary;
+  }
+
+  /**
+   * Welcome mail for bulk-created accounts. Reuses the internal account email
+   * flow (recoverPassword), so the new user receives a link to set their own
+   * password rather than being told the one the importer chose. Best effort:
+   * the account exists either way.
+   */
+  private async sendBulkWelcomeEmails(createdUsers: any[]): Promise<void> {
+    if (createdUsers.length === 0) return;
+
+    const { recoverPassword } = await import('@alga-psa/auth/actions');
+    for (const createdUser of createdUsers) {
+      const email = createdUser?.email;
+      if (!email) continue;
+      try {
+        await recoverPassword(email, createdUser.user_type === 'client' ? 'client' : 'msp');
+      } catch (error) {
+        logger.warn('Bulk user create: welcome email could not be sent', {
+          user_id: createdUser.user_id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   /**
@@ -1133,8 +1298,19 @@ export class UserService extends BaseService<IUser> {
     await this.ensurePermission(context, 'user', 'update');
     
     const { knex } = await this.getKnex();
+    let changedUserIds: string[] = [];
 
-    return withTransaction(knex, async (trx) => {
+    const summary = await withTransaction(knex, async (trx) => {
+      // The users whose state this call actually flips, read before any write:
+      // these are the ones that get the board cleanup and the USER_UPDATED event.
+      const changed: Array<{ user_id: string }> = await this.restrictToInteractiveUsers(
+        this.buildTenantScopedQuery(trx, context), false
+      )
+        .whereIn('user_id', userIds)
+        .where({ is_inactive: !deactivate })
+        .select('user_id');
+      changedUserIds = changed.map((row) => row.user_id);
+
       // Reactivating internal users occupies seats: admit them one at a time
       // under the seat lock (each check sees the previous activation);
       // an over-limit request fails the whole operation (the transaction rolls back).
@@ -1151,7 +1327,27 @@ export class UserService extends BaseService<IUser> {
           await this.buildTenantScopedQuery(trx, context)
             .where({ user_id: candidate.user_id })
             .update({ is_inactive: false, updated_at: knex.raw('now()') });
-          await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+          await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
+        }
+      }
+
+      // Deactivation is checked over the whole set: each target is told about
+      // the others, so a request that deactivates every admin at once is
+      // refused as surely as one that deactivates the last remaining admin.
+      if (deactivate) {
+        const targets: Array<{ user_id: string }> = await this.restrictToInteractiveUsers(
+          this.buildTenantScopedQuery(trx, context), false
+        )
+          .whereIn('user_id', userIds)
+          .select('user_id');
+        const targetIds = targets.map((target) => target.user_id);
+        for (const targetId of targetIds) {
+          await enforceUserRoleFloor(
+            trx,
+            context.tenant,
+            { kind: 'deactivate_user', userId: targetId },
+            { alsoAffectedUserIds: targetIds.filter((other) => other !== targetId) }
+          );
         }
       }
 
@@ -1162,6 +1358,14 @@ export class UserService extends BaseService<IUser> {
           is_inactive: deactivate,
           updated_at: knex.raw('now()')
         });
+
+      // Same cleanup the settings UI's deactivate does: an inactive user must
+      // not stay a board's default assignee, or new tickets keep landing on them.
+      if (deactivate && changedUserIds.length > 0) {
+        await tenantDb(trx, context.tenant).table('boards')
+          .whereIn('default_assigned_to', changedUserIds)
+          .update({ default_assigned_to: null });
+      }
 
       // Log bulk activity
       for (const userId of userIds) {
@@ -1183,6 +1387,40 @@ export class UserService extends BaseService<IUser> {
         results: []
       };
     });
+
+    // After commit, one USER_UPDATED per user whose state changed, as the
+    // settings UI's deactivate publishes. Best effort: the change is committed.
+    await this.publishBulkActivationEvents(changedUserIds, context);
+
+    return summary;
+  }
+
+  private async publishBulkActivationEvents(userIds: string[], context: ServiceContext): Promise<void> {
+    if (userIds.length === 0) return;
+
+    const { publishNonCatalogWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    const actor = context.userId ? { actorType: 'USER' as const, actorUserId: context.userId } : undefined;
+    for (const userId of userIds) {
+      const occurredAt = new Date().toISOString();
+      try {
+        await publishNonCatalogWorkflowEvent({
+          eventType: 'USER_UPDATED',
+          payload: {
+            userId,
+            changedFields: ['is_inactive'],
+            actorUserId: context.userId,
+            updatedAt: occurredAt,
+          },
+          ctx: { tenantId: context.tenant, occurredAt, actor },
+          idempotencyKey: `user_bulk_activation:${userId}:${occurredAt}`,
+        });
+      } catch (error) {
+        logger.error('Bulk user (de)activation: USER_UPDATED event could not be published', {
+          user_id: userId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   /**

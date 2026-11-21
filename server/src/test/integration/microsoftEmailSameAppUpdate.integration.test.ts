@@ -75,7 +75,7 @@ const graphHttp = vi.hoisted(() => {
       return { data: {} };
     }),
     patch: vi.fn(async () => ({ data: {} })),
-    interceptors: { request: { use: vi.fn() } },
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   });
   return { instance, deletedSubscriptions, createdSubscriptions };
 });

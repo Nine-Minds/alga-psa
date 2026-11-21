@@ -83,7 +83,7 @@ describe('PDF service canonical true-up output', () => {
     expect(preview.html).toContain(explanation);
 
     const setContent = vi.fn();
-    const page = { setContent, pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-test')), close: vi.fn().mockResolvedValue(undefined) };
+    const page = { setJavaScriptEnabled: vi.fn(), setRequestInterception: vi.fn(), on: vi.fn(), setContent, pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-test')), close: vi.fn().mockResolvedValue(undefined) };
     let browser: any;
     try {
       // Optional local evidence uses real Chromium with the production PDF method;
@@ -93,7 +93,7 @@ describe('PDF service canonical true-up output', () => {
         browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
         vi.mocked(browserPoolService.getBrowser).mockResolvedValue(browser);
       } else {
-        vi.mocked(browserPoolService.getBrowser).mockResolvedValue({ newPage: async () => page } as any);
+        vi.mocked(browserPoolService.getBrowser).mockResolvedValue({ createBrowserContext: async () => ({ newPage: async () => page, close: vi.fn().mockResolvedValue(undefined) }) } as any);
       }
       const pdf = await service.generatePDF({ invoiceId: 'invoice-1', templateId: 'template-1', userId: 'fixture-user' });
       if (process.env.CONTRACT_PDF_EVIDENCE_DIR) {

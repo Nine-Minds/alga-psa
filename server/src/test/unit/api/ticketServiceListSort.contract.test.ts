@@ -143,6 +143,8 @@ describe('ticket list API field allowlist', () => {
       'entered_at',
       'closed_at',
       'tags',
+      'contact_tags',
+      'client_tags',
       'master_ticket_id',
       'bundle_master_ticket_number',
       'bundle_child_count',

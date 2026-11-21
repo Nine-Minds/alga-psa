@@ -28,12 +28,18 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/search/acl', () => ({
+vi.mock('@alga-psa/search/acl', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/search/acl')>()),
   resolveSearchAclPrincipal: mocks.resolveSearchAclPrincipal,
   verifyResultVisibility: mocks.verifyResultVisibility,
 }));
 
 vi.mock('@alga-psa/search/query', () => ({
+  // The full search reads its page and counts in one statement; the double composes the two halves.
+  runSearchPage: async (options: unknown) => ({
+    hits: await mocks.runSearchQuery(options),
+    countsByType: await mocks.countSearchMatchesByType(options),
+  }),
   runSearchQuery: mocks.runSearchQuery,
   runSearchTypeaheadQuery: mocks.runSearchTypeaheadQuery,
   countSearchMatches: mocks.countSearchMatches,

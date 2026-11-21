@@ -11,7 +11,7 @@ const repository = fileURLToPath(new URL('../../', import.meta.url));
 test('workspace DB runner collects and executes app-credential opt-in suites with their isolated application connection', { timeout: 60000 }, (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-workspace-db-runner-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  for (const directory of ['scripts/lib', 'server', 'packages/email', 'packages/billing']) {
+  for (const directory of ['scripts/lib', 'server/src/test/integration/authorization', 'packages/email', 'packages/billing']) {
     mkdirSync(path.join(root, directory), { recursive: true });
   }
   for (const file of ['scripts/run-workspace-db-tests.mjs', 'scripts/lib/test-discovery.mjs',
@@ -23,7 +23,7 @@ test('workspace DB runner collects and executes app-credential opt-in suites wit
   symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   writeFileSync(path.join(root, 'server/vitest.workspace-db.config.ts'), `export default ${JSON.stringify({
-    test: { include: ['../packages/**/*.db.test.ts'], globals: true, environment: 'node', maxWorkers: 1 },
+    test: { include: ['../packages/**/*.db.test.ts', 'src/test/integration/**/*.db.test.ts'], globals: true, environment: 'node', maxWorkers: 1 },
   })};`);
   // Exercise the same opt-in boundary as the real suite through both Vitest
   // collection and execution, without needing a database for this runner test.
@@ -52,6 +52,14 @@ test('workspace DB runner collects and executes app-credential opt-in suites wit
       });
     });
   `);
+  writeFileSync(path.join(root, 'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts'), `
+    describe('asset group authorization regression', () => {
+      it('runs when selected by its repository-root path', () => {
+        expect(process.env.REQUIRE_DB).toBe('1');
+        expect(process.env.TEST_DB_NAME).toBe('fixture_database');
+      });
+    });
+  `);
   const git = (...args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' });
   git('init');
   git('add', '.');
@@ -72,7 +80,24 @@ test('workspace DB runner collects and executes app-credential opt-in suites wit
   assert.equal(result.status, 0, result.stdout + result.stderr);
   const evidence = JSON.parse(readFileSync(path.join(root, 'test-results/workspace-db/evidence.json'), 'utf8'));
   assert.equal(evidence.status, 'passed');
-  assert.equal(evidence.expectedTests.length, 2);
-  assert.equal(evidence.counts.passed, 2);
+  assert.equal(evidence.expectedTests.length, 3);
+  assert.equal(evidence.counts.passed, 3);
   assert.equal(evidence.counts.skipped + evidence.counts.pending, 0);
+
+  const selected = spawnSync(process.execPath, [
+    'scripts/run-workspace-db-tests.mjs',
+    'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts',
+  ], { cwd: root, encoding: 'utf8', timeout: 30000, env: { ...process.env, CI: '1', TEST_DB_NAME: 'fixture_database' } });
+  assert.equal(selected.error, undefined);
+  assert.equal(selected.status, 0, selected.stdout + selected.stderr);
+  const selectedEvidence = JSON.parse(readFileSync(path.join(root, 'test-results/workspace-db/evidence.json'), 'utf8'));
+  assert.equal(selectedEvidence.status, 'passed');
+  assert.deepEqual(selectedEvidence.selection, {
+    mode: 'filtered',
+    filters: ['server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts'],
+  });
+  assert.deepEqual(selectedEvidence.expectedFiles, [
+    'server/src/test/integration/authorization/assetGroupAuthorization.db.test.ts',
+  ]);
+  assert.equal(selectedEvidence.counts.passed, 1);
 });

@@ -7,6 +7,7 @@ import {
   type LabelBatchLayout,
 } from './layout';
 import type { InvoicePdfPrintOptions } from '@alga-psa/types';
+import { PDF_FONT_FACE_CSS } from '../pdf-fonts';
 
 /**
  * One rendered label: body markup + the CSS that goes with it. The markup already carries the
@@ -56,7 +57,8 @@ export function composeLabelSheets(
       throw new LabelLayoutError(
         `${cell.description ?? `Label ${index + 1}`} is designed for ${designed.widthMm.toFixed(1)} x ` +
           `${designed.heightMm.toFixed(1)} mm but its label cell is ${placement.widthMm.toFixed(1)} x ` +
-          `${placement.heightMm.toFixed(1)} mm.`
+          `${placement.heightMm.toFixed(1)} mm.`,
+        'template-size-mismatch'
       );
     }
   });
@@ -77,6 +79,7 @@ export function composeLabelSheets(
     <meta charset="utf-8" />
     <title>${escapeHtml(options.title ?? 'Labels')}</title>
     <style>
+${PDF_FONT_FACE_CSS}
 ${css}
 @page { size: ${mmCss(geometry.pageWidthMm)} ${mmCss(geometry.pageHeightMm)}; margin: 0; }
 html, body { margin: 0; padding: 0; background: #fff; }
