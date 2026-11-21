@@ -29,6 +29,7 @@ const runtimeState = vi.hoisted(() => ({
   tenantId: '',
   actorUserId: '',
   deniedPermissions: new Set<string>(),
+  useActualPermissions: false,
 }));
 
 vi.mock('../businessOperations/shared', async (importOriginal) => {
@@ -50,7 +51,10 @@ vi.mock('../businessOperations/shared', async (importOriginal) => {
         });
       });
     },
-    requirePermission: async (ctx: any, _tx: any, permission: { resource: string; action: string }) => {
+    requirePermission: async (ctx: any, tx: any, permission: { resource: string; action: string }) => {
+      if (runtimeState.useActualPermissions) {
+        return actual.requirePermission(ctx, tx, permission);
+      }
       const key = `${permission.resource}:${permission.action}`;
       if (!runtimeState.deniedPermissions.has(key)) return;
       throw {
@@ -500,6 +504,89 @@ async function createTicket(
   return ticketId;
 }
 
+async function grantPermissions(db: Knex, tenantId: string, userId: string, permissions: Array<[string, string]>): Promise<void> {
+  const roleId = uuidv4();
+  await tenantTable(db, tenantId, 'roles').insert({
+    tenant: tenantId,
+    role_id: roleId,
+    role_name: `Project action test role ${roleId.slice(0, 8)}`,
+    msp: true,
+    client: false,
+  });
+
+  for (const [resource, action] of permissions) {
+    let permission = await tenantTable(db, tenantId, 'permissions')
+      .where({ tenant: tenantId, resource, action, msp: true })
+      .first('permission_id');
+    if (!permission?.permission_id) {
+      [permission] = await tenantTable(db, tenantId, 'permissions')
+        .insert({ tenant: tenantId, permission_id: uuidv4(), resource, action, msp: true, client: false })
+        .returning('permission_id');
+    }
+    await tenantTable(db, tenantId, 'role_permissions').insert({
+      tenant: tenantId,
+      role_id: roleId,
+      permission_id: permission.permission_id,
+    });
+  }
+
+  await tenantTable(db, tenantId, 'user_roles').insert({ tenant: tenantId, user_id: userId, role_id: roleId });
+}
+
+async function createTaskTicketScopeBundle(
+  db: Knex,
+  tenantId: string,
+  actorUserId: string,
+  projectClientId: string,
+  readableTicketClientIds: string[],
+  updatableTicketClientIds: string[]
+): Promise<void> {
+  const { bundleId, revisionId } = await createAuthorizationBundle(db, {
+    tenant: tenantId,
+    name: 'Project task ticket destination scope',
+    bundleKey: `project-task-ticket-${uuidv4().slice(0, 8)}`,
+    actorUserId,
+  });
+  await upsertBundleRule(db, {
+    tenant: tenantId,
+    bundleId,
+    revisionId,
+    resourceType: 'project',
+    action: 'create_task',
+    templateKey: 'selected_clients',
+    config: { selectedClientIds: [projectClientId] },
+    actorUserId,
+  });
+  await upsertBundleRule(db, {
+    tenant: tenantId,
+    bundleId,
+    revisionId,
+    resourceType: 'ticket',
+    action: 'read',
+    templateKey: 'selected_clients',
+    config: { selectedClientIds: readableTicketClientIds },
+    actorUserId,
+  });
+  await upsertBundleRule(db, {
+    tenant: tenantId,
+    bundleId,
+    revisionId,
+    resourceType: 'ticket',
+    action: 'update',
+    templateKey: 'selected_clients',
+    config: { selectedClientIds: updatableTicketClientIds },
+    actorUserId,
+  });
+  await publishBundleRevision(db, { tenant: tenantId, bundleId, revisionId, actorUserId });
+  await createBundleAssignment(db, {
+    tenant: tenantId,
+    bundleId,
+    targetType: 'user',
+    targetId: actorUserId,
+    actorUserId,
+  });
+}
+
 describe('project business operation db actions', () => {
   let db: Knex;
 
@@ -511,7 +598,7 @@ describe('project business operation db actions', () => {
     if (!registry.get('projects.search_tasks', 1)) {
       registerProjectActions();
     }
-  }, 120000);
+  }, 600000);
 
   afterAll(async () => {
     runtimeState.db = null;
@@ -522,6 +609,7 @@ describe('project business operation db actions', () => {
 
   beforeEach(async () => {
     runtimeState.deniedPermissions.clear();
+    runtimeState.useActualPermissions = false;
     runtimeState.tenantId = await createTenant(db, 'Project Test Tenant');
     runtimeState.actorUserId = await createUser(db, runtimeState.tenantId, { email: `actor-${Date.now()}@example.com` });
   });
@@ -1821,6 +1909,85 @@ describe('project business operation db actions', () => {
       .first('task_name', 'phase_id');
     expect(persistedTask?.task_name).toBe('Compatibility Task');
     expect(persistedTask?.phase_id).toBe(phaseId);
+  });
+
+  it('denies linked task creation when the publisher lacks ticket:update permission before persisting any task or links', async () => {
+    const tenant = runtimeState.tenantId;
+    const projectClient = await createClientOrCompany(db, tenant);
+    const ticketClient = await createClientOrCompany(db, tenant);
+    const projectId = await createProject(db, tenant, {
+      name: 'Ticket permission project',
+      clientOrCompanyId: projectClient.clientId,
+    });
+    const phaseId = await createPhase(db, tenant, projectId, { name: 'Ticket permission phase' });
+    const ticketId = await createTicket(db, tenant, runtimeState.actorUserId, { clientId: ticketClient.clientId });
+    await createTaskTicketScopeBundle(db, tenant, runtimeState.actorUserId, projectClient.clientId, [ticketClient.clientId], [ticketClient.clientId]);
+    await grantPermissions(db, tenant, runtimeState.actorUserId, [['project_task', 'create']]);
+    runtimeState.useActualPermissions = true;
+
+    await expect(invokeAction('projects.create_task', {
+      project_id: projectId,
+      phase_id: phaseId,
+      title: 'Denied by ticket permission',
+      link_ticket_id: ticketId,
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ phase_id: phaseId, task_name: 'Denied by ticket permission' }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'project_ticket_links').where({ project_id: projectId, ticket_id: ticketId }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'ticket_entity_links').where({ ticket_id: ticketId }).first()).toBeUndefined();
+  });
+
+  it('denies linked task creation when the destination ticket is outside the publisher bundle scope', async () => {
+    const tenant = runtimeState.tenantId;
+    const projectClient = await createClientOrCompany(db, tenant);
+    const ticketClient = await createClientOrCompany(db, tenant);
+    const projectId = await createProject(db, tenant, {
+      name: 'Ticket scope project',
+      clientOrCompanyId: projectClient.clientId,
+    });
+    const phaseId = await createPhase(db, tenant, projectId, { name: 'Ticket scope phase' });
+    const ticketId = await createTicket(db, tenant, runtimeState.actorUserId, { clientId: ticketClient.clientId });
+    await createTaskTicketScopeBundle(db, tenant, runtimeState.actorUserId, projectClient.clientId, [ticketClient.clientId], [projectClient.clientId]);
+    await grantPermissions(db, tenant, runtimeState.actorUserId, [['project_task', 'create'], ['ticket', 'update']]);
+    runtimeState.useActualPermissions = true;
+
+    await expect(invokeAction('projects.create_task', {
+      project_id: projectId,
+      phase_id: phaseId,
+      title: 'Denied by ticket scope',
+      link_ticket_id: ticketId,
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ phase_id: phaseId, task_name: 'Denied by ticket scope' }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'project_ticket_links').where({ project_id: projectId, ticket_id: ticketId }).first()).toBeUndefined();
+    expect(await tenantTable(db, tenant, 'ticket_entity_links').where({ ticket_id: ticketId }).first()).toBeUndefined();
+  });
+
+  it('creates and links a task when the publisher has ticket:update permission and destination scope access', async () => {
+    const tenant = runtimeState.tenantId;
+    const client = await createClientOrCompany(db, tenant);
+    const projectId = await createProject(db, tenant, {
+      name: 'Authorized ticket project',
+      clientOrCompanyId: client.clientId,
+    });
+    const phaseId = await createPhase(db, tenant, projectId, { name: 'Authorized ticket phase' });
+    const ticketId = await createTicket(db, tenant, runtimeState.actorUserId, { clientId: client.clientId });
+    await createTaskTicketScopeBundle(db, tenant, runtimeState.actorUserId, client.clientId, [client.clientId], [client.clientId]);
+    await grantPermissions(db, tenant, runtimeState.actorUserId, [['project_task', 'create'], ['ticket', 'update']]);
+    runtimeState.useActualPermissions = true;
+
+    const created = await invokeAction('projects.create_task', {
+      project_id: projectId,
+      phase_id: phaseId,
+      title: 'Authorized linked task',
+      link_ticket_id: ticketId,
+    });
+
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ task_id: created.task_id, phase_id: phaseId }).first('task_name')).toMatchObject({
+      task_name: 'Authorized linked task',
+    });
+    expect(await tenantTable(db, tenant, 'project_ticket_links').where({ project_id: projectId, phase_id: phaseId, task_id: created.task_id, ticket_id: ticketId }).first()).toBeDefined();
+    expect(await tenantTable(db, tenant, 'ticket_entity_links').where({ ticket_id: ticketId, entity_type: 'project_task', entity_id: created.task_id }).first()).toBeDefined();
   });
 
   it('enforces action-specific project bundle scopes for update, delete, and task creation', async () => {

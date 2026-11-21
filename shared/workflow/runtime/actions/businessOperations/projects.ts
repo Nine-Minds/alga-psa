@@ -1120,7 +1120,10 @@ async function createProjectAuthorizer(
   };
 }
 
-async function createTicketReadAuthorizer(tx: TenantTxContext): Promise<(ticket: Record<string, unknown>) => Promise<boolean>> {
+async function createTicketAuthorizer(
+  tx: TenantTxContext,
+  action: 'read' | 'update'
+): Promise<(ticket: Record<string, unknown>) => Promise<boolean>> {
   const subject = await resolveActorAuthorizationSubject(tx);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
@@ -1143,7 +1146,7 @@ async function createTicketReadAuthorizer(tx: TenantTxContext): Promise<(ticket:
 
     const decision = await authorizationKernel.authorizeResource({
       subject,
-      resource: { type: 'ticket', action: 'read', id: ticketId },
+      resource: { type: 'ticket', action, id: ticketId },
       record: toTicketAuthorizationRecord(ticket),
       requestCache,
       knex: tx.trx,
@@ -1180,13 +1183,30 @@ async function assertTicketReadable(
   tx: TenantTxContext,
   ticket: Record<string, unknown>
 ): Promise<void> {
-  const authorize = await createTicketReadAuthorizer(tx);
+  const authorize = await createTicketAuthorizer(tx, 'read');
   const allowed = await authorize(ticket);
   if (!allowed) {
     throwActionError(ctx, {
       category: 'ActionError',
       code: 'PERMISSION_DENIED',
       message: 'Permission denied: ticket:read',
+      details: { ticket_id: ticket.ticket_id },
+    });
+  }
+}
+
+async function assertTicketUpdatable(
+  ctx: any,
+  tx: TenantTxContext,
+  ticket: Record<string, unknown>
+): Promise<void> {
+  const authorize = await createTicketAuthorizer(tx, 'update');
+  const allowed = await authorize(ticket);
+  if (!allowed) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: ticket:update',
       details: { ticket_id: ticket.ticket_id },
     });
   }
@@ -1239,6 +1259,12 @@ export function registerProjectActions(): void {
       const project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
       if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
       await assertProjectAuthorized(ctx, tx, project, 'create_task');
+
+      if (input.link_ticket_id) {
+        await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+        const ticket = await ensureTicketExists(ctx, tx, input.link_ticket_id);
+        await assertTicketUpdatable(ctx, tx, ticket);
+      }
 
       const phaseId = input.phase_id ?? (await tenantScopedTable(tx, 'project_phases')
         .where('project_id', input.project_id)
@@ -2524,7 +2550,7 @@ export function registerProjectActions(): void {
             const tickets = canReadTicketLinks
               ? await tenantScopedTable(tx, 'tickets').whereIn('ticket_id', sourceTicketIds).select('*')
               : [];
-            const authorizeTicket = await createTicketReadAuthorizer(tx);
+            const authorizeTicket = await createTicketAuthorizer(tx, 'read');
             const ticketAuthorization = await Promise.all(tickets.map((ticket: Record<string, unknown>) => authorizeTicket(ticket)));
             const allowedTicketIds = new Set(
               tickets
