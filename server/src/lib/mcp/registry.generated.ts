@@ -37373,6 +37373,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "client_portal_visible": {
           "type": "boolean"
+        },
+        "default_assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "additionalProperties": false,

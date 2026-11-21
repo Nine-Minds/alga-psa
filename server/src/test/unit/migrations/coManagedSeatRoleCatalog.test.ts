@@ -50,7 +50,7 @@ const RESOURCE_CATEGORIES: Record<string, 'operational' | 'sales' | 'billing' | 
   security_settings: 'settings', settings: 'settings', sla_policy: 'settings', storage: 'settings',
   system_settings: 'settings', ticket_settings: 'settings', user_settings: 'settings', webhook: 'settings', workflow: 'settings',
 
-  role: 'user-administration', service_principal: 'user-administration', team: 'user-administration', user: 'user-administration',
+  permission: 'user-administration', role: 'user-administration', service_principal: 'user-administration', team: 'user-administration', user: 'user-administration',
   user_schedule: 'user-administration',
 
   // Not one of the five closed categories, and not seat work either.

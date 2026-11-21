@@ -13296,6 +13296,11 @@ components:
             - string
             - "null"
           format: uuid
+        default_assigned_team_id:
+          type:
+            - string
+            - "null"
+          format: uuid
         inbound_reply_reopen_enabled:
           type: boolean
         inbound_reply_reopen_cutoff_hours:
@@ -13333,6 +13338,7 @@ components:
         - display_itil_impact
         - display_itil_urgency
         - default_assigned_to
+        - default_assigned_team_id
         - enable_live_ticket_timer
         - client_portal_visible
         - tenant
@@ -13436,6 +13442,11 @@ components:
             already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
+        default_assigned_team_id:
+          type:
+            - string
+            - "null"
+          format: uuid
       additionalProperties: false
       description: Payload for updating a board. All fields are optional.
     StatusIdParams:

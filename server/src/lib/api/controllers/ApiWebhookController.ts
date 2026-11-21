@@ -55,12 +55,23 @@ import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
+const WEBHOOK_PERMISSION_ACTIONS = [
+  'read', 'create', 'update', 'delete', 'test', 'retry', 'system_settings',
+  'analytics', 'bulk_update', 'manage_subscriptions', 'verify',
+  'manage_security', 'export', 'trigger',
+] as const;
+
 export class ApiWebhookController {
   private webhookService: WebhookService;
 
   constructor() {
     // Persistence is webhookModel; the event bus and audit log are optional and not wired for the REST API.
     this.webhookService = new WebhookService();
+  }
+
+  /** Runtime permission contract for this controller's custom authorization path. */
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return WEBHOOK_PERMISSION_ACTIONS.map((action) => ({ resource: 'webhook', action }));
   }
 
   /**
@@ -122,6 +133,9 @@ export class ApiWebhookController {
   // context (no rate limit, ProductAccessError rather than the base product gate) and every handler is typed on
   // ApiRequest. Folding it in changes auth behaviour, so the base needs a service-less/option-less mode first.
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+    if (!(WEBHOOK_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared webhook permission action: ${action}`);
+    }
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
