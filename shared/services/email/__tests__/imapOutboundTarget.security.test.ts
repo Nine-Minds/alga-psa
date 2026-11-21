@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
 
 const lookup = vi.hoisted(() => vi.fn());
 vi.mock('node:dns/promises', () => ({
@@ -25,6 +27,28 @@ describe('IMAP destination policy', () => {
     const target = await assertSafeImapHost('imap.internal.example', 993);
     expect(target.url.port).toBe('993');
     expect(target.pin).toEqual({ address: '10.40.8.12', family: 4 });
+  });
+
+  it.each(['server', 'email-service'])('lets the browser stack %s reach only its owned private IMAP emulator', async (service) => {
+    const config = parse(readFileSync(new URL('../../../../docker-compose.e2e-emulators.yaml', import.meta.url), 'utf8'), {
+      merge: true,
+      customTags: ['!reset', '!override'].map((tag) => ({
+        tag, collection: 'seq' as const, resolve: (sequence: unknown) => sequence,
+      })),
+    });
+    const allowlist = config.services[service].environment.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST;
+    if (allowlist === undefined) delete process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST;
+    else process.env.EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST = allowlist;
+    lookup.mockResolvedValue([{ address: '172.19.0.7', family: 4 }]);
+
+    const target = await assertSafeImapHost('imap-test-server', 3143);
+    expect(target.pin).toEqual({ address: '172.19.0.7', family: 4 });
+    expect(target.url.port).toBe('3143');
+    await expect(assertSafeImapHost('other-private-server', 3143)).rejects.toThrow(/blocked private address/);
+    await expect(assertSafeImapOauthTokenEndpoint('https://imap-test-server/token')).rejects.toThrow(/blocked private address/);
+
+    lookup.mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
+    await expect(assertSafeImapHost('imap-test-server', 3143)).rejects.toThrow(/blocked private address/);
   });
 
   it.each([
