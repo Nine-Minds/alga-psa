@@ -76,6 +76,8 @@ export default defineConfig({
       { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../../packages/co-managed/src/index.ts') },
       { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/co-managed/src')}/$1` },
       // Preserve the worker build's dependency-light notification implementation.
+      { find: /^@alga-psa\/notifications\/notifications\/email$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/email.ts') },
+      { find: /^@alga-psa\/notifications\/notifications\/emailLocaleResolver$/, replacement: path.resolve(__dirname, '../../packages/notifications/src/notifications/emailLocaleResolver.ts') },
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: `${path.resolve(__dirname, './src/typings/notifications')}/$1` },
       { find: '@/lib/db', replacement: path.resolve(__dirname, '../server/src/lib/db.ts') },
       // Match the worker tsconfig's enterprise email-domain entry point.
@@ -128,6 +130,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/secrets/index.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/encryption.ts') },
+      { find: /^@alga-psa\/core\/jobRunnerAccessor$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/jobRunnerAccessor.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src')}/$1` },
       { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../../packages/marketing/src/index.ts') },
       { find: /^@alga-psa\/marketing\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/marketing/src')}/$1` },

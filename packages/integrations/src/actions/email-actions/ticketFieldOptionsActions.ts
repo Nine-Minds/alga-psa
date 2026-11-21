@@ -22,7 +22,6 @@ type StatusOptionRow = {
 };
 type PriorityOptionRow = { id: string; name: string };
 type CategoryOptionRow = { id: string; name: string; parent_id: string | null; board_id: string | null };
-type ClientOptionRow = { id: string; name: string };
 type UserOptionRow = { id: string; name: string | null; username: string };
 type LocationOptionRow = { id: string; name: string; client_id: string };
 type TicketFieldOptionsActionError = ActionMessageError | ActionPermissionError;
@@ -41,7 +40,6 @@ type TicketFieldOptionSet =
   | 'statuses'
   | 'priorities'
   | 'categories'
-  | 'clients'
   | 'users';
 
 const TICKET_FIELD_OPTION_LABELS: Record<TicketFieldOptionSet, string> = {
@@ -50,7 +48,6 @@ const TICKET_FIELD_OPTION_LABELS: Record<TicketFieldOptionSet, string> = {
   statuses: 'statuses',
   priorities: 'priorities',
   categories: 'categories',
-  clients: 'clients',
   users: 'users',
 };
 
@@ -62,7 +59,6 @@ const TICKET_FIELD_OPTION_KEYS: Record<TicketFieldOptionSet, string> = {
   statuses: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.statuses',
   priorities: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.priorities',
   categories: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.categories',
-  clients: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.clients',
   users: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.users',
 };
 
@@ -126,7 +122,6 @@ export const getTicketFieldOptions = withAuth(async (
       statuses,
       priorities,
       categories,
-      clients,
       users,
       locations
     ] = await Promise.all([
@@ -166,15 +161,6 @@ export const getTicketFieldOptions = withAuth(async (
           board_id: row.board_id ?? undefined
         }))),
 
-      // Clients
-      tenantDb(knex, tenant).table('clients')
-        .orderBy('client_name', 'asc')
-        .select('client_id as id', 'client_name as name')
-        .then(rows => rowsAs<ClientOptionRow>(rows).map(row => ({
-          id: row.id,
-          name: row.name
-        }))),
-
       // Users
       tenantDb(knex, tenant).table('users')
         .orderBy('first_name', 'asc')
@@ -206,7 +192,6 @@ export const getTicketFieldOptions = withAuth(async (
         statuses: statuses || [],
         priorities: priorities || [],
         categories: categories || [],
-        clients: clients || [],
         users: users || [],
         locations: locations || []
       }
@@ -386,32 +371,6 @@ export const getCategoriesByBoard = withAuth(async (
       error
     });
     return ticketFieldOptionsLoadError('categories');
-  }
-});
-
-export const getAvailableClients = withAuth(async (
-  user,
-  { tenant }
-): Promise<{ clients: TicketFieldOptions['clients'] } | TicketFieldOptionsActionError> => {
-  const { knex } = await createTenantKnex();
-  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
-  if (!permitted) {
-    return ticketFieldOptionsPermissionError();
-  }
-
-  try {
-    const clients = await tenantDb(knex, tenant).table('clients')
-      .orderBy('client_name', 'asc')
-      .select('client_id as id', 'client_name as name')
-      .then(rows => rowsAs<ClientOptionRow>(rows).map(row => ({
-        id: row.id,
-        name: row.name
-      })));
-
-    return { clients };
-  } catch (error) {
-    console.error('Failed to load clients:', error);
-    return ticketFieldOptionsLoadError('clients');
   }
 });
 

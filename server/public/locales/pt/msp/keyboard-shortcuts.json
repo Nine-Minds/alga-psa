@@ -396,6 +396,12 @@
         "label": "Mostrar dicas de links em uma nova guia",
         "description": "Mostre dicas de teclado e abra links em uma nova guia quando possível."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Alternar o modo de foco",
+        "description": "Expanda o editor de layout para toda a janela ou volte ao layout normal."
+      }
     }
   },
   "platform": {

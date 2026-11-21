@@ -12,6 +12,7 @@ import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-tem
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { buildTemplateHtmlDocument, inlinePreviewDocumentImages } from '../lib/invoice-template-ast/server-render';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 
@@ -50,6 +51,8 @@ type AuthoritativePreviewResult = {
     status: 'idle' | 'success' | 'error';
     html: string | null;
     css: string | null;
+    /** The same render as a full HTML document, drawn as the pages it prints as. */
+    documentHtml?: string | null;
     contentHeightPx?: number | null;
     error?: string;
   };
@@ -173,6 +176,16 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         dateFormat,
         t: localized.t,
       });
+      // The author sees the pages this invoice prints as, chunked by the same engine that prints them.
+      // Its images are inlined first (inlinePreviewDocumentImages), or the chunker would
+      // measure a header the author's iframe then draws taller.
+      const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+      const paginated = await paginateDocumentPreviewHtml(
+        await inlinePreviewDocumentImages(
+          buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Invoice preview' }),
+        ),
+        validation.ast,
+      );
       const presentationLabels = timePresentationLabels(localized.t);
       // Reuse the document AST's display-only walk for canvas labels. Never
       // translate authored literals or expose the translator across the wire.
@@ -195,6 +208,7 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           status: 'success',
           html: rendered.html,
           css: rendered.css,
+          documentHtml: paginated.html,
           contentHeightPx: null,
         },
         verification: {

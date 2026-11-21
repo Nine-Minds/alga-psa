@@ -1,0 +1,78 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004"
+    ],
+    "description": "On the migrated DB run the seed twice, rotate under competing writes and reverse-resolve each historical ID. Verify one current mapping and independent test/live or account namespaces.",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F015"
+    ],
+    "description": "Attempt publication as a tenant admin and with wrong product, interval, mode or previously bound foreign offer. Verify no binding changes. Publish and restore a valid binding as an operator.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007",
+      "F010"
+    ],
+    "description": "Review the same test-mode offer in hosted Account Management and the portal. Rotate between review and confirmation, require renewed consent and charge new buyers the replacement Stripe terms. Exercise the hosted overview entry as well.",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ],
+    "description": "Confirm before rotation and resume afterward. Complete once, renew and change quantity on the old price. Verify historical classification and correct invoice preview and no second subscription.",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F013"
+    ],
+    "description": "Complete central portal payment and reconcile without browser return. Verify signed license on appliance refresh, separate base seats, then renew, decrease and expire under existing license policy.",
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012"
+    ],
+    "description": "Replay paid, unpaid, wrong-owner and stale events around an issuance outage. Retry delivery after recovery and inspect issuer state, signed count and Stripe charge count.",
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "featureIds": [
+      "F002",
+      "F005",
+      "F014",
+      "F015"
+    ],
+    "description": "Rehearse mixed-version rollout against seeded DB with an in-flight legacy operation. Disable new selection, confirm historical renewal continues, restore previous binding and complete another new purchase. Verify CE cannot enter hosted billing.",
+    "implemented": false
+  }
+]

@@ -158,6 +158,26 @@ export const paymentFailedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
 
 export type PaymentFailedEventPayload = z.infer<typeof paymentFailedEventPayloadSchema>;
 
+/**
+ * A recorded payment was backed out in AlgaPSA: the MSP reversed a manual
+ * payment, or deliberately reversed a synced one here only
+ * (`unlinkedFromProvider`). Distinct from PAYMENT_REFUNDED, which is money
+ * actually sent back through a gateway.
+ */
+export const paymentReversedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  paymentId: paymentIdSchema,
+  invoiceId: invoiceIdSchema.optional(),
+  reversedAt: z.string().datetime().optional(),
+  reversedByUserId: userIdSchema.optional(),
+  amount: z.string().min(1),
+  currency: currencySchema,
+  reason: z.string().optional(),
+  /** True when the payment's accounting-system mapping was unlinked too. */
+  unlinkedFromProvider: z.boolean().optional(),
+}).describe('Payload for PAYMENT_REVERSED');
+
+export type PaymentReversedEventPayload = z.infer<typeof paymentReversedEventPayloadSchema>;
+
 export const paymentRefundedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   paymentId: paymentIdSchema,
   refundedAt: z.string().datetime().optional(),

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useSWRConfig } from 'swr';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
@@ -50,6 +50,7 @@ export function AssetGroupDrawer({
   const { t } = useTranslation('msp/assets');
   const { mutate } = useSWRConfig();
   const [group, setGroup] = useState<AssetGroup | null>(null);
+  const [loadingGroup, setLoadingGroup] = useState(true);
   const [name, setName] = useState('');
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
@@ -75,14 +76,24 @@ export function AssetGroupDrawer({
     return value;
   }, []);
 
-  const load = useCallback(async () => {
-    const result = await getAssetGroup(groupId);
-    apply(result);
+  useLayoutEffect(() => {
+    let active = true;
+    setGroup(null);
+    setLoadingGroup(true);
+    void getAssetGroup(groupId).then((result) => {
+      if (!active) return;
+      apply(result);
+      setLoadingGroup(false);
+    }).catch((error) => {
+      if (!active) return;
+      toast.error(assetActionErrorMessage(error));
+      setGroup(null);
+      setLoadingGroup(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [groupId, apply]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useEffect(() => {
     if (!group?.client_id) return;
@@ -107,8 +118,10 @@ export function AssetGroupDrawer({
 
   if (!group) {
     return (
-      <div id="asset-group-drawer" className="p-6 text-sm text-[rgb(var(--color-text-500))]">
-        {t('common.states.loading', { defaultValue: 'Loading...' })}
+      <div id="asset-group-drawer" className="p-6 text-sm text-[rgb(var(--color-text-500))]" role="status">
+        {loadingGroup
+          ? t('common.states.loading', { defaultValue: 'Loading...' })
+          : t('errors.permissions.readAssets', { defaultValue: 'You do not have permission to view this group.' })}
       </div>
     );
   }

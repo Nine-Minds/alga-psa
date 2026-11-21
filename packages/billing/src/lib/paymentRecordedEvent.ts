@@ -11,6 +11,8 @@ export function buildExternalPaymentRecordedPayload(params: {
   currency: string;
   method: string;
   gatewayTransactionId?: string | null;
+  /** Set only when a person recorded the payment (manual entry). */
+  receivedByUserId?: string | null;
   /** Omit only when provenance is unknown; consumers default-deny. */
   source?: PaymentRecordedSource;
 }) {
@@ -21,7 +23,58 @@ export function buildExternalPaymentRecordedPayload(params: {
     amount: Number.isFinite(params.amount) ? String(Math.max(0, params.amount)) : '0',
     currency: params.currency,
     method: params.method,
+    receivedByUserId: params.receivedByUserId ?? undefined,
     gatewayTransactionId: params.gatewayTransactionId ?? undefined,
     source: params.source,
+  });
+}
+
+/**
+ * A payment backed out in AlgaPSA (manual reversal, or a synced payment
+ * reversed here only). Not a refund: no money moved through a gateway.
+ */
+export function buildExternalPaymentReversedPayload(params: {
+  paymentId: string;
+  invoiceId?: string | null;
+  reversedAt: string;
+  reversedByUserId?: string | null;
+  /** Amount in cents (positive) */
+  amount: number;
+  currency: string;
+  reason?: string;
+  /** True when the payment's accounting-system mapping was unlinked too. */
+  unlinkedFromProvider?: boolean;
+}) {
+  return builtWorkflowPayload('PAYMENT_REVERSED', {
+    paymentId: params.paymentId,
+    invoiceId: params.invoiceId ?? undefined,
+    reversedAt: params.reversedAt,
+    reversedByUserId: params.reversedByUserId ?? undefined,
+    amount: Number.isFinite(params.amount) ? String(Math.max(0, params.amount)) : '0',
+    currency: params.currency,
+    reason: params.reason,
+    unlinkedFromProvider: params.unlinkedFromProvider,
+  });
+}
+
+// LEVERAGE: pattern payment-recorded-builder — same payload as
+// buildPaymentAppliedPayload in server/src/lib/api/services/paymentWorkflowEvents.ts.
+export function buildExternalPaymentAppliedPayload(params: {
+  paymentId: string;
+  appliedAt: string;
+  /** Set only when a person applied the payment (manual entry). */
+  appliedByUserId?: string | null;
+  applications: Array<{ invoiceId: string; amountApplied: number }>;
+}) {
+  return builtWorkflowPayload('PAYMENT_APPLIED', {
+    paymentId: params.paymentId,
+    appliedAt: params.appliedAt,
+    appliedByUserId: params.appliedByUserId ?? undefined,
+    applications: params.applications.map((application) => ({
+      invoiceId: application.invoiceId,
+      amountApplied: Number.isFinite(application.amountApplied)
+        ? String(Math.max(0, application.amountApplied))
+        : '0',
+    })),
   });
 }

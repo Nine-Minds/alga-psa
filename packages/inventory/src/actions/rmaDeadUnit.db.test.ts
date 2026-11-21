@@ -1,0 +1,764 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
+/**
+ * Advance-replacement dead-unit leg (alga-2026-0002683, real DB). The Dell advance flow through shipping the
+ * dead unit to the vendor and the vendor's receipt, the guard matrix, the shared `dead_unit_owed` status told
+ * apart from the stock track, permissions, and the hard invariant: no stock row ever changes.
+ */
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import knexLib, { type Knex } from 'knex';
+
+// `readScope` makes the caller a client-portal user scoped to another client, so the REAL asset read check
+// (builtin same_client rule) denies the asset: no module mock has to intercept the gate.
+const holder: { knex: Knex; tenant: string; userId: string; grants: Set<string> | null; readScope: { user_type: string; clientId: string | null } } = {
+  knex: undefined as never, tenant: '', userId: '', grants: null, readScope: { user_type: 'internal', clientId: null },
+};
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: (...a: any[]) => unknown) => (...args: unknown[]) =>
+    fn({ user_id: holder.userId, tenant: holder.tenant, ...holder.readScope }, { tenant: holder.tenant }, ...args),
+  hasPermission: async (_user: unknown, resource: string, action: string) => holder.grants === null || holder.grants.has(`${resource}:${action}`),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async (_u: unknown, resource: string, action: string) => holder.grants === null || holder.grants.has(`${resource}:${action}`),
+}));
+vi.mock('@alga-psa/db', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  createTenantKnex: async () => ({ knex: holder.knex, tenant: holder.tenant }),
+  withTransaction: (db: Knex, fn: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(fn),
+}));
+const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }> }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(async (e: any) => { published.events.push({ eventType: e.eventType, payload: e.payload }); }),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async (e: any) => { published.events.push({ eventType: e.eventType, payload: e.payload }); }),
+  publishUnregisteredEventType: vi.fn(async () => undefined), reviveStoredWorkflowPayload: () => null,
+}));
+import {
+  approveWarrantyClaim, closeWarrantyRma, confirmVendorReceipt, openWarrantyClaim, receiveVendorReplacement,
+  returnDeviceToClient, shipDeadUnitToVendor, shipToVendor, markDeviceReceived, recordVendorNonReturnCharge, listRmaCaseEvents,
+} from './rmaWarrantyActions';
+import {
+  chargeForUnreturned, closeRma, deadUnitsOwedReport, getRmaCase, markDeadUnitOwed, openRma, recordDeadUnitReturned, receiveReturn,
+} from './rmaActions';
+import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
+import { recordCustodyEventInTransaction } from '@alga-psa/assets/lib/custody/service';
+import { queryOverdueAdvanceVendorReturns } from '../lib/dashboardQueries';
+import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+
+let knex: Knex;
+let LOCATION: string;
+let VENDOR: string;
+let CLIENT: string;
+let TICKET: string;
+let SERVICE: string;
+
+const FORBIDDEN = ['stock_units', 'stock_movements', 'stock_levels', 'invoices', 'invoice_charges', 'time_entries'];
+const counts = async () => {
+  const out: Record<string, number> = {};
+  for (const t of FORBIDDEN) out[t] = Number((await knex(t).where({ tenant: holder.tenant }).count('* as c').first())!.c);
+  return out;
+};
+
+beforeAll(async () => {
+  knex = knexLib({ client: 'pg', connection: getInventoryTestDatabaseConnection(), pool: { min: 1, max: 4 } });
+  holder.knex = knex;
+  holder.tenant = await createInventoryTestTenant(knex);
+  holder.userId = (await knex('users').where({ tenant: holder.tenant }).first()).user_id;
+  LOCATION = (await knex('stock_locations').where({ tenant: holder.tenant }).first()).location_id;
+  VENDOR = (await knex('vendors').where({ tenant: holder.tenant }).first()).vendor_id;
+  CLIENT = (await knex('clients').where({ tenant: holder.tenant }).first()).client_id;
+  TICKET = (await knex('tickets').where({ tenant: holder.tenant }).first()).ticket_id;
+  SERVICE = (await knex('service_catalog').where({ tenant: holder.tenant }).first()).service_id;
+  await knex('asset_statuses').insert([
+    { slug: 'active', label: 'Active', kind: 'deployable', display_order: 0 },
+    { slug: 'held_by_msp', label: 'Held by MSP', kind: 'pending', display_order: 5 },
+    { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
+  ].map((s) => ({ tenant: holder.tenant, ...s, is_builtin: true, is_active: true })));
+});
+beforeEach(() => { holder.grants = null; holder.readScope = { user_type: 'internal', clientId: null }; published.events.length = 0; });
+afterAll(async () => { await knex?.destroy(); });
+
+const ok = (r: any): any => {
+  expect(r?.actionError ?? r?.permissionError, JSON.stringify(r)).toBeUndefined();
+  return r;
+};
+
+async function newAsset(over: Record<string, unknown> = {}) {
+  const assetId = randomUUID();
+  await insertTestAssets(knex, {
+    tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `T-${assetId.slice(0, 8)}`,
+    name: 'Dell WD19 dock', serial_number: 'OLD-SERIAL', model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...over,
+  });
+  return assetId;
+}
+async function inCustody(assetId: string) {
+  return knex.transaction((trx) => openCustody(trx, holder.tenant, holder.userId, {
+    asset_id: assetId, ticket_id: TICKET, purpose: 'repair', location_id: LOCATION, bin: 'B3',
+    next_action_party: 'msp', next_action_note: null, follow_up_on: null, condition_note: null, accessories: [], document_ids: [],
+  } as any));
+}
+const rmaRow = (id: string) => knex('rma_cases').where({ tenant: holder.tenant, rma_id: id }).first();
+const custodyRow = (id: string) => knex('asset_custody').where({ tenant: holder.tenant, custody_id: id }).first();
+const events = (id: string) => knex('rma_events').where({ tenant: holder.tenant, rma_id: id }).orderBy('occurred_at').orderBy('recorded_at');
+const eventTypes = async (id: string) => (await events(id)).map((e: any) => e.event_type);
+
+/** Open → approve (advance) → custody in_office → receive replacement. Returns a case in `replaced`. */
+async function replacedAdvanceCase() {
+  const assetId = await newAsset();
+  const { custody } = await inCustody(assetId);
+  const opened = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Dock drops displays', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(opened.rma_id, { track: 'advance_replacement', vendor_id: VENDOR, rma_reference: 'DELL-ADV-1' }));
+  ok(await receiveVendorReplacement(opened.rma_id, { replacement_serial_number: 'NEW-SERIAL', location_id: LOCATION }));
+  return { assetId, custody, rmaId: opened.rma_id as string };
+}
+
+it('authorized sibling custody shipment reconciles the linked RMA and a stale charge cannot bypass it', async () => {
+  const c = await replacedAdvanceCase();
+  const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+
+  holder.grants = new Set(['asset:update']);
+  await expect(knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Unprivileged shipment', document_ids: [],
+  } as any))).rejects.toMatchObject({ code: 'permission_denied' });
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+  expect((await custodyRow(c.custody.custody_id)).state).toBe('in_office');
+  holder.grants = new Set(['asset:update', 'inventory:update']);
+
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Sibling custody shipment', document_ids: [],
+  } as any));
+
+  expect(await rmaRow(c.rmaId)).toMatchObject({ status: 'dead_unit_owed', outbound_shipped_at: expect.anything() });
+  expect(await events(c.rmaId)).toMatchObject([expect.objectContaining({ event_type: 'opened' }), expect.anything(), expect.anything(), expect.objectContaining({ event_type: 'dead_unit_shipped', payload: expect.objectContaining({ shipment_source: 'custody' }) })]);
+
+  // Simulate historical stale lifecycle state; authoritative custody still blocks a charge.
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ status: 'replaced' });
+  expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+});
+
+it('a prior returned custody episode does not block charging a later obligation without a custody link', async () => {
+  const assetId = await newAsset();
+  const previous = await inCustody(assetId);
+  const { recordCustodyEvent } = await import('@alga-psa/assets/lib/custody/recordCustodyEvent');
+  await knex.transaction((trx) => recordCustodyEvent(trx, holder.tenant, holder.userId, previous.custody.custody_id, {
+    event_type: 'returned', counterparty: 'Client', document_ids: [],
+  } as any));
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Later failure', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'LATER-NEW' }));
+  expect((await rmaRow(claim.rma_id)).custody_id).toBeNull();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ return_by: '2020-01-01' });
+  ok(await recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' }));
+  expect((await rmaRow(claim.rma_id)).status).toBe('closed');
+});
+
+it('authoritative returned custody blocks a charge when the RMA lifecycle is stale', async () => {
+  const c = await replacedAdvanceCase();
+  const { recordCustodyEvent } = await import('@alga-psa/assets/lib/custody/recordCustodyEvent');
+  await knex.transaction((trx) => recordCustodyEvent(trx, holder.tenant, holder.userId, c.custody.custody_id, {
+    event_type: 'returned', counterparty: 'Client', document_ids: [],
+  } as any));
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: '2020-01-01' });
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+  expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '50', currency_code: 'USD' })).toHaveProperty('actionError');
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+});
+
+it('custody shipment ignores stock-owned RMA rows even if they share the episode and asset', async () => {
+  const clientClaim = await replacedAdvanceCase();
+  const stock = await stockCaseInDeadUnitOwed();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: stock.rmaId }).update({
+    asset_id: clientClaim.assetId, custody_id: clientClaim.custody.custody_id, status: 'replaced', updated_at: knex.fn.now(),
+  });
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, clientClaim.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  expect((await rmaRow(stock.rmaId)).status).toBe('replaced');
+  expect((await rmaRow(clientClaim.rmaId)).status).toBe('dead_unit_owed');
+  expect(await events(stock.rmaId)).toHaveLength(0);
+});
+
+it('a newer warranty review claim does not hide the eligible linked return obligation', async () => {
+  const c = await replacedAdvanceCase();
+  const newer = ok(await openWarrantyClaim({ asset_id: c.assetId, reason: 'Newer review', rma_type: 'advance_replacement' }));
+  expect(newer.status).toBe('warranty_review');
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  expect((await rmaRow(c.rmaId)).status).toBe('dead_unit_owed');
+  expect((await rmaRow(newer.rma_id)).status).toBe('warranty_review');
+});
+
+it('a charged unlinked claim does not block shipment from a later unrelated custody episode', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Client-held dead unit', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'CHARGED-REPLACEMENT' }));
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ return_by: '2020-01-01' });
+  ok(await recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' }));
+  const later = await inCustody(assetId);
+  await expect(knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, later.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any))).resolves.toHaveProperty('event');
+});
+
+it('refuses ambiguous multiple eligible return obligations linked to one episode', async () => {
+  const first = await replacedAdvanceCase();
+  const second = ok(await openWarrantyClaim({ asset_id: first.assetId, reason: 'Duplicate advance claim', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(second.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  ok(await receiveVendorReplacement(second.rma_id, { replacement_serial_number: 'DUPLICATE-REPLACEMENT' }));
+  await expect(knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, first.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any))).rejects.toMatchObject({ code: 'invalid_transition' });
+  expect((await custodyRow(first.custody.custody_id)).state).toBe('in_office');
+  expect((await rmaRow(first.rmaId)).status).toBe('replaced');
+  expect((await rmaRow(second.rma_id)).status).toBe('replaced');
+});
+
+it('custody intake after claim approval links the episode before replacement receipt', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Claim before intake', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+
+  const intake = await inCustody(assetId);
+  expect((await rmaRow(claim.rma_id)).custody_id).toBe(intake.custody.custody_id);
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'INTAKE-FIRST' }));
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, intake.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  expect((await rmaRow(claim.rma_id)).status).toBe('dead_unit_owed');
+});
+
+it('custody intake refuses ambiguous multiple unlinked advance claims', async () => {
+  const assetId = await newAsset();
+  const first = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'First claim', rma_type: 'advance_replacement' }));
+  const second = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Second claim', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(first.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  ok(await approveWarrantyClaim(second.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  await expect(inCustody(assetId)).rejects.toMatchObject({ code: 'invalid_transition' });
+  expect(await knex('asset_custody').where({ tenant: holder.tenant, asset_id: assetId })).toHaveLength(0);
+  expect((await rmaRow(first.rma_id)).custody_id).toBeNull();
+  expect((await rmaRow(second.rma_id)).custody_id).toBeNull();
+});
+
+it('custody intake after replacement receipt links the episode and prevents a later non-return charge', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Intake after replacement', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'REPLACEMENT-FIRST', return_by: '2020-01-01' }));
+
+  const intake = await inCustody(assetId);
+  expect((await rmaRow(claim.rma_id)).custody_id).toBe(intake.custody.custody_id);
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, intake.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  // Model an old stale status; the persisted association still makes custody authoritative.
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ status: 'replaced' });
+  expect(await recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' })).toHaveProperty('actionError');
+});
+
+it('legacy unlinked active claims recover only the episode opened after the claim', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Legacy unlinked intake', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  const intake = await inCustody(assetId);
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'LEGACY-NEW' }));
+
+  // Emulate a pre-fix row. The episode is newer than the claim, while an earlier episode would not qualify.
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ custody_id: null });
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, intake.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  expect((await rmaRow(claim.rma_id)).status).toBe('dead_unit_owed');
+  expect((await rmaRow(claim.rma_id)).custody_id).toBe(intake.custody.custody_id);
+});
+
+it('charging rejects physical shipment from a historical episode even when the active claim is unlinked', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Legacy shipped custody', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  const intake = await inCustody(assetId);
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'LEGACY-SHIPPED', return_by: '2020-01-01' }));
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ custody_id: null });
+  const { recordCustodyEvent } = await import('@alga-psa/assets/lib/custody/recordCustodyEvent');
+  await knex.transaction((trx) => recordCustodyEvent(trx, holder.tenant, holder.userId, intake.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', document_ids: [],
+  } as any));
+
+  expect(await recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' })).toHaveProperty('actionError');
+  expect((await rmaRow(claim.rma_id)).status).toBe('replaced');
+});
+
+it('shipment and charge serialize for a claim linked during later custody intake', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Concurrent intake resolution', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  const intake = await inCustody(assetId);
+  ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'CONCURRENT-INTAKE', return_by: '2020-01-01' }));
+
+  const shipment = knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, intake.custody.custody_id, { event_type: 'shipped', counterparty: 'Dell', document_ids: [] } as any));
+  const charge = recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' });
+  const results = await Promise.allSettled([shipment, charge]);
+  const fulfilled = results.filter((result) => result.status === 'fulfilled' && !(result.value as any)?.actionError);
+  expect(fulfilled).toHaveLength(1);
+  const final = await rmaRow(claim.rma_id);
+  expect(['dead_unit_owed', 'closed']).toContain(final.status);
+  if (final.status === 'dead_unit_owed') expect((await custodyRow(intake.custody.custody_id)).state).toBe('with_vendor');
+  if (final.status === 'closed') expect((await custodyRow(intake.custody.custody_id)).state).not.toBe('with_vendor');
+});
+
+it('unlinked active claims with multiple later episodes fail charging as ambiguous', async () => {
+  const assetId = await newAsset();
+  const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Ambiguous historical custody', rma_type: 'advance_replacement' }));
+  ok(await approveWarrantyClaim(claim.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+  await ok(await receiveVendorReplacement(claim.rma_id, { replacement_serial_number: 'AMBIGUOUS-NEW', return_by: '2020-01-01' }));
+  const first = await inCustody(assetId);
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ custody_id: null });
+  const { recordCustodyEvent } = await import('@alga-psa/assets/lib/custody/recordCustodyEvent');
+  await knex.transaction((trx) => recordCustodyEvent(trx, holder.tenant, holder.userId, first.custody.custody_id, {
+    event_type: 'returned', counterparty: 'Client', document_ids: [],
+  } as any));
+  await inCustody(assetId);
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: claim.rma_id }).update({ custody_id: null });
+  expect(await recordVendorNonReturnCharge(claim.rma_id, { amount: '50', currency_code: 'USD' })).toHaveProperty('actionError');
+  expect((await rmaRow(claim.rma_id)).status).toBe('replaced');
+});
+
+it('custody shipment and late charge serialize so they cannot both resolve one vendor return', async () => {
+  const c = await replacedAdvanceCase();
+  const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+  const shipment = knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Concurrent custody shipment', document_ids: [],
+  } as any));
+  const charge = recordVendorNonReturnCharge(c.rmaId, { amount: '50', currency_code: 'USD' });
+  const results = await Promise.allSettled([shipment, charge]);
+  expect(results.filter((result) => result.status === 'fulfilled' && !(result.value as any)?.actionError)).toHaveLength(1);
+  const status = (await rmaRow(c.rmaId)).status;
+  expect(['dead_unit_owed', 'closed']).toContain(status);
+  if (status === 'closed') expect((await custodyRow(c.custody.custody_id)).state).not.toBe('with_vendor');
+  if (status === 'dead_unit_owed') expect((await custodyRow(c.custody.custody_id)).state).toBe('with_vendor');
+});
+
+async function stockCaseInDeadUnitOwed() {
+  const [u] = await knex('stock_units')
+    .insert({ tenant: holder.tenant, service_id: SERVICE, serial_number: `SN-${randomUUID()}`, status: 'delivered', client_id: CLIENT, unit_cost: 1000 })
+    .returning('*');
+  const rma: any = ok(await openRma({ returned_unit_id: u.unit_id, reason: 'dead' }));
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: rma.rma_id }).update({ status: 'dead_unit_owed', rma_type: 'advance_replacement', dead_unit_due_date: '2026-12-01' });
+  return { unitId: u.unit_id as string, rmaId: rma.rma_id as string };
+}
+
+describe('advance-replacement dead-unit leg', () => {
+  it('Dell advance flow: replacement received, dead unit shipped to the vendor, vendor receipt closes resolved', async () => {
+    const assetId = await newAsset();
+    const { custody } = await inCustody(assetId);
+    const before = await counts();
+
+    const opened = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Dock drops displays', rma_type: 'advance_replacement' }));
+    ok(await approveWarrantyClaim(opened.rma_id, { track: 'advance_replacement', vendor_id: VENDOR, rma_reference: 'DELL-ADV-1' }));
+    expect((await rmaRow(opened.rma_id)).status).toBe('open');
+    expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
+
+    expect(ok(await receiveVendorReplacement(opened.rma_id, { replacement_serial_number: 'NEW-SERIAL', location_id: LOCATION })).status).toBe('replaced');
+    expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
+    expect((await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).first()).serial_number).toBe('NEW-SERIAL');
+
+    published.events.length = 0;
+    const shipped = ok(await shipDeadUnitToVendor(opened.rma_id, { carrier: 'UPS', tracking_number: '1Z-DEAD-1', return_by: '2026-12-15' }));
+    expect(shipped).toMatchObject({ status: 'dead_unit_owed', outbound_carrier: 'UPS', outbound_tracking_number: '1Z-DEAD-1', return_by: '2026-12-15', returned_unit_id: null });
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'with_vendor', close_reason: null });
+    expect(published.events.map((e) => e.eventType)).toContain('INVENTORY_RMA_UPDATED');
+
+    const shippedEvent = (await events(opened.rma_id)).find((e: any) => e.event_type === 'dead_unit_shipped');
+    expect(shippedEvent).toBeTruthy();
+    // The asset row now carries the replacement's serial; the dead unit's serial is kept in the event payload.
+    expect(JSON.stringify(shippedEvent.payload)).toContain('OLD-SERIAL');
+    // Carrier and tracking live on the case; the custody shipment event carries them in its note.
+    expect(await rmaRow(opened.rma_id)).toMatchObject({ outbound_carrier: 'UPS', outbound_tracking_number: '1Z-DEAD-1' });
+    const custodyShipped = await knex('asset_custody_events').where({ tenant: holder.tenant, custody_id: custody.custody_id, event_type: 'shipped' }).first();
+    expect(custodyShipped.note).toContain('1Z-DEAD-1');
+    expect(custodyShipped.note).toContain('OLD-SERIAL');
+
+    const confirmed = ok(await confirmVendorReceipt(opened.rma_id, {}));
+    expect(confirmed).toMatchObject({ status: 'closed', closed_reason: 'resolved' });
+    expect(confirmed.closed_at).toBeTruthy();
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'closed', close_reason: 'returned_to_vendor' });
+
+    expect(await eventTypes(opened.rma_id)).toEqual(expect.arrayContaining(['opened', 'warranty_approved', 'replacement_received', 'dead_unit_shipped', 'vendor_receipt_confirmed']));
+    expect(await eventTypes(opened.rma_id)).not.toContain('returned_to_client');
+
+    const history = await knex('asset_history').where({ tenant: holder.tenant, asset_id: assetId });
+    const changeTypes = history.map((h: any) => h.change_type);
+    expect(changeTypes).toContain('custody_shipped');
+    expect(changeTypes).toContain('custody_returned_to_vendor');
+    expect(changeTypes).not.toContain('custody_returned');
+    expect(JSON.stringify(history)).not.toContain('returned_to_client');
+    expect(JSON.stringify(await knex('asset_custody_events').where({ tenant: holder.tenant, custody_id: custody.custody_id }))).not.toContain('returned_to_client');
+
+    expect(await counts()).toEqual(before);
+  });
+
+  it('guard matrix: only a replaced/repaired advance case may ship; everything else is refused with no write', async () => {
+    const ship = { carrier: 'UPS', tracking_number: 'G1' };
+    const assetId = await newAsset();
+    const { custody } = await inCustody(assetId);
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'advance_replacement' }));
+    // warranty_review
+    expect(await shipDeadUnitToVendor(c.rma_id, ship)).toHaveProperty('actionError');
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'advance_replacement', vendor_id: VENDOR }));
+    // open
+    expect(await shipDeadUnitToVendor(c.rma_id, ship)).toHaveProperty('actionError');
+    expect(await confirmVendorReceipt(c.rma_id, {})).toHaveProperty('actionError');
+    ok(await receiveVendorReplacement(c.rma_id, { replacement_serial_number: 'N1', location_id: LOCATION }));
+    // replaced: confirm is not available yet
+    expect(await confirmVendorReceipt(c.rma_id, {})).toHaveProperty('actionError');
+    ok(await shipDeadUnitToVendor(c.rma_id, ship));
+    ok(await confirmVendorReceipt(c.rma_id, {}));
+    // closed
+    expect(await shipDeadUnitToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'other' })).toHaveProperty('actionError');
+    expect(await confirmVendorReceipt(c.rma_id, {})).toHaveProperty('actionError');
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'closed', close_reason: 'returned_to_vendor' });
+  });
+
+  it('receive_replacement persists return_by on the advance track; omitted, the approval value survives (T013)', async () => {
+    const mk = async (approvalReturnBy: string) => {
+      const assetId = await newAsset();
+      await inCustody(assetId);
+      const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'advance_replacement' }));
+      ok(await approveWarrantyClaim(c.rma_id, { track: 'advance_replacement', vendor_id: VENDOR, return_by: approvalReturnBy }));
+      return c.rma_id as string;
+    };
+    const ymd = async (id: string) => { const d = (await rmaRow(id)).return_by; return d instanceof Date ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : String(d).slice(0, 10); };
+    const withNew = await mk('2026-11-10');
+    ok(await receiveVendorReplacement(withNew, { replacement_serial_number: 'R1', location_id: LOCATION, return_by: '2026-11-20' }));
+    expect(await ymd(withNew)).toBe('2026-11-20');
+    const recv = (await events(withNew)).find((e: any) => e.event_type === 'replacement_received');
+    expect(recv.payload.return_by).toBe('2026-11-20');
+    const without = await mk('2026-11-10');
+    ok(await receiveVendorReplacement(without, { replacement_serial_number: 'R2', location_id: LOCATION }));
+    expect(await ymd(without)).toBe('2026-11-10');
+  });
+
+  it('receive_replacement ignores return_by on the standard track', async () => {
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'standard' }));
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(c.rma_id, {}));
+    ok(await shipToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'S9', return_by: '2026-12-01' }));
+    ok(await receiveVendorReplacement(c.rma_id, { replacement_serial_number: 'S-N2', location_id: LOCATION, return_by: '2026-12-25' }));
+    const d = (await rmaRow(c.rma_id)).return_by;
+    expect(String(d instanceof Date ? d.getMonth() + 1 : d)).toMatch(/12/);
+    expect(d instanceof Date ? d.getDate() : Number(String(d).slice(8, 10))).toBe(1);
+  });
+
+  it('a standard-track case is refused, even when it reaches replaced', async () => {
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'standard' }));
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(c.rma_id, {}));
+    ok(await shipToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'S1', return_by: '2026-12-01' }));
+    ok(await receiveVendorReplacement(c.rma_id, { replacement_serial_number: 'S-NEW', location_id: LOCATION }));
+    expect((await rmaRow(c.rma_id)).status).toBe('replaced');
+    const before = await events(c.rma_id);
+    const r: any = await shipDeadUnitToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'S2' });
+    expect(r).toMatchObject({ actionError: expect.any(String), messageKey: 'features/inventory:errors.rma.warrantyWrongTrack' });
+    expect(await events(c.rma_id)).toHaveLength(before.length);
+    expect((await rmaRow(c.rma_id)).status).toBe('replaced');
+  });
+
+  it('same tracking is idempotent (no new event, no custody write); a different tracking from dead_unit_owed is refused', async () => {
+    const { rmaId, custody } = await replacedAdvanceCase();
+    const first = ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'IDEM-1' }));
+    const n = (await events(rmaId)).length;
+    const custodyBefore = await custodyRow(custody.custody_id);
+    const custodyEventsBefore = await knex('asset_custody_events').where({ tenant: holder.tenant, custody_id: custody.custody_id }).count('* as c').first();
+    published.events.length = 0;
+
+    const again = ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'IDEM-1' }));
+    expect(again.status).toBe('dead_unit_owed');
+    expect(again.updated_at).toEqual(first.updated_at);
+    expect(await events(rmaId)).toHaveLength(n);
+    expect(await custodyRow(custody.custody_id)).toEqual(custodyBefore);
+    expect(await knex('asset_custody_events').where({ tenant: holder.tenant, custody_id: custody.custody_id }).count('* as c').first()).toEqual(custodyEventsBefore);
+    expect(published.events).toHaveLength(0);
+
+    expect(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'IDEM-2' })).toHaveProperty('actionError');
+    expect((await rmaRow(rmaId)).outbound_tracking_number).toBe('IDEM-1');
+  });
+
+  it('refuses when the device is not in custody or custody is in the wrong place', async () => {
+    const a = await replacedAdvanceCase();
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: a.custody.custody_id }).update({ state: 'with_vendor', holder_user_id: null, location_id: null, bin: null });
+    expect(await shipDeadUnitToVendor(a.rmaId, { carrier: 'UPS', tracking_number: 'W1' })).toMatchObject({ messageKey: 'features/inventory:errors.rma.warrantyCustodyWrongState' });
+    expect((await rmaRow(a.rmaId)).status).toBe('replaced');
+
+    const b = await replacedAdvanceCase();
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: b.custody.custody_id }).update({ state: 'closed', close_reason: 'disposed', closed_at: knex.fn.now() });
+    expect(await shipDeadUnitToVendor(b.rmaId, { carrier: 'UPS', tracking_number: 'W2' })).toMatchObject({ messageKey: 'features/inventory:errors.rma.warrantyNoCustody' });
+    expect((await rmaRow(b.rmaId)).status).toBe('replaced');
+
+    const c = await replacedAdvanceCase();
+    ok(await shipDeadUnitToVendor(c.rmaId, { carrier: 'UPS', tracking_number: 'W3' }));
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: c.custody.custody_id }).update({ state: 'in_office', holder_user_id: holder.userId, location_id: LOCATION });
+    expect(await confirmVendorReceipt(c.rmaId, {})).toMatchObject({ messageKey: 'features/inventory:errors.rma.warrantyCustodyWrongState' });
+    expect((await rmaRow(c.rmaId)).status).toBe('dead_unit_owed');
+  });
+
+  it('from dead_unit_owed, generic close leaves custody with the vendor and return-to-client is refused', async () => {
+    const { rmaId, custody } = await replacedAdvanceCase();
+    ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'GC-1' }));
+    expect(await returnDeviceToClient(rmaId, {})).toHaveProperty('actionError');
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'with_vendor' });
+    const closed = ok(await closeWarrantyRma(rmaId, { reason: 'resolved' }));
+    expect(closed.status).toBe('closed');
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'with_vendor', close_reason: null });
+  });
+
+  it('permissions and the record-level check run on the server action', async () => {
+    const { rmaId, assetId, custody } = await replacedAdvanceCase();
+    const ship = { carrier: 'UPS', tracking_number: 'P1' };
+    holder.grants = new Set(['asset:update']);
+    expect(await shipDeadUnitToVendor(rmaId, ship)).toHaveProperty('permissionError');
+    holder.grants = new Set(['warranty:read', 'asset:update']);
+    expect(await shipDeadUnitToVendor(rmaId, ship)).toHaveProperty('permissionError');
+    holder.grants = new Set(['warranty:update']);
+    expect(await shipDeadUnitToVendor(rmaId, ship)).toHaveProperty('permissionError');
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
+    expect(await shipDeadUnitToVendor(rmaId, ship)).toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
+    expect((await rmaRow(rmaId)).status).toBe('replaced');
+    expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
+    holder.readScope = { user_type: 'internal', clientId: null };
+    ok(await shipDeadUnitToVendor(rmaId, ship));
+
+    holder.grants = new Set(['warranty:update']);
+    expect(await confirmVendorReceipt(rmaId, {})).toHaveProperty('permissionError');
+    holder.grants = new Set(['warranty:update', 'asset:update']);
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
+    expect(await confirmVendorReceipt(rmaId, {})).toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
+    holder.readScope = { user_type: 'internal', clientId: null };
+    expect((await rmaRow(rmaId)).status).toBe('dead_unit_owed');
+    ok(await confirmVendorReceipt(rmaId, {}));
+  });
+});
+
+describe('shared dead_unit_owed status: stock track vs warranty track', () => {
+  it('dashboard query returns only overdue, unshipped advance returns and applies the existing asset read gate', async () => {
+    const overdue = await replacedAdvanceCase();
+    const dueToday = await replacedAdvanceCase();
+    const approaching = await replacedAdvanceCase();
+    const outsideWindow = await replacedAdvanceCase();
+    const onTime = await replacedAdvanceCase();
+    const resolved = await replacedAdvanceCase();
+    const localToday = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inSevenDays = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inEightDays = (() => { const d = new Date(); d.setDate(d.getDate() + 8); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: overdue.rmaId }).update({ return_by: yesterday });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: dueToday.rmaId }).update({ return_by: localToday });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ return_by: inSevenDays });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: outsideWindow.rmaId }).update({ return_by: inEightDays });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: onTime.rmaId }).update({ return_by: tomorrow });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: resolved.rmaId }).update({ return_by: yesterday, status: 'closed', closed_at: knex.fn.now() });
+
+    const rows = await queryOverdueAdvanceVendorReturns(knex, holder.tenant, localToday);
+    const byId = new Map(rows.map((row) => [row.rma_id, row]));
+    expect(byId.get(overdue.rmaId)).toMatchObject({ rma_number: expect.stringMatching(/^RMA-/), return_by: yesterday, overdue_days: 1 });
+    expect(byId.get(dueToday.rmaId)).toMatchObject({ return_by: localToday, overdue_days: 0, days_until_due: 0 });
+    expect(byId.get(approaching.rmaId)).toMatchObject({ return_by: inSevenDays, overdue_days: -7, days_until_due: 7 });
+    expect(byId.has(outsideWindow.rmaId)).toBe(false);
+    const otherTenant = await createInventoryTestTenant(knex);
+    expect(await queryOverdueAdvanceVendorReturns(knex, otherTenant, localToday)).toEqual([]);
+    const otherClientId = randomUUID();
+    await knex('clients').insert({ tenant: holder.tenant, client_id: otherClientId, client_name: 'Restricted customer', billing_cycle: 'monthly' });
+    await knex('assets').where({ tenant: holder.tenant, asset_id: approaching.assetId }).update({ client_id: otherClientId });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ client_id: otherClientId });
+    holder.readScope = { user_type: 'client', clientId: CLIENT };
+    const user = { user_id: holder.userId, ...holder.readScope };
+    const scope = await resolveRmaReadScope(user);
+    const scopedRows = await queryOverdueAdvanceVendorReturns(knex, holder.tenant, localToday);
+    const visible = new Set((await filterReadableRmaCases(knex as any, holder.tenant, user, scopedRows, scope)).map((row) => row.rma_id));
+    expect(visible.has(approaching.rmaId)).toBe(false);
+    expect(visible.has(overdue.rmaId)).toBe(true);
+  });
+
+  it('vendor non-return charge persists amount, currency, actor history and resolves the deadline once', async () => {
+    const c = await replacedAdvanceCase();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+    const before = await counts();
+
+    const attempts = await Promise.all([
+      recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD', note: 'Vendor declined late return' }),
+      recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD', note: 'Vendor declined late return' }),
+    ]);
+    expect(attempts.filter((attempt: any) => !attempt?.actionError && !attempt?.permissionError)).toHaveLength(1);
+    expect(attempts.filter((attempt: any) => attempt?.actionError || attempt?.permissionError)).toHaveLength(1);
+    const charged = attempts.find((attempt: any) => !attempt?.actionError && !attempt?.permissionError)!;
+    ok(charged);
+    expect(charged).toMatchObject({ status: 'closed', closed_reason: 'resolved' });
+    const history = await events(c.rmaId);
+    expect(history).toHaveLength(4);
+    expect(history.at(-1)).toMatchObject({ event_type: 'closed', actor_user_id: holder.userId, note: 'Vendor declined late return', payload: { resolution: 'vendor_non_return_charge', amount: '125.50', currency_code: 'USD' } });
+    expect(history.map((event: any) => event.event_type)).not.toContain('dead_unit_shipped');
+    expect(history.map((event: any) => event.event_type)).not.toContain('vendor_receipt_confirmed');
+    const reloadedHistory = ok(await listRmaCaseEvents(c.rmaId));
+    expect(reloadedHistory.at(-1)).toMatchObject({ event_type: 'closed', actor_name: 'Inventory Operator', payload: { resolution: 'vendor_non_return_charge', amount: '125.50', currency_code: 'USD' } });
+    expect(await counts()).toEqual(before);
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect(await events(c.rmaId)).toHaveLength(4);
+  });
+
+  it('refuses charges for non-overdue, wrong-track, unit-tracked and assetless cases', async () => {
+    const future = await replacedAdvanceCase();
+    const approaching = await replacedAdvanceCase();
+    const standard = await replacedAdvanceCase();
+    const stock = await stockCaseInDeadUnitOwed();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inSevenDays = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: future.rmaId }).update({ return_by: tomorrow });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ return_by: inSevenDays });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: standard.rmaId }).update({ return_by: past, rma_type: 'standard' });
+    for (const rmaId of [future.rmaId, approaching.rmaId, standard.rmaId, stock.rmaId]) {
+      expect(await recordVendorNonReturnCharge(rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    }
+    const assetlessId = randomUUID();
+    await knex('rma_cases').insert({ tenant: holder.tenant, rma_id: assetlessId, rma_number: `RMA-${assetlessId.slice(0, 8)}`, rma_type: 'advance_replacement', status: 'replaced', returned_unit_id: null, asset_id: null, return_by: past });
+    expect(await recordVendorNonReturnCharge(assetlessId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect((await rmaRow(assetlessId)).status).toBe('replaced');
+    expect(await events(assetlessId)).toHaveLength(0);
+  });
+
+  it('rejects malformed money, due-today and inaccessible records without changing lifecycle or history', async () => {
+    const c = await replacedAdvanceCase();
+    const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: today });
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+    for (const input of [
+      { amount: '0', currency_code: 'USD' }, { amount: '1.001', currency_code: 'USD' },
+      { amount: 'Infinity', currency_code: 'USD' }, { amount: '1', currency_code: 'XXX' },
+    ]) expect(await recordVendorNonReturnCharge(c.rmaId, input)).toHaveProperty('actionError');
+    holder.readScope = { user_type: 'client', clientId: randomUUID() };
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+    expect(await events(c.rmaId)).toHaveLength(3);
+  });
+
+  it('refuses a non-return charge on a readable asset excluded by the update policy without side effects', async () => {
+    const c = await replacedAdvanceCase();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: '2020-01-01' });
+    const before = await rmaRow(c.rmaId);
+    const history = await events(c.rmaId);
+    const custody = await custodyRow(c.custody.custody_id);
+    const stockAndBilling = await counts();
+    const bundleId = randomUUID();
+    const revisionId = randomUUID();
+    await knex.transaction(async (trx) => {
+      await trx('authorization_bundles').insert({
+        tenant: holder.tenant, bundle_id: bundleId, name: 'Warranty read-only operator', status: 'active', is_system: false,
+      });
+      await trx('authorization_bundle_revisions').insert({
+        tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId, revision_number: 1, lifecycle_state: 'published',
+      });
+      await trx('authorization_bundles').where({ tenant: holder.tenant, bundle_id: bundleId }).update({ published_revision_id: revisionId });
+      await trx('authorization_bundle_rules').insert({
+        tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId,
+        resource_type: 'asset', action: 'update', template_key: 'same_team', effect: 'narrow', config: '{}', position: 0,
+      });
+      await trx('authorization_bundle_assignments').insert({
+        tenant: holder.tenant, bundle_id: bundleId, target_type: 'user', target_id: holder.userId, status: 'active',
+      });
+    });
+    published.events.length = 0;
+    try {
+      // Read visibility alone cannot authorize a mutation. This asset has no team association.
+      expect(ok(await getRmaCase(c.rmaId))).toMatchObject({ rma_id: c.rmaId, status: 'replaced' });
+      expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' }))
+        .toMatchObject({ messageKey: 'features/inventory:errors.rma.caseNotFound' });
+      expect(await rmaRow(c.rmaId)).toEqual(before);
+      expect(await events(c.rmaId)).toEqual(history);
+      expect(await custodyRow(c.custody.custody_id)).toEqual(custody);
+      expect(await counts()).toEqual(stockAndBilling);
+      expect(published.events).toHaveLength(0);
+    } finally {
+      await knex('authorization_bundle_assignments').where({ tenant: holder.tenant, bundle_id: bundleId }).delete();
+    }
+    // The same eligible charge succeeds once the per-record restriction is removed.
+    expect(ok(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' }))).toMatchObject({ status: 'closed' });
+    expect(await events(c.rmaId)).toHaveLength(history.length + 1);
+  });
+
+  it('every stock-track entry point refuses a warranty case in dead_unit_owed and changes nothing', async () => {
+    const { rmaId } = await replacedAdvanceCase();
+    ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'SH-1' }));
+    const before = await counts();
+    const row = await rmaRow(rmaId);
+    for (const attempt of [
+      () => recordDeadUnitReturned(rmaId),
+      () => chargeForUnreturned(rmaId),
+      () => closeRma(rmaId),
+      () => markDeadUnitOwed(rmaId, '2026-12-01'),
+    ]) {
+      expect(await attempt()).toMatchObject({ messageKey: 'features/inventory:errors.rma.warrantyClaimUnitAction' });
+    }
+    expect(await rmaRow(rmaId)).toEqual(row);
+    expect(await counts()).toEqual(before);
+  });
+
+  it('the warranty cores refuse a stock case in dead_unit_owed', async () => {
+    const { rmaId, unitId } = await stockCaseInDeadUnitOwed();
+    const row = await rmaRow(rmaId);
+    const unit = await knex('stock_units').where({ tenant: holder.tenant, unit_id: unitId }).first();
+    const before = await counts();
+    for (const attempt of [
+      () => confirmVendorReceipt(rmaId, {}),
+      () => shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'X' }),
+      () => closeWarrantyRma(rmaId, {}),
+      () => returnDeviceToClient(rmaId, {}),
+    ]) {
+      expect(await attempt()).toMatchObject({ messageKey: 'features/inventory:errors.rma.warrantyUnitTracked' });
+    }
+    expect(await rmaRow(rmaId)).toEqual(row);
+    expect(await knex('stock_units').where({ tenant: holder.tenant, unit_id: unitId }).first()).toEqual(unit);
+    expect(await counts()).toEqual(before);
+  });
+
+  it('the stock-track dead-unit-owed report keeps stock cases and excludes warranty dead units', async () => {
+    const stock = await stockCaseInDeadUnitOwed();
+    const { rmaId } = await replacedAdvanceCase();
+    ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'RP-1' }));
+    const rows: any[] = ok(await deadUnitsOwedReport());
+    const ids = rows.map((r) => r.rma_id);
+    expect(ids).toContain(stock.rmaId);
+    expect(ids).not.toContain(rmaId);
+  });
+
+  it('stock-track dead-unit closing still works for a stock case (unchanged)', async () => {
+    const { rmaId, unitId } = await stockCaseInDeadUnitOwed();
+    const closed: any = ok(await recordDeadUnitReturned(rmaId));
+    expect(closed.status).toBe('closed');
+    expect((await knex('stock_units').where({ tenant: holder.tenant, unit_id: unitId }).first()).status).toBe('in_rma');
+    void receiveReturn;
+  });
+});

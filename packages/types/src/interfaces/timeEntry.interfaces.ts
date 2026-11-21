@@ -179,6 +179,8 @@ export interface TicketTimeEntrySummaryEntry {
   service_id: string | null;
   service_name: string | null;
   is_own: boolean;
+  /** Display name of the principal this entry was created through (EE); absent otherwise. */
+  via_principal_name?: string | null;
 }
 
 export interface TicketTimeEntriesSummary {

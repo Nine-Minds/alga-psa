@@ -19,6 +19,8 @@ interface TicketCommentSearchRow {
   updated_at?: Date | string | null;
   ticket_title: string | null;
   ticket_number: string | null;
+  /** The ticket's client; scopes the comment for client-portal readers. */
+  ticket_client_id?: string | null;
 }
 
 function resolveCommentBody(row: TicketCommentSearchRow): string | undefined {
@@ -76,9 +78,13 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     body: resolveCommentBody(row),
     // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
     url: `${recordPath('ticket', row.ticket_id)}#comment-${row.comment_id}`,
-    metadata: { author_kind: toCommentAuthorKind(row.author_type) },
+    // `audience` is carried on the row so a reader whose organization is not the owning tenant's
+    // staff (a seat technician) is filtered by it in the index; a row indexed before it existed
+    // has none and is hidden from such a reader until it is re-indexed.
+    metadata: { author_kind: toCommentAuthorKind(row.author_type), ...(row.audience ? { audience: row.audience } : {}) },
     acl: {
       requiredPermission: 'ticket:read',
+      clientScopeId: row.ticket_client_id ?? undefined,
       // Only a requester-audience comment is searchable by non-staff. A missing audience (legacy
       // fixtures) falls back to the flag; an inconsistent row resolves private and is internal-only.
       isInternalOnly: row.audience ? row.audience !== 'requester' : (row.is_internal ?? false),
@@ -107,6 +113,7 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
       'c.updated_at',
       't.title as ticket_title',
       't.ticket_number',
+      't.client_id as ticket_client_id',
       // LEVERAGE: pattern comment-audience-sql — the one audience predicate, shared with portal reads and the search ACL.
       knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string,
     );

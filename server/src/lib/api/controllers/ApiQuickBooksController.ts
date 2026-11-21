@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication for QuickBooks integration
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { QuickBooksService } from '../services/QuickBooksService';
 import {
@@ -73,24 +74,21 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  ConflictError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
+
+/**
+ * The five seeded `accounting_integrations` capabilities. Admin holds all of
+ * them; Finance holds everything but `connections_manage` and `remote_mutate`.
+ */
+type AccountingIntegrationAction =
+  | 'catalog_read'
+  | 'connections_manage'
+  | 'exports_execute'
+  | 'mappings_manage'
+  | 'remote_mutate';
 
 export class ApiQuickBooksController {
   private qbService: QuickBooksService;
@@ -133,14 +131,14 @@ export class ApiQuickBooksController {
     }
 
     // Get user within tenant context
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    assertInternalApiUser(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user
     };
@@ -156,18 +154,23 @@ export class ApiQuickBooksController {
 
   /**
    * Check permissions
+   *
+   * QuickBooks endpoints are gated by the seeded `accounting_integrations`
+   * capabilities, the same resource the accounting server actions use. The
+   * never-seeded `quickbooks:read/write/admin` triple returned 403 for every
+   * role, including Admin.
    */
-  private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+  private async checkPermission(req: ApiRequest, action: AccountingIntegrationAction): Promise<void> {
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
 
     // Get a connection within the current tenant context
     const knex = await getConnection(req.context.tenant);
-    
-    const hasAccess = await hasPermission(req.context.user, 'quickbooks', action, knex);
+
+    const hasAccess = await hasApiContextPermission(req.context, 'accounting_integrations', action, knex);
     if (!hasAccess) {
-      throw new ForbiddenError(`Permission denied: Cannot ${action} quickbooks`);
+      throw new ForbiddenError(`Permission denied: Cannot ${action} accounting integrations`);
     }
   }
 
@@ -251,7 +254,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           const data = await this.validateData(apiRequest, qboOAuthRequestSchema);
           const result = await this.qbService.initiateOAuthFlow(
@@ -285,7 +288,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           const data = await this.validateData(apiRequest, qboOAuthCallbackSchema);
           
@@ -323,7 +326,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'admin');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           await this.qbService.disconnectQuickBooks(
             apiRequest.context!.tenant,
@@ -357,7 +360,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const status = await this.qbService.getConnectionStatus(apiRequest.context!.tenant);
 
@@ -391,7 +394,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const data = await this.validateData(apiRequest, qboConnectionTestSchema);
           const result = await this.qbService.testConnection(
@@ -423,7 +426,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           // TODO: Implement refreshOAuthTokens method in QuickBooksService
           const result = {
@@ -466,7 +469,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const data = await this.validateData(apiRequest, customerSyncRequestSchema);
           const result = await this.qbService.syncCustomers(
@@ -500,7 +503,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           const url = new URL(req.url);
@@ -542,7 +545,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const mappingId = await this.extractIdFromPath(apiRequest, 'mapping_id');
           
@@ -580,7 +583,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const data = await this.validateData(apiRequest, invoiceExportRequestSchema);
           const result = await this.qbService.exportInvoices(
@@ -614,7 +617,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const data = await this.validateData(apiRequest, invoiceImportRequestSchema);
           const result = await this.qbService.importInvoices(
@@ -652,7 +655,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const data = await this.validateData(apiRequest, paymentSyncRequestSchema);
           const result = await this.qbService.syncPayments(
@@ -689,7 +692,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           
@@ -720,7 +723,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const url = new URL(req.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -758,7 +761,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const data = await this.validateData(apiRequest, accountMappingRequestSchema);
           
@@ -789,7 +792,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           
@@ -820,7 +823,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const url = new URL(req.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -858,7 +861,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const data = await this.validateData(apiRequest, taxMappingRequestSchema);
           
@@ -893,7 +896,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           // Temporary stub while QuickBooksService method is not implemented
           const result = { status: 'idle', last_sync: null };
@@ -922,7 +925,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, syncHistoryFilterSchema);
           const url = new URL(req.url);
@@ -971,7 +974,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const syncId = await this.extractIdFromPath(apiRequest, 'sync_id');
           
@@ -1006,7 +1009,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const syncId = await this.extractIdFromPath(apiRequest, 'sync_id');
           
@@ -1040,7 +1043,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const syncId = await this.extractIdFromPath(apiRequest, 'sync_id');
           
@@ -1086,7 +1089,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           const data = await this.validateData(apiRequest, bulkSyncRequestSchema);
           
@@ -1117,7 +1120,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'admin');
+          await this.checkPermission(apiRequest, 'exports_execute');
           
           // TODO: Implement executeFullSync method in QuickBooksService
           const result = { data: { sync_id: 'full_sync_' + Date.now() } }; // Temporary stub
@@ -1150,7 +1153,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const url = new URL(req.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -1189,7 +1192,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const data = await this.validateData(apiRequest, mappingConfigRequestSchema);
           
@@ -1219,7 +1222,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const mappingId = await this.extractIdFromPath(apiRequest, 'mapping_id');
           
@@ -1259,7 +1262,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const mappingId = await this.extractIdFromPath(apiRequest, 'mapping_id');
           const data = await this.validateData(apiRequest, mappingConfigRequestSchema);
@@ -1294,7 +1297,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'write');
+          await this.checkPermission(apiRequest, 'mappings_manage');
           
           const mappingId = await this.extractIdFromPath(apiRequest, 'mapping_id');
           
@@ -1327,7 +1330,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const result = await this.qbService.getIntegrationHealth(
             apiRequest.context!.tenant
@@ -1358,7 +1361,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           // TODO: Implement getHealthMonitoringConfig method in QuickBooksService
           const result = { monitoring_enabled: true, check_interval: 300 };
@@ -1387,7 +1390,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'admin');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           const data = await this.validateData(apiRequest, healthMonitoringConfigSchema);
           
@@ -1424,7 +1427,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'admin');
+          await this.checkPermission(apiRequest, 'connections_manage');
           
           // TODO: Implement runComprehensiveDiagnostics method in QuickBooksService
           const result = {
@@ -1471,7 +1474,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           
@@ -1522,7 +1525,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           
@@ -1579,7 +1582,7 @@ export class ApiQuickBooksController {
         const apiRequest = await this.authenticate(req);
         
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
+          await this.checkPermission(apiRequest, 'catalog_read');
           
           const validatedQuery = this.validateQuery(apiRequest, qboEntityFilterSchema);
           

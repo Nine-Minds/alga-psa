@@ -14,7 +14,8 @@
     "../../packages/authorization/src/kernel/index.ts",
     "../../packages/authorization/src/bundles/service.ts",
     "../../packages/licensing/src/index.ts",
-    "../../packages/validation/src/index.ts"
+    "../../packages/validation/src/index.ts",
+    "../../packages/sla/src/services/slaNotificationService.ts"
   ],
   "exclude": [
     "node_modules",

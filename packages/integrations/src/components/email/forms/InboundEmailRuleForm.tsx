@@ -21,7 +21,10 @@ import {
   updateInboundEmailRule,
   type InboundEmailRuleRecord,
 } from '../../../actions/email-actions/inboundEmailRulesActions';
-import { getEmailProviders, getInboundTicketDefaults, getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getEmailProviders, getInboundTicketDefaults } from '@alga-psa/integrations/actions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -110,7 +113,6 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
 
   const [providers, setProviders] = useState<Array<{ id: string; providerName: string; mailbox: string }>>([]);
   const [defaultsOptions, setDefaultsOptions] = useState<Array<{ id: string; display_name: string }>>([]);
-  const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
   const [aiAvailability, setAiAvailability] = useState<{ enterprise: boolean; aiAddonActive: boolean }>({
     enterprise: false,
     aiAddonActive: false,
@@ -136,11 +138,10 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
   useEffect(() => {
     const load = async () => {
       try {
-        const [providerData, defaultsData, availability, fieldOptions] = await Promise.all([
+        const [providerData, defaultsData, availability] = await Promise.all([
           getEmailProviders(),
           getInboundTicketDefaults(),
           getInboundEmailRuleAiAvailability(),
-          getTicketFieldOptions(),
         ]);
         if (isReturnedActionError(providerData)) {
           setError(getErrorMessage(providerData));
@@ -162,11 +163,6 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
           setAiAvailability({ enterprise: false, aiAddonActive: false });
           return;
         }
-        if (isReturnedActionError(fieldOptions)) {
-          setError(getErrorMessage(fieldOptions));
-          setAiAvailability({ enterprise: false, aiAddonActive: false });
-          return;
-        }
         setProviders(
           (providerData.providers ?? []).map((p: any) => ({
             id: p.id,
@@ -180,7 +176,6 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
             .map((d: any) => ({ id: d.id, display_name: d.display_name ?? d.short_name ?? d.id }))
         );
         setAiAvailability(availability);
-        setClients(fieldOptions.options?.clients ?? []);
       } catch {
         // Pickers degrade to empty lists; saving still validates server-side.
       }
@@ -334,6 +329,10 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
 
   const testTrace = testEvaluation?.trace?.[0] ?? null;
   const testOutcome = testEvaluation?.outcome ?? null;
+  // The tester names the assigned client from a by-id lookup; the tenant's client list is never loaded.
+  const { searchClients } = useClientPickerSearch();
+  const assignedClientId = testOutcome?.kind === 'assign_client' ? (testOutcome.clientId as string | undefined) ?? null : null;
+  const { clients: assignedClients } = useClientNames(assignedClientId ? [assignedClientId] : [], searchClients);
   const showAliasQuickAdd = Boolean(
     testTrace &&
       testTrace.conditionsMatched &&
@@ -371,7 +370,8 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
       case 'skip':
         return t('inboundRules.tester.outcome.skip', { defaultValue: 'Email skipped — no ticket created' });
       case 'assign_client': {
-        const clientName = clients.find((c) => c.id === outcome.clientId)?.name ?? outcome.clientId;
+        const clientName = assignedClients[outcome.clientId]?.client_name
+          ?? t('inboundRules.tester.outcome.matchedClient', { defaultValue: 'the matched client' });
         return t('inboundRules.tester.outcome.assignClient', {
           defaultValue: 'Ticket assigned to client "{{client}}"',
           client: clientName,
@@ -878,15 +878,16 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
               {showAliasQuickAdd && (
                 <div className="flex items-end gap-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
                   <div className="w-72">
-                    <CustomSelect
-                      id="rule-test-alias-client"
-                      label={t('inboundRules.tester.aliasLabel', {
+                    <Label htmlFor="rule-test-alias-client-trigger" className="mb-1 block">
+                      {t('inboundRules.tester.aliasLabel', {
                         defaultValue: 'Add "{{value}}" as an alias of',
                         value: testTrace.extractedValue,
                       })}
-                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
-                      value={aliasClientId || null}
-                      onValueChange={setAliasClientId}
+                    </Label>
+                    <ClientPicker
+                      id="rule-test-alias-client"
+                      selectedClientId={aliasClientId || null}
+                      onSelect={(clientId) => setAliasClientId(clientId ?? '')}
                       placeholder={t('inboundRules.tester.aliasClientPlaceholder', {
                         defaultValue: 'Select a client',
                       })}

@@ -110,26 +110,38 @@ export function verifyWebhookSignature(
   }
 }
 
-/**
- * Find integration by webhook secret or organization ID
- */
-export async function findIntegrationForWebhook(
-  organizationId: number
-): Promise<{
+export interface NinjaOneWebhookContext {
   integration: RmmIntegration;
   tenantId: string;
   mapping: RmmOrganizationMapping;
-} | null> {
-  const { knex } = await createTenantKnex();
-  const discoveryDb = tenantDb(knex, 'pre-tenant-discovery');
+}
 
-  // Find the organization mapping to get tenant and integration
-  const lookupQuery = discoveryDb
-    .unscoped(
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Find the integration and mapping for a NinjaOne organisation.
+ *
+ * `tenantHint` is the `?tenant=` the registered webhook URL carries
+ * (buildWebhookUrl). With it the lookup is tenant-scoped and stays on one
+ * shard; only a request without it has to ask every tenant. The hint is not
+ * trusted: the caller still verifies the webhook secret of the integration
+ * found here.
+ */
+export async function findIntegrationForWebhook(
+  organizationId: number,
+  tenantHint?: string | null,
+): Promise<NinjaOneWebhookContext | null> {
+  const { knex } = await createTenantKnex();
+  const hintedTenant = tenantHint && UUID_PATTERN.test(tenantHint) ? tenantHint : null;
+  const db = tenantDb(knex, hintedTenant ?? 'pre-tenant-discovery');
+
+  const lookupQuery = hintedTenant
+    ? db.table('rmm_organization_mappings as rom')
+    : db.unscoped(
       'rmm_organization_mappings as rom',
-      'NinjaOne webhook organization lookup derives tenant before tenant facade can be constructed'
+      'NinjaOne webhook without a tenant in its URL derives the tenant from the organization mapping'
     );
-  discoveryDb.tenantJoin(lookupQuery, 'rmm_integrations as ri', 'rom.integration_id', 'ri.integration_id');
+  db.tenantJoin(lookupQuery, 'rmm_integrations as ri', 'rom.integration_id', 'ri.integration_id');
 
   const result = await lookupQuery
     .where('rom.external_organization_id', String(organizationId))
@@ -212,7 +224,8 @@ export async function findIntegrationForWebhook(
  * Main webhook handler
  */
 export async function handleNinjaOneWebhook(
-  payload: NinjaOneWebhookPayload
+  payload: NinjaOneWebhookPayload,
+  resolved?: NinjaOneWebhookContext,
 ): Promise<WebhookProcessingResult> {
   logger.debug('Processing NinjaOne webhook', {
     activityType: payload.activityType,
@@ -220,8 +233,8 @@ export async function handleNinjaOneWebhook(
     organizationId: payload.organizationId,
   });
 
-  // Find the integration and tenant for this webhook
-  const context = await findIntegrationForWebhook(payload.organizationId);
+  // The route has already resolved it to verify the webhook secret.
+  const context = resolved ?? await findIntegrationForWebhook(payload.organizationId);
 
   if (!context) {
     logger.warn('No integration found for webhook', {

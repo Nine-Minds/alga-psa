@@ -1,0 +1,31 @@
+{
+  "capturedAt": "2026-11-04T01:39:45.190Z",
+  "database": "server_card_d4555320",
+  "restorationMismatches": [],
+  "temporaryApiKeys": [
+    {
+      "count": "0"
+    }
+  ],
+  "smokeDefinitions": [
+    {
+      "definition_id": "d4555320-0000-4000-8000-000000000d10",
+      "is_active": false,
+      "lead_days": 1,
+      "start_date": "2026-11-04T05:00:00.000Z"
+    },
+    {
+      "definition_id": "d4555320-0000-4000-8000-000000000d20",
+      "is_active": false,
+      "lead_days": 1,
+      "start_date": "2026-11-04T05:00:00.000Z"
+    }
+  ],
+  "ticket": [
+    {
+      "ticket_id": "6a894b17-0878-48ca-a3ee-1c90a38d8f08",
+      "board_id": "c1964d82-4542-4eae-9d26-46c88fefd8e3",
+      "priority_id": "a5146f36-5b12-4464-bf9b-a13b0b9e0aff"
+    }
+  ]
+}

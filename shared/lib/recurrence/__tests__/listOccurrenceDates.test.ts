@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listOccurrenceDates } from '../listOccurrenceDates';
+import { listNextOccurrenceDates, listOccurrenceDates } from '../listOccurrenceDates';
 import { recurrenceRuleSchema, type RecurrenceRule } from '../rule';
 
 const rule = (input: unknown): RecurrenceRule => recurrenceRuleSchema.parse(input);
@@ -231,5 +231,29 @@ describe('recurrenceRuleSchema', () => {
         frequency: 'monthly', interval: 1, on: { type: 'nthWeekday', nth: 'last', weekday: 'sun' },
       }).success
     ).toBe(true);
+  });
+});
+
+describe('listNextOccurrenceDates', () => {
+  it('returns the next N dates of a rare rule however far ahead they lie', () => {
+    const r = rule({ frequency: 'yearly', month: 3, day: 1, end: NEVER });
+    expect(listNextOccurrenceDates(r, '2027-03-01', { from: '2026-11-14', count: 5 })).toEqual([
+      '2027-03-01', '2028-03-01', '2029-03-01', '2030-03-01', '2031-03-01',
+    ]);
+  });
+
+  it('counts from the later of from and the start date, inclusive', () => {
+    const r = rule({ frequency: 'weekly', interval: 1, weekdays: ['mon'], end: NEVER });
+    expect(listNextOccurrenceDates(r, '2026-01-05', { from: '2026-03-02', count: 2 })).toEqual(['2026-03-02', '2026-03-09']);
+  });
+
+  it('returns fewer when the rule ends first, counting afterCount from the start date', () => {
+    const r = rule({ frequency: 'yearly', month: 6, day: 15, end: { type: 'afterCount', count: 3 } });
+    expect(listNextOccurrenceDates(r, '2026-06-15', { from: '2027-01-01', count: 5 })).toEqual(['2027-06-15', '2028-06-15']);
+  });
+
+  it('returns nothing for a non-positive count', () => {
+    const r = rule({ frequency: 'daily', interval: 1, weekdaysOnly: false, end: NEVER });
+    expect(listNextOccurrenceDates(r, '2026-01-01', { from: '2026-01-01', count: 0 })).toEqual([]);
   });
 });

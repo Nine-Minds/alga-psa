@@ -2,6 +2,11 @@ import { predicateReferencesValue, type PredicateNode } from '@alga-psa/predicat
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { isCapabilityServed } from '../../lib/capability';
+import { countLiveCoManagedSeatArrangementsForClient } from './seatArrangementClientGuard';
+
+export {
+  assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError, countLiveCoManagedSeatArrangementsForClient,
+} from './seatArrangementClientGuard';
 
 // Raw tenant scoping (not @alga-psa/db's tenantDb) so @alga-psa/core does not
 // depend on @alga-psa/db — that import direction creates a core<->db build cycle.
@@ -17,6 +22,7 @@ const countPredicateReferences = (table: string, column: string, path: string) =
   };
 
 export const countBoardChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'board_id');
+export const countServiceRequestDefinitionChecklistApplyRules = countPredicateReferences('checklist_template_apply_rules', 'where', 'service_request_definition_id');
 
 const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
@@ -355,6 +361,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'co_managed_provisioning_operations',
         label: 'co-managed IT workspace',
         countQuery: countLiveCoManagedWorkspacesForClient
+      },
+      {
+        type: 'co_managed_seat_arrangement',
+        table: 'co_managed_seat_arrangements',
+        label: 'co-managed IT seat arrangement',
+        countQuery: countLiveCoManagedSeatArrangementsForClient
       }
     ]
   },
@@ -767,6 +779,20 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       }
     ]
   },
+  service_request_definition: {
+    entityType: 'service_request_definition',
+    supportsInactive: false,
+    supportsArchive: true,
+    dependencies: [
+      { type: 'submission', table: 'service_request_submissions', foreignKey: 'definition_id', label: 'submission' },
+      {
+        type: 'checklist_apply_rule',
+        table: 'checklist_template_apply_rules',
+        countQuery: countServiceRequestDefinitionChecklistApplyRules,
+        label: 'checklist apply rule'
+      }
+    ]
+  },
   interaction_type: {
     entityType: 'interaction_type',
     supportsInactive: false,
@@ -807,9 +833,35 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: async (trx, options) => {
           // Every save writes an 'updated' row; only real history (sent, status
           // changes, conversions...) should block a hard delete of a draft.
-          const result = await tenantScopedTable(trx, options.tenant, 'quote_activities')
+          const query = tenantScopedTable(trx, options.tenant, 'quote_activities')
             .where({ quote_id: options.entityId })
-            .whereNotIn('activity_type', ['created', 'updated'])
+            .whereNotIn('activity_type', ['created', 'updated']);
+
+          const quote = await tenantScopedTable(trx, options.tenant, 'quotes')
+            .select('status')
+            .where({ quote_id: options.entityId })
+            .first();
+
+          // A quote still sitting in draft may have been round-tripped through
+          // approval (draft -> pending_approval -> draft). Those rows describe
+          // the draft's own editing history, not business history that must
+          // outlive it, so they must not refuse the delete the way a `sent` or
+          // `converted` transition does (alga-2026-0002902). Unrecognised
+          // metadata keeps blocking: coalesce makes a null next_status fail the
+          // match rather than silently dropping the row from the count.
+          if (quote?.status === 'draft') {
+            query
+              .whereNot('activity_type', 'approval_changes_requested')
+              .whereNot(function (this: Knex.QueryBuilder) {
+                this.where('activity_type', 'status_changed')
+                  .whereRaw("coalesce(quote_activities.metadata->>'next_status', '') in (?, ?)", [
+                    'draft',
+                    'pending_approval',
+                  ]);
+              });
+          }
+
+          const result = await query
             .count<{ count: string }>('* as count')
             .first();
           return Number(result?.count ?? 0);

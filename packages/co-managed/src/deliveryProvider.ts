@@ -1,21 +1,33 @@
 import type { Knex } from 'knex';
 import { withAdminTransaction, tenantDb } from '@alga-psa/db';
-import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { claimDelivery, finishDelivery, flagStaleSendingDeliveries, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { normalizeEmailAddress } from '@alga-psa/shared/lib/email/addressUtils';
+import { contactEmailMatch } from '@alga-psa/shared/lib/email/contactEmailMatch';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
-  decideReplyToken, parseCm2Metadata,
-  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
+  decideReplyToken, parseCm2Metadata, coManagedInboundOperationId,
+  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type InboundSender, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
 } from '@alga-psa/shared/lib/coManagedDelivery';
-import { withCoManagedNotificationRecipient } from './sharedWork';
+import { withCoManagedNotificationRecipient, withCoManagedSharedWork } from './sharedWork';
+import { withCoManagedCustomerTicket } from './customerWork';
 import { projectTaskAudience } from './projectTaskAudience';
 import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
-import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
+import { isCoManagedSharedWorkError, withCoManagedMailCredential } from './sharedWorkIdentity';
 // LEVERAGE: friction customer-ticket-read-authorizer — only the per-record tickets authorizer evaluates bundle/contact-visibility narrowing, but it is shaped for a server action (throws, wants a full IUserWithRoles); we wrap it in try/catch and feed it a raw users row.
 import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { hasPermission } from '@alga-psa/authorization/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
+
+function isReplyTokenExpired(expiresAt: unknown, now = Date.now()): boolean {
+  const expiration = expiresAt instanceof Date
+    ? expiresAt.getTime()
+    : typeof expiresAt === 'string' && expiresAt.trim() !== ''
+      ? Date.parse(expiresAt)
+      : Number.NaN;
+  return !Number.isFinite(expiration) || expiration <= now;
+}
 
 type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boolean } & Record<string, unknown>;
 
@@ -93,14 +105,23 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         const rows = await query;
         // One users query for the whole batch (customer-side principals only), not one per row.
         const customerIds = new Set<string>();
+        const sponsorIdsByTenant = new Map<string, Set<string>>();
         for (const row of rows) {
-          if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') continue;
-          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string } | null;
-          if (p?.principalId) customerIds.add(p.principalId);
+          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string; sponsorTenant?: string } | null;
+          if (p?.principalId) {
+            if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') {
+              if (!sponsorIdsByTenant.has(p.sponsorTenant ?? '')) sponsorIdsByTenant.set(p.sponsorTenant ?? '', new Set());
+              sponsorIdsByTenant.get(p.sponsorTenant ?? '')!.add(p.principalId);
+            } else customerIds.add(p.principalId);
+          }
         }
         const customerUsers = new Map<string, CustomerUserRow>();
         if (customerIds.size) {
           for (const u of await tenantDb(trx, tenant).table('users').whereIn('user_id', [...customerIds])) customerUsers.set(u.user_id, u as CustomerUserRow);
+        }
+        const sponsorUsers = new Map<string, CustomerUserRow>();
+        for (const [sponsorTenant, ids] of sponsorIdsByTenant) {
+          if (sponsorTenant) for (const u of await tenantDb(trx, sponsorTenant).table('users').whereIn('user_id', [...ids])) sponsorUsers.set(`${sponsorTenant}:${u.user_id}`, u as CustomerUserRow);
         }
         for (const row of rows) {
           const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as (CoManagedRoutingPayload & { principalId: string }) | null;
@@ -112,10 +133,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           const ticket = tickets.get(payload.ticketId);
           const sponsorSide = row.recipient_kind === 'msp_user' || row.recipient_kind === 'team';
           let allowed = !!ticket;
+          let redactedFields: readonly string[] = [];
           if (allowed && sponsorSide) {
             try {
-              await withCoManagedNotificationRecipient(trx as unknown as Knex, { kind: 'notification_recipient', tenant: payload.sponsorTenant, userId: payload.principalId },
-                { tenant, relationshipId: payload.relationshipId, kind: 'ticket', id: payload.ticketId }, async () => undefined);
+              const user = sponsorUsers.get(`${payload.sponsorTenant}:${payload.principalId}`);
+              allowed = Boolean(user && !user.is_inactive && user.user_type === 'internal');
+              if (allowed) redactedFields = await withCoManagedNotificationRecipient(trx as unknown as Knex, { kind: 'notification_recipient', tenant: payload.sponsorTenant, userId: payload.principalId },
+                { tenant, relationshipId: payload.relationshipId, kind: 'ticket', id: payload.ticketId }, async context => context.redactedFields);
             } catch (error) {
               if (!isCoManagedSharedWorkError(error)) throw error;
               allowed = false;
@@ -123,6 +147,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           }
           let principalId: string = payload.principalId;
           let email: string | undefined = row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined;
+          if (allowed && sponsorSide) {
+            const user = sponsorUsers.get(`${payload.sponsorTenant}:${payload.principalId}`);
+            if (row.delivery_kind === ROUTING_EMAIL_KIND) {
+              email = normalize(user?.email) || undefined;
+              if (!email) allowed = false;
+            }
+          }
           if (allowed && !sponsorSide) {
             // Customer side: never trust the captured snapshot. Re-resolve against the CURRENT user and ticket.
             const user = customerUsers.get(payload.principalId);
@@ -136,7 +167,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
             }
           }
           out.push({ tenant, deliveryKind: row.delivery_kind, sourceId: row.source_id, event: payload.event,
-            recipient: { kind: row.recipient_kind, principalId, email }, ledgerRecipient: row.recipient,
+            recipient: { kind: row.recipient_kind, principalId, email, ...(sponsorSide ? { redactedFields } : {}) }, ledgerRecipient: row.recipient,
             recipientTenant: sponsorSide ? payload.sponsorTenant : tenant, ticketId: payload.ticketId,
             ticketNumber: ticket?.ticket_number ?? '', ticketTitle: ticket?.title ?? '', actorName: payload.actorName, actorOrganization: payload.actorOrganization, allowed });
         }
@@ -146,10 +177,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
 
     async flagStaleRoutingSending(tenant, olderThanMs) {
       // write-admission: exempt — delivery-ledger reconciliation flag on a stale claim, not a co-managed work write
-      return withAdminTransaction(async (trx) => tenantDb(trx, tenant).table('co_management_deliveries')
-        .whereIn('delivery_kind', [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND]).where({ state: 'sending', requires_reconciliation: false })
-        .where('updated_at', '<', new Date(Date.now() - olderThanMs))
-        .update({ requires_reconciliation: true, error_code: 'unknown_outcome', last_error: 'Delivery was claimed but never finished; reconcile before resending.', updated_at: new Date() }));
+      return withAdminTransaction((trx) => flagStaleSendingDeliveries(trx, CO_MANAGED_LEDGER, tenant, [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND], olderThanMs));
     },
 
     async planTicketComment(tenant, ticketId, commentId): Promise<CommentDeliveryPlan | null> {
@@ -165,9 +193,9 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           for (const candidate of await sponsorParticipants(trx, tenant, ticketId, shared)) {
             try {
               // Each recipient is re-checked against its OWN current policy; a denied one is simply skipped.
-              await withCoManagedNotificationRecipient(trx as unknown as Knex,
-                { kind: 'notification_recipient', tenant: shared.relationship.sponsor_tenant, userId: candidate.principalId }, resource, async () => undefined);
-              sponsorRecipients.push(candidate);
+              const redactedFields = await withCoManagedNotificationRecipient(trx as unknown as Knex,
+                { kind: 'notification_recipient', tenant: shared.relationship.sponsor_tenant, userId: candidate.principalId }, resource, async context => context.redactedFields);
+              sponsorRecipients.push({ ...candidate, redactedFields });
             } catch (error) {
               if (!isCoManagedSharedWorkError(error)) throw error;
             }
@@ -178,6 +206,13 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           replyTokenMetadata: { namespace: 'cm', version: 2, relationshipId: shared.relationshipId, grantGeneration: shared.grantGeneration, threadId: thread.threadId },
         };
       });
+    },
+
+    async reauthorizeCommentRecipient(input) {
+      const plan = await this.planTicketComment(input.tenant, input.ticketId, input.commentId);
+      if (!plan || plan.relationshipId !== input.relationshipId || plan.sponsorTenant !== input.sponsorTenant) return null;
+      return plan.sponsorRecipients.find((recipient) => recipient.principalId === input.principalId &&
+        (recipient.kind === 'msp_user' || recipient.kind === 'team')) ?? null;
     },
 
     async planTaskComment(tenant, taskCommentId) {
@@ -200,7 +235,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         { delivery_kind: kind, source_id: sourceId, recipient: recipient.email ?? recipient.principalId }, state, { error: outcome?.error, errorCode: outcome?.code }));
     },
 
-    async admitReplyToken(tenant, token, metadata, senderEmail): Promise<InboundAdmission> {
+    async admitReplyToken(tenant, token, metadata, inboundSender: InboundSender): Promise<InboundAdmission> {
       const parsed = parseCm2Metadata(metadata);
       if (!parsed) {
         // cm1 (or an unparseable cm2) never reaches a comment write.
@@ -209,28 +244,68 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : { admitted: false, reason: 'legacy_token', acknowledge: true };
       }
       return withAdminTransaction(async (trx): Promise<InboundAdmission> => {
-        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id');
+        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id', 'expires_at');
         const ticketId = record?.ticket_id as string | undefined;
         const shared = ticketId ? await loadSharedTicket(trx, tenant, ticketId) : null;
         if (!ticketId || !shared || shared.relationshipId !== parsed.relationshipId) return { admitted: false, reason: 'stale_generation', acknowledge: true };
         const decision = decideReplyToken(token, metadata, shared.grantGeneration);
         if (decision.action === 'refuse') return { admitted: false, reason: decision.reason, acknowledge: true };
         if (shared.work.grant_revoked_at) return { admitted: false, reason: 'grant_revoked', acknowledge: true };
+        // A missing or invalid expiry is indistinguishable from an expired credential.
+        // Use the unauthenticated admission denial before resolving any audience participant.
+        if (isReplyTokenExpired(record?.expires_at)) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         const thread = parsed.threadId
-          ? await tenantDb(trx, tenant).table('comment_threads').where({ thread_id: parsed.threadId }).first('collaboration_audience', 'is_internal')
+          ? await tenantDb(trx, tenant).table('comment_threads').where({ thread_id: parsed.threadId, ticket_id: ticketId }).first('collaboration_audience', 'is_internal')
           : null;
+        // A token's conversation must belong to its persisted ticket in this tenant.
+        if (parsed.threadId && !thread) return { admitted: false, reason: 'not_participant', acknowledge: true };
+        if (record?.comment_id) {
+          const parent = await tenantDb(trx, tenant).table('comments')
+            .where({ comment_id: record.comment_id, ticket_id: ticketId, thread_id: parsed.threadId }).first('comment_id');
+          if (!parent) return { admitted: false, reason: 'not_participant', acknowledge: true };
+        }
         const audience = resolveCommentAudience(thread ?? { is_internal: false });
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
-        // The requester thread keeps the native writer (the sender is a contact; native sender rules apply).
-        if (audience === 'requester') return base;
-        const sender = normalize(senderEmail);
+        const sender = normalizeEmailAddress(inboundSender.email) ?? '';
+        if (audience === 'requester') {
+          // The From address is only a claim until the existing contact-auth policy trusts its attribution.
+          // Refuse before looking up contacts so a forged active contact address cannot be admitted.
+          if (!inboundSender.contactAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+          if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
+          const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
+          const contact = ticket?.client_id
+            ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
+              .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
+            : null;
+          return contact ? {
+            ...base,
+            requesterContactId: contact.contact_name_id as string,
+            requesterClientId: ticket.client_id as string,
+          } : { admitted: false, reason: 'not_participant', acknowledge: true };
+        }
+        // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
+        // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.
+        if (!inboundSender.internalAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
-        // Resolve the sender to an internal user of either organisation. The writer then re-authorizes them.
+        // Admission and the writer both require current record authority in the actor's own tenant.
         for (const candidateTenant of [tenant, shared.relationship.sponsor_tenant as string]) {
           const user = await tenantDb(trx, candidateTenant).table('users')
             .whereRaw('lower(email) = ?', [sender]).where({ user_type: 'internal', is_inactive: false }).first('user_id');
           if (!user) continue;
           if (audience === 'organization_private' && candidateTenant !== tenant) return { admitted: false, reason: 'audience_forbidden', acknowledge: true };
+          const actor = { kind: 'session' as const, tenant: candidateTenant, userId: user.user_id as string,
+            sessionId: coManagedInboundOperationId(tenant, ticketId, token) };
+          const resource = { tenant, relationshipId: shared.relationshipId, kind: 'ticket' as const, id: ticketId };
+          const authorize = candidateTenant === tenant ? withCoManagedCustomerTicket : withCoManagedSharedWork;
+          try {
+            // Mail supplies identity, never resource authority. Reuse the same live RBAC,
+            // bundle, relationship and grant checks as comment creation, for both actions.
+            await withCoManagedMailCredential(actor, () => authorize(trx as unknown as Knex, actor, resource, 'update',
+              context => authorize(context.trx, actor, resource, 'read', async () => undefined)));
+          } catch (error) {
+            if (!isCoManagedSharedWorkError(error)) throw error;
+            return { admitted: false, reason: 'not_participant', acknowledge: true };
+          }
           return { ...base, actor: { tenant: candidateTenant, userId: user.user_id } };
         }
         return { admitted: false, reason: 'not_participant', acknowledge: true };

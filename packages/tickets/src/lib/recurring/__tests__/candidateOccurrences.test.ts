@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildFallbackBusinessDayCalendar } from '@alga-psa/shared/lib/businessHours/businessDayCalendar';
 import type { RecurrenceRule } from '@alga-psa/shared/lib/recurrence';
-import { listCandidateOccurrences } from '../candidateOccurrences';
+import { listCandidateOccurrences, listOccurrencesDueBetween } from '../candidateOccurrences';
 
 const TZ = 'America/New_York';
 const monthlyOn1: RecurrenceRule = { frequency: 'monthly', interval: 1, on: { type: 'dayOfMonth', day: 1 }, end: { type: 'never' } };
@@ -143,5 +143,28 @@ describe('listCandidateOccurrences', () => {
       if (original === undefined) delete process.env.TZ;
       else process.env.TZ = original;
     }
+  });
+});
+
+describe('listOccurrencesDueBetween', () => {
+  it('returns occurrences by due date regardless of lead_days, create time or watermark', () => {
+    // lead_days 0: the generator would not create the 2026-05-01 ticket until that day; the window still sees it.
+    const result = listOccurrencesDueBetween({ ...base, fromDate: '2026-04-28', toDate: '2026-05-03' });
+    expect(result.map((c) => [c.nominal, c.due])).toEqual([['2026-05-01', '2026-05-01']]);
+    expect(result[0].dueAt.toISOString()).toBe('2026-05-01T21:00:00.000Z'); // 17:00 EDT
+  });
+
+  it('includes both window edges and nothing outside them', () => {
+    expect(listOccurrencesDueBetween({ ...base, fromDate: '2026-05-01', toDate: '2026-06-01' }).map((c) => c.due))
+      .toEqual(['2026-05-01', '2026-06-01']);
+    expect(listOccurrencesDueBetween({ ...base, fromDate: '2026-05-02', toDate: '2026-05-31' })).toEqual([]);
+  });
+
+  it('keys the window on the adjusted due date, so an occurrence moved across the edge is found by its due date', () => {
+    // 2026-03-01 is a Sunday; with `next` it is due Monday 2026-03-02.
+    const shifted = { ...base, policy: 'next' as const, calendar: buildFallbackBusinessDayCalendar() };
+    expect(listOccurrencesDueBetween({ ...shifted, fromDate: '2026-03-02', toDate: '2026-03-02' }).map((c) => [c.nominal, c.due]))
+      .toEqual([['2026-03-01', '2026-03-02']]);
+    expect(listOccurrencesDueBetween({ ...shifted, fromDate: '2026-03-01', toDate: '2026-03-01' })).toEqual([]);
   });
 });

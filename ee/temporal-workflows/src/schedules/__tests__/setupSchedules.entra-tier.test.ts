@@ -32,7 +32,7 @@ vi.mock('@ee/lib/integrations/ninjaone/proactiveRefresh', () => ({
 }));
 
 vi.mock('@alga-psa/db/admin.js', () => ({
-  getAdminConnection: vi.fn(async () => ({})),
+  getAdminConnection: vi.fn(async () => ({ schema: { hasTable: vi.fn(async () => false) } })),
 }));
 
 vi.mock('@alga-psa/db', () => ({

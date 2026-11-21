@@ -37,6 +37,8 @@ export async function findOrCreateTimeSheetRow(
   if (!timeSheet) {
     // Human-work guard: a new time sheet's owner must be a licensed user.
     await assertHumanWorkOwner(conn, tenant, userId, 'user_id');
+    // Targeted insert-ignore: a concurrent creator (UI, stopwatch, REST) never raises 23505, so a
+    // caller-owned transaction is not aborted. The winner is read in a later statement.
     [timeSheet] = await facade.table('time_sheets')
       .insert({
         user_id: userId,
@@ -44,7 +46,18 @@ export async function findOrCreateTimeSheetRow(
         approval_status: 'DRAFT',
         tenant,
       })
+      .onConflict(['tenant', 'user_id', 'period_id'])
+      .ignore()
       .returning('*');
+
+    if (!timeSheet) {
+      timeSheet = await facade.table('time_sheets')
+        .where({ user_id: userId, period_id: periodId })
+        .first();
+      if (!timeSheet) {
+        throw new Error('Time sheet disappeared while resolving a concurrent create');
+      }
+    }
   }
 
   return timeSheet;

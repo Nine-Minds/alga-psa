@@ -183,3 +183,26 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Missing layer:** one shared implementation. Blocked by the CE/EE packaging boundary and differing
   tenant semantics (server copy has `PROVIDER_TENANT_DISCOVERY`; integrations copy requires `tenant`).
 - **Where:** `// LEVERAGE: pattern calendar-provider-service-triplicate` above `getProviders` in each copy.
+
+
+## asset-identity-claims — friction
+
+- **What:** UI, REST, and ingestion inserted assets before an optional claim. Legacy duplicates also left the tag namespace unoccupied. This allowed persistence callers to bypass identity arbitration and made reservation completion order differ between write paths.
+- **Gate:** Multiple creation paths, high correctness cost, and stable tenant/tag ownership semantics. A shared identity preparation operation serves all concrete callers.
+- **Execution:** Bounded repair within asset numbering. `prepareAssetIdentity` acquires or transfers a claim before insertion. Colocated foreign keys make the relationship mandatory. Exact legacy bindings and holding claims preserve physical tags until reviewed activation.
+- **Rollout:** Identity enforcement follows the existing tenant activation operation. Before activation, N-1 writers can insert and edit assets without identity metadata; reads normalize their live physical tags. Activation locks the tenant policy, reconciles and adopts all assets, then closes the compatibility policy through a composite foreign key. New-code writes lock and read that policy before persistence. This keeps the release overlap compatible without an SQL bypass after activation.
+- **Status:** Revised. Database and shared-service behavior is exercised on PostgreSQL and Citus; evidence lives under `docs/evidence/alga-2026-0003120-draft/`. This ledger entry is not an approved implementation plan.
+
+## numbering-settings-allocation-lock — friction
+
+- **What:** The settings mutation read the counter without the allocator's lock. An administrator could save a stale last-used value after a concurrent allocation, allowing a numeric value to recur under another client prefix.
+- **Gate:** Settings and issuance share one persisted counter and one existing PostgreSQL advisory-lock protocol. A deterministic database race reproduced the counter rewind.
+- **Execution:** Bounded repair of the shared settings action. Initialize with conflict-ignore, acquire the allocator's existing tenant/entity lock, then validate and save the current state. All numbered entity settings use the same protocol. No new counters or asset-specific modes were added.
+- **Status:** Revised. The regression fails against the prior action and passes with the repair. PostgreSQL tests also verify concurrent first use, no-op settings saves, and independent ticket/asset counters.
+
+## asset-fixture-identities — pattern
+
+- **What:** Client and enterprise integration fixtures inserted assets without the normalized identity and ownership claim now required by the database.
+- **Gate:** The same persisted identity contract broke multiple independent suites. Identity acquisition and insertion must be atomic, and fixtures must retain IDs referenced by their scenario data.
+- **Execution:** Bounded CI repair. `server/test-utils/assetFixtures.ts` composes the production claim operation with single or batch inserts in the caller's transaction, opening a transaction when needed. Migrated the failing client and enterprise fixtures; tests that deliberately exercise invalid or legacy identities retain their direct writes.
+- **Status:** Extracted. Existing database scenarios exercise real constraints rather than bypassing them.

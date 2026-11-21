@@ -305,7 +305,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Validation runbook for `T013` checkpoint:
   - `cd packages/tickets && npx vitest run src/actions/ticketActions.authorizationNarrowing.test.ts --coverage.enabled=false`
 - (2026-04-21) Completed `T014` by extending `packages/tickets/src/actions/ticketActions.authorizationNarrowing.test.ts` with API/UI parity coverage:
-  - compares migrated UI list scope (`getTicketsForList`) with API helper scope (`authorizeApiResourceRead`) under the same tenant/user/bundle-rule context.
+  - compares migrated UI list scope (`getTicketsForList`) with API helper scope (`projectApiResourceRead`) under the same tenant/user/bundle-rule context.
   - asserts the same effective allowed ticket IDs for both paths in the selected v1 ticket parity scenario.
 - (2026-04-21) Completed `T015` and `T016` with document authorization contract coverage in `packages/documents/tests/documentActions.authorization.contract.test.ts`:
   - `T015`: verifies migrated document paths preserve client baseline own/same-client/client-visible semantics while including selected-client bundle narrowing hooks.

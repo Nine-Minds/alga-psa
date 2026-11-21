@@ -512,7 +512,7 @@ export const testDattoRmmConnection = withAdvancedAssetsAccess(async (
     const { knex } = await createTenantKnex();
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
       .where('provider', PROVIDER)
-      .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null });
+      .update({ is_active: true, connected_at: knex.fn.now(), sync_error: null, updated_at: new Date().toISOString() });
     await clearDattoReconnectRequired(tenant);
 
     const deviceCount = account?.devicesStatus?.numberOfDevices;

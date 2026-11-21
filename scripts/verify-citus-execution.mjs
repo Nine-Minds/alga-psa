@@ -4,18 +4,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readCandidateExecutionBundle } from './lib/candidate-execution-artifacts.mjs';
 import { evaluateCandidateExecution } from './lib/candidate-execution-gate.mjs';
+import { citusRuntimeFiles } from './lib/citus-runtime-inventory.mjs';
 import { repositoryTestFiles, isAdditionalWorkspaceTest } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
-// Consumer-owned minimum: never infer required files from producer reports.
-const runtimeFiles = [
-  'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
-  'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
-  'server/src/test/integration/remainingBucketUnits.integration.test.ts',
-  'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
-  'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
-  'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
-];
+// Required files come from the candidate checkout independently of producer reports.
 const tenantFiles = [
   'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',
   'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts',
@@ -27,7 +20,7 @@ const tenantFiles = [
 
 export function verifyCitusExecution({ root, revision, directory, candidates, jobResult }) {
   const requirements = [
-    { id: 'citus-runtime', format: 'vitest', candidates: runtimeFiles },
+    { id: 'citus-runtime', format: 'vitest', candidates: citusRuntimeFiles },
     { id: 'temporal-database', format: 'vitest', candidates: [...new Set([
       ...tenantFiles, ...candidates.filter(file => isAdditionalWorkspaceTest(file, 'temporal-database')),
     ])] },

@@ -162,15 +162,13 @@ async function insertBlock(
 // The burn engine's date normalization is process-timezone-dependent, so the
 // timezone regression tests pin TZ explicitly and guard that Node honored it
 // before asserting on dates.
-//
-// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
-// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
-// fails whenever the suite runs outside summer time.
-const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
-function assertTz(zone: string, expectedOffsetMinutes: number) {
+function assertTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
-  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // DST offsets belong to the scenario instant, not the date the suite runs.
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
+  expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
@@ -441,7 +439,7 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
   // toDateOnly → selectEligibleBlocks), the exact code path that regressed.
   it('expiration-boundary burn uses local calendar dates on the pg DATE read path (Europe/Berlin UTC+2)', async () => {
     const originalTz = process.env.TZ;
-    assertTz('Europe/Berlin', -120);
+    assertTz('Europe/Berlin', -120, '2026-08-31T22:00:00.000Z');
     const db = connect();
     const tenant = uuidv4();
     const clientId = uuidv4();
@@ -496,7 +494,7 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
 
   it('expiration-boundary burn uses local calendar dates on the pg DATE read path (Pacific/Kiritimati UTC+14)', async () => {
     const originalTz = process.env.TZ;
-    assertTz('Pacific/Kiritimati', -840);
+    assertTz('Pacific/Kiritimati', -840, '2026-08-31T22:00:00.000Z');
     const db = connect();
     const tenant = uuidv4();
     const clientId = uuidv4();
@@ -691,7 +689,7 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
   // through the end of that local day (verified on the non-straddle side).
   it('available-minutes flips at the UTC/Berlin calendar straddle on tenant timezone alone', async () => {
     const originalTz = process.env.TZ;
-    assertTz('UTC', 0); // worker stays on UTC; only the tenant timezone differs
+    assertTz('UTC', 0, '2026-08-31T22:00:00.000Z'); // worker stays on UTC; only the tenant timezone differs
     const db = connect();
     const tenants: string[] = [];
 
@@ -755,7 +753,7 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
     try {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date('2026-08-20T12:00:00.000Z'));
-      assertTz('UTC', 0);
+      assertTz('UTC', 0, '2026-08-20T12:00:00.000Z');
       await db('tenants').insert({ tenant, client_name: 'HB Subject Composition', email: 'hb-subject@test.local', billing_source: 'test' });
       await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Subject Composition Client' });
       const { service_id: serviceA } = await insertService(db, tenant, 'Subject A', 1);
@@ -822,7 +820,7 @@ async function assertAvailableBoundary(opts: {
   todayDay: string;
 }): Promise<void> {
   const originalTz = process.env.TZ;
-  assertTz(opts.workerTz, opts.workerOffsetMinutes);
+  assertTz(opts.workerTz, opts.workerOffsetMinutes, opts.freezeAt);
   const db = connect();
   const tenant = uuidv4();
   const clientId = uuidv4();
