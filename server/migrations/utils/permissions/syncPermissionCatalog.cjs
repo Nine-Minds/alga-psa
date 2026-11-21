@@ -23,7 +23,7 @@ const {
   getProductPermissions,
   permissionIdentity,
 } = require('./catalog.cjs');
-const { compileRoleGrants, getDefaultRoles } = require('./roleGrants.cjs');
+const { compileRoleGrants, getCapabilityRoles, getDefaultRoles } = require('./roleGrants.cjs');
 const { assertCatalogIsValid } = require('./catalogValidation.cjs');
 
 const PERMISSION_COLUMNS = ['permission_id', 'resource', 'action', 'msp', 'client', 'description'];
@@ -38,7 +38,8 @@ const SUPPORTED_PRODUCT_TRANSITIONS = { algadesk: ['psa'], co_managed: ['psa'] }
 
 /**
  * A tenant whose own shape stops it from being reconciled: no tenants row, a
- * missing or unknown product_code, a missing or duplicated default role.
+ * missing or unknown product_code, a missing or duplicated required role (the
+ * protected MSP and client-portal Admins).
  *
  * Callers that own the tenant they just created (seeds, onboarding, the
  * integration suite) let this throw. Fleet-wide callers pass
@@ -118,15 +119,21 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
   const errors = [];
   let extraGrants = 0;
 
-  for (const role of getDefaultRoles(product)) {
+  // A capability role is a grant target only in a tenant its capability admitted.
+  const catalogRoles = [...getDefaultRoles(product), ...getCapabilityRoles(product)];
+  for (const role of catalogRoles) {
     const matches = roles.filter((candidate) =>
       candidate.role_name === role.roleName
       && candidate.msp === role.msp
       && candidate.client === role.client);
 
+    // Only a required role (the protected MSP and client-portal Admins) blocks the
+    // tenant. Any other default role the tenant deleted or renamed simply gets no
+    // grants, so one missing Technician or client User role cannot stall the
+    // permission rollout for the whole tenant.
     if (matches.length === 0) {
-      roleResolution.push({ roleKey: role.key, status: role.legacy ? 'legacy-absent' : 'missing', roleId: null });
-      if (!role.legacy) {
+      roleResolution.push({ roleKey: role.key, status: role.legacy ? 'legacy-absent' : role.capabilities ? 'capability-absent' : 'missing', roleId: null });
+      if (role.required) {
         errors.push(
           `Tenant ${tenantId} has no ${product} default role (role_name="${role.roleName}", msp=${role.msp}, client=${role.client}). `
           + 'Run the supported onboarding recovery for this tenant before reconciling permissions; catalog sync never creates roles.',
@@ -136,10 +143,12 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     }
     if (matches.length > 1) {
       roleResolution.push({ roleKey: role.key, status: 'ambiguous', roleId: null });
-      errors.push(
-        `Tenant ${tenantId} has ${matches.length} roles matching the ${product} default role identity `
-        + `(role_name="${role.roleName}", msp=${role.msp}, client=${role.client}). Resolve the duplicate before reconciling permissions.`,
-      );
+      if (role.required) {
+        errors.push(
+          `Tenant ${tenantId} has ${matches.length} roles matching the ${product} default role identity `
+          + `(role_name="${role.roleName}", msp=${role.msp}, client=${role.client}). Resolve the duplicate before reconciling permissions.`,
+        );
+      }
       continue;
     }
 
@@ -171,7 +180,7 @@ function buildCatalogPlan({ tenantId, product, permissions, roles, rolePermissio
     }
   }
 
-  const customRoles = roles.filter((candidate) => !getDefaultRoles(product).some((role) =>
+  const customRoles = roles.filter((candidate) => !catalogRoles.some((role) =>
     candidate.role_name === role.roleName
     && candidate.msp === role.msp
     && candidate.client === role.client)).length;

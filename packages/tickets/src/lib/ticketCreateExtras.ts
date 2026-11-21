@@ -7,6 +7,7 @@ import { z } from 'zod';
 export const TICKET_CREATE_LIMITS = {
   maxAssets: 50,
   maxWatchers: 50,
+  maxAdditionalAgents: 50,
 } as const;
 
 const uuid = z.string().guid();
@@ -19,6 +20,7 @@ export const ticketCreateExtrasSchema = z
   .object({
     asset_ids: z.array(uuid).max(TICKET_CREATE_LIMITS.maxAssets).optional(),
     watcher_ids: z.array(uuid).max(TICKET_CREATE_LIMITS.maxWatchers).optional(),
+    additional_agent_ids: z.array(uuid).max(TICKET_CREATE_LIMITS.maxAdditionalAgents).optional(),
   })
   .strict();
 
@@ -27,6 +29,8 @@ export interface TicketCreateExtras {
   assetIds: string[];
   /** Deduplicated user ids. Empty when none were supplied. */
   watcherIds: string[];
+  /** Additional agents requested as part of ticket creation. */
+  additionalAgentIds: string[];
 }
 
 interface FormDataLike {
@@ -54,16 +58,18 @@ export function parseTicketCreateExtras(data: FormDataLike): TicketCreateExtras 
   const parsed = ticketCreateExtrasSchema.safeParse({
     asset_ids: readJson(data, 'asset_ids'),
     watcher_ids: readJson(data, 'watcher_ids'),
+    additional_agent_ids: readJson(data, 'additional_agent_ids'),
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new Error(`Invalid ticket create payload: ${issue.path.join('.') || 'payload'} ${issue.message}`);
   }
 
-  const { asset_ids, watcher_ids } = parsed.data;
+  const { asset_ids, watcher_ids, additional_agent_ids } = parsed.data;
   const result: TicketCreateExtras = {
     assetIds: Array.from(new Set(asset_ids ?? [])),
     watcherIds: Array.from(new Set(watcher_ids ?? [])),
+    additionalAgentIds: Array.from(new Set(additional_agent_ids ?? [])),
   };
 
   return result;

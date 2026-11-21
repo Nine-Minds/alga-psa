@@ -15,18 +15,15 @@ import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { runRegistrySearch, type RegistrySearchHit } from '@alga-psa/agent-tooling/registry/searchResult';
-import {
-  resolveSearchAclPrincipal,
-  verifyResultVisibility,
-  type ClientAccess,
-} from '@alga-psa/search/acl';
+import { verifyResultVisibility } from '@alga-psa/search/acl';
+import { resolveSearchPrincipal } from '@alga-psa/search/runAppSearch';
 import {
   countSearchMatches,
   countSearchMatchesByType,
   encodeSearchCursor,
   runSearchQuery,
 } from '@alga-psa/search/query';
-import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
+import { SEARCH_OBJECT_TYPES, type IUserWithRoles, type SearchObjectType } from '@alga-psa/types';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
@@ -1255,8 +1252,7 @@ export class ChatCompletionsService {
           return { error: 'Unable to search business data without a matching authenticated user.' };
         }
 
-        const clientAccess = this.resolveSearchClientAccess(currentUser as unknown as Record<string, unknown>);
-        const principal = await resolveSearchAclPrincipal(knex, currentUser as any, clientAccess);
+        const principal = await resolveSearchPrincipal(knex, tenantId, currentUser as unknown as IUserWithRoles);
         const [hits, totalCount, countsByType] = await Promise.all([
           runSearchQuery({
             knex,
@@ -1317,19 +1313,6 @@ export class ChatCompletionsService {
       this.logWarn('tool_search_business_data_failed', { error: message });
       return { error: message };
     }
-  }
-
-  private static resolveSearchClientAccess(user: Record<string, unknown>): ClientAccess {
-    const clientId =
-      typeof user.clientId === 'string'
-        ? user.clientId
-        : typeof user.client_id === 'string'
-          ? user.client_id
-          : undefined;
-    if (user.user_type === 'client') {
-      return clientId ? { mode: 'scoped', clientIds: [clientId] } : { mode: 'scoped', clientIds: [] };
-    }
-    return { mode: 'all' };
   }
 
   private static async tryAppendAutoToolResultsForMultipleCalls(params: {
@@ -3581,7 +3564,14 @@ export class ChatCompletionsService {
       genericParameters.body ??
       undefined;
 
-    if (bodyValue !== undefined && method !== 'GET' && method !== 'DELETE') {
+    // Only GET/HEAD never carry a body; a DELETE does when the endpoint
+    // documents one (the bulk deletes take their ids there).
+    const bodyAllowed =
+      method !== 'GET' &&
+      method !== 'HEAD' &&
+      (method !== 'DELETE' || entry.requestBodySchema !== undefined);
+
+    if (bodyValue !== undefined && bodyAllowed) {
       headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
       init.body =
         typeof bodyValue === 'string'

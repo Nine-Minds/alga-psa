@@ -59,8 +59,8 @@ const formatTimestamp = (value?: string | null) => {
 const buildRecordKey = (record: DnsRecord) =>
   `${record.type}:${record.name}:${record.value ?? ''}`.toLowerCase();
 
-// Most DNS providers append the apex domain automatically, so the "host"
-// users should enter is the record name with the apex stripped (or `@` for the apex itself).
+// Fallback for records stored before the provider supplied `host`: strip the
+// registered domain (or `@` for the domain itself).
 const toHostLabel = (name: string, domain?: string): string => {
   if (!domain) {
     return name;
@@ -74,6 +74,24 @@ const toHostLabel = (name: string, domain?: string): string => {
     return name.slice(0, name.length - domain.length - 1);
   }
   return name;
+};
+
+// The zone the customer edits may be a parent of the registered domain (e.g. `resxtech.com`
+// for `e.resxtech.com`); recover it from a record's name/host pair when available.
+const deriveZone = (records: DnsRecord[], domain?: string): string | undefined => {
+  for (const record of records) {
+    if (!record.host) {
+      continue;
+    }
+    if (record.host === '@') {
+      return record.name;
+    }
+    const prefix = `${record.host.toLowerCase()}.`;
+    if (record.name.toLowerCase().startsWith(prefix)) {
+      return record.name.slice(prefix.length);
+    }
+  }
+  return domain;
 };
 
 function getDetectionStatus(record: DnsRecord, detection?: DnsLookupResult): DetectionStatus {
@@ -170,6 +188,7 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
   const matchedCount = (detections ?? []).filter((entry) => entry.matchedValue).length;
   const totalTracked = records.length || detections?.length || 0;
   const lastCheckedReadable = formatTimestamp(lastCheckedAt);
+  const zone = deriveZone(records, domain);
 
   const handleCopy = (value: string) => {
     navigator.clipboard?.writeText(value).then(
@@ -190,15 +209,15 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
         <div className="text-xs text-gray-500">{t('managed.dnsRecords.lastCheckedNoRecords', { checkedAt: lastCheckedReadable })}</div>
       ) : null}
 
-      {domain ? (
+      {zone ? (
         <div className="flex gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
           <Info className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>{t('managed.dnsRecords.hostHint', { domain })}</p>
+          <p>{t('managed.dnsRecords.hostHint', { domain: zone })}</p>
         </div>
       ) : null}
 
       {records.map((record, index) => {
-        const host = toHostLabel(record.name, domain);
+        const host = record.host ?? toHostLabel(record.name, domain);
         const detection = detectionMap.get(buildRecordKey(record));
         const status = getDetectionStatus(record, detection);
         const statusStyle = STATUS_STYLES[status];

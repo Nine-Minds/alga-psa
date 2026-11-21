@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Läser in förhandsgranskning av mallen…",
     "errorPrefix": "Fel:",
-    "empty": "Välj en faktura och en mall att förhandsgranska."
+    "empty": "Välj en faktura och en mall att förhandsgranska.",
+    "frameTitle": "Förhandsgranskning av faktura"
   },
   "templateDesigner": {
     "propertyEditor": {

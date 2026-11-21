@@ -39,14 +39,23 @@ export interface LabelPrintRequest {
   overrides?: { title?: string; detail?: string };
 }
 
+/** Machine-readable refusal reasons the dialogs act on (never the message text). */
+export const LABEL_TEMPLATE_SIZE_MISMATCH = 'template-size-mismatch';
+
 export type LabelPrintOutcome =
   | { status: 'printed'; printed: number; skipped: number; blobUrl: string; popupBlocked: boolean }
-  | { status: 'failed'; httpStatus: number; message: string; failures: LabelPrintFailure[] };
+  | { status: 'failed'; httpStatus: number; message: string; failures: LabelPrintFailure[]; code?: string };
 
-async function readError(response: Response): Promise<{ message: string; failures: LabelPrintFailure[] }> {
+async function readError(
+  response: Response
+): Promise<{ message: string; failures: LabelPrintFailure[]; code?: string }> {
   try {
-    const body = (await response.json()) as { error?: string; failures?: LabelPrintFailure[] };
-    return { message: body.error ?? '', failures: Array.isArray(body.failures) ? body.failures : [] };
+    const body = (await response.json()) as { error?: string; failures?: LabelPrintFailure[]; code?: string };
+    return {
+      message: body.error ?? '',
+      failures: Array.isArray(body.failures) ? body.failures : [],
+      ...(typeof body.code === 'string' ? { code: body.code } : {}),
+    };
   } catch {
     return { message: '', failures: [] };
   }
@@ -86,8 +95,8 @@ export function useLabelPrint() {
         body: JSON.stringify(body),
       });
       if (!response.ok) {
-        const { message, failures } = await readError(response);
-        return { status: 'failed', httpStatus: response.status, message, failures };
+        const { message, failures, code } = await readError(response);
+        return { status: 'failed', httpStatus: response.status, message, failures, ...(code ? { code } : {}) };
       }
       const skipped = Number(response.headers.get('X-Label-Skipped') ?? '0') || 0;
       const blob = await response.blob();

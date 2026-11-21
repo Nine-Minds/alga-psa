@@ -14,9 +14,11 @@ import {
   type WorkflowPublishHooks
 } from './schemas/eventBusSchema';
 import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+import { EVENT_BUS_REGISTRY_KEY } from './eventBusRegistry';
 import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
+export type EventRequestResult = { success: true } | { success: false; error: string };
 
 // Connection state tracking
 let isConnected = false;
@@ -171,15 +173,14 @@ async function getClient() {
 
 // Helper to check connection status (for external monitoring)
 export function isEventBusConnected(): boolean {
-  return eventBusRegistry[EVENT_BUS_KEY]?.isConnected() ?? false;
+  return eventBusRegistry[EVENT_BUS_REGISTRY_KEY]?.isConnected() ?? false;
 }
 
 // Next's main and EE graphs can bundle this module independently. All
 // subscribers in the process must share one consumer: separate consumers in
 // the same Redis group compete for messages and ACK each other's work.
-const EVENT_BUS_KEY = Symbol.for('alga.eventBus.v1');
 const eventBusRegistry = globalThis as typeof globalThis & {
-  [EVENT_BUS_KEY]?: EventBus;
+  [EVENT_BUS_REGISTRY_KEY]?: EventBus;
 };
 
 // LEVERAGE: pattern redis-consumer-group-ensure — same NOGROUP detection and group-cache invalidation lives in shared/workflow/streams/redisStreamClient.ts
@@ -224,10 +225,10 @@ export class EventBus {
   }
 
   public static getInstance(): EventBus {
-    if (!eventBusRegistry[EVENT_BUS_KEY]) {
-      eventBusRegistry[EVENT_BUS_KEY] = new EventBus();
+    if (!eventBusRegistry[EVENT_BUS_REGISTRY_KEY]) {
+      eventBusRegistry[EVENT_BUS_REGISTRY_KEY] = new EventBus();
     }
-    return eventBusRegistry[EVENT_BUS_KEY];
+    return eventBusRegistry[EVENT_BUS_REGISTRY_KEY];
   }
 
   public isConnected(): boolean {
@@ -258,6 +259,56 @@ export class EventBus {
       channelMap.set(channel, handlers);
     }
     return handlers;
+  }
+
+  /** Create a Redis-backed completion slot before publishing a correlated request. */
+  public async beginRequest(requestId: string, ttlSeconds: number): Promise<void> {
+    if (!requestId || !Number.isInteger(ttlSeconds) || ttlSeconds < 1) {
+      throw new Error('Event request requires an id and a positive integer TTL');
+    }
+    const client = await getClient();
+    const created = await client.set(`eventbus:request:${requestId}`, 'pending', {
+      EX: ttlSeconds,
+      NX: true,
+    });
+    if (created !== 'OK') {
+      throw new Error(`Event request already exists: ${requestId}`);
+    }
+  }
+
+  /** Wait until a correlated server request completes, rejecting failures and timeouts. */
+  public async waitForRequest(requestId: string, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    const key = `eventbus:request:${requestId}`;
+    const client = await getClient();
+    try {
+      while (Date.now() < deadline) {
+        const result = await client.get(key);
+        if (result && result !== 'pending') {
+          const completion = JSON.parse(result) as EventRequestResult;
+          if (completion.success === true) return;
+          throw new Error(completion.error || 'Server execution failed');
+        }
+        await new Promise((resolve) => setTimeout(resolve, Math.min(100, Math.max(1, deadline - Date.now()))));
+      }
+      throw new Error(`Timed out waiting for server execution request ${requestId}`);
+    } finally {
+      await client.del(key);
+    }
+  }
+
+  /** Resolve a correlated request after the server-side handler has completed. */
+  public async completeRequest(requestId: string, result: EventRequestResult): Promise<void> {
+    const client = await getClient();
+    const key = `eventbus:request:${requestId}`;
+    if (await client.exists(key)) {
+      await client.set(key, JSON.stringify(result), { EX: 720 });
+    }
+  }
+
+  public async clearRequest(requestId: string): Promise<void> {
+    const client = await getClient();
+    await client.del(`eventbus:request:${requestId}`);
   }
 
   private getActiveSubscriptions(): Array<{
@@ -1037,7 +1088,7 @@ export class EventBus {
       this.handlers.clear();
       EventBus.createdConsumerGroups.clear();
       EventBus.recoveringConsumerGroups.clear();
-      if (eventBusRegistry[EVENT_BUS_KEY] === this) delete eventBusRegistry[EVENT_BUS_KEY];
+      if (eventBusRegistry[EVENT_BUS_REGISTRY_KEY] === this) delete eventBusRegistry[EVENT_BUS_REGISTRY_KEY];
     }
   }
 }

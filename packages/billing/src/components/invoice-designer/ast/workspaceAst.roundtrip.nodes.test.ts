@@ -1,6 +1,7 @@
 import type { TemplateValueExpression } from '@alga-psa/types';
 import { describe, expect, it } from 'vitest';
-import { createAstDocument, findNodeById, getDocumentNode, roundTripAst } from './workspaceAst.roundtrip.helpers';
+import { cloneAst, createAstDocument, findNodeById, getDocumentNode, roundTripAst } from './workspaceAst.roundtrip.helpers';
+import { importTemplateAstToWorkspace } from './workspaceAst';
 
 describe('workspaceAst roundtrip node/property matrix', () => {
   it('round-trips all text expression variants', () => {
@@ -470,6 +471,34 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     const syntheticLayout = getDocumentNode(roundTrippedSynthetic);
     expect(syntheticLayout.children.map((child) => child.id)).toEqual(['top-stack']);
     expect(syntheticLayout.children[0]?.type).toBe('stack');
+  });
+
+  it('reopens a forced-break divider as the Page Break block it was built from', () => {
+    const ast = createAstDocument([
+      {
+        id: 'page-section',
+        type: 'section',
+        children: [
+          { id: 'cover-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+          { id: 'plain-rule', type: 'divider', style: { inline: { margin: '8px 0' } } },
+        ],
+      },
+    ]);
+
+    const workspace = importTemplateAstToWorkspace(cloneAst(ast));
+    const types = Object.fromEntries(
+      Object.values(workspace.nodesById).map((node) => [node.id, node.type] as const)
+    );
+    // An ordinary divider must not be claimed by the page-break mapping.
+    expect(types['cover-break']).toBe('page-break');
+    expect(types['plain-rule']).toBe('divider');
+
+    // Saving it again emits the same instruction-only divider.
+    const layout = getDocumentNode(roundTripAst(ast));
+    const exported = findNodeById(layout, 'cover-break');
+    expect(exported?.type).toBe('divider');
+    expect(exported?.style?.inline).toEqual({ breakAfter: 'page', border: '0', margin: '0', height: '0' });
+    expect(findNodeById(layout, 'plain-rule')?.style?.inline).toMatchObject({ margin: '8px 0' });
   });
 
   it('round-trips barcode nodes (QR + Code 128), keeping symbology and the value expression', () => {

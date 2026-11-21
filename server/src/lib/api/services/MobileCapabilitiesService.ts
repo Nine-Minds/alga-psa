@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import {
   BaseService,
   type ServiceContext,
 } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { resolveDateFormatCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
@@ -23,6 +23,12 @@ import {
   getThemePairMeta,
   type ThemePairId,
 } from '@alga-psa/tenancy/lib/themePairs';
+import { readDontNotifyCustomerDefault } from '@alga-psa/notifications/notifications/notificationPolicy';
+import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { coManagedSeatAuthority } from '@alga-psa/co-managed/seatAuthority';
+import { tenantDb } from '@alga-psa/db';
+import { CO_MANAGED_SEAT_SURFACE } from '@shared/services/productSurfaceKinds';
+import { loadProductPrincipal } from '@shared/services/productPrincipal';
 
 /** The 15 seed tokens the mobile app derives its whole palette from. */
 export type MobileThemeSeedTokens = CustomThemeTokens;
@@ -44,12 +50,29 @@ export interface MobileFeatureCapabilities {
     opportunitiesCreate: boolean;
     /** Project tasks on mobile; PSA only, like the Projects module itself. */
     projects: boolean;
+    /** Asset browsing on mobile; PSA only. */
+    assets: boolean;
+    /** Site audits; needs asset read AND write, so a read-only tech cannot start one. */
+    assetAudit: boolean;
     /** Client/contact writes follow RBAC alone: both products have clients and contacts. */
     clientsCreate: boolean;
     clientsUpdate: boolean;
     contactsCreate: boolean;
     contactsUpdate: boolean;
+    /**
+     * Tenant setting: every "Don't notify the customer" checkbox starts ticked.
+     * Mirrors `notification_settings.default_dont_notify_customer` (Settings ->
+     * Notifications -> Email -> Settings on the web).
+     */
+    dontNotifyCustomerDefault: boolean;
+    /**
+     * The session reaches the operational surface only (a co-managed seat technician): tickets, projects,
+     * assets, contacts and their own time. The server refuses everything else for the session's key.
+     */
+    operationalOnly: boolean;
   };
+  /** Set when `operationalOnly`: the one client the session works for and the boards it may open tickets on. */
+  operationalScope?: MobileOperationalScope | null;
   /**
    * How this user's dates are written, resolved from their country exactly as
    * the web layouts resolve it. The device locale must not decide this: a
@@ -57,6 +80,11 @@ export interface MobileFeatureCapabilities {
    */
   formatting: CountryDateFormat;
   theme: MobileTheme;
+}
+
+export interface MobileOperationalScope {
+  client: { clientId: string; clientName: string } | null;
+  creatableBoardIds: string[];
 }
 
 const ALGA_PRESET = CUSTOM_THEME_PRESETS[DEFAULT_THEME_PAIR_ID as 'alga'];
@@ -114,19 +142,81 @@ export class MobileCapabilitiesService extends BaseService<never> {
     }
   }
 
+  private async getDontNotifyCustomerDefault(
+    knex: Parameters<typeof readDontNotifyCustomerDefault>[0],
+    tenant: string,
+  ): Promise<boolean> {
+    try {
+      return await readDontNotifyCustomerDefault(knex, tenant);
+    } catch {
+      // Fail open: the historical behavior is unticked checkboxes.
+      return false;
+    }
+  }
+  /** The seat technician's live scope, for the pickers the app cannot fill from closed endpoints. */
+  private async resolveOperationalScope(
+    knex: Awaited<ReturnType<MobileCapabilitiesService['getDbForContext']>>,
+    context: ServiceContext,
+  ): Promise<MobileOperationalScope> {
+    const subject = await resolveAuthorizationSubject(knex, {
+      tenant: context.tenant,
+      user: context.user ?? { user_id: context.userId },
+      apiKeyId: context.apiKeyId,
+    });
+    const scope = coManagedSeatAuthority(subject)?.scope;
+    if (!scope) return { client: null, creatableBoardIds: [] };
+    const client = await tenantDb(knex, context.tenant).table('clients')
+      .where({ client_id: scope.clientId })
+      .first('client_name');
+    return {
+      client: client ? { clientId: scope.clientId, clientName: client.client_name } : null,
+      creatableBoardIds: scope.creatableBoardIds,
+    };
+  }
+
   async getMyCapabilities(context: ServiceContext): Promise<MobileFeatureCapabilities> {
     const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);
     const productCode = await getTenantProduct(context.tenant);
     const knex = await this.getDbForContext(context);
+    const dontNotifyCustomerDefault = await this.getDontNotifyCustomerDefault(knex, context.tenant);
+
+    const { surfaceKind } = await loadProductPrincipal({ tenantId: context.tenant, userId: context.userId });
+    if (surfaceKind === CO_MANAGED_SEAT_SURFACE) {
+      const [projects, assets] = productCode === 'psa'
+        ? await Promise.all([
+            hasApiContextPermission(context, 'project', 'read', knex),
+            hasApiContextPermission(context, 'asset', 'read', knex),
+          ])
+        : [false, false];
+      return {
+        features: {
+          inventory: false,
+          opportunities: false,
+          opportunitiesCreate: false,
+          projects,
+          assets,
+          assetAudit: false,
+          clientsCreate: false,
+          clientsUpdate: false,
+          contactsCreate: false,
+          contactsUpdate: false,
+          dontNotifyCustomerDefault,
+          operationalOnly: true,
+        },
+        operationalScope: await this.resolveOperationalScope(knex, context),
+        formatting,
+        theme,
+      };
+    }
 
     const [clientsCreate, clientsUpdate, contactsCreate, contactsUpdate] = await Promise.all([
-      hasPermission(context.user, 'client', 'create', knex),
-      hasPermission(context.user, 'client', 'update', knex),
-      hasPermission(context.user, 'contact', 'create', knex),
-      hasPermission(context.user, 'contact', 'update', knex),
+      hasApiContextPermission(context, 'client', 'create', knex),
+      hasApiContextPermission(context, 'client', 'update', knex),
+      hasApiContextPermission(context, 'contact', 'create', knex),
+      hasApiContextPermission(context, 'contact', 'update', knex),
     ]);
-    const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate };
+    const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate, operationalOnly: false };
 
     if (productCode !== 'psa') {
       return {
@@ -135,6 +225,9 @@ export class MobileCapabilitiesService extends BaseService<never> {
           opportunities: false,
           opportunitiesCreate: false,
           projects: false,
+          assets: false,
+          assetAudit: false,
+          dontNotifyCustomerDefault,
           ...crm,
         },
         formatting,
@@ -142,11 +235,13 @@ export class MobileCapabilitiesService extends BaseService<never> {
       };
     }
 
-    const [inventory, opportunities, opportunitiesCreate, projects] = await Promise.all([
-      hasPermission(context.user, 'inventory', 'read', knex),
-      hasPermission(context.user, 'opportunities', 'read', knex),
-      hasPermission(context.user, 'opportunities', 'create', knex),
-      hasPermission(context.user, 'project', 'read', knex),
+    const [inventory, opportunities, opportunitiesCreate, projects, assets, assetsUpdate] = await Promise.all([
+      hasApiContextPermission(context, 'inventory', 'read', knex),
+      hasApiContextPermission(context, 'opportunities', 'read', knex),
+      hasApiContextPermission(context, 'opportunities', 'create', knex),
+      hasApiContextPermission(context, 'project', 'read', knex),
+      hasApiContextPermission(context, 'asset', 'read', knex),
+      hasApiContextPermission(context, 'asset', 'update', knex),
     ]);
 
     return {
@@ -155,6 +250,9 @@ export class MobileCapabilitiesService extends BaseService<never> {
         opportunities,
         opportunitiesCreate,
         projects,
+        assets,
+        assetAudit: assets && assetsUpdate,
+        dontNotifyCustomerDefault,
         ...crm,
       },
       formatting,

@@ -8,6 +8,7 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { requireTenantSettingsUpdate } from './tenantSettingsAuthorization';
+import { sanitizePortalBranding } from '../../lib/sanitizePortalBranding';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
 export type PortalSidebarStyle = 'default' | 'primary' | 'secondary' | 'custom';
@@ -58,18 +59,6 @@ export interface TenantBranding {
 
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
-
-/**
- * Which image each square mark is re-cut from is bookkeeping for the settings
- * screens, not branding — and it names a document, so it stays out of a payload
- * the portal and the sign-in page also read.
- */
-const withoutMarkProvenance = (branding: TenantBranding): TenantBranding => {
-  const rest = { ...branding } as TenantBranding & Record<string, unknown>;
-  delete rest.logoMarkSource;
-  delete rest.logoDarkMarkSource;
-  return rest;
-};
 
 /**
  * Update tenant's branding settings
@@ -182,11 +171,12 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
     return null;
   }
 
-  return scopeBrandingToEdition({
-    ...withoutMarkProvenance(tenantSettings.settings.branding),
+  const branding = sanitizePortalBranding({
+    ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  }, isEnterprise);
+  });
+  return scopeBrandingToEdition(branding, isEnterprise);
 });
 
 /**
@@ -202,9 +192,10 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
     return null;
   }
 
-  return scopeBrandingToEdition({
-    ...withoutMarkProvenance(tenantSettings.settings.branding),
+  const branding = sanitizePortalBranding({
+    ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  }, isEnterprise);
+  });
+  return scopeBrandingToEdition(branding, isEnterprise);
 }

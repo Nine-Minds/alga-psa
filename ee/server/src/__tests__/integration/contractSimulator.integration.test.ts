@@ -31,6 +31,7 @@ import {
 import { assumptionKey } from "@ee/lib/billing/simulator/syntheticActivity";
 import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
 import { buildContractCadenceDueSelectionInput } from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
+import { fingerprintTenantTables } from "../utils/tableFingerprint";
 
 process.env.DB_PORT =
   process.env.DB_PORT === "6432" ? "5432" : process.env.DB_PORT;
@@ -349,6 +350,23 @@ describe("Contract simulator – migrated-schema integration", () => {
         }),
       ]),
     );
+  });
+
+  it("carries the live billing identity on a live scenario, and still simulates old JSON without it", async () => {
+    const scenario = fixture.scenario;
+
+    expect(scenario.billing_identity).toBeTruthy();
+    expect(scenario.billing_identity!.profiles).toHaveLength(1);
+    expect(scenario.billing_identity!.terms.days).toBeGreaterThan(-1);
+    expect(scenario.billing_identity!.fields.find((f) => f.key === "currency")).toBeDefined();
+
+    // Scenarios persisted before the field existed must load and price identically.
+    const { billing_identity: _omit, ...legacy } = scenario;
+    const legacyScenario = JSON.parse(JSON.stringify(legacy)) as ContractScenario;
+    expect("billing_identity" in legacyScenario).toBe(false);
+    const withField = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const withoutField = await simulateContractScenario(context.db, context.tenantId, legacyScenario);
+    expect(withoutField.periods.map((p) => p.total)).toEqual(withField.periods.map((p) => p.total));
   });
 
   it("snapshots and simulates a customer-shaped contract template for profile and client contexts", async () => {
@@ -1409,31 +1427,6 @@ async function insertSupportedRows(
       ),
     ),
   );
-}
-
-async function fingerprintTenantTables(
-  db: Knex,
-  tenant: string,
-  tables: string[],
-): Promise<Record<string, string>> {
-  const result: Record<string, string> = {};
-  for (const table of tables) {
-    if (!(await db.schema.hasTable(table))) continue;
-    const columns = await db(table).columnInfo();
-    const query = db(table).select("*");
-    if ("tenant" in columns) query.where({ tenant });
-    const rows = await query;
-    result[table] = JSON.stringify(
-      rows.map((row) =>
-        Object.fromEntries(
-          Object.entries(row).sort(([left], [right]) =>
-            left.localeCompare(right),
-          ),
-        ),
-      ),
-    );
-  }
-  return result;
 }
 
 async function persistScenarioServicePeriods(

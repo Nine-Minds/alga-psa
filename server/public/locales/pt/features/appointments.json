@@ -31,6 +31,8 @@
     "description": "Escolha o serviço com o qual você precisa de ajuda",
     "selectService": "Selecione um serviço",
     "serviceLabel": "Serviço",
+    "preselectedServiceNotice": "Este serviço já está selecionado para você — siga para escolher uma data.",
+    "serviceReadOnlyLabel": "Serviço selecionado",
     "ticketLabel": "Link para ticket existente (opcional)",
     "selectTicket": "Selecione um ticket",
     "noTicket": "Sem ticket",

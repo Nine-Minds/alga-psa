@@ -1,0 +1,59 @@
+[
+  {
+    "id": "F001",
+    "description": "Provider-agnostic reconciliation operation: given tenant, provider_message_id and an on-wire Message-ID, set email_sending_logs.rfc_message_id, keep the generated id in metadata.generatedRfcMessageId, be idempotent, and never silently replace one on-wire id with another.",
+    "implemented": true,
+    "prdRefs": [
+      "On-wire id reconciliation"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Reconciliation rewrites every persisted copy of the generated id that feeds later thread headers (comment_threads.email_references, comment reply-context email_message_id, ticket email_metadata.references, and any others found by tracing), so later In-Reply-To/References name on-wire ids.",
+    "implemented": true,
+    "prdRefs": [
+      "On-wire id reconciliation"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "ResendEmailProvider returns the on-wire Message-ID as rfcMessageId after a successful send (send response if present, otherwise GET /emails/:id); a missing id or a failed fetch never fails or retries the send.",
+    "implemented": true,
+    "prdRefs": [
+      "Resend send path"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Resend webhook handling reads message_id on email.* events, including email.sent, and calls the reconciliation operation scoped to the signed tenant tag and email_id; existing workflow event publishing is unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "Resend webhook path",
+      "Security / permissions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "resolveReplyTargetFromOutboundMessageId matches with rfcMessageIdLookupForms and resolves a reply naming either the on-wire id or the generated id.",
+    "implemented": true,
+    "prdRefs": [
+      "Inbound lookup"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Re-runnable, tenant-scoped, rate-limit-aware backfill that sets on-wire ids for existing provider_type=resend rows through the reconciliation operation.",
+    "implemented": true,
+    "prdRefs": [
+      "Backfill"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "SMTP SES on-wire id handling keeps working and shares the reconciliation contract (no third variant of on-wire id recording).",
+    "implemented": true,
+    "prdRefs": [
+      "On-wire id reconciliation"
+    ]
+  }
+]

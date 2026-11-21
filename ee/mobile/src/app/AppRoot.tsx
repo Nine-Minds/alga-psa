@@ -4,7 +4,7 @@ import { NavigationContainer, useNavigationContainerRef } from "@react-navigatio
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
-import { hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
+import { hasHeldDeepLink, hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
 import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
@@ -19,6 +19,7 @@ import { createApiClient } from "../api";
 import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
+import { clearWebSignInSession } from "../auth/webSession";
 import { unregisterPushToken } from "../api/pushToken";
 import { clearPushRegistration } from "../notifications/pushRegistration";
 import { getStableDeviceId } from "../device/clientMetadata";
@@ -28,6 +29,7 @@ import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import { setUser as setSentryUser, reactNavigationIntegration } from "../errors/sentry";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { clearRecentSearches } from "../features/search/recentSearches";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
 import { clearCachedTheme, readCachedTheme } from "../ui/themeCache";
@@ -35,7 +37,13 @@ import type { MobileTheme } from "../ui/themeTokens";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
 import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
-import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume } from "./bootstrapUtils";
+import {
+  isSessionUsable,
+  msUntilExpiry,
+  msUntilRefresh,
+  shouldRefreshOnResume,
+  skipRestoredNavState,
+} from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
 import { t } from "../i18n/i18n";
@@ -55,11 +63,19 @@ export function AppRoot() {
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
   const lastBiometricUnlockAtMs = useRef(0);
+  const freshSignInRef = useRef(false);
 
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   const setSession = useCallback(
     (next: MobileSession | null) => {
+      // A fresh sign-in opens on Home, not on whatever the last session left
+      // behind; relaunch still restores the persisted route. Navigating here
+      // cannot do it — the signed-in navigator is not mounted yet — so the
+      // restore is skipped instead, below.
+      if (next !== null && sessionRef.current === null && !hasHeldDeepLink()) {
+        freshSignInRef.current = true;
+      }
       sessionRef.current = next;
       setDeepLinkSignedIn(next !== null);
       setSessionState(next);
@@ -132,9 +148,11 @@ export function AppRoot() {
       }
 
       setNavStateLoaded(false);
+      const freshSignIn = freshSignInRef.current;
+      freshSignInRef.current = false;
       // A pending deep link (e.g. a ticket link tapped in an email) must win over
-      // the restored screen; React Navigation ignores links when initialState is set.
-      if (await hasPendingDeepLink()) {
+      // the restored screen, and a sign-in opens on Home.
+      if (skipRestoredNavState({ freshSignIn, pendingDeepLink: await hasPendingDeepLink() })) {
         if (canceled) return;
         setNavInitialState(undefined);
         setNavStateLoaded(true);
@@ -255,22 +273,15 @@ export function AppRoot() {
 
   useEffect(() => {
     if (!session) return;
-    // When the access token expires, attempt a refresh instead of
-    // immediately logging the user out.  Only clear the session if
-    // the refresh itself fails (e.g. refresh token also expired).
+    // When the access token expires, attempt a refresh. refreshSession signs
+    // out on its own when the refresh token is rejected; a network or server
+    // failure keeps the session so the next request or resume can retry.
     const handle = setTimeout(
-      () => {
-        void refreshSession().then((token) => {
-          if (!token) {
-            // Refresh failed — session is truly unrecoverable.
-            setSession(null);
-          }
-        });
-      },
+      () => void refreshSession(),
       msUntilExpiry(session.expiresAtMs, Date.now()) + 500,
     );
     return () => clearTimeout(handle);
-  }, [session?.expiresAtMs, session?.refreshToken, setSession, refreshSession]);
+  }, [session?.expiresAtMs, session?.refreshToken, refreshSession]);
 
   useAppResume(() => {
     if (!session) return;
@@ -315,23 +326,27 @@ export function AppRoot() {
       }
     } catch (e) {
       logger.warn("Logout revoke failed", { error: e });
-    } finally {
-      await Promise.allSettled([
-        clearPendingMobileAuth(),
-        clearReceivedOtt(),
-        clearPushRegistration(),
-        // A different tenant must not inherit this one's colours.
-        clearCachedTheme(baseUrl, currentSession?.tenantId),
-      ]);
-      setCachedTenantTheme(null);
-      setSession(null);
     }
+    // The sign-in browser keeps its own web session; end it too, or the next
+    // sign-in silently returns this user.
+    if (baseUrl && currentSession) await clearWebSignInSession(baseUrl);
+    await Promise.allSettled([
+      clearPendingMobileAuth(),
+      clearReceivedOtt(),
+      clearPushRegistration(),
+      // A different tenant must not inherit this one's colours.
+      clearCachedTheme(baseUrl, currentSession?.tenantId),
+      clearRecentSearches(baseUrl, currentSession?.user?.id),
+    ]);
+    setCachedTenantTheme(null);
+    setSession(null);
   }, [baseUrl, setSession]);
 
   const setHost = useCallback(
     async (url: string) => {
       const normalized = await saveStoredHost(url);
       await clearPushRegistration();
+      await clearRecentSearches(baseUrl, sessionRef.current?.user?.id);
       await clearCachedTheme(baseUrl, sessionRef.current?.tenantId);
       setCachedTenantTheme(null);
       setActiveBaseUrl(normalized);

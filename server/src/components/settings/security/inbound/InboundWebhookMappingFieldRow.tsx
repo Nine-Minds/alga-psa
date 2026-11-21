@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { IClient, IUser, ITeam } from '@alga-psa/types';
+import type { IUser, ITeam } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -23,7 +23,6 @@ import {
 } from '@/lib/inboundWebhooks/fieldMappingMode';
 import {
   listInboundWebhookLookup,
-  listClientsForInboundWebhook,
   listUsersForInboundWebhook,
   listTeamsForInboundWebhook,
   type InboundWebhookLookupEntityType,
@@ -325,53 +324,19 @@ interface ClientStaticPickerProps {
 }
 
 function ClientStaticPicker({ id, value, onChange }: ClientStaticPickerProps) {
-  const { t } = useTranslation('msp/profile');
-  const [clients, setClients] = useState<IClient[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    listClientsForInboundWebhook()
-      .then((result) => {
-        if (!cancelled) {
-          setClients(result);
-          setError(null);
-        }
-      })
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : String(loadError));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (error) {
-    return <p className="text-xs text-red-600">{error}</p>;
-  }
-
+  // Searches and pages on the server through the shell's searcher; the selected client is named by id.
   return (
     <ClientPicker
       id={id}
-      clients={clients}
       selectedClientId={value || null}
       onSelect={(clientId) => onChange(clientId ?? '')}
       filterState={filterState}
       onFilterStateChange={setFilterState}
       clientTypeFilter={clientTypeFilter}
       onClientTypeFilterChange={setClientTypeFilter}
-      placeholder={loading ? t('security.webhooks.inbound.mapping.loading') : ''}
       fitContent={false}
       modal
     />

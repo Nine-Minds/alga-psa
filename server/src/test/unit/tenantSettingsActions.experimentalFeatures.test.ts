@@ -25,12 +25,14 @@ vi.mock('next/headers.js', () => ({
   headers: async () => new Headers(),
 }));
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@alga-psa/auth', () => ({
   hasPermission: hasPermissionMock,
   withAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
   withOptionalAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -365,6 +367,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   });
 
   it('rejects enabling aiAssistant when tenant is not whitelisted by the feature flag', async () => {
+    hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(false);
     allowTenantKnex = false;
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

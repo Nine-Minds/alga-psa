@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { ActivityType } from '@alga-psa/types';
 
+// `loaded` is the localStorage stage, `resolved` the authoritative server stage.
 const mocks = vi.hoisted(() => ({
   setSaved: vi.fn(),
-  pref: { value: null as any, loaded: false },
+  pref: { value: null as any, loaded: false, resolved: false },
 }));
 
 vi.mock('@alga-psa/user-composition/hooks', () => ({
@@ -13,6 +14,7 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
     value: mocks.pref.value ?? opts.defaultValue,
     setValue: mocks.setSaved,
     hasLoadedInitial: mocks.pref.loaded,
+    hasResolved: mocks.pref.resolved,
   }),
 }));
 
@@ -26,24 +28,28 @@ beforeEach(() => {
   mocks.setSaved.mockReset();
   mocks.pref.value = null;
   mocks.pref.loaded = false;
+  mocks.pref.resolved = false;
 });
 
 describe('useActivityFilterState', () => {
-  it('mirrors late saved prefs until the first user edit, then stops', () => {
+  it('follows late saved prefs through both stages until the first user edit, then stops', () => {
     const { result, rerender } = renderHook(() => useActivityFilterState());
     expect(result.current.filters).toEqual(DEFAULT_ACTIVITY_FILTERS);
     expect(result.current.isReady).toBe(false);
 
-    // Stage 1 (localStorage) then stage 2 (server) resolve after mount.
+    // Stage 1 (localStorage): in use, but still replaceable by the server value.
     mocks.pref.loaded = true;
     mocks.pref.value = saved;
     rerender();
     expect(result.current.filters).toEqual(saved);
-    expect(result.current.isReady).toBe(true);
+    expect(result.current.isReady).toBe(false);
 
+    // Stage 2 (server): authoritative.
+    mocks.pref.resolved = true;
     mocks.pref.value = { ...saved, search: 'server' };
     rerender();
     expect(result.current.filters.search).toBe('server');
+    expect(result.current.isReady).toBe(true);
 
     act(() => result.current.setFilters(edit));
     expect(result.current.filters).toEqual(edit);
@@ -61,6 +67,7 @@ describe('useActivityFilterState', () => {
 
   it('setOverrideFilters is not persisted and blocks the mirror; clearOverride restores saved filters', () => {
     mocks.pref.loaded = true;
+    mocks.pref.resolved = true;
     mocks.pref.value = saved;
     const { result, rerender } = renderHook(() => useActivityFilterState());
     expect(result.current.filters).toEqual(saved);
@@ -87,16 +94,27 @@ describe('useActivityFilterState', () => {
     expect(result.current.filters).toEqual(edit);
   });
 
-  it('isReady covers the override path (prefs not yet loaded) and the loaded path', () => {
+  it('isReady covers the override path (prefs not yet loaded) and waits for the resolved value', () => {
     const withOverride = renderHook(() => useActivityFilterState({ initialOverride: override }));
     expect(withOverride.result.current.isReady).toBe(true);
     expect(withOverride.result.current.filters).toEqual(override);
 
     const plain = renderHook(() => useActivityFilterState());
     expect(plain.result.current.isReady).toBe(false);
+    // The localStorage stage alone is not enough: the server value may still replace it.
     mocks.pref.loaded = true;
     plain.rerender();
+    expect(plain.result.current.isReady).toBe(false);
+    mocks.pref.resolved = true;
+    plain.rerender();
     expect(plain.result.current.isReady).toBe(true);
+  });
+
+  it('a user edit makes it ready before the saved value resolves', () => {
+    const { result } = renderHook(() => useActivityFilterState());
+    expect(result.current.isReady).toBe(false);
+    act(() => result.current.setFilters(edit));
+    expect(result.current.isReady).toBe(true);
   });
 
   it('keeps targetUserId in memory', () => {

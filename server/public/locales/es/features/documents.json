@@ -196,6 +196,7 @@
     "fileError": "No se pudo subir el archivo"
   },
   "folders": {
+    "show": "Mostrar carpetas",
     "root": "Raíz",
     "loadFailed": "No se pudo cargar el árbol de carpetas",
     "deleteConfirm": "¿Seguro que deseas eliminar la carpeta \"{{name}}\"? Solo funcionará si la carpeta está vacía.",
@@ -304,6 +305,11 @@
   },
   "ticketDocuments": "Documentos del ticket",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Imprimir",
+    "edit": "Editar",
+    "upload": "Subir",
+    "closePreview": "Cerrar vista previa",
     "save": "Guardar",
     "saving": "Guardando...",
     "cancel": "Cancelar"
@@ -379,5 +385,17 @@
   },
   "skeleton": {
     "cardLabel": "Tarjeta de carga de documento"
+  },
+  "fallbackUserName": "Usuario",
+  "selectOrCreate": "Seleccione un documento o cree uno nuevo.",
+  "viewMode": {
+    "grid": "Cuadrícula",
+    "list": "Lista"
+  },
+  "unsavedChanges": {
+    "title": "Cambios sin guardar",
+    "message": "¿Está seguro de que desea cancelar? Se perderán todos los cambios sin guardar.",
+    "confirm": "Descartar cambios",
+    "cancel": "Continuar editando"
   }
 }

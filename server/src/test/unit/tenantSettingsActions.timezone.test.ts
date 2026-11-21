@@ -16,9 +16,9 @@ vi.mock('next/headers.js', () => ({
 vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
   withAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', user_type: 'internal', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
   withOptionalAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: 'tenant-test', roles: [] }, { tenant: 'tenant-test' }, ...args),
+    fn({ user_id: 'user-test', tenant: 'tenant-test', user_type: 'internal', roles: [] }, { tenant: 'tenant-test' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({

@@ -215,7 +215,7 @@ async fn execute(
         .strip_prefix("sha256:")
         .unwrap_or(&content_hash);
     tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, content_hash=%hash, "Initializing Wasmtime ModuleLoader for extension execution");
-    let loader = match ModuleLoader::new() {
+    let loader = match ModuleLoader::shared() {
         Ok(l) => {
             tracing::info!(request_id=%req_id, "✓ ModuleLoader initialized successfully");
             l
@@ -234,14 +234,14 @@ async fn execute(
     };
 
     const DEFAULT_WASM_ENTRY: &str = "dist/main.wasm";
-    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, entry=DEFAULT_WASM_ENTRY, "Ensuring WASM binary is cached locally");
+    tracing::debug!(request_id=%req_id, tenant=%tenant, extension=%ext, entry=DEFAULT_WASM_ENTRY, "Ensuring WASM binary is cached locally");
     let wasm = match loader
         .load_wasm_module(tenant, ext, &content_hash, DEFAULT_WASM_ENTRY)
         .await
     {
         Ok(b) => {
-            tracing::info!(request_id=%req_id, wasm_size=%b.len(), "✓ WASM binary downloaded from bundle store");
-            tracing::info!(request_id=%req_id, "WASM binary ready for Wasmtime instantiation");
+            tracing::debug!(request_id=%req_id, wasm_size=%b.len(), "✓ WASM binary downloaded from bundle store");
+            tracing::debug!(request_id=%req_id, "WASM binary ready for Wasmtime instantiation");
             b
         }
         Err(e) => {

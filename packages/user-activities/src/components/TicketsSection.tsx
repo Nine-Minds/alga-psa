@@ -18,12 +18,14 @@ interface TicketsSectionProps {
   targetUserId?: string;
   /** Viewing another user: no action menus. */
   readOnly?: boolean;
+  /** False while the saved filters are still resolving: hold the first query. */
+  filtersReady?: boolean;
 }
 
-export function TicketsSection({ limit = 5, onViewAll, filters, targetUserId = '', readOnly = false }: TicketsSectionProps) {
+export function TicketsSection({ limit = 5, onViewAll, filters, targetUserId = '', readOnly = false, filtersReady = true }: TicketsSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
-  const feed = useActivitySectionFeed<TicketActivity>(ActivityType.TICKET, filters, targetUserId, limit);
+  const feed = useActivitySectionFeed<TicketActivity>(ActivityType.TICKET, filters, targetUserId, limit, undefined, { enabled: filtersReady });
   const { activities, loading } = feed;
   const error = feed.error
     ? t('sections.tickets.errors.loadFailed', { defaultValue: 'Failed to load ticket activities. Please try again later.' })

@@ -133,6 +133,23 @@ describe('invoice:credit permission migration', () => {
       { tenant: context.tenantId, role_id: technicianRoleId, role_name: 'Technician', msp: true, client: false },
     ]);
 
+    // The dev seeds already provision invoice:credit from the catalog; remove it so the
+    // backfill's insert path is what runs, as it did for tenants that predated the permission.
+    const seeded = await tenantTable(context, 'permissions')
+      .where({ tenant: context.tenantId, resource: 'invoice', action: 'credit' })
+      .select('permission_id');
+    const seededIds = seeded.map((row) => row.permission_id);
+    if (seededIds.length > 0) {
+      await tenantTable(context, 'role_permissions')
+        .where({ tenant: context.tenantId })
+        .whereIn('permission_id', seededIds)
+        .del();
+      await tenantTable(context, 'permissions')
+        .where({ tenant: context.tenantId })
+        .whereIn('permission_id', seededIds)
+        .del();
+    }
+
     await migration.up(context.db);
 
     const permission = await tenantTable(context, 'permissions')

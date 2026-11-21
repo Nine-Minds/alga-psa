@@ -34,6 +34,8 @@ type NumberSettingsRow = NumberSettings & {
   entity_type: EntityType;
 };
 
+const EDITABLE_NUMBER_SETTINGS = new Set(['prefix', 'last_number', 'initial_value', 'padding_length', 'prefix_date_format']);
+
 // QuickBooks Online rejects a DocNumber longer than 21 characters, and
 // invoice_number syncs verbatim (quickBooksOnlineAdapter DocNumber mapping).
 const QBO_DOC_NUMBER_MAX_LENGTH = 21;
@@ -75,22 +77,43 @@ export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: 
 });
 
 export const updateNumberSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   entityType: EntityType,
   updates: Partial<NumberSettings>
 ): Promise<UpdateResponse> => {
+  if (!await hasPermission(user, 'settings', 'update')) {
+    throw new Error('Permission denied: Cannot update numbering settings');
+  }
+  // Server-action arguments are untrusted at runtime. Never let a settings
+  // payload relocate the tenant/entity row that owns the sequence.
+  if (!Object.prototype.hasOwnProperty.call(NUMBERING_DEFAULTS, entityType)) {
+    return { success: false, error: 'Unknown numbered entity type' };
+  }
+  if (Object.keys(updates).some((field) => !EDITABLE_NUMBER_SETTINGS.has(field))) {
+    return { success: false, error: 'Unknown number setting' };
+  }
   const { knex: db } = await createTenantKnex();
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get current settings if they exist
       const db = tenantDb(trx, tenant);
-
+      // Use the allocator's initialization order and advisory lock. Reading an
+      // unlocked counter lets a stale admin save rewind a concurrent issuance,
+      // even when that issuance used a different client's asset prefix.
+      await db.table<NumberSettingsRow>('next_number').insert({
+        tenant,
+        entity_type: entityType,
+        last_number: 0,
+        prefix_date_format: null,
+        ...NUMBERING_DEFAULTS[entityType],
+      }).onConflict(['tenant', 'entity_type']).ignore();
+      await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?::uuid::text || ?::text))', [tenant, entityType]);
       const currentSettings = await db.table<NumberSettingsRow>('next_number')
         .where('entity_type', entityType)
+        .forUpdate()
         .first();
-      const isNewSettings = !currentSettings;
+      if (!currentSettings) throw new Error('Numbering settings could not be initialized');
 
       // An empty date format clears the feature; store NULL so issuance takes
       // the untouched pre-change path.
@@ -103,7 +126,7 @@ export const updateNumberSettings = withAuth(async (
 
       // Combine current settings with updates
       const finalSettings = {
-        ...(currentSettings || { last_number: 0, prefix_date_format: null, ...NUMBERING_DEFAULTS[entityType] }),
+        ...currentSettings,
         ...normalizedUpdates
       };
 
@@ -119,14 +142,12 @@ export const updateNumberSettings = withAuth(async (
           return { success: false, error: 'Last number must be a positive integer' };
         }
 
-        if ('initial_value' in updates || !isNewSettings) {
-          if (finalSettings.last_number < finalSettings.initial_value) {
-            return { success: false, error: 'Last number cannot be less than the initial value' };
-          }
+        if (finalSettings.last_number < finalSettings.initial_value) {
+          return { success: false, error: 'Last number cannot be less than the initial value' };
         }
 
-        // Only check for decreasing last_number if we're updating existing settings
-        if (!isNewSettings && currentSettings && finalSettings.last_number < currentSettings.last_number) {
+        // Never rewind a committed sequence value.
+        if (finalSettings.last_number < currentSettings.last_number) {
           return { success: false, error: 'New number must be greater than the current last number' };
         }
       }
@@ -159,14 +180,7 @@ export const updateNumberSettings = withAuth(async (
         }
       }
 
-      // Insert or update settings
-      if (isNewSettings) {
-        await db.table<NumberSettingsRow>('next_number').insert({
-          tenant,
-          entity_type: entityType,
-          ...finalSettings
-        });
-      } else {
+      if (Object.keys(normalizedUpdates).length > 0) {
         await db.table<NumberSettingsRow>('next_number')
           .where('entity_type', entityType)
           .update(normalizedUpdates);
