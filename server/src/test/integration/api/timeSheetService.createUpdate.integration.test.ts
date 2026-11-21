@@ -281,7 +281,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     await tenantTable(f.tenantId, 'users').where({ user_id: managed }).update({ reports_to: f.actor });
 
     const rows = [
-      { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 1, total_hours: 1, approval_status: 'DRAFT',
+      { id: 'provider-own', tenant: f.tenantId, user_id: f.actor, user_name: 'x', hours: 101, total_hours: 101, approval_status: 'DRAFT',
         time_entries: [
           { time_sheet_id: 'provider-own', tenant: f.tenantId, duration: 60 },
           { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, duration: 900 },
@@ -289,16 +289,16 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
         comments: [
           { time_sheet_id: 'provider-own', tenant: f.tenantId, comment: 'own private comment' },
           { time_sheet_id: 'provider-own', tenant: otherTenant.tenantId, comment: 'foreign nested secret' },
-        ], summary: { total_hours: 1 } },
-      { id: 'provider-managed', tenant: f.tenantId, user_id: managed, user_name: 'x', hours: 2, total_hours: 2, approval_status: 'SUBMITTED',
+        ], summary: { total_hours: 101 } },
+      { id: 'provider-managed', tenant: f.tenantId, user_id: managed, user_name: 'x', hours: 102, total_hours: 102, approval_status: 'SUBMITTED',
         time_entries: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, duration: 120 }],
-        comments: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, comment: 'managed comment' }], summary: { total_hours: 2 } },
-      { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, user_name: 'x', hours: 4, total_hours: 4, approval_status: 'APPROVED',
+        comments: [{ time_sheet_id: 'provider-managed', tenant: f.tenantId, comment: 'managed comment' }], summary: { total_hours: 102 } },
+      { id: 'provider-unrelated', tenant: f.tenantId, user_id: unrelated, user_name: 'x', hours: 104, total_hours: 104, approval_status: 'APPROVED',
         time_entries: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, duration: 240 }],
-        comments: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, comment: 'unrelated private comment' }], summary: { total_hours: 4 } },
-      { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, user_name: 'x', hours: 8, total_hours: 8, approval_status: 'APPROVED',
+        comments: [{ time_sheet_id: 'provider-unrelated', tenant: f.tenantId, comment: 'unrelated private comment' }], summary: { total_hours: 104 } },
+      { id: 'provider-other-tenant', tenant: otherTenant.tenantId, user_id: otherTenant.actor, user_name: 'x', hours: 108, total_hours: 108, approval_status: 'APPROVED',
         time_entries: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, duration: 480 }],
-        comments: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, comment: 'foreign private comment' }], summary: { total_hours: 8 } },
+        comments: [{ time_sheet_id: 'provider-other-tenant', tenant: otherTenant.tenantId, comment: 'foreign private comment' }], summary: { total_hours: 108 } },
     ];
     const provider = {
       kind: 'test-time-source',
