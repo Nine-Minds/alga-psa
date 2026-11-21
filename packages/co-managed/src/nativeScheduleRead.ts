@@ -105,16 +105,21 @@ export function scheduleView(row: any, assignments: string[], actor: CoManagedAu
  * become a membership oracle. Calendar occurrences inherit actual master and
  * linked-source authority; raw recurrence data stays inside the transaction. */
 export async function readCoManagedNativeSchedules(db: Knex, tenant: string, identify: () => Promise<CoManagedAuthenticatedActor>,
-  options: { id?: string; start?: string; end?: string; userId?: string; afterEntryId?: string; calendar?: { start: string; end: string; technicianIds?: string[]; afterEntryId?: string } } = {}
+  options: { id?: string; occurrenceStart?: string; start?: string; end?: string; userId?: string; afterEntryId?: string; calendar?: { start: string; end: string; technicianIds?: string[]; afterEntryId?: string } } = {}
 ): Promise<{ handled: false } | { handled: true; entries: any[]; hasMore: boolean; nextCursor: string | null }> {
   options = { ...options, calendar: options.calendar ? { ...options.calendar, technicianIds: options.calendar.technicianIds ? [...options.calendar.technicianIds] : undefined } : undefined };
   if (!isCoManagedUuid(tenant) || (options.id && !isCoManagedUuid(options.id)) || (options.userId && !isCoManagedUuid(options.userId)) ||
     (options.afterEntryId !== undefined && !isCoManagedUuid(options.afterEntryId)) ||
     (options.calendar?.afterEntryId !== undefined && !isCoManagedUuid(options.calendar.afterEntryId))) throw new CoManagedSharedWorkError();
   const start = options.start ? new Date(options.start).getTime() : null, end = options.end ? new Date(options.end).getTime() : null;
+  const occurrenceStart = options.occurrenceStart === undefined ? null : Date.parse(options.occurrenceStart);
+  if (options.occurrenceStart !== undefined && (!Number.isFinite(occurrenceStart) || new Date(occurrenceStart!).toISOString() !== options.occurrenceStart)) throw new CoManagedSharedWorkError();
   if ((start !== null && !Number.isFinite(start)) || (end !== null && !Number.isFinite(end))) throw new CoManagedSharedWorkError();
   const calendarStart = options.calendar ? Date.parse(options.calendar.start) : null, calendarEnd = options.calendar ? Date.parse(options.calendar.end) : null;
-  if (options.calendar && (options.id || !Number.isFinite(calendarStart) || !Number.isFinite(calendarEnd) || calendarEnd! <= calendarStart! || calendarEnd! - calendarStart! > MAX_CALENDAR_WINDOW_MS || (options.calendar.technicianIds !== undefined && (options.calendar.technicianIds.length > MAX_SCHEDULE_TECHNICIANS || !options.calendar.technicianIds.every(isCoManagedUuid))))) throw new CoManagedSharedWorkError();
+  if (
+    (options.calendar && (options.id || options.occurrenceStart !== undefined || !Number.isFinite(calendarStart) || !Number.isFinite(calendarEnd) || calendarEnd! <= calendarStart! || calendarEnd! - calendarStart! > MAX_CALENDAR_WINDOW_MS || (options.calendar.technicianIds !== undefined && (options.calendar.technicianIds.length > MAX_SCHEDULE_TECHNICIANS || !options.calendar.technicianIds.every(isCoManagedUuid))))) ||
+    (options.occurrenceStart !== undefined && (!options.id || options.start !== undefined || options.end !== undefined || options.afterEntryId !== undefined))
+  ) throw new CoManagedSharedWorkError();
   const technicianIds = options.calendar?.technicianIds ? new Set(options.calendar.technicianIds) : undefined;
   return withTransaction(db, async trx => {
     if (!await retainCoManagedWorkspace(trx, tenant)) return { handled: false };
@@ -145,13 +150,15 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
     let holidays: any[] | undefined, projectedCount = 0;
     const recurrenceWork = { remaining: MAX_SCHEDULE_RESULTS };
     const calendarRows = async (row: any) => {
-      if (!options.calendar || !row.is_recurring || !row.recurrence_pattern) return [row];
+      if ((!options.calendar && occurrenceStart === null) || !row.is_recurring || !row.recurrence_pattern) return [row];
       const pattern = typeof row.recurrence_pattern === 'string' ? JSON.parse(row.recurrence_pattern) : row.recurrence_pattern;
       const duration = new Date(row.scheduled_end).getTime() - new Date(row.scheduled_start).getTime();
       if (!Number.isFinite(duration) || duration <= 0) throw new CoManagedSharedWorkError();
       // Include occurrences beginning before the range whose duration crosses
       // into it. Final overlap filtering uses the actual occurrence timestamps.
-      const from = new Date(Math.max(calendarStart! - duration, new Date(row.scheduled_start).getTime()));
+      const rangeStart = occurrenceStart === null ? calendarStart! : occurrenceStart;
+      const rangeEnd = occurrenceStart === null ? calendarEnd! : occurrenceStart + 1;
+      const from = new Date(Math.max(rangeStart - duration, new Date(row.scheduled_start).getTime()));
       if (!holidays) {
         const holidayRows = await owner.table('holidays').whereNull('schedule_id').orderBy('holiday_id').limit(MAX_SCHEDULE_HOLIDAYS + 1).forShare().select('*');
         if (holidayRows.length > MAX_SCHEDULE_HOLIDAYS) throw new CoManagedScheduleLimitError();
@@ -160,7 +167,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         }));
       }
       const remaining = MAX_SCHEDULE_RESULTS - projectedCount;
-      const occurrences = generateOccurrences({ ...row, recurrence_pattern: pattern }, from, new Date(calendarEnd!), {
+      const occurrences = generateOccurrences({ ...row, recurrence_pattern: pattern }, from, new Date(rangeEnd), {
         holidays, includeMaster: true, maxOccurrences: remaining, workBudget: recurrenceWork,
       });
       return occurrences.map(occurrence => ({
@@ -173,7 +180,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         const source = await retainScheduleSource(trx, actor, credential.subject, hint);
         const row = await owner.table('schedule_entries').where('entry_id', hint.entry_id).forShare().first();
         if (!row || row.work_item_id !== hint.work_item_id || row.work_item_type !== hint.work_item_type) throw new CoManagedSharedWorkError();
-        if (options.calendar && row.original_entry_id) continue;
+        if ((options.calendar || occurrenceStart !== null) && row.original_entry_id) continue;
         const assignmentRows = await owner.table('schedule_entry_assignees').where('entry_id', row.entry_id).orderBy('user_id').limit(MAX_SCHEDULE_ASSIGNEES + 1).forShare().select('user_id');
         if (assignmentRows.length > MAX_SCHEDULE_ASSIGNEES) throw new CoManagedScheduleLimitError();
         const assignments = assignmentRows.map(item => item.user_id);
@@ -185,7 +192,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         // restriction also withholds derived occurrences; private Busy entries
         // still disclose their authorized occupancy without the stored pattern.
         scheduleView(row, assignments, actor, policy.redactedFields, source);
-        if (options.calendar && row.is_recurring && isScheduleFieldHidden([...policy.redactedFields, ...source.fields], ['recurrence_pattern', 'is_recurring', 'original_entry_id'])) continue;
+        if ((options.calendar || occurrenceStart !== null) && row.is_recurring && isScheduleFieldHidden([...policy.redactedFields, ...source.fields], ['recurrence_pattern', 'is_recurring', 'original_entry_id'])) continue;
         let projected: any[];
         try { projected = await calendarRows(row); }
         catch (error) {
@@ -196,6 +203,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         projectedCount += projected.length;
         for (const occurrence of projected) {
           const view = scheduleView(occurrence, assignments, actor, policy.redactedFields, source);
+          if (occurrenceStart !== null && Date.parse(occurrence.scheduled_start) !== occurrenceStart) continue;
           if (options.calendar) {
             if (Date.parse(view.scheduled_start) >= calendarEnd! || Date.parse(view.scheduled_end) <= calendarStart!) continue;
             if (canReadOthers && technicianIds?.size && !assignments.some(id => technicianIds.has(id)) && !(assignments.length === 0 && row.work_item_type === 'appointment_request')) continue;

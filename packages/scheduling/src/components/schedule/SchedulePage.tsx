@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ScheduleCalendar from './ScheduleCalendar';
 import AppointmentRequestsPanel from './AppointmentRequestsPanel';
 import AvailabilitySettings from './AvailabilitySettings';
@@ -10,6 +10,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { APPOINTMENT_REQUEST_ID_PARAM } from '@alga-psa/core';
+import { parseScheduleEntryUrl, writeScheduleEntryUrl, type ScheduleEntryUrlSelection } from '../../lib/scheduleEntryUrl';
 import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
 import {
   isReloadNavigation,
@@ -22,6 +23,10 @@ import {
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const entrySelection = searchParams ? parseScheduleEntryUrl(new URLSearchParams(searchParams.toString())) : null;
+  const hasEntrySelectionParams = Boolean(searchParams?.has('entryId') || searchParams?.has('occurrenceStart') || searchParams?.has('scheduleDate') || searchParams?.has('scheduleView'));
   const requestIdFromUrl = searchParams?.get(APPOINTMENT_REQUEST_ID_PARAM) ?? null;
 
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
@@ -31,6 +36,16 @@ export default function SchedulePage() {
   const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
   const [headerActionsSlot, setHeaderActionsSlot] = useState<HTMLDivElement | null>(null);
+
+  const changeEntrySelection = (selection: ScheduleEntryUrlSelection | null) => {
+    const next = writeScheduleEntryUrl(new URLSearchParams(searchParams?.toString() ?? ''), selection);
+    const query = next.toString();
+    router[selection ? 'push' : 'replace'](`${pathname}${query ? `?${query}` : ''}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (hasEntrySelectionParams && !entrySelection) changeEntrySelection(null);
+  }, [hasEntrySelectionParams, entrySelection]);
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -139,7 +154,7 @@ export default function SchedulePage() {
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
-        <ScheduleCalendar key={refreshKey} headerActionsSlot={headerActionsSlot} />
+        <ScheduleCalendar key={refreshKey} headerActionsSlot={headerActionsSlot} entrySelection={entrySelection} onEntrySelectionChange={changeEntrySelection} />
       </div>
 
       <AppointmentRequestsPanel

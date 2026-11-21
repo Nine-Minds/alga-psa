@@ -14,6 +14,8 @@ vi.mock('@alga-psa/scheduling/actions', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/msp/schedule',
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

@@ -923,6 +923,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   return (
     <div className="flex flex-col h-screen">
+      {error && (
+        <div role="alert" className="mx-4 mt-2 rounded border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
       {filterWorkItemId && (
         <div className="p-2 mx-4 mt-2 rounded border bg-[rgb(var(--color-primary-50))] border-[rgb(var(--color-primary-200))]">
           <p className="text-[rgb(var(--color-primary-800))] font-medium">

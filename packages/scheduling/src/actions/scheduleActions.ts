@@ -7,6 +7,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { generateOccurrences, RecurrenceOccurrenceLimitError } from '@alga-psa/shared/utils/recurrenceUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
@@ -1245,11 +1246,16 @@ export const deleteScheduleEntry = withAuth(async (
 export const getScheduleEntryById = withAuth(async (
   user,
   { tenant },
-  entryId: string
+  entryId: string,
+  occurrenceStart?: string
 ): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: entryId }));
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId) ||
+      (occurrenceStart !== undefined && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(occurrenceStart) || !Number.isFinite(Date.parse(occurrenceStart)) || new Date(occurrenceStart).toISOString() !== occurrenceStart))) {
+      return null;
+    }
+    const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: entryId, occurrenceStart }));
     if (current.handled) {
       const entry = current.entries[0];
       return entry ? nativeScheduleView(entry) : null;
@@ -1299,7 +1305,44 @@ export const getScheduleEntryById = withAuth(async (
         return maskEntry(scheduleEntry, access);
       }
 
-      return { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      let selected = scheduleEntry;
+      if (occurrenceStart !== undefined) {
+        const occurrenceTime = Date.parse(occurrenceStart);
+        if (!entry.is_recurring || !entry.recurrence_pattern) {
+          if (new Date(entry.scheduled_start).getTime() !== occurrenceTime) return null;
+        } else {
+          const pattern = typeof entry.recurrence_pattern === 'string' ? JSON.parse(entry.recurrence_pattern) : entry.recurrence_pattern;
+          const duration = new Date(entry.scheduled_end).getTime() - new Date(entry.scheduled_start).getTime();
+          if (!Number.isFinite(duration) || duration <= 0) return null;
+          const holidayRows = await scopedDb.table('holidays').whereNull('schedule_id').orderBy('holiday_id').limit(501).select('*');
+          if (holidayRows.length > 500) return null;
+          const holidays = holidayRows.map((holiday: any) => ({
+            ...holiday,
+            holiday_date: holiday.holiday_date instanceof Date ? holiday.holiday_date.toISOString().slice(0, 10) : holiday.holiday_date,
+          }));
+          const budget = { remaining: 2000 };
+          let occurrences: Date[];
+          try {
+            occurrences = generateOccurrences({ ...scheduleEntry, recurrence_pattern: pattern },
+              new Date(Math.max(occurrenceTime - duration, new Date(entry.scheduled_start).getTime())),
+              new Date(occurrenceTime + 1), { includeMaster: true, maxOccurrences: 2000, workBudget: budget, holidays });
+          } catch (error) {
+            if (error instanceof RecurrenceOccurrenceLimitError) return null;
+            throw error;
+          }
+          const occurrence = occurrences.find(value => value.getTime() === occurrenceTime);
+          if (!occurrence) return null;
+          selected = {
+            ...scheduleEntry,
+            entry_id: `${entryId}_${occurrenceTime}`,
+            original_entry_id: entryId,
+            scheduled_start: occurrence,
+            scheduled_end: new Date(occurrenceTime + duration),
+          };
+        }
+      }
+
+      return { ...selected, access: 'full', can_edit: decision.canEdit };
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);

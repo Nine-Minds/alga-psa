@@ -164,6 +164,29 @@ describe('schedule entry mutation permissions', () => {
     }
   });
 
+  it('resolves an exact URL occurrence through the authenticated provider read', async () => {
+    const { scheduleSeam } = await import('../src/lib/sharedWorkScheduling');
+    const { getScheduleEntryById } = await import('../src/actions/scheduleActions');
+    const entryId = '00000000-0000-4000-8000-000000000123';
+    const occurrenceStart = '2026-11-04T09:30:00.000Z';
+    const readSchedules = vi.fn(async (_db: unknown, _tenant: string, _identify: unknown, options: any) => ({
+      handled: true as const,
+      entries: [{ ...EXISTING_ENTRY, entry_id: `${entryId}_${Date.parse(occurrenceStart)}`, original_entry_id: entryId,
+        scheduled_start: occurrenceStart, scheduled_end: '2026-11-04T10:30:00.000Z', recurrence_pattern: null }],
+      hasMore: false, nextCursor: null,
+    }));
+    scheduleSeam.reset();
+    scheduleSeam.register(() => ({ readSchedules } as any));
+    try {
+      const result = await getScheduleEntryById(entryId, occurrenceStart);
+      expect(readSchedules.mock.calls[0][3]).toEqual({ id: entryId, occurrenceStart });
+      expect(result).toMatchObject({ entry_id: `${entryId}_${Date.parse(occurrenceStart)}`, original_entry_id: entryId,
+        scheduled_start: new Date(occurrenceStart), scheduled_end: new Date('2026-11-04T10:30:00.000Z') });
+    } finally {
+      scheduleSeam.reset();
+    }
+  });
+
   it.each([undefined, ['user-1']])('denies own-entry update without schedule read permission (assignment %j)', async (assigned_user_ids) => {
     const { updateScheduleEntry } = await import('../src/actions/scheduleActions');
     hasPermissionMock.mockResolvedValue(false);

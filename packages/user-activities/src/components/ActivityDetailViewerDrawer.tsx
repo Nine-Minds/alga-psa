@@ -333,12 +333,23 @@ export function ActivityDetailViewerDrawer({
           oneMonthAhead.setMonth(now.getMonth() + 1);
 
           const scheduleResult = await ctx.getScheduleEntries(oneMonthAgo, oneMonthAhead);
-          const scheduleEntry = scheduleResult.success ?
-            scheduleResult.entries.find((e: any) => e.entry_id === activityId) : null;
+          if (!scheduleResult.success) {
+            throw new Error(t('drawer.errorLoadingMessage', { defaultValue: 'Failed to load activity details. Please try again later.' }));
+          }
+          const scheduleEntry = scheduleResult.entries.find((e: any) => e.entry_id === activityId) ?? null;
 
           if (!scheduleEntry) {
-            if (scheduleResult.success && scheduleResult.hasMore) {
-              throw new Error(t('drawer.scheduleEntrySearchTruncated', { defaultValue: 'Schedule results are incomplete. Open the schedule to find this entry.' }));
+            if (scheduleResult.hasMore) {
+              setContent(
+                <div className="h-full p-6">
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      {t('drawer.scheduleEntrySearchTruncated', { defaultValue: 'Schedule results are incomplete. Open the schedule to find this entry.' })}
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              );
+              break;
             }
             throw new Error(t('drawer.scheduleEntryNotFound', { defaultValue: 'Schedule entry not found' }));
           }

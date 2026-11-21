@@ -27,6 +27,7 @@ import ScheduleCalendar from '../src/components/schedule/ScheduleCalendar';
 
 const {
   getScheduleEntries,
+  getScheduleEntryById,
   addScheduleEntry,
   updateScheduleEntry,
   deleteScheduleEntry,
@@ -43,6 +44,7 @@ const {
   getShareableUsers,
 } = vi.hoisted(() => ({
   getScheduleEntries: vi.fn(),
+  getScheduleEntryById: vi.fn(),
   addScheduleEntry: vi.fn(),
   updateScheduleEntry: vi.fn(),
   deleteScheduleEntry: vi.fn(),
@@ -85,6 +87,7 @@ vi.mock('@alga-psa/scheduling/actions', () => ({
   archiveGroupCalendar: vi.fn(),
   restoreGroupCalendar: vi.fn(),
   getScheduleEntries,
+  getScheduleEntryById,
   addScheduleEntry,
   updateScheduleEntry,
   deleteScheduleEntry,
@@ -401,6 +404,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
       success: true,
       entries: serverEvents.map((ev) => ({ ...ev })),
     }));
+    getScheduleEntryById.mockResolvedValue(null);
     updateScheduleEntry.mockImplementation(async (entryId: string, data: any) => {
       const index = serverEvents.findIndex((ev) => ev.entry_id === entryId);
       if (index >= 0) {
@@ -697,6 +701,68 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     });
     expect(screen.queryByTestId('calendar-event-stale-page-a')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Load more schedules' })).toBeNull();
+  });
+
+  it('discards a pending URL selection after navigation changes the date', async () => {
+    let resolveSelection!: (value: any) => void;
+    const pendingSelection = new Promise<any>(resolve => { resolveSelection = resolve; });
+    getScheduleEntryById.mockReturnValue(pendingSelection);
+    const selection = {
+      entryId: '00000000-0000-4000-8000-000000000123',
+      date: '2026-09-04',
+      view: 'day' as const,
+    };
+    const onEntrySelectionChange = vi.fn();
+    const { rerender } = render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={onEntrySelectionChange} />);
+    await waitFor(() => expect(getScheduleEntryById).toHaveBeenCalledWith(selection.entryId, undefined));
+
+    await act(async () => calendarSurface.props.onNavigate(new Date('2026-09-11T00:00:00Z'), calendarSurface.props.view, 'NEXT'));
+    expect(onEntrySelectionChange).toHaveBeenCalledWith(null);
+    rerender(<ScheduleCalendar entrySelection={null} onEntrySelectionChange={onEntrySelectionChange} />);
+    await act(async () => {
+      resolveSelection(baseEntry({ entry_id: selection.entryId }));
+      await pendingSelection;
+    });
+
+    expect(document.getElementById('save-entry-btn')).toBeNull();
+  });
+
+  it('uses generic unavailable behavior when a linked record no longer resolves', async () => {
+    const selection = {
+      entryId: '00000000-0000-4000-8000-000000000124',
+      date: '2026-09-04',
+      view: 'day' as const,
+    };
+    getScheduleEntryById.mockResolvedValue(null);
+
+    render(<ScheduleCalendar entrySelection={selection} onEntrySelectionChange={vi.fn()} />);
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('This schedule entry is unavailable.'));
+    expect(document.body.textContent).not.toContain(selection.entryId);
+  });
+
+  it('writes stable entry and exact occurrence identities when calendar records are selected', async () => {
+    const ordinaryId = '00000000-0000-4000-8000-000000000201';
+    const recurringId = '00000000-0000-4000-8000-000000000202';
+    const occurrenceStart = '2026-09-04T14:00:00.000Z';
+    serverEvents = [
+      baseEntry({ entry_id: ordinaryId, title: 'Ordinary review link' }),
+      baseEntry({ entry_id: `${recurringId}_${Date.parse(occurrenceStart)}`, original_entry_id: recurringId,
+        title: 'Recurring review link', scheduled_start: occurrenceStart, scheduled_end: '2026-09-04T15:00:00.000Z', is_recurring: true }),
+    ];
+    const onEntrySelectionChange = vi.fn();
+    render(<ScheduleCalendar onEntrySelectionChange={onEntrySelectionChange} />);
+
+    await screen.findByTestId(`calendar-event-${ordinaryId}`);
+    openEntry(ordinaryId);
+    await waitFor(() => expect(onEntrySelectionChange).toHaveBeenLastCalledWith({
+      entryId: ordinaryId, date: expect.any(String), view: 'week',
+    }));
+    closePopup();
+    openEntry(`${recurringId}_${Date.parse(occurrenceStart)}`);
+    await waitFor(() => expect(onEntrySelectionChange).toHaveBeenLastCalledWith({
+      entryId: recurringId, occurrenceStart, date: expect.any(String), view: 'week',
+    }));
   });
 
 

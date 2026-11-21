@@ -256,6 +256,46 @@ describe('native calendar read work bounds', () => {
     expect((result as any).entries.map((entry: any) => entry.scheduled_start.slice(0, 10))).toEqual(['2025-01-01', '2025-01-02', '2025-01-03']);
   });
 
+  it('resolves one recurring occurrence by stable master id and exact UTC start', async () => {
+    seedWorkspace();
+    const start = new Date('2025-01-01T09:00:00.000Z');
+    seedEntry({ is_recurring: true, scheduled_start: start, scheduled_end: new Date(start.getTime() + 60 * 60 * 1000),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2025-01-01T00:00:00.000Z', count: 5 } });
+
+    const result = await readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, {
+      id: ENTRY, occurrenceStart: '2025-01-04T09:00:00.000Z',
+    });
+
+    expect(result).toMatchObject({ handled: true, hasMore: false, entries: [{
+      entry_id: `${ENTRY}_${Date.parse('2025-01-04T09:00:00.000Z')}`,
+      original_entry_id: ENTRY,
+      scheduled_start: '2025-01-04T09:00:00.000Z',
+    }] });
+  });
+
+  it('returns no record for an occurrence that is off pattern and refuses cross-tenant actors', async () => {
+    seedWorkspace();
+    seedEntry({ is_recurring: true, recurrence_pattern: { frequency: 'weekly', interval: 1, startDate: '2026-11-02T00:00:00.000Z', daysOfWeek: [0] } });
+    const offPattern = await readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, {
+      id: ENTRY, occurrenceStart: '2026-11-04T09:00:00.000Z',
+    });
+    expect(offPattern).toMatchObject({ handled: true, entries: [] });
+
+    await expect(readCoManagedNativeSchedules(db, TENANT, async () => ({ ...calendarActor, tenant: id(99) }), {
+      id: ENTRY, occurrenceStart: '2026-11-02T09:00:00.000Z',
+    })).rejects.toBeInstanceOf(CoManagedSharedWorkError);
+  });
+
+  it('does not resolve a linked occurrence when the authenticated viewer lacks access', async () => {
+    seedWorkspace();
+    gate.canUpdateOthers = false;
+    seedEntry({ entry_id: ENTRY, is_recurring: true, recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2026-11-02T00:00:00.000Z' } }, [TECH]);
+
+    await expect(readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, {
+      id: ENTRY, occurrenceStart: '2026-11-03T09:00:00.000Z',
+    })).rejects.toBeInstanceOf(CoManagedSharedWorkError);
+  });
+
   it('reads an old daily COUNT master for a recent month', async () => {
     seedWorkspace();
     const start = new Date('2018-01-01T09:00:00.000Z');

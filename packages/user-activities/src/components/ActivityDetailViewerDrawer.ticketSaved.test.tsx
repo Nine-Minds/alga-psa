@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   ticketProps: [] as any[],
   navigateToTicket: null as null | ((id: string) => Promise<void>),
   fetchActivities: vi.fn(),
+  getScheduleEntries: vi.fn(),
 }));
 
 const stableT = (_k: string, o: any) => o?.defaultValue ?? _k;
@@ -61,6 +62,7 @@ vi.mock('./OpportunityActivityPanel', () => ({ OpportunityActivityPanel: () => n
 
 const crossFeature = {
   getConsolidatedTicketData: vi.fn(async () => ({ ticket: { ticket_id: 't1' } })),
+  getScheduleEntries: mocks.getScheduleEntries,
   renderTicketDetails: (props: any) => {
     mocks.ticketProps.push(props);
     return <div data-testid="ticket-details" />;
@@ -83,13 +85,14 @@ function ListProbe() {
 
 const listFilters = { types: ['ticket'] } as any;
 
-function renderDrawer(activityType: string, onActionComplete = vi.fn()) {
+function renderDrawer(activityType: string, onActionComplete = vi.fn(), workItemType?: string) {
   render(
     <ActivitiesCacheProvider>
       <ListProbe />
       <ActivityDetailViewerDrawer
         activityType={activityType as any}
         activityId="a1"
+        workItemType={workItemType}
         onClose={vi.fn()}
         onActionComplete={onActionComplete}
       />
@@ -117,10 +120,25 @@ beforeEach(() => {
   mocks.ticketProps.length = 0;
   mocks.navigateToTicket = null;
   mocks.fetchActivities.mockReset().mockResolvedValue({ activities: [], totalCount: 0 });
+  mocks.getScheduleEntries.mockReset();
 });
 afterEach(cleanup);
 
 describe('ActivityDetailViewerDrawer ticket save signal', () => {
+  it('shows an incomplete result when the bounded calendar read has continuation', async () => {
+    mocks.getScheduleEntries.mockResolvedValue({ success: true, entries: [], hasMore: true, nextCursor: 'cursor-500' });
+    renderDrawer('schedule', vi.fn(), 'ticket');
+    await waitFor(() => expect(document.body.textContent).toContain('Schedule results are incomplete. Open the schedule to find this entry.'));
+    expect(mocks.getScheduleEntries).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the established generic unavailable error when the schedule read is rejected', async () => {
+    mocks.getScheduleEntries.mockResolvedValue({ success: false, error: 'Schedule results exceeded the work limit.' });
+    renderDrawer('schedule', vi.fn(), 'ticket');
+    await waitFor(() => expect(document.body.textContent).toContain('Error loading activity details'));
+    expect(document.body.textContent).not.toMatch(/work limit/i);
+  });
+
   it('main path: passes onSaved that refreshes the list', async () => {
     const onActionComplete = renderDrawer('ticket');
     await waitFor(() => expect(mocks.ticketProps.length).toBeGreaterThan(0));

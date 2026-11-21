@@ -33,7 +33,8 @@ import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import MonthScheduleChip from './MonthScheduleChip';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
 import { workItemFills } from '../../lib/scheduleChipInk';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, getScheduleEntryById, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
+import type { ScheduleEntryUrlSelection } from '../../lib/scheduleEntryUrl';
 import { IEditScope, IScheduleEntry, DeletionValidationResult, IScheduleViewerCapabilities, IVisibleCalendar, IUser } from '@alga-psa/types';
 import ShareCalendarDialog from './sharing/ShareCalendarDialog';
 import GroupCalendarDialog from './sharing/GroupCalendarDialog';
@@ -77,6 +78,10 @@ interface ScheduleOverlayPreference {
 
 const EMPTY_OVERLAYS: ScheduleOverlayPreference = { people: [], groups: [] };
 
+function calendarDateKey(value: Date): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
 function normalizeOverlayPreference(value: unknown): ScheduleOverlayPreference {
   if (!value || typeof value !== 'object') return EMPTY_OVERLAYS;
   const candidate = value as Partial<ScheduleOverlayPreference>;
@@ -86,9 +91,11 @@ function normalizeOverlayPreference(value: unknown): ScheduleOverlayPreference {
 
 interface ScheduleCalendarProps {
   headerActionsSlot?: HTMLElement | null;
+  entrySelection?: ScheduleEntryUrlSelection | null;
+  onEntrySelectionChange?: (selection: ScheduleEntryUrlSelection | null) => void;
 }
 
-const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }): React.ReactElement | null => {
+const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, entrySelection = null, onEntrySelectionChange }): React.ReactElement | null => {
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
   // Use the custom hook for schedule view preference
@@ -110,6 +117,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const [scheduleHasMore, setScheduleHasMore] = useState(false);
   const [isLoadingMoreSchedules, setIsLoadingMoreSchedules] = useState(false);
   const scheduleQueryGeneration = useRef(0);
+  const entrySelectionGeneration = useRef(0);
   const pageRequestInFlight = useRef(false);
   const fetchEventsRef = useRef<() => Promise<void>>(async () => {});
   const [showEntryPopup, setShowEntryPopup] = useState(false);
@@ -118,7 +126,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => entrySelection ? new Date(`${entrySelection.date}T12:00:00`) : new Date());
   const [focusedTechnicianId, setFocusedTechnicianId] = useState<string | null>(null);
   // Shared calendars: what the viewer can see, computed on the server.
   const [capabilities, setCapabilities] = useState<IScheduleViewerCapabilities | null>(null);
@@ -612,6 +620,51 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     fetchEvents();
   }, [fetchEvents]);
 
+  const entrySelectionKey = entrySelection ? `${entrySelection.entryId}:${entrySelection.occurrenceStart ?? ''}:${entrySelection.date}:${entrySelection.view}` : '';
+  useEffect(() => {
+    const generation = ++entrySelectionGeneration.current;
+    if (!entrySelection) {
+      setShowEntryPopup(false);
+      setSelectedEvent(null);
+      return;
+    }
+
+    const selectedDate = new Date(`${entrySelection.date}T12:00:00`);
+    if (!Number.isFinite(selectedDate.getTime())) {
+      onEntrySelectionChange?.(null);
+      return;
+    }
+    if (calendarDateKey(date) !== entrySelection.date) setDate(selectedDate);
+    if (view !== entrySelection.view) setView(entrySelection.view as View);
+    const queryKey = scheduleQueryKey;
+
+    void getScheduleEntryById(entrySelection.entryId, entrySelection.occurrenceStart).then((entry) => {
+      if (generation !== entrySelectionGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
+      if (!entry || 'success' in entry || 'actionError' in entry || 'permissionError' in entry) {
+        toast.error(t('errors.entry.notFound', { defaultValue: 'This schedule entry is unavailable.' }));
+        onEntrySelectionChange?.(null);
+        return;
+      }
+      if (entry.access === 'busy') {
+        setBusyEntry(entry);
+        setShowEntryPopup(false);
+        return;
+      }
+      setSelectedEvent(entry);
+      setSelectedSlot(null);
+      setShowEntryPopup(true);
+    }).catch((error) => {
+      if (generation !== entrySelectionGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
+      console.error('Failed to load linked schedule entry:', error);
+      toast.error(t('errors.entry.notFound', { defaultValue: 'This schedule entry is unavailable.' }));
+      onEntrySelectionChange?.(null);
+    });
+
+    return () => {
+      if (generation === entrySelectionGeneration.current) entrySelectionGeneration.current++;
+    };
+  }, [entrySelectionKey, scheduleQueryKey]);
+
   // Load the popup's assignee candidates when it opens. The entry's stored
   // assignees are passed through so their real names resolve even when they are
   // inactive or otherwise outside the viewer's assignable set.
@@ -724,12 +777,22 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
     setSelectedEvent(scheduleEvent);
     setShowEntryPopup(true);
+    const entryId = scheduleEvent.original_entry_id ?? scheduleEvent.entry_id;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entryId)) {
+      onEntrySelectionChange?.({
+        entryId,
+        ...(scheduleEvent.original_entry_id ? { occurrenceStart: new Date(scheduleEvent.scheduled_start).toISOString() } : {}),
+        date: calendarDateKey(new Date(scheduleEvent.scheduled_start)),
+        view: view === 'day' || view === 'month' ? view : 'week',
+      });
+    }
   };
 
   const handleEntryPopupClose = () => {
     setShowEntryPopup(false);
     setSelectedEvent(null);
     setSelectedSlot(null);
+    onEntrySelectionChange?.(null);
   };
 
   const handleTaskUpdate = async (updated: any) => {
@@ -836,10 +899,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
   const handleNavigate = useCallback((newDate: Date, view: View, action: NavigateAction) => {
     setDate(newDate);
-  }, [setDate]);
+    if (entrySelectionKey) onEntrySelectionChange?.(null);
+  }, [entrySelectionKey, setDate]);
 
   const goToToday = () => {
     setDate(new Date());
+    if (entrySelection) onEntrySelectionChange?.(null);
   };
 
   const goBack = () => {
@@ -850,6 +915,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       newDate.setDate(date.getDate() - 7);
     }
     setDate(newDate);
+    if (entrySelection) onEntrySelectionChange?.(null);
   };
 
   const goNext = () => {
@@ -860,6 +926,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       newDate.setDate(date.getDate() + 7);
     }
     setDate(newDate);
+    if (entrySelection) onEntrySelectionChange?.(null);
   };
 
   const updateEventLocally = (updatedEvent: IScheduleEntry) => {
@@ -1474,6 +1541,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                     scrollToTime={scrollToTime}
                     onView={(newView) => {
                       setView(newView);
+                      if (entrySelection) onEntrySelectionChange?.(null);
                     }}
                     onNavigate={handleNavigate}
                     selectable
