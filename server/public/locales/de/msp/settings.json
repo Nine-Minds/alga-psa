@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Standardzeitzone",
-        "help": "Wird für E-Mails und Benachrichtigungen verwendet, wenn ein Benutzer keine eigene Zeitzone festgelegt hat."
+        "help": "Wird für E-Mails, Benachrichtigungen sowie Uhrzeiten und Datumsangaben der Zeiterfassung verwendet, wenn ein Benutzer keine eigene Zeitzone festgelegt hat."
       }
     },
     "actions": {

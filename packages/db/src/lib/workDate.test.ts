@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
-import { localDateForInstant, resolveTenantToday } from './workDate';
+import {
+  localDateForInstant,
+  normalizeIanaTimeZone,
+  resolveEffectiveTimeZone,
+  resolveTenantToday,
+  resolveUserTimeZone,
+} from './workDate';
 
 const SYDNEY_BOUNDARY = Temporal.Instant.from('2026-10-18T22:00:00Z');
 
@@ -59,5 +65,78 @@ describe('resolveTenantToday', () => {
     vi.spyOn(Temporal.Now, 'instant').mockReturnValue(SYDNEY_BOUNDARY);
     expect((await resolveTenantToday(fakeKnex({}), 'tenant-1')).toString()).toBe('2026-10-18');
     expect((await resolveTenantToday(fakeKnex(undefined), 'tenant-1')).toString()).toBe('2026-10-18');
+  });
+});
+
+describe('resolveUserTimeZone / resolveEffectiveTimeZone', () => {
+  // Routes by table. The user lookup is one statement: users LEFT JOIN tenant_settings, returning
+  // { user_timezone, tenant_timezone }; the tenant-only lookup reads tenant_settings.settings.
+  function fakeKnex(userTz: unknown, tenantTz: unknown, userExists = true) {
+    const statements: string[] = [];
+    const knex: any = vi.fn((table: string) => {
+      const builder: any = {
+        where: vi.fn(() => builder),
+        select: vi.fn(() => builder),
+        leftJoin: vi.fn(() => builder),
+        first: vi.fn(async () => {
+          statements.push(table);
+          if (table === 'users as u') {
+            return userExists ? { user_timezone: userTz, tenant_timezone: tenantTz ?? null } : undefined;
+          }
+          return { settings: tenantTz === undefined ? {} : { timezone: tenantTz } };
+        }),
+      };
+      return builder;
+    });
+    knex.raw = vi.fn((sql: string) => ({ sql }));
+    knex.statements = statements;
+    return knex;
+  }
+
+  const cases: Array<[string, unknown, unknown, string]> = [
+    ['user wins over tenant', 'America/New_York', 'Australia/Brisbane', 'America/New_York'],
+    ['null user falls to tenant', null, 'Australia/Brisbane', 'Australia/Brisbane'],
+    ['empty user falls to tenant', '', 'Australia/Brisbane', 'Australia/Brisbane'],
+    ['whitespace user falls to tenant', '   ', 'Australia/Brisbane', 'Australia/Brisbane'],
+    ['nothing set is UTC', null, undefined, 'UTC'],
+    ['invalid user falls to tenant', 'Not/AZone', 'Australia/Brisbane', 'Australia/Brisbane'],
+    ['invalid tenant with blank user is UTC', '', 'Not/AZone', 'UTC'],
+    ['invalid user and invalid tenant is UTC', 'Not/AZone', 'Also/Bad', 'UTC'],
+  ];
+
+  it.each(cases)('%s', async (_name, userTz, tenantTz, expected) => {
+    const knex = fakeKnex(userTz, tenantTz);
+    const viaUser = await resolveUserTimeZone(knex, 'tenant-1', 'user-1');
+    const viaEffective = await resolveEffectiveTimeZone(knex, 'tenant-1', 'user-1');
+    expect(viaUser).toBe(expected);
+    expect(viaEffective).toBe(expected);
+    // Hot-path budget: both levels come back from a single statement.
+    expect(knex.statements).toEqual(['users as u', 'users as u']);
+  });
+
+  it('unknown user still honours the tenant default', async () => {
+    const knex = fakeKnex(null, 'Australia/Brisbane', false);
+    expect(await resolveEffectiveTimeZone(knex, 'tenant-1', 'missing-user')).toBe('Australia/Brisbane');
+    expect(knex.statements).toEqual(['users as u', 'tenant_settings']);
+  });
+
+  it('no user id reads only the tenant default', async () => {
+    const knex = fakeKnex(null, 'Australia/Brisbane');
+    expect(await resolveEffectiveTimeZone(knex, 'tenant-1', null)).toBe('Australia/Brisbane');
+    expect(knex.statements).toEqual(['tenant_settings']);
+  });
+});
+
+describe('normalizeIanaTimeZone', () => {
+  it.each([
+    ['Australia/Brisbane', 'Australia/Brisbane'],
+    ['  Australia/Brisbane  ', 'Australia/Brisbane'],
+    [null, 'UTC'],
+    [undefined, 'UTC'],
+    ['', 'UTC'],
+    ['   ', 'UTC'],
+    ['Not/AZone', 'UTC'],
+  ])('%j -> %s', (input, expected) => {
+    expect(normalizeIanaTimeZone(input as any)).toBe(expected);
   });
 });

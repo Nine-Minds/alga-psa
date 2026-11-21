@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Default Time Zone",
-        "help": "Used for emails and notifications when a user has not set their own timezone."
+        "help": "Used for emails, notifications, and time entry times and dates when a user has not set their own time zone."
       }
     },
     "actions": {

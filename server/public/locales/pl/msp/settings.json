@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Domyślna strefa czasowa",
-        "help": "Używana w wiadomościach e-mail i powiadomieniach, gdy użytkownik nie ustawił własnej strefy czasowej."
+        "help": "Używana w wiadomościach e-mail, powiadomieniach oraz godzinach i datach w ewidencji czasu, gdy użytkownik nie ustawił własnej strefy czasowej."
       }
     },
     "actions": {

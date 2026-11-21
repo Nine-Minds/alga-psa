@@ -4,13 +4,7 @@ import { tenantDb } from './tenantDb';
 
 // LEVERAGE: pattern iana-zone-catalog — lenient read-path zone check; storable-zone validation lives in @alga-psa/core/timeZones (validateStorableTimeZone)
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
-  if (!timeZone) return 'UTC';
-  try {
-    Temporal.TimeZone.from(timeZone);
-    return timeZone;
-  } catch {
-    return 'UTC';
-  }
+  return validZoneOrNull(timeZone) ?? 'UTC';
 }
 
 export function toTemporalInstant(value: string | Date): Temporal.Instant {
@@ -73,47 +67,65 @@ export function truncateToMinute(value: string | Date): Date {
   return new Date(Math.floor(epochMs / 60000) * 60000);
 }
 
+/**
+ * Return the given zone if it is a valid IANA zone, otherwise null.
+ * Blank, whitespace-only and non-string values count as unset.
+ */
+function validZoneOrNull(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    Temporal.TimeZone.from(trimmed);
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The zone this user works in: profile zone -> tenant default zone -> UTC.
+ * Used for both the time-entry display zone and the stored work_date/work_timezone,
+ * so the two always agree. Delegates to resolveEffectiveTimeZone.
+ */
 export async function resolveUserTimeZone(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<string> {
-  const row = await tenantDb(knexOrTrx, tenant).table('users')
-    .where({ user_id: userId })
-    .select('timezone')
-    .first();
-  return normalizeIanaTimeZone(row?.timezone ?? null);
+  return resolveEffectiveTimeZone(knexOrTrx, tenant, userId);
 }
 
-// LEVERAGE: pattern effective-timezone-resolver — duplicated in server/src/lib/utils/workDate.ts; consolidate into one implementation
 /**
  * Resolve the effective timezone for a user within a tenant.
  * Resolution chain: user timezone -> tenant timezone -> UTC.
+ * A blank or invalid zone at either level falls through to the next level.
  */
 export async function resolveEffectiveTimeZone(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   userId?: string | null
 ): Promise<string> {
+  const db = tenantDb(knexOrTrx, tenant);
+
   if (userId) {
-    const userRow = await tenantDb(knexOrTrx, tenant).table('users')
-      .where({ user_id: userId })
-      .select('timezone')
-      .first();
-    if (userRow?.timezone) {
-      return normalizeIanaTimeZone(userRow.timezone);
+    // One statement for both levels: time-entry writes resolve the zone on the hot path,
+    // so a user without a profile zone must not cost a second round trip.
+    const query = db.table('users as u')
+      .where('u.user_id', userId)
+      .select('u.timezone as user_timezone', knexOrTrx.raw("ts.settings ->> 'timezone' as tenant_timezone"));
+    db.tenantJoin(query, 'tenant_settings as ts', 'ts.tenant', 'u.tenant', { type: 'left', tenantPredicate: 'literal' });
+    const row = await query.first();
+    if (row) {
+      return validZoneOrNull(row.user_timezone) ?? validZoneOrNull(row.tenant_timezone) ?? 'UTC';
     }
+    // Unknown user: still honour the tenant default.
   }
 
-  const settingsRow = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
+  const settingsRow = await db.table('tenant_settings')
     .select('settings')
     .first();
-  const tenantTz = settingsRow?.settings?.timezone;
-  if (tenantTz && typeof tenantTz === 'string') {
-    return normalizeIanaTimeZone(tenantTz);
-  }
-
-  return 'UTC';
+  return validZoneOrNull(settingsRow?.settings?.timezone) ?? 'UTC';
 }
 
 /**
