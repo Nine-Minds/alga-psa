@@ -1,0 +1,2 @@
+console.log(JSON.stringify({reference:await db('co_managed_ticket_references').where('ticket_id','ea90c3fe-1e02-572f-b8b8-dc43cd9af134'),notifications:await db('internal_notifications').where('tenant','6f14cc2a-866f-51c1-9ce2-d55ca488b1f1').orderBy('created_at','desc').limit(4)},null,2));
+await db('co_managed_ticket_references').where({tenant:'6f14cc2a-866f-51c1-9ce2-d55ca488b1f1',ticket_id:'ea90c3fe-1e02-572f-b8b8-dc43cd9af134'}).update({assigned_to:'395c61f9-6cb1-52df-944d-5829636e2136'});

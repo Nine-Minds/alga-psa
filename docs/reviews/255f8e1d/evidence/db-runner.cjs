@@ -1,0 +1,2 @@
+const fs=require('fs');const root=process.cwd();const env=require(root+'/node_modules/dotenv').parse(fs.readFileSync(root+'/server/.env.local')); const db=require(root+'/node_modules/knex')({client:'pg',connection:{host:env.DB_HOST,port:+env.DB_PORT,database:env.DB_NAME_SERVER,user:env.DB_USER_ADMIN||'postgres',password:env.DB_PASSWORD_ADMIN}});
+(async()=>{await new Function('db','env','fs','require','return (async()=>{'+fs.readFileSync(process.argv[2],'utf8')+'})()')(db,env,fs,require);await db.destroy()})().catch(e=>{console.error(e.message);process.exit(1)});

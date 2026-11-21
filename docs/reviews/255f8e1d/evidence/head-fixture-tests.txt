@@ -1,0 +1,8 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-2-findings-in-deliveryprovider-ts
+
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  18:29:57
+   Duration  1.12s (transform 363ms, setup 0ms, import 1.04s, tests 18ms, environment 0ms)

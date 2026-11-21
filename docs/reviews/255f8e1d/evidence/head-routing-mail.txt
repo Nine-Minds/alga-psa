@@ -1,0 +1,4 @@
+Date: Wed, 04 Nov 2026 23:28:45 +0000
+To: cm.notification.current.1943@notification.test
+Subject: A team member escalated ticket #Shared ticket
+A team member escalated ticket #Shared ticket A team member: Shared ticket Open ticket #Shared ticket This is an automated message. Please do not reply to this email.

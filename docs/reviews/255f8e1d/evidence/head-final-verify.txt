@@ -1,0 +1,28 @@
+
+> fixtures:co-managed
+> tsx scripts/dev/co-managed-fixtures/index.ts --only notification --verify
+
+present  notification  fixture-owned customer and sponsor workspaces exist
+present  notification  both fixture workspaces have a default company for UI context
+present  notification  active relationship and escalated shared ticket exist
+present  notification  provisioning operation resolves to the fixture sponsor client and board
+present  notification  active sponsor allocation exists for the operation and relationship
+present  notification  fixture sponsor has capacity for the active allocation
+present  notification  fixture sponsor has enabled local SMTP configuration
+present  notification  fixture customer has enabled local SMTP configuration
+present  notification  redacted recipient password is accepted by the application verifier
+present  notification  redacted recipient has required internal ticket, client, and co-management permissions
+present  notification  redacted recipient is assigned to the fixture relationship
+present  notification  redacted recipient-specific read redaction policy exists
+present  notification  visible recipient password is accepted by the application verifier
+present  notification  visible recipient has required internal ticket, client, and co-management permissions
+present  notification  visible recipient is assigned to the fixture relationship
+present  notification  visible recipient-specific read redaction policy exists
+present  notification  fixture customer admin password is accepted by the application verifier
+present  notification  fixture customer admin has role membership
+present  notification  fixture customer admin passes runtime ticket:read authorization
+present  notification  fixture customer admin passes runtime ticket authorization for Shared IT comments
+Release flag (release-v2-0-feature) must be configured per tenant; it is not database state:
+  Oz: on
+  Kansas: off
+  Emerald: on

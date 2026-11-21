@@ -1,0 +1,4 @@
+Date: Wed, 04 Nov 2026 23:30:28 +0000
+To: cm.notification.visible@notification.test
+Subject: ROUTING-CANARY-ACTOR-1943 escalated ticket #NOTIFY-001
+ROUTING-CANARY-ACTOR-1943 escalated ticket #NOTIFY-001 ROUTING-CANARY-ACTOR-1943 (ROUTING-CANARY-ORG-1943): Fixture restricted title Open ticket #NOTIFY-001 This is an automated message. Please do not reply to this email.
