@@ -4,7 +4,7 @@ This supplements the approved [design](2026-11-03-apply-current-redactions-to-re
 
 ## Current-revision evidence
 
-The repair was prepared from branch `feature/security-apply-current-redactions-to-remaining-c`, whose starting `HEAD` was `753c53f1c23563c337141f0cafaf13d5625d4dc9`, equal to `origin/feature/security-apply-current-redactions-to-remaining-c`. The checkout was clean at start. There was no inherited `package-lock.json` modification.
+This signal-regression repair round started from branch `feature/security-apply-current-redactions-to-remaining-c` at `f336b0a7b781ae920fa2060205d961a3d22c4eaf`, equal to its remote tracking branch. The checkout was clean at start. There was no inherited `package-lock.json` modification.
 
 **Tested implementation and regression revision:** `8d731599eeea7b10944c7f5bf696ad816f7e0a90`. The review-note update is documentation-only and follows this tested code revision.
 
