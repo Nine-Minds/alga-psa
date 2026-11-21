@@ -12,6 +12,7 @@ import { createCorePortableRegistry } from '@alga-psa/co-managed/portableCoreReg
 import type { PortableContributorRegistry } from '@alga-psa/co-managed/portableContributorRegistry';
 import { acquirePortableDownload } from '@alga-psa/co-managed/portableDownload';
 import { exportCoManagedPortableVault } from './portableVaultExport';
+import { portableRemoteMeetingContributor } from './portableRemoteMeetingExport';
 
 export interface CoManagedPortableWorkspaceArtifact {
   packageId: string; sourceTenant: string; capturedAt: string; path: string; size: number; sha256: string;
@@ -47,7 +48,7 @@ export async function prepareCoManagedPortableWorkspaceExport(db: Knex, inputAct
 
 async function prepareWorkspace(db: Knex, inputActor: CoManagedSessionActor, passphrase: string, dependencies: PortableExportDependencies) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
-  const registry = dependencies.registry ?? createCorePortableRegistry();
+  const registry = dependencies.registry ?? createCorePortableRegistry([portableRemoteMeetingContributor]);
   const vaultExport = dependencies.vault ?? exportCoManagedPortableVault;
   const actor = snapshotCoManagedSessionActor(inputActor), packageId = randomUUID();
   let collected: Awaited<ReturnType<typeof collectPortableWorkspace>> | undefined;

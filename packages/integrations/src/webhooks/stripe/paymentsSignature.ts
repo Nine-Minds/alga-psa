@@ -14,22 +14,26 @@ import type { ISecretProvider } from '@alga-psa/core/secrets';
  *   app-level secret `stripe_payment_webhook_secret` (falling back to
  *   `stripe_webhook_secret`). License orders arrive this way.
  *
- * The tenant id is read from the unverified payload only to decide which
- * secret(s) to try; nothing from the payload is trusted until a signature
- * verifies against one of them.
+ * Tenant identity comes from the ROUTE (per-tenant endpoint) or, on the legacy
+ * shared route, from whichever tenant's secret verifies the signature. The
+ * unverified payload's metadata.tenant_id is only an ordering hint; after a
+ * signature verifies, a payload tenant that differs from the verified tenant
+ * is ignored, never re-routed.
  */
 
-export type WebhookSecretSource = 'tenant' | 'platform';
+export type WebhookSecretSource = 'route-tenant' | 'hint-tenant' | 'tenant' | 'platform';
 
 export interface WebhookSecretCandidate {
   source: WebhookSecretSource;
+  /** Tenant the secret belongs to; null for the platform secret. */
+  tenantId: string | null;
   secret: string;
 }
 
-export interface VerifiedStripeEvent {
-  event: Stripe.Event;
-  source: WebhookSecretSource;
-}
+export type StripeSignatureResult =
+  | { kind: 'verified'; event: Stripe.Event; tenantId: string | null; secretSource: WebhookSecretSource }
+  | { kind: 'ignored'; event: Stripe.Event; tenantId: string; secretSource: WebhookSecretSource; reason: 'tenant_mismatch' }
+  | { kind: 'invalid' };
 
 export const TENANT_WEBHOOK_SECRET_NAME = 'stripe_payment_webhook_secret';
 export const PLATFORM_WEBHOOK_SECRET_NAMES = ['stripe_payment_webhook_secret', 'stripe_webhook_secret'] as const;
@@ -58,29 +62,57 @@ export function peekTenantId(rawBody: string): string | null {
   }
 }
 
+export interface ResolveSignatureCandidatesInput {
+  /** Tenant fixed by the per-tenant route. When set, ONLY that tenant's secret is a candidate. */
+  tenantIdFromRoute?: string;
+  /** Unverified metadata.tenant_id from the payload; used purely to order candidates. */
+  payloadTenantHint?: string | null;
+  /** Tenants whose endpoint secret may sign legacy-route deliveries (enabled Stripe tenants). */
+  enabledTenantIds?: string[];
+}
+
 /**
- * Resolves the signing secrets to try, tenant secret first when a tenant hint
- * is present, then the platform secret.
+ * Resolves the ordered, de-duplicated list of signing secrets to try.
+ *
+ * - Per-tenant route: exactly that tenant's secret (no platform, no hint).
+ * - Legacy route: hint tenant, then every enabled tenant, then the platform secret.
  */
-export async function resolveWebhookSecretCandidates(
+export async function resolveSignatureCandidates(
   secretProvider: Pick<ISecretProvider, 'getAppSecret' | 'getTenantSecret'>,
-  tenantHint: string | null
+  input: ResolveSignatureCandidatesInput = {}
 ): Promise<WebhookSecretCandidate[]> {
   const candidates: WebhookSecretCandidate[] = [];
-
-  if (tenantHint) {
-    const tenantSecret = await secretProvider.getTenantSecret(tenantHint, TENANT_WEBHOOK_SECRET_NAME);
-    if (tenantSecret) {
-      candidates.push({ source: 'tenant', secret: tenantSecret });
+  const seen = new Set<string>();
+  const add = (source: WebhookSecretSource, tenantId: string | null, secret: string | undefined | null) => {
+    if (!secret || seen.has(secret)) return;
+    seen.add(secret);
+    candidates.push({ source, tenantId, secret });
+  };
+  const tenantSecret = async (tenantId: string) => {
+    try {
+      return await secretProvider.getTenantSecret(tenantId, TENANT_WEBHOOK_SECRET_NAME);
+    } catch {
+      return undefined;
     }
+  };
+
+  if (input.tenantIdFromRoute) {
+    add('route-tenant', input.tenantIdFromRoute, await tenantSecret(input.tenantIdFromRoute));
+    return candidates;
   }
+
+  if (input.payloadTenantHint) {
+    add('hint-tenant', input.payloadTenantHint, await tenantSecret(input.payloadTenantHint));
+  }
+
+  const others = (input.enabledTenantIds ?? []).filter((t) => t !== input.payloadTenantHint);
+  const secrets = await Promise.all(others.map(tenantSecret));
+  others.forEach((tenantId, i) => add('tenant', tenantId, secrets[i]));
 
   for (const name of PLATFORM_WEBHOOK_SECRET_NAMES) {
     const platformSecret = await secretProvider.getAppSecret(name);
     if (platformSecret) {
-      if (!candidates.some((c) => c.secret === platformSecret)) {
-        candidates.push({ source: 'platform', secret: platformSecret });
-      }
+      add('platform', null, platformSecret);
       break;
     }
   }
@@ -89,22 +121,34 @@ export async function resolveWebhookSecretCandidates(
 }
 
 /**
- * Verifies the Stripe signature against each candidate in order and returns
- * the constructed event plus which secret matched. Returns null when no
- * candidate verifies.
+ * Verifies the Stripe signature with Stripe's own constructEvent, once per
+ * candidate in order; the first match wins. A verified event whose
+ * metadata.tenant_id names a different tenant than the one whose secret signed
+ * it is reported as `ignored`. Nothing about failed candidates is exposed.
  */
 export function verifyStripeSignature(
   rawBody: string,
   signature: string,
   candidates: WebhookSecretCandidate[]
-): VerifiedStripeEvent | null {
+): StripeSignatureResult {
   for (const candidate of candidates) {
+    let event: Stripe.Event;
     try {
-      const event = Stripe.webhooks.constructEvent(rawBody, signature, candidate.secret);
-      return { event, source: candidate.source };
+      event = Stripe.webhooks.constructEvent(rawBody, signature, candidate.secret);
     } catch {
-      // try the next candidate
+      continue;
     }
+    const payloadTenant = extractTenantId(event);
+    if (candidate.tenantId && payloadTenant && payloadTenant !== candidate.tenantId) {
+      return {
+        kind: 'ignored',
+        event,
+        tenantId: candidate.tenantId,
+        secretSource: candidate.source,
+        reason: 'tenant_mismatch',
+      };
+    }
+    return { kind: 'verified', event, tenantId: candidate.tenantId, secretSource: candidate.source };
   }
-  return null;
+  return { kind: 'invalid' };
 }

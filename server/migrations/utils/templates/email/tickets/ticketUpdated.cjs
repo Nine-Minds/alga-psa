@@ -6,6 +6,7 @@
  */
 
 const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
+const { buildChangesBoxHtml, buildChangesText } = require('../../_shared/changesBox.cjs');
 const {
   BADGE_BG,
   BRAND_DARK,
@@ -40,7 +41,6 @@ const COPY = {
     category: 'Category',
     location: 'Location',
     changesLabel: 'Changes Made',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'View Ticket',
     footer: 'Powered by AlgaPSA &middot; Keeping teams aligned',
     textHeader: 'Ticket Updated',
@@ -63,7 +63,6 @@ const COPY = {
     category: 'Catégorie',
     location: 'Emplacement',
     changesLabel: 'Modifications',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Voir le Ticket',
     footer: 'Powered by AlgaPSA &middot; Gardons les équipes alignées',
     textHeader: 'Ticket Mis à Jour',
@@ -86,7 +85,6 @@ const COPY = {
     category: 'Categoría',
     location: 'Ubicación',
     changesLabel: 'Cambios Realizados',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Ver Ticket',
     footer: 'Powered by AlgaPSA &middot; Manteniendo a los equipos alineados',
     textHeader: 'Ticket Actualizado',
@@ -109,7 +107,6 @@ const COPY = {
     category: 'Kategorie',
     location: 'Standort',
     changesLabel: 'Änderungen',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Ticket Anzeigen',
     footer: 'Powered by AlgaPSA &middot; Teams auf Kurs halten',
     textHeader: 'Ticket Aktualisiert',
@@ -132,7 +129,6 @@ const COPY = {
     category: 'Categorie',
     location: 'Locatie',
     changesLabel: 'Wijzigingen',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Ticket Bekijken',
     footer: 'Powered by AlgaPSA &middot; Teams op één lijn houden',
     textHeader: 'Ticket Bijgewerkt',
@@ -155,7 +151,6 @@ const COPY = {
     category: 'Categoria',
     location: 'Sede',
     changesLabel: 'Modifiche effettuate',
-    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Apri ticket',
     footer: 'Powered by AlgaPSA &middot; Manteniamo i team allineati',
     textHeader: 'Ticket aggiornato',
@@ -177,15 +172,14 @@ const COPY = {
     board: 'Tablica',
     category: 'Kategoria',
     location: 'Lokalizacja',
-    changesLabel: 'Podsumowanie zgłoszenia',
-    changesVar: '{{{ticket.changes}}}',
+    changesLabel: 'Wprowadzone zmiany',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by AlgaPSA',
     textHeader: 'Zgłoszenie zaktualizowane',
     textUpdatedBy: 'Zaktualizowano',
     textAssigned: 'Przypisane do',
     textRequester: 'Zgłaszający',
-    textChanges: 'Podsumowanie',
+    textChanges: 'Wprowadzone zmiany',
     textView: 'Zobacz zgłoszenie',
     updatedByVar: '{{ticket.updatedBy}}',
   },
@@ -205,7 +199,6 @@ COPY.pt = {
   category: 'Categoria',
   location: 'Localização',
   changesLabel: 'Alterações realizadas',
-  changesVar: '{{{ticket.changes}}}',
   viewButton: 'Ver ticket',
   footer: 'Powered by AlgaPSA &middot; Mantendo as equipes alinhadas',
   textHeader: 'Ticket atualizado',
@@ -228,7 +221,6 @@ COPY.sv = {
   category: 'Kategori',
   location: 'Plats',
   changesLabel: 'Gjorda ändringar',
-  changesVar: '{{{ticket.changes}}}',
   viewButton: 'Visa ärende',
   footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ärende uppdaterat',
@@ -241,9 +233,6 @@ COPY.sv = {
 
 /* eslint-enable max-len */
 
-const CHANGES_BOX_BG = '#fff9e6';
-const CHANGES_BOX_BORDER = '#ffe4a3';
-const CHANGES_LABEL_COLOR = '#92400e';
 
 function buildBodyHtml(c) {
   const updatedByVal = c.updatedByVar || '{{ticket.updatedBy}}';
@@ -293,10 +282,7 @@ function buildBodyHtml(c) {
                     <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
                   </tr>
                 </table>
-                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:${CHANGES_BOX_BG};border:1px solid ${CHANGES_BOX_BORDER};">
-                  <div style="font-weight:600;color:${CHANGES_LABEL_COLOR};margin-bottom:8px;">${c.changesLabel}</div>
-                  <div style="color:#475467;line-height:1.5;">${c.changesVar}</div>
-                </div>
+                ${buildChangesBoxHtml({ label: c.changesLabel, itemsPath: 'ticket.changeItems', grouped: true })}
                 <a href="{{ticket.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">${c.viewButton}</a>`;
 }
 
@@ -315,7 +301,7 @@ ${c.category}: {{ticket.categoryDetails}}
 ${c.location}: {{ticket.locationSummary}}
 
 ${c.textChanges}:
-${c.changesVar}
+${buildChangesText({ itemsPath: 'ticket.changeItems', grouped: true })}
 
 ${c.textView}: {{ticket.url}}`;
 }

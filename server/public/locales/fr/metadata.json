@@ -214,6 +214,9 @@
       "title": "Demandes de service",
       "detail": {
         "fallbackTitle": "Demande de service"
+      },
+      "formBuilder": {
+        "title": "Éditeur de formulaire"
       }
     },
     "surveys": {
@@ -349,6 +352,10 @@
       "title": "Actifs",
       "custody": {
         "title": "Matériel sous garde"
+      },
+      "audits": {
+        "title": "Audits de site",
+        "detailTitle": "Audit de site"
       }
     },
     "chat": {
@@ -521,7 +528,10 @@
       "defaultTitle": "Tableau de bord | AlgaPSA"
     },
     "coManaged": {
-      "title": "Informatique cogérée"
+      "title": "Informatique cogérée",
+      "archive": {
+        "title": "Archive de la gestion informatique partagée"
+      }
     },
     "coManagement": {
       "title": "Accès cogéré",
@@ -542,8 +552,17 @@
         "taskTitle": "Tâche partagée",
         "projectTitle": "Projet partagé"
       },
+      "departure": {
+        "title": "Mettre fin à la gestion informatique partagée"
+      },
+      "sla": {
+        "title": "Priorités SLA cogérées"
+      },
       "export": {
         "title": "Exporter l'espace de travail"
+      },
+      "upgrade": {
+        "title": "Passer à AlgaPSA"
       }
     }
   },

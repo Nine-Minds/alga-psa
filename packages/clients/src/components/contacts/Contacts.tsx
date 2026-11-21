@@ -41,6 +41,7 @@ import ClientQuickView from '../clients/ClientQuickView';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
+import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -54,6 +55,8 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { isPlainLeftClick } from '@alga-psa/ui/lib/plainLeftClick';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
@@ -723,20 +726,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             size="sm"
             className="mr-2"
           />
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => handleEditContact(record)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleEditContact(record);
-              }
-            }}
+          {/* A real anchor, so Ctrl/Cmd+Click, middle-click and "Open link in
+              new tab" reach the contact page the way a plain click does. */}
+          <Link
+            id={`contact-name-link-${record.contact_name_id}`}
+            href={`/msp/contacts/${record.contact_name_id}`}
+            prefetch={false}
             className="min-w-0 truncate text-blue-600 hover:underline cursor-pointer"
           >
             {record.full_name}
-          </div>
+          </Link>
           {/* Renders nothing unless this contact is directory-maintained. */}
           <EntraContactBadge contact={record as unknown as Record<string, unknown>} />
           {record.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
@@ -779,6 +778,30 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       },
     },
     {
+      title: t('contactsPage.table.location', { defaultValue: 'Location' }),
+      dataIndex: 'primaryLocation',
+      width: '12%',
+      render: (value, record): React.ReactNode => {
+        const cell = contactLocationCell(record);
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : t('common.states.na', { defaultValue: 'N/A' });
+        }
+        return (
+          <span className="truncate">
+            {cell.label}
+            {cell.extraCount > 0 ? (
+              <span className="text-gray-500">
+                {' '}
+                {t('contactLocations.extraCount', { defaultValue: '+{{count}}', count: cell.extraCount })}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
+    },
+    {
       title: t('contactsPage.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       width: '13%',
@@ -807,20 +830,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
         return (
           <ClientNameCell clientId={clientId} clientName={clientName} logoUrl={record.client_logo_url ?? null}>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={handleClientOpen}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleClientOpen();
-                }
+            {/* Plain click keeps the drawer; modified and middle clicks are the
+                browser's, so the client page can open in a new tab. */}
+            <Link
+              id={`contact-client-link-${record.contact_name_id}`}
+              href={`/msp/clients/${clientId}`}
+              prefetch={false}
+              onClick={(e) => {
+                if (!isPlainLeftClick(e)) return;
+                e.preventDefault();
+                handleClientOpen();
               }}
               className="text-blue-600 hover:underline cursor-pointer truncate"
             >
               {clientName}
-            </div>
+            </Link>
           </ClientNameCell>
         );
       },

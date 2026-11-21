@@ -4,7 +4,7 @@ import { formatISO } from 'date-fns';
 import { computeWorkDateFields, resolveUserTimeZone, tenantDb, truncateToMinute } from '@alga-psa/db';
 import { toPlainDate } from '@alga-psa/core';
 import type { IUser } from '@alga-psa/types';
-import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertHumanWorkOwner, timeEntryWorkItem } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { resolveTimeEntryContract } from '@alga-psa/scheduling/lib/timeEntryContract';
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import type { PersistedTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
@@ -85,7 +85,7 @@ export async function writeCoManagedTimeEntry(trx: Knex.Transaction, input: CoMa
   const userId = existing?.user_id || entry.user_id || actor.user_id;
   await assertCanActOnBehalf(actor, tenant, userId, trx);
   if (!entry.entry_id) {
-    if (entry.user_id) await assertHumanWorkAssignee(trx, tenant, [entry.user_id]);
+    if (entry.user_id) await assertHumanWorkAssignee(trx, tenant, [entry.user_id], timeEntryWorkItem(entry.work_item_type, entry.work_item_id));
     else await assertHumanWorkOwner(trx, tenant, actor.user_id, 'user_id');
   }
 

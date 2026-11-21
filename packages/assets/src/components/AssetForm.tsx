@@ -25,7 +25,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getAsset, updateAsset } from '../actions/assetActions';
+import { createAsset, getAsset, updateAsset } from '../actions/assetActions';
+import { previewAssetNumber } from '../actions/assetNumberingActions';
 import {
   assetActionErrorFrom,
   assetActionErrorMessage,
@@ -52,7 +53,8 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetFormProps {
-  assetId: string;
+  assetId?: string;
+  createMode?: boolean;
   /**
    * Called instead of navigating after a successful save. The /edit route
    * leaves this unset and keeps navigating to the detail page; the edit drawer
@@ -81,13 +83,24 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
   printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
 };
 
+function emptyBuiltinTypeFields(type: string): Partial<AssetFormData> {
+  switch (type) {
+    case 'workstation': return { workstation: { os_type: '', os_version: '', cpu_model: '', cpu_cores: null, ram_gb: null, storage_type: '', storage_capacity_gb: null, gpu_model: '', installed_software: [] } as any };
+    case 'network_device': return { network_device: { device_type: 'switch', management_ip: '', port_count: null, firmware_version: '', supports_poe: false, power_draw_watts: null, vlan_config: {}, port_config: {} } as any };
+    case 'server': return { server: { os_type: '', os_version: '', cpu_model: '', cpu_cores: null, ram_gb: null, storage_config: [], raid_config: '', is_virtual: false, hypervisor: '', network_interfaces: [], primary_ip: '', installed_services: [] } as any };
+    case 'mobile_device': return { mobile_device: { os_type: 'ios', os_version: '', model: '', imei: '', phone_number: '', carrier: '', is_supervised: false, installed_apps: [] } as any };
+    case 'printer': return { printer: { model: '', ip_address: '', is_network_printer: false, supports_color: false, supports_duplex: false, max_paper_size: null, supported_paper_types: [], monthly_duty_cycle: null, supply_levels: {} } as any };
+    default: return {};
+  }
+}
+
 
 
 const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
-export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
+export default function AssetForm({ assetId, createMode = false, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,6 +128,10 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   const [billingProfiles, setBillingProfiles] = useState<Array<{ billing_profile_id: string; name: string }>>([]);
   // Purchase cost is stored in minor units but typed as a decimal amount.
   const [purchaseCostInput, setPurchaseCostInput] = useState('');
+  const [automaticTag, setAutomaticTag] = useState(createMode);
+  const [tagPreview, setTagPreview] = useState<string | null>(null);
+  const [addAnother, setAddAnother] = useState(false);
+  const [previewRevision, setPreviewRevision] = useState(0);
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -222,9 +239,15 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
   ]), [t]);
 
   useEffect(() => {
+    if (createMode) {
+      setAsset({ asset_id: '', asset_type: 'unknown', status: 'active', ownership: 'client' } as Asset);
+      setFormData((current) => ({ ...current, asset_type: 'unknown', status: 'active', ownership: 'client' }));
+      setLoading(false);
+      return;
+    }
     const loadAsset = async () => {
       try {
-        const data = unwrapAssetActionResult(await getAsset(assetId));
+        const data = unwrapAssetActionResult(await getAsset(assetId!));
         if (!data) {
           setLoadError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
@@ -332,7 +355,16 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     };
   
     void loadAsset();
-  }, [assetId, t]);
+  }, [assetId, createMode, t]);
+
+  useEffect(() => {
+    if (!createMode || !automaticTag || !formData.client_id) { setTagPreview(null); return; }
+    let active = true;
+    void previewAssetNumber(formData.client_id).then((preview) => {
+      if (active) setTagPreview(preview.tag);
+    }).catch(() => { if (active) setTagPreview(null); });
+    return () => { active = false; };
+  }, [createMode, automaticTag, formData.client_id, previewRevision]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1222,7 +1254,9 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
 
       // updateAsset RETURNS expected failures (validation, permission, not found)
       // rather than throwing: Next.js masks thrown messages in production builds.
-      const result = await updateAsset(assetId, cleanedData);
+      const result = createMode
+        ? await createAsset({ ...cleanedData, asset_tag: automaticTag ? '' : cleanedData.asset_tag } as CreateAssetRequest)
+        : await updateAsset(assetId!, cleanedData);
 
       if (isAssetValidationError(result)) {
         const nextFieldErrors: Record<string, string> = {};
@@ -1247,10 +1281,28 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
         return;
       }
 
+      if (createMode) {
+        const created = result as Asset;
+        toast.success(t('assetForm.create.success', { defaultValue: 'Asset {{tag}} created', tag: created.asset_tag }));
+        if (addAnother) {
+          setFormData((current) => ({ ...current, name: '', asset_tag: '', serial_number: '', manufacturer: '', model: '' }));
+          setCustomAttributes({});
+          setPurchaseCostInput('');
+          setAutomaticTag(true);
+          setPreviewRevision((revision) => revision + 1);
+          setSaveError(null);
+        } else {
+          onSaved?.();
+          router.push(`/msp/assets/${created.asset_id}`);
+          router.refresh();
+        }
+        return;
+      }
+
       // The detail page renders from the client-side asset cache, so
       // router.refresh() alone leaves its tiles on the pre-save values until a
       // reload — saving a new status kept showing the old one.
-      await mutateCache(matchAssetCacheKeys([assetId]));
+      await mutateCache(matchAssetCacheKeys([assetId!]));
 
       if (onSaved) {
         onSaved();
@@ -1295,7 +1347,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     <div id="asset-form-container" className="space-y-4">
       <div id="asset-form-header" className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">
-          {t('assetForm.heading', { defaultValue: 'Edit Asset' })}
+          {createMode ? t('fullIntake.title', { defaultValue: 'Add asset' }) : t('assetForm.heading', { defaultValue: 'Edit Asset' })}
         </h1>
       </div>
 
@@ -1493,14 +1545,18 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                   <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.assetTag', { defaultValue: 'Asset Tag' })}
                   </label>
-                  <Input
-                    id="asset_tag"
-                    name="asset_tag"
-                    value={formData.asset_tag}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1"
-                  />
+                  {createMode && <div className="mb-2"><Checkbox id="asset-auto-number" label={t('assetForm.create.autoTag', { defaultValue: 'Assign next automatic tag' })} checked={automaticTag} onChange={(event) => setAutomaticTag(event.target.checked)} /></div>}
+                  {createMode && automaticTag
+                    ? <p id="asset-number-preview" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">{t('assetForm.create.preview', { defaultValue: 'Next tag preview: {{tag}} (preview does not reserve a number)', tag: tagPreview ?? t('assetForm.create.selectClient', { defaultValue: 'Select a client to preview' }) })}</p>
+                    : <Input
+                      id="asset_tag"
+                      name="asset_tag"
+                      value={formData.asset_tag}
+                      onChange={handleInputChange}
+                      required={!createMode || !automaticTag}
+                      className="mt-1"
+                    />}
+                  {renderFieldError('asset_tag')}
                 </div>
                 <div>
                   <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -1524,7 +1580,9 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                     onValueChange={(value) => {
                       // D4: switching type keeps attributes values — fields
                       // not in the new schema simply stop rendering.
-                      setFormData(prev => ({ ...prev, asset_type: value }));
+                      const typeFields = createMode ? emptyBuiltinTypeFields(value) : {};
+                      setFormData(prev => ({ ...prev, asset_type: value, ...typeFields }));
+                      if (createMode) setAsset({ asset_id: '', asset_type: value, status: 'active', ownership: 'client', ...typeFields } as Asset);
                       setAttributeErrors({});
                     }}
                     options={assetTypeOptions}
@@ -1762,6 +1820,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
 
         {!hideActions && (
           <div id="form-actions" className="flex justify-end gap-2">
+            {createMode && <Checkbox id="asset-add-another" label={t('assetForm.create.addAnother', { defaultValue: 'Save and add another' })} checked={addAnother} onChange={(event) => setAddAnother(event.target.checked)} />}
             <Button
               id="cancel-button"
               type="button"
@@ -1778,7 +1837,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
             >
               {saving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+                : (createMode ? t('assetForm.create.submit', { defaultValue: 'Create asset' }) : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' }))}
             </Button>
           </div>
         )}

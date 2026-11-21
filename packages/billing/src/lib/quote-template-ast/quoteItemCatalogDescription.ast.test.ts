@@ -77,14 +77,18 @@ const renderHtml = async (ast: TemplateAst, data: QuoteViewModel): Promise<{ htm
 const strip = (html: string): string => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
 describe('quote catalog-description stacked table cells', () => {
-  it('standard quote template stacks item name above catalog description while keeping the value fallback', () => {
+  it('standard quote template stacks the edited description above the catalog description while keeping the value fallback', () => {
     const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-default'));
     const table = findLineItemsTable(ast);
     const descriptionColumn = table.columns.find((column) => column.id === 'description');
 
     expect(descriptionColumn?.value).toEqual({ type: 'path', path: 'description' });
+    expect(descriptionColumn?.lines?.map((line) => line.id)).toEqual([
+      'item-description',
+      'catalog-description',
+    ]);
     expect(descriptionColumn?.lines?.map((line) => line.value)).toEqual([
-      { type: 'path', path: 'service_name' },
+      { type: 'path', path: 'description' },
       { type: 'path', path: 'catalog_description' },
     ]);
   });
@@ -137,17 +141,17 @@ describe('quote catalog-description stacked table cells', () => {
     expect(sourceDescriptionColumns.length).toBe(roundTrippedColumns.length);
     expect(sourceDescriptionColumns.length).toBeGreaterThan(0);
 
-    // Every description column keeps name + catalog description; the grouped
-    // base bands additionally carry the optional-row marker. The round trip
-    // preserves each column's lines exactly.
+    // Every description column keeps the edited description + catalog
+    // description; the grouped base bands additionally carry the optional-row
+    // marker. The round trip preserves each column's lines exactly.
     roundTrippedColumns.forEach((column, index) => {
       expect(column.value).toEqual({ type: 'path', path: 'description' });
-      expect(linePaths(column).slice(0, 2)).toEqual(['service_name', 'catalog_description']);
+      expect(linePaths(column).slice(0, 2)).toEqual(['description', 'catalog_description']);
       expect(linePaths(column)).toEqual(linePaths(sourceDescriptionColumns[index]!));
     });
     const bandTable = findNodeById<TemplateDynamicTableNode>(roundTripped.layout, 'cadence-band-items')!;
     expect(linePaths(bandTable.columns.find((column) => column.id === 'description')!)).toEqual([
-      'service_name',
+      'description',
       'catalog_description',
       'optional_label',
     ]);
@@ -215,6 +219,56 @@ describe('quote catalog-description stacked table cells', () => {
     expect(text.match(/Managed Firewall Service/g)?.length).toBe(2);
     // Custom row falls back to its line description exactly once.
     expect(text.match(/Custom site-wide audit/g)?.length).toBe(1);
+  });
+
+  // alga-2026-0002902: Leap Forward edits a line's description and the standard
+  // layouts showed the catalog service name instead.
+  it('renders the edited line description instead of the catalog service name', async () => {
+    const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-default'));
+    const data = viewModel([quoteItem({ description: 'Firewall for the Dayton office (3 sites)' })]);
+
+    const { html } = await renderHtml(ast, data);
+    const text = strip(html);
+
+    expect(html).toContain(
+      '<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Firewall for the Dayton office (3 sites)</div>',
+    );
+    // The catalog description still renders beneath the edited text.
+    expect(text.indexOf('Central management, rule review, and firmware patching.')).toBeGreaterThan(
+      text.indexOf('Firewall for the Dayton office (3 sites)'),
+    );
+    expect(text).not.toContain('Managed Firewall Service');
+  });
+
+  it('prints the text once when the catalog description repeats the line description', async () => {
+    const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-default'));
+    const data = viewModel([
+      quoteItem({ description: 'Central management, rule review, and firmware patching.' }),
+    ]);
+
+    const { html } = await renderHtml(ast, data);
+    const text = strip(html);
+
+    expect(text.match(/Central management, rule review, and firmware patching\./g)?.length).toBe(1);
+  });
+
+  it('still renders a discount row that carries only its line description', async () => {
+    const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-default'));
+    const data = viewModel([
+      quoteItem({
+        quote_item_id: 'qi-discount',
+        service_id: null,
+        service_name: null,
+        catalog_description: null,
+        description: 'Loyalty discount',
+        unit_price: -5000,
+        total_price: -5000,
+      }),
+    ]);
+
+    const { html } = await renderHtml(ast, data);
+
+    expect(strip(html).match(/Loyalty discount/g)?.length).toBe(1);
   });
 
   it('renders per-line independent styles in the exported HTML', async () => {

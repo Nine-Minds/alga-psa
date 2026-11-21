@@ -14,12 +14,13 @@ import { getSecret } from '../../lib/utils/getSecret';
 // and nothing in the gate ran the round trip against Postgres.
 
 const context = vi.hoisted(() => ({ tenant: '', userId: '', db: null as any }));
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth', async () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: context.userId, tenant: context.tenant, user_type: 'internal' }, { tenant: context.tenant }, ...args),
   withAuthCheck: (fn: any) => fn,
-  hasPermission: vi.fn(async () => true), preCheckDeletion: vi.fn(), localizeActionError: async (error: any) => error,
+  ...(await import('../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)),
+  preCheckDeletion: vi.fn(), localizeActionError: async (error: any) => error,
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/auth/rbac', async () => (await import('../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)));
 vi.mock('@alga-psa/db', async importOriginal => ({
   ...await importOriginal<typeof import('@alga-psa/db')>(),
   createTenantKnex: async () => ({ knex: context.db, tenant: context.tenant }),

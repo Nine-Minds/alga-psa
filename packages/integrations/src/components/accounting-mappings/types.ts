@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import type { ExternalEntityMapping, CreateMappingData, UpdateMappingData } from '@alga-psa/integrations/actions';
 
 export type AccountingMappingEntityOption = {
@@ -165,6 +166,30 @@ export type AccountingMappingElementIds = {
   deleteMenuPrefix?: string;
 };
 
+/** Props the engine passes to a module's searched Alga-side selector. */
+export type AccountingMappingAlgaPickerProps = {
+  id: string;
+  /** Selected Alga entity id, or '' for none. */
+  value: string;
+  onChange: (algaEntityId: string) => void;
+  /** Entities that already hold a mapping; the engine never includes the edited mapping's own entity. */
+  excludeIds: string[];
+  placeholder: string;
+};
+
+/**
+ * Alga side of a module whose entities are too many to list (clients): the dialog searches on the
+ * server, the mappings table names only the mapped entities, and the full list is read only when the
+ * user opens the bulk grid, whose rows are the unmapped entities themselves.
+ */
+export type AccountingMappingAlgaSearch = {
+  Picker: ComponentType<AccountingMappingAlgaPickerProps>;
+  /** Display options for the given ids (the mapped entities), sized by the ids, not the tenant. */
+  resolve(ids: string[]): Promise<AccountingMappingEntityOption[]>;
+  /** Every Alga entity. Called only when the bulk grid opens. */
+  loadAll(context: AccountingMappingContext): Promise<AccountingMappingEntityOption[]>;
+};
+
 export interface AccountingMappingModule {
   id: string;
   adapterType: string;
@@ -186,6 +211,11 @@ export interface AccountingMappingModule {
     context: AccountingMappingContext
   ) => AccountingMappingOverrides | undefined;
   elements?: AccountingMappingElementIds;
+  /**
+   * Set when the Alga side is searched rather than listed. `load` then returns no `algaEntities`;
+   * the engine resolves the mapped ones through `resolve` and loads the rest only for the bulk grid.
+   */
+  algaSearch?: AccountingMappingAlgaSearch;
 
   load(context: AccountingMappingContext): Promise<AccountingMappingLoadResult>;
   create(

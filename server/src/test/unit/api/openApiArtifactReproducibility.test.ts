@@ -39,3 +39,42 @@ it.each(['ce', 'ee'])('reproduces the published %s OpenAPI artifacts', (edition)
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
 }, 120_000);
+
+it('reproduces the published CE and EE MCP registries from the OpenAPI artifacts', () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-mcp-registry-'));
+  const registryPaths = [
+    'server/src/lib/mcp/registry.generated.ts',
+    'ee/server/src/chat/registry/apiRegistry.generated.ts',
+  ];
+  try {
+    // The CLI resolves its inputs and outputs relative to its own location.
+    // Give it an isolated repository layout so this test never rewrites the checkout.
+    for (const relativePath of [
+      'ee/scripts/generate-chat-registry.mjs',
+      'ee/docs/api-registry',
+      'sdk/docs/openapi/alga-openapi.ce.json',
+      'sdk/docs/openapi/alga-openapi.ee.json',
+    ]) {
+      const destination = path.join(temporaryRoot, relativePath);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.cpSync(path.join(repoRoot, relativePath), destination, { recursive: true });
+    }
+
+    const env = { ...process.env };
+    delete env.MCP_REGISTRY_EDITION;
+    const result = spawnSync(process.execPath, ['ee/scripts/generate-chat-registry.mjs'], {
+      cwd: temporaryRoot, env, encoding: 'utf8', timeout: 30_000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+
+    for (const relativePath of registryPaths) {
+      const generated = fs.readFileSync(path.join(temporaryRoot, relativePath), 'utf8');
+      const published = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+      expect(digest(published), `${relativePath}: run npm run generate:artifacts and commit the output`)
+        .toBe(digest(generated));
+    }
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});

@@ -9,6 +9,7 @@ import type {
 } from '../types';
 
 export type * from '../types';
+export { assertNoDelegationHeaders } from '../delegation';
 
 export async function resolveServicePrincipalApiContext<TUser = unknown>(
   _keyRecord: BoundaryApiKeyRecord,
@@ -21,6 +22,17 @@ export async function resolveServicePrincipalApiContext<TUser = unknown>(
 /** Resolves true only when the owner (neither internal nor client) may authenticate a key. */
 export async function servicePrincipalKeyGate(_owner: BoundaryKeyGateOwner): Promise<boolean> {
   return false;
+}
+
+/** CE has no principal attribution columns, so time-entry writes remain schema-compatible. */
+export async function stampTimeEntryAttribution(
+  _conn: unknown,
+  _tenant: string,
+  _entryId: string,
+  _operation: 'create' | 'update',
+  _viaPrincipalUserId: string | null | undefined,
+): Promise<Record<string, string | null>> {
+  return {};
 }
 
 export function mapServicePrincipalError<T>(error: T): T {

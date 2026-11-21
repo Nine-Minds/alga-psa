@@ -41,7 +41,9 @@ describe('portable workspace manifest', () => {
     const names = built.exclusions.map(e => e.name);
     for (const e of PORTABLE_BASE_EXCLUSIONS) expect(names).toContain(e.name);
     expect(built.exclusions.find(e => e.name === 'credential_vault')).toMatchObject({ class: 'secret' });
-    expect(new Set(built.exclusions.map(e => e.class))).toEqual(new Set(['msp_private', 'commercial', 'secret', 'deferred_domain']));
+    // No base entry defers a domain: time, schedule, meetings, conversations and documents are delivered by their contributors.
+    expect(new Set(built.exclusions.map(e => e.class))).toEqual(new Set(['msp_private', 'commercial', 'secret']));
+    expect(PORTABLE_BASE_EXCLUSIONS.some(e => e.class === 'deferred_domain')).toBe(false);
     expect(built.credentialVault).toBeNull();
   });
   it('carries the edge to an undelivered domain as external', async () => {

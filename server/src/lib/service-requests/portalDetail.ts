@@ -6,6 +6,16 @@ import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
+import {
+  collectElementVisibilityRules,
+  computeVisibleFieldKeys,
+  parseVisibilityRules,
+  type VisibilityRule,
+} from './formVisibility';
+import {
+  normalizeBasicFormSchema,
+  type ServiceRequestInitialValues,
+} from './formSchema';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -41,12 +51,51 @@ export interface ServiceRequestPortalDefinitionDetail {
   description: string | null;
   icon: string | null;
   formSchema: Record<string, unknown>;
-  initialValues: Record<string, string | boolean | null>;
+  initialValues: ServiceRequestInitialValues;
   visibleFieldKeys: string[];
   executionProvider: string;
   executionConfig: Record<string, unknown>;
   formBehaviorProvider: string;
   formBehaviorConfig: Record<string, unknown>;
+}
+
+/**
+ * Client portal projection of a definition detail: only what the request form
+ * page renders. Execution/form-behavior config and version identifiers stay
+ * server-side.
+ */
+export interface ServiceRequestPortalFormView {
+  title: string;
+  description: string | null;
+  icon: string | null;
+  formSchema: Record<string, unknown>;
+  initialValues: ServiceRequestInitialValues;
+  /**
+   * The complete rule list, assembled server-side: every element's own `visibleWhen`
+   * condition plus, for the advanced provider, its configured rules. The browser never
+   * sees which provider the definition uses or what else its config holds.
+   */
+  visibilityRules: VisibilityRule[];
+}
+
+export function toPortalFormView(
+  detail: ServiceRequestPortalDefinitionDetail
+): ServiceRequestPortalFormView {
+  // One normalizer decides what an element is, so the portal and the builder agree.
+  const normalized = normalizeBasicFormSchema(detail.formSchema);
+  return {
+    title: detail.title,
+    description: detail.description,
+    icon: detail.icon,
+    formSchema: detail.formSchema,
+    initialValues: detail.initialValues,
+    visibilityRules: [
+      ...collectElementVisibilityRules(normalized.fields),
+      ...(detail.formBehaviorProvider === 'advanced'
+        ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+        : []),
+    ],
+  };
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(
@@ -143,8 +192,13 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
   const resolvedInitialValues = {
     ...staticInitialValues,
     ...dynamicInitialValues,
-  } as Record<string, string | boolean | null>;
+  } as ServiceRequestInitialValues;
 
+  // The provider decides when it has its own rule list; otherwise the elements' own
+  // `visibleWhen` conditions decide, evaluated against the values the form opens with.
+  const snapshotFields = Array.isArray((latestVersion.form_schema_snapshot as any)?.fields)
+    ? ((latestVersion.form_schema_snapshot as any).fields as any[])
+    : [];
   const visibleFieldKeys = formBehaviorProvider.resolveVisibleFieldKeys
     ? await formBehaviorProvider.resolveVisibleFieldKeys(
         {
@@ -157,11 +211,16 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
         resolvedInitialValues,
         latestVersion.form_behavior_config ?? {}
       )
-    : Array.isArray((latestVersion.form_schema_snapshot as any)?.fields)
-      ? ((latestVersion.form_schema_snapshot as any).fields as any[])
-          .map((field) => (typeof field?.key === 'string' ? field.key : null))
-          .filter((fieldKey): fieldKey is string => !!fieldKey)
-      : [];
+    : computeVisibleFieldKeys(
+        snapshotFields,
+        collectElementVisibilityRules(snapshotFields),
+        resolvedInitialValues,
+        {
+          requesterUserId: context.requesterUserId,
+          clientId: context.clientId,
+          contactId: context.contactId ?? null,
+        }
+      );
 
   return {
     definitionId,

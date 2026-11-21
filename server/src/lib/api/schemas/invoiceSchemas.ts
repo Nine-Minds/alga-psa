@@ -4,6 +4,8 @@
  */
 
 import { z } from 'zod';
+import { INVOICE_FIELD_POLICY } from './invoiceFieldPolicy';
+import type { InvoiceCreateField, InvoiceFieldRule, InvoiceUpdateField } from './invoiceFieldPolicy';
 import { PREFERRED_PAYMENT_METHODS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   uuidSchema,
@@ -184,34 +186,60 @@ const baseInvoiceSchema = z.object({
 });
 
 // Create invoice schema
-const createInvoiceSchema = baseInvoiceSchema.omit({
-  invoice_id: true,
-  invoice_number: true,
-  finalized_at: true
-}).extend({
-  tenant: uuidSchema.optional(),
-  items: z.array(createInvoiceItemSchema).optional()
-});
+const baseInvoiceShape = baseInvoiceSchema.shape;
+const createInvoiceShape = Object.fromEntries(
+  (Object.entries(INVOICE_FIELD_POLICY) as [string, InvoiceFieldRule][])
+    .filter(([key, rule]) => key === 'tenant' || (rule.create.kind === 'writable' || !!rule.createAllows))
+    .flatMap(([key, rule]) => {
+      if (key === 'tenant') return [[key, uuidSchema.optional()]];
+      if (key === 'items') return [[key, z.array(createInvoiceItemSchema).optional()]];
+      const schema = (baseInvoiceShape as Record<string, z.ZodTypeAny>)[key];
+      if (!schema) return [];
+      // Create command defaults are optional here so policy validation sees presence
+      // and can reject a non-default value rather than silently defaulting it.
+      return [[key, rule.createAllows ? schema.optional() : schema]];
+    }),
+) as Record<string, z.ZodTypeAny>;
+for (const [key, rule] of Object.entries(INVOICE_FIELD_POLICY) as [string, InvoiceFieldRule][]) {
+  if (rule.create.kind === 'engine-derived') {
+    createInvoiceShape[key] = z.unknown().optional().refine(
+      (value) => value === undefined,
+      { message: `Field '${key}' is derived from invoice items and cannot be supplied` },
+    );
+  }
+}
+const createInvoiceSchema = z.object(createInvoiceShape)
+  // Nothing is stripped before the field classifier sees it. Zod's default (strip) would
+  // delete keys this schema does not declare — e.g. the update-only `tax_source` — so a
+  // create body carrying them would be silently ignored instead of refused. The policy in
+  // invoiceFieldPolicy.ts is the single authority for what a create body may carry;
+  // InvoiceService.create runs checkInvoicePayload('create', data) and returns a 400 naming
+  // the field and the command that owns it.
+  .passthrough();
 
 // Update invoice schema. tax_source is update-only: a new invoice takes its
 // tax source from the client/tenant default, while an existing one may be
 // switched (any direction on a draft; internal -> pending_external on a
 // finalized invoice that has not been exported).
-// The editable set is an explicit allowlist (INVOICE_UPDATE_FIELDS); lifecycle,
-// identity and monetary fields are owned by dedicated commands. Strict so that a
+// The editable set comes from INVOICE_FIELD_POLICY; lifecycle, identity and monetary
+// fields are owned by dedicated commands. Strict so that a
 // PUT carrying e.g. {"status":"paid"} is a 400 naming the key, never a silent no-op 200.
 // Never use omit here: it would fail open when a column is added.
-const updateInvoiceSchema = createUpdateSchema(
-  createInvoiceSchema.pick({
-    payment_method: true,
-    billing_profile_id: true,
-    due_date: true,
-    invoice_date: true,
-    items: true,
-  })
-).extend({
-  tax_source: z.enum(['internal', 'external', 'pending_external']).optional(),
-}).strict();
+const updateInvoiceFields = Object.fromEntries(
+  (Object.entries(INVOICE_FIELD_POLICY) as [string, InvoiceFieldRule][])
+    .filter(([, rule]) => rule.update.kind === 'writable')
+    .map(([key]) => [
+      key,
+      key === 'tax_source'
+        ? z.enum(['internal', 'external', 'pending_external']).optional()
+        : key === 'items'
+          ? z.array(createInvoiceItemSchema).optional()
+        : (baseInvoiceShape as Record<string, z.ZodTypeAny>)[key],
+    ])
+    .filter(([, schema]) => !!schema)
+    .map(([key, schema]) => [key, (schema as z.ZodTypeAny).optional()]),
+) as Record<string, z.ZodTypeAny>;
+const updateInvoiceSchema = z.object(updateInvoiceFields).strict();
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
@@ -775,8 +803,13 @@ export type CreateInvoiceItem = z.infer<typeof createInvoiceItemSchema>;
 export type UpdateInvoiceItem = z.infer<typeof updateInvoiceItemSchema>;
 export type ManualInvoiceItem = z.infer<typeof manualInvoiceItemSchema>;
 export type Invoice = z.infer<typeof baseInvoiceSchema>;
-export type CreateInvoice = z.infer<typeof createInvoiceSchema>;
-export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>;
+type InvoiceBase = z.infer<typeof baseInvoiceSchema>;
+type RequiredCreateInvoiceField = 'client_id' | 'invoice_date' | 'due_date';
+export type CreateInvoice = Pick<InvoiceBase, RequiredCreateInvoiceField>
+  & Partial<Pick<InvoiceBase, Exclude<Extract<InvoiceCreateField, keyof InvoiceBase>, RequiredCreateInvoiceField>>>
+  & { tenant?: string; items?: CreateInvoiceItem[] };
+export type UpdateInvoice = Partial<Pick<InvoiceBase, Extract<InvoiceUpdateField, keyof InvoiceBase>>>
+  & { items?: CreateInvoiceItem[]; tax_source?: 'internal' | 'external' | 'pending_external' };
 export type InvoiceResponse = z.infer<typeof invoiceResponseSchema>;
 export type InvoiceViewModel = z.infer<typeof invoiceViewModelSchema>;
 export type InvoiceTemplate = z.infer<typeof invoiceTemplateSchema>;

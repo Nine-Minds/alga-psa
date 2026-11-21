@@ -22,6 +22,10 @@ function SuspendedPostHogPageView() {
   return null;
 }
 
+// Bearer-token pages: the URL itself is the credential, so analytics must never
+// see it (a $pageview would ship the token to a third-party host).
+const ANALYTICS_FREE_PATH = /^\/quote\/[^/]+/;
+
 interface PostHogProviderProps {
   children: React.ReactNode;
   // Server-evaluated flags handed to the client so gated UI renders without a
@@ -40,6 +44,8 @@ export function PostHogProvider({ children, initialFeatureFlags = {} }: PostHogP
 
   useEffect(() => {
     if (!isHydrated) return;
+
+    if (ANALYTICS_FREE_PATH.test(window.location.pathname)) return;
 
     if (!isPostHogEnabled()) {
       console.log('Usage statistics disabled by ALGA_USAGE_STATS environment variable');

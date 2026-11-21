@@ -59,6 +59,23 @@ describe('classifyImport', () => {
     expect(plan.needsCustomerStamp || plan.needsMapping).toBe(false);
   });
 
+  it('adopts a failed import whose customer and card are already stamped but not locally persisted', () => {
+    const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', source: 'alga_import' };
+    const customerWithStampedCard = customer('cus_1', {
+      metadata: stamped,
+      paymentMethods: [pm('pm_1', { metadata: stamped })],
+    });
+
+    const plan = classifyImport({
+      rows: [row('r', 'c1', 'p1', 'cus_1')],
+      customers: [customerWithStampedCard],
+      alga: alga(),
+    }).rows[0];
+
+    expect(plan).toMatchObject({ action: 'adopt', needsCustomerStamp: false, needsMapping: true });
+    expect(plan.cards[0]).toMatchObject({ action: 'import', needsMetadataStamp: false });
+  });
+
   it('does not re-activate a card parked in requires_update', () => {
     const stamped = { tenant_id: T, client_id: 'c1', billing_profile_id: 'p1' };
     const state = alga({

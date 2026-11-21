@@ -19,8 +19,10 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
+import { QuoteDecisionLine, emailLinkDecisionForActivity } from './QuoteDecisionLine';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, markQuoteAccepted, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
@@ -145,9 +147,25 @@ function renderQuoteDetailRow(
   );
 }
 
+
+/** Recipient email from activity metadata; tolerates missing, null, array or JSON-string metadata. */
+function viewedViaEmailLinkRecipient(metadata: unknown): string | null {
+  let value = metadata;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const email = (value as Record<string, unknown>).recipient_email;
+  return typeof email === 'string' && email.trim() ? email.trim() : null;
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, formatCalendarDate } = useFormatters();
   const router = useRouter();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -172,7 +190,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
   const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string; documentHtml?: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -793,13 +811,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     try {
       setIsPreviewLoading2(true);
       setError(null);
-      const result = await renderQuotePreview(quote.quote_id);
+      // Drawn as the pages it prints as, so a layout with page breaks is read as sheets.
+      const result = await renderQuotePreview(quote.quote_id, undefined, { paginate: true });
 
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
       }
 
-      setPreviewHtml(result as { html: string; css: string });
+      setPreviewHtml(result as { html: string; css: string; documentHtml?: string });
       setIsPreviewOpen(true);
     } catch (actionError) {
       setError(
@@ -1100,11 +1119,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
-            <div className="mt-1 font-medium">{quote.quote_date ? formatDate(quote.quote_date) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.quote_date ? formatCalendarDate(quote.quote_date) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
-            <div className="mt-1 font-medium">{quote.valid_until ? formatDate(quote.valid_until) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.valid_until ? formatCalendarDate(quote.valid_until) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
@@ -1192,7 +1211,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <section className="space-y-2 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
             <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">{t('quoteForm.alerts.accepted', { defaultValue: 'Quote Accepted' })}</h3>
             <div className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1">
-              {quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
+              {quote.decisions?.[0]?.decision === 'accepted'
+                ? <p data-testid="quote-accepted-by"><QuoteDecisionLine decision={quote.decisions[0]} /></p>
+                : quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
               {quote.accepted_at && <p><span className="font-medium">{t('quoteDetail.status.acceptedOn', { defaultValue: 'Accepted on:' })}</span> {formatDate(quote.accepted_at)}</p>}
             </div>
           </section>
@@ -1202,6 +1223,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <section className="space-y-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
             <h3 className="text-base font-semibold text-red-800 dark:text-red-300">{t('quoteForm.alerts.rejected', { defaultValue: 'Quote Rejected' })}</h3>
             <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
+              {quote.decisions?.[0]?.decision === 'rejected' && <p data-testid="quote-rejected-by"><QuoteDecisionLine decision={quote.decisions[0]} /></p>}
               {quote.rejected_at && <p><span className="font-medium">{t('quoteDetail.status.rejectedOn', { defaultValue: 'Rejected on:' })}</span> {formatDate(quote.rejected_at)}</p>}
               {quote.rejection_reason && <p><span className="font-medium">{t('quoteDetail.status.reason', { defaultValue: 'Reason:' })}</span> {quote.rejection_reason}</p>}
             </div>
@@ -1323,11 +1345,28 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               {quote.quote_activities.map((activity) => (
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                    <div className="font-medium text-foreground">{activity.description}</div>
+                    <div className="font-medium text-foreground">
+                      {(() => {
+                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
+                        if (linked) return <QuoteDecisionLine decision={linked} />;
+                        if (activity.activity_type === 'viewed_via_email_link') {
+                          const recipient = viewedViaEmailLinkRecipient(activity.metadata);
+                          return recipient
+                            ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
+                              defaultValue: 'Quote viewed via email link by {{email}}',
+                              email: recipient,
+                            })
+                            : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' });
+                        }
+                        return activity.description;
+                      })()}
+                    </div>
                     <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                    {activity.activity_type.replace(/_/g, ' ')}
+                    {activity.activity_type === 'viewed_via_email_link'
+                      ? t('quoteDetail.activity.viewedViaEmailLink.type', { defaultValue: 'Viewed via email link' })
+                      : activity.activity_type.replace(/_/g, ' ')}
                   </div>
                 </div>
               ))}
@@ -1566,7 +1605,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         )}
       >
         <DialogContent>
-          {previewHtml ? (
+          {previewHtml?.documentHtml ? (
+            <PreviewSheetFrame
+              html={previewHtml.documentHtml}
+              title={t('quotePreview.title', { defaultValue: 'Quote Preview' })}
+              zoomMode="fit"
+              automationId="quote-detail-preview-pages"
+            />
+          ) : previewHtml ? (
+            // A single roll beats no preview when the chunking pass could not run.
             <div className="rounded border border-border p-4 bg-white text-black" style={{ colorScheme: 'light' }}>
               <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
               <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />

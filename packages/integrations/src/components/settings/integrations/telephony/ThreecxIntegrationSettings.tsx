@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { IClient } from '@alga-psa/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -20,7 +19,6 @@ import {
   downloadThreecxTemplate,
   getThreecxCardState,
   listThreecxContactQueue,
-  listTelephonyResolutionTargets,
   mapThreecxContactToClient,
   rotateThreecxApiKey,
   runThreecxPhonebookImport,
@@ -37,7 +35,6 @@ import {
 import type {
   ThreecxCardState,
   ThreecxContactQueueItem,
-  TelephonyResolutionTarget,
 } from '../../../../actions/integrations/telephonyActions';
 import { TelephonyStatusBadge } from './TelephonyStatusBadge';
 
@@ -539,41 +536,18 @@ interface ContactQueueSectionProps {
 type PendingItem = Extract<ThreecxContactQueueItem, { kind: 'pending' }>;
 type UnmappedItem = Extract<ThreecxContactQueueItem, { kind: 'unmapped' }>;
 
-function targetsToClients(targets: TelephonyResolutionTarget[]): IClient[] {
-  return targets.flatMap((target) => {
-    if (target.contactId || !target.clientId) return [];
-    return [{
-      client_id: target.clientId,
-      client_name: target.label,
-      client_type: target.clientType ?? null,
-      url: '',
-      is_inactive: false,
-      created_at: '',
-      updated_at: '',
-      billing_cycle: 'monthly',
-      is_tax_exempt: false,
-      tenant: '',
-    } as IClient];
-  });
-}
-
 function ContactQueueSection({ t, busy, canManage, runBusy, error, setError, initialPendingId }: ContactQueueSectionProps) {
   const [items, setItems] = useState<ThreecxContactQueueItem[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [selection, setSelection] = useState<Record<string, string | null>>({});
   const [completing, setCompleting] = useState<PendingItem | null>(null);
   const [autoOpened, setAutoOpened] = useState(false);
 
   const loadQueue = useCallback(async () => {
-    const [queue, targets] = await Promise.all([
-      listThreecxContactQueue(),
-      listTelephonyResolutionTargets({ clientsOnly: true }),
-    ]);
+    const queue = await listThreecxContactQueue();
     if (!queue.success) {
       setError(queue.error ?? null);
     }
     setItems(queue.items);
-    setClients(targets.success ? targetsToClients(targets.targets) : []);
     setSelection((current) => {
       const next = { ...current };
       for (const item of queue.items) {
@@ -648,7 +622,6 @@ function ContactQueueSection({ t, busy, canManage, runBusy, error, setError, ini
                     <div className="max-w-sm">
                       <ClientPicker
                         id={`threecx-contact-queue-client-${key}`}
-                        clients={clients}
                         selectedClientId={selection[key] ?? null}
                         onSelect={(clientId) => setSelection((current) => ({ ...current, [key]: clientId }))}
                         placeholder={t('integrations.telephony.providers.threecx.queue.chooseClient', { defaultValue: 'Choose a client…' })}
@@ -680,7 +653,6 @@ function ContactQueueSection({ t, busy, canManage, runBusy, error, setError, ini
       {completing && (
         <CompletePendingContactDialog
           item={completing}
-          clients={clients}
           t={t}
           busy={busy}
           onClose={() => setCompleting(null)}
@@ -701,14 +673,12 @@ function ContactQueueSection({ t, busy, canManage, runBusy, error, setError, ini
 
 function CompletePendingContactDialog({
   item,
-  clients,
   t,
   busy,
   onClose,
   onSubmit,
 }: {
   item: PendingItem;
-  clients: IClient[];
   t: TFn;
   busy: boolean;
   onClose: () => void;
@@ -758,7 +728,6 @@ function CompletePendingContactDialog({
         />
         <ClientPicker
           id="threecx-complete-client"
-          clients={clients}
           selectedClientId={clientId}
           onSelect={setClientId}
           placeholder={t('integrations.telephony.providers.threecx.queue.chooseClient', { defaultValue: 'Choose a client…' })}

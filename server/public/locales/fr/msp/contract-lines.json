@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Description de la ligne de facture",
         "invoiceLineDescriptionPlaceholder": "par ex. Maintenance mensuelle du système téléphonique selon le contrat de 2019",
         "nameLabel": "Nom de la ligne de contrat *",
-        "namePlaceholder": "par ex. Support géré - Or"
+        "namePlaceholder": "par ex. Support géré - Or",
+        "invoiceLineSubtitleLabel": "Sous-titre de la ligne de facture",
+        "invoiceLineSubtitlePlaceholder": "p. ex. Postes gérés et sauvegarde",
+        "invoiceLineSubtitleHelp": "Affiché en seconde ligne atténuée sous le titre lorsque cette ligne forfaitaire figure sur une facture."
       },
       "cardTitle": "Modifier la ligne de contrat : {{name}} (fixe)",
       "errors": {

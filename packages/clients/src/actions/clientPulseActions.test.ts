@@ -19,6 +19,7 @@ const CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const assignmentRows = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>>, timezone: null as string | null }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: unknown[]) =>
@@ -36,6 +37,13 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: async (db: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(db),
+  tenantDb: (db: any, tenant: string) => ({ table: (name: string) => db(name).where({ tenant }) }),
+}));
+
+// The document read scope: null (nothing narrows the caller) unless a test hands one in.
+const documentReadScopeMock = vi.hoisted(() => vi.fn(async (): Promise<unknown> => null));
+vi.mock('@alga-psa/shared/lib/documentAuthorization', () => ({
+  resolveDocumentReadScope: documentReadScopeMock,
 }));
 
 vi.mock('../lib/documentsHelpers', () => ({
@@ -90,7 +98,10 @@ const clientRow = {
 };
 
 const defaultRespond = (sql: string): Rows =>
-  sql.includes('from "clients" as "c"') ? [clientRow] : [];
+  sql.includes('from "clients" as "c"') ? [clientRow]
+    : sql.includes('from "tenant_settings"') ? [{ settings: assignmentRows.timezone ? { timezone: assignmentRows.timezone } : {} }]
+      : sql.includes('from "client_contracts" as "cc"') ? assignmentRows.rows
+        : [];
 
 const findStatement = (statements: string[], fragment: string): string => {
   const match = statements.find((sql) => sql.includes(fragment));
@@ -102,6 +113,8 @@ describe('getClientPulse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
+    assignmentRows.rows = [];
+    assignmentRows.timezone = null;
   });
 
   it('joins the completed-payments aggregate on the tenant distribution key', async () => {
@@ -153,6 +166,23 @@ describe('getClientPulse', () => {
     consoleError.mockRestore();
   });
 
+  // A co-managed seat technician reads only some of a client's documents. The documents card counts and names
+  // what the caller's document read scope admits, not every document associated with the client.
+  it('narrows the documents card by the caller\'s document read scope', async () => {
+    const { knex, statements } = recordingKnex(defaultRespond);
+    createTenantKnexMock.mockResolvedValue({ knex });
+    const apply = vi.fn((query: any, alias: string) => query.whereRaw(`${alias}.is_client_visible = true /* scoped */`));
+    documentReadScopeMock.mockResolvedValueOnce({ apply, applyToEntityFolders: vi.fn() });
+
+    const pulse = await getClientPulse(CLIENT_ID) as any;
+
+    expect(pulse.documents).toBeDefined();
+    expect(apply).toHaveBeenCalledWith(expect.anything(), 'd');
+    const documentStatements = statements.filter((sql) => sql.includes('from "documents" as "d"'));
+    expect(documentStatements).toHaveLength(2);
+    for (const sql of documentStatements) expect(sql).toContain('/* scoped */');
+  });
+
   it('still fails the whole snapshot when the client itself cannot be read', async () => {
     const { knex } = recordingKnex(() => []);
     createTenantKnexMock.mockResolvedValue({ knex });
@@ -160,5 +190,26 @@ describe('getClientPulse', () => {
     const result = await getClientPulse(CLIENT_ID) as any;
 
     expect(result.actionError).toBe('Client not found');
+  });
+
+  it('counts only distinct assignments that resolve to Active using tenant-local today', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-01T01:00:00.000Z'));
+    assignmentRows.timezone = 'America/Los_Angeles'; // tenant today is Apr 30 while UTC today is May 1
+    assignmentRows.rows = [
+      { contract_id: 'future', is_active: true, start_date: '2026-05-01', end_date: null, contract_status: 'active' },
+      { contract_id: 'arrived', is_active: true, start_date: '2026-04-30', end_date: null, contract_status: 'active' },
+      { contract_id: 'arrived', is_active: true, start_date: '2026-04-30', end_date: null, contract_status: 'active' },
+      { contract_id: 'draft', is_active: true, start_date: '2026-04-01', end_date: null, contract_status: 'draft' },
+    ];
+    const { knex } = recordingKnex(defaultRespond);
+    createTenantKnexMock.mockResolvedValue({ knex });
+
+    try {
+      const pulse = await getClientPulse(CLIENT_ID) as any;
+      expect(pulse.money.activeContractCount).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

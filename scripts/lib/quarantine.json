@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+
   "entries": [
     {
       "artifact": "teams-development-execution",
@@ -9,4 +10,5 @@
       "tracking": "F034/T028"
     }
   ]
+
 }

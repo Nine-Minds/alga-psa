@@ -1,11 +1,18 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { registerDefaultNodes } from '../../nodes/registerDefaultNodes';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getNodeTypeRegistry } from '../../registries/nodeTypeRegistry';
+import { runWithEvaluationRequestBudget } from '../../expressionEngine';
 import { applyTriggerPayloadMapping, simulateWorkflowDefinition } from '../simulator';
 import { buildSampleFromJsonSchema } from '../samplePayload';
 import type { WorkflowDefinition } from '../../types';
+import {
+  EvaluationBusyError,
+  getExpressionAdmissionStats,
+  resetExpressionAdmission,
+  runWithAdmission,
+} from '../../expressionEngine';
 
 const baseDefinition = (steps: unknown[]): WorkflowDefinition => ({
   id: 'wf-sim-test',
@@ -476,5 +483,75 @@ describe('buildSampleFromJsonSchema', () => {
     expect(sample.count).toBe(0);
     expect(sample.nested).toEqual({ flag: false });
     expect(sample.tags).toEqual(['sample-string']);
+  });
+});
+
+describe('simulateWorkflowDefinition expression admission', () => {
+  afterEach(() => resetExpressionAdmission());
+
+  const tryCatchAround = (steps: unknown[]) =>
+    baseDefinition([{ id: 'guard', type: 'control.tryCatch', try: steps, catch: [] }]);
+
+  it('fails closed with EvaluationBusyError (not a step failure) when no evaluation slot frees up', async () => {
+    resetExpressionAdmission({ maxConcurrency: 1, queueTimeoutMs: 20 });
+    let release!: () => void;
+    const holder = runWithAdmission({}, () => new Promise<void>((resolve) => (release = resolve)));
+    expect(getExpressionAdmissionStats().active).toBe(1);
+
+    // Wrapped in tryCatch on purpose: a busy evaluator must not be swallowed as an ordinary ExpressionError.
+    await expect(
+      simulateWorkflowDefinition({
+        definition: tryCatchAround([
+          { id: 'assign', type: 'transform.assign', config: { assign: { 'vars.x': { $expr: '1 + 1' } } } },
+        ]),
+        payload: {},
+      })
+    ).rejects.toBeInstanceOf(EvaluationBusyError);
+
+    release();
+    await holder;
+    expect(getExpressionAdmissionStats().active).toBe(0);
+  });
+
+  it('simulates normally and returns every slot when capacity is available', async () => {
+    resetExpressionAdmission({ maxConcurrency: 1, queueTimeoutMs: 20 });
+    const result = await simulateWorkflowDefinition({
+      definition: baseDefinition([
+        { id: 'a', type: 'transform.assign', config: { assign: { 'vars.x': { $expr: '1 + 1' } } } },
+        { id: 'b', type: 'transform.assign', config: { assign: { 'vars.y': { $expr: 'vars.x + 1' } } } },
+      ]),
+      payload: {},
+    });
+    expect(result.status).toBe('completed');
+    expect(result.finalVars).toMatchObject({ x: 2, y: 3 });
+    expect(getExpressionAdmissionStats().active).toBe(0);
+  });
+});
+
+describe('simulateWorkflowDefinition request-level expression ceiling', () => {
+  afterEach(() => resetExpressionAdmission());
+
+  it('ends a simulation that loops over many cheap expressions with an ExpressionError step failure (not a 429)', async () => {
+    let cpu = 0;
+    const result = await runWithEvaluationRequestBudget(
+      { cpuBudgetMs: 100, wallBudgetMs: 60_000, cpuNow: () => (cpu += 10) },
+      () =>
+        simulateWorkflowDefinition({
+          definition: baseDefinition([
+            {
+              id: 'loop',
+              type: 'control.forEach',
+              items: { $expr: 'payload.items' },
+              itemVar: 'item',
+              body: [{ id: 'assign', type: 'transform.assign', config: { assign: { 'vars.x': { $expr: '1 + 1' } } } }],
+            },
+          ]),
+          payload: { items: Array.from({ length: 90 }, (_, i) => i) },
+        })
+    );
+    expect(result.status).toBe('failed');
+    // surfaced as a failed step with the budget message, exactly like any other expression error
+    expect(result.errors[0]?.message).toMatch(/Request expression budget exceeded/);
+    expect(result.trace.some((entry: any) => entry.outcome === 'error')).toBe(true);
   });
 });

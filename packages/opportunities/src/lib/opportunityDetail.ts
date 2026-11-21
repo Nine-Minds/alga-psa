@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, type TenantDb } from '@alga-psa/db';
 import type { IOpportunityDetail, IOpportunityEvidence } from '@alga-psa/types';
 import { OpportunityModel } from '../models/opportunityModel';
 
@@ -7,6 +7,60 @@ function optionalIso(value: unknown): string | null | undefined {
   if (value === null) return null;
   if (value === undefined) return undefined;
   return value instanceof Date ? value.toISOString() : String(value);
+}
+
+type EvidenceWithCitation = IOpportunityEvidence & { ref_label?: string | null; ref_missing?: boolean };
+
+/**
+ * Active evidence with each cited interaction/document resolved by LEFT JOIN
+ * (tenant-constrained on every join), so a deleted or detached target yields
+ * `ref_missing` instead of an error. A document only resolves while it is
+ * still attached to this opportunity — the rung opens it from the deal's own
+ * document list.
+ */
+async function loadActiveEvidenceWithCitations(db: TenantDb, opportunityId: string): Promise<EvidenceWithCitation[]> {
+  const query = db.table('opportunity_evidence as oe')
+    .where({ 'oe.opportunity_id': opportunityId })
+    .whereNull('oe.corrected_at');
+  db.tenantJoin(query, 'interactions as ci', 'ci.interaction_id', 'oe.ref_id', {
+    type: 'left',
+    rootTenantColumn: 'oe.tenant',
+    on: (join) => join.andOnVal('oe.ref_type', '=', 'interaction').andOn('ci.opportunity_id', '=', 'oe.opportunity_id'),
+  });
+  db.tenantJoin(query, 'document_associations as cda', 'cda.document_id', 'oe.ref_id', {
+    type: 'left',
+    rootTenantColumn: 'oe.tenant',
+    on: (join) => join
+      .andOnVal('oe.ref_type', '=', 'document')
+      .andOnVal('cda.entity_type', '=', 'opportunity')
+      .andOn('cda.entity_id', '=', 'oe.opportunity_id'),
+  });
+  db.tenantJoin(query, 'documents as cd', 'cd.document_id', 'cda.document_id', {
+    type: 'left',
+    rootTenantColumn: 'cda.tenant',
+  });
+  const rows = await query
+    .select('oe.*', 'ci.title as interaction_title', 'cd.document_name as document_name', 'ci.interaction_id as resolved_interaction_id', 'cd.document_id as resolved_document_id')
+    .orderBy('oe.recorded_at', 'asc') as Array<Record<string, any>>;
+
+  const seen = new Set<string>();
+  const result: EvidenceWithCitation[] = [];
+  for (const row of rows) {
+    if (seen.has(row.evidence_id)) continue; // several associations must not duplicate a rung
+    seen.add(row.evidence_id);
+    const { interaction_title, document_name, resolved_interaction_id, resolved_document_id, ...evidence } = row;
+    let ref_label: string | null = null;
+    let ref_missing = false;
+    if (evidence.ref_type === 'interaction') {
+      ref_missing = !resolved_interaction_id;
+      ref_label = ref_missing ? null : interaction_title ?? null;
+    } else if (evidence.ref_type === 'document') {
+      ref_missing = !resolved_document_id;
+      ref_label = ref_missing ? null : document_name ?? null;
+    }
+    result.push({ ...(evidence as IOpportunityEvidence), ref_label, ref_missing });
+  }
+  return result;
 }
 
 export async function getOpportunityDetail(
@@ -31,10 +85,7 @@ export async function getOpportunityDetail(
           .first()
       : null,
     db.table('users').where({ user_id: opportunity.owner_id }).select('first_name', 'last_name').first(),
-    db.table('opportunity_evidence')
-      .where({ opportunity_id: opportunityId })
-      .whereNull('corrected_at')
-      .orderBy('recorded_at', 'asc') as unknown as Promise<IOpportunityEvidence[]>,
+    loadActiveEvidenceWithCitations(db, opportunityId),
     db.table('quotes')
       .where({ opportunity_id: opportunityId })
       .select('quote_id', 'quote_number', 'status', 'total_amount', 'currency_code', 'sent_at', 'accepted_at'),
@@ -68,7 +119,10 @@ export async function getOpportunityDetail(
           : index < furthestReached
             ? 'skipped' as const
             : 'pending' as const,
-        evidence: evidence.find((item) => item.checkpoint === checkpoint) ?? null,
+        // A cited declaration is the rung's headline evidence when one exists.
+        evidence: evidence.find((item) => item.checkpoint === checkpoint && item.ref_type)
+          ?? evidence.find((item) => item.checkpoint === checkpoint)
+          ?? null,
       })),
     ],
     linked_quotes: quotes.map((quote: any) => ({
