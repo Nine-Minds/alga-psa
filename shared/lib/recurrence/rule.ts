@@ -46,20 +46,20 @@ export const dateStringSchema = z
     return probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d;
   }, 'Not a valid calendar date');
 
-const intervalSchema = z.number().int().min(1).max(999);
+const intervalSchema = z.number().int().min(1).max(999).describe('Repeat every N units (days, weeks or months). Not used by yearly rules.');
 
 export const recurrenceEndSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('never') }),
-  z.object({ type: z.literal('onDate'), date: dateStringSchema }),
-  z.object({ type: z.literal('afterCount'), count: z.number().int().min(1).max(10000) }),
-]);
+  z.object({ type: z.literal('never') }).describe('The schedule never ends.'),
+  z.object({ type: z.literal('onDate'), date: dateStringSchema.describe('Last date, YYYY-MM-DD.') }).describe('Ends on a date.'),
+  z.object({ type: z.literal('afterCount'), count: z.number().int().min(1).max(10000).describe('Total number of occurrences.') }).describe('Ends after a number of occurrences.'),
+]).describe('When the recurrence stops.');
 
 const endField = recurrenceEndSchema.default({ type: 'never' });
 
 const dailyRuleSchema = z.object({
   frequency: z.literal('daily'),
   interval: intervalSchema,
-  weekdaysOnly: z.boolean().default(false),
+  weekdaysOnly: z.boolean().default(false).describe('Only weekdays (Mon-Fri); requires interval 1. Default false.'),
   end: endField,
 });
 
@@ -69,7 +69,8 @@ const weeklyRuleSchema = z.object({
   weekdays: z
     .array(weekdaySchema)
     .min(1, 'Choose at least one weekday')
-    .refine((days) => new Set(days).size === days.length, 'Weekdays must be unique'),
+    .refine((days) => new Set(days).size === days.length, 'Weekdays must be unique')
+    .describe('Weekdays it recurs on, unique, at least one.'),
   end: endField,
 });
 
@@ -96,9 +97,9 @@ const monthlyRuleSchema = z.object({
 const MAX_DAY_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 const yearlyRuleSchema = z.object({
-  frequency: z.literal('yearly'),
-  month: z.number().int().min(1).max(12),
-  day: z.number().int().min(1).max(31),
+  frequency: z.literal('yearly').describe('Every year, on the given month and day. Has no interval.'),
+  month: z.number().int().min(1).max(12).describe('Month of the year, 1-12.'),
+  day: z.number().int().min(1).max(31).describe('Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years).'),
   end: endField,
 });
 

@@ -19,7 +19,14 @@ import type {
   OutboundEmailDiagnosticsReport,
 } from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
+import { PROVIDER_SECRET_FIELDS, SECRET_MASK } from '@alga-psa/email/providerSecrets';
 import { connectionFingerprint, normalizeProviderSecretAliases } from '@alga-psa/core/providerConnectionIdentity';
+import {
+  deleteProviderSecretRefs,
+  persistProviderSecrets,
+  redactProviderConfigs,
+} from '@alga-psa/email/providerSecrets';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
   actionError,
   isActionMessageError,
@@ -32,10 +39,6 @@ type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromD
   defaultFromDomain?: string | null;
 };
 
-// getEmailSettings masks stored secrets as this sentinel so they are never
-// sent to the browser. On save it means "unchanged" — restore the real value.
-const SECRET_MASK = '***';
-const SECRET_FIELDS = ['password', 'apiKey'] as const;
 const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend', 'microsoft'] as const;
 const SECRET_FINGERPRINT = '__secretFingerprint';
 
@@ -76,41 +79,40 @@ function mergeProviderSecrets(
   for (const config of incoming) {
     const prior = existingById.get(`${config.providerType}:${config.providerId}`);
     let nextConfig: Record<string, any>;
-    let priorConfig: Record<string, unknown> = {};
+    let priorConfig: Record<string, any> = {};
     try {
       nextConfig = normalizeProviderSecretAliases(config.config ?? {}, config.providerType);
-      priorConfig = normalizeProviderSecretAliases(prior?.config ?? {}, prior?.providerType ?? config.providerType);
+      priorConfig = normalizeProviderSecretAliases(prior?.config ?? {}, config.providerType);
     } catch {
       return { error: { providerName: config.providerType } };
     }
-    const sameIdentity = Boolean(prior && connectionFingerprint(nextConfig, config.providerType, config.providerId) === connectionFingerprint(priorConfig, prior.providerType, prior.providerId));
+    const identity = connectionFingerprint(nextConfig, config.providerType, config.providerId);
+    const sameIdentity = Boolean(prior && priorConfig[SECRET_FINGERPRINT] === identity);
 
-    for (const field of SECRET_FIELDS) {
-      if (nextConfig[field] !== SECRET_MASK) continue;
-      const priorValue = priorConfig[field];
-      const priorFingerprint = priorConfig[SECRET_FINGERPRINT];
-      if (!priorValue || !sameIdentity || priorFingerprint !== connectionFingerprint(priorConfig, prior?.providerType, prior?.providerId)) {
+    for (const spec of PROVIDER_SECRET_FIELDS[config.providerType] ?? []) {
+      const raw = nextConfig[spec.field];
+      const unchanged = raw === undefined || raw === null || raw === SECRET_MASK;
+      const refs = priorConfig.secretRefs;
+      const hasPriorSecret = Boolean(
+        (refs && typeof refs === 'object' && typeof refs[spec.field] === 'string')
+        || [spec.field, ...spec.aliases].some(field => typeof priorConfig[field] === 'string'
+          && priorConfig[field].trim() !== '' && priorConfig[field] !== SECRET_MASK)
+      );
+      if ((raw === SECRET_MASK && !hasPriorSecret) || (unchanged && hasPriorSecret && !sameIdentity)) {
         return { error: { providerName: config.providerType } };
       }
-      nextConfig[field] = priorValue;
     }
 
-    const hasSecret = SECRET_FIELDS.some(field => Boolean(nextConfig[field]));
-    if (hasSecret) nextConfig[SECRET_FINGERPRINT] = connectionFingerprint(nextConfig, config.providerType, config.providerId);
+    const hasSecret = (PROVIDER_SECRET_FIELDS[config.providerType] ?? []).some(spec => {
+      const value = nextConfig[spec.field];
+      return typeof value === 'string' && value.trim() !== '';
+    });
+    if (hasSecret) nextConfig[SECRET_FINGERPRINT] = identity;
     else delete nextConfig[SECRET_FINGERPRINT];
     configs.push({ ...config, config: nextConfig });
   }
   return { configs };
 }
-
-function sanitizeProviderConfig(config: EmailProviderConfig): EmailProviderConfig {
-  const safeConfig = normalizeProviderSecretAliases(config.config ?? {}, config.providerType);
-  delete safeConfig[SECRET_FINGERPRINT];
-  safeConfig.password = safeConfig.password ? SECRET_MASK : '';
-  safeConfig.apiKey = safeConfig.apiKey ? SECRET_MASK : '';
-  return { ...config, config: safeConfig };
-}
-
 function extractDomain(address?: string | null): string | null {
   if (!address) return null;
   const parts = address.split('@');
@@ -136,8 +138,11 @@ async function toEmailSettingsView(
   tenant: string
 ): Promise<EmailSettingsView> {
   const tenantCompanyName = await resolveTenantCompanyName(knex, tenant);
+  const editable = withEditableProviderConfigs(settings);
   return {
-    ...withEditableProviderConfigs(settings),
+    ...editable,
+    // Final client-facing gate: no secret, alias or secretRefs leaves here.
+    providerConfigs: redactProviderConfigs(editable.providerConfigs),
     tenantCompanyName,
     effectiveNotificationFrom: resolveDefaultFromAddress(settings, tenantCompanyName),
   };
@@ -181,10 +186,10 @@ export const getEmailSettings = withAuth(async (
       return toEmailSettingsView(defaultSettings, knex, tenant || '');
     }
 
-    // Don't expose sensitive data like passwords and API keys in full
+    // Secret values, aliases, references, and fingerprints stay server-side.
     const sanitizedSettings = {
       ...settings,
-      providerConfigs: settings.providerConfigs.map(sanitizeProviderConfig)
+      providerConfigs: redactProviderConfigs(settings.providerConfigs),
     };
 
     return toEmailSettingsView(sanitizedSettings, knex, tenant || '');
@@ -295,18 +300,8 @@ export const updateEmailSettings = withAuth(async (
       return actionError(`Cannot change transport. These sender addresses would no longer work: ${invalidSenders.join(', ')}`, 'msp/email-providers:errors.settings.transportInvalidatesSenders', { senders: invalidSenders.join(', ') });
     }
 
-    const mergedSettings: TenantEmailSettings = {
-      tenantId: tenant || '',
-      defaultFromDomain: nextDefaultFromDomain,
-      customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
-      emailProvider: selectedProviderType,
-      providerConfigs: normalizedProviderConfigs,
-      trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
-      maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
-      createdAt: existingSettings?.createdAt ?? now,
-      updatedAt: now
-    };
-
+    // All validation must finish before any secret is written (the secret store
+    // is outside the DB transaction, so a rejected save must never reach it).
     // Reject malformed sender data before it persists: a junk config.from
     // propagates into default_from_domain and every synthesized fallback sender.
     // Only the fields present in this update are checked, so tenants carrying
@@ -335,11 +330,36 @@ export const updateEmailSettings = withAuth(async (
         );
       }
     }
-    const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
+    const targetDomain = nextDefaultFromDomain?.trim().toLowerCase();
     // Same schema as the address checks: a domain is valid iff an address on it is.
     if (hasOwnUpdate(updates, 'defaultFromDomain') && targetDomain && !isValidEmail(`sender@${targetDomain}`)) {
       return actionError('Outbound sending domain must be a valid domain (e.g. example.com)', 'msp/email-providers:errors.settings.outboundDomainInvalid');
     }
+
+    // Secrets go to the store first, under new versioned names; the DB only gets refs.
+    const secretProvider = await getSecretProviderInstance();
+    const persisted = await persistProviderSecrets(
+      tenant || '',
+      normalizedProviderConfigs,
+      existingSettings?.providerConfigs,
+      secretProvider
+    );
+
+    // Everything between the secret write and the commit is inside this try so a
+    // failure anywhere in it removes the newly written secrets.
+    try {
+    const mergedSettings: TenantEmailSettings = {
+      tenantId: tenant || '',
+      defaultFromDomain: nextDefaultFromDomain,
+      customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
+      emailProvider: selectedProviderType,
+      providerConfigs: persisted.configs,
+      trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
+      maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
+      createdAt: existingSettings?.createdAt ?? now,
+      updatedAt: now
+    };
+
     // Prepare data for database
     const settingsData = {
       tenant: tenant,
@@ -352,29 +372,38 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
-    await knex.transaction(async (trx) => {
-      const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');
+      await knex.transaction(async (trx) => {
+        const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');
 
-      // Check if settings exist
-      const existing = await settingsTable().first();
+        // Check if settings exist
+        const existing = await settingsTable().first();
 
-      if (existing) {
-        // Update settings and transport-specific sender links together.
-        await settingsTable().update(settingsData);
-      } else {
-        await settingsTable()
-          .insert({
-            ...settingsData,
-            created_at: now
-          });
-      }
+        if (existing) {
+          // Update settings and transport-specific sender links together.
+          await settingsTable().update(settingsData);
+        } else {
+          await settingsTable()
+            .insert({
+              ...settingsData,
+              created_at: now
+            });
+        }
 
-      if (selectedProviderType.toLowerCase() !== 'microsoft') {
-        await tenantDb(trx, tenant).table('email_sender_addresses')
-          .whereNotNull('microsoft_provider_id')
-          .update({ microsoft_provider_id: null, updated_at: now });
-      }
-    });
+        if (selectedProviderType.toLowerCase() !== 'microsoft') {
+          await tenantDb(trx, tenant).table('email_sender_addresses')
+            .whereNotNull('microsoft_provider_id')
+            .update({ microsoft_provider_id: null, updated_at: now });
+        }
+      });
+    } catch (error) {
+      // The save did not commit: drop the secrets written for it. The previous
+      // credentials were never replaced, so the live configuration is intact.
+      await deleteProviderSecretRefs(tenant || '', persisted.committedRefs, secretProvider);
+      throw error;
+    }
+
+    // Committed: the replaced secrets are unreferenced now.
+    await deleteProviderSecretRefs(tenant || '', persisted.staleRefs, secretProvider);
 
     // Refresh any process-local singleton immediately. TenantEmailService also
     // checks persisted settings before every send, covering other processes and

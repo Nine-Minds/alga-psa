@@ -9,7 +9,7 @@ If you want a turnkey on-premise install instead of running Docker Compose yours
 ## Prerequisites
 
 - Docker Engine 24.0.0 or later
-- Docker Compose v2.20.0 or later
+- Docker Compose v2.39.4 or later
 - Git
 - Text editor for configuration files
 
@@ -245,7 +245,7 @@ sudo iptables -I DOCKER-USER -i eth0 -p tcp -m conntrack --ctorigdstport 5432 \
 
 #### Changing published ports in your own override file
 
-Override files and `extends` add to a service's `ports:` list. They never replace it. To remove a published port or replace the list, use `!reset` or `!override`. Both need Docker Compose 2.24 or later:
+Override files and `extends` add to a service's `ports:` list. They never replace it. To remove a published port or replace the list, use `!reset` or `!override`. `!reset` needs Docker Compose 2.24 or later; `!override` needs 2.24.4 or later:
 
 ```yaml
 # docker-compose.local.yaml
@@ -259,7 +259,7 @@ services:
 
 Add your file after the other `-f` files, and keep `docker-compose.expose-infra.yaml` last if you use it.
 
-The source-built production overlay, `docker-compose.prod.yaml`, uses `!reset` to publish no database or cache ports. It requires Compose 2.24 or later. The prebuilt files do not use `!reset`, so the v2.20 minimum above still applies to them.
+The source-built production overlay, `docker-compose.prod.yaml`, uses `!reset` to publish no database or cache ports. Use Compose 2.39.4 or later for all source-built and prebuilt stacks because their hardening policy uses `security_opt: !override` to prevent duplicate inherited options.
 
 #### Maintenance without host ports
 
@@ -312,6 +312,50 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 - The application’s local storage provider writes to `/data/files` inside the server container. Using the named volume `files_data` keeps those assets across restarts without host-permission tweaks.
 - `docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image down` followed by `... up -d` is safe for restarts. Avoid adding `-v` unless you explicitly intend to wipe Postgres/files volumes.
 - To inspect the volume contents from the host, use `docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data busybox ls /var/lib/postgresql/data` (replace the volume name if you changed `APP_NAME` or pass `-p`).
+
+## Container user
+
+The server, setup, workflow-worker and email-service containers, and the compose Redis container, run as uid 1000 (`node`) instead of root. Every service also sets `no-new-privileges`, and the long-running non-root application containers drop all Linux capabilities.
+
+A short-lived `runtime-permissions` container runs first on every `docker compose up`. It is the only application-image container that runs as root, and it holds only the capabilities it needs to change file ownership. It:
+
+- changes ownership of the `files_data` volume to uid 1000,
+- sets the owner and mode of the files in `./secrets` to `1000:1000` and `0600`, and
+- repairs the tenant secret store under `secrets/tenants` (owner uid 1000, directories `0700`, files `0600`).
+
+Each step only touches entries that are not already correct, so a second run changes nothing.
+
+### Upgrading
+
+On the first start after upgrading, `runtime-permissions` changes the owner of the files in `./secrets` on the host. Other host users that read those files, for example a backup job that runs as an unprivileged user, lose access unless they run as root or uid 1000. If your login uid is not 1000, use `sudo` to read or edit the files from then on.
+
+To make the change yourself instead:
+
+```bash
+sudo chown -R 1000:1000 secrets
+sudo find secrets -maxdepth 1 -type f -exec chmod 600 {} +
+scripts/repair-secret-permissions.sh --apply --path secrets/tenants --uid 1000
+```
+
+If a file cannot be changed (some network and desktop-virtualized file systems refuse `chown`), `runtime-permissions` stops with an error that names the file, and the application services do not start.
+
+Uploaded files now go to the `files_data` volume (`STORAGE_LOCAL_BASE_PATH=/data/files`). Earlier releases wrote uploads from the prebuilt server image into the container layer, so they were lost when the container was recreated. Files uploaded by earlier releases are not migrated.
+
+### Snap-installed Docker
+
+Docker installed from the snap package applies an AppArmor profile that rejects `no-new-privileges`, so every container fails to start. Check how Docker is installed:
+
+```bash
+snap list docker
+```
+
+If it is listed, turn the option off for that host in `server/.env` (or your shell):
+
+```bash
+ALGA_NO_NEW_PRIVILEGES=false
+```
+
+Leave the variable unset everywhere else. The default is `true`.
 
 ## Monitoring
 
@@ -600,6 +644,31 @@ The stack refuses to start in three cases:
 - `POSTGRES_HOST_AUTH_METHOD=trust is not allowed`: the postgres container found that environment value. Remove it or set it to `md5`.
 - `no postgres password is available`: the volume still has legacy entries, and `secrets/postgres_password` is empty or missing. Restore the secret and start again.
 - `pg_hba.conf has rules that do not require a password`: `setup` found a rule without a password after Postgres started. Recreate the `postgres` container so it repairs the file, or fix the rule by hand as described above.
+
+### PgBouncer authentication (upgrading from earlier versions)
+
+PgBouncer now enforces `md5` password authentication on every connection. The `postgres` superuser has been removed from PgBouncer's `userlist.txt`; only `app_user` and `hocuspocus_user` are listed there.
+
+**What this means for external connections:**
+
+- **Application connections** go through PgBouncer (port 6432) using `app_user`. Nothing changes for the running stack itself.
+- **Administrative connections** (psql, migrations, schema inspection) must connect directly to Postgres on port 5432, not through PgBouncer. Use `postgres` or another superuser on the direct port.
+- **External database tools** (TablePlus, DBeaver, pg_dump) that previously connected as `postgres` through PgBouncer must switch to either `app_user` through PgBouncer, or any superuser directly on port 5432.
+
+**Developers running the server outside Docker:**
+
+If you run `server` on the host rather than in a container, set two additional environment variables in `server/.env` so the server can reach Postgres directly for admin operations:
+
+```env
+DB_HOST_ADMIN=127.0.0.1
+DB_PORT_ADMIN=5432
+```
+
+`DB_HOST_ADMIN` and `DB_PORT_ADMIN` default to `DB_HOST` and `DB_PORT` (the PgBouncer address) when not set, which prevents migrations and admin queries that require a direct superuser connection. Setting them explicitly routes those operations to Postgres while keeping ordinary queries through PgBouncer.
+
+**Upgrading an existing install:**
+
+No data migration is required. Run `docker compose ... up -d --build` with your usual Compose files; the PgBouncer container rebuilds its `userlist.txt` automatically. After the upgrade, test any external tools that connect through port 6432 and update their credentials to `app_user` if they were using `postgres`.
 
 ### Database image changes
 

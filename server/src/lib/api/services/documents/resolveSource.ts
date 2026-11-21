@@ -1,19 +1,23 @@
 /**
- * Turns the request `source` (url | base64) into `{ bytes, fileName, mimeType }`
- * for the upload core. All failures are ValidationErrors (HTTP 400) whose
- * messages name the cause but never echo a URL path/query (signed URLs are
- * credentials).
+ * Turns the request `source` (url | base64) into `{ body, fileName, mimeType }` for the upload
+ * core. A url source is a stream (byte guard + timeouts, piped into the ingest pipeline); a
+ * base64 source is the one deliberately buffered path, with its own named cap. Failures are
+ * ValidationErrors (HTTP 400), or PayloadTooLargeError (413) for size, whose messages name the
+ * cause but never echo a URL path/query (signed URLs are credentials).
+ *
+ * The MIME returned is only the *declared* type: the ingest pipeline sniffs the bytes and decides.
  */
-import { fileTypeFromBuffer } from 'file-type';
-import { getStorageConfig } from '@alga-psa/storage/config/storage';
-import { ValidationError } from '../../middleware/apiMiddleware';
+import type { Readable } from 'node:stream';
+import { getMaxUploadBytes } from './uploadLimits';
+import { effectiveBufferedCap } from '@alga-psa/storage/ingest/bufferedCap';
+import { LengthRequiredError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
 import type { Knex } from 'knex';
 import {
   FetchHostNotAllowedError,
   UnsafeUrlError,
   UrlFetchError,
   createHostPolicy,
-  safeFetch,
+  safeFetchStream,
   type SafeFetchDeps,
 } from '../../../net/safeFetch';
 import { loadEffectiveFetchHosts } from './fetchHostSettings';
@@ -31,7 +35,8 @@ export interface ResolveSourceInput {
 export interface ResolvedFile {
   fileName: string;
   mimeType: string;
-  bytes: Buffer;
+  /** A Buffer for base64 sources; a byte-guarded stream for url sources. */
+  body: Buffer | Readable;
 }
 
 /** Stable `code` on the 400 returned when a URL source's host is not on the tenant allowlist. */
@@ -59,8 +64,77 @@ export class FetchHostNotAllowedValidationError extends ValidationError {
 
 export interface ResolveSourceDeps {
   fetchDeps?: SafeFetchDeps;
-  /** Override the size cap (tests). Defaults to the default storage provider's maxFileSize. */
+  /** Override the provider size cap (tests). Defaults to the default storage provider's maxFileSize. */
   maxBytes?: number;
+  /** Override the url fetch timeouts (tests). */
+  urlTimeouts?: { connectTimeoutMs?: number; totalTimeoutMs?: number };
+}
+
+/**
+ * A base64 source is a JSON string that is parsed, decoded and held whole, so it is capped well
+ * below the provider max (decoded bytes; the encoded form is a third larger). Files above this
+ * go through a url source, the chunked upload session API or (tickets) multipart.
+ */
+export const MAX_BASE64_SOURCE_BYTES = 25 * 1024 * 1024;
+
+/** Slack on the raw JSON string for line wrapping before the exact encoded-length check. */
+const BASE64_WHITESPACE_SLACK = 1.05;
+
+/**
+ * url sources stream, so the connect timeout is per hop as in safeFetch, but the total budget
+ * must cover the whole transfer of a provider-max file (500 MB in 10 minutes needs ~0.8 MB/s).
+ */
+export const URL_SOURCE_CONNECT_TIMEOUT_MS = 15_000;
+export const URL_SOURCE_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
+
+const LARGE_FILE_HINT =
+  'To attach a larger file use a url source (an allowed https download host), or the chunked upload session API (POST /api/documents/uploads, then PUT chunks and POST .../complete); tickets also accept multipart/form-data at /api/v1/tickets/{id}/documents.';
+
+/** Encoded (base64) length of `decodedBytes`, padding included. */
+export function base64EncodedLength(decodedBytes: number): number {
+  return Math.ceil(decodedBytes / 3) * 4;
+}
+
+/** The decoded-size cap that applies to a base64 source. */
+export function base64SourceCap(providerMax: number): number {
+  return effectiveBufferedCap(MAX_BASE64_SOURCE_BYTES, providerMax, 'MAX_BASE64_SOURCE_BYTES');
+}
+
+/** Room in a JSON attach request for everything but the base64 string (entity ids, names, source wrapper). */
+export const JSON_ENVELOPE_BYTES = 64 * 1024;
+
+function base64TooLarge(cap: number): PayloadTooLargeError {
+  return new PayloadTooLargeError(
+    `base64 sources are limited to ${formatLimit(cap)} (about ${formatLimit(base64EncodedLength(cap))} encoded). ${LARGE_FILE_HINT}`,
+    [{ path: ['source'], message: `base64 content exceeds ${formatLimit(cap)}` }],
+  );
+}
+
+/**
+ * 413 for a base64 body whose encoded size is past `cap`; checked on lengths only, before
+ * anything is decoded (and before whitespace is stripped, via a slack on the raw length).
+ */
+export function assertBase64EncodedWithinCap(rawLength: number, cap: number, compactLength?: number): void {
+  const encodedLimit = base64EncodedLength(cap);
+  const over =
+    compactLength === undefined ? rawLength > encodedLimit * BASE64_WHITESPACE_SLACK : compactLength > encodedLimit;
+  if (over) throw base64TooLarge(cap);
+}
+
+/**
+ * The JSON attach request, before `req.json()` buffers it: 411 when no Content-Length bounds the
+ * body, 413 when it is past the encoded cap plus whitespace slack plus the fixed JSON envelope
+ * (so a file exactly at the cap is accepted; the exact decoded check follows in resolveSource).
+ */
+export function assertJsonBodyWithinCap(contentLength: string | null, cap: number): void {
+  if (contentLength === null || !/^\d+$/.test(contentLength.trim())) {
+    throw new LengthRequiredError(
+      `JSON requests must declare a Content-Length (the body is held in memory; base64 sources are limited to ${formatLimit(cap)}). ${LARGE_FILE_HINT}`,
+      [{ path: ['body'], message: 'Content-Length header is required' }],
+    );
+  }
+  const limit = Math.ceil(base64EncodedLength(cap) * BASE64_WHITESPACE_SLACK) + JSON_ENVELOPE_BYTES;
+  if (Number(contentLength) > limit) throw base64TooLarge(cap);
 }
 
 const MAX_FILE_NAME_BYTES = 255;
@@ -90,17 +164,11 @@ function mimeFromExtension(fileName: string): string | null {
   const ext = /\.([A-Za-z0-9]+)$/.exec(fileName)?.[1]?.toLowerCase();
   return ext ? (TEXT_EXTENSION_MIME[ext] ?? null) : null;
 }
-/** Sniffed container formats that many specific types (docx, xlsx, doc, ...) share; a declared type is more precise. */
-const CONTAINER_SNIFF_TYPES = new Set(['application/zip', 'application/x-cfb']);
-
 function fail(source: string, message: string, extra?: Record<string, unknown>): never {
   throw new ValidationError('Validation failed', [{ path: [source], message, ...extra }]);
 }
 
-export async function getMaxUploadBytes(): Promise<number> {
-  const config = await getStorageConfig();
-  return config.providers[config.defaultProvider].maxFileSize;
-}
+export { getMaxUploadBytes };
 
 function formatLimit(bytes: number): string {
   const mb = bytes / (1024 * 1024);
@@ -155,47 +223,32 @@ function fileNameFromUrlPath(rawUrl: string): string | null {
 
 /** Strict base64: standard alphabet, correct padding, no stray characters. Whitespace (line wrapping) is ignored. */
 export function decodeBase64Strict(content: string, maxBytes: number): Buffer {
+  // Length checks first: neither the whitespace strip nor the decode runs on an over-cap body.
+  assertBase64EncodedWithinCap(content.length, maxBytes);
   const compact = content.replace(/[\r\n\t ]+/g, '');
+  assertBase64EncodedWithinCap(content.length, maxBytes, compact.length);
   if (compact.length === 0) {
     fail('source', 'base64 content is empty');
   }
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact) || compact.length % 4 !== 0) {
     fail('source', 'base64 content is not valid standard base64 (invalid characters or padding)');
   }
-  const decodedEstimate = Math.ceil((compact.length * 3) / 4);
-  if (decodedEstimate > maxBytes) {
-    fail('source', `File size exceeds limit of ${formatLimit(maxBytes)}`);
-  }
-  return Buffer.from(compact, 'base64');
-}
-
-async function sniffMime(bytes: Buffer): Promise<string | null> {
-  try {
-    const detected = await fileTypeFromBuffer(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
-    return detected?.mime ?? null;
-  } catch {
-    return null;
-  }
+  const decoded = Buffer.from(compact, 'base64');
+  // The encoded-length checks are only estimates (padding); the decoded size is the exact cap.
+  if (decoded.length > maxBytes) throw base64TooLarge(maxBytes);
+  return decoded;
 }
 
 /**
- * Decide the MIME type. The bytes win over claims: a sniffed type overrides a declared
- * or Content-Type value so the storage allowlist judges what the file actually is.
- * (Generic container sniffs such as zip yield to a more specific declared type.)
+ * The type the caller (or the remote server) claims. A claim only: the ingest pipeline sniffs the
+ * bytes and a sniffed type wins over this one before the allowlist judges it.
  */
-async function resolveMimeType(
-  bytes: Buffer,
-  fileName: string,
-  explicit?: string,
-  headerType?: string | null,
-): Promise<string> {
+function declaredMimeType(fileName: string, explicit?: string, headerType?: string | null): string {
   const declared =
     explicit?.trim() ||
     (headerType ? headerType.split(';')[0]!.trim().toLowerCase() : '') ||
     '';
   const declaredUsable = declared && declared !== GENERIC_MIME ? declared : '';
-  const sniffed = await sniffMime(bytes);
-  if (sniffed && !(CONTAINER_SNIFF_TYPES.has(sniffed) && declaredUsable)) return sniffed;
   return declaredUsable || mimeFromExtension(fileName) || GENERIC_MIME;
 }
 
@@ -204,7 +257,7 @@ export async function resolveSource(
   deps: ResolveSourceDeps = {},
   tenantCtx?: ResolveSourceTenant,
 ): Promise<ResolvedFile> {
-  const maxBytes = deps.maxBytes ?? (await getMaxUploadBytes());
+  const providerMax = deps.maxBytes ?? (await getMaxUploadBytes());
   const { source } = input;
 
   if (source.type === 'base64') {
@@ -213,8 +266,8 @@ export async function resolveSource(
     }
     const fileName = sanitizeFileName(input.fileName);
     if (!fileName) fail('file_name', 'file_name is not usable after sanitising');
-    const bytes = decodeBase64Strict(source.content, maxBytes);
-    return { fileName, bytes, mimeType: await resolveMimeType(bytes, fileName, input.mimeType) };
+    const bytes = decodeBase64Strict(source.content, base64SourceCap(providerMax));
+    return { fileName, body: bytes, mimeType: declaredMimeType(fileName, input.mimeType) };
   }
 
   if (!tenantCtx) {
@@ -225,24 +278,20 @@ export async function resolveSource(
 
   let fetched;
   try {
-    fetched = await safeFetch(source.url, { maxBytes, hostPolicy }, deps.fetchDeps);
+    // The byte guard aborts the transfer once the provider max is exceeded (Content-Length is
+    // only an early out); the timeouts bound connect and the whole download.
+    fetched = await safeFetchStream(
+      source.url,
+      {
+        maxBytes: providerMax,
+        hostPolicy,
+        connectTimeoutMs: deps.urlTimeouts?.connectTimeoutMs ?? URL_SOURCE_CONNECT_TIMEOUT_MS,
+        totalTimeoutMs: deps.urlTimeouts?.totalTimeoutMs ?? URL_SOURCE_TOTAL_TIMEOUT_MS,
+      },
+      deps.fetchDeps,
+    );
   } catch (error) {
-    if (error instanceof FetchHostNotAllowedError) {
-      // Hostname only: the path/query of a signed URL is the credential.
-      console.warn(
-        `[documents] URL source refused: host not on the tenant download allowlist tenant=${tenantCtx.tenant} host=${error.hostname}${error.viaRedirect ? ' (via redirect)' : ''}`,
-      );
-      throw new FetchHostNotAllowedValidationError(error.hostname, error.viaRedirect);
-    }
-    if (error instanceof UnsafeUrlError) fail('source', error.message);
-    if (error instanceof UrlFetchError) {
-      fail(
-        'source',
-        error.reason === 'too_large' ? `${error.message} (limit ${formatLimit(maxBytes)})` : error.message,
-        error.upstreamStatus !== undefined ? { upstream_status: error.upstreamStatus } : undefined,
-      );
-    }
-    throw error;
+    throw mapFetchError(error, tenantCtx.tenant, providerMax);
   }
 
   const candidate =
@@ -251,12 +300,45 @@ export async function resolveSource(
     fileNameFromUrlPath(source.url);
   const fileName = candidate ? sanitizeFileName(candidate) : '';
   if (!fileName) {
+    fetched.stream.destroy();
     fail('file_name', 'Could not determine a file name from the URL; pass file_name');
   }
 
   return {
     fileName,
-    bytes: fetched.bytes,
-    mimeType: await resolveMimeType(fetched.bytes, fileName, input.mimeType, fetched.headers.get('content-type')),
+    body: fetched.stream,
+    mimeType: declaredMimeType(fileName, input.mimeType, fetched.headers.get('content-type')),
   };
+}
+
+/**
+ * Translate a failed fetch (before the body, or surfacing mid-stream from the ingest) into the
+ * API error. `too_large` is a 413; everything else about the URL is a 400.
+ */
+export function mapFetchError(error: unknown, tenant: string, providerMax: number): unknown {
+  if (error instanceof FetchHostNotAllowedError) {
+    // Hostname only: the path/query of a signed URL is the credential.
+    console.warn(
+      `[documents] URL source refused: host not on the tenant download allowlist tenant=${tenant} host=${error.hostname}${error.viaRedirect ? ' (via redirect)' : ''}`,
+    );
+    return new FetchHostNotAllowedValidationError(error.hostname, error.viaRedirect);
+  }
+  if (error instanceof UnsafeUrlError) {
+    return new ValidationError('Validation failed', [{ path: ['source'], message: error.message }]);
+  }
+  if (error instanceof UrlFetchError) {
+    if (error.reason === 'too_large') {
+      return new PayloadTooLargeError(`${error.message} (limit ${formatLimit(providerMax)})`, [
+        { path: ['source'], message: error.message },
+      ]);
+    }
+    return new ValidationError('Validation failed', [
+      {
+        path: ['source'],
+        message: error.message,
+        ...(error.upstreamStatus !== undefined ? { upstream_status: error.upstreamStatus } : {}),
+      },
+    ]);
+  }
+  return error;
 }

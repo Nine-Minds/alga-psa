@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
@@ -50,10 +51,10 @@ describe('inbound email rule client matchers (integration)', () => {
       [names.inactive, ids.inactive],
     ] as const;
     for (const [name, clientId] of assets) {
-      await db('assets').insert(pickColumns(assetColumns, {
+      await insertTestAssets(db, pickColumns(assetColumns, {
         tenant, asset_id: randomUUID(), type_id: randomUUID(), client_id: clientId, company_id: clientId,
         asset_tag: randomUUID(), asset_type: 'workstation', name, status: 'active',
-      }));
+      }) as { tenant: string; asset_tag: string });
     }
     const contactColumns = await db('contacts').columnInfo();
     const contacts = [

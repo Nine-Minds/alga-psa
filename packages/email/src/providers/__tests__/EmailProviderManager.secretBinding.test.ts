@@ -33,6 +33,24 @@ describe('EmailProviderManager stored-secret identity gate', () => {
     expect(createTransportMock).not.toHaveBeenCalled();
   });
 
+  it('applies the identity gate to credentials already held by secret reference', async () => {
+    const original = { host: 'smtp.original.test', port: 587, username: 'mailer' };
+    const manager = new EmailProviderManager();
+    const createProvider = vi.spyOn(manager as any, 'createProvider');
+
+    await expect(manager.initialize({
+      tenantId: 'tenant-1', emailProvider: 'smtp',
+      providerConfigs: [{ providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
+        ...original,
+        host: 'smtp.changed-in-database.test',
+        secretRefs: { password: 'email_outbound_smtp_password_00000000-0000-0000-0000-000000000000' },
+        __secretFingerprint: connectionFingerprint(original, 'smtp', 'smtp-1'),
+      } }],
+    } as any)).rejects.toMatchObject({ errorCode: 'SECRET_IDENTITY_MISMATCH' });
+    expect(createProvider).not.toHaveBeenCalled();
+    expect(createTransportMock).not.toHaveBeenCalled();
+  });
+
   it('upgrades a legacy persisted credential before strict initialization', async () => {
     const legacy: any = { providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
       host: 'smtp.test', port: 587, username: 'mailer', password: 'credential-value', from: 'mailer@example.test',

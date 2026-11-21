@@ -472,18 +472,37 @@
         "noLimit": "Ingen gräns"
       },
       "actions": {
-        "save": "Spara tjänsteregler"
+        "save": "Spara tjänsteregler",
+        "savePortalBooking": "Spara portalens bokningsinställningar"
       },
       "feedback": {
         "selectServiceError": "Välj en tjänst",
         "saveSuccess": "Tjänstereglerna har sparats",
         "saveError": "Det gick inte att spara tjänstereglerna",
         "deleteSuccess": "Tjänstereglerna har raderats",
-        "deleteError": "Det gick inte att radera tjänstereglerna"
+        "deleteError": "Det gick inte att radera tjänstereglerna",
+        "portalBookingSaveSuccess": "Kundportalens bokningsinställningar har sparats"
       },
       "deleteDialog": {
         "title": "Radera tjänsteregler",
         "message": "Är du säker på att du vill radera reglerna för {{serviceName}}? Åtgärden kan inte ångras."
+      },
+      "portalBooking": {
+        "title": "Bokning i kundportalen",
+        "description": "Vad kunderna ser när de begär en tid via portalen."
+      },
+      "portalHideContractServices": {
+        "label": "Visa endast konfigurerade bokningsbara tjänster i kundportalen",
+        "help": "Döljer de tjänster kunderna får via sina avtal, så att portalen bara listar de tjänster som konfigurerats ovan med ”Tillåt bokning utan avtal”."
+      },
+      "portalDefaultService": {
+        "label": "Standardtjänst för bokning",
+        "none": "Ingen standard – kunden väljer",
+        "help": "Förvalt för kunderna så att de aldrig behöver välja en tjänst. Välj en av dina konfigurerade tjänster – innan dess förväljs ingenting."
+      },
+      "portalShowServiceRates": {
+        "label": "Visa tjänstetaxor för kunder",
+        "help": "När detta är av ser kunderna aldrig ett pris för en tjänst vid bokning."
       }
     },
     "exceptions": {

@@ -180,6 +180,24 @@ describe('InvoicePreviewPanel', () => {
     expect(templateRendererMock.mock.calls.at(-1)?.[0]?.template?.template_id).toBe('tpl-resolved');
   });
 
+  it('shows the invoice as the pages it prints as, keeping the paper shell for the fallback', async () => {
+    // A layout with page breaks has to read as separate sheets here, not as one roll.
+    render(
+      <InvoicePreviewPanel
+        invoiceId="inv-1"
+        templates={defaultTemplates as any}
+        selectedTemplateId={null}
+        onTemplateChange={vi.fn()}
+        isFinalized={false}
+      />
+    );
+
+    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
+    const props = templateRendererMock.mock.calls.at(-1)?.[0];
+    expect(props?.paginated).toBe(true);
+    expect(typeof props?.fallbackWrapper).toBe('function');
+  });
+
   it('keeps an explicit template selection over the resolved invoice template', async () => {
     render(
       <InvoicePreviewPanel

@@ -41,6 +41,7 @@ import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeSc
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob } from './handlers/cleanupWebhookDeliveriesJob';
+import { cleanupInboundEmailQuarantineJob } from './handlers/cleanupInboundEmailQuarantineJob';
 import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHandler';
 import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRetryHandler';
 
@@ -70,7 +71,9 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 export type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean;
+      /** Run only for tenants the registered capability filter serves (same contract as a JobDescriptor). */
+      capability?: string }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
@@ -167,6 +170,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
+  'cleanup-inbound-email-quarantine': { scope: 'system', run: () => cleanupInboundEmailQuarantineJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },

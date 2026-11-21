@@ -57,7 +57,9 @@ export function providerSecretFingerprintMatches(provider: { providerType: strin
   } catch {
     return false;
   }
-  const hasSecret = Boolean(config.password || config.apiKey);
+  const refs = config.secretRefs;
+  const hasSecret = Boolean(config.password || config.apiKey
+    || (typeof refs === 'object' && refs !== null && ('password' in refs || 'apiKey' in refs)));
   if (!hasSecret) return true;
   return typeof config.__secretFingerprint === 'string'
     && config.__secretFingerprint === connectionFingerprint(config, provider.providerType, provider.providerId);

@@ -9,9 +9,6 @@ const baseInvoice = {
   client_id: '11111111-1111-4111-8111-111111111111',
   invoice_date: '2026-08-06',
   due_date: '2026-09-05',
-  subtotal: 7500,
-  tax: 0,
-  total_amount: 7500,
   status: 'draft',
 };
 

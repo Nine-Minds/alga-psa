@@ -7,6 +7,7 @@ const withTransactionMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
 const applyTicketVisibilityFilterMock = vi.fn((query) => query);
 const hasPermissionMock = vi.fn(async () => true);
+const hasBillingReadPermissionMock = vi.fn(async () => true);
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -27,6 +28,13 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The invoice tile and the invoice/quote activity ride on the portal billing
+// gate, which lives in @alga-psa/billing and is re-exported here.
+vi.mock('./clientBillingPermissions', () => ({
+  hasClientBillingReadPermission: (...args: any[]) => hasBillingReadPermissionMock(...args),
+  getClientIdFromPortalUser: vi.fn(),
+}));
+
 vi.mock('@alga-psa/tickets/lib', () => ({
   applyTicketVisibilityFilter: (...args: any[]) => applyTicketVisibilityFilterMock(...args),
 }));
@@ -42,6 +50,7 @@ describe('client portal dashboard visibility enforcement', () => {
     vi.clearAllMocks();
     applyTicketVisibilityFilterMock.mockImplementation((query) => query);
     hasPermissionMock.mockImplementation(async () => true);
+    hasBillingReadPermissionMock.mockImplementation(async () => true);
     currentUser = {
       user_id: 'client-user-1',
       user_type: 'client',
@@ -154,12 +163,162 @@ describe('client portal dashboard visibility enforcement', () => {
     expect(JSON.stringify(activity)).not.toContain('Hidden rollout');
     expect(tablesQueried).not.toContain('projects');
   });
+
+  // alga-2026-0003317: the dashboard was the one portal surface that read
+  // tickets, invoices and quotes with no RBAC gate at all, so a portal role
+  // with every ticket permission unchecked still read colleagues' ticket
+  // titles and comment excerpts off the landing page.
+  it('skips the ticket count and ticket activity when the role lacks ticket:read', async () => {
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string) => resource !== 'ticket');
+
+    const tablesQueried = buildPortalTrx();
+
+    const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+
+    expect(await getDashboardMetrics()).toMatchObject({ openTickets: 0 });
+    // Fails closed before the query runs, not by filtering rows afterwards.
+    expect(tablesQueried).not.toContain('tickets');
+
+    const activity = await getRecentActivity();
+    expect(JSON.stringify(activity)).not.toContain('Hidden ticket');
+    expect(tablesQueried).not.toContain('tickets');
+  });
+
+  it('skips the invoice count and invoice/quote activity when the role lacks billing:read', async () => {
+    hasBillingReadPermissionMock.mockImplementation(async () => false);
+
+    const tablesQueried = buildPortalTrx();
+
+    const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+
+    expect(await getDashboardMetrics()).toMatchObject({ pendingInvoices: 0 });
+    expect(tablesQueried).not.toContain('invoices');
+
+    const activity = await getRecentActivity();
+    expect(JSON.stringify(activity)).not.toContain('INV-HIDDEN');
+    expect(JSON.stringify(activity)).not.toContain('Q-HIDDEN');
+    expect(tablesQueried).not.toContain('invoices as inv');
+    expect(tablesQueried).not.toContain('quotes');
+  });
+
+  it('keeps tickets, invoices and quotes for a role granted both permissions', async () => {
+    const tablesQueried = buildPortalTrx();
+
+    const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+
+    expect(await getDashboardMetrics()).toMatchObject({ openTickets: 1, pendingInvoices: 1 });
+    expect(tablesQueried).toContain('tickets');
+    expect(tablesQueried).toContain('invoices');
+
+    const serialized = JSON.stringify(await getRecentActivity());
+    expect(serialized).toContain('Hidden ticket');
+    expect(serialized).toContain('INV-HIDDEN');
+    expect(serialized).toContain('Q-HIDDEN');
+  });
+});
+
+/**
+ * A transaction whose ticket / invoice / quote tables all have exactly one row,
+ * so a gate that fails closed is visible both as a zeroed count and as a table
+ * that was never queried. Returns the list of queried tables.
+ */
+function buildPortalTrx(): string[] {
+  const tablesQueried: string[] = [];
+  withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+    callback(Object.assign((table: string) => {
+      tablesQueried.push(table);
+      if (table === 'contacts') {
+        return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+      }
+      if (table === 'tickets') {
+        return chain([{
+          title: 'Hidden ticket',
+          client_id: 'client-1',
+          board_id: 'board-1',
+          is_closed: false,
+          timestamp: '2026-10-01T00:00:00Z',
+          description: null,
+        }]);
+      }
+      if (table === 'invoices' || table === 'invoices as inv') {
+        return chain([{
+          invoice_number: 'INV-HIDDEN',
+          client_id: 'client-1',
+          total: 1000,
+          timestamp: '2026-10-01T00:00:00Z',
+        }]);
+      }
+      if (table === 'quotes') {
+        return chain([{
+          quote_number: 'Q-HIDDEN',
+          client_id: 'client-1',
+          title: 'Quote',
+          status: 'sent',
+          timestamp: '2026-10-01T00:00:00Z',
+        }]);
+      }
+      return chain([]);
+    }, { raw: vi.fn() }))
+  );
+
+  getVisibilityContextMock.mockResolvedValue({
+    contactId: 'contact-1',
+    clientId: 'client-1',
+    visibilityGroupId: 'group-1',
+    visibleBoardIds: ['board-1'],
+  });
+
+  return tablesQueried;
+}
+
+it('service request activity never selects or surfaces the raw execution error text', async () => {
+  vi.clearAllMocks();
+  currentUser = { user_id: 'u', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1' };
+  createTenantKnexMock.mockResolvedValue({ knex: {} });
+  hasPermissionMock.mockImplementation(async () => true);
+  hasBillingReadPermissionMock.mockImplementation(async () => true);
+  applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+  getVisibilityContextMock.mockResolvedValue({
+    contactId: 'contact-1',
+    clientId: 'client-1',
+    visibilityGroupId: null,
+    visibleBoardIds: [],
+  });
+  let serviceRequestQuery: any;
+  withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+    callback(Object.assign((table: string) => {
+      if (table === 'contacts') return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+      if (table === 'service_request_submissions') {
+        serviceRequestQuery = chain([
+          {
+            client_id: 'client-1',
+            name: 'Access Request',
+            status: 'failed',
+            execution_error_summary: 'duplicate key value violates unique constraint "pk_tickets"',
+            timestamp: '2026-10-01T00:00:00Z',
+          },
+        ]);
+        return serviceRequestQuery;
+      }
+      return chain([]);
+    }, { raw: vi.fn() }))
+  );
+
+  const { getRecentActivity } = await import('./dashboard');
+  const activity = await getRecentActivity();
+
+  const serviceRequestActivity = (activity as any[]).find((item) => item.type === 'service_request');
+  expect(serviceRequestActivity).toMatchObject({ status: 'failed', description: '' });
+  expect(JSON.stringify(activity)).not.toContain('duplicate key');
+  expect(JSON.stringify(serviceRequestQuery.select.mock.calls)).not.toContain('execution_error_summary');
 });
 
 it.each([false, true])('dashboard count and activity exclude sibling/NULL tickets unless admin=%s', async (admin) => {
   vi.clearAllMocks();
   currentUser = { user_id: 'u', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1' };
   createTenantKnexMock.mockResolvedValue({ knex: {} });
+  hasPermissionMock.mockImplementation(async () => true);
+  hasBillingReadPermissionMock.mockImplementation(async () => true);
   const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
   applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
   getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: admin ? 'client' : 'contact', isClientAdmin: admin, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });

@@ -1,3 +1,16 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — YAML anchors are file-local, so this policy is repeated per compose file
+  # Replace the policy when merging files and resolving extends: appending can
+  # duplicate inherited options before Compose validates the service. Requires Compose >= 2.24.4.
+  security_opt: !override
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Services whose image runs as uid 1000: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 version: '3.8'
 
 services:
@@ -8,7 +21,11 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ee
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
+    cap_drop:
+      - ALL
     environment:
+      # Uploads and generated files go to the files_data volume, not the container layer
+      STORAGE_LOCAL_BASE_PATH: /data/files
       EDITION: enterprise
       DB_NAME: server
       PGBOSS_DATABASE: server
@@ -30,6 +47,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -72,6 +92,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       setup:
         condition: service_completed_successfully
       postgres:
@@ -85,6 +107,7 @@ services:
         required: false
 
   setup:
+    <<: *hardening-nonroot
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ee
@@ -149,6 +172,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -157,7 +182,35 @@ services:
         condition: service_completed_successfully
     entrypoint: ["/app/setup/entrypoint.sh"]
 
+  # One-shot root init: hands the files volume, the tenant secret store and the
+  # host secret files to uid 1000 so the non-root services can use them. Runs
+  # on every `up`, is idempotent, and holds only the capabilities it needs.
+  runtime-permissions:
+    <<: *hardening
+    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
+    platform: linux/amd64
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    volumes:
+      - files_data:/data/files
+      - type: bind
+        source: ./secrets
+        target: /host-secrets
+      - type: bind
+        source: ./secrets/tenants
+        target: /data/tenants
+
   workflow-worker:
+    <<: *hardening-nonroot
     # NOTE: The published EE server image does not currently ship the workflow-worker runtime bundle.
     # For local prebuilt-stack testing, build the worker image from source.
     build:
@@ -165,6 +218,7 @@ services:
       dockerfile: services/workflow-worker/Dockerfile
     platform: linux/amd64
     environment:
+      STORAGE_LOCAL_BASE_PATH: /data/files
       EDITION: enterprise
       DB_NAME: server
       PGBOSS_DATABASE: server
@@ -181,6 +235,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -199,6 +255,8 @@ services:
       # Expose a random port for health checks/monitoring
       - "3000"
     volumes:
+      # Shared files volume (also used by server and email-service), not the container layer
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -218,6 +276,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -231,6 +291,7 @@ services:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   email-service:
+    <<: *hardening-nonroot
     # NOTE: The published EE server image does not currently ship the email-service runtime bundle.
     # For local prebuilt-stack testing, build the IMAP service image from source.
     build:
@@ -253,6 +314,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -268,7 +331,10 @@ services:
       IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+      STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -294,6 +360,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -304,6 +372,7 @@ services:
         condition: service_started
 
   hocuspocus:
+    <<: *hardening
     extends:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
@@ -320,8 +389,11 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
-      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # Hocuspocus uses its own database and role, which PgBouncer does not route.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
     secrets:
       - db_password_hocuspocus
       - redis_password
@@ -332,6 +404,7 @@ services:
         condition: service_started
 
   postgres:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: postgres
@@ -352,11 +425,16 @@ services:
       - postgres_password
 
   redis:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: redis
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
 
   pgbouncer:
+    <<: *hardening
     extends:
       file: docker-compose.base.yaml
       service: pgbouncer

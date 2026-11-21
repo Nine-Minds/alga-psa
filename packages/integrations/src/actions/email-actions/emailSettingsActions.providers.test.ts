@@ -2,10 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
-const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock } = vi.hoisted(() => ({
-  createTenantKnexMock: vi.fn(),
-  getTenantEmailSettingsMock: vi.fn(),
-  invalidateTenantSettingsMock: vi.fn(),
+const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock, secretStore } = vi.hoisted(() => {
+  const data = new Map<string, string>();
+  return {
+    createTenantKnexMock: vi.fn(),
+    getTenantEmailSettingsMock: vi.fn(),
+    invalidateTenantSettingsMock: vi.fn(),
+    secretStore: {
+      data,
+      getTenantSecret: vi.fn(async (_tenant: string, name: string) => data.get(name)),
+      setTenantSecret: vi.fn(async (_tenant: string, name: string, value: string | null) => {
+        if (value === null) data.delete(name); else data.set(name, value);
+      }),
+      deleteTenantSecret: vi.fn(async (_tenant: string, name: string) => { data.delete(name); }),
+    },
+  };
+});
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => secretStore),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -73,6 +88,9 @@ describe('email settings provider invariants', () => {
     invalidateTenantSettingsMock.mockReset();
     invalidateTenantSettingsMock.mockResolvedValue(undefined);
     createTenantKnexMock.mockResolvedValue({ knex: vi.fn() });
+    secretStore.data.clear();
+    secretStore.setTenantSecret.mockClear();
+    secretStore.deleteTenantSecret.mockClear();
   });
 
   it('materializes editable provider configs for an existing empty settings row', async () => {
@@ -151,7 +169,7 @@ describe('email settings provider invariants', () => {
     expect(serialized).not.toContain('__secretFingerprint');
   });
 
-  it('normalizes enablement and preserves masked secrets when changing provider', async () => {
+  it('normalizes enablement and migrates masked legacy secrets into the secret store when changing provider', async () => {
     const existingSettings = buildSettings('resend', [
       {
         providerId: 'smtp-provider',
@@ -161,7 +179,7 @@ describe('email settings provider invariants', () => {
           host: 'relay.acme.test',
           port: 587,
           username: 'mailer',
-          password: 'stored-password',
+          password: 'stored-password', // legacy plaintext, migrated on save
           from: 'support@acme.test',
           __secretFingerprint: connectionFingerprint({ host: 'relay.acme.test', port: 587, username: 'mailer', password: 'stored-password', from: 'support@acme.test' }, 'smtp'),
         },
@@ -212,12 +230,14 @@ describe('email settings provider invariants', () => {
     const persistedPayload = updateMock.mock.calls[0]?.[0];
     expect(persistedPayload).toBeDefined();
     const persisted = JSON.parse(persistedPayload?.provider_configs as string);
+    const smtpRef = persisted[0].config.secretRefs.password;
+    const resendRef = persisted[1].config.secretRefs.apiKey;
     expect(persisted).toEqual([
       expect.objectContaining({
         providerType: 'smtp',
         isEnabled: true,
         config: expect.objectContaining({
-          password: 'stored-password',
+          secretRefs: expect.objectContaining({ password: smtpRef }),
           __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[0].config, 'smtp'),
         }),
       }),
@@ -225,11 +245,15 @@ describe('email settings provider invariants', () => {
         providerType: 'resend',
         isEnabled: false,
         config: expect.objectContaining({
-          apiKey: 'stored-api-key',
+          secretRefs: expect.objectContaining({ apiKey: resendRef }),
           __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[1].config, 'resend', 'resend-provider'),
         }),
       }),
     ]);
+    expect(secretStore.data.get(smtpRef)).toBe('stored-password');
+    expect(secretStore.data.get(resendRef)).toBe('stored-api-key');
+    expect(persistedPayload?.provider_configs).not.toContain('stored-password');
+    expect(persistedPayload?.provider_configs).not.toContain('stored-api-key');
   });
 
   it('never returns stored passwords, API keys, or internal fingerprints to clients', async () => {
@@ -281,7 +305,9 @@ describe('email settings provider invariants', () => {
     const { updateEmailSettings } = await import('./emailSettingsActions');
     await updateEmailSettings({ maxDailyEmails: 123, providerConfigs: [{ ...existing.providerConfigs[0], config: { api_key: '***', from: 'support@example.test' } }] });
     const saved = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs))[0].config;
-    expect(saved).toMatchObject({ apiKey: 'synthetic-resend-secret', __secretFingerprint: connectionFingerprint(original, 'resend', 'resend-main') });
+    expect(secretStore.data.get(saved.secretRefs.apiKey)).toBe('synthetic-resend-secret');
+    expect(saved).toMatchObject({ __secretFingerprint: connectionFingerprint(original, 'resend', 'resend-main') });
+    expect(saved).not.toHaveProperty('apiKey');
     expect(saved).not.toHaveProperty('api_key');
   });
 
@@ -298,8 +324,9 @@ describe('email settings provider invariants', () => {
     const { updateEmailSettings } = await import('./emailSettingsActions');
     await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { api_key: 'replacement-synthetic-secret', from: 'support@example.test' } }] });
     const saved = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs))[0].config;
-    expect(saved.apiKey).toBe('replacement-synthetic-secret');
-    expect(saved.api_key).toBeUndefined();
+    expect(secretStore.data.get(saved.secretRefs.apiKey)).toBe('replacement-synthetic-secret');
+    expect(saved).not.toHaveProperty('apiKey');
+    expect(saved).not.toHaveProperty('api_key');
     expect(saved.__secretFingerprint).toBe(connectionFingerprint(saved, 'resend', 'resend-main'));
   });
 
@@ -447,7 +474,8 @@ describe('email settings provider invariants', () => {
 
     const persisted = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs));
     const savedConfig = persisted[0].config;
-    expect(savedConfig.password).toBe('new-secret');
+    expect(secretStore.data.get(savedConfig.secretRefs.password)).toBe('new-secret');
+    expect(savedConfig).not.toHaveProperty('password');
     expect(savedConfig.__secretFingerprint).toBe(connectionFingerprint(savedConfig, 'smtp'));
     expect(savedConfig.__secretFingerprint).not.toBe(oldConfig.__secretFingerprint);
   });
@@ -541,4 +569,173 @@ describe('email settings provider invariants', () => {
   });
 
 
+  describe('secret handling', () => {
+    const FAKE_PASSWORD = 'fake-smtp-password-7f3a';
+    const FAKE_KEY = 'fake-resend-key-91bd';
+
+    function knexWith(opts: { failTransaction?: boolean; senders?: any[] } = {}) {
+      const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
+      const knexMock = vi.fn((table: string) => {
+        const builder: any = {
+          where: vi.fn(() => builder),
+          whereNotNull: vi.fn(() => builder),
+          select: vi.fn(async () => table === 'email_sender_addresses' ? opts.senders ?? [] : []),
+          first: vi.fn(async () => ({ tenant: 'tenant-123' })),
+          update: updateMock,
+          insert: vi.fn(async () => 1),
+        };
+        return builder;
+      }) as any;
+      knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => {
+        if (opts.failTransaction) throw new Error('db down');
+        return callback(knexMock);
+      };
+      createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+      return { updateMock };
+    }
+
+    const smtpConfig = (config: Record<string, any>): EmailProviderConfig => ({
+      providerId: 'smtp-provider', providerType: 'smtp', isEnabled: true,
+      config: { host: 'relay.acme.test', port: 587, username: 'mailer', from: 'support@acme.test', ...config },
+    });
+
+    function deepStrings(value: unknown, out: string[] = []): string[] {
+      if (typeof value === 'string') out.push(value);
+      else if (Array.isArray(value)) value.forEach(v => deepStrings(v, out));
+      else if (value && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value)) { out.push(k); deepStrings(v, out); }
+      }
+      return out;
+    }
+
+    function expectNoSecretLeak(result: unknown, secrets: string[]) {
+      const serialized = JSON.stringify(result);
+      const strings = deepStrings(JSON.parse(serialized));
+      expect(serialized).not.toContain('secretRefs');
+      expect(serialized).not.toContain('email_outbound_');
+      expect(serialized).not.toContain('api_key');
+      for (const secret of secrets) expect(serialized).not.toContain(secret);
+      for (const secret of secrets) expect(strings.some(v => v === secret)).toBe(false);
+    }
+
+    it('writes the secret to the store and persists refs only', async () => {
+      const { updateMock } = knexWith();
+      const existing = buildSettings('smtp', [smtpConfig({ password: '' })]);
+      const savedRef = 'email_outbound_smtp_password_00000000-0000-4000-8000-0000000000aa';
+      getTenantEmailSettingsMock.mockResolvedValueOnce(existing).mockImplementationOnce(async () => {
+        const persisted = JSON.parse(String(updateMock.mock.calls[0]?.[0].provider_configs));
+        return buildSettings('smtp', persisted);
+      });
+      void savedRef;
+
+      const { updateEmailSettings } = await import('./emailSettingsActions');
+      const result = await updateEmailSettings({
+        emailProvider: 'smtp',
+        providerConfigs: [smtpConfig({ password: FAKE_PASSWORD })],
+      });
+
+      expect(secretStore.setTenantSecret).toHaveBeenCalledTimes(1);
+      const [tenant, name, value] = secretStore.setTenantSecret.mock.calls[0];
+      expect(tenant).toBe('tenant-123');
+      expect(name).toMatch(/^email_outbound_smtp_password_[0-9a-f-]{36}$/);
+      expect(value).toBe(FAKE_PASSWORD);
+
+      const persistedJson = String(updateMock.mock.calls[0]?.[0].provider_configs);
+      expect(persistedJson).not.toContain(FAKE_PASSWORD);
+      expect(JSON.parse(persistedJson)[0].config.secretRefs).toEqual({ password: name });
+      expect(JSON.parse(persistedJson)[0].config).not.toHaveProperty('password');
+
+      // Response: masked, no refs, no values.
+      expect((result as any).providerConfigs[0].config.password).toBe('***');
+      expectNoSecretLeak(result, [FAKE_PASSWORD]);
+    });
+
+    it('deletes the new ref when the DB transaction fails, and keeps the old credential', async () => {
+      knexWith({ failTransaction: true });
+      const oldRef = 'email_outbound_smtp_password_00000000-0000-4000-8000-0000000000bb';
+      secretStore.data.set(oldRef, 'fake-old-password');
+      getTenantEmailSettingsMock.mockResolvedValueOnce(buildSettings('smtp', [
+        smtpConfig({ secretRefs: { password: oldRef } }),
+      ]));
+
+      const { updateEmailSettings } = await import('./emailSettingsActions');
+      const result = await updateEmailSettings({
+        emailProvider: 'smtp',
+        providerConfigs: [smtpConfig({ password: FAKE_PASSWORD })],
+      });
+
+      expect(JSON.stringify(result)).toMatch(/Failed to update email settings/);
+      const written = secretStore.setTenantSecret.mock.calls[0][1];
+      expect(secretStore.deleteTenantSecret).toHaveBeenCalledWith('tenant-123', written);
+      expect(secretStore.deleteTenantSecret).not.toHaveBeenCalledWith('tenant-123', oldRef);
+      expect(secretStore.data.has(written)).toBe(false);
+      expect(secretStore.data.get(oldRef)).toBe('fake-old-password');
+      expect(invalidateTenantSettingsMock).not.toHaveBeenCalled();
+    });
+
+    it('deletes the replaced ref only after a successful commit', async () => {
+      knexWith();
+      const oldRef = 'email_outbound_smtp_password_00000000-0000-4000-8000-0000000000cc';
+      secretStore.data.set(oldRef, 'fake-old-password');
+      getTenantEmailSettingsMock.mockResolvedValue(buildSettings('smtp', [
+        smtpConfig({ secretRefs: { password: oldRef } }),
+      ]));
+
+      const { updateEmailSettings } = await import('./emailSettingsActions');
+      await updateEmailSettings({ emailProvider: 'smtp', providerConfigs: [smtpConfig({ password: FAKE_PASSWORD })] });
+
+      expect(secretStore.deleteTenantSecret).toHaveBeenCalledWith('tenant-123', oldRef);
+    });
+
+    it('never writes a secret when validation rejects the save', async () => {
+      knexWith({ senders: [{ email_address: 'not-an-email' }] });
+      getTenantEmailSettingsMock.mockResolvedValue(buildSettings('resend', [
+        { providerId: 'resend-provider', providerType: 'resend', isEnabled: true, config: { from: 'a@acme.test' } },
+      ]));
+
+      const { updateEmailSettings } = await import('./emailSettingsActions');
+      const senderReject = await updateEmailSettings({
+        emailProvider: 'smtp',
+        providerConfigs: [smtpConfig({ password: FAKE_PASSWORD })],
+      });
+      expect(JSON.stringify(senderReject)).toMatch(/Cannot change transport/);
+
+      knexWith();
+      const fromReject = await updateEmailSettings({
+        emailProvider: 'smtp',
+        providerConfigs: [smtpConfig({ password: FAKE_PASSWORD, from: 'junk-from' })],
+      });
+      expect(JSON.stringify(fromReject)).toMatch(/From address must be a valid email/);
+
+      const domainReject = await updateEmailSettings({
+        emailProvider: 'smtp',
+        defaultFromDomain: 'not a domain',
+        providerConfigs: [smtpConfig({ password: FAKE_PASSWORD })],
+      });
+      expect(JSON.stringify(domainReject)).toMatch(/domain must be a valid domain/);
+
+      expect(secretStore.setTenantSecret).not.toHaveBeenCalled();
+      expect(secretStore.deleteTenantSecret).not.toHaveBeenCalled();
+    });
+
+    it('getEmailSettings never returns secrets, aliases, refs or ref-shaped values', async () => {
+      knexWith();
+      const ref = 'email_outbound_smtp_password_00000000-0000-4000-8000-0000000000dd';
+      const resendRef = 'email_outbound_resend_api_key_00000000-0000-4000-8000-0000000000ee';
+      getTenantEmailSettingsMock.mockResolvedValue(buildSettings('smtp', [
+        smtpConfig({ secretRefs: { password: ref }, password: FAKE_PASSWORD }),
+        { providerId: 'resend-provider', providerType: 'resend', isEnabled: false,
+          config: { from: 'a@acme.test', api_key: FAKE_KEY, apiKey: FAKE_KEY, secretRefs: { apiKey: resendRef } } },
+        { providerId: 'resend-legacy', providerType: 'resend', isEnabled: false, config: { api_key: FAKE_KEY } },
+      ]));
+
+      const { getEmailSettings } = await import('./emailSettingsActions');
+      const result = await getEmailSettings() as any;
+
+      expect(result.providerConfigs[0].config.password).toBe('***');
+      expect(result.providerConfigs[1].config.apiKey).toBe('***');
+      expect(result.providerConfigs[2].config.apiKey).toBe('***');
+      expectNoSecretLeak(result, [FAKE_PASSWORD, FAKE_KEY, ref, resendRef]);
+    });
+  });
 });

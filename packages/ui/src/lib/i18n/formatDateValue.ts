@@ -143,3 +143,37 @@ export function formatDateValue(
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return formatWithCountry(dateObj, locale, options, dateFormat);
 }
+
+/**
+ * The calendar day a stored value stands for, as `YYYY-MM-DD`.
+ *
+ * Some calendar dates live in `timestamptz` columns, written as midnight UTC of
+ * the chosen day (quote_date and valid_until, for example: the quote form saves
+ * `date.toISOString().slice(0, 10)`). Their day is the UTC day of the instant.
+ * Reading them in the viewer's timezone puts them on the previous day west of
+ * UTC (2026-12-31T00:00:00Z shown as 12/30 in America/New_York). Returns null
+ * for empty or unparseable input.
+ */
+export function toUtcCalendarDateString(value: Date | string | null | undefined): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (isDateOnlyString(value)) return value;
+  const instant = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(instant.getTime())) return null;
+  return instant.toISOString().slice(0, 10);
+}
+
+/**
+ * Format a calendar date held as a date-only string or a midnight-UTC instant.
+ * Use for values that name a day (a quote's date and expiry), not a moment.
+ * True instants (created_at, accepted_at) keep going through formatDateValue.
+ */
+export function formatCalendarDateValue(
+  date: Date | string,
+  locale: string,
+  options?: Intl.DateTimeFormatOptions,
+  dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT,
+): string {
+  const day = toUtcCalendarDateString(date);
+  // Unparseable input keeps formatDateValue's behaviour for it.
+  return formatDateValue(day ?? date, locale, options, dateFormat);
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import SeatTrialReturn from '@/components/co-managed/SeatTrialReturn';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -52,6 +53,7 @@ export default function LicensePurchaseSuccessPage() {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
+      <SeatTrialReturn afterPurchase />
       <Card className="mt-8">
         <CardContent className="pt-12 pb-8 space-y-8">
           {/* Success Icon and Title */}

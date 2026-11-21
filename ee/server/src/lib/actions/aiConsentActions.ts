@@ -1,7 +1,7 @@
 'use server';
 
 import { getSession } from '@alga-psa/auth';
-import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import { checkAccountManagementUpdatePermission } from '@alga-psa/auth/actions';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 
 import {
@@ -40,7 +40,7 @@ async function requireApplianceSession(): Promise<ApplianceSession> {
 
 async function requireConsentManager(): Promise<ApplianceSession> {
   const applianceSession = await requireApplianceSession();
-  if (!(await checkAccountManagementPermission())) {
+  if (!(await checkAccountManagementUpdatePermission())) {
     throw new Error('You do not have permission to manage AI consent');
   }
   return applianceSession;

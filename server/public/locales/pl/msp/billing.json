@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Ładowanie podglądu szablonu...",
     "errorPrefix": "Błąd:",
-    "empty": "Wybierz fakturę i szablon do podglądu."
+    "empty": "Wybierz fakturę i szablon do podglądu.",
+    "frameTitle": "Podgląd faktury"
   },
   "templateDesigner": {
     "propertyEditor": {

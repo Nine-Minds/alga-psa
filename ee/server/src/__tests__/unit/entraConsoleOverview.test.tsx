@@ -243,6 +243,69 @@ describe('EntraConsole overview', () => {
     expect(table?.textContent).not.toContain('managed-1');
   });
 
+  it('names the contacts that failed and why under their client, not just a count', async () => {
+    getEntraSyncRunDetailMock.mockResolvedValue({
+      success: true,
+      data: {
+        run: null,
+        tenantResults: [
+          {
+            managedTenantId: 'managed-1',
+            clientId: 'client-1',
+            status: 'completed',
+            created: 5,
+            linked: 1,
+            updated: 1,
+            ambiguous: 0,
+            inactivated: 0,
+            failed: 2,
+            userIssues: [
+              {
+                severity: 'failure',
+                stage: 'create',
+                entraObjectId: 'user-dana',
+                userPrincipalName: 'dana@contoso.com',
+                displayName: 'Dana Whitfield',
+                contactNameId: null,
+                message: 'EMAIL_EXISTS: A contact with this email address already exists in the system',
+              },
+              {
+                severity: 'notice',
+                stage: 'create',
+                entraObjectId: 'user-rosa',
+                userPrincipalName: 'rosa@contoso.com',
+                displayName: 'Rosa Alvarez',
+                contactNameId: 'contact-rosa',
+                field: 'phone_numbers',
+                message: 'Extension "123456789012" was dropped: extensions are 1-10 digits.',
+              },
+            ],
+            errorMessage: null,
+            startedAt: '2026-07-25T03:04:00.000Z',
+            completedAt: '2026-07-25T03:04:30.000Z',
+          },
+        ],
+      },
+    });
+    renderConsole();
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-last-run-issues-managed-1-failures')).not.toBeNull()
+    );
+
+    const failures = document.getElementById('entra-console-last-run-issues-managed-1-failures');
+    expect(failures?.textContent).toContain('Dana Whitfield');
+    expect(failures?.textContent).toContain('EMAIL_EXISTS');
+    // The persisted list held one of the two failures; the other is counted, not dropped.
+    // (The count line is a plural key; this suite's locale mock does not resolve plurals.)
+    const table = document.getElementById('entra-console-last-run-clients');
+    expect(table?.textContent).toContain('and 1 more');
+    // Field notes are listed separately from failures.
+    const notices = document.getElementById('entra-console-last-run-issues-managed-1-notices');
+    expect(notices?.textContent).toContain('Rosa Alvarez');
+    expect(failures?.textContent).not.toContain('Rosa Alvarez');
+  });
+
   it('says what the run did in words, not by printing its database status', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-07-25T12:00:00Z'));

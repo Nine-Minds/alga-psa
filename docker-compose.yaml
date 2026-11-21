@@ -18,9 +18,13 @@ x-environment: &shared-environment
   DB_TYPE: ${DB_TYPE:-postgres}
   DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
   DB_PORT: ${PGBOUNCER_PORT:-6432}
+  # Admin and pg-boss connections go straight to Postgres, not through PgBouncer.
+  # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+  DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+  DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
   DB_NAME: server
-  DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-server}
-  DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-app_user}
+  DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+  DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
   DB_NAME_SERVER: server
   DB_USER_SERVER: app_user
   DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
@@ -278,6 +282,9 @@ services:
       - app-network
     environment:
       <<: *shared-environment
+      # Hocuspocus talks to Postgres directly with its own role (not through PgBouncer).
+      DB_HOST: postgres
+      DB_PORT: 5432
     secrets:
       - db_password_hocuspocus
       - redis_password

@@ -235,13 +235,13 @@ describe('Live Xero export integration', () => {
       ]
     });
 
-    return { batchId: batch.batch_id, lineId: line.line_id };
+    return { batchId: batch.batch_id, lineId: line.line_id, invoiceId };
   }
 
   it('T017: DB-backed export succeeds through the live Xero adapter using the stored default connection context', async () => {
     // The adapter requires an immutable batch target realm, so even the
     // default-connection flow exports against a realm-stamped batch.
-    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: 'xero-default-realm' });
+    const { batchId, lineId, invoiceId } = await seedLiveXeroBatch({ targetRealm: 'xero-default-realm' });
 
     xeroCreateMock.mockResolvedValue({
       createInvoices: vi.fn(async (payloads: Array<Record<string, any>>) => {
@@ -265,7 +265,10 @@ describe('Live Xero export integration', () => {
       metadata: {
         adapter: 'xero',
         deliveredInvoices: 1
-      }
+      },
+      // Per-entity outcome the scheduled drains branch on (alga-2026-0003015).
+      deliveredEntityIds: [invoiceId],
+      failedEntities: []
     });
 
     expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, 'xero-default-realm');
@@ -304,7 +307,7 @@ describe('Live Xero export integration', () => {
   }, HOOK_TIMEOUT);
 
   it('T019: realm-scoped Xero service and client mappings resolve for a realm-targeted batch', async () => {
-    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: 'xero-tenant-1' });
+    const { batchId, lineId, invoiceId } = await seedLiveXeroBatch({ targetRealm: 'xero-tenant-1' });
 
     xeroCreateMock.mockResolvedValue({
       createInvoices: vi.fn(async (payloads: Array<Record<string, any>>) => [{
@@ -316,7 +319,9 @@ describe('Live Xero export integration', () => {
 
     await expect(service.executeBatch(batchId)).resolves.toEqual({
       deliveredLines: [{ lineId, externalDocumentRef: 'xero-invoice-realm-1' }],
-      metadata: { adapter: 'xero', deliveredInvoices: 1 }
+      metadata: { adapter: 'xero', deliveredInvoices: 1 },
+      deliveredEntityIds: [invoiceId],
+      failedEntities: []
     });
     expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, 'xero-tenant-1');
   }, HOOK_TIMEOUT);

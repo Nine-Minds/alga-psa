@@ -26,6 +26,11 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
+// Deep link to the Microsoft app registration section of the Providers page.
+const MICROSOFT_PROVIDERS_SETTINGS_URL = '/msp/settings?tab=integrations&category=providers&provider=microsoft';
 
 const microsoftCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -55,6 +60,11 @@ export function MicrosoftCalendarProviderForm({
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
+  // Set when the OAuth callback reports that Microsoft needs administrator
+  // consent (error=consent_required, AADSTS65001, AADSTS90094).
+  const [pendingAdminConsent, setPendingAdminConsent] = useState(false);
+  const [redirectUri, setRedirectUri] = useState<string | null>(null);
+  const { toast } = useToast();
   const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
     | 'unsupported_consumer'
     | 'binding_not_configured'
@@ -95,6 +105,7 @@ export function MicrosoftCalendarProviderForm({
         const res = await getMicrosoftCalendarSetupStatus();
         setProviderSetupReady(Boolean(res.success && res.ready));
         setProviderSetupReasonCode(res.success ? res.reasonCode || null : null);
+        setRedirectUri(res.success ? res.redirectUri || null : null);
       } catch {
         setProviderSetupReady(false);
         setProviderSetupReasonCode(null);
@@ -113,14 +124,20 @@ export function MicrosoftCalendarProviderForm({
         if (event.data.success) {
           setOAuthStatus('success');
           setOAuthError(null);
+          setPendingAdminConsent(false);
           if (event.data.data?.calendarProviderId) {
             setCalendarProviderId(event.data.data.calendarProviderId);
           }
           if (onSuccess) {
             onSuccess();
           }
+        } else if (event.data.error === 'pending_admin_consent') {
+          setOAuthStatus('error');
+          setOAuthError(null);
+          setPendingAdminConsent(true);
         } else {
           setOAuthStatus('error');
+          setPendingAdminConsent(false);
           setOAuthError(event.data.errorDescription || t('calendar.providers.common.oauth.callbackFailed', { defaultValue: 'OAuth authorization failed' }));
         }
       }
@@ -130,10 +147,27 @@ export function MicrosoftCalendarProviderForm({
     return () => window.removeEventListener('message', handleMessage);
   }, [onSuccess]);
 
+  const copyRedirectUri = async () => {
+    if (!redirectUri) return;
+    const copied = await copyTextToClipboard(redirectUri);
+    if (copied) {
+      toast({
+        title: t('calendar.providers.microsoft.setup.copied', { defaultValue: 'Copied' }),
+        description: t('calendar.providers.microsoft.setup.redirectUri', { defaultValue: 'Redirect URI' }),
+      });
+    } else {
+      toast({
+        title: t('calendar.providers.microsoft.setup.copyFailed', { defaultValue: 'Could not copy' }),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleAuthorize = async () => {
     try {
       setOAuthStatus('authorizing');
       setOAuthError(null);
+      setPendingAdminConsent(false);
 
       // Create or get provider ID
       let providerId = calendarProviderId;
@@ -335,6 +369,29 @@ export function MicrosoftCalendarProviderForm({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {pendingAdminConsent && (
+              <Alert id="microsoft-calendar-admin-consent-pending">
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div className="font-medium">{t('calendar.providers.microsoft.adminConsentPending.title', { defaultValue: 'Administrator approval is pending.' })}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {t('calendar.providers.microsoft.adminConsentPending.body', {
+                        defaultValue: 'A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.',
+                      })}
+                    </div>
+                    <Button
+                      id="microsoft-calendar-admin-consent-providers-link"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
+                    >
+                      {t('calendar.providers.microsoft.adminConsentPending.openSettings', { defaultValue: 'Open Microsoft Provider Settings' })}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
             {!providerSetupLoading && !providerSetupReady && (
               <Alert>
                 <AlertDescription>
@@ -354,7 +411,7 @@ export function MicrosoftCalendarProviderForm({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.assign('/msp/settings?tab=integrations&category=providers')}
+                      onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
                     >
                       {t('calendar.providers.microsoft.configAlert.openSettings', { defaultValue: 'Open Providers Settings' })}
                     </Button>
@@ -362,6 +419,51 @@ export function MicrosoftCalendarProviderForm({
                 </AlertDescription>
               </Alert>
             )}
+            <div id="microsoft-calendar-setup-guidance" className="space-y-3 rounded-lg border p-4">
+              <div className="font-medium">{t('calendar.providers.microsoft.setup.title', { defaultValue: 'Before you connect' })}</div>
+              <p className="text-sm text-muted-foreground">
+                {t('calendar.providers.microsoft.setup.intro', { defaultValue: 'In your Microsoft Entra app registration, add this redirect URI and grant these delegated permissions.' })}
+              </p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>{t('calendar.providers.microsoft.setup.redirectUri', { defaultValue: 'Redirect URI' })}</Label>
+                  <Button
+                    id="microsoft-calendar-redirect-uri-copy"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyRedirectUri}
+                    disabled={!redirectUri}
+                  >
+                    {t('calendar.providers.microsoft.setup.copy', { defaultValue: 'Copy' })}
+                  </Button>
+                </div>
+                <div id="microsoft-calendar-redirect-uri" className="break-all rounded-md bg-muted/40 p-2 font-mono text-xs">
+                  {redirectUri || t('calendar.providers.microsoft.setup.unavailable', { defaultValue: 'Unavailable' })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>{t('calendar.providers.microsoft.setup.permissions', { defaultValue: 'Delegated permissions (Microsoft Graph)' })}</Label>
+                <ul id="microsoft-calendar-scopes" className="space-y-1 rounded-md bg-muted/40 p-2 font-mono text-xs">
+                  {MICROSOFT_CALENDAR_OAUTH_SCOPES.map((scope) => (
+                    <li key={scope}>{scope.replace('https://graph.microsoft.com/', '')}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t('calendar.providers.microsoft.setup.tenancy', { defaultValue: 'The app can be single-tenant or multitenant. Sign-in follows the directory (tenant) ID on the Microsoft profile bound to Calendar.' })}
+              </p>
+              <Button
+                id="microsoft-calendar-setup-providers-link"
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
+              >
+                {t('calendar.providers.microsoft.setup.openProviders', { defaultValue: 'Open Microsoft provider settings' })}
+              </Button>
+            </div>
             <div className={`p-4 rounded-lg transition-colors ${
               oauthStatus === 'success' ? 'bg-success/10 border-2 border-success/30' : 'bg-muted/50'
             }`}>

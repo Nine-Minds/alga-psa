@@ -28,6 +28,7 @@ function buildSelectBuilder(rows: Array<Record<string, any>>) {
   builder.andWhere = vi.fn(passthrough);
   builder.orWhere = vi.fn(passthrough);
   builder.whereNull = vi.fn(passthrough);
+  builder.whereRaw = vi.fn(passthrough);
   builder.whereNotNull = vi.fn(passthrough);
   builder.whereIn = vi.fn(passthrough);
   builder.orderBy = vi.fn(passthrough);

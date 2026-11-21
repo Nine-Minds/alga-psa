@@ -82,12 +82,8 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActio
   setDashboardWelcomeUseCompanyNameAction: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@alga-psa/clients/actions/queryActions', () => ({
-  getAllClients: vi.fn().mockResolvedValue([
-    { client_id: 'client-1', client_name: 'Acme MSP' },
-    { client_id: 'client-2', client_name: 'Globex' },
-    { client_id: 'client-3', client_name: 'Initech' },
-  ]),
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
 }));
 
 // Country-derived defaults: the MSP sits in the US, the client being considered
@@ -110,7 +106,7 @@ vi.mock('@alga-psa/clients/actions/countryActions', () => ({
 const clientPickerProps = vi.fn();
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: (props: { clients: { client_id: string }[] }) => {
+  ClientPicker: (props: { excludeIds?: string[]; searchClients?: unknown }) => {
     clientPickerProps(props);
     return <div data-testid="client-picker" />;
   },
@@ -255,15 +251,15 @@ describe('GeneralSettings default client confirmation', () => {
     ).toBeTruthy();
   });
 
-  it('does not offer clients that are already listed', async () => {
+  it('searches on the server and leaves out clients that are already listed', async () => {
     render(<GeneralSettings />);
 
     await waitFor(() => expect(radioFor('client-2')).toBeTruthy());
     await waitFor(() => {
       const lastCall = clientPickerProps.mock.calls.at(-1)?.[0];
-      expect(lastCall.clients.map((c: { client_id: string }) => c.client_id)).toEqual([
-        'client-3',
-      ]);
+      expect(lastCall.clients).toBeUndefined();
+      expect(typeof lastCall.searchClients).toBe('function');
+      expect([...lastCall.excludeIds].sort()).toEqual(['client-1', 'client-2']);
     });
   });
 });

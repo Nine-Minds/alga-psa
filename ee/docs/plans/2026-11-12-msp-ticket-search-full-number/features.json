@@ -1,0 +1,5 @@
+[
+  {"id":"F001","description":"Derive the search identifier from the whole trimmed query (strip leading # and whitespace) instead of the first letters-digits chunk","group":"Search","implemented":true,"prdRefs":["Requirements"]},
+  {"id":"F002","description":"Exact identifier clause matches the full ticket number case-insensitively; starts-with clause only for a single number-shaped token","group":"Search","implemented":true,"prdRefs":["Requirements"]},
+  {"id":"F003","description":"Apply the same identifier derivation to any other list search that shares it","group":"Search","implemented":true,"prdRefs":["Requirements"]}
+]
