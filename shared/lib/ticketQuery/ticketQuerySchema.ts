@@ -27,18 +27,23 @@
  * describe the row itself.
  */
 import { tagSet } from '@alga-psa/predicates/sql';
-import type { Attribute, ComputedAttribute, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
+import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
 import { ticketSlaBreachedSql } from './ticketSlaSql';
 
-type Resolver = (alias: string, value: unknown, nowIso: string, operator: PredicateOperator) => SqlFragment;
+type Resolver = (alias: string, value: PredicateLiteral | PredicateLiteral[] | undefined, nowIso: string, operator: PredicateOperator) => SqlFragment;
 
-const scalar = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value);
-const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const scalar = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral => {
+  const resolved = Array.isArray(value) ? value[0] : value;
+  if (resolved === undefined) throw new Error('Expected a scalar predicate value before compiling SQL');
+  return resolved;
+};
+const list = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral[] =>
+  Array.isArray(value) ? value : value === undefined ? [] : [value];
 
 const COMPUTED_RESOLVERS = (() => {
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
   // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
-  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: unknown): SqlFragment => {
+  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateLiteral | PredicateLiteral[] | undefined): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
@@ -52,7 +57,7 @@ const COMPUTED_RESOLVERS = (() => {
       return values.length ? { sql: `COALESCE((${expression.sql}) IN (${values.map(() => '?').join(', ')}), FALSE)`, bindings: [...expression.bindings, ...values] } : { sql: 'FALSE', bindings: [] };
     }
     if (operator === 'equals' || operator === 'not_equals') return {
-      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, value],
+      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, scalar(value)],
     };
     if (operator === 'contains' || operator === 'starts_with' || operator === 'ends_with') {
       const escaped = String(value).replace(/[\\%_]/g, (character) => `\\${character}`);

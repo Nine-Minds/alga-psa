@@ -7,6 +7,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { requireTenantSettingsUpdate } from './tenantSettingsAuthorization';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
 export type PortalSidebarStyle = 'default' | 'primary' | 'secondary' | 'custom';
@@ -74,7 +75,8 @@ const withoutMarkProvenance = (branding: TenantBranding): TenantBranding => {
  * Update tenant's branding settings
  */
 export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, branding: TenantBranding) => {
-  // Check if user has admin permissions
+  await requireTenantSettingsUpdate(user, tenant);
+  // Preserve the existing internal-user restriction in addition to settings:update.
   if (user.user_type !== 'internal') {
     throw new Error('Only internal users can update tenant branding');
   }

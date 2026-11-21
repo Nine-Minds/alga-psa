@@ -10,6 +10,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { hasTenantSettingsUpdate } from '../tenant-actions/tenantSettingsAuthorization';
 import { persistTenantOnboardingProgress } from '../../server/onboardingProgress';
 import {
   actionError,
@@ -323,10 +324,14 @@ const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<
 };
 
 const updateTenantSettingsInternal = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   settings: Record<string, any>
 ): Promise<void> => {
+  if (!(await hasTenantSettingsUpdate(user, tenant))) {
+    throw new Error('Permission denied: Cannot update settings');
+  }
+
   try {
     const currentSettings = await getCurrentTenantSettingsJson(tenant);
     const updatedSettings = {
@@ -407,9 +412,15 @@ export const getTenantTimezoneAuth = withAuth(async (
 /**
  * Set tenant timezone (authenticated, requires settings:update permission).
  */
-export async function setTenantTimezone(
-  timezone: string
-): Promise<void | TenantSettingsActionError> {
+export const setTenantTimezone = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  timezone: string,
+): Promise<void | TenantSettingsActionError> => {
+  if (!(await hasTenantSettingsUpdate(user, tenant))) {
+    return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
+  }
+
   // Tenant timezone saves are always explicit, so always validate. UTC aliases
   // come back mapped to "UTC"; non-city IDs (EST, Etc/GMT+5, US/Eastern) are rejected.
   // Both failures are returned as action errors with a messageKey, so they never
@@ -429,7 +440,7 @@ export async function setTenantTimezone(
     return actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
   }
   return updateTenantSettings({ timezone: validation.timeZone });
-}
+});
 
 export async function initializeTenantSettings(tenantId: string): Promise<void> {
   try {
