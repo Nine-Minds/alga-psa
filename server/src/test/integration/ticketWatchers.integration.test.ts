@@ -123,7 +123,7 @@ async function expectMirrorMatchesTable(ticket: string = ticketId) {
   expect(list.map((e) => [e.email, e.active]).sort()).toEqual(rows.map((r) => [r.email, r.active]).sort());
 }
 
-const ctx = () => ({ userId: actorId, tenant: tenantId });
+const ctx = () => ({ userId: actorId, tenant: tenantId, user: userRef.user });
 
 describe('ticket watchers', () => {
   beforeAll(async () => {

@@ -171,7 +171,12 @@ export async function createTicketAuthorizationContext(
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) => {
         try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
+          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input, {
+            principalMemberships: {
+              roleIds: authorizationSubject.roleIds ?? [],
+              teamIds: authorizationSubject.teamIds ?? [],
+            },
+          });
         } catch {
           return [];
         }

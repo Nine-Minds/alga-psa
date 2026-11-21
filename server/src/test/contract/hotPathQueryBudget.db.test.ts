@@ -206,7 +206,7 @@ describe('hot-path query budget', () => {
           steps: measured.steps.map(({ name, statements, locks }) => ({ name, statements, locks })),
           totals: measured.totals,
           denylist: NEW_TABLE_DENYLIST.map((r) => r.source),
-          notes: 'raising a number requires this file in the PR diff',
+          notes: 'ticket.update adds 3 statements: current team membership, current managed-user relationships, and active bundle assignments. Bundle role/team membership queries reuse the transaction-scoped authorization subject; the ticket row is reused. boardMove incurs the same per-ticket authorization delta.',
         };
         fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
         return;

@@ -1269,7 +1269,7 @@ describe('Ticket bundling integration', () => {
       const { scopedDb, childId } = await setup(mode);
       const service = new TicketService();
       await runWithTenant(tenantId, async () => {
-        await service.update(childId, { status_id: statusClosedId, assigned_to: internalUser.user_id }, { tenant: tenantId, userId: internalUser.user_id });
+        await service.update(childId, { status_id: statusClosedId, assigned_to: internalUser.user_id }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
       });
       const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
       expect(child?.status_id).toBe(statusClosedId);
@@ -1280,7 +1280,7 @@ describe('Ticket bundling integration', () => {
       const { childId } = await setup('sync_updates');
       const service = new TicketService();
       const rejection = await runWithTenant(tenantId, async () =>
-        service.update(childId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id })
+        service.update(childId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser })
           .then(() => null, (error: unknown) => error));
       expect(rejection).toBeInstanceOf(ValidationError);
     });
@@ -1891,7 +1891,7 @@ describe('Ticket bundling integration', () => {
 
     await runWithTenant(tenantId, async () => {
       await expect(
-        service.update(masterId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id }),
+        service.update(masterId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser }),
       ).rejects.toBeInstanceOf(BundlePropagationConfirmationRequiredError);
     });
 
@@ -1899,7 +1899,7 @@ describe('Ticket bundling integration', () => {
     expect(masterAfter?.status_id).toBe(statusOpenId);
 
     await runWithTenant(tenantId, async () => {
-      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: true }, { tenant: tenantId, userId: internalUser.user_id });
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: true }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
     });
 
     const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
@@ -1921,7 +1921,7 @@ describe('Ticket bundling integration', () => {
       await service.update(
         masterId,
         { status_id: statusClosedId, propagateToChildren: true },
-        { tenant: tenantId, userId: internalUser.user_id },
+        { tenant: tenantId, userId: internalUser.user_id, user: internalUser },
       );
     });
 
@@ -1946,7 +1946,7 @@ describe('Ticket bundling integration', () => {
     const service = new TicketService();
 
     await runWithTenant(tenantId, async () => {
-      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: false }, { tenant: tenantId, userId: internalUser.user_id });
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: false }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
     });
 
     const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
@@ -2040,7 +2040,7 @@ describe('Ticket bundling integration', () => {
     // BUNDLE_CHILD_LOCKED_FIELDS gate), so the ledger cannot end up
     // disagreeing with tickets.is_closed through this path.
     const rejection = await runWithTenant(tenantId, async () =>
-      service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id })
+      service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser })
         .then(() => null, (error: unknown) => error));
     expect(rejection).toBeInstanceOf(ValidationError);
 

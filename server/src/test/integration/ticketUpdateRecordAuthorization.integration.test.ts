@@ -19,7 +19,10 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
-  return createAuthModuleMock();
+  return {
+    ...createAuthModuleMock(),
+    localizeActionError: vi.fn(async (error: unknown) => error),
+  };
 });
 
 const authorizationObservations = vi.hoisted(() => [] as Array<{ ticketId: string; title: string | undefined; apiKeyId?: string }>);
@@ -53,6 +56,7 @@ let clientInScope: string;
 let clientOutside: string;
 let boardId: string;
 let statusId: string;
+let nextStatusId: string;
 let priorityId: number;
 let actor: any;
 let realPermissionCheck: typeof rbac.hasPermission;
@@ -156,6 +160,8 @@ describe('ticket update record authorization (real transaction)', () => {
     statusId = uuidv4();
     await table('boards').insert({ tenant, board_id: boardId, board_name: 'Record auth' });
     await table('statuses').insert({ tenant, status_id: statusId, name: 'Open', board_id: boardId, status_type: 'ticket', is_closed: false, is_default: true, order_number: 5001 });
+    nextStatusId = uuidv4();
+    await table('statuses').insert({ tenant, status_id: nextStatusId, name: 'In Progress', board_id: boardId, status_type: 'ticket', is_closed: false, is_default: false, order_number: 5002 });
     const priority = await table('priorities').where({ item_type: 'ticket' }).first('priority_id');
     priorityId = priority.priority_id;
 
@@ -231,6 +237,21 @@ describe('ticket update record authorization (real transaction)', () => {
     expect((await table('tickets').where({ ticket_id: ticketId }).first()).title).toBe('In-scope updated');
   }, HOOK_TIMEOUT);
 
+  it('propagates the authenticated principal through a bulk status update', async () => {
+    const ticketId = await insertTicket(clientOutside, 'Bulk outside original');
+    const { bulkUpdateTicketStatus } = await import('@alga-psa/tickets/actions/ticketActions');
+
+    const result = await bulkUpdateTicketStatus([ticketId], nextStatusId);
+
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed).toEqual([expect.objectContaining({
+      ticketId,
+      message: 'Permission denied: Cannot access ticket',
+    })]);
+    expect((await table('tickets').where({ ticket_id: ticketId }).first()).status_id).toBe(statusId);
+    expect(workflowEvents).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
   it('enforces the same selected-client bundle on REST TicketService.update and permits an in-scope REST update', async () => {
     const outsideId = await insertTicket(clientOutside, 'REST outside original');
     const insideId = await insertTicket(clientInScope, 'REST inside original');
@@ -238,6 +259,14 @@ describe('ticket update record authorization (real transaction)', () => {
     const apiKeyId = uuidv4();
     const serviceContext = { tenant, userId: actor.user_id, user: actor, apiKeyId, db: context.db };
     const notificationCount = Number((await table('internal_notifications').count('* as count').first() as any).count);
+
+    const missingPrincipal = await runWithTenant(tenant, () => service.update(
+      insideId,
+      { title: 'REST missing principal' } as any,
+      { tenant, userId: actor.user_id, apiKeyId, db: context.db } as any,
+    )).then(() => null, (error) => error);
+    expect(missingPrincipal).toBeInstanceOf(ForbiddenError);
+    expect((await table('tickets').where({ ticket_id: insideId }).first()).title).toBe('REST inside original');
 
     const restDenial = await runWithTenant(tenant, () => service.update(outsideId, { title: 'REST unauthorized' } as any, serviceContext as any))
       .then(() => null, (error) => error);

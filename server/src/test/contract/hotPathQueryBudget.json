@@ -25,12 +25,12 @@
     },
     {
       "name": "ticket.update",
-      "statements": 12,
+      "statements": 15,
       "locks": 0
     },
     {
       "name": "ticket.boardMove",
-      "statements": 25,
+      "statements": 28,
       "locks": 0
     },
     {
@@ -85,7 +85,7 @@
     }
   ],
   "totals": {
-    "statements": 466,
+    "statements": 472,
     "locks": 17
   },
   "denylist": [
@@ -95,5 +95,5 @@
     "^native_time_tracking_",
     "^tenant_license_state$"
   ],
-  "notes": "raising a number requires this file in the PR diff"
+  "notes": "ticket.update adds 3 statements: current team membership, current managed-user relationships, and active bundle assignments. Bundle role/team membership queries reuse the transaction-scoped authorization subject; the ticket row is reused. boardMove incurs the same per-ticket authorization delta."
 }
