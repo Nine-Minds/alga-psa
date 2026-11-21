@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   currentUser: null as null | { user_id: string; tenant: string; user_type: string },
   getLicenseUsage: vi.fn(),
+  hasPermission: vi.fn(),
   getConnection: vi.fn(),
   tenantDb: vi.fn(),
 }));
@@ -13,6 +14,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
     return action(mocks.currentUser, { tenant: mocks.currentUser.tenant });
   },
 }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: mocks.getLicenseUsage }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: mocks.getConnection,
@@ -27,6 +29,7 @@ describe('licensing actions enforce authenticated tenant scope', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.currentUser = null;
+    mocks.hasPermission.mockResolvedValue(true);
     mocks.getLicenseUsage.mockResolvedValue({ limit: 12, used: 4, remaining: 8 });
     mocks.getConnection.mockResolvedValue({});
     const query = {
@@ -65,6 +68,19 @@ describe('licensing actions enforce authenticated tenant scope', () => {
 
   it('rejects an unauthenticated active-user-count request before querying users', async () => {
     await expect(getActiveUserCountAction()).rejects.toThrow('User not authenticated');
+    expect(mocks.getConnection).not.toHaveBeenCalled();
+  });
+
+  it('denies callers without account-management read permission before reading either licensing view', async () => {
+    mocks.currentUser = { user_id: 'user-a', tenant: 'tenant-a', user_type: 'internal' };
+    mocks.hasPermission.mockResolvedValue(false);
+
+    await expect(getLicenseUsageAction()).rejects.toThrow('Permission denied');
+    await expect(getActiveUserCountAction()).rejects.toThrow('Permission denied');
+
+    expect(mocks.hasPermission).toHaveBeenNthCalledWith(1, mocks.currentUser, 'account_management', 'read');
+    expect(mocks.hasPermission).toHaveBeenNthCalledWith(2, mocks.currentUser, 'account_management', 'read');
+    expect(mocks.getLicenseUsage).not.toHaveBeenCalled();
     expect(mocks.getConnection).not.toHaveBeenCalled();
   });
 });

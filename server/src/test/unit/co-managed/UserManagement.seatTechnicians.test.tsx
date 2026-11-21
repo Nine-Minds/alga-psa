@@ -30,7 +30,7 @@ vi.mock('@alga-psa/users/actions/user-actions/userInvitationActions', () => ({
 vi.mock('@alga-psa/clients/actions/queryActions', () => ({ getContactsByClient: vi.fn(), getAllContacts: vi.fn() }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ addContact: vi.fn(), getContactsEligibleForInvitation: vi.fn() }));
 vi.mock('@alga-psa/client-portal/actions/portal-actions/portalInvitationActions', () => ({ sendPortalInvitation: vi.fn(), createClientPortalUser: vi.fn() }));
-vi.mock('@alga-psa/licensing/actions/license-actions', () => ({ getLicenseUsageAction: actions.usage }));
+vi.mock('@/lib/actions/licensingActions', () => ({ getLicenseUsageAction: actions.usage }));
 vi.mock('@alga-psa/clients/components/contacts/QuickAddContact', () => ({ default: () => null }));
 vi.mock('@alga-psa/clients/lib/contactActionErrorCodes', () => ({ parseContactActionError: vi.fn() }));
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({ default: () => null }));

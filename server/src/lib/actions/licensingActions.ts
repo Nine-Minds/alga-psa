@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth, type AuthContext } from '@alga-psa/auth/withAuth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { getLicenseUsage, type LicenseUsage } from '@alga-psa/licensing/server';
@@ -10,6 +11,10 @@ export const getLicenseUsageAction = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<{ success: boolean; data?: LicenseUsage; error?: string }> => {
+  if (!await hasPermission(_user, 'account_management', 'read')) {
+    throw new Error('Permission denied');
+  }
+
   try {
     return { success: true, data: await getLicenseUsage(tenant) };
   } catch (error) {
@@ -23,6 +28,10 @@ export const getActiveUserCountAction = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<{ success: boolean; data?: number; error?: string }> => {
+  if (!await hasPermission(_user, 'account_management', 'read')) {
+    throw new Error('Permission denied');
+  }
+
   try {
     const knex = await getConnection(tenant);
     const result = await tenantDb(knex, tenant).table('users')
