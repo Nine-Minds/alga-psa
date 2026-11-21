@@ -88,15 +88,15 @@ Two layers. The first is deterministic and is the one that fails without the fix
 **Why it fails before the fix:** today `checkEmailRateLimit` calls `tryConsume`, so the "atomic called / non-atomic not called" assertion fails. After the one-line swap it passes. This pins the enforcement-point decision permanently and runs in CI without Redis.
 
 ### Test B — concurrent live-Redis behavioral test (the finding's requested proof)
-**New:** `packages/email/src/__tests__/TenantEmailService.rateLimit.concurrency.test.ts`, modeled on the existing live-Redis harness in `packages/core/src/lib/rateLimit/__tests__/TokenBucketRateLimiter.atomic.test.ts:158-227` (connect-with-short-timeout, skip when no Redis reachable).
+**New:** `packages/email/src/__tests__/TenantEmailService.rateLimit.concurrency.db.test.ts`. The `.db.test.ts` suffix assigns this live-Redis suite to the workspace database lane, where CI provides Redis and enables the real client. Setup fails if Redis is unavailable.
 
 - Initialize the limiter singleton with the live Redis client and an `email` bucket of `maxTokens = N` (e.g. 20), `refillRate` negligible (e.g. 0.01) so refill cannot mask the race.
-- `del` the bucket key, then fire `3N` concurrent `TenantEmailService.checkEmailRateLimit(tenant, user)` via `Promise.all`.
-- **Assert:** exactly `N` results have `allowed === true`, and `allowed` is never `> N`.
+- `del` the bucket key, then fire `3N` concurrent `defaultSendLive` requests via `Promise.all`, exercising the shared email rate-limit gate.
+- **Assert:** exactly `N` sends succeed and invoke the controlled provider; the remaining requests return `RATE_LIMITED`.
 
-**Why it fails before the fix:** with non-atomic `tryConsume`, `Promise.all` makes all `3N` GETs resolve against the same full-bucket state before any SET lands, so far more than `N` calls are allowed — assertion `allowed === N` fails. After the swap, the single `EVAL` serializes consume on the Redis side and exactly `N` are allowed. When no Redis is reachable (CI without the service), the test self-skips, exactly like the existing atomic suite; Test A still guards the contract there.
+**Why it fails before the fix:** with non-atomic `tryConsume`, `Promise.all` makes all `3N` GETs resolve against the same full-bucket state before any SET lands, so far more than `N` calls are allowed — assertion `allowed === N` fails. After the swap, the single `EVAL` serializes consume on the Redis side and exactly `N` are allowed. These assertions must execute; a missing Redis service fails setup.
 
-Run: `npm test` in `packages/email` (`vitest run`). For Test B against local Redis, point it at the same convention the atomic suite uses (`redis://127.0.0.1:6381` / env override).
+Run: `npm test` in `packages/email` (`vitest run`). Test B defaults to `REDIS_HOST` and `REDIS_PORT` (or `127.0.0.1:6379`); set `EMAIL_RATE_LIMIT_TEST_REDIS` to override the URL. From `server/`, use `vitest run --config vitest.redis.config.ts ../packages/email/src/__tests__/TenantEmailService.rateLimit.concurrency.db.test.ts` for a focused run with the real client.
 
 ---
 
@@ -111,7 +111,7 @@ Run: `npm test` in `packages/email` (`vitest run`). For Test B against local Red
 **Risks / regressions to weigh:**
 - **Fail-closed on Redis EVAL errors** (section 2 table): a transient Redis/EVAL failure now denies outbound/diagnostic sends that previously passed. Defensible for a rate gate and consistent with the gateway, but it is a real behavior change on the normal `sendEmail` path too, not just diagnostics. Confirm this is acceptable for notification email.
 - **EVAL support requirement:** `tryConsumeAtomic` needs a Redis client exposing `eval`. If a deployment's injected client lacks it, the method fails **open** (`remaining:-1`, lines 407-410) — no worse than today, but worth confirming the production client supports `EVAL`.
-- **Test B flakiness/CI:** the concurrency test requires a live Redis and self-skips otherwise; ensure CI either provides Redis or the skip is acceptable, leaning on Test A for always-on coverage.
+- **Test B infrastructure:** the concurrency test requires live Redis. The workspace database lane provides it; setup failures remain visible instead of skipping the regression assertions.
 - **Blast radius:** a single-line change at a shared chokepoint touches both regular sends and diagnostics simultaneously — intended, but means the regular-send path should be exercised (existing `packages/email` suite) to confirm no normal-path regression.
 
 ---
@@ -146,7 +146,7 @@ Focused validation with isolated Redis:
 ```bash
 EMAIL_RATE_LIMIT_TEST_REDIS=redis://127.0.0.1:6387 npm test -- --run \
   src/__tests__/TenantEmailService.rateLimit.test.ts \
-  src/__tests__/TenantEmailService.rateLimit.concurrency.test.ts \
+  src/__tests__/TenantEmailService.rateLimit.concurrency.db.test.ts \
   src/diagnostics/__tests__/outboundDiagnostics.liveSendGates.test.ts
 
 EXT_GATEWAY_RATE_LIMIT_TEST_REDIS=redis://127.0.0.1:6387 npm test -- --run \

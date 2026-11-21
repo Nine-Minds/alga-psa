@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { createClient } from 'redis';
 
 const controlledProvider = vi.hoisted(() => ({
   sendEmail: vi.fn(),
@@ -23,54 +24,49 @@ import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import type { TokenBucketRedisClient } from '@alga-psa/core/rateLimit';
 
 describe('TenantEmailService email rate limit concurrency (live Redis)', () => {
-  const redisUrl = process.env.EMAIL_RATE_LIMIT_TEST_REDIS || 'redis://127.0.0.1:6381';
+  // The .db.test suffix assigns this suite to the workspace database lane,
+  // which provides real Redis instead of the unit lane's never-connecting stub.
+  const redisUrl = process.env.EMAIL_RATE_LIMIT_TEST_REDIS
+    || `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || '6379'}`;
   const tenantId = `email-rate-limit-test-${randomUUID()}`;
   const userId = 'concurrent-user';
   const bucketKey = `alga-psa:ratelimit:bucket:email:${tenantId}:${userId}`;
   const capacity = 20;
 
-  let client: {
-    del: (key: string) => Promise<unknown>;
-    disconnect: () => Promise<void>;
-    get: (key: string) => Promise<string | null>;
-    set: (key: string, value: string, options?: { EX?: number }) => Promise<unknown>;
-    eval: (script: string, options: { keys: string[]; arguments: string[] }) => Promise<unknown>;
-  } | null = null;
+  let client: ReturnType<typeof createClient>;
 
   beforeAll(async () => {
-    try {
-      const { createClient } = await import('redis');
-      const passwordFile = process.env.EMAIL_RATE_LIMIT_TEST_REDIS_PASSWORD_FILE;
-      const password = passwordFile ? (await readFile(passwordFile, 'utf8')).trim() : undefined;
-      const candidate = createClient({
-        url: redisUrl,
-        ...(password ? { password } : {}),
-        socket: {
-          connectTimeout: 2000,
-          reconnectStrategy: () => new Error('no live Redis for email rate-limit test'),
-        },
-      });
-      candidate.on('error', () => undefined);
-      await candidate.connect();
-      await candidate.ping();
-      client = candidate as unknown as typeof client;
-    } catch {
-      client = null;
-    }
+    const passwordFile = process.env.EMAIL_RATE_LIMIT_TEST_REDIS_PASSWORD_FILE;
+    const password = passwordFile ? (await readFile(passwordFile, 'utf8')).trim() : undefined;
+    client = createClient({
+      url: redisUrl,
+      ...(password ? { password } : {}),
+      socket: {
+        connectTimeout: 2000,
+        reconnectStrategy: () => new Error('no live Redis for email rate-limit test'),
+      },
+    });
+    client.on('error', () => undefined);
+    await client.connect();
+    await client.ping();
   }, 15000);
 
-  afterAll(async () => {
-    await client?.del(bucketKey).catch(() => undefined);
-    TokenBucketRateLimiter.resetInstance();
-    await client?.disconnect().catch(() => undefined);
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('sends exactly the bucket capacity through diagnostics live-send and blocks the rest', async ({ skip }) => {
-    if (!client) {
-      skip();
-      return;
+  afterAll(async () => {
+    TokenBucketRateLimiter.resetInstance();
+    if (client?.isOpen) {
+      try {
+        await client.del(bucketKey);
+      } finally {
+        await client.disconnect();
+      }
     }
+  });
 
+  it('sends exactly the bucket capacity through diagnostics live-send and blocks the rest', async () => {
     TokenBucketRateLimiter.resetInstance();
     const limiter = TokenBucketRateLimiter.getInstance();
     await limiter.initialize(async () => client as unknown as TokenBucketRedisClient, {
@@ -104,12 +100,7 @@ describe('TenantEmailService email rate limit concurrency (live Redis)', () => {
     expect(results.filter((result) => result.errorCode === 'RATE_LIMITED')).toHaveLength(capacity * 2);
   });
 
-  it('preserves quota across out-of-order application clocks and normalizes future bucket timestamps', async ({ skip }) => {
-    if (!client) {
-      skip();
-      return;
-    }
-
+  it('preserves quota across out-of-order application clocks and normalizes future bucket timestamps', async () => {
     TokenBucketRateLimiter.resetInstance();
     await TokenBucketRateLimiter.getInstance().initialize(async () => client as unknown as TokenBucketRedisClient, {
       email: async () => ({ maxTokens: 2, refillRate: 0.000001 }),
@@ -165,9 +156,9 @@ describe('TenantEmailService email rate limit concurrency (live Redis)', () => {
     expect(futureStateAfterConsume.tokens).toBeCloseTo(0.5);
     expect(futureStateAfterConsume.lastRefillMs).toBeLessThan(originalNow() + 120_000);
 
-    // Set a deterministic one-second-old baseline relative to Redis TIME to
-    // prove normal refill resumes after timestamp normalization without sleep.
-    const redisTime = await (client as any).sendCommand(['TIME']);
+    // Set an old baseline relative to Redis TIME so the configured refill
+    // supplies tokens after timestamp normalization without sleep.
+    const redisTime = await client.sendCommand<string[]>(['TIME']);
     const redisNowMs = Number(redisTime[0]) * 1000 + Number(redisTime[1]) / 1000;
     await client.set(bucketKey, JSON.stringify({ tokens: 0, lastRefillMs: redisNowMs - 2_000_000_000 }), { EX: 3600 });
     const recovered = await defaultSendLive(input);
