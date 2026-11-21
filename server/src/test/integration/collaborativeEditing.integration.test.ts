@@ -804,6 +804,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       const documentId = await seedDocument();
       const room = `document:${tenantId}:${documentId}`;
       let tokenCalls = 0;
+      let transientRenewalFailures = 0;
       let firstExpiresAt = 0;
       let firstToken = '';
       let releaseRenewal!: () => void;
@@ -815,6 +816,8 @@ describe('Collaborative Editing — Integration Tests', () => {
         if (tokenCalls === 2) {
           renewalStarted();
           await renewalGate;
+          transientRenewalFailures += 1;
+          throw new Error('Temporary credential service failure');
         }
         const credential = tokenCalls === 1 ? shortLivedCredential(documentId) : {
           token: signDocumentRoomToken({ tenantId, documentId, userId }),
@@ -828,6 +831,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       };
 
       const editor = await connectWithRenewal(room, issueCredential);
+      const originalDocument = editor.document;
       await synced(editor.provider);
       await expect(renewalStartedPromise).resolves.toBeUndefined();
 
@@ -844,7 +848,11 @@ describe('Collaborative Editing — Integration Tests', () => {
       await expect.poll(() => Date.now() > firstExpiresAt, { timeout: 5000 }).toBe(true);
       expect(editor.provider.isConnected).toBe(true);
       expect(editor.provider.synced).toBe(true);
-      expect(tokenCalls).toBeGreaterThanOrEqual(2);
+      expect(editor.document).toBe(originalDocument);
+      expect(editor.provider.configuration.preserveConnection).toBe(false);
+      expect(tokenCalls).toBeGreaterThanOrEqual(3);
+      expect(transientRenewalFailures).toBe(1);
+      expect(editor.provider.configuration.token).not.toBe(firstToken);
       expect(() => validateDocumentRoomToken(room, firstToken)).toThrow();
 
       await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)

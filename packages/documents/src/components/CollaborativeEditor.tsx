@@ -36,7 +36,7 @@ import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import { getDocumentRoomToken } from '../actions/collaborativeEditingActions';
-import { startDocumentRoomConnection } from '../lib/documentRoomConnection';
+import { DocumentRoomCredentialDeniedError, startDocumentRoomConnection } from '../lib/documentRoomConnection';
 import { EditorImage } from '../lib/editorImageExtension';
 import {
   editorImageUploadMessage,
@@ -395,19 +395,23 @@ export function CollaborativeEditor({
     let active = true;
     const issueToken = async () => {
       const result = await getDocumentRoomToken(documentId);
-      if (isDocumentActionError(result)) throw new Error(getErrorMessage(result));
+      if (isDocumentActionError(result)) {
+        const message = getErrorMessage(result);
+        if ('permissionError' in result) throw new DocumentRoomCredentialDeniedError(message);
+        throw new Error(message);
+      }
       return { token: result.token, expiresAt: result.expiresAt };
     };
-    const reportAuthorizationFailure = (error: unknown) => {
+    const reportRenewalFailure = (error: unknown) => {
       if (!active) return;
-      const message = error instanceof Error ? error.message : 'Permission denied: Cannot edit this document';
-      console.error('[CollaborativeEditor] Failed to authorize document room:', error);
+      const message = error instanceof Error ? error.message : 'Unable to restore collaborative editing. Check your connection and document access, then reload the editor.';
+      console.error('[CollaborativeEditor] Failed to restore document room connection:', error);
       setConnectionStatus('disconnected');
       onConnectionStatusChangeRef.current?.('disconnected');
       toast.error(message);
     };
-    const connection = startDocumentRoomConnection(provider, issueToken, reportAuthorizationFailure);
-    void connection.ready.catch(reportAuthorizationFailure);
+    const connection = startDocumentRoomConnection(provider, issueToken, reportRenewalFailure);
+    void connection.ready.catch(reportRenewalFailure);
     return () => {
       active = false;
       connection.stop();
