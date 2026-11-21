@@ -4,8 +4,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { ApiFinancialController } from '../../../lib/api/controllers/ApiFinancialController';
-import { createTestDbConnection, createTestTenant, type TenantTestData } from '../../e2e/helpers/testSetup';
-import { wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
+import { createTestTenant, type TenantTestData } from '../../e2e/helpers/testSetup';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
 
 type ApiContext = {
   tenant: string;
@@ -27,7 +27,7 @@ describe('bulk invoice controller lifecycle integration', () => {
 
   beforeAll(async () => {
     wireLocalTestDbEnv();
-    db = createTestDbConnection();
+    db = await createTestDbConnection();
     primary = await createTestTenant(db, { companyName: `Bulk invoice actor ${uuidv4().slice(0, 8)}` });
     other = await createTestTenant(db, { companyName: `Bulk invoice other ${uuidv4().slice(0, 8)}` });
     const tenant = primary.tenant.tenantId;
