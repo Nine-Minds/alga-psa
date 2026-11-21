@@ -9,7 +9,7 @@ import {
   createTenantKnex as createPackageTenantKnex,
   getCurrentTenantId as getPackageCurrentTenantId
 } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   updateWorkflowDefinitionDraftAction,

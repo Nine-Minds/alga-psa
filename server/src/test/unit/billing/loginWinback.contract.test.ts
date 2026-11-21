@@ -10,7 +10,7 @@ function read(relativePath: string): string {
 
 describe('login win-back contract', () => {
   it('T036/T042/T043: inactive login triggers hook before returning null and before verifyPassword', () => {
-    const source = read('packages/auth/src/actions/auth.tsx');
+    const source = read('packages/auth/src/lib/authenticateUserForAuth.ts');
 
     const inactiveGate = source.indexOf('if (user.is_inactive)');
     const hook = source.indexOf('void triggerInactiveLoginWinback(user)');
@@ -24,7 +24,7 @@ describe('login win-back contract', () => {
   });
 
   it('T040/T041/T072: shared auth uses EE injection and CE resolves to a no-op stub', () => {
-    const authSource = read('packages/auth/src/actions/auth.tsx');
+    const authSource = read('packages/auth/src/lib/authenticateUserForAuth.ts');
     const entry = read('packages/auth/src/lib/winback/enterpriseWinbackEntry.ts');
     const ceStub = read('packages/ee/src/lib/auth/loginWinback.ts');
 

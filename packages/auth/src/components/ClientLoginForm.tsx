@@ -165,7 +165,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   return (
     <>
     <form 
-      onSubmit={onSubmit} 
+      onSubmit={onSubmit}
       method="POST"
       className="space-y-4" 
       {...withDataAutomationId({ id: 'client-login-form' })}
