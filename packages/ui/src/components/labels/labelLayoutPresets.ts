@@ -1,10 +1,18 @@
-/** Layout presets for the label print dialog, in the shape POST /api/labels/pdf accepts as `layout`. */
-export type LabelLayoutPresetId = 'roll-4x2' | 'letter-2x5' | 'a4-2x7';
+/**
+ * Layout presets for the label print dialog, in the shape POST /api/labels/pdf accepts as `layout`.
+ * A `null` layout means "send no layout": the server then prints one label per page at the size the
+ * template itself declares, whatever thermal label that is.
+ */
+export type LabelLayoutPresetId = 'template-preferred' | 'roll-4x2' | 'letter-2x5' | 'a4-2x7';
 
 export const LABEL_LAYOUT_STORAGE_KEY = 'alga.labels.layout';
-export const DEFAULT_LABEL_LAYOUT_PRESET: LabelLayoutPresetId = 'roll-4x2';
+export const DEFAULT_LABEL_LAYOUT_PRESET: LabelLayoutPresetId = 'template-preferred';
 
 export const LABEL_LAYOUT_PRESETS: Record<LabelLayoutPresetId, { defaultLabel: string; layout: unknown }> = {
+  'template-preferred': {
+    defaultLabel: 'Match template size',
+    layout: null,
+  },
   'roll-4x2': {
     defaultLabel: 'One per label (4 × 2 in roll)',
     layout: { kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } },

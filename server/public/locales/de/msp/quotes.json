@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Zurück zu Layouts",
+      "back": "Zurück zu Angebotslayouts",
       "rerun": "Wiederholung",
       "saveLayout": "Layout speichern"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Kopie von {{name}}",
       "standardTemplate": "Standardvorlage"
     },
-    "title": "Angebotslayout-Editor",
-    "description": "Entwerfen Sie das Angebotslayout mit dem visuellen Editor und zeigen Sie dann eine Vorschau mit Beispieldaten an.",
     "errors": {
       "exportAst": "Die AST-Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
       "load": "Der Angebotsvorlagen-Editor konnte nicht geladen werden",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Angebotsdetails konnten nicht geladen werden."
     },
     "fields": {
-      "layoutDetails": "Layoutdetails",
+      "created": "Erstellt {{time}}",
+      "notSaved": "Noch nicht gespeichert",
+      "savedAt": "Gespeichert {{time}}",
       "templateName": "Vorlagenname",
       "version": "Version"
     },
-    "footer": {
-      "created": "Erstellt:",
-      "lastUpdated": "Letzte Aktualisierung:"
-    },
     "headings": {
-      "editLayout": "Angebotslayout bearbeiten",
       "newLayout": "Neues Angebotslayout"
     },
     "placeholders": {
@@ -850,7 +845,14 @@
       "noQuotesFound": "Keine Angebote gefunden.",
       "selectQuote": "Angebot wählen",
       "selectQuoteHint": "Wählen Sie ein Angebot für die datengebundene Vorschau.",
-      "loadingQuoteDetails": "Angebotsdetails werden geladen…"
+      "loadingQuoteDetails": "Angebotsdetails werden geladen…",
+      "frameTitle": "Angebotsvorschau",
+      "zoom": {
+        "fit": "Anpassen",
+        "actual": "100 %",
+        "label": "Vorschauzoom",
+        "fitWithScale": "Anpassen ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendern",
@@ -865,6 +867,9 @@
       "preview": "Vorschau",
       "transforms": "Verwandelt",
       "visual": "Visuell"
+    },
+    "titles": {
+      "edit": "Layout bearbeiten: {{name}}"
     }
   },
   "templatesPage": {

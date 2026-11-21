@@ -398,6 +398,48 @@
     "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   },
   "coManaged": {
+    "trial": {
+      "title": "Prueba de 15 días de un puesto cogestionado",
+      "description": "Invite a un técnico del cliente a trabajar en los tableros que elija. Los 15 días empiezan con su primer inicio de sesión. El acceso requiere una suscripción básica o una prueba del plan básico activa.",
+      "terms": "Un puesto de pago cuesta {{amount}} al mes. La prueba termina sin cargos salvo que confirme la capacidad de pago.",
+      "status": {
+        "active": "Activa",
+        "pending": "En espera del primer inicio de sesión",
+        "base_paused": "Suscripción básica en pausa",
+        "expired": "Prueba caducada",
+        "paid": "Puesto de pago en uso",
+        "ended": "Prueba finalizada",
+        "checkout_pending": "En espera del pago"
+      },
+      "purchaseAwaitingVerification": "Compra pendiente de verificación",
+      "conversionFailed": "El cambio a un puesto de pago no se completó. Revise la capacidad de pago disponible o intente realizar la compra de nuevo.",
+      "deadline": "La prueba del puesto termina el {{date}}.",
+      "baseUntil": "El acceso básico actual termina el {{date}}.",
+      "openSetup": "Abrir la configuración del puesto del cliente",
+      "invite": "Invitar al técnico durante 15 días",
+      "resend": "Reenviar invitación",
+      "replace": "Sustituir al técnico",
+      "cancelInvitation": "Cancelar invitación",
+      "restoreBase": "Restaurar el acceso básico en Cuenta",
+      "resumePurchase": "Reanudar compra",
+      "cancelConversion": "Cancelar el cambio de puesto",
+      "spareSeatTerms": "Use ahora un puesto de pago disponible. El total de puestos del grupo seguirá siendo el mismo.",
+      "confirmSpareSeat": "Confirmar el uso de un puesto de pago",
+      "keepSeat": "Conservar este puesto",
+      "refresh": "Actualizar prueba",
+      "returnToTrial": "Volver a la prueba del puesto del cliente",
+      "notice": {
+        "invitationSaved": "Invitación guardada. Intente enviarla de nuevo desde abajo.",
+        "deliveryFailed": "El envío falló. Puede intentarlo de nuevo.",
+        "replacementSent": "Se envió la invitación al técnico sustituto.",
+        "replacementSaved": "Se guardó el técnico sustituto. Intente enviar la invitación de nuevo."
+      },
+      "error": {
+        "boardChoicesFailed": "No se pudieron cargar los tableros disponibles.",
+        "actionFailed": "No se pudo completar la acción. Actualice la prueba e inténtelo de nuevo.",
+        "paymentFailed": "No se pudo completar el pago. Revise el estado de la prueba."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Este espacio de trabajo no tiene un grupo cogestionado. Añada puestos cogestionados para usar esta función.",
@@ -694,6 +736,8 @@
     "proRequired": "Se requiere una suscripción Pro de PSA para patrocinar espacios de trabajo de clientes.",
     "loadError": "No se pudo cargar la capacidad de puestos de clientes. Inténtelo de nuevo.",
     "purchaseError": "No se pudo completar la compra de puestos. Puede reanudarla con seguridad.",
+    "termsChanged": "El precio cambió después de que revisara la compra. Revise las condiciones actualizadas antes de confirmar.",
+    "offerUnavailable": "La compra de nuevas plazas no está disponible temporalmente. No se realizó ningún cargo.",
     "checkoutExpired": "Este pago caducó. Inicie una nueva compra para continuar.",
     "grace": "Renueve su licencia o resuelva el déficit de capacidad antes del {{date}} para mantener los espacios de trabajo de clientes editables.",
     "readOnly": "El período de gracia terminó el {{date}}. Restablezca la capacidad con licencia para reanudar los cambios en los espacios de trabajo de clientes.",
@@ -709,6 +753,11 @@
       "intro": "Compre aquí un conjunto de puestos de cogestión. Después de la compra, asigne puestos a los clientes desde cada ficha de cliente."
     },
     "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
+    "billingCustomerUnlinked": "No se pudo verificar una cuenta de facturación de Stripe para este espacio de trabajo. Contacte con soporte para vincularla.",
+    "proSubscriptionRequired": "Las plazas de gestión conjunta requieren una suscripción Pro vigente. Revise su suscripción en Gestión de la cuenta.",
+    "offerPaused": "Las compras de nuevas plazas están pausadas. Contacte con su gestor de cuenta para obtener información.",
+    "offerMisconfigured": "La oferta de plazas de TI coadministrada no está configurada correctamente. Contacte con soporte.",
+    "offerTemporarilyUnavailable": "El servicio de precios no está disponible temporalmente. Vuelva a intentarlo pronto.",
     "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad de cogestión.",
     "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",
     "purchaseUnavailable": "La compra de cogestión alojada no está disponible en esta implementación.",

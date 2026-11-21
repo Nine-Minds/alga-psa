@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedEntitlementState } from './co-managed-entitlements';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export class CoManagedAdmissionError extends Error {
   constructor(public readonly code: 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED' |
@@ -26,7 +27,7 @@ export async function lockCoManagedSeatScope(trx: Knex.Transaction, customerTena
   const found = await customer.table('co_management_relationships').whereNull('ended_at').first();
   if (!found) throw new CoManagedAdmissionError('CO_MANAGED_NOT_ACTIVE');
   const sponsor = tenantDb(trx, found.sponsor_tenant);
-  const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
+  const entitlement = await lockCoManagedSponsorPool(trx, found.sponsor_tenant);
   const owner = await sponsor.table('tenants').forShare().first('product_code', 'plan');
   const operation = await sponsor.table('co_managed_provisioning_operations')
     .where({ customer_tenant: customerTenant, relationship_id: found.relationship_id }).forUpdate().first();

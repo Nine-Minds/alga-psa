@@ -74,6 +74,10 @@ export class ApiKeyService {
       const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
       if (!approved) return 'owner_type_rejected';
     }
+    if (user.user_type === 'internal' && user.principal_member) {
+      const { admitSeatTrialCredential } = await import('@enterprise/lib/co-managed/seatTrialSession');
+      if (!await admitSeatTrialCredential(tenant, userId, knex)) return 'principal_refused';
+    }
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
   }

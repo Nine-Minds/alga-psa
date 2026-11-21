@@ -284,11 +284,14 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
     if (liveOnly) query.where('a.state', 'active');
     return query;
   };
+  const arrangements = ofUser(db.table('co_managed_seat_arrangements as r'), 'r.arrangement_id', false);
+  arrangements.whereNotExists(db.table('co_managed_unavailable_trial_assignments as blocked').select(knex.raw('1'))
+    .where('blocked.assignment_id', knex.ref('a.assignment_id')));
   return knex.queryBuilder().select(knex.raw(
     `jsonb_build_object('assignments', (?), 'arrangements', (?), 'boards', (?), 'projects', (?))`,
     [
       aggregate(knex, db.table('co_managed_seat_assignments').where('user_id', subject.userId).select('arrangement_id', 'state')),
-      aggregate(knex, ofUser(db.table('co_managed_seat_arrangements as r'), 'r.arrangement_id', false)
+      aggregate(knex, arrangements
         .distinct('r.arrangement_id', 'r.client_id', 'r.state')),
       aggregate(knex, ofUser(db.table('co_managed_seat_board_scopes as s'), 's.arrangement_id', true)
         .select('s.arrangement_id', 's.board_id', 's.can_create')),

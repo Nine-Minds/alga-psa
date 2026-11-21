@@ -457,6 +457,7 @@
         "contactMissingEmail": "O contato não possui um endereço de e-mail. Adicione um endereço de e-mail ao contato antes de enviar um convite.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido. Atualize o contato com um endereço de e-mail válido antes de enviar um convite.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato. Use a redefinição de senha em vez de enviar um convite.",
+        "portalUserAlreadyExists": "Este endereço de e-mail já pertence a outra conta de usuário nesta organização.",
         "noDefaultClient": "Nenhum cliente padrão configurado para este locatário. Defina um cliente padrão nas Configurações Gerais.",
         "noDefaultLocation": "O cliente padrão deve ter um local padrão configurado para enviar convites do portal.",
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",
@@ -653,12 +654,43 @@
     "actions": {
       "openMenu": "Abrir menu",
       "quickView": "Visualização rápida",
-      "addNewContact": "Adicionar novo contato"
+      "addNewContact": "Adicionar novo contato",
+      "selectAll": "Selecionar todos os contatos",
+      "selectContact": "Selecionar {{name}}",
+      "inviteSelected": "Convidar para o portal ({{selected}})",
+      "inviteAllEligible": "Convidar todos os elegíveis"
     },
     "errors": {
       "loadFailed": "Falha ao carregar contatos.",
       "loadingTitle": "Erro ao carregar contatos",
       "retryFailed": "Falha ao carregar contatos. Por favor, tente novamente."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Convidar contatos para o portal do cliente",
+    "description": "Confirmação de convites em massa para o portal com prévia dos elegíveis e resultados por contato",
+    "loading": "Verificando quem pode ser convidado...",
+    "inviteCount": "{{total}} contatos serão convidados para o portal do cliente.",
+    "skipCount": "{{total}} serão ignorados:",
+    "visibilityNote": "Cada convite concede o acesso que o contato já possui: {{grouped}} estão limitados a um grupo de visibilidade do portal e {{full}} recebem acesso completo aos dados de portal do seu cliente.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "já tem acesso ao portal",
+      "missingEmail": "sem endereço de e-mail utilizável",
+      "sharedMailbox": "caixa de correio compartilhada"
+    },
+    "actions": {
+      "send": "Enviar {{total}} convites",
+      "sending": "Enviando..."
+    },
+    "results": {
+      "summary": "{{sent}} enviados, {{skipped}} ignorados, {{failed}} com falha.",
+      "sent": "Enviado",
+      "skipped": "Ignorado",
+      "failed": "Falhou"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível determinar quem pode ser convidado. Tente novamente.",
+      "sendFailed": "Não foi possível enviar os convites. Tente novamente."
     }
   },
   "contactsLayout": {

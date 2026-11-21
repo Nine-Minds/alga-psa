@@ -4,9 +4,12 @@ import { documentTypeLabel } from './documentTypeLabel';
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { toast } from 'react-hot-toast';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
+import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
 import { Input } from '@alga-psa/ui/components/Input';
 import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -35,11 +38,8 @@ import {
   runAuthoritativeTemplatePreview,
   saveDocumentTemplate,
 } from '../../../actions/documentTemplateActions';
-import {
-  getDocumentTypeRegistryEntry,
-  isDocumentType,
-} from '../../../lib/document-templates/registry';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
+import { DESIGNER_AREA_MIN_HEIGHT, useFitToAvailableHeight } from '../../invoice-designer/useFitToAvailableHeight';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
 import {
@@ -129,6 +129,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
+  // One preference for every document type: the author's choice is about the editor.
+  const focus = useDesignerFocusPreference('document_layout');
+  const fillHeight = focus.isFocused ? 'flex min-h-0 flex-1 flex-col' : '';
   const typeLabel = useMemo(() => documentTypeLabel(documentType, t), [documentType, t]);
 
   const [template, setTemplate] = useState<DocumentTemplateDraft>(initialTemplate);
@@ -156,10 +159,20 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
         };
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Label-only settings do not fit a header row, so they live behind one button.
+  const [isLabelSettingsOpen, setIsLabelSettingsOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>('visual');
   const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<VisualWorkspaceTab>('design');
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState<string | number>('320px');
+  const designerAreaRef = useRef<HTMLDivElement>(null);
+  // In the normal layout the Design view takes the room left under the header instead of
+  // guessing at the page chrome, so it ends where the page ends and nothing scrolls.
+  const designerAreaHeight = useFitToAvailableHeight(designerAreaRef, {
+    enabled: !focus.isFocused && editorTab === 'visual' && visualWorkspaceTab === 'design',
+    minHeight: DESIGNER_AREA_MIN_HEIGHT,
+  });
+  const designerFill = focus.isFocused || designerAreaHeight !== null ? 'flex min-h-0 flex-1 flex-col' : '';
 
   // Designer store
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
@@ -187,9 +200,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   // The preview is drawn on the printed page's sheet; 'fit' enlarges a label to fill the pane.
   const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
   const [previewScale, setPreviewScale] = useState<number | null>(null);
-  // Only labels are drawn on their printed sheet (see resolveTemplatePreviewSheetFromAst), so only they zoom.
-  const previewIsLabelSheet = isDocumentType(documentType)
-    && getDocumentTypeRegistryEntry(documentType).printGeometry === 'label-cell';
   // Standard templates carry translatable labels, so an author can see the
   // document in the language each client will actually receive it in.
   const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
@@ -264,7 +274,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     calculateHeight();
     window.addEventListener('resize', calculateHeight);
     return () => window.removeEventListener('resize', calculateHeight);
-  }, []);
+  }, [focus.isFocused]);
 
   // Authoritative preview pipeline — export the workspace and render it server-side.
   useEffect(() => {
@@ -389,50 +399,45 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     }
   };
 
+  // One compact header row (back, title, name, version, label settings, saved status, actions),
+  // the same arrangement as the invoice and quote layout editors: the rest of the window belongs
+  // to the designer, so the page never scrolls while editing.
   return (
-    <div className="p-6 space-y-4" id="document-template-editor-page">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {isNewTemplate
-              ? t('documentTemplates.editor.titles.create', { defaultValue: 'New {{type}} Layout', type: typeLabel })
-              : t('documentTemplates.editor.titles.edit', { defaultValue: 'Edit {{type}} Layout', type: typeLabel })}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('documentTemplates.editor.description', {
-              defaultValue: 'Design the {{type}} layout using the visual editor, then preview with sample data.',
+    <DesignerFocusSurface
+      id="document-template-editor-surface"
+      focused={focus.isFocused}
+      onFocusedChange={focus.setFocused}
+      // The page margin the type's list view also uses; focus mode takes the window instead.
+      className="p-6"
+    >
+    <Card
+      id="document-template-editor-page"
+      className={fillHeight ? `${fillHeight} rounded-none border-0` : undefined}
+      style={focus.isFocused ? { boxShadow: 'none' } : undefined}
+    >
+      <CardHeader className="pb-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button id="document-template-editor-back" variant="soft" onClick={onCancel}>
+            {t('documentTemplates.editor.actions.back', {
+              defaultValue: 'Back to {{type}} Layouts',
               type: typeLabel,
             })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button id="document-template-editor-back" variant="outline" onClick={onCancel}>
-            {t('documentTemplates.editor.actions.back', { defaultValue: 'Back to Layouts' })}
           </Button>
-          <Button id="document-template-editor-save" onClick={() => void handleSave()} disabled={isSaving}>
-            {isSaving
-              ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
-              : t('documentTemplates.editor.actions.save', { defaultValue: 'Save Layout' })}
-          </Button>
-        </div>
-      </div>
-
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {t('documentTemplates.editor.errorTitle', { defaultValue: '{{type}} Layout Editor', type: typeLabel })}
-          </AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('documentTemplates.editor.sections.details', { defaultValue: 'Layout Details' })}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+          <h2 className="min-w-0 max-w-[20rem] truncate text-lg font-semibold">
+            {isNewTemplate
+              ? t('documentTemplates.editor.titles.create', { defaultValue: 'New {{type}} Layout', type: typeLabel })
+              : t('documentTemplates.editor.titles.edit', {
+                defaultValue: 'Edit Layout: {{name}}',
+                name: template.name || typeLabel,
+              })}
+          </h2>
+          <div className="flex min-w-[260px] flex-1 items-center gap-2">
+            <label
+              htmlFor="document-template-name-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+            </label>
             <Input
               id="document-template-name-input"
               value={template.name || ''}
@@ -441,10 +446,16 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 defaultValue: '{{type}} Template',
                 type: typeLabel,
               })}
+              containerClassName="flex-1"
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('documentTemplates.editor.fields.version', { defaultValue: 'Version' })}
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="document-template-version-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('documentTemplates.editor.fields.version', { defaultValue: 'Version' })}
+            </label>
             <Input
               id="document-template-version-input"
               type="number"
@@ -454,55 +465,112 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
               onChange={(event) =>
                 setTemplate((current) => ({ ...current, version: Math.max(1, Number(event.target.value) || 1) }))
               }
+              containerClassName="w-20"
             />
-          </label>
+          </div>
           {isLabelTemplate ? (
-            <>
-              <div className="flex flex-col gap-2 text-sm font-medium text-foreground">
-                {t('documentTemplates.editor.fields.labelClass', { defaultValue: 'Label class' })}
-                <CustomSelect
-                  id="document-template-label-class-select"
-                  value={labelClass}
-                  onValueChange={(value) => isLabelClass(value) && setLabelClass(value)}
-                  options={LABEL_CLASSES.map((value) => ({
-                    value,
-                    label: t(`documentTemplates.labelClasses.${value}`, { defaultValue: LABEL_CLASS_DEFAULT_LABELS[value] }),
-                  }))}
-                />
-              </div>
-              <fieldset className="flex flex-col gap-2 text-sm md:col-span-2">
-                <legend className="font-medium text-foreground">
-                  {t('documentTemplates.editor.fields.labelFields', { defaultValue: 'Fields shown on the label' })}
-                </legend>
-                <p className="text-xs text-muted-foreground">
-                  {t('documentTemplates.editor.fields.labelFieldsHint', {
-                    defaultValue: 'The record link (QR code) and the identifier are always shown.',
-                  })}
-                </p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {LABEL_HIDEABLE_FIELDS.map((field) => (
-                    <label key={field} className="flex items-center gap-2">
-                      <input
-                        id={`document-template-label-field-${field}`}
-                        type="checkbox"
-                        checked={!hiddenFields.includes(field)}
-                        onChange={(event) =>
-                          setHiddenFields((current) =>
-                            event.target.checked ? current.filter((f) => f !== field) : [...current, field],
-                          )
-                        }
-                      />
-                      {t(`documentTemplates.labelFields.${field}`, { defaultValue: LABEL_FIELD_DEFAULT_LABELS[field] })}
-                    </label>
-                  ))}
+            <Popover open={isLabelSettingsOpen} onOpenChange={setIsLabelSettingsOpen}>
+              <PopoverTrigger asChild>
+                <Button id="document-template-label-settings" variant="outline">
+                  {t('documentTemplates.editor.actions.labelSettings', { defaultValue: 'Label settings' })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                // Above the label class dropdown's own layer, and deaf to the clicks that
+                // dropdown portals outside this popover: picking a class is not "outside".
+                className="z-[10001] w-80 space-y-3"
+                onInteractOutside={(event) => {
+                  const target = event.target as HTMLElement | null;
+                  if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <div className="flex flex-col gap-2 text-sm font-medium text-foreground">
+                  {t('documentTemplates.editor.fields.labelClass', { defaultValue: 'Label class' })}
+                  <CustomSelect
+                    id="document-template-label-class-select"
+                    value={labelClass}
+                    onValueChange={(value) => isLabelClass(value) && setLabelClass(value)}
+                    options={LABEL_CLASSES.map((value) => ({
+                      value,
+                      label: t(`documentTemplates.labelClasses.${value}`, { defaultValue: LABEL_CLASS_DEFAULT_LABELS[value] }),
+                    }))}
+                  />
                 </div>
-              </fieldset>
-            </>
+                <fieldset className="flex flex-col gap-2 text-sm">
+                  <legend className="font-medium text-foreground">
+                    {t('documentTemplates.editor.fields.labelFields', { defaultValue: 'Fields shown on the label' })}
+                  </legend>
+                  <p className="text-xs text-muted-foreground">
+                    {t('documentTemplates.editor.fields.labelFieldsHint', {
+                      defaultValue: 'The record link (QR code) and the identifier are always shown.',
+                    })}
+                  </p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {LABEL_HIDEABLE_FIELDS.map((field) => (
+                      <label key={field} className="flex items-center gap-2">
+                        <input
+                          id={`document-template-label-field-${field}`}
+                          type="checkbox"
+                          checked={!hiddenFields.includes(field)}
+                          onChange={(event) =>
+                            setHiddenFields((current) =>
+                              event.target.checked ? current.filter((f) => f !== field) : [...current, field],
+                            )
+                          }
+                        />
+                        {t(`documentTemplates.labelFields.${field}`, { defaultValue: LABEL_FIELD_DEFAULT_LABELS[field] })}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </PopoverContent>
+            </Popover>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span
+              id="document-template-save-status"
+              className="text-xs text-muted-foreground"
+              aria-live="polite"
+              title={template.created_at
+                ? t('documentTemplates.editor.fields.created', {
+                  defaultValue: 'Created {{time}}',
+                  time: formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : undefined}
+            >
+              {template.updated_at
+                ? t('documentTemplates.editor.fields.savedAt', {
+                  defaultValue: 'Saved {{time}}',
+                  time: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : t('documentTemplates.editor.fields.notSaved', { defaultValue: 'Not saved yet' })}
+            </span>
+            <DesignerFocusToggle id="document-template-editor-focus-toggle" />
+            <Button id="document-template-editor-close" variant="outline" onClick={onCancel}>
+              {t('templateEditor.actions.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button id="document-template-editor-save" onClick={() => void handleSave()} disabled={isSaving}>
+              {isSaving
+                ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
+                : t('documentTemplates.editor.actions.save', { defaultValue: 'Save Layout' })}
+            </Button>
+          </div>
+        </div>
+        {error ? (
+          <Alert variant="destructive" className="mt-2" id="document-template-editor-error-alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardHeader>
+      <CardContent className={`pt-0 ${fillHeight}`.trim()}>
+      <Tabs
+        value={editorTab}
+        onValueChange={(value) => setEditorTab(value as EditorTab)}
+        className={`space-y-4 ${fillHeight}`.trim()}
+      >
         <TabsList>
           <TabsTrigger
             id="document-template-editor-visual-tab"
@@ -520,12 +588,18 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visual" className="pt-4 space-y-3">
-          <div className="border rounded overflow-hidden bg-card" id="document-template-visual-designer">
+        <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
+          <div
+            ref={designerAreaRef}
+            className={`border rounded overflow-hidden bg-card ${designerFill}`.trim()}
+            style={designerAreaHeight === null ? undefined : { height: designerAreaHeight }}
+            id="document-template-visual-designer"
+          >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="document-designer-visual-workspace-tabs"
+              className={designerFill || undefined}
             >
               <TabsList>
                 <TabsTrigger
@@ -551,11 +625,14 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className="pt-3">
-                <DesignerShell />
+              <TabsContent value="design" className={`pt-3 ${designerFill}`.trim()}>
+                <DesignerShell fillParent={designerAreaHeight !== null} />
               </TabsContent>
 
-              <TabsContent value="transforms" className="pt-3">
+              <TabsContent
+                value="transforms"
+                className={`pt-3 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+              >
                 <TransformsWorkspace
                   previewState={previewState}
                   previewData={null}
@@ -568,7 +645,10 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 />
               </TabsContent>
 
-              <TabsContent value="preview" className="pt-3 space-y-3">
+              <TabsContent
+                value="preview"
+                className={`pt-3 space-y-3 ${focus.isFocused ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+              >
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <ViewSwitcher
@@ -637,7 +717,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                         })}
                     </p>
                     <div className="flex items-center gap-2">
-                      {previewIsLabelSheet && (
                       <ViewSwitcher
                         aria-label={t('designer.workspace.preview.zoom.label', { defaultValue: 'Preview zoom' })}
                         currentView={previewZoomMode}
@@ -660,7 +739,6 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                           },
                         ]}
                       />
-                      )}
                       <PreviewLocaleSelect
                         id="document-designer-preview-locale-select"
                         value={previewLocale}
@@ -723,7 +801,10 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="code" className="pt-4">
+        <TabsContent
+          value="code"
+          className={`pt-4 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+        >
           <Alert variant="info" className="mb-3">
             <AlertDescription>
               {t('templateEditor.alerts.codeReadonly', {
@@ -749,28 +830,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           </div>
         </TabsContent>
       </Tabs>
-
-      <CardFooter className="flex justify-between items-center gap-2 px-0">
-        <div className="text-sm text-muted-foreground">
-          {template.created_at && (
-            <p>
-              {t('documentTemplates.editor.labels.created', {
-                defaultValue: 'Created: {{date}}',
-                date: formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' }),
-              })}
-            </p>
-          )}
-          {template.updated_at && (
-            <p>
-              {t('documentTemplates.editor.labels.lastUpdated', {
-                defaultValue: 'Last Updated: {{date}}',
-                date: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
-              })}
-            </p>
-          )}
-        </div>
-      </CardFooter>
-    </div>
+      </CardContent>
+    </Card>
+    </DesignerFocusSurface>
   );
 };
 

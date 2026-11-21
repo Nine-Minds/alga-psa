@@ -10,6 +10,7 @@ const {
   pushMock,
   listServiceRequestDefinitionsActionMock,
   listServiceRequestTemplatesActionMock,
+  createBlankServiceRequestDefinitionActionMock,
   createServiceRequestDefinitionFromTemplateActionMock,
   toastSuccessMock,
   toastErrorMock,
@@ -17,6 +18,7 @@ const {
   pushMock: vi.fn(),
   listServiceRequestDefinitionsActionMock: vi.fn(),
   listServiceRequestTemplatesActionMock: vi.fn(),
+  createBlankServiceRequestDefinitionActionMock: vi.fn(),
   createServiceRequestDefinitionFromTemplateActionMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -34,7 +36,8 @@ vi.mock('next/link', () => ({
 
 vi.mock('../../../../../app/msp/service-requests/actions', () => ({
   archiveServiceRequestDefinitionAction: vi.fn(),
-  createBlankServiceRequestDefinitionAction: vi.fn(),
+  createBlankServiceRequestDefinitionAction: (...args: unknown[]) =>
+    createBlankServiceRequestDefinitionActionMock(...args),
   createServiceRequestDefinitionFromTemplateAction: (...args: unknown[]) =>
     createServiceRequestDefinitionFromTemplateActionMock(...args),
   duplicateServiceRequestDefinitionAction: vi.fn(),
@@ -134,6 +137,26 @@ describe('ServiceRequestsManagementPage', () => {
       success: true,
       data: { definition_id: 'definition-123' },
     });
+    createBlankServiceRequestDefinitionActionMock.mockResolvedValue({
+      definition_id: 'definition-456',
+    });
+  });
+
+  it('creates a blank draft and reloads the table it was added to', async () => {
+    render(<ServiceRequestsManagementPage />);
+
+    await screen.findByText('New Hire Onboarding');
+    listServiceRequestDefinitionsActionMock.mockClear();
+
+    fireEvent.click(document.getElementById('service-request-create-blank')!);
+
+    await waitFor(() => {
+      expect(createBlankServiceRequestDefinitionActionMock).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(listServiceRequestDefinitionsActionMock).toHaveBeenCalled();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('creates a draft from an example and opens the editor page immediately', async () => {

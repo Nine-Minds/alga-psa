@@ -562,13 +562,14 @@ export const sendTestEmailAction = withAuth(async (
     const textContent = overrideContent?.text_content ?? template.text_content;
 
     // 5. Get sample data and substitute variables
-    const { expandEachBlocksForPreview, getSampleDataForPreview } = await import('../../lib/templateSampleData');
-    const sampleData = getSampleDataForPreview(template.name, htmlContent, subject);
+    const { getSampleDataForPreview, replaceTemplateSampleVariables } = await import('../../lib/templateSampleData');
+    const sampleData = getSampleDataForPreview(template.name, `${htmlContent}\n${textContent ?? ''}`, subject);
+    const hasSampleData = (condition: string) => Object.hasOwn(sampleData, condition);
 
     const { StaticTemplateProcessor } = await import('@alga-psa/email');
-    const renderedSubject = `[TEST] ${replaceVars(subject, sampleData)}`;
-    const renderedHtml = replaceVars(expandEachBlocksForPreview(htmlContent), sampleData);
-    const renderedText = replaceVars(expandEachBlocksForPreview(textContent ?? ''), sampleData);
+    const renderedSubject = `[TEST] ${replaceTemplateSampleVariables(subject, sampleData, hasSampleData)}`;
+    const renderedHtml = replaceTemplateSampleVariables(htmlContent, sampleData, hasSampleData);
+    const renderedText = replaceTemplateSampleVariables(textContent ?? '', sampleData, hasSampleData);
 
     const templateProcessor = new StaticTemplateProcessor(renderedSubject, renderedHtml, renderedText);
 
@@ -588,29 +589,6 @@ export const sendTestEmailAction = withAuth(async (
     return { success: true, sentTo: userRecord.email };
   });
 });
-
-/**
- * Simple variable replacement for test email rendering.
- * Handles {{#if condition}}...{{/if}} blocks and {{variable}} placeholders.
- */
-function replaceVars(content: string, data: Record<string, string>): string {
-  // Process {{#if condition}}...{{/if}} blocks first — show content when sample data exists
-  let result = content.replace(
-    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, condition, blockContent) => {
-      const key = condition.trim();
-      return key in data ? blockContent : '';
-    }
-  );
-
-  // Then replace simple {{variable}} placeholders
-  result = result.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-    const trimmedKey = key.trim();
-    return trimmedKey in data ? data[trimmedKey] : match;
-  });
-
-  return result;
-}
 
 /** Compatibility entry points reject caller identities that differ from the session. */
 export const getUserPreferencesAction = withAuth(async (

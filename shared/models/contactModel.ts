@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
 import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
 import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
@@ -83,6 +84,93 @@ export async function clearContactLinksBeforeDelete(
   // FR-E6: the contact stops being a workspace user; a deleted bundle owner
   // leaves its members unassigned.
   await clearGroupContactLinksForContact(db, tenant, contactId);
+}
+
+export interface DeleteContactCascadeOptions {
+  /** Tag cleanup lives in @alga-psa/tags, which shared cannot depend on; callers inject it. */
+  deleteTags?: (trx: Knex.Transaction, contactId: string) => Promise<unknown>;
+}
+
+/** Nulls the Entra reconciliation queue's pointer at a contact about to be deleted. */
+async function cleanupEntraReferencesBeforeContactDelete(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const queueTableExists = await trx('information_schema.tables')
+    .where({ table_schema: 'public', table_name: 'entra_contact_reconciliation_queue' })
+    .first('table_name');
+
+  if (!queueTableExists) {
+    return;
+  }
+
+  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenant)
+    .where({ resolved_contact_id: contactId })
+    .update({
+      resolved_contact_id: null,
+      updated_at: trx.fn.now(),
+    });
+}
+
+/**
+ * The whole hard-delete cascade for one contact, run inside the caller's transaction.
+ * Every delete path (MSP action, REST API) shares it so none of them can quietly
+ * skip a child table and leave orphans — a portal user stranded on a deleted
+ * contact can neither sign in nor be invited again.
+ *
+ * Returns the number of contact rows removed (0 when the contact was already gone).
+ */
+export async function deleteContactCascade(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  options: DeleteContactCascadeOptions = {}
+): Promise<number> {
+  await options.deleteTags?.(trx, contactId);
+
+  // Child records owned by the contact
+  await tenantScopedTable(trx, 'contact_phone_numbers', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'comments', tenant).where({ contact_id: contactId }).delete();
+  await tenantScopedTable(trx, 'portal_invitations', tenant).where({ contact_id: contactId }).delete();
+
+  await clearContactLinksBeforeDelete(trx, tenant, contactId);
+
+  // Unlink from any RMM org mapping using this contact as its default
+  // notification contact (no FK; Citus rejects ON DELETE SET NULL).
+  await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
+    .where({ default_contact_id: contactId })
+    .update({ default_contact_id: null, updated_at: new Date().toISOString() });
+
+  const contactRecord = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .select('notes_document_id')
+    .first();
+
+  if (contactRecord?.notes_document_id) {
+    await tenantScopedTable(trx, 'document_block_content', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+  }
+
+  await cleanupEntraReferencesBeforeContactDelete(trx, tenant, contactId);
+
+  return tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .delete();
 }
 
 /**

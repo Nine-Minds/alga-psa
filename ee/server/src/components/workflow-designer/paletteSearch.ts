@@ -1,3 +1,8 @@
+// LEVERAGE: pattern palette-search-ranking — the generic half (category ordering, word-variant
+// matching) now lives in @alga-psa/ui/components/designer/designerPaletteSearch. The synonym
+// table and the match-tier ranking below stay here: both are bound to the MSP help-desk
+// vocabulary and to workflow item shapes.
+import { groupDesignerPaletteItemsByCategory } from '@alga-psa/ui/components/designer';
 import { getSearchSynonyms } from './searchSynonyms';
 
 const PALETTE_CATEGORY_ORDER = [
@@ -235,38 +240,4 @@ type PaletteSortableItem = {
 
 export const groupPaletteItemsByCategory = <T extends PaletteSortableItem>(
   items: T[]
-): Record<string, T[]> => {
-  const grouped = items.reduce<Record<string, T[]>>((acc, item) => {
-    const category = item.category;
-    acc[category] = acc[category] || [];
-    acc[category].push(item);
-    return acc;
-  }, {});
-
-  Object.values(grouped).forEach((categoryItems) => {
-    categoryItems.sort((left, right) => {
-      if ((left.sortOrder ?? 0) !== (right.sortOrder ?? 0)) {
-        return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
-      }
-      return left.label.localeCompare(right.label);
-    });
-  });
-
-  return Object.fromEntries(
-    Object.entries(grouped).sort(([leftCategory], [rightCategory]) => {
-      const leftIndex = PALETTE_CATEGORY_ORDER.indexOf(leftCategory);
-      const rightIndex = PALETTE_CATEGORY_ORDER.indexOf(rightCategory);
-
-      if (leftIndex !== -1 && rightIndex !== -1) {
-        return leftIndex - rightIndex;
-      }
-      if (leftIndex !== -1) {
-        return -1;
-      }
-      if (rightIndex !== -1) {
-        return 1;
-      }
-      return leftCategory.localeCompare(rightCategory);
-    })
-  );
-};
+): Record<string, T[]> => groupDesignerPaletteItemsByCategory(items, PALETTE_CATEGORY_ORDER);

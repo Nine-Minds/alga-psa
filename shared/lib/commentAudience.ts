@@ -178,9 +178,10 @@ export async function resolveCommentAudienceReader(
   const query = db.table('co_managed_seat_assignments as sa')
     .where('sa.user_id', user.userId).whereNot('sa.state', 'revoked');
   db.tenantJoin(query, 'co_managed_seat_arrangements as ar', 'sa.arrangement_id', 'ar.arrangement_id', { type: 'left' });
-  const seat = await query.first({ assignment_state: 'sa.state', arrangement_state: 'ar.state', client_id: 'ar.client_id' });
+  db.tenantJoin(query, 'co_managed_unavailable_trial_assignments as blocked', 'blocked.assignment_id', 'sa.assignment_id', { type: 'left' });
+  const seat = await query.first({ blocked: 'blocked.assignment_id', assignment_state: 'sa.state', arrangement_state: 'ar.state', client_id: 'ar.client_id' });
   if (!seat) return { kind: 'staff', tenant };
-  if (seat.assignment_state !== 'active' || seat.arrangement_state !== 'active' || !seat.client_id) return null;
+  if (seat.blocked || seat.assignment_state !== 'active' || seat.arrangement_state !== 'active' || !seat.client_id) return null;
   return { kind: 'seat', tenant, clientId: seat.client_id };
 }
 
@@ -605,7 +606,9 @@ function internalReaderAudienceSql(db: Knex | Knex.Transaction, tenant: string, 
         AND aud_ar.state = 'active'
       JOIN co_managed_seat_assignments aud_sa ON aud_sa.tenant = aud_c.tenant AND aud_sa.arrangement_id = aud_ar.arrangement_id
         AND aud_sa.user_id = ? AND aud_sa.state = 'active'
-      WHERE aud_c.tenant = ? AND aud_c.comment_id = (?) AND (?) = ANY(?::text[])))`,
+      WHERE NOT EXISTS (SELECT 1 FROM co_managed_unavailable_trial_assignments blocked WHERE blocked.tenant = aud_sa.tenant
+        AND blocked.assignment_id = aud_sa.assignment_id)
+        AND aud_c.tenant = ? AND aud_c.comment_id = (?) AND (?) = ANY(?::text[])))`,
     [staff, userId, tenant, id, commentAudienceSql(db, 'aud_ct', 'aud_rc', 'aud_c'), audiencesVisibleTo('seat')]);
   };
   /** `documentId` is a uuid column (bound as an identifier) or a uuid-typed expression. */

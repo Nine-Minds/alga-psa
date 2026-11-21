@@ -1,5 +1,6 @@
 'use client';
 
+import CoManagedSeatTrial from './CoManagedSeatTrial';
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
@@ -18,5 +19,5 @@ export default function CoManagedPurchasePool() {
     window.addEventListener(CO_MANAGED_ACCESS_CHANGED, refresh);
     return () => window.removeEventListener(CO_MANAGED_ACCESS_CHANGED, refresh);
   }, [router]);
-  return <CoManagedPoolEditor showTotals />;
+  return <><CoManagedSeatTrial /><CoManagedPoolEditor showTotals /></>;
 }

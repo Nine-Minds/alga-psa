@@ -14,6 +14,7 @@ import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTi
 import { bulkUpdateTicketDueDate, bulkUpdateTicketPriority } from '@alga-psa/tickets/actions/ticketActions';
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { insertTestAssets } from '@shared/test-utils/assetFixtures';
 import {
   addTicketResource,
   canAddAsAdditionalAgent,
@@ -109,6 +110,12 @@ async function cleanupTenant(tenantId: string): Promise<void> {
     'documents',
     'comments',
     'comment_threads',
+    'asset_associations',
+    'asset_group_contacts',
+    'asset_group_members',
+    'asset_groups',
+    'asset_tag_claims',
+    'assets',
     'tickets',
     'client_portal_visibility_group_boards',
     'client_portal_visibility_groups',
@@ -466,6 +473,111 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: siblingId }).del();
       await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: false });
       await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'client' });
+    }
+  });
+
+  // FR-E7 / FR-E7b. The workspace grants used to be correlated EXISTS
+  // subqueries; they are now id lists resolved by the context builder, so this
+  // case pins the *semantics* of both rewritten predicates against a real
+  // database: the colleague's open ticket about the hot desk and the hot desk
+  // itself are visible, their closed history and a colleague's own laptop
+  // are not.
+  it('contact scope admits a shared workspace: its devices and their open tickets, nothing else', async () => {
+    const colleagueId = uuidv4();
+    const groupId = uuidv4();
+    const workspaceAssetId = uuidv4();
+    const colleagueAssetId = uuidv4();
+    const added: string[] = [];
+    try {
+      await db('contacts').insert({
+        tenant: fixture.tenantId, contact_name_id: colleagueId, client_id: fixture.clientAId,
+        full_name: 'Workspace Colleague', email: `colleague-${colleagueId.slice(0, 8)}@example.com`,
+      });
+      await insertTestAssets(db, [
+        {
+          tenant: fixture.tenantId, asset_id: workspaceAssetId, client_id: fixture.clientAId,
+          asset_type: 'workstation', asset_tag: `HD-${workspaceAssetId.slice(0, 8)}`, name: 'Hot Desk PC',
+          status: 'active', contact_name_id: null,
+        },
+        {
+          // Assigned to the colleague and in no workspace: never visible.
+          tenant: fixture.tenantId, asset_id: colleagueAssetId, client_id: fixture.clientAId,
+          asset_type: 'workstation', asset_tag: `CL-${colleagueAssetId.slice(0, 8)}`, name: 'Colleague Laptop',
+          status: 'active', contact_name_id: colleagueId,
+        },
+      ]);
+      await db('asset_groups').insert({
+        tenant: fixture.tenantId, group_id: groupId, client_id: fixture.clientAId,
+        name: 'Front desk', kind: 'shared_workspace',
+      });
+      await db('asset_group_members').insert({ tenant: fixture.tenantId, group_id: groupId, asset_id: workspaceAssetId });
+      await db('asset_group_contacts').insert({
+        tenant: fixture.tenantId, group_id: groupId, contact_name_id: fixture.contactAId, role: 'user',
+      });
+
+      for (const [title, closed] of [['Workspace Open Ticket', false], ['Workspace Closed Ticket', true]] as const) {
+        const ticket = await db.transaction((trx) => TicketModel.createTicket({
+          title, description: title, client_id: fixture.clientAId, contact_id: colleagueId,
+          board_id: fixture.boardVisibleId, status_id: fixture.statusId,
+          priority_id: fixture.priorityId, entered_by: fixture.internalUserId,
+        }, fixture.tenantId, trx, {}, silentTicketCreation('test fixture')));
+        added.push(ticket.ticket_id!);
+        await db('asset_associations').insert({
+          tenant: fixture.tenantId, asset_id: workspaceAssetId, entity_id: ticket.ticket_id,
+          entity_type: 'ticket', relationship_type: 'affected', created_by: fixture.internalUserId,
+        });
+        if (closed) {
+          await tenantRows('tickets', fixture.tenantId).where({ ticket_id: ticket.ticket_id })
+            .update({ is_closed: true, closed_at: new Date().toISOString() });
+        }
+      }
+      const [openTicketId, closedTicketId] = added;
+
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId)
+        .where({ group_id: fixture.groupVisibleId })
+        .update({ ticket_scope: 'contact', asset_scope: 'contact' });
+
+      optimizedPathMocks.hasPermission.mockResolvedValue(true);
+      optimizedPathMocks.tenant = fixture.tenantId;
+      optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+      const { getClientContactVisibilityContext } = await import('@alga-psa/authorization/portal/visibility.server');
+      const portal = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+      const portalAssets = await import('@alga-psa/client-portal/actions/client-portal-actions/client-assets');
+
+      await runWithTenant(fixture.tenantId, async () => {
+        // The resolver finds the memberships the predicates now match against.
+        const visibility = await db.transaction((trx) =>
+          getClientContactVisibilityContext(trx, fixture.tenantId, fixture.contactAId));
+        expect([...(visibility.workspaceTicketIds ?? [])].sort()).toEqual([...added].sort());
+        expect(visibility.workspaceAssetIds).toEqual([workspaceAssetId]);
+        // Nothing resolves project membership, so projects stay narrowed.
+        expect(visibility.workspaceProjectIds).toBeUndefined();
+
+        const listed = (await portal.getClientTickets('__status_filter__:all') as any[]).map((ticket) => ticket.ticket_id);
+        expect(listed).toContain(fixture.ticketVisibleId);
+        expect(listed).toContain(openTicketId);
+        // FR-E7b grants the open ticket only: the closed one is its requester's history.
+        expect(listed).not.toContain(closedTicketId);
+        expect(await portal.getClientTicketDetails(openTicketId)).toMatchObject({ ticket_id: openTicketId });
+        expect(await portal.getClientTicketDetails(closedTicketId))
+          .toMatchObject({ actionError: 'Ticket not found or access denied' });
+
+        const devices = (await portalAssets.getClientAssets() as any[]).map((asset) => asset.asset_id);
+        expect(devices).toContain(workspaceAssetId);
+        expect(devices).not.toContain(colleagueAssetId);
+      });
+    } finally {
+      await tenantRows('asset_associations', fixture.tenantId).whereIn('entity_id', added).del().catch(() => undefined);
+      await tenantRows('tickets', fixture.tenantId).whereIn('ticket_id', added).del().catch(() => undefined);
+      await tenantRows('asset_group_contacts', fixture.tenantId).where({ group_id: groupId }).del().catch(() => undefined);
+      await tenantRows('asset_group_members', fixture.tenantId).where({ group_id: groupId }).del().catch(() => undefined);
+      await tenantRows('asset_groups', fixture.tenantId).where({ group_id: groupId }).del().catch(() => undefined);
+      await tenantRows('asset_tag_claims', fixture.tenantId).whereIn('owner_id', [workspaceAssetId, colleagueAssetId]).del().catch(() => undefined);
+      await tenantRows('assets', fixture.tenantId).whereIn('asset_id', [workspaceAssetId, colleagueAssetId]).del().catch(() => undefined);
+      await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: colleagueId }).del().catch(() => undefined);
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId)
+        .where({ group_id: fixture.groupVisibleId })
+        .update({ ticket_scope: 'client', asset_scope: 'client' });
     }
   });
 

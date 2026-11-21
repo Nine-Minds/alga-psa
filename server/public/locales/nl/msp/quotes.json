@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Terug naar Lay-outs",
+      "back": "Terug naar offerte-indelingen",
       "rerun": "Opnieuw uitvoeren",
       "saveLayout": "Lay-out opslaan"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Kopie van {{name}}",
       "standardTemplate": "Standaard sjabloon"
     },
-    "title": "Offerte-indelingseditor",
-    "description": "Ontwerp de offerte-indeling met behulp van de visuele editor en bekijk een voorbeeld met voorbeeldgegevens.",
     "errors": {
       "exportAst": "Kan sjabloon AST niet exporteren vanuit de visuele werkruimte: {{message}}",
       "load": "Kan de offertesjablooneditor niet laden",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Laden van offertedetails is mislukt."
     },
     "fields": {
-      "layoutDetails": "Indelingsdetails",
+      "created": "Gemaakt {{time}}",
+      "notSaved": "Nog niet opgeslagen",
+      "savedAt": "Opgeslagen {{time}}",
       "templateName": "Sjabloonnaam",
       "version": "Versie"
     },
-    "footer": {
-      "created": "Gemaakt:",
-      "lastUpdated": "Laatst bijgewerkt:"
-    },
     "headings": {
-      "editLayout": "Offerte-indeling bewerken",
       "newLayout": "Nieuwe offerte-indeling"
     },
     "placeholders": {
@@ -850,7 +845,14 @@
       "noQuotesFound": "Geen offertes gevonden.",
       "selectQuote": "Offerte kiezen",
       "selectQuoteHint": "Kies een offerte voor een gegevensgebonden voorvertoning.",
-      "loadingQuoteDetails": "Offertedetails worden geladen…"
+      "loadingQuoteDetails": "Offertedetails worden geladen…",
+      "frameTitle": "Offertevoorbeeld",
+      "zoom": {
+        "fit": "Passend",
+        "actual": "100%",
+        "label": "Voorbeeldzoom",
+        "fitWithScale": "Passend ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Renderen",
@@ -865,6 +867,9 @@
       "preview": "Voorbeeld",
       "transforms": "Transformeert",
       "visual": "Visueel"
+    },
+    "titles": {
+      "edit": "Lay-out bewerken: {{name}}"
     }
   },
   "templatesPage": {
