@@ -1,5 +1,5 @@
 {
-  "reviewOutcome": "prepared",
+  "reviewOutcome": "prepared-with-current-revision-gap",
   "guideStatus": "historical-runtime-evidence",
   "currentRevisionRuntimeRequired": true,
   "reviewDocumentPath": "docs/reviews/255f8e1d/index.html",
@@ -9,7 +9,7 @@
   "reviewPreparedAt": "2026-11-20T23:55:00Z",
   "reviewEnvironment": "Existing evidence directory /home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05; committed copies under docs/reviews/255f8e1d/evidence. Live development walkthrough exercised d17622d44fc011c45061041f61d221e113223e6b, not current PR head 04bbb5627289509a3ef71826edfbaaa943f599a4. The app server remains stopped; current-head runtime validation is required.",
   "evidenceDirectory": "docs/reviews/255f8e1d/evidence",
-  "sourceEvidenceDirectory": "/home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4eaa1e05/evidence",
+  "sourceEvidenceDirectory": "/home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence",
   "evidenceLinks": [
     "evidence/head-walkthrough.webm",
     "evidence/head-walkthrough.vtt",
@@ -18,6 +18,7 @@
     "evidence/head-redacted-mail.txt",
     "evidence/head-visible-mail.txt"
   ],
-  "boardStateUpdated": false,
-  "approvalGranted": false
+  "boardStateUpdated": true,
+  "approvalGranted": false,
+  "reviewReport": "Historical live demonstration and artifacts are exact to d17622d44fc011c45061041f61d221e113223e6b. PR #4094 merged at 04bbb5627289509a3ef71826edfbaaa943f599a4. Current revision runtime validation remains required; focused tests do not establish runtime equivalence. No merge approval remains."
 }
