@@ -193,6 +193,17 @@ describe('client deletion actions', () => {
   });
 
   describe('updateClient', () => {
+    it('does not let client:read authorize the separate client:update mutation', async () => {
+      hasPermissionAsyncMock.mockImplementation(async (_user: unknown, _resource: string, action: string) => action === 'read');
+      const { updateClient } = await import('./clientActions');
+
+      await expect(updateClient('client-1', { client_name: 'Changed' })).resolves.toMatchObject({
+        permissionError: expect.stringContaining('Permission denied'),
+      });
+      expect(createTenantKnexMock).not.toHaveBeenCalled();
+      expect(withTransactionMock).not.toHaveBeenCalled();
+    });
+
     it('limits client portal updates to self-service client fields', async () => {
       authUserRef.value = {
         user_id: 'client-user-1',

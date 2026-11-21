@@ -6,6 +6,7 @@ import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 import type {
   IClient,
+  IClientWithLocation,
   IProject,
   IProjectPhase,
   IProjectStatusMapping,
@@ -26,6 +27,8 @@ import type {
 import { getAllUsers, findUserById } from '@alga-psa/user-composition/actions/userQueryActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- server action calling another server action; cannot use React context composition
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- secure Projects client quick-view loader composes the existing detailed client query after its own authorization decision
+import { getClientById } from '@alga-psa/clients/actions/queryActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -58,6 +61,8 @@ import { revalidatePath } from 'next/cache';
 import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';
 import { loadProjectRowsByDecision, projectPickerProjection } from '../lib/projectListProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
+import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
+import { isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
 import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -422,6 +427,61 @@ export const getAllClientsForProjects = withAuth(async (user, { tenant }): Promi
     ...client,
     logoUrl: logoUrlsMap.get(client.client_id) ?? null,
   }));
+});
+
+/** Detailed client hydration for the Projects quick view. Picker fields are never used as a detail fallback. */
+export const getProjectClientQuickView = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  sourceProjectId?: string,
+): Promise<IClientWithLocation | null> => {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read clients');
+  }
+  if (sourceProjectId && !await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+
+  const decision = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (sourceProjectId) {
+      const project = await loadAuthorizedProjectRow(trx, tenant, user as IUserWithRoles, sourceProjectId);
+      if (!project || project.client_id !== clientId || !project.client_name) {
+        throw new Error('Permission denied: Cannot read project client');
+      }
+    }
+    const identity = await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: clientId })
+      .first<{ client_id: string }>('client_id');
+    if (!identity) return null;
+    const decide = await createClientReadDecider(trx, tenant, user as IUserWithRoles);
+    const result = await decide(identity);
+    if (!result.allowed
+      || isCoManagedResourceHidden(result.redactedFields, ['client', 'clients'])
+      || isCoManagedReadFieldHidden(result.redactedFields, ['client_id', 'clients.client_id', 'id'])) {
+      throw new Error('Permission denied: Cannot read clients');
+    }
+    return result.redactedFields;
+  });
+  if (!decision) return null;
+
+  // This detailed action is called only after both coarse and record authorization. Mask again at the
+  // returning boundary because the shared legacy query itself is not redaction-aware.
+  const client = await getClientById(clientId);
+  if (!client) return null;
+  const masked = { ...client } as Record<string, unknown>;
+  for (const field of Object.keys(masked)) {
+    if (isCoManagedReadFieldHidden(decision, [field, `clients.${field}`])) masked[field] = null;
+  }
+  const identitySensitiveImage = isCoManagedReadFieldHidden(decision, [
+    'client_name', 'clients.client_name', 'logo', 'logo_url', 'logoUrl', 'logo_wide_url', 'logoWideUrl',
+  ]);
+  if (identitySensitiveImage) {
+    masked.logoUrl = null;
+    masked.logoWideUrl = null;
+  }
+  return masked as unknown as IClientWithLocation;
 });
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {

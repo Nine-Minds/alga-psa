@@ -5,14 +5,13 @@ import { parse } from 'date-fns';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IProject, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
-import { projectClientPresentation } from '../lib/projectClientPresentation';
+import { ProjectClientCell } from './ProjectClientCell';
 import { deleteProject, loadProjectListItemsByIds, searchProjectListIds, type ProjectPickerClient } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
@@ -23,11 +22,10 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { useDrawer } from "@alga-psa/ui";
+import { useClientDrawer, useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import Drawer from '@alga-psa/ui/components/Drawer';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -242,7 +240,7 @@ export default function Projects({ initialProjects, clients, projectClientMetada
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
-  const [clientSummary, setClientSummary] = useState<ProjectPickerClient | null>(null);
+  const clientDrawer = useClientDrawer();
 
   // Tag-related state. Seeded from server-fetched tags so URL-based tag filters
   // work on the very first render (bookmarked/pasted URLs).
@@ -842,30 +840,13 @@ export default function Projects({ initialProjects, clients, projectClientMetada
       title: projectListT('columns.client', 'Client'),
       dataIndex: 'client_id',
       width: '12%',
-      render: (_value, record) => {
-        const presentation = projectClientPresentation(record, projectClientMetadata);
-        const clientName = presentation.clientName;
-        if (!clientName) return <ClientNameCell clientName={null} />;
-        const visibleClient = presentation.visibleClientId
-          ? projectClientMetadata.find((client) => client.client_id === presentation.visibleClientId)
-          : undefined;
-        if (!visibleClient) return <ClientNameCell clientName={clientName} />;
-        return (
-          <ClientNameCell clientId={visibleClient.client_id} clientName={clientName} logoUrl={presentation.logoUrl}>
-            <button
-              id={`project-client-summary-${record.project_id}`}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                setClientSummary(visibleClient);
-              }}
-              className="text-left whitespace-normal break-words text-[rgb(var(--color-primary-600))] hover:underline"
-            >
-              {clientName}
-            </button>
-          </ClientNameCell>
-        );
-      }
+      render: (_value, record) => <ProjectClientCell
+        project={record}
+        clients={projectClientMetadata}
+        onOpenClient={clientDrawer
+          ? (clientId, projectId) => clientDrawer.openClientDrawer(clientId, { projectId })
+          : undefined}
+      />
     },
     {
       title: projectListT('columns.contact', 'Contact'),
@@ -1319,21 +1300,6 @@ export default function Projects({ initialProjects, clients, projectClientMetada
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
-
-      <Drawer
-        id="project-client-summary-drawer"
-        isOpen={clientSummary !== null}
-        onClose={() => setClientSummary(null)}
-        width="24rem"
-      >
-        {clientSummary && (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{clientSummary.client_name}</h2>
-            {clientSummary.client_type && <p>{clientSummary.client_type}</p>}
-            {clientSummary.is_inactive !== null && <p>{clientSummary.is_inactive ? t('common:status.inactive') : t('common:status.active')}</p>}
-          </section>
-        )}
-      </Drawer>
 
     </div>
   );

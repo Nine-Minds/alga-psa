@@ -14,6 +14,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: /^@alga-psa\/projects\/actions$/, replacement: path.resolve(__dirname, '../projects/src/actions/index.ts') },
+      { find: /^@alga-psa\/clients\/components\/clients\/ClientQuickView$/, replacement: path.resolve(__dirname, '../clients/src/components/clients/ClientQuickView.tsx') },
       // The clients context subpath's package exports point its "import"
       // condition at a dist build this package's test runs do not produce;
       // resolve it to source like the other aliased workspace packages.

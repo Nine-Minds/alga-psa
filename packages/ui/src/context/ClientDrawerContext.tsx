@@ -5,6 +5,8 @@ import { createContext, useContext } from 'react';
 export interface ClientDrawerOptions {
   /** Opens a sub-panel of the client quick view on mount. */
   initialPanel?: 'locations';
+  /** Source project; its record authorization and client_name mask must still permit the quick view. */
+  projectId?: string;
 }
 
 export interface ClientDrawerContextType {
