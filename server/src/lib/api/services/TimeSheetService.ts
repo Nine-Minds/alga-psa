@@ -199,8 +199,9 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters], async () => readScope);
     if (delegated.handled) {
       const { field: sortField } = resolveTimeSheetListSort(options.sort);
       const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
@@ -310,7 +311,7 @@ export class TimeSheetService extends BaseService<any> {
         .where('time_entries.user_id', knex.raw(`${this.tableName}.user_id`));
 
       let query = this.buildTenantScopedQuery(knex, context);
-      await this.authorizeTimeSheetRead(query, context, knex);
+      this.applyTimeSheetReadScope(query, readScope);
 
       // time_periods is joined exactly once: filters and ORDER BY both reference it.
       db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
@@ -398,13 +399,14 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getById', [id, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getById', [id, context], async () => readScope);
     if (delegated.handled) return (delegated.value as any[]).find((row) => row.id === id) ?? null;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const query = this.buildTenantScopedQuery(knex, context);
-      await this.authorizeTimeSheetRead(query, context, knex);
+      this.applyTimeSheetReadScope(query, readScope);
 
       db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
       db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
@@ -426,8 +428,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getWithDetails', [id, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getWithDetails', [id, context], async () => readScope);
     if (delegated.handled) return (delegated.value as any[]).find((row) => row.id === id) ?? null;
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
@@ -821,8 +824,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetComments', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetComments', [timeSheetId, context], async () => readScope);
     if (delegated.handled) {
       const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
       return sheet ? (sheet.comments ?? []) : [];
@@ -830,7 +834,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
-      await this.authorizeTimeSheetRead(visibleSheet, context, knex);
+      this.applyTimeSheetReadScope(visibleSheet, readScope);
       if (!await visibleSheet.first('time_sheets.id')) return [];
       const query = db.table('time_sheet_comments');
       
@@ -1530,8 +1534,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Search and statistics
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'search', [searchData, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'search', [searchData, context], async () => readScope);
     if (delegated.handled) {
       const query = (searchData.query ?? '').toLocaleLowerCase();
       return (delegated.value as any[])
@@ -1558,7 +1563,7 @@ export class TimeSheetService extends BaseService<any> {
       const tableName = this.tableName; // Capture tableName to use in callbacks
       
       const query = this.buildTenantScopedQuery(knex, context);
-      await this.authorizeTimeSheetRead(query, context, knex);
+      this.applyTimeSheetReadScope(query, readScope);
   
       // Join users first: the name match below references users.*.
       // `user_name` is the only searchable field; no column name derived from input reaches SQL.
@@ -1608,8 +1613,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getStatistics', [context, filters], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getStatistics', [context, filters], async () => readScope);
     if (delegated.handled) {
       const rows = (delegated.value as any[]).filter((row) => {
         if (filters?.user_id && row.user_id !== filters.user_id) return false;
@@ -1682,7 +1688,10 @@ export class TimeSheetService extends BaseService<any> {
 
   /** Apply the shared owner/delegate/read_all scope before counting, paging, or aggregation. */
   private async authorizeTimeSheetRead(query: any, context: ServiceContext, db: Knex | Knex.Transaction): Promise<void> {
-    const scope = await this.resolveTimeSheetReadScope(context, db);
+    this.applyTimeSheetReadScope(query, await this.resolveTimeSheetReadScope(context, db));
+  }
+
+  private applyTimeSheetReadScope(query: any, scope: TimeSheetReadScope): void {
     if (scope.subjectUserIds !== null) query.whereIn('time_sheets.user_id', scope.subjectUserIds);
   }
 
@@ -1796,15 +1805,16 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetEntries', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetEntries', [timeSheetId, context], async () => readScope);
     if (delegated.handled) {
       const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
       return sheet ? (sheet.time_entries ?? sheet.entries ?? []) : [];
     }
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
-      await this.authorizeTimeSheetRead(visibleSheet, context, knex);
+      this.applyTimeSheetReadScope(visibleSheet, readScope);
       const authorizedSheet = await visibleSheet.first('time_sheets.user_id');
       if (!authorizedSheet) return [];
       
@@ -1818,15 +1828,16 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
-    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetSummary', [timeSheetId, context], () => this.resolveTimeSheetReadScope(context));
+    // Resolve authorization before provider selection; both read paths use this boundary.
+    const readScope = await this.resolveTimeSheetReadScope(context);
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetSummary', [timeSheetId, context], async () => readScope);
     if (delegated.handled) {
       const sheet = (delegated.value as any[]).find((row) => row.id === timeSheetId);
       return sheet ? (sheet.summary ?? null) : null;
     }
       const { knex } = await this.getKnex();
       const visibleSheet = this.buildTenantScopedQuery(knex, context).where('time_sheets.id', timeSheetId);
-      await this.authorizeTimeSheetRead(visibleSheet, context, knex);
+      this.applyTimeSheetReadScope(visibleSheet, readScope);
       const authorizedSheet = await visibleSheet.first('time_sheets.user_id');
       if (!authorizedSheet) return null;
       

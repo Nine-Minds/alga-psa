@@ -318,6 +318,29 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect((await service.list({ page: 1, limit: 25, filters: { has_entries: false } } as any, ctx)).data.map((row: any) => row.id)).toEqual([sheet.id]);
   });
 
+  it.each([
+    ['list', (service: TimeSheetService, ctx: any) => service.list({ page: 1, limit: 25 }, ctx)],
+    ['getById', (service: TimeSheetService, ctx: any) => service.getById('provider-own', ctx)],
+    ['getWithDetails', (service: TimeSheetService, ctx: any) => service.getWithDetails('provider-own', ctx)],
+    ['search', (service: TimeSheetService, ctx: any) => service.search({ query: 'x' } as any, ctx)],
+    ['getStatistics', (service: TimeSheetService, ctx: any) => service.getStatistics(ctx)],
+    ['getTimeSheetEntries', (service: TimeSheetService, ctx: any) => service.getTimeSheetEntries('provider-own', ctx)],
+    ['getTimeSheetSummary', (service: TimeSheetService, ctx: any) => service.getTimeSheetSummary('provider-own', ctx)],
+    ['getTimeSheetComments', (service: TimeSheetService, ctx: any) => service.getTimeSheetComments('provider-own', ctx)],
+  ] as const)('resolves %s authorization before selecting or invoking a registered provider', async (_method, read) => {
+    const f = await seed();
+    const collectRows = vi.fn(async () => []);
+    const factory = vi.fn(() => ({ kind: 'authorization-order-source', rest: { collectTimeSheetReadRows: collectRows } }));
+    registerTimeSource('authorization-order-source', factory as any, { servesCapability: 'co-managed' });
+    const service = serviceFor(f.tenantId);
+    const unavailableAuthorization = new Error('Authorization database unavailable');
+    vi.mocked((service as any).getKnex).mockRejectedValue(unavailableAuthorization);
+
+    await expect(read(service, contextFor(f.tenantId, f.actor))).rejects.toBe(unavailableAuthorization);
+    expect(factory).not.toHaveBeenCalled();
+    expect(collectRows).not.toHaveBeenCalled();
+  });
+
   it('enforces the shared scope over an unfiltered registered provider collection before every read surface', async () => {
     const f = await seed();
     const managed = await seedUser(f.tenantId, 'Managed');

@@ -1,5 +1,25 @@
 # PR #4154: delegated time-sheet read authorization
 
+## Authorization before provider selection (2026-11-21)
+
+At starting revision `c0b5aef19e4807e037c7330b0348f11c107b3ea9`, the shared collection adapter already enforced tenant, owner/delegate/read_all, and nested-record scope before returning delegated reads. The service still resolved authorization lazily inside delegation, after the registry had selected and instantiated the provider.
+
+All eight sheet read methods now resolve their immutable scope before calling the registry. The delegated collection adapter receives that scope, and native queries apply the same resolved subject IDs. List-backed exports inherit the boundary. Authorization dependency failures propagate before provider selection or collection access. Transactional write authorization retains its existing transaction-bound resolution.
+
+Eight behavioral regressions register a non-native source and simulate an unavailable authorization database. Each read must propagate the failure without instantiating the provider or invoking its reader. All eight failed on the starting ordering (exit 1; 33 unrelated cases skipped). After the service change, the focused run passed 88 tests across seven files (exit 0, no skipped tests). Existing registered-source tests verify owner-only, authorized managed-subject, tenant-local read_all, foreign-tenant denial, child records, filters, pagination, counts, statistics, and HTTP export results. Native read and lifecycle regressions also passed.
+
+Commands, from `server/`:
+
+```sh
+TEST_DB_NAME=test_timesheet_security_officer NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts -t 'authorization before selecting' --coverage.enabled=false --maxWorkers=1
+
+TEST_DB_NAME=test_timesheet_security_officer NODE_OPTIONS=--max-old-space-size=8192 npx vitest run src/test/integration/api/timeSheetService.createUpdate.integration.test.ts src/test/integration/api/timeSheetService.search.integration.test.ts src/test/integration/api/timeSheetService.entriesSummary.integration.test.ts src/test/integration/api/timeSheetService.workflowTenantIsolation.integration.test.ts src/test/integration/T043b.timeSheetApprove.integration.test.ts src/test/unit/api/timeSheetReadRoutes.test.ts src/test/unit/api/timeSheetListSort.test.ts --coverage.enabled=false --maxWorkers=1
+```
+
+Server typecheck also passed (exit 0), run from the repository root with `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -w server`.
+
+Logs: `/home/robert/.alga-xo/reviews/c0f1312d-timesheet-security/evidence/authorization-before-provider-20261121/`. This round adds automated service verification. Earlier browser evidence and build/CI observations below remain historical.
+
 ## Calendar-date sorting verification
 
 The calendar-date sorting correction is `d5fdb48ecc490fe1fae63dbafdcbc6c6ae500c06`. Delegated period sorts normalize local-midnight database `Date` objects and `YYYY-MM-DD` strings through `formatDbDate` before comparison. Timestamp sorts still compare instants, and authorization still runs before filtering and pagination.
