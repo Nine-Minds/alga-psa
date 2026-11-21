@@ -21,6 +21,8 @@ import {
   CoManagedTicketHandoffError,
   escalateCoManagedTicket,
   exportCoManagedTicketQueue,
+  getCoManagedSharedTicketDetails,
+  getCoManagedTicketAssignment,
   getCoManagedTicketQueue,
   handBackCoManagedTicket,
   revokeCoManagedTicketGrant,
@@ -362,8 +364,9 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       await db('tickets').where({ tenant: A.tenant, ticket_id: a }).update({ status_id: openStatus.status_id, is_closed: false });
       if (!aWork) await escalate(A, 'a4', 0);
       else throw new Error('Expected an untouched A:a4 work row for this isolated policy regression');
-      aReferenceAtAssignment = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).first();
       if (!bWork || !bReference) throw new Error('Expected B:b1 work and reference from the preceding queue fixtures');
+      await db('users').where({ tenant: B.tenant, user_id: B.admin.userId }).update({ first_name: 'Customer', last_name: 'Assignee' });
+      await db('tickets').where({ tenant: B.tenant, ticket_id: b }).update({ assigned_to: B.admin.userId });
       await db('co_management_ticket_work').where({ tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).update({ responsibility: 'customer', grant_revoked_at: null });
       await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b })
         .update({ assigned_to: tech.userId, assigned_team_id: null });
@@ -374,6 +377,14 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect(tag(plainWorking)).toContain('B:1001');
       expect(plainWorking.signals).toEqual({ escalatedUnassigned: 1, awaitingReply: 1 });
       expect((await rq('working', { signal: 'escalated_unassigned' })).items.map(row => row.ticketId)).toContain(a);
+      await db('users').where({ tenant: msp, user_id: tech.userId }).update({ first_name: 'Queue', last_name: 'Tester' });
+      await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a })
+        .update({ assigned_to: tech.userId, assigned_team_id: null });
+      aReferenceAtAssignment = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).first();
+      const plainAssignment: any = await getCoManagedTicketAssignment(db, tech, resource(A, 'a4'));
+      expect(plainAssignment).toMatchObject({ hasAssignment: true, mspAssignment: { name: 'Queue Tester' } });
+      const plainDetails = await getCoManagedSharedTicketDetails(db, tech, resource(B, 'b1'));
+      expect(plainDetails.fields.customer_assignee).toEqual({ name: 'Customer Assignee' });
       expect((await rq('working', { signal: 'awaiting_reply' })).items.map(row => row.ticketId)).toContain(b);
       const plainOversight = await rq('oversight', { state: 'all' });
 
@@ -390,6 +401,12 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect(tag(bundledWorking)).not.toContain('B:1001');
       expect(bundledWorking.items.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
       expect(bundledWorking.signals).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+      const bundledAssignment = await getCoManagedTicketAssignment(db, tech, resource(A, 'a4'));
+      expect(bundledAssignment).not.toHaveProperty('mspAssignment');
+      expect(JSON.stringify(bundledAssignment)).not.toContain('Queue Tester');
+      const bundledDetails = await getCoManagedSharedTicketDetails(db, tech, resource(B, 'b1'));
+      expect(bundledDetails.fields.customer_assignee).toBeUndefined();
+      expect(JSON.stringify(bundledDetails)).not.toContain('Customer Assignee');
       expect((await rq('working', { signal: 'escalated_unassigned' })).items).toEqual([]);
       expect((await rq('working', { signal: 'awaiting_reply' })).items).toEqual([]);
       const bundledOversight = await rq('oversight', { state: 'all' });
@@ -408,6 +425,11 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       const bReferenceAfter = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).first();
       expect(aReferenceAfter).toEqual(aReferenceAtAssignment);
       expect(bReferenceAfter).toEqual({ ...bReference, assigned_to: tech.userId, assigned_team_id: null });
+      const tightenedAssignment = await getCoManagedTicketAssignment(db, tech, resource(A, 'a4'));
+      expect(tightenedAssignment).not.toHaveProperty('mspAssignment');
+      expect(JSON.stringify(tightenedAssignment)).not.toContain('Queue Tester');
+      const tightenedDetails = await getCoManagedSharedTicketDetails(db, tech, resource(B, 'b1'));
+      expect(tightenedDetails.fields.customer_assignee).toEqual({ name: 'Customer Assignee' });
       const tightenedWorking = await rq('working', { state: 'all' });
       expect(tag(tightenedWorking)).toContain('A:1004');
       expect(tag(tightenedWorking)).not.toContain('B:1001');
@@ -416,10 +438,14 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       const tightenedOversight = await rq('oversight', { state: 'all' });
       expect(tightenedOversight.totalCount).toBe(plainOversight.totalCount);
       expect(tightenedOversight.openCount).toBe(plainOversight.openCount);
+      expect(tightenedWorking.assignedRelationshipCount).toBe(plainWorking.assignedRelationshipCount);
       const exported = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' });
       expect(exported.map(row => row.ticketId)).toContain(a);
       expect(exported.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
       expect(exported.find(row => row.ticketId === b)?.fields.has_msp_assignment).toBeUndefined();
+      await expect(getCoManagedSharedTicketDetails(db, A.admin, resource(B, 'b1'))).rejects.toThrow();
+      await expect(getCoManagedTicketAssignment(db, A.admin, resource(B, 'b1'))).rejects.toThrow();
+      await expect(getCoManagedSharedTicketDetails(db, tech, { ...resource(B, 'b1'), id: a })).rejects.toThrow();
     } finally {
       await db('authorization_bundle_assignments').where({ tenant: msp, bundle_id: bundleId }).delete();
       await db('authorization_bundle_rules').where({ tenant: msp, bundle_id: bundleId }).delete();

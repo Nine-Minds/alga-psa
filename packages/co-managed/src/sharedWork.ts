@@ -167,9 +167,20 @@ async function withCoManagedSharedPrincipal<T, Action extends 'read' | 'update' 
     const roles = await loadCoManagedStaffRoles(trx, actor, resource.tenant, resource.relationshipId, subject.teamIds ?? []);
     const grant = await loadCoManagedGrantFacts(trx, resource, lifecycle.relationship.visibility_mode, action === 'update' ? 'update' : 'share');
     if (!grant) return deny();
+    // Ticket bundle policies such as `selected_boards` use the MSP routing
+    // board carried by the qualified reference, matching the federated queue.
+    // The customer's local ticket board is a different tenant's identifier.
+    let ticketReference: { board_id: string } | undefined;
+    if (resource.kind === 'ticket') {
+      const work = await tenantDb(trx, resource.tenant).table('co_management_ticket_work')
+        .where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).forShare().first('work_id');
+      if (work) ticketReference = await tenantDb(trx, lifecycle.relationship.sponsor_tenant).table('co_managed_ticket_references')
+        .where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: resource.id,
+          work_id: work.work_id, client_id: lifecycle.relationship.sponsor_client_id }).forShare().first('board_id');
+    }
     // Customer UUIDs never become home policy IDs: the home record carries only the sponsor client.
     const record: AuthorizationRecord = { id: `${resource.tenant}:${resource.kind}:${resource.id}`,
-      clientId: lifecycle.relationship.sponsor_client_id, assignedUserIds: [], teamIds: [] };
+      clientId: lifecycle.relationship.sponsor_client_id, boardId: ticketReference?.board_id, assignedUserIds: [], teamIds: [] };
     const home = await loadCoManagedHomeFacts(trx, actor, subject, resource.kind === 'ticket' ? 'ticket' : 'project', record);
     const decision = evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts });
     if (!(action === 'update' ? decision.write : decision.read)) return deny();
