@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { createTenantKnex } from '@/lib/db';
-import { assertTenantProductAccess } from '@/lib/productAccess';
 import * as resyncRoute from '../../../app/api/email/imap/resync/route';
 import * as reconnectRoute from '../../../app/api/email/imap/reconnect/route';
 
@@ -16,6 +14,7 @@ const state = vi.hoisted(() => ({
   permissionChecks: 0,
   tenantKnexCalls: 0,
   tenantDbCalls: [] as unknown[],
+  productChecks: [] as unknown[],
   knex: Object.assign(() => undefined, { fn: { now: () => 'now' } }),
 }));
 
@@ -29,9 +28,10 @@ vi.mock('@/lib/db', () => ({
   }),
 }));
 vi.mock('@/lib/productAccess', () => ({
-  assertTenantProductAccess: vi.fn(async () => {
+  assertTenantProductAccess: async (input: unknown) => {
+    state.productChecks.push(input);
     if (!state.productAllowed) throw state.productAccessError;
-  }),
+  },
   isProductAccessError: (error: unknown) => error === state.productAccessError,
   toProductAccessDeniedResponse: () => new Response(null, { status: 403 }),
 }));
@@ -122,6 +122,7 @@ describe('IMAP maintenance route authorization', () => {
     state.permissionChecks = 0;
     state.tenantKnexCalls = 0;
     state.tenantDbCalls = [];
+    state.productChecks = [];
   });
 
   for (const endpoint of endpoints) {
@@ -154,26 +155,40 @@ describe('IMAP maintenance route authorization', () => {
       expect(state.updates).toEqual([]);
     });
 
-    it(`${endpoint.name}: rejects a tenant mismatch before permission or provider access`, async () => {
+    it(`${endpoint.name}: rejects a session tenant mismatch before permission or provider access`, async () => {
+      state.user = { ...state.user, tenant: 'another-tenant' };
       state.canUpdateSettings = true;
-      state.tenant = 'another-tenant';
       const response = await post(endpoint.name);
 
       expect(response.status).toBe(403);
       expect(await response.json()).toEqual({ error: 'Tenant mismatch' });
       expect(state.permissionChecks).toBe(0);
-      expect(assertTenantProductAccess).not.toHaveBeenCalled();
+      expect(state.productChecks).toEqual([]);
       expect(state.tenantDbCalls).toEqual([]);
       expect(state.updates).toEqual([]);
     });
 
-    it(`${endpoint.name}: rejects administrators without product access before provider access`, async () => {
+    it(`${endpoint.name}: rejects a database tenant mismatch before permission or provider access`, async () => {
+      state.tenant = 'another-tenant';
+      state.canUpdateSettings = true;
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'Tenant mismatch' });
+      expect(state.permissionChecks).toBe(0);
+      expect(state.productChecks).toEqual([]);
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
+    it(`${endpoint.name}: rejects an administrator without product access before reading or changing provider state`, async () => {
       state.canUpdateSettings = true;
       state.productAllowed = false;
       const response = await post(endpoint.name);
 
       expect(response.status).toBe(403);
       expect(state.permissionChecks).toBe(1);
+      expect(state.productChecks).toHaveLength(1);
       expect(state.tenantDbCalls).toEqual([]);
       expect(state.updates).toEqual([]);
     });
@@ -184,14 +199,13 @@ describe('IMAP maintenance route authorization', () => {
 
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ success: true });
-      expect(createTenantKnex).toHaveBeenCalledTimes(1);
       expect(state.permissionChecks).toBe(1);
-      expect(assertTenantProductAccess).toHaveBeenCalledExactlyOnceWith({
+      expect(state.productChecks).toEqual([{
         tenantId: 'tenant-from-session',
         userId: 'staff-1',
         capability: 'email_to_ticket',
         allowedProducts: ['psa', 'algadesk'],
-      });
+      }]);
       expect(state.providerLookups).toBe(1);
       expect(state.tenantKnexCalls).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);

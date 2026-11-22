@@ -16,13 +16,25 @@ vi.mock('@alga-psa/documents/lib/documentPermissions', async (importOriginal) =>
   ...(await importOriginal<typeof import('@alga-psa/documents/lib/documentPermissions')>()),
   // Target policy is exercised by documentAssociationCrossClient.integration.test.ts.
   areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
+
+vi.mock('@shared/lib/documentProductReadScope', () => ({
   applyDocumentProductReadScope: vi.fn(),
+}));
+vi.mock('../lib/documentPermissions', () => ({
   canReadDocument: vi.fn(async () => true),
   canReadTicketDocuments: vi.fn(async () => true),
   canUploadDocument: vi.fn(async () => true),
 }));
+vi.mock('../../../../packages/documents/src/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../packages/documents/src/lib/documentPermissions')>()),
+  areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
   authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
 }));
 
@@ -33,7 +45,7 @@ vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOrigin
   isDocumentAssociationCreateAllowed: isDocumentAssociationCreateAllowedMock,
 }));
 
-vi.mock('../lib/meetingDocumentAdmission', () => ({
+vi.mock('@shared/lib/meetingDocumentAdmission', () => ({
   admitMeetingDocumentsForBrowser: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => ({ documents }),
 }));
 
@@ -235,6 +247,7 @@ describe('uploadDocument', () => {
       tenant: 'tenant-123',
       document_id: 'doc-existing',
       document_name: 'Before',
+      content: null,
       thumbnail_file_id: 'trusted-thumbnail',
       created_by: 'user-1',
       is_client_visible: false,
