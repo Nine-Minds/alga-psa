@@ -8,7 +8,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 import {
-  getVisibleMicrosoftConsumerTypes,
+  getMicrosoftPlatformAppServedConsumers,
   hasMicrosoftProfileCapability,
   normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
@@ -84,17 +84,9 @@ export async function getMicrosoftPlatformClientId(): Promise<string | null> {
   return isConfigured(config.clientId) && isConfigured(config.clientSecret) ? config.clientId : null;
 }
 
-/**
- * The single definition of what the AlgaPSA-supplied Microsoft app serves on
- * this build: `email` always, `calendar` only where the calendar package is
- * present (the same EE edition gate that makes the Calendar consumer visible).
- * Setup, consent-time binding, reconciliation and status surfaces all read this.
- */
-export function getMicrosoftPlatformAppServedConsumers(
-  visibleConsumers: readonly MicrosoftProfileConsumer[] = getVisibleMicrosoftConsumerTypes()
-): MicrosoftProfileConsumer[] {
-  return visibleConsumers.includes('calendar') ? ['email', 'calendar'] : ['email'];
-}
+// Pure; defined beside the consumer constants so client components can import it
+// without pulling this module's server dependencies into the browser bundle.
+export { getMicrosoftPlatformAppServedConsumers };
 
 /** Display name for new supplied-app profiles. It must not say "Email": the app serves more than email. */
 export const MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME = 'Alga platform Microsoft app';
