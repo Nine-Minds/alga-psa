@@ -18,7 +18,13 @@ const ITIL_SLA_POLICY_NAME = 'ITIL Standard';
  */
 export class ItilStandardsService {
   /**
-   * Copy ITIL standard priorities to tenant's priorities table
+   * Copy ITIL standard priorities to the tenant's priorities table.
+   *
+   * An existing row is recognised by its family and `itil_priority_level`, never by its name: a
+   * tenant's own priority that happens to be called like an ITIL one is the tenant's, and flagging
+   * it would silently move it between the two families. Such a name is a collision against
+   * `UNIQUE (tenant, priority_name, item_type)`, so it is reported with the priority's name instead
+   * of being worked around.
    */
   static async copyItilPrioritiesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string): Promise<void> {
     const db = tenantDb(trx, tenant);
@@ -36,41 +42,43 @@ export class ItilStandardsService {
     }
 
     for (const stdPriority of itilPriorities) {
-      // Check if already exists in tenant priorities
       const existing = await db.table('priorities')
-        .where('priority_name', stdPriority.priority_name)
+        .where('is_from_itil_standard', true)
         .where('item_type', stdPriority.item_type)
+        .where('itil_priority_level', stdPriority.itil_priority_level)
         .first();
 
-      if (!existing) {
-        const newPriorityId = uuidv4();
-        console.log(`[ItilStandardsService] Inserting ITIL priority "${stdPriority.priority_name}" (${newPriorityId}) for tenant ${tenant}`);
-        await db.table('priorities').insert({
-          priority_id: newPriorityId,
-          tenant: tenant,
-          priority_name: stdPriority.priority_name,
-          color: stdPriority.color,
-          order_number: stdPriority.order_number,
-          is_from_itil_standard: true,
-          itil_priority_level: stdPriority.itil_priority_level,
-          item_type: stdPriority.item_type,
-          created_by: createdBy,
-          created_at: trx.fn.now(),
-          updated_at: trx.fn.now()
-        });
-      } else if (!existing.is_from_itil_standard) {
-        // Update existing priority to mark as ITIL if it matches but wasn't marked
-        console.log(`[ItilStandardsService] Updating existing priority "${stdPriority.priority_name}" to mark as ITIL for tenant ${tenant}`);
-        await db.table('priorities')
-          .where('priority_id', existing.priority_id)
-          .update({
-            is_from_itil_standard: true,
-            itil_priority_level: stdPriority.itil_priority_level,
-            updated_at: trx.fn.now()
-          });
-      } else {
-        console.log(`[ItilStandardsService] ITIL priority "${stdPriority.priority_name}" already exists for tenant ${tenant}`);
+      if (existing) {
+        console.log(`[ItilStandardsService] ITIL priority level ${stdPriority.itil_priority_level} already exists for tenant ${tenant}`);
+        continue;
       }
+
+      const nameCollision = await db.table('priorities')
+        .where('priority_name', stdPriority.priority_name)
+        .where('item_type', stdPriority.item_type)
+        .first('priority_id', 'priority_name');
+
+      if (nameCollision) {
+        throw new Error(
+          `Cannot add the ITIL priority ‘${stdPriority.priority_name}’: a priority of this tenant already uses that name. Rename ‘${nameCollision.priority_name}’ and try again.`
+        );
+      }
+
+      const newPriorityId = uuidv4();
+      console.log(`[ItilStandardsService] Inserting ITIL priority "${stdPriority.priority_name}" (${newPriorityId}) for tenant ${tenant}`);
+      await db.table('priorities').insert({
+        priority_id: newPriorityId,
+        tenant: tenant,
+        priority_name: stdPriority.priority_name,
+        color: stdPriority.color,
+        order_number: stdPriority.order_number,
+        is_from_itil_standard: true,
+        itil_priority_level: stdPriority.itil_priority_level,
+        item_type: stdPriority.item_type,
+        created_by: createdBy,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now()
+      });
     }
 
     console.log(`[ItilStandardsService] Completed copying ITIL priorities for tenant ${tenant}`);

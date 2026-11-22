@@ -56,11 +56,17 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
+    // Only the fields a caller owns may reach INSERT. `is_from_itil_standard` and
+    // `itil_priority_level` decide which family a priority belongs to and which board offers it,
+    // and are written by ITIL seeding alone — spreading the input here let a crafted call put a
+    // tenant priority into the ITIL family.
+    const insertData: Record<string, unknown> = { tenant };
+    for (const field of ['priority_name', 'order_number', 'color', 'item_type', 'created_by', 'created_at'] as const) {
+      if (priority[field] !== undefined) insertData[field] = priority[field];
+    }
+
     const [insertedPriority] = await tenantDb(knexOrTrx, tenant).table<IPriority>('priorities')
-      .insert({
-        ...priority,
-        tenant,
-      })
+      .insert(insertData as unknown as IPriority)
       .returning('*');
 
     return insertedPriority;

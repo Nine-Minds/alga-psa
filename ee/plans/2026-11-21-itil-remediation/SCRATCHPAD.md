@@ -176,6 +176,46 @@ What the checks changed in the plan:
 
 Still open: a free-form workflow expression comparing a ticket's category to a literal id cannot be found or re-pointed.
 
+## Implementation notes
+
+### Commit group 1 — `core-rules` (done)
+
+Landed: `shared/lib/itil/priorityMatrix.ts`, `shared/lib/tickets/boardFieldRules.ts`, both registered in
+`shared/tsup.config.ts` and `shared/package.json`; `packages/tickets/src/lib/itilUtils.ts` now re-exports the
+matrix instead of holding a second copy; the PR #3880 helpers in `ticketFieldReferences.ts` delegate;
+`ItilStandardsService.copyItilPrioritiesToTenant` matches by family + level; the priority write whitelist in
+`packages/reference-data/src/models/priority.ts` and `priorityActions.ts`.
+
+- **`boardDefaultPriority.ts` overlap (asked for by the plan).** `packages/tickets/src/lib/boardDefaultPriority.ts`
+  is the *client* rule: it picks from a list already fetched, for the Quick Add and the client portal form. The
+  server rule is `defaultPriorityForBoard`/`defaultPriorityForBoardRow` in the shared module. They agree on R7 —
+  stored default when its family matches, else the level-3 ITIL priority, else the lowest-order own ticket
+  priority — and differ only at the end: the client helper falls back once more to "the first priority in the
+  list" so a `<Select>` is never empty, while the server returns `null`, as R7 says ("otherwise none"). The client
+  helper is folded into the one filter helper in the `priority-pickers` group; until then it stays as the client
+  half and must be changed with the server half.
+- **New field problems carry no `messageKey` yet.** `findBoardFieldProblems` reports existence, item-type,
+  category-ownership and Impact/Urgency problems as plain English `message`s, the way
+  `findTicketFieldReferenceProblems` already reports its own. Only the two family-mismatch messages (which
+  already have keys in all ten locales) carry a key. The group that first shows one of the new messages to a
+  user adds its key to every locale in that group's commit — adding keys here would put untranslated strings in
+  ten locale files that nothing renders.
+- **`findTicketUpdatePriorityBoardTypeProblem` keeps its narrow contract.** It now runs the shared patch check,
+  which also looks at the category, but filters the result down to the two family-mismatch problems. Widening it
+  here would turn a dangling category into a `PriorityBoardTypeError` on paths that report that separately
+  (`findTicketFieldReferenceProblems`, `TicketModel`). The category half of the patch check is wired into the
+  writers in the `writers-create` and `writers-update` groups.
+- **T010 is the existing suite.** `server/src/test/integration/priorityBoardType.integration.test.ts` is
+  deliberately unmodified: it is the test that the delegation did not change behaviour.
+- **Seeding is now fail-loud.** A tenant priority named like an ITIL one used to be flagged (and silently moved
+  into the ITIL family); it now aborts ITIL setup with a message naming the row. That is the PR's intent (R3: the
+  flag is set by seeding alone), and it makes `handleItilConfiguration` able to fail — the `board-lifecycle`
+  group has to surface it as a field error on board create rather than a server error.
+- Not run here: the integration suites. This worktree has no test database (`.env.localtest` points at port
+  5472, which is closed; `secrets/` is absent), so `itilBoardFieldRules.integration.test.ts` was written against
+  the harness in `itilBoardDeletionCleanup.integration.test.ts` and is first executed by CI. The unit and
+  contract tests in the group were run locally.
+
 ## Commands
 
 ```bash

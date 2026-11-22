@@ -1,6 +1,11 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { TicketTemplateReferenceProblem } from '@alga-psa/types';
+import {
+  describePriorityBoardKindMismatch,
+  findBoardFieldProblems,
+  findTicketPatchBoardFieldProblems,
+} from '@alga-psa/shared/lib/tickets/boardFieldRules';
 
 /**
  * Reference checks for the ticket field group (board, status, priority, category, assignees, and a
@@ -68,26 +73,17 @@ export class PriorityBoardTypeError extends Error {
   }
 }
 
-/** A null `priority_type` is `custom` (as in boardActions); a null `is_from_itil_standard` is custom. */
+/**
+ * A null `priority_type` is `custom` (as in boardActions); a null `is_from_itil_standard` is custom.
+ * The rule itself lives in `@alga-psa/shared/lib/tickets/boardFieldRules`; this wrapper keeps the
+ * local row types so the template validator below can keep passing the rows it already fetched.
+ */
 function describePriorityBoardTypeMismatch(
   board: PriorityBoardTypeBoard,
   priority: PriorityBoardTypePriority,
   schedule?: boolean
 ): PriorityBoardTypeProblem | null {
-  const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
-  const priorityIsItil = Boolean(priority.is_from_itil_standard);
-  if (boardIsItil === priorityIsItil) return null;
-  const suffix = schedule ? '; edit the schedule' : '';
-  const message = priorityIsItil
-    ? `Priority ‘${priority.priority_name}’ is an ITIL priority but board ‘${board.board_name}’ uses custom priorities${suffix}`
-    : `Priority ‘${priority.priority_name}’ is a custom priority but board ‘${board.board_name}’ uses ITIL priorities${suffix}`;
-  return {
-    message,
-    messageKey: priorityIsItil
-      ? 'features/tickets:errors.ticket.priorityItilBoardCustom'
-      : 'features/tickets:errors.ticket.priorityCustomBoardItil',
-    messageParams: { priority: priority.priority_name, board: board.board_name },
-  };
+  return describePriorityBoardKindMismatch(board, priority, schedule);
 }
 
 /**
@@ -95,6 +91,8 @@ function describePriorityBoardTypeMismatch(
  * `priority_type`, otherwise null. Also null when either row does not exist: the existence problems are
  * reported elsewhere. Used by manual ticket create/update; the shared validator applies the same rule on
  * the rows it has already fetched.
+ *
+ * Delegates to the shared rules module, which is the one implementation of R3.
  */
 export async function findPriorityBoardTypeProblem(
   conn: Knex | Knex.Transaction,
@@ -102,15 +100,8 @@ export async function findPriorityBoardTypeProblem(
   boardId: string,
   priorityId: string
 ): Promise<PriorityBoardTypeProblem | null> {
-  const db = tenantDb(conn, tenant);
-  const board = await db.table('boards').where({ board_id: boardId }).first('board_name', 'priority_type');
-  if (!board) return null;
-  const priority = await db
-    .table('priorities')
-    .where({ priority_id: priorityId, item_type: 'ticket' })
-    .first('priority_name', 'is_from_itil_standard');
-  if (!priority) return null;
-  return describePriorityBoardTypeMismatch(board, priority);
+  const problems = await findBoardFieldProblems(conn, tenant, { boardId, priorityId });
+  return firstPriorityKindProblem(problems);
 }
 
 /**
@@ -127,15 +118,30 @@ export async function findTicketUpdatePriorityBoardTypeProblem(
   current: { board_id?: string | null; priority_id?: string | null },
   patch: { board_id?: string | null; priority_id?: string | null }
 ): Promise<PriorityBoardTypeProblem | null> {
-  const hasBoard = 'board_id' in patch && patch.board_id !== undefined;
-  const hasPriority = 'priority_id' in patch && patch.priority_id !== undefined;
-  const boardChanged = hasBoard && (patch.board_id ?? null) !== (current.board_id ?? null);
-  const priorityChanged = hasPriority && (patch.priority_id ?? null) !== (current.priority_id ?? null);
-  if (!boardChanged && !priorityChanged) return null;
-  const boardId = hasBoard ? patch.board_id : current.board_id;
-  const priorityId = hasPriority ? patch.priority_id : current.priority_id;
-  if (!boardId || !priorityId) return null;
-  return findPriorityBoardTypeProblem(conn, tenant, boardId, priorityId);
+  const problems = await findTicketPatchBoardFieldProblems(conn, tenant, current, patch);
+  return firstPriorityKindProblem(problems);
+}
+
+/**
+ * These two helpers report the family mismatch only: a missing board, a missing priority or a
+ * project-task priority is reported by the callers' own existence checks, and surfacing it here
+ * would turn an unrelated data problem into a `PriorityBoardTypeError`.
+ */
+function firstPriorityKindProblem(
+  problems: Array<{ field: string; message: string; messageKey?: string; messageParams?: Record<string, string> }>
+): PriorityBoardTypeProblem | null {
+  const problem = problems.find(
+    (candidate) =>
+      candidate.field === 'priority_id' &&
+      (candidate.messageKey === 'features/tickets:errors.ticket.priorityItilBoardCustom' ||
+        candidate.messageKey === 'features/tickets:errors.ticket.priorityCustomBoardItil')
+  );
+  if (!problem) return null;
+  return {
+    message: problem.message,
+    messageKey: problem.messageKey!,
+    messageParams: problem.messageParams as PriorityBoardTypeProblem['messageParams'],
+  };
 }
 
 /**

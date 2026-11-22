@@ -5,7 +5,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Shared module shared/lib/tickets/boardFieldRules.ts with plain functions taking a knex connection or transaction and a tenant; exported through shared/package.json and shared/tsup.config.ts"
   },
   {
@@ -14,7 +14,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Impact x Urgency matrix moves to shared/lib/itil/priorityMatrix.ts; packages/tickets itilUtils re-exports calculateItilPriority and ItilLabels from it"
   },
   {
@@ -23,7 +23,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listPrioritiesForBoard returns ticket priorities whose family matches the board's priority_type, ordered, including itil_priority_level"
   },
   {
@@ -32,7 +32,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "findBoardFieldProblems checks a priority against a board's priority_type and returns a field-level problem naming the priority and the board; the PR #3880 helpers in ticketFieldReferences delegate to it"
   },
   {
@@ -41,7 +41,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "findTicketPatchBoardFieldProblems checks the priority only when the patch changes priority_id or board_id, and the category only when it changes category_id, subcategory_id or board_id"
   },
   {
@@ -50,7 +50,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveItilPriorityId returns the tenant's ITIL priority for an Impact x Urgency pair by itil_priority_level, never by name"
   },
   {
@@ -59,7 +59,7 @@
     "prdRefs": [
       "R7"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "defaultPriorityForBoard returns the board default when it fits, else the level-3 ITIL priority or the lowest-order own ticket priority, else null"
   },
   {
@@ -68,7 +68,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveTicketPriorityFields applies R4 for a create or an update and returns priority_id, itil_impact and itil_urgency; takes a policy of refuse or fallback"
   },
   {
@@ -77,7 +77,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "With policy fallback, resolveTicketPriorityFields returns the configured priority when it fits, else the board default, else the configured priority unchanged"
   },
   {
@@ -86,7 +86,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "On a board with the tenant's own priorities, resolveTicketPriorityFields returns empty Impact and Urgency whatever was supplied"
   },
   {
@@ -95,7 +95,7 @@
     "prdRefs": [
       "Problem 3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL priority seeding finds existing rows by family and level; it never flags an existing unflagged priority by name, and a name collision with a tenant priority is reported with the priority's name"
   },
   {
@@ -104,7 +104,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Priority create and update accept only name, colour, order and item type in the reference-data model and the web actions; the ITIL flag and level are set only by ITIL seeding"
   },
   {
@@ -113,7 +113,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The REST priority API stays read-only: no create, update or delete route exists for priorities"
   },
   {

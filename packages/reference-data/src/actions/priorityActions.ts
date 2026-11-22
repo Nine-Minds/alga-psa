@@ -115,16 +115,30 @@ export const findPriorityById = withAuth(async (_user, { tenant }, id: string) =
   });
 });
 
+/**
+ * The fields a caller owns. A priority's family (`is_from_itil_standard`) and its
+ * `itil_priority_level` decide which boards offer it and which SLA targets apply, and are written
+ * by ITIL seeding alone, so they are dropped here rather than refused: the rest of the edit saves.
+ */
+function ownedPriorityFields<T extends Partial<IPriority>>(priorityData: T): Partial<IPriority> {
+  const owned: Partial<IPriority> = {};
+  if (priorityData.priority_name !== undefined) owned.priority_name = priorityData.priority_name;
+  if (priorityData.order_number !== undefined) owned.order_number = priorityData.order_number;
+  if (priorityData.color !== undefined) owned.color = priorityData.color;
+  if (priorityData.item_type !== undefined) owned.item_type = priorityData.item_type;
+  return owned;
+}
+
 export const createPriority = withAuth(async (user, { tenant }, priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority | PriorityActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const newPriority = await Priority.insert(trx, tenant, {
-        ...priorityData,
+        ...ownedPriorityFields(priorityData),
         created_by: user.user_id,
         created_at: new Date()
-      });
+      } as Omit<IPriority, 'priority_id' | 'tenant'>);
       return newPriority;
     } catch (error) {
       console.error(`Error creating priority for tenant ${tenant}:`, error);
@@ -236,7 +250,7 @@ export const updatePriority = withAuth(async (_user, { tenant }, priorityId: str
         throw new Error('ITIL standard priorities cannot be edited');
       }
 
-      const updatedPriority = await Priority.update(trx, tenant, priorityId, priorityData);
+      const updatedPriority = await Priority.update(trx, tenant, priorityId, ownedPriorityFields(priorityData));
       if (!updatedPriority) {
         throw new Error(`Priority ${priorityId} not found for tenant ${tenant}`);
       }

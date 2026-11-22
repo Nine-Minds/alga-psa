@@ -5,7 +5,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After build:shared the module resolves from packages/tickets, packages/co-managed, server and shared/workflow, and imports no server action"
   },
   {
@@ -14,7 +14,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Matrix returns the expected level for all 25 Impact x Urgency pairs and rejects values outside 1 to 5"
   },
   {
@@ -23,7 +23,7 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL board, priority only, ticket has Impact and Urgency: priority accepted and both cleared"
   },
   {
@@ -32,7 +32,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listPrioritiesForBoard on an ITIL board returns exactly the five ITIL ticket priorities in level order"
   },
   {
@@ -41,7 +41,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listPrioritiesForBoard on a non-ITIL board returns only the tenant's own ticket priorities and no project-task priorities"
   },
   {
@@ -50,7 +50,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listPrioritiesForBoard treats a NULL priority_type as the tenant's own kind"
   },
   {
@@ -59,7 +59,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listPrioritiesForBoard never returns another tenant's priorities"
   },
   {
@@ -68,7 +68,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "findBoardFieldProblems reports an own priority on an ITIL board and an ITIL priority on a non-ITIL board, naming both"
   },
   {
@@ -77,7 +77,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "findBoardFieldProblems reports a priority id that does not exist or is a project-task priority"
   },
   {
@@ -86,7 +86,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The existing priorityBoardType integration tests pass unchanged against the delegating helpers"
   },
   {
@@ -95,7 +95,7 @@
     "featureIds": [
       "F005"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A patch without priority_id or board_id on a ticket with a non-fitting priority reports no priority problem"
   },
   {
@@ -104,7 +104,7 @@
     "featureIds": [
       "F005"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A patch that changes only board_id is checked against the ticket's stored priority"
   },
   {
@@ -113,7 +113,7 @@
     "featureIds": [
       "F005"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A patch that changes only the title on a ticket with a category from another board reports no category problem"
   },
   {
@@ -122,7 +122,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveItilPriorityId finds the ITIL priority after it has been renamed"
   },
   {
@@ -131,7 +131,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "resolveItilPriorityId returns null when the tenant has no ITIL priority for the level"
   },
   {
@@ -140,7 +140,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "defaultPriorityForBoard returns the stored default when it fits the board"
   },
   {
@@ -149,7 +149,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "defaultPriorityForBoard ignores a stored default of the wrong family and returns level 3 on an ITIL board"
   },
   {
@@ -158,7 +158,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "defaultPriorityForBoard returns the lowest-order own ticket priority on a non-ITIL board with no default, and null when the tenant has none"
   },
   {
@@ -167,7 +167,7 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL board, Impact and Urgency supplied: priority is the matrix result and a supplied priority_id is ignored"
   },
   {
@@ -176,7 +176,7 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL board, priority only, no stored Impact/Urgency: priority accepted and both stay empty"
   },
   {
@@ -185,7 +185,7 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL board, priority only, refuse policy, own-family priority: refused with a priority_id problem"
   },
   {
@@ -194,7 +194,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Fallback returns the configured priority when it fits"
   },
   {
@@ -203,7 +203,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Fallback returns the board default when the configured priority does not fit"
   },
   {
@@ -212,7 +212,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Fallback returns the configured priority unchanged when the tenant has no priority of the board's family"
   },
   {
@@ -221,7 +221,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Fallback with only one of Impact and Urgency drops both"
   },
   {
@@ -230,7 +230,7 @@
     "featureIds": [
       "F010"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Non-ITIL board with Impact and Urgency supplied: both come back empty and the supplied priority is used"
   },
   {
@@ -239,7 +239,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Seeding ITIL priorities twice leaves five rows"
   },
   {
@@ -248,7 +248,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Seeding with a tenant priority already named like an ITIL one fails with an error naming it and does not flag it"
   },
   {
@@ -257,7 +257,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Priority create with is_from_itil_standard and itil_priority_level in the input stores neither, through the model and the web action"
   },
   {
@@ -266,7 +266,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Priority update cannot set or clear the ITIL flag or level"
   },
   {
@@ -275,7 +275,7 @@
     "featureIds": [
       "F013"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A contract test fails if a write route is added under /api/v1/priorities without the ITIL guard"
   },
   {

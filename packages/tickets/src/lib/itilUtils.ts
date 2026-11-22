@@ -1,114 +1,16 @@
 import { ItilPriority, getSlaTarget } from '@alga-psa/shared/lib/itil/slaTargets';
+import {
+  ItilImpact,
+  ItilUrgency,
+  calculateItilPriority,
+  ItilLabels,
+} from '@alga-psa/shared/lib/itil/priorityMatrix';
 
 export { ItilPriority, getSlaTarget };
 
-// ITIL Utility Functions for Priority Calculation and Business Logic
-
-/**
- * ITIL Impact levels (1-5 scale)
- */
-export enum ItilImpact {
-  HIGH = 1,      // Large number of users affected, critical business function affected
-  MEDIUM_HIGH = 2,  // Medium number of users affected, important business function affected
-  MEDIUM = 3,    // Small number of users affected, minor business function affected
-  MEDIUM_LOW = 4,   // Few users affected, minimal business impact
-  LOW = 5        // Single user affected, no business impact
-}
-
-/**
- * ITIL Urgency levels (1-5 scale)
- */
-export enum ItilUrgency {
-  HIGH = 1,      // Work cannot continue, immediate attention required
-  MEDIUM_HIGH = 2,  // Work is severely impaired, needs quick attention
-  MEDIUM = 3,    // Work can continue with limitations
-  MEDIUM_LOW = 4,   // Work can continue with minor inconvenience
-  LOW = 5        // Work can continue normally
-}
-
-/**
- * ITIL Impact × Urgency Priority Matrix
- * Returns priority level based on impact and urgency values
- */
-const PRIORITY_MATRIX: Record<number, Record<number, number>> = {
-  [ItilImpact.HIGH]: {
-    [ItilUrgency.HIGH]: ItilPriority.CRITICAL,
-    [ItilUrgency.MEDIUM_HIGH]: ItilPriority.HIGH,
-    [ItilUrgency.MEDIUM]: ItilPriority.HIGH,
-    [ItilUrgency.MEDIUM_LOW]: ItilPriority.MEDIUM,
-    [ItilUrgency.LOW]: ItilPriority.MEDIUM
-  },
-  [ItilImpact.MEDIUM_HIGH]: {
-    [ItilUrgency.HIGH]: ItilPriority.HIGH,
-    [ItilUrgency.MEDIUM_HIGH]: ItilPriority.HIGH,
-    [ItilUrgency.MEDIUM]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM_LOW]: ItilPriority.MEDIUM,
-    [ItilUrgency.LOW]: ItilPriority.LOW
-  },
-  [ItilImpact.MEDIUM]: {
-    [ItilUrgency.HIGH]: ItilPriority.HIGH,
-    [ItilUrgency.MEDIUM_HIGH]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM_LOW]: ItilPriority.LOW,
-    [ItilUrgency.LOW]: ItilPriority.LOW
-  },
-  [ItilImpact.MEDIUM_LOW]: {
-    [ItilUrgency.HIGH]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM_HIGH]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM]: ItilPriority.LOW,
-    [ItilUrgency.MEDIUM_LOW]: ItilPriority.LOW,
-    [ItilUrgency.LOW]: ItilPriority.PLANNING
-  },
-  [ItilImpact.LOW]: {
-    [ItilUrgency.HIGH]: ItilPriority.MEDIUM,
-    [ItilUrgency.MEDIUM_HIGH]: ItilPriority.LOW,
-    [ItilUrgency.MEDIUM]: ItilPriority.LOW,
-    [ItilUrgency.MEDIUM_LOW]: ItilPriority.PLANNING,
-    [ItilUrgency.LOW]: ItilPriority.PLANNING
-  }
-};
-
-/**
- * Calculate ITIL priority based on impact and urgency
- * @param impact ITIL impact level (1-5)
- * @param urgency ITIL urgency level (1-5)
- * @returns Priority level (1-5)
- */
-export function calculateItilPriority(impact: number, urgency: number): number {
-  // Validate input ranges
-  if (impact < 1 || impact > 5 || urgency < 1 || urgency > 5) {
-    throw new Error('Impact and urgency must be between 1 and 5');
-  }
-
-  return PRIORITY_MATRIX[impact][urgency];
-}
-
-/**
- * Get human-readable labels for ITIL levels
- */
-export const ItilLabels = {
-  impact: {
-    1: 'High',
-    2: 'Medium-High',
-    3: 'Medium',
-    4: 'Medium-Low',
-    5: 'Low'
-  },
-  urgency: {
-    1: 'High',
-    2: 'Medium-High',
-    3: 'Medium',
-    4: 'Medium-Low',
-    5: 'Low'
-  },
-  priority: {
-    1: 'Critical',
-    2: 'High',
-    3: 'Medium',
-    4: 'Low',
-    5: 'Planning'
-  }
-};
+// The Impact × Urgency matrix and its labels live in @alga-psa/shared so the rules module,
+// shared/workflow and co-managed can use them without importing the tickets package.
+export { ItilImpact, ItilUrgency, calculateItilPriority, ItilLabels };
 
 /**
  * Check if SLA should be breached based on elapsed time
