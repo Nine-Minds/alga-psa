@@ -302,7 +302,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -350,7 +350,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -437,7 +437,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -774,10 +774,10 @@ describe('client portal ticket visibility enforcement', () => {
     // client-visible comments so internal-only commenters aren't enumerated.
     expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
 
-    // L4a: both reads also apply the shared audience predicate (commentAudienceSql), so only
+    // L4a: both reads also apply the shared audience predicate (commentAudienceVisibleSql), so only
     // requester-audience comments reach the portal and shared_it / organization_private never do.
-    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
-    expect(commentUserIdsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
+    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith('?', expect.any(Array));
+    expect(commentUserIdsBuilder.whereRaw).toHaveBeenCalledWith('?', expect.any(Array));
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {
@@ -1338,10 +1338,18 @@ describe('contact-scoped portal enforcement', () => {
     else await actions.getClientTicketDocuments(TICKET_1);
 
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalled();
-    const sawWorkspace = applyTicketVisibilityFilterMock.mock.calls.some(
+    const workspaceGates = applyTicketVisibilityFilterMock.mock.calls.filter(
       (call: any[]) => Boolean(call[2]?.sharedWorkspaceTickets)
     );
-    expect(sawWorkspace).toBe(expectsWorkspace);
+    expect(workspaceGates.length > 0).toBe(expectsWorkspace);
+    for (const call of workspaceGates) {
+      // The id list now comes from the context, so the adapter carries the
+      // ticket's own id and closed flag and nothing to correlate on.
+      expect(call[2].sharedWorkspaceTickets).toEqual({
+        ticketIdColumn: expect.any(String),
+        closedColumn: expect.any(String),
+      });
+    }
   });
 });
 

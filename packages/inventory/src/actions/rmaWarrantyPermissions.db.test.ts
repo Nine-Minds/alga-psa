@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C5 T020 / T021 (real DB): the warranty permission is granted to existing tenants by the migration and to new ones
  * by the catalog; refusals happen before any write; a hidden asset reads as not found; rows without an asset keep
@@ -134,7 +135,7 @@ const eventCount = async () => Number((await knex('rma_events').where({ tenant: 
 
 async function newAsset() {
   const assetId = randomUUID();
-  await knex('assets').insert({
+  await insertTestAssets(knex, {
     tenant: holder.tenant, asset_id: assetId, asset_type: 'unknown', client_id: CLIENT, asset_tag: `P-${assetId.slice(0, 8)}`,
     name: 'Dell WD19 dock', serial_number: 'SER-1234', model: 'WD19', manufacturer: 'Dell', status: 'active', location: '',
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -240,11 +241,11 @@ describe('T020 warranty permission provisioning and enforcement', () => {
 
 describe('T021 record-level asset visibility on RMA reads', () => {
   it('a case whose asset the caller cannot read is hidden exactly like a missing case; asset-less rows keep today\'s visibility', async () => {
-    holder.grants = new Set(['warranty:read', 'warranty:create', 'inventory:read', 'asset:update']);
+    holder.grants = new Set(['warranty:read', 'warranty:create', 'inventory:read', 'asset:update', 'ticket:read']);
 
     const assetId = await newAsset();
     await inCustody(assetId);
-    const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', ticket_id: TICKET }));
+    const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x' }));
 
     // a stock-unit RMA row: no asset_id
     const service = await knex('service_catalog').where({ tenant: holder.tenant }).first();

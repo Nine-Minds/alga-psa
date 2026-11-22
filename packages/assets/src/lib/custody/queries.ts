@@ -8,10 +8,9 @@ import type {
   ICustodyQueueRow,
 } from '@alga-psa/types';
 import { CUSTODY_QUEUE_TABS } from '@alga-psa/types';
-import {
-  filterReadableAssets,
-  type AssetReadAuthorizationContext,
-} from '../assetReadAuthorization';
+import type { AssetReadAuthorizationContext } from '../assetReadAuthorization';
+import { projectReadableAssetRecords } from '../assetReadProjection';
+import { ASSET_CUSTODY_QUEUE_SOURCE } from '@alga-psa/authorization/recordProjection';
 import { CUSTODY_COLUMNS, FOLLOW_UP_SELECT, mapCustodyRow } from './shared';
 
 /**
@@ -108,8 +107,8 @@ export interface ListCustodyQueueOptions {
 }
 
 /**
- * The open-episode queue. Every row is filtered through the record-level asset read check before it is
- * counted or returned, so totals and tab counts never reveal an asset the caller cannot read.
+ * The open-episode queue. Candidates are authorized and projected before filters, totals, tab counts,
+ * or pagination, so denied and redacted source data cannot influence the response.
  * Open episodes are few (equipment physically on shelves), so rows are filtered then paged in memory.
  */
 export async function listCustodyQueue(
@@ -129,19 +128,9 @@ export async function listCustodyQueue(
     })
     .leftJoin('clients as cl', function joinClient() {
       this.on('cl.tenant', 'c.tenant').andOn('cl.client_id', 'c.client_id');
-    })
-    .whereNull('c.closed_at');
-  if (filters.client_id) q.where('c.client_id', filters.client_id);
-  if (filters.location_id) q.where('c.location_id', filters.location_id);
-  if (filters.holder_user_id) q.where('c.holder_user_id', filters.holder_user_id);
-  if (filters.purpose) q.where('c.purpose', filters.purpose);
-  if (filters.next_action_party) q.where('c.next_action_party', filters.next_action_party);
-  if (filters.mine && options.userId) q.where('c.holder_user_id', options.userId);
-
+    });
   const rows: Array<ICustodyQueueRow & { _a: { asset_id: string; client_id: string | null } }> = (
     await q
-      .orderByRaw('c.follow_up_on asc nulls last')
-      .orderBy('c.opened_at', 'asc')
       .select([
         ...detailSelect(trx as Knex),
         'a.asset_tag as asset_tag',
@@ -158,16 +147,48 @@ export async function listCustodyQueue(
     _a: { asset_id: row.asset_id, client_id: row.asset_client_id ?? null },
   }));
 
-  const readable = await filterReadableAssets(trx, tenant, authContext, rows.map((r) => r._a));
-  const readableIds = new Set(readable.map((a) => a.asset_id));
-  const visible = rows.filter((r) => readableIds.has(r.asset_id)).map(({ _a, ...row }) => row as ICustodyQueueRow);
+  const assetById = new Map(rows.map(({ asset_id, _a }) => [asset_id, _a]));
+  const projectionCandidates = rows.map(({ _a: _authorizationRecord, ...row }) => row);
+  const projections = await projectReadableAssetRecords(
+    trx,
+    tenant,
+    authContext,
+    projectionCandidates,
+    (row) => assetById.get(row.asset_id)!,
+    ASSET_CUSTODY_QUEUE_SOURCE,
+  );
+  const requestedFilters: Array<[keyof ICustodyQueueRow, unknown]> = [
+    ['client_id', filters.client_id],
+    ['location_id', filters.location_id],
+    ['holder_user_id', filters.holder_user_id],
+    ['purpose', filters.purpose],
+    ['next_action_party', filters.next_action_party],
+    ...(filters.mine && options.userId ? [['holder_user_id', options.userId] as [keyof ICustodyQueueRow, unknown]] : []),
+  ];
+  const visible = projections.flatMap(({ record, policy }) => {
+    const row = record as ICustodyQueueRow;
+    const isOpen = policy.readable('closed_at', ASSET_CUSTODY_QUEUE_SOURCE) && row.closed_at === null;
+    const matchesFilters = requestedFilters.every(([field, value]) =>
+      value === undefined || (policy.readable(field, ASSET_CUSTODY_QUEUE_SOURCE) && row[field] === value));
+    return isOpen && matchesFilters ? [{ row, policy }] : [];
+  });
+
+  const readableDate = (row: ICustodyQueueRow, field: 'follow_up_on' | 'opened_at', policy: (typeof projections)[number]['policy']) => {
+    if (!policy.readable(field, ASSET_CUSTODY_QUEUE_SOURCE)) return Number.POSITIVE_INFINITY;
+    const timestamp = row[field] ? new Date(row[field] as string).getTime() : Number.POSITIVE_INFINITY;
+    return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+  };
+  visible.sort((a, b) =>
+    readableDate(a.row, 'follow_up_on', a.policy) - readableDate(b.row, 'follow_up_on', b.policy)
+    || readableDate(a.row, 'opened_at', a.policy) - readableDate(b.row, 'opened_at', b.policy));
+  const visibleRows = visible.map(({ row }) => row);
 
   const tabCounts = Object.fromEntries(
-    CUSTODY_QUEUE_TABS.map((tab) => [tab, visible.filter((r) => matchesQueueTab(r, tab, today)).length])
+    CUSTODY_QUEUE_TABS.map((tab) => [tab, visibleRows.filter((r) => matchesQueueTab(r, tab, today)).length])
   ) as Record<CustodyQueueTab, number>;
 
   const tab = filters.tab ?? 'all_open';
-  const inTab = visible.filter((r) => matchesQueueTab(r, tab, today));
+  const inTab = visibleRows.filter((r) => matchesQueueTab(r, tab, today));
   return {
     rows: inTab.slice((page - 1) * pageSize, page * pageSize),
     total: inTab.length,

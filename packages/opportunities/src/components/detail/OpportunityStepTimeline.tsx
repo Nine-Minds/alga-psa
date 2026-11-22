@@ -35,6 +35,8 @@ export function OpportunityStepTimeline({
   onAddStep,
   onApplyTemplate,
   onStageSelect,
+  onOpenCitation,
+  canOpenInteraction,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -50,6 +52,8 @@ export function OpportunityStepTimeline({
   onAddStep: (stage: PlannableStage | null) => void;
   onApplyTemplate: (stages: PlannableStage[]) => void;
   onStageSelect?: (stage: PlannableStage) => void;
+  onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -111,6 +115,8 @@ export function OpportunityStepTimeline({
             onAddStep={onAddStep}
             onApplyTemplate={onApplyTemplate}
             onStageSelect={onStageSelect}
+            onOpenCitation={onOpenCitation}
+            canOpenInteraction={canOpenInteraction}
             onCompleteStep={onCompleteStep}
             onEditStep={onEditStep}
             onDeleteStep={onDeleteStep}
@@ -176,6 +182,8 @@ function StageSegment({
   onAddStep,
   onApplyTemplate,
   onStageSelect,
+  onOpenCitation,
+  canOpenInteraction,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -190,6 +198,8 @@ function StageSegment({
   onAddStep: (stage: PlannableStage) => void;
   onApplyTemplate: (stages: PlannableStage[]) => void;
   onStageSelect?: (stage: PlannableStage) => void;
+  onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -275,6 +285,12 @@ function StageSegment({
       </div>
       <div className={`min-w-0 flex-1 ${isLast ? 'pb-1' : 'pb-4'}`}>
         <div className="flex min-h-7 items-center gap-2">{heading}</div>
+        <EvidenceCitation
+          idBase={idBase}
+          evidence={evidence?.evidence}
+          onOpenCitation={onOpenCitation}
+          canOpenInteraction={canOpenInteraction}
+        />
         {steps.length > 0 ? (
           <div className="mt-2 space-y-2">
             {steps.map((step) => (
@@ -312,6 +328,58 @@ function StageSegment({
         ) : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * The source a declaration cites. A live source is a link; a deleted one is a
+ * muted chip and the rung otherwise renders as normal.
+ */
+function EvidenceCitation({
+  idBase,
+  evidence,
+  onOpenCitation,
+  canOpenInteraction,
+}: {
+  idBase: string;
+  evidence: IOpportunityEvidenceLadderStep['evidence'];
+  onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
+}) {
+  const { t } = useTranslation('msp/opportunities');
+  const type = evidence?.ref_type;
+  if (!evidence || (type !== 'interaction' && type !== 'document') || !evidence.ref_id) return null;
+  if (evidence.ref_missing) {
+    return (
+      <div className="mt-1">
+        <Badge id={`${idBase}-source-removed`} variant="default-muted" size="sm">
+          {t('opportunities.declare.sourceRemoved', 'Source removed')}
+        </Badge>
+      </div>
+    );
+  }
+  const fallback = type === 'interaction'
+    ? t('opportunities.declare.interactionFallback', 'Interaction')
+    : t('opportunities.declare.documentFallback', 'Document');
+  const label = evidence.ref_label || fallback;
+  const refId = evidence.ref_id;
+  return (
+    <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
+      <span className="text-[rgb(var(--color-text-500))]">{t('opportunities.declare.source', 'Source')}:</span>
+      {onOpenCitation && (type === 'document' || canOpenInteraction) ? (
+        <button
+          id={`${idBase}-source-link`}
+          type="button"
+          onClick={() => onOpenCitation?.(type, refId)}
+          className="min-w-0 truncate text-[rgb(var(--color-primary-600))] hover:underline"
+          title={label}
+        >
+          {label}
+        </button>
+      ) : (
+        <span className="min-w-0 truncate" title={label}>{label}</span>
+      )}
+    </div>
   );
 }
 

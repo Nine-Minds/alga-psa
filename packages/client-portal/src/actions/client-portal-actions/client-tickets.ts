@@ -4,15 +4,16 @@ import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { commentAudienceVisibleSql } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
-import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import { canWriteAttachmentTicket, reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, TICKET_ORIGINS } from '@alga-psa/types';
@@ -67,6 +68,10 @@ const clientTicketSchema = z.object({
   board_id: z.string().optional(),
   asset_id: z.string().guid().optional(),
 });
+
+// Pasted description images can only be uploaded once the ticket exists, so the
+// rewritten description comes back in a second call validated the same way.
+const clientTicketDescriptionSchema = clientTicketSchema.pick({ description: true });
 
 const VISIBILITY_NOT_FOUND_ERROR =
   'Visibility group assignment is invalid for this contact.';
@@ -299,7 +304,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -399,7 +404,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', closedColumn: 't.is_closed' } });
         })
         .first();
 
@@ -427,7 +432,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where('c.ticket_id', ticketId)
         .where('c.is_internal', false)
         // Same audience predicate as the conversation read below: only requester-audience authors.
-        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'cut', 'cur', 'c')])
+        .whereRaw('?', [commentAudienceVisibleSql(trx, { kind: 'requester', tenant }, { thread: 'cut', root: 'cur', comment: 'c', ownerTenant: 'c.tenant' })])
         // Do not enumerate authors of scheduled/canceled comments before
         // publication — mirror the conversations query's publish_state gate.
         .where('c.publish_state', 'published');
@@ -508,7 +513,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         // Audience is an additional restriction (never a grant): thread, root and comment flags must
         // agree on `requester`, so a damaged or relabelled row can only narrow what the portal sees.
-        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'ct', 'rc', 'comments')])
+        .whereRaw('?', [commentAudienceVisibleSql(trx, { kind: 'requester', tenant }, { thread: 'ct', root: 'rc', comment: 'comments', ownerTenant: 'comments.tenant' })])
         .orderBy('comments.created_at', 'asc');
 
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
@@ -557,7 +562,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         // documents has no client_id after associations were normalized. The
         // ticket relationship comes from document_associations; client_id is
         // inherited only from the already-authorized ticket row.
-        documents: await filterReadableCommentAttachments(trx, tenant, userId, documents),
+        documents: await filterReadableCommentAttachments(trx, tenant, user, documents),
         users,
         linkedAssets,
       };
@@ -782,14 +787,18 @@ export const addClientTicketComment = withAuth(async (
       });
       const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
+      let responseStateChanged = false;
       if (!isInternal) {
-        // LEVERAGE: pattern response-state-from-comment — client portal writes awaiting_internal directly (no tracking check, no TICKET_RESPONSE_STATE_CHANGED); route through applyCommentResponseState in shared/lib/tickets/responseState.ts once portal behaviour change is accepted.
-        await tenantDb(trx, tenant).table('tickets')
-          .where({
-            ticket_id: ticketId,
-          })
-          .update({ response_state: 'awaiting_internal' });
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant,
+          ticketId,
+          authorType: 'client',
+          isInternal: false,
+          userId,
+        });
+        responseStateChanged = newState !== previousState;
 
+        // Independent of the response-state tracking setting.
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
 
@@ -821,7 +830,7 @@ export const addClientTicketComment = withAuth(async (
       await publishTicketUpdate({
         tenantId: tenant,
         ticketId,
-        updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
+        updatedFields: responseStateChanged ? ['comments', 'response_state'] : ['comments'],
         updatedBy: {
           userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
@@ -1386,7 +1395,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', tenantColumn: 'tickets.tenant', closedColumn: 'tickets.is_closed' } });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', closedColumn: 'tickets.is_closed' } });
         })
         .first();
 
@@ -1412,7 +1421,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
         });
-      const readableRows = await filterReadableCommentAttachments(trx, tenant, userId, rows);
+      const readableRows = await filterReadableCommentAttachments(trx, tenant, user, rows);
       return readableRows.map((document) => projectClientTicketDocument({
         ...document,
         client_id: ticket.client_id,
@@ -1566,6 +1575,9 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        // The portal never asks where the ticket is, so leave it unsaid: the model fills it from
+        // the portal user's own contact (or the client default), and a remote worker gets none.
+        location_id: undefined,
         billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
@@ -1605,7 +1617,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
             clientColumn: 'assets.client_id',
             contactColumn: 'assets.contact_name_id',
             // FR-E7b: a workspace user can raise a ticket on any workspace asset.
-            sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+            sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
           }
         )
           .select('asset_id')
@@ -1651,5 +1663,97 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
     return result;
   } catch (error) {
     return expectedOrThrow(error, 'Failed to create client ticket:');
+  }
+});
+
+/**
+ * Second write of a portal-created ticket's description.
+ *
+ * An image pasted into the create dialog has nowhere to live until the ticket
+ * exists, so createClientTicket is sent the description without those blocks and
+ * the dialog replays it here once every image is uploaded against the new
+ * ticket. The gate is the same one the uploads passed (`ticket:update` plus the
+ * record-scope attachment write check), narrowed to the ticket this user filed:
+ * finalizing is never a way to rewrite a colleague's description.
+ *
+ * Only attributes.description changes; the rest of the attributes document
+ * (watch list, custom fields) is carried over untouched.
+ */
+export const finalizeClientTicketDescription = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  description: string
+): Promise<ClientTicketActionResult<void>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      return permissionError('Insufficient permissions to update tickets', 'common:errors.permissions.tickets.update');
+    }
+
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
+    const validatedData = (() => {
+      try {
+        return validateData(clientTicketDescriptionSchema, { description });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const zodFailure = zodErrorMessage(error);
+          throw expectedClientTicketActionError(
+            zodFailure.message,
+            zodFailure.messageKey,
+            zodFailure.messageParams,
+          );
+        }
+        throw error;
+      }
+    })();
+
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const ticket = await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticketId })
+        .first('ticket_id', 'entered_by', 'attributes');
+
+      if (
+        !ticket ||
+        ticket.entered_by !== userId ||
+        !await canWriteAttachmentTicket(trx, tenant, userId, ticketId)
+      ) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticketId })
+        .update({
+          attributes: {
+            ...((ticket.attributes || {}) as Record<string, unknown>),
+            description: validatedData.description,
+          },
+          updated_at: new Date().toISOString(),
+          updated_by: userId,
+        });
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to finalize client ticket description:');
   }
 });

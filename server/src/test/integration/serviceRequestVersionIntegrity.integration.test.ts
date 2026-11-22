@@ -189,7 +189,7 @@ describe('service request version integrity', () => {
     );
 
     expect(detail).not.toBeNull();
-    expect(detail?.definition_version_id).toBe(version1Id);
+    expect(detail).not.toHaveProperty('definition_version_id');
     expect(detail?.submitted_payload).toEqual({
       employee_name: 'Alice Version One',
     });

@@ -21,9 +21,9 @@ import { MAX_COMMENT_LENGTH } from "../types";
 import type { TicketNotificationSuppressionOptions, TicketStatus } from "../../../api/tickets";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketNotificationSuppressionControl,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function CommentComposer({
   draftContent,
@@ -90,7 +90,7 @@ export function CommentComposer({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const canSchedule = variant === "ticket" && (Boolean(onChangeScheduleAt));
   const isScheduled = Boolean(scheduleAt);
@@ -102,10 +102,11 @@ export function CommentComposer({
   }, [isInternal, onChangeScheduleAt, scheduleAt]);
 
   useEffect(() => {
-    if (!isResolution || !closeStatusId) {
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+    // A cleared draft starts a new action; mode changes keep the agent's choice.
+    if (!sending && draftPlainText.trim().length === 0) {
+      resetSuppression();
     }
-  }, [isResolution, closeStatusId]);
+  }, [draftPlainText, sending, resetSuppression]);
   return (
     <View
       style={{
@@ -229,6 +230,7 @@ export function CommentComposer({
           {isResolution && closeStatusId ? (
             <View style={{ marginTop: spacing.md }}>
               <TicketNotificationSuppressionControl
+                idPrefix="ticket-comment-close"
                 value={suppression}
                 onChange={setSuppression}
                 disabled={sending}
@@ -250,7 +252,11 @@ export function CommentComposer({
           ) : null}
           <View style={{ marginTop: spacing.sm }}>
             <PrimaryButton
-              onPress={() => onSend(activeTicketNotificationSuppression(suppression))}
+              onPress={() => onSend(
+                isResolution && closeStatusId
+                  ? activeTicketNotificationSuppression(suppression)
+                  : undefined,
+              )}
               disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
               accessibilityLabel={t("comments.sendComment")}
             >

@@ -73,6 +73,17 @@ describe('ticketing dashboard i18n wiring contract', () => {
     }
   });
 
+  it('T026: wires the seat technician list views and their empty state through features/tickets translations', () => {
+    const en = readJson<Record<string, unknown>>('../../../../server/public/locales/en/features/tickets.json');
+    const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
+    expect(read('./TicketingDashboard.tsx')).toContain("t('dashboard.seatViews.empty'");
+    expect(read('../../../co-managed/src/seatTicketListViews.ts')).toContain("labelKey: 'dashboard.seatViews.clientIt'");
+    for (const key of ['clientIt', 'msp', 'unassigned', 'all', 'empty'].map((k) => `dashboard.seatViews.${k}`)) {
+      expect(typeof getLeaf(en, key), key).toBe('string');
+      expect(getLeaf(pseudo, key) as string, key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
   it('T010b: wires the View menu chrome through features/tickets translations', () => {
     // The density slider moved out of the toolbar and into the View menu, which
     // also owns columns and the save/reset default-view items. The keys are

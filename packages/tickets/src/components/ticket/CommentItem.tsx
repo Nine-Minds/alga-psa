@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
+import { ServiceAuthorBadge } from '@enterprise/components/service-principals/ServiceAuthorBadge';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -191,7 +193,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
-  const { enabled: coManagedEnabled } = useCapability('co-managed');
+  const { enabled: coManagedWorkspaceEnabled } = useCapability('co-managed');
+  // The seat shape labels comments too, but only a ticket of a live arrangement ever carries a read-time audience.
+  const { enabled: coManagedSeatEnabled } = useCapability('co-managed-seat');
+  const coManagedEnabled = coManagedWorkspaceEnabled || coManagedSeatEnabled;
   const dataSource = useTicketDataSource();
   const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
   const { searchUsersForMentions } = dataSource.viewer;
@@ -262,6 +267,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const getAuthorEmail = () => {
     if (isSystemAuthor) return null;
+    // Service principals have only a synthetic placeholder address; never surface it.
+    if (resolvedAuthor.authorKind === 'service') return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -589,6 +596,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className={`font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] min-w-0 ${isCompact ? 'truncate' : 'break-words'}`}>
                   {getAuthorName()}
                 </p>
+                {resolvedAuthor.authorKind === 'service' && <ServiceAuthorBadge />}
+                <ViaPrincipalLabel principalName={conversation.via_principal_name} />
                 {isBundleMirror && (
                   conversation.bundle_mirror_source?.master_ticket_id ? (
                     <a

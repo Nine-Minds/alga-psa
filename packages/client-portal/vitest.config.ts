@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
@@ -17,6 +18,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      serverOnlyAlias,
       {
         find: /^@alga-psa\/core\/fileNames$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,

@@ -157,6 +157,8 @@
         "ghost": "utilizzo fantasma",
         "rmaAging": "rma in sospeso",
         "rmaClient": "sostituzione",
+        "rmaVendorReturnOverdue": "reso al fornitore in ritardo",
+        "rmaVendorReturnApproaching": "reso al fornitore in scadenza",
         "priceCreep": "deriva prezzi",
         "billCreep": "deriva fatture",
         "billsOverdue": "fatture scadute",
@@ -165,7 +167,8 @@
         "stockOut": "giacenza esaurita",
         "poPartial": "PO parziale",
         "warranty": "garanzia",
-        "deadStock": "giacenza inattiva"
+        "deadStock": "giacenza inattiva",
+        "rmaVendorReturn": "Reso al fornitore in ritardo"
       },
       "fact": {
         "unbilledSo": "spedito, ancora non fatturato",
@@ -177,6 +180,8 @@
         "ghostTech": "chiusi {{count}} ticket hardware, nessuna parte fatturata",
         "rmaVendor": "deve un credito — nessuna risposta da {{days}} giorni",
         "rmaClient": "unità di sostituzione ancora dovuta",
+        "rmaVendorReturnOverdue": "reso al fornitore in scadenza il {{date}} — {{days}} giorni di ritardo",
+        "rmaVendorReturnApproaching": "reso al fornitore entro il {{date}} — restano {{days}} giorni",
         "priceCreepSo": "ancora al vecchio costo",
         "priceCreepQuotes": "{{count}} preventivo/i aperto/i ora sotto il costo attuale",
         "priceCreepBill": "la fattura supera il PO corrispondente",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} sotto il punto di riordino",
         "poPartial": "PO ricevuto parzialmente ancora aperto",
         "warranty": "{{count}} unità con garanzia in scadenza <30g",
-        "deadStock": "nessun movimento da 90 giorni"
+        "deadStock": "nessun movimento da 90 giorni",
+        "rmaVendorReturn": "Reso al fornitore dovuto il {{date}} — {{days}} giorni di ritardo"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} righe · spedito {{days}}g fa",
@@ -207,7 +213,8 @@
         "stockLevel": "disponibili {{available}} · punto di riordino {{reorder}}",
         "poPartial": "{{po}} · {{received}} di {{ordered}} ricevuti · {{vendor}}",
         "warranty": "{{count}} clienti",
-        "deadStock": "{{locations}} ubicazione/i immobilizzano capitale circolante"
+        "deadStock": "{{locations}} ubicazione/i immobilizzano capitale circolante",
+        "rmaVendorReturn": "{{ref}} · scadenza del reso al fornitore"
       },
       "metric": {
         "ageDays": "{{days}}g",
@@ -598,6 +605,7 @@
       "warrantyLocationRequired": "Scegli dove si trova ora il dispositivo, così da poterlo ricevere.",
       "warrantyInvalidTransition": "Questo passaggio non è disponibile nello stato attuale dell'RMA. Aggiorna e riprova.",
       "warrantyReviewClose": "Approva o rifiuta la richiesta prima di chiuderla.",
+      "warrantyWrongTrack": "Questo passaggio vale solo per le richieste con sostituzione anticipata.",
       "duplicateReference": "Questo riferimento o numero RMA è già in uso.",
       "checkViolation": "Questo valore non è consentito per questo RMA.",
       "ticketNotFound": "Ticket non trovato.",
@@ -1324,6 +1332,7 @@
       "replacementReceived": "Sostituzione ricevuta",
       "replacementDeployed": "Sostituzione distribuita",
       "deadUnitOwed": "Unità guasta dovuta",
+      "deadUnitToVendor": "Unità guasta al fornitore",
       "deadUnitReturned": "Unità guasta resa",
       "replaced": "Sostituito",
       "credited": "Accreditato",
@@ -1373,6 +1382,12 @@
       "noEvents": "Nessuna cronologia al momento.",
       "confirmReceived": "Conferma che il dispositivo è in ufficio. La sua custodia deve essere in ufficio.",
       "confirmCredit": "Registra che il fornitore ha accreditato questo dispositivo. Il periodo di custodia viene chiuso come smaltito.",
+      "confirmShipDeadUnit": "Rispedisci l'unità guasta al fornitore. Il dispositivo in custodia viene registrato come presso il fornitore.",
+      "confirmVendorReceipt": "Conferma che il fornitore ha ricevuto l'unità guasta. Il caso viene chiuso come risolto e la custodia come restituita al fornitore.",
+      "deadUnitNotShipped": "Unità guasta non ancora spedita, scadenza {{date}}",
+      "deadUnitApproaching": "Reso dell’unità guasta in scadenza: {{date}}",
+      "deadUnitShippedLate": "Unità guasta spedita in ritardo, scadenza {{date}}",
+      "returnByHint": "La data entro cui il fornitore richiede la spedizione dell'unità guasta, calcolata dalla consegna di questa sostituzione. Lasciala invariata per mantenere la data dell'approvazione.",
       "actions": {
         "approveStandard": "Approva (standard)",
         "approveAdvance": "Approva (sostituzione anticipata)",
@@ -1384,7 +1399,10 @@
         "recordRepair": "Registra riparazione",
         "recordCredit": "Registra accredito del fornitore",
         "returnToClient": "Restituisci al cliente",
-        "close": "Chiudi RMA"
+        "shipDeadUnitToVendor": "Spedisci l'unità guasta al fornitore",
+        "confirmVendorReceipt": "Il fornitore ha ricevuto l'unità guasta",
+        "close": "Chiudi RMA",
+        "chargeVendorNonReturn": "Registra addebito per mancato reso al fornitore"
       },
       "events": {
         "opened": "Richiesta aperta",
@@ -1397,8 +1415,11 @@
         "repairReceived": "Riparazione ricevuta",
         "vendorCredited": "Accreditato dal fornitore",
         "returnedToClient": "Restituito al cliente",
+        "deadUnitShipped": "Unità guasta spedita al fornitore",
+        "vendorReceiptConfirmed": "Il fornitore ha ricevuto l'unità guasta",
         "closed": "Chiuso",
-        "note": "Nota"
+        "note": "Nota",
+        "vendorNonReturnCharge": "Addebito per mancato reso al fornitore registrato"
       },
       "outcome": {
         "covered": "Coperto",
@@ -1433,7 +1454,10 @@
         "inboundTracking": "Numero di tracciamento in entrata",
         "counterparty": "Restituito a",
         "closeReason": "Motivo di chiusura",
-        "note": "Nota"
+        "note": "Nota",
+        "vendorChargeAmount": "Importo dell’addebito",
+        "vendorChargeCurrency": "Valuta",
+        "selectCurrency": "Seleziona valuta"
       },
       "claim": {
         "title": "Nuova richiesta di garanzia",
@@ -1449,7 +1473,8 @@
         "track": "Traccia",
         "stockHint": "I dispositivi venduti dal magazzino non possono essere richiesti qui. Usa invece Apri RMA dall'unità di magazzino.",
         "submit": "Apri richiesta"
-      }
+      },
+      "vendorChargeHint": "La registrazione di questo addebito chiude l’obbligo scaduto di reso al fornitore. Non registra la spedizione né la ricezione."
     }
   },
   "salesOrders": {

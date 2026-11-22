@@ -183,11 +183,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {
@@ -290,11 +301,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {

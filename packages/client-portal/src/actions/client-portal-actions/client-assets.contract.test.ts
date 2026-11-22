@@ -80,8 +80,8 @@ describe('client-assets server action contract', () => {
     // `assets` holds a contact id and no group, so the portal's "Assigned to"
     // and "Shared workspace" rows need the join and the summaries.
     expect(source).toContain("'contacts.full_name as contact_name'");
-    expect(source).toContain('getAssetGroupSummariesForAssets');
-    expect(source).toContain('await getAssetGroupSummary(trx, tenant, assetId)');
+    expect(source).toContain('getAuthorizedAssetGroupSummariesForAssets');
+    expect(source).toContain('getAuthorizedAssetGroupSummary(\n          trx,\n          tenant,\n          assetGroupAuthUser(user),\n          assetId,\n          portalAssetReadCheck(tenant, visibility),');
     expect(source).toContain('withAssigneeName(trx, tenant, baseQuery())');
     expect(
       source.match(/withAssigneeName\(trx, tenant, scopedAssets\(trx, tenant, visibility\)\)/g),

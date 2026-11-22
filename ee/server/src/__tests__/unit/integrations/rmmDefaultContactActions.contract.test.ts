@@ -56,10 +56,12 @@ describe('RMM default contact action contracts', () => {
   });
 
   it('T043: deleting a contact unlinks it from any RMM mapping default (backend, not a DB FK)', () => {
-    const source = readRepoFile('packages/clients/src/actions/contact-actions/contactActions.tsx');
+    // The unlink lives in the shared deleteContactCascade now (moved there so the
+    // MSP action and the REST API delete path share one cascade and cannot drift).
+    const source = readRepoFile('shared/models/contactModel.ts');
 
-    expect(source).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
+    expect(source).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenant)");
     expect(source).toContain('.where({ default_contact_id: contactId })');
-    expect(source).toContain('.update({ default_contact_id: null })');
+    expect(source).toContain('.update({ default_contact_id: null, updated_at: new Date().toISOString() })');
   });
 });

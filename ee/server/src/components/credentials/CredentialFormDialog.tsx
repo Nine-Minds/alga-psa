@@ -24,8 +24,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Copy, Dice5, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialAttachment, CredentialAssociationEntityType, CredentialSummary } from '../../lib/credentials/contracts';
@@ -65,7 +64,6 @@ interface CredentialFormDialogProps {
   entityType?: CredentialAssociationEntityType | null;
   entityId?: string | null;
   editing?: CredentialSummary | null;
-  clients?: IClient[];
   context: CredentialsContext | null;
   onError?: () => void;
   /** Lets an inline host route its Back affordance through this form's dirty guard. */
@@ -141,14 +139,12 @@ export function CredentialFormDialog({
   entityType,
   entityId,
   editing,
-  clients: clientsProp,
   context,
   onError,
   onRequestClose,
 }: CredentialFormDialogProps) {
   const { t } = useTranslation('msp/credentials');
 
-  const [clients, setClients] = useState<IClient[]>(clientsProp ?? []);
   const [clientId, setClientId] = useState(defaultClientId ?? '');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -176,14 +172,6 @@ export function CredentialFormDialog({
   // Hudu destination availability is per selected client (connected AND that
   // client mapped to a Hudu company) — not a global "Hudu connected" flag.
   const [huduClientMapped, setHuduClientMapped] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!clientsProp || clientsProp.length === 0) {
-      getAllClients(false)
-        .then(setClients)
-        .catch(() => undefined);
-    }
-  }, [clientsProp]);
 
   useEffect(() => {
     if (!isOpen || editing || !clientId || context?.huduConnected !== true) {
@@ -370,7 +358,7 @@ export function CredentialFormDialog({
               <Label htmlFor="credential-form-client">{t('credentials.form.client')}</Label>
               <ClientPicker
                 id="credential-form-client"
-                clients={clients}
+                searchClients={searchClientsForPicker}
                 selectedClientId={clientId || null}
                 onSelect={(id) => setClientId(id ?? '')}
                 placeholder={t('credentials.form.selectClient')}

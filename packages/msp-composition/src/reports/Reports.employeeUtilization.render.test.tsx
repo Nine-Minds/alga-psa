@@ -25,10 +25,49 @@ vi.mock('next/link', () => ({
   default: ({ children, ...rest }: any) => <a {...rest}>{children}</a>,
 }));
 
+// Stable stubs, so the report effects (keyed on `t`) do not refetch on every
+// render. Formatted days are wrapped so a test can tell they went through the
+// locale formatter rather than being printed raw.
+const stubT = (_key: string, options?: Record<string, any>) => {
+  const template = options?.defaultValue ?? _key;
+  if (typeof template !== 'string' || !options) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, token) =>
+    options[token] === undefined ? match : String(options[token]),
+  );
+};
+const stubTranslation = { t: stubT };
+const stubFormatters = { formatCalendarDate: (day: string) => `day(${day})` };
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
-  }),
+  useTranslation: () => stubTranslation,
+  useFormatters: () => stubFormatters,
+}));
+
+// Driving the real calendar popover (and the i18n hooks DateTimeField wants)
+// is not what this suite is about: the stub picks a fixed span in one click,
+// exactly as the picker's onChange hands both bounds over. The second button
+// hands over a backwards span, as a typed date could.
+vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
+  DateRangePicker: ({ id, onChange }: any) => (
+    <div id={id}>
+      <button
+        type="button"
+        id={`${id}-pick`}
+        onClick={() => onChange({ from: new Date(2026, 0, 5), to: new Date(2026, 1, 3) })}
+      >
+        pick custom range
+      </button>
+      <button
+        type="button"
+        id={`${id}-pick-backwards`}
+        onClick={() => onChange({ from: new Date(2026, 1, 3), to: new Date(2026, 0, 5) })}
+      >
+        pick backwards range
+      </button>
+    </div>
+  ),
+  formatLocalYMD: (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
 }));
 
 vi.mock('@alga-psa/reporting/actions/helpdeskReportActions', () => ({
@@ -52,6 +91,7 @@ const { default: Reports } = await import('./Reports');
 function reportWith(byUser: any[], summary: Partial<Record<string, unknown>> = {}) {
   return {
     rangeDays: 30,
+    range: null,
     summary: {
       activeUsers: byUser.length,
       usersWithoutCapacity: byUser.filter((row) => row.capacityHours === null).length,
@@ -124,6 +164,76 @@ describe('Employee Utilization report rendering', () => {
     // Only the estimated row is flagged; a scheduled denominator is exact.
     const flags = await screen.findAllByTitle('Estimated from weekly capacity; no working hours set.');
     expect(flags.length).toBe(1);
+  });
+
+  it('re-requests the report for a custom window once both bounds are picked', async () => {
+    getEmployeeUtilizationReport.mockResolvedValue(reportWith([]));
+
+    const { container } = render(<Reports productCode="psa" tier="pro" />);
+    await userEvent.click(container.querySelector('#reports-view-employee-utilization') as Element);
+    await waitFor(() => expect(getEmployeeUtilizationReport).toHaveBeenCalledWith(30));
+
+    await userEvent.click(container.querySelector('#reports-custom-range-pick') as Element);
+
+    await waitFor(() =>
+      expect(getEmployeeUtilizationReport).toHaveBeenLastCalledWith({ from: '2026-01-05', to: '2026-02-03' }),
+    );
+
+    // Back to a preset: the custom span is cleared, not stacked on top.
+    await userEvent.click(container.querySelector('#reports-range-7') as Element);
+    await waitFor(() => expect(getEmployeeUtilizationReport).toHaveBeenLastCalledWith(7));
+  });
+
+  it('labels the header with the window the server reports, locale-formatted', async () => {
+    // The server cut the asked-for end back (to its today): the header must
+    // follow what was reported on, not what was picked.
+    getEmployeeUtilizationReport.mockImplementation((range: unknown) =>
+      Promise.resolve(
+        typeof range === 'object'
+          ? { ...reportWith([]), rangeDays: 26, range: { from: '2026-01-05', to: '2026-01-30' } }
+          : reportWith([]),
+      ),
+    );
+
+    const { container } = render(<Reports productCode="psa" tier="pro" />);
+    await userEvent.click(container.querySelector('#reports-view-employee-utilization') as Element);
+    expect(await screen.findAllByText('Last 30 days')).not.toHaveLength(0);
+
+    await userEvent.click(container.querySelector('#reports-custom-range-pick') as Element);
+
+    expect(await screen.findAllByText('day(2026-01-05) to day(2026-01-30)')).not.toHaveLength(0);
+    expect(screen.queryByText(/2026-02-03/)).toBeNull();
+  });
+
+  it('does not request a backwards span and says why instead', async () => {
+    getEmployeeUtilizationReport.mockResolvedValue(reportWith([]));
+
+    const { container } = render(<Reports productCode="psa" tier="pro" />);
+    await userEvent.click(container.querySelector('#reports-view-employee-utilization') as Element);
+    await waitFor(() => expect(getEmployeeUtilizationReport).toHaveBeenCalledWith(30));
+
+    await userEvent.click(container.querySelector('#reports-custom-range-pick-backwards') as Element);
+
+    expect(await screen.findByText('The end date is before the start date.')).toBeTruthy();
+    expect(getEmployeeUtilizationReport).not.toHaveBeenCalledWith(expect.objectContaining({ from: expect.any(String) }));
+  });
+
+  it('shows the action error when the server refuses a custom window', async () => {
+    getEmployeeUtilizationReport.mockImplementation((range: unknown) =>
+      Promise.resolve(
+        typeof range === 'object'
+          ? { actionError: 'The custom date range starts after today, so there is nothing to report yet.' }
+          : reportWith([]),
+      ),
+    );
+
+    const { container } = render(<Reports productCode="psa" tier="pro" />);
+    await userEvent.click(container.querySelector('#reports-view-employee-utilization') as Element);
+    await userEvent.click(container.querySelector('#reports-custom-range-pick') as Element);
+
+    expect(
+      await screen.findByText('The custom date range starts after today, so there is nothing to report yet.'),
+    ).toBeTruthy();
   });
 
   it('renders the empty state when no active users are returned', async () => {

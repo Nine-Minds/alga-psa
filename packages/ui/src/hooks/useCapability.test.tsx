@@ -13,7 +13,7 @@ vi.mock('next-auth/react', () => {
 });
 
 import { FeatureFlagBootstrapProvider } from '../capability/bootstrapContext';
-import { useCapability } from './useCapability';
+import { useCapability, useServedCapabilities } from './useCapability';
 
 const withBootstrap = (flags: Record<string, boolean | string>) =>
   ({ children }: { children: ReactNode }) => (
@@ -62,5 +62,26 @@ describe('useCapability', () => {
     vi.stubEnv('NEXT_PUBLIC_FORCE_CAPABILITIES', 'co-managed:maybe');
     const { result } = renderHook(() => useCapability('co-managed'));
     expect(result.current).toMatchObject({ enabled: false, admitted: false });
+  });
+});
+
+describe('useServedCapabilities', () => {
+  it('is empty when nothing was bootstrapped', () => {
+    const { result } = renderHook(() => useServedCapabilities());
+    expect([...result.current]).toEqual([]);
+  });
+
+  it('holds exactly the capabilities useCapability reports as enabled', () => {
+    const { result } = renderHook(() => useServedCapabilities(), {
+      wrapper: withBootstrap({ 'capability:co-managed': false, 'capability:co-managed-seat': true }),
+    });
+    expect([...result.current]).toEqual(['co-managed-seat']);
+  });
+
+  it('serves nothing for an admitted-only capability (admission is not serving)', () => {
+    const { result } = renderHook(() => useServedCapabilities(), {
+      wrapper: withBootstrap({ 'capability:co-managed-seat': false, 'capability:co-managed-seat:admit': true }),
+    });
+    expect(result.current.has('co-managed-seat')).toBe(false);
   });
 });

@@ -18,7 +18,7 @@
  *   is provided, otherwise the run ends with status `paused-at-wait`.
  */
 
-import { compileExpression } from '../expressionEngine';
+import { EvaluationBusyError, compileExpression, evaluateWorkflowExpression } from '../expressionEngine';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { resolveActionCallOutputSchema } from '../actions/actionOutputSchemaResolver';
@@ -242,8 +242,9 @@ export async function simulateWorkflowDefinition(params: {
 
   const evaluateExpr = async (expr: Expr, stepId: string, path: string): Promise<unknown> => {
     try {
-      return await compileExpression(expr).evaluate(buildExpressionContext());
+      return await evaluateWorkflowExpression(compileExpression(expr), buildExpressionContext());
     } catch (error) {
+      if (error instanceof EvaluationBusyError) throw error;
       throw stepError(stepId, path, 'ExpressionError', error instanceof Error ? error.message : String(error));
     }
   };
@@ -396,7 +397,7 @@ export async function simulateWorkflowDefinition(params: {
         resumeError: null,
       });
     } catch (error) {
-      if (error instanceof SimulationStepError || error instanceof SimulationHalt) throw error;
+      if (error instanceof SimulationStepError || error instanceof SimulationHalt || error instanceof EvaluationBusyError) throw error;
       // Node handlers throw both Error instances and structured runtime errors
       // ({ category, message, ... }) — surface the real message for both.
       const structured = isRecord(error) && typeof error.message === 'string' ? error : null;
@@ -462,6 +463,7 @@ export async function simulateWorkflowDefinition(params: {
             workflowRunId: scopes.system.runId,
           })) ?? {};
       } catch (error) {
+        if (error instanceof EvaluationBusyError) throw error;
         const message = isRecord(error) && typeof error.message === 'string' ? error.message : String(error);
         throw stepError(step.id, path, 'ExpressionError', message);
       }
@@ -689,8 +691,9 @@ export async function simulateWorkflowDefinition(params: {
             };
             for (const [target, expr] of Object.entries(callStep.outputMapping)) {
               try {
-                assignToScopePath(target, await compileExpression(expr).evaluate(childContext));
+                assignToScopePath(target, await evaluateWorkflowExpression(compileExpression(expr), childContext));
               } catch (error) {
+                if (error instanceof EvaluationBusyError) throw error;
                 throw stepError(step.id, path, 'ExpressionError', error instanceof Error ? error.message : String(error));
               }
             }
@@ -805,6 +808,8 @@ export async function simulateWorkflowDefinition(params: {
   try {
     await runSequence(definition.steps, 'root.steps', { tryDepth: 0, loopContinue: false });
   } catch (error) {
+    // Fail closed: a busy evaluator aborts the whole simulation (-> 429), it is not a step failure.
+    if (error instanceof EvaluationBusyError) throw error;
     if (error instanceof SimulationHalt) {
       status = error.status;
     } else if (error instanceof SimulationStepError) {

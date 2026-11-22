@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
@@ -16,6 +17,7 @@ import {
   createFixedPlanAssignment,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
@@ -38,7 +40,6 @@ import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpe
 
 let db: Knex;
 let tenantId: string;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createPDFGenerationService: typeof import('@alga-psa/billing/services/pdfGenerationService').createPDFGenerationService;
@@ -147,7 +148,6 @@ describe('journey: invoice render → stored PDF', () => {
     await db.migrate.latest();
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, userId: journeyUserId, permissionCheck: () => true });
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ createPDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService'));
@@ -263,7 +263,7 @@ describe('journey: invoice render → stored PDF', () => {
     });
 
     // --- generate + finalize: the rendered artifact is a finalized invoice ---
-    const generated = await generateInvoice(januaryCycleId);
+    const generated = await generateInvoiceForCycle(januaryCycleId);
     expect(generated, JSON.stringify(generated)).toBeTruthy();
     expect(generated?.invoice_id, JSON.stringify(generated)).toBeDefined();
     const invoiceId = generated!.invoice_id;
@@ -476,7 +476,107 @@ describe('journey: invoice render → stored PDF', () => {
       sourceType: 'invoice',
       sourceId: invoiceId,
     });
+
+    const [{ JobService }, { JobStatus }, { InvoiceZipJobHandler }, { StorageService }] = await Promise.all([
+      import('../../../services/job.service'),
+      import('../../../types/job'),
+      import('../../../lib/jobs/handlers/invoiceZipHandler'),
+      import('@alga-psa/storage/StorageService'),
+    ]);
+    const jobId = uuidv4();
+    const executionId = uuidv4();
+    await tenantTable(db, tenantId, 'jobs').insert({
+      tenant: tenantId,
+      job_id: jobId,
+      type: 'invoice_zip',
+      status: JobStatus.Failed,
+      metadata: JSON.stringify({
+        serverExecution: { executionId, status: 'failed', error: 'verification fixture failure' },
+        stepResults: [],
+      }),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    const zipHandler = new InvoiceZipJobHandler(new JobService({} as any), new StorageService());
+    await zipHandler.handleInvoiceZipJob(jobId, {
+      jobServiceId: jobId,
+      forwardedExecutionId: executionId,
+      tenantId,
+      requesterId: journeyUserId,
+      invoiceIds: [invoiceId],
+      steps: [
+        { stepName: `Generate invoice ${invoiceNumber}`, type: 'invoice', metadata: { invoiceId, tenantId } },
+        { stepName: 'Create invoice ZIP', type: 'zip', metadata: { tenantId } },
+      ],
+      metadata: { user_id: journeyUserId, invoice_count: 1, tenantId },
+    });
+
+    const jobRow = await tenantTable(db, tenantId, 'jobs').where({ job_id: jobId }).first();
+    const jobMetadata = typeof jobRow?.metadata === 'string' ? JSON.parse(jobRow.metadata) : jobRow?.metadata;
+    expect(jobRow?.status).toBe(JobStatus.Failed);
+    expect(jobMetadata.serverExecution).toEqual({ executionId, status: 'failed', error: 'verification fixture failure' });
+    const zipStep = jobMetadata.stepResults.find((step: { step?: string; status?: string }) => step.step === 'zip' && step.status === 'completed');
+    expect(zipStep?.file_id).toBeTruthy();
+
+    const storedArchive = await tenantTable(db, tenantId, 'external_files')
+      .where({ file_id: zipStep.file_id })
+      .first();
+    expect(storedArchive?.mime_type).toBe('application/zip');
+    expect(Number(storedArchive?.file_size)).toBeGreaterThan(0);
+    const archivePath = path.join(storageBaseDir, String(storedArchive?.storage_path));
+    const archiveCheck = execFileSync('unzip', ['-t', archivePath], { encoding: 'utf8' });
+    const archiveListing = execFileSync('unzip', ['-Z1', archivePath], { encoding: 'utf8' })
+      .trim().split('\n').filter(Boolean);
+    const expectedPdfName = `${invoiceNumber}.pdf`;
+    expect(archiveListing).toEqual([expectedPdfName]);
+
+    const extractedDir = await fs.mkdtemp(path.join(os.tmpdir(), 'invoice-zip-evidence-'));
+    try {
+      execFileSync('unzip', ['-qq', archivePath, '-d', extractedDir]);
+      const pdfPath = path.join(extractedDir, expectedPdfName);
+      const pdfInfo = execFileSync('pdfinfo', [pdfPath], { encoding: 'utf8' });
+      const pdfText = execFileSync('pdftotext', [pdfPath, '-'], { encoding: 'utf8' });
+      expect(pdfInfo).toMatch(/Pages:\s+[1-9]/);
+      expect(pdfText).toContain(invoiceNumber);
+      expect(pdfText).toContain('Journey Render Client');
+      const zipDocument = await tenantTable(db, tenantId, 'documents')
+        .where({ file_id: zipStep.file_id })
+        .first();
+      expect(zipDocument?.mime_type).toBe('application/zip');
+      expect(zipDocument?.file_size).toBe(storedArchive?.file_size);
+
+      process.stdout.write('INVOICE_ZIP_DELIVERY_EVIDENCE ' + JSON.stringify({
+        evidenceType: 'app-free-handler-integration',
+        tenantId,
+        invoiceId,
+        invoiceNumber,
+        jobId,
+        executionId,
+        jobStatusAfterHandler: jobRow?.status,
+        executionOutcome: jobMetadata.serverExecution,
+        documentId: zipDocument?.document_id,
+        fileId: storedArchive?.file_id,
+        mimeType: storedArchive?.mime_type,
+        storedBytes: Number(storedArchive?.file_size),
+        archiveCheck: archiveCheck.trim().split('\n').at(-1),
+        archiveMembers: archiveListing,
+        pdfInfo: pdfInfo.split('\n').find((line) => line.startsWith('Pages:'))?.trim(),
+        pdfContainsInvoiceNumber: pdfText.includes(invoiceNumber),
+        pdfContainsClientName: pdfText.includes('Journey Render Client'),
+      }) + '\n');
+
+      await tenantTable(db, tenantId, 'document_associations').where({ document_id: zipDocument?.document_id }).del();
+      await tenantTable(db, tenantId, 'documents').where({ document_id: zipDocument?.document_id }).del();
+      await tenantTable(db, tenantId, 'external_files').where({ file_id: storedArchive?.file_id }).del();
+      await tenantTable(db, tenantId, 'job_details').where({ job_id: jobId }).del();
+      await tenantTable(db, tenantId, 'jobs').where({ job_id: jobId }).del();
+    } finally {
+      await fs.rm(extractedDir, { recursive: true, force: true });
+    }
+
   }, HOOK_TIMEOUT);
+
 });
 
 async function ensureTenant(connection: Knex): Promise<string> {

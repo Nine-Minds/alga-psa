@@ -15,6 +15,8 @@ const mockProvider = {
   },
   on: vi.fn(),
   off: vi.fn(),
+  setConfiguration: vi.fn(),
+  connect: vi.fn(async () => undefined),
   destroy: mockDestroy,
   status: 'connected',
   synced: true,
@@ -46,6 +48,7 @@ vi.mock('../actions/documentBlockContentActions', () => ({
   getBlockContent: vi.fn(),
   updateBlockContent: vi.fn(),
 }));
+vi.mock('../actions/collaborativeEditingActions', () => ({ getDocumentRoomToken: vi.fn(async () => ({ token: 'signed-token', expiresAt: Date.now() + 100_000 })) }));
 
 describe('CollaborativeEditor provider lifecycle', () => {
   beforeEach(() => {

@@ -19,6 +19,42 @@ export class CollabPersistenceExtension {
   constructor(config = {}) {
     this.apiUrl = config.apiUrl || 'http://localhost:3000/api/internal/collab/persist'
     this.apiKey = config.apiKey || ''
+    this.authorizationUrl = config.authorizationUrl || this.apiUrl.replace(/\/persist(?:\?.*)?$/, '/authorize')
+    this.roomCredentials = new Map()
+  }
+
+  async authorizeWriter(documentName, credential) {
+    const [, tenantId, documentId] = documentName.split(':')
+    if (!tenantId || !documentId || !credential || !this.apiKey) return false
+    try {
+      const response = await fetch(this.authorizationUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey },
+        body: JSON.stringify({ tenantId, documentId, credential }),
+      })
+      return response.ok
+    } catch (error) {
+      console.error(`[CollabPersistenceExtension] authorization check failed for ${documentName}:`, error)
+      return false
+    }
+  }
+
+  async beforeHandleMessage({ documentName, context }) {
+    if (!documentName?.startsWith('document:')) return
+    const credential = context?.documentRoomToken
+    if (!await this.authorizeWriter(documentName, credential)) {
+      throw new Error('Document edit authorization expired or was revoked')
+    }
+  }
+
+  onChange({ documentName, context }) {
+    if (documentName?.startsWith('document:') && context?.documentRoomToken) {
+      this.roomCredentials.set(documentName, context.documentRoomToken)
+    }
+  }
+
+  afterUnloadDocument({ documentName }) {
+    this.roomCredentials.delete(documentName)
   }
 
   async onStoreDocument({ document, documentName }) {
@@ -46,6 +82,12 @@ export class CollabPersistenceExtension {
       return
     }
 
+    const credential = this.roomCredentials.get(documentName)
+    if (!credential) {
+      console.error(`[CollabPersistenceExtension] no authenticated writer for ${documentName}; skipping persistence`)
+      return
+    }
+
     try {
       const update = Buffer.from(Y.encodeStateAsUpdate(document)).toString('base64')
       const response = await fetch(this.apiUrl, {
@@ -54,7 +96,7 @@ export class CollabPersistenceExtension {
           'Content-Type': 'application/json',
           'x-api-key': this.apiKey,
         },
-        body: JSON.stringify({ tenantId, documentId, update }),
+        body: JSON.stringify({ tenantId, documentId, update, credential }),
       })
 
       if (!response.ok) {

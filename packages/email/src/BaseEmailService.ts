@@ -14,6 +14,7 @@ import {
   buildOutboundEmailQueuedPayload,
   buildOutboundEmailSentPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
+import { sameMessageId } from './onWireMessageId';
 import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
@@ -178,6 +179,38 @@ interface CommentThreadReplyHeaderContext {
   references: string[];
 }
 
+// Resend accepts tag names/values of ASCII letters, numbers, underscores and dashes (max 256).
+const PROVIDER_TAG_VALUE = /^[A-Za-z0-9_-]{1,256}$/;
+
+/**
+ * Tags a provider echoes back on its delivery webhooks. The Resend webhook route derives the
+ * tenant from the signed `alga_tenant_id` tag, both for the delivery/bounce workflow events and for
+ * recording the on-wire Message-ID (onWireMessageId.ts); without it every event is a no-op for the
+ * tenant. Values that a provider would reject are left out rather than failing the send.
+ */
+function buildProviderTags(params: {
+  tenantId: string;
+  workflowMessageId: string;
+  correlationId?: unknown;
+  ticketId?: string;
+  threadId?: string;
+}): Record<string, string> {
+  const candidates: Record<string, unknown> = {
+    alga_tenant_id: params.tenantId,
+    alga_workflow_message_id: params.workflowMessageId,
+    alga_correlation_id: params.correlationId,
+    alga_ticket_id: params.ticketId,
+    alga_thread_id: params.threadId,
+  };
+  const tags: Record<string, string> = {};
+  for (const [name, value] of Object.entries(candidates)) {
+    if (value == null) continue;
+    const text = String(value);
+    if (PROVIDER_TAG_VALUE.test(text)) tags[name] = text;
+  }
+  return tags;
+}
+
 function extractDomainFromAddress(address?: string): string | null {
   if (typeof address !== 'string') return null;
   const at = address.lastIndexOf('@');
@@ -187,7 +220,8 @@ function extractDomainFromAddress(address?: string): string | null {
 }
 
 function buildGeneratedRfcMessageId(domain?: string | null): string {
-  const domainPart = (domain && domain.trim()) || 'alga-psa.local';
+  // Lower-case: domains are case-insensitive and inbound lookup forms lower-case them.
+  const domainPart = ((domain && domain.trim()) || 'alga-psa.local').toLowerCase();
   return `<${randomUUID()}@${domainPart}>`;
 }
 
@@ -792,6 +826,13 @@ export abstract class BaseEmailService {
         correlationId: params.correlationId || workflowMessageId,
         actor: workflowActor,
       };
+      emailMessage.tags = buildProviderTags({
+        tenantId,
+        workflowMessageId,
+        correlationId: params.correlationId,
+        ticketId: maybeTicketId,
+        threadId: maybeThreadId,
+      });
 
       try {
         await publishWorkflowEvent({
@@ -1014,6 +1055,19 @@ export abstract class BaseEmailService {
         params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
           ? { ...params.providerResult.metadata }
           : {};
+      // On-wire contract (onWireMessageId.ts): when the provider reported an id that is not the one we
+      // stamped on the message, rfc_message_id holds the on-wire id (above) and the generated id is kept
+      // here, so it stays resolvable for References already sent to customers.
+      const generatedHeaderId = getHeaderValue(params.message.headers, 'Message-ID');
+      if (
+        params.providerResult.success &&
+        rfcMessageId &&
+        generatedHeaderId &&
+        !sameMessageId(rfcMessageId, generatedHeaderId) &&
+        typeof baseMetadata.generatedRfcMessageId !== 'string'
+      ) {
+        baseMetadata.generatedRfcMessageId = generatedHeaderId;
+      }
       const existingDiagnostics =
         baseMetadata.algaDiagnostics && typeof baseMetadata.algaDiagnostics === 'object'
           ? baseMetadata.algaDiagnostics
