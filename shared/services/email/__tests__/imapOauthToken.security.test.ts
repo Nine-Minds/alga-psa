@@ -1,13 +1,24 @@
+import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  post: vi.fn(),
+  request: vi.fn(),
   lookup: vi.fn(),
   getTenantSecret: vi.fn(),
   update: vi.fn(),
 }));
 
-vi.mock('axios', () => ({ default: { post: mocks.post } }));
+vi.mock('undici', async (importOriginal) => ({
+  ...await importOriginal<typeof import('undici')>(),
+  Agent: class {
+    constructor(public options: any) {}
+    close = async () => undefined;
+  },
+  request: mocks.request,
+}));
+vi.mock('node:dns', () => ({
+  default: { promises: { lookup: (...args: unknown[]) => mocks.lookup(...args) } },
+}));
 vi.mock('node:dns/promises', () => ({
   default: { lookup: (...args: unknown[]) => mocks.lookup(...args) },
   lookup: (...args: unknown[]) => mocks.lookup(...args),
@@ -39,7 +50,10 @@ describe('shared IMAP OAuth refresh outbound policy', () => {
     vi.clearAllMocks();
     mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     mocks.getTenantSecret.mockResolvedValue('bound-refresh-token');
-    mocks.post.mockResolvedValue({ data: { access_token: 'access-1', expires_in: 3600 } });
+    mocks.request.mockImplementation(async () => ({
+      statusCode: 200, headers: {},
+      body: Readable.from([Buffer.from(JSON.stringify({ access_token: 'access-1', expires_in: 3600 }))]),
+    }));
     mocks.update.mockResolvedValue(1);
   });
 
@@ -47,22 +61,25 @@ describe('shared IMAP OAuth refresh outbound policy', () => {
     await expect(refreshImapAccessToken({
       provider: { ...provider, oauth_token_url: 'https://127.0.0.1/token', oauth_credentials_token_url: 'https://127.0.0.1/token' },
       db: {} as any,
-    })).rejects.toThrow(/blocked private address/);
+    })).rejects.toThrow(/not publicly routable/);
 
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
   });
 
   it('disables redirects when posting refresh credentials to a public token endpoint', async () => {
-    mocks.post.mockRejectedValue(new Error('Request failed with status code 302'));
+    const body = Readable.from([]);
+    mocks.request.mockResolvedValue({ statusCode: 302, headers: { location: 'https://127.0.0.1/token' }, body });
 
-    await expect(refreshImapAccessToken({ provider, db: {} as any })).rejects.toThrow('302');
+    await expect(refreshImapAccessToken({ provider, db: {} as any })).rejects.toThrow('IMAP OAuth token refresh failed');
 
-    expect(mocks.post).toHaveBeenCalledWith(
-      provider.oauth_token_url,
-      expect.any(URLSearchParams),
-      expect.objectContaining({ maxRedirects: 0 })
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expect(mocks.request).toHaveBeenCalledWith(
+      new URL(provider.oauth_token_url),
+      expect.objectContaining({ method: 'POST', body: expect.any(String) })
     );
+    expect(body.destroyed).toBe(true);
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
   it('refuses to consult legacy secret names after the issuer binding is cleared', async () => {
@@ -71,7 +88,7 @@ describe('shared IMAP OAuth refresh outbound policy', () => {
       db: {} as any,
     })).rejects.toThrow(/reauthorized/);
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
   });
 
   it('uses only the configured application secret before mailbox authorization', async () => {
@@ -93,7 +110,7 @@ describe('shared IMAP OAuth refresh outbound policy', () => {
     })).rejects.toThrow(/reauthorized/);
 
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
   });
 
   it('does not forward a DB client secret marked as belonging to a different issuer', async () => {
