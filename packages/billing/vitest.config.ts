@@ -215,6 +215,12 @@ export default defineConfig({
       'src/lib/balanceDue.test.ts',
       'src/lib/creditBalance.test.ts',
       'src/actions/contractSimulationActions.refusals.test.ts',
+      // Pricing schedules: which line a schedule reprices, and the calendar
+      // date it is stored under (a day early reprices a whole extra period).
+      'src/components/billing-dashboard/contracts/PricingScheduleDialog.contract.test.tsx',
+      'src/components/billing-dashboard/contracts/PricingSchedules.contract.test.tsx',
+      'src/actions/contractPricingScheduleActions.customRate.test.ts',
+      'src/actions/contractPricingScheduleActions.dates.test.ts',
     ],
     // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
     // as itself rather than as a test timeout.

@@ -1,9 +1,11 @@
 'use server';
 
+import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { toCalendarDateString } from '@alga-psa/core';
 import {
   actionError,
   permissionError,
@@ -15,6 +17,25 @@ import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 type PricingScheduleActionError = ActionMessageError | ActionPermissionError;
 type PricingScheduleMutationResult = IContractPricingSchedule | PricingScheduleActionError;
 type PricingScheduleDeleteResult = { success: true } | PricingScheduleActionError;
+
+/**
+ * A Fixed contract line a pricing schedule can be scoped to, with the two facts
+ * the UI needs to describe what the schedule rate would actually do.
+ */
+export interface PricingScheduleLineScope {
+  contract_line_id: string;
+  contract_line_name: string | null;
+  /**
+   * The line has at least one member priced as part of the bundle, so the
+   * schedule rate becomes the line's fee for the period. False when every
+   * member is unit-priced: the engine prices those from their own unit rates
+   * and the plan-level rate has no precedence
+   * (compute/computeFixedCharges.ts — "has NO precedence" for pricing_basis 'unit').
+   */
+  has_bundle_fee: boolean;
+  /** At least one member bills quantity × unit rate, which a schedule never changes. */
+  has_unit_priced_members: boolean;
+}
 
 async function getContractAuthoringError(
   knex: any,
@@ -47,6 +68,137 @@ function getCustomRateValidationError(customRate: number | null | undefined): st
 
   return null;
 }
+
+/**
+ * `effective_date` and `end_date` are DATE columns, and a schedule applies to a
+ * whole service period with no proration at its boundary — so a date stored one
+ * day early reprices an entire extra period. Callers used to send
+ * `new Date(...).toISOString()` of a local-midnight pick, which east of UTC is
+ * the previous day once Postgres truncates it. Every write therefore goes
+ * through `toCalendarDateString`, which returns null for an absent value,
+ * throws on anything that is not a date (mapped to this error), and keeps a
+ * legacy instant's UTC calendar date — what rows written before this change
+ * mean.
+ */
+const INVALID_DATE_ERROR = {
+  message: 'Effective date and end date must be calendar dates (YYYY-MM-DD)',
+  key: 'msp/contracts:errors.pricingSchedule.invalidDate',
+} as const;
+
+/**
+ * Half-open end date `durationValue` units after `effectiveDate`, on the
+ * calendar rather than on instants. Temporal clamps an overflowing day of month
+ * ("2026-01-31" + 1 month = "2026-02-28"); the old `Date.setMonth` arithmetic
+ * rolled forward into the next month instead.
+ */
+function calculateEndDateFromDuration(
+  effectiveDate: string,
+  durationValue: number,
+  durationUnit: 'days' | 'weeks' | 'months' | 'years'
+): string {
+  const start = Temporal.PlainDate.from(effectiveDate);
+
+  switch (durationUnit) {
+    case 'days':
+      return start.add({ days: durationValue }).toString();
+    case 'weeks':
+      return start.add({ weeks: durationValue }).toString();
+    case 'months':
+      return start.add({ months: durationValue }).toString();
+    case 'years':
+      return start.add({ years: durationValue }).toString();
+  }
+}
+
+/**
+ * Fixed lines of a contract, each with whether a schedule rate would reprice it.
+ * One definition of "eligible" shared by the picker and the write-path guard.
+ */
+async function fetchFixedLineScopes(
+  db: any,
+  contractId: string,
+): Promise<PricingScheduleLineScope[]> {
+  const lines = await db.table('contract_lines')
+    .where({ contract_id: contractId, contract_line_type: 'Fixed' })
+    .orderBy('display_order', 'asc')
+    .select('contract_line_id', 'contract_line_name');
+
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return [];
+  }
+
+  const lineIds = lines.map((line: any) => line.contract_line_id);
+  const members = await db.table('contract_line_service_configuration as clsc')
+    .leftJoin('contract_line_service_fixed_config as fc', function (this: any) {
+      this.on('fc.config_id', '=', 'clsc.config_id').andOn('fc.tenant', '=', 'clsc.tenant');
+    })
+    .whereIn('clsc.contract_line_id', lineIds)
+    .select({ contract_line_id: 'clsc.contract_line_id', pricing_basis: 'fc.pricing_basis' });
+
+  const unitMembers = new Set<string>();
+  const bundleMembers = new Set<string>();
+  for (const member of (Array.isArray(members) ? members : []) as any[]) {
+    (member.pricing_basis === 'unit' ? unitMembers : bundleMembers).add(member.contract_line_id);
+  }
+
+  return lines.map((line: any) => ({
+    contract_line_id: line.contract_line_id,
+    contract_line_name: line.contract_line_name ?? null,
+    // A line with no members at all keeps bundle semantics: nothing opted into
+    // unit pricing, so the schedule rate is still the line's fee.
+    has_bundle_fee: bundleMembers.has(line.contract_line_id) || !unitMembers.has(line.contract_line_id),
+    has_unit_priced_members: unitMembers.has(line.contract_line_id),
+  }));
+}
+
+/**
+ * Guard for a requested line scope: the line must belong to this contract, be
+ * Fixed, and have a bundle fee for the schedule rate to replace.
+ */
+async function getLineScopeValidationError(
+  db: any,
+  contractId: string,
+  contractLineId: string,
+): Promise<{ message: string; key: string } | null> {
+  const scopes = await fetchFixedLineScopes(db, contractId);
+  const scope = scopes.find((candidate) => candidate.contract_line_id === contractLineId);
+
+  if (!scope) {
+    return {
+      message: 'Pricing schedules apply to a fixed-fee line of this contract; pick one of its fixed lines',
+      key: 'msp/contracts:errors.pricingSchedule.lineNotEligible',
+    };
+  }
+
+  if (!scope.has_bundle_fee) {
+    return {
+      message: 'This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead.',
+      key: 'msp/contracts:errors.pricingSchedule.lineUnitPriced',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Fixed lines of a contract with the facts the pricing-schedule picker needs.
+ */
+export const getPricingScheduleLineScopes = withAuth(async (
+  user,
+  { tenant },
+  contractId: string
+): Promise<PricingScheduleLineScope[] | PricingScheduleActionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+  const { knex } = await createTenantKnex();
+
+  if (!tenant) {
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
+  }
+
+  return fetchFixedLineScopes(tenantDb(knex, tenant), contractId);
+});
 
 
 /**
@@ -107,34 +259,6 @@ export const getPricingScheduleById = withAuth(async (
 
   return schedule || null;
 });
-
-/**
- * Helper function to calculate end_date from duration
- */
-function calculateEndDateFromDuration(
-  effectiveDate: string,
-  durationValue: number,
-  durationUnit: 'days' | 'weeks' | 'months' | 'years'
-): string {
-  const date = new Date(effectiveDate);
-
-  switch (durationUnit) {
-    case 'days':
-      date.setDate(date.getDate() + durationValue);
-      break;
-    case 'weeks':
-      date.setDate(date.getDate() + (durationValue * 7));
-      break;
-    case 'months':
-      date.setMonth(date.getMonth() + durationValue);
-      break;
-    case 'years':
-      date.setFullYear(date.getFullYear() + durationValue);
-      break;
-  }
-
-  return date.toISOString();
-}
 
 /**
  * Find an existing schedule on the same contract and line scope whose
@@ -203,19 +327,44 @@ export const createPricingSchedule = withAuth(async (
   if (customRateError) {
     return actionError(customRateError);
   }
+
+  let effectiveDate: string | null;
+  let endDate: string | null;
+  try {
+    effectiveDate = toCalendarDateString(scheduleData.effective_date);
+    endDate = toCalendarDateString(scheduleData.end_date);
+  } catch {
+    return actionError(INVALID_DATE_ERROR.message, INVALID_DATE_ERROR.key);
+  }
+
+  if (!effectiveDate) {
+    return actionError(INVALID_DATE_ERROR.message, INVALID_DATE_ERROR.key);
+  }
+
   // Calculate end_date from duration if provided
-  let endDate = scheduleData.end_date;
   if (scheduleData.duration_value && scheduleData.duration_unit) {
     endDate = calculateEndDateFromDuration(
-      scheduleData.effective_date,
+      effectiveDate,
       scheduleData.duration_value,
       scheduleData.duration_unit
     );
   }
 
   // Validate that end_date is after effective_date if provided
-  if (endDate && endDate <= scheduleData.effective_date) {
+  if (endDate && endDate <= effectiveDate) {
     return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
+  }
+
+  const contractLineId = scheduleData.contract_line_id ?? null;
+  if (contractLineId) {
+    const lineScopeError = await getLineScopeValidationError(
+      tenantDb(knex, tenant),
+      scheduleData.contract_id,
+      contractLineId,
+    );
+    if (lineScopeError) {
+      return actionError(lineScopeError.message, lineScopeError.key);
+    }
   }
 
   return knex.transaction(async (trx) => {
@@ -226,8 +375,8 @@ export const createPricingSchedule = withAuth(async (
     const overlapping = await findOverlappingPricingSchedule(
       db,
       scheduleData.contract_id,
-      scheduleData.contract_line_id ?? null,
-      scheduleData.effective_date,
+      contractLineId,
+      effectiveDate,
       endDate,
     );
 
@@ -238,6 +387,7 @@ export const createPricingSchedule = withAuth(async (
     const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
       .insert({
         ...scheduleData,
+        effective_date: effectiveDate,
         end_date: endDate,
         tenant,
         created_by: user.user_id,
@@ -291,10 +441,27 @@ export const updatePricingSchedule = withAuth(async (
     return actionError(customRateError);
   }
 
-  // Calculate end_date from duration if provided
-  const effectiveDate = scheduleData.effective_date || existingSchedule.effective_date;
-  let endDate = scheduleData.end_date !== undefined ? scheduleData.end_date : existingSchedule.end_date;
+  // Normalise both the incoming and the stored dates to calendar dates: the
+  // string comparisons below (and the overlap probe) are only sound when both
+  // sides are YYYY-MM-DD, and a stored legacy instant must not be re-saved as
+  // an instant.
+  let effectiveDate: string | null;
+  let endDate: string | null;
+  try {
+    effectiveDate = toCalendarDateString(scheduleData.effective_date)
+      ?? toCalendarDateString(existingSchedule.effective_date);
+    endDate = scheduleData.end_date !== undefined
+      ? toCalendarDateString(scheduleData.end_date)
+      : toCalendarDateString(existingSchedule.end_date);
+  } catch {
+    return actionError(INVALID_DATE_ERROR.message, INVALID_DATE_ERROR.key);
+  }
 
+  if (!effectiveDate) {
+    return actionError(INVALID_DATE_ERROR.message, INVALID_DATE_ERROR.key);
+  }
+
+  // Calculate end_date from duration if provided
   if (scheduleData.duration_value && scheduleData.duration_unit) {
     endDate = calculateEndDateFromDuration(
       effectiveDate,
@@ -308,11 +475,24 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   // Check for overlapping schedules (excluding current schedule) in the same
-  // line scope; an update may move a schedule between scopes.
+  // line scope; an update may move a schedule between scopes. A NULL scope
+  // stays valid, so an existing contract-wide row is never rewritten by a save
+  // that does not re-scope it.
   const nextLineScope =
     scheduleData.contract_line_id !== undefined
       ? scheduleData.contract_line_id
       : existingSchedule.contract_line_id ?? null;
+
+  if (nextLineScope && nextLineScope !== existingSchedule.contract_line_id) {
+    const lineScopeError = await getLineScopeValidationError(
+      db,
+      existingSchedule.contract_id,
+      nextLineScope,
+    );
+    if (lineScopeError) {
+      return actionError(lineScopeError.message, lineScopeError.key);
+    }
+  }
 
   return knex.transaction(async (trx) => {
     await lockTenantBilling(trx, tenant);
@@ -337,6 +517,7 @@ export const updatePricingSchedule = withAuth(async (
       })
       .update({
         ...scheduleData,
+        effective_date: effectiveDate,
         end_date: endDate,
         updated_by: user.user_id,
         updated_at: trx.fn.now()
