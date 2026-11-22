@@ -9,7 +9,7 @@ import {
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
 import { canCompileSearchVisibility, registerSearchVisibilityVerifier, resolveSearchAclPrincipal, verifyResultVisibility } from '@alga-psa/search/acl';
-import { runAppSearch } from '@alga-psa/search/runAppSearch';
+import { runAppSearch, runAuthorizedSearchCandidates } from '@alga-psa/search/runAppSearch';
 import { TestContext } from '../../../test-utils/testContext';
 import { createCloseRulesFixture, insertResolutionComment } from './helpers/closeRulesFixture';
 import { createUser } from '../../../test-utils/testDataFactory';
@@ -649,7 +649,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
     }
   }, 60_000);
 
-  it('keeps document association decisions on fallback when SQL cannot match first-row semantics', async () => {
+  it('compiles document visibility with all-association and source-existence semantics', async () => {
     await runWithTenant(ctx.tenantId, async () => {
       const portalUserId = await createUser(db, ctx.tenantId, { user_type: 'client', contact_id: fixture.contactId });
       const roleId = randomUUID();
@@ -678,12 +678,51 @@ describe('production search authorization PostgreSQL benchmark', () => {
       });
 
       const acl = await resolveSearchAclPrincipal(db, portalUser, { mode: 'scoped', clientIds: [fixture.clientId] });
-      expect(canCompileSearchVisibility('document')).toBe(false);
+      expect(canCompileSearchVisibility('document')).toBe(true);
       await expect(verifyResultVisibility(db, acl, [{ type: 'document', id: documentId }])).resolves.toEqual([]);
       const result = await runAppSearch(db, ctx.tenantId, portalUser, { query: 'needle association', types: ['document'] as any, limit: 5 });
       expect(result.results).toEqual([]);
       expect(result.groups.document).toBe(0);
       expect(result.totalCount).toBe(0);
+
+      const allowedId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('documents').insert({
+        tenant: ctx.tenantId, document_id: allowedId, document_name: 'Needle allowed association document',
+        type_id: documentType.type_id, user_id: ctx.user.user_id, created_by: ctx.user.user_id,
+      });
+      await tenantDb(db, ctx.tenantId).table('document_associations').insert({
+        tenant: ctx.tenantId, document_id: allowedId, entity_type: 'client', entity_id: fixture.clientId,
+      });
+      await db('app_search_index').insert({
+        tenant: ctx.tenantId, object_type: 'document', object_id: allowedId,
+        title: 'Needle allowed association document', body: 'needle association', url: `/msp/documents/${allowedId}`,
+        source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'document:read',
+        search_vector: db.raw("to_tsvector('english', 'needle association')"),
+      });
+      const allowedResult = await runAppSearch(db, ctx.tenantId, portalUser, { query: 'needle association', types: ['document'] as any, limit: 5 });
+      expect(allowedResult.results.map(({ id }) => id)).toEqual([allowedId]);
+      expect(allowedResult.groups.document).toBe(1);
+      expect(allowedResult.totalCount).toBe(1);
+
+      // The replacement verifier has no compiler. Its replacement policy must
+      // be authoritative even for a stale index row; the built-in SQL predicate
+      // must not survive independently of the active registration.
+      const orphanId = randomUUID();
+      await db('app_search_index').insert({
+        tenant: ctx.tenantId, object_type: 'document', object_id: orphanId,
+        title: 'Needle replacement document', body: 'needle replacement', url: `/msp/documents/${orphanId}`,
+        source_updated_at: FIXED_RANKING, metadata: JSON.stringify({}), required_permission: 'document:read',
+        search_vector: db.raw("to_tsvector('english', 'needle replacement')"),
+      });
+      const restoreVerifier = registerSearchVisibilityVerifier('document', async () => true);
+      try {
+        expect(canCompileSearchVisibility('document')).toBe(false);
+        const replacementResult = await runAppSearch(db, ctx.tenantId, portalUser, { query: 'needle replacement', types: ['document'] as any, limit: 5 });
+        expect(replacementResult.results.map(({ id }) => id)).toEqual([orphanId]);
+        expect(replacementResult.totalCount).toBe(1);
+      } finally {
+        restoreVerifier();
+      }
     });
   }, 60_000);
 
@@ -774,7 +813,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
     });
   }, 60_000);
 
-  it('measures the default document source-verification fallback at 150, 500 and 1500 candidates', async () => {
+  it('measures SQL-filtered document visibility at 150, 500 and 1500 candidates', async () => {
     await runWithTenant(ctx.tenantId, async () => {
       const sizes = [150, 500, 1500] as const;
       const documentTypeId = randomUUID();
@@ -796,6 +835,23 @@ describe('production search authorization PostgreSQL benchmark', () => {
         tenant: ctx.tenantId, user_id: ctx.user.user_id, role_id: documentRoleId,
       });
 
+      const portalUserId = await createUser(db, ctx.tenantId, { user_type: 'client', contact_id: fixture.contactId });
+      const portalRoleId = randomUUID();
+      const portalPermissionId = randomUUID();
+      await tenantDb(db, ctx.tenantId).table('roles').insert({
+        tenant: ctx.tenantId, role_id: portalRoleId, role_name: `Portal document reader ${portalRoleId}`, msp: false, client: true,
+      });
+      await tenantDb(db, ctx.tenantId).table('permissions').insert({
+        tenant: ctx.tenantId, permission_id: portalPermissionId, resource: 'document', action: 'read', msp: false, client: true,
+      });
+      await tenantDb(db, ctx.tenantId).table('role_permissions').insert({
+        tenant: ctx.tenantId, role_id: portalRoleId, permission_id: portalPermissionId,
+      });
+      await tenantDb(db, ctx.tenantId).table('user_roles').insert({
+        tenant: ctx.tenantId, user_id: portalUserId, role_id: portalRoleId,
+      });
+      const portalUser = { ...ctx.user, user_id: portalUserId, user_type: 'client', contact_id: fixture.contactId, clientId: fixture.clientId, roles: [] } as any;
+
       const documentIds: string[] = Array.from({ length: 1500 }, () => randomUUID());
       const documents = documentIds.flatMap((documentId, offset) => {
         // Keep every tenth index candidate stale so source-record verification
@@ -808,9 +864,15 @@ describe('production search authorization PostgreSQL benchmark', () => {
         }];
       });
       await db.batchInsert('documents', documents, 500);
-      await db.batchInsert('document_associations', documents.map(({ document_id }) => ({
-        tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: deniedClient, entity_type: 'client',
-      })), 500);
+      const associations = documents.flatMap(({ document_id }, offset) => {
+        if (offset % 5 === 0) return [{ tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: deniedClient, entity_type: 'client' }];
+        if (offset % 7 === 0) return [
+          { tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: fixture.clientId, entity_type: 'client' },
+          { tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: deniedClient, entity_type: 'client' },
+        ];
+        return [{ tenant: ctx.tenantId, association_id: randomUUID(), document_id, entity_id: fixture.clientId, entity_type: 'client' }];
+      });
+      await db.batchInsert('document_associations', associations, 500);
       const indexRows = documentIds.map((documentId, offset) => {
         const sequence = offset + 1;
         const body = [
@@ -828,7 +890,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
       });
       await db.batchInsert('app_search_index', indexRows, 500);
 
-      expect(canCompileSearchVisibility('document')).toBe(false);
+      expect(canCompileSearchVisibility('document')).toBe(true);
       const scenarios: Array<{ size: typeof sizes[number]; query: string }> = [
         { size: 150, query: 'small' },
         { size: 500, query: 'medium' },
@@ -836,84 +898,123 @@ describe('production search authorization PostgreSQL benchmark', () => {
       ];
       const measurements: Array<Record<string, unknown>> = [];
       for (const scenario of scenarios) {
-        const expectedDocumentIds = documentIds.slice(0, scenario.size).filter((_, index) => (index + 1) % 10 !== 0);
-        const expectedTotal = expectedDocumentIds.length;
-        for (const restrictive of [false, true]) {
-          const assignment = tenantDb(db, ctx.tenantId).table('authorization_bundle_assignments').where({ bundle_id: bundleId });
-          if (restrictive) {
-            if (!(await assignment.first())) await createBundleAssignment(db, {
-              tenant: ctx.tenantId, bundleId, targetType: 'user', targetId: ctx.user.user_id, actorUserId: ctx.user.user_id,
-            });
-          } else {
-            await assignment.delete();
-          }
-          const context = restrictive ? 'ticket_bundle_restricted' : 'unrestricted';
-          const request = () => runAppSearch(db, ctx.tenantId, ctx.user, {
-            query: scenario.query, types: ['document'] as any, limit: 100,
-          }, SEARCH_INDEX);
-          const validate = (result: Awaited<ReturnType<typeof runAppSearch>>) => {
-            expect(result.groups.document, `${context}/${scenario.size} document total`).toBe(expectedTotal);
-            expect(result.totalCount, `${context}/${scenario.size} authorized total`).toBe(expectedTotal);
-            expect(result.results).toHaveLength(Math.min(100, expectedTotal));
-            expect(new Set(result.results.map(({ id }) => id)).size).toBe(result.results.length);
-            expect(result.results.every(({ type, id }) => type === 'document' && expectedDocumentIds.includes(id))).toBe(true);
-          };
-          validate(await request()); // one unmeasured warmup per size and context
-
-          const latencies: number[] = [];
-          const statementCounts: number[] = [];
-          const documentSourceStatements: number[] = [];
-          const associationSourceStatements: number[] = [];
-          for (let sample = 0; sample < SAMPLES; sample += 1) {
-            let statements = 0;
-            let documentReads = 0;
-            let associationReads = 0;
-            const onQuery = (query: { sql: string }) => {
-              statements += 1;
-              if (/\bfrom\s+["']?documents\b/i.test(query.sql)) documentReads += 1;
-              if (/\bfrom\s+["']?document_associations\b/i.test(query.sql)) associationReads += 1;
+        const contexts = [
+          { name: 'unrestricted-internal', user: ctx.user, expected: documentIds.slice(0, scenario.size).filter((_, index) => (index + 1) % 10 !== 0) },
+          { name: 'client-portal-scoped', user: portalUser, expected: documentIds.slice(0, scenario.size).filter((id, index) => {
+            if ((index + 1) % 10 === 0) return false;
+            const linked = associations.filter((association) => association.document_id === id);
+            return linked.every(({ entity_id }) => entity_id === fixture.clientId);
+          }) },
+        ];
+        for (const context of contexts) {
+          for (const variant of ['typeahead', 'full'] as const) {
+            const expectedDocumentIds = context.expected;
+            const expectedTotal = expectedDocumentIds.length;
+            const request = () => variant === 'typeahead'
+              ? runAuthorizedSearchCandidates({
+                knex: db, tenant: ctx.tenantId, user: context.user, query: scenario.query,
+                requestedTypes: ['document'] as any, pageSize: 5, includeSnippets: false,
+                searchIndex: SEARCH_INDEX,
+              })
+              : runAppSearch(db, ctx.tenantId, context.user, {
+                query: scenario.query, types: ['document'] as any, limit: 100,
+              }, SEARCH_INDEX);
+            const validate = async (result: Awaited<ReturnType<typeof runAppSearch>> | Awaited<ReturnType<typeof runAuthorizedSearchCandidates>>) => {
+              const groups = result.groups;
+              const hits = ('results' in result ? result.results : result.visibleHits).slice(0, variant === 'typeahead' ? 5 : 100);
+              expect(groups.document, `${context.name}/${variant}/${scenario.size} group`).toBe(expectedTotal);
+              if ('totalCount' in result) expect(result.totalCount).toBe(expectedTotal);
+              expect(hits).toHaveLength(Math.min(variant === 'typeahead' ? 5 : 100, expectedTotal));
+              expect(new Set(hits.map(({ id }) => id)).size).toBe(hits.length);
+              expect(hits.every(({ type, id }) => type === 'document' && expectedDocumentIds.includes(id))).toBe(true);
             };
-            db.on('query', onQuery);
-            try {
-              const started = performance.now();
-              const result = await request();
-              latencies.push(performance.now() - started);
-              validate(result);
-            } finally {
-              db.removeListener('query', onQuery);
+            await validate(await request());
+
+            const latencies: number[] = [];
+            const statementCounts: number[] = [];
+            const documentSourceStatements: number[] = [];
+            const associationSourceStatements: number[] = [];
+            for (let sample = 0; sample < SAMPLES; sample += 1) {
+              let statements = 0;
+              let documentReads = 0;
+              let associationReads = 0;
+              const onQuery = (query: { sql: string }) => {
+                statements += 1;
+                if (/^\s*select\b[\s\S]*\bfrom\s+["']?documents\b/i.test(query.sql)) documentReads += 1;
+                if (/^\s*select\b[\s\S]*\bfrom\s+["']?document_associations\b/i.test(query.sql)) associationReads += 1;
+              };
+              db.on('query', onQuery);
+              try {
+                const started = performance.now();
+                const result = await request();
+                latencies.push(performance.now() - started);
+                await validate(result);
+              } finally {
+                db.removeListener('query', onQuery);
+              }
+              statementCounts.push(statements);
+              documentSourceStatements.push(documentReads);
+              associationSourceStatements.push(associationReads);
+              expect(documentReads, `${context.name}/${variant}/${scenario.size} document verification SELECTs`).toBe(0);
+              expect(associationReads, `${context.name}/${variant}/${scenario.size} association verification SELECTs`).toBe(0);
             }
-            statementCounts.push(statements);
-            documentSourceStatements.push(documentReads);
-            associationSourceStatements.push(associationReads);
-            // The default verifier performs one tenant-scoped document lookup
-            // per candidate and one client-association lookup per live row.
-            expect(documentReads, `${context}/${scenario.size} document source reads`).toBe(scenario.size);
-            expect(associationReads, `${context}/${scenario.size} association source reads`).toBe(expectedTotal);
+            expect(new Set(statementCounts).size, `${context.name}/${variant}/${scenario.size} deterministic SQL count`).toBe(1);
+
+            if (variant === 'full') {
+              const seen = new Set<string>();
+              let cursor: string | undefined;
+              let pages = 0;
+              do {
+                const page = await runAppSearch(db, ctx.tenantId, context.user, {
+                  query: scenario.query, types: ['document'] as any, limit: 100, cursor,
+                }, SEARCH_INDEX);
+                expect(page.totalCount).toBe(expectedTotal);
+                for (const hit of page.results) {
+                  expect(seen.has(hit.id)).toBe(false);
+                  seen.add(hit.id);
+                }
+                cursor = page.nextCursor;
+                pages += 1;
+                expect(pages).toBeLessThanOrEqual(Math.ceil(expectedTotal / 100) + 1);
+              } while (cursor);
+              expect(seen).toEqual(new Set(expectedDocumentIds));
+            }
+
+            const sortedLatencies = [...latencies].sort((a, b) => a - b);
+            measurements.push({
+              scenario: `${scenario.size}-${context.name}-${variant}`,
+              authorization_context: context.name === 'client-portal-scoped'
+                ? `Client portal scoped to ${fixture.clientId}; denied and multiply-associated documents are excluded.`
+                : 'Internal user with unrestricted client access.',
+              entry_point: variant === 'typeahead' ? 'runAuthorizedSearchCandidates, page size 5, no snippets' : 'runAppSearch first page, page size 100',
+              matching_document_candidates: scenario.size,
+              authorized_total: expectedTotal,
+              stale_source_candidates: Math.floor(scenario.size / 10),
+              denied_association_candidates: scenario.size - Math.floor(scenario.size / 10) - expectedTotal,
+              multiply_associated_candidates: Math.ceil((scenario.size - Math.floor(scenario.size / 10)) / 7),
+              complete_pagination_validated: variant === 'full',
+              raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
+              p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
+              raw_statement_count_samples: statementCounts,
+              median_statements: [...statementCounts].sort((a, b) => a - b)[Math.floor(SAMPLES / 2)],
+              raw_document_verification_select_samples: documentSourceStatements,
+              raw_association_verification_select_samples: associationSourceStatements,
+              warmup_requests: WARMUPS,
+              measured_requests: SAMPLES,
+              concurrency: 1,
+              page_size: variant === 'typeahead' ? 5 : 100,
+            });
+            console.log(JSON.stringify({ document_visibility_sample: measurements[measurements.length - 1] }));
           }
-          const sortedLatencies = [...latencies].sort((a, b) => a - b);
-          const sortedStatements = [...statementCounts].sort((a, b) => a - b);
-          measurements.push({
-            scenario: `${scenario.size}-${context}`,
-            authorization_context: restrictive
-              ? 'Internal user with selected-client ticket:read bundle; documents remain unrestricted because the bundle has no document:read rule and internal clientAccess is all.'
-              : 'Unrestricted internal user; clientAccess is all.',
-            matching_document_candidates: scenario.size,
-            source_documents_present: expectedTotal,
-            stale_index_candidates_denied: scenario.size - expectedTotal,
-            authorized_total: expectedTotal,
-            returned_identity_validation: 'Every returned row is a unique document ID in the expected live fixture identity set; stale index-only IDs are denied.',
-            raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
-            p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
-            raw_statement_count_samples: statementCounts,
-            median_statements: sortedStatements[Math.floor(SAMPLES / 2)],
-            raw_document_source_read_samples: documentSourceStatements,
-            raw_association_source_read_samples: associationSourceStatements,
-            warmup_requests: WARMUPS,
-            measured_requests: SAMPLES,
-            concurrency: 1,
-            page_size: 100,
-          });
-          console.log(JSON.stringify({ document_fallback_sample: measurements[measurements.length - 1] }));
+        }
+      }
+
+      for (const context of ['unrestricted-internal', 'client-portal-scoped']) {
+        for (const variant of ['typeahead', 'full']) {
+          const counts = measurements
+            .filter((measurement) => measurement.scenario.toString().includes(`${context}-${variant}`))
+            .map((measurement) => measurement.median_statements);
+          expect(new Set(counts).size, `${context}/${variant} statement growth over 150/500/1500 candidates`).toBe(1);
         }
       }
 
@@ -923,15 +1024,16 @@ describe('production search authorization PostgreSQL benchmark', () => {
         postgresVersion: (await db.raw('SHOW server_version')).rows[0].server_version,
         fixture: {
           matching_document_candidates: 1500, source_documents: documents.length,
-          stale_index_candidates: 150, document_client_associations: documents.length,
+          stale_index_candidates: 150, document_client_associations: associations.length,
+          fixture_composition: 'Readable client-associated rows, denied client-associated rows, multiply associated rows with one allowed and one denied client, and stale index-only rows.',
           sources: ['public.documents', 'public.document_associations', 'public.document_types', 'public.app_search_index'],
         },
         procedure: {
           warmups: WARMUPS, samples: SAMPLES, concurrency: 1, page_size: 100,
-          timing_boundary: 'performance.now around runAppSearch, including principal and policy resolution, the batched-candidate scan, source verification, totals and result page; fixture, policy assignment changes and warmups excluded.',
-          statement_method: 'Knex query events on the transaction connection during each timed runAppSearch request; document and association source SELECTs counted separately.',
+          timing_boundary: 'performance.now around the request path, including principal and policy resolution, SQL visibility, counts and first page; fixture setup and warmup excluded. Full-search cursor walk validated outside the timed request samples.',
+          statement_method: 'Knex query events on the transaction connection during each timed request; standalone document and association verification SELECTs counted separately from correlated EXISTS predicates.',
           percentile: 'Nearest-rank p95; with five samples the p95 is the maximum.',
-          fallback_confirmation: 'canCompileSearchVisibility(document) is false; each timed request issued one documents source lookup per matching candidate and one document_associations lookup per live source document.',
+          visibility_confirmation: 'canCompileSearchVisibility(document) is true; the active verifier compiler admits source existence and all-association client scope in page/count SQL. Timed requests issue no separate document or association verification SELECTs.',
         },
         measurements,
       }));

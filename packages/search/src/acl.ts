@@ -155,6 +155,40 @@ function compileRecordVisibilitySql(user: SearchAclPrincipal, onlyType: SearchOb
   return { sql: predicates[0] ?? 'FALSE', bindings };
 }
 
+function compileDocumentVisibilitySql(user: SearchAclPrincipal): SqlFragment {
+  if (!user.tenant) return { sql: 'FALSE', bindings: [] };
+
+  // Mirror the source verifier: the document must exist in this tenant, and
+  // every client association must pass. The NOT EXISTS form preserves the
+  // verifier's empty-association allow rule and cannot let one allowed link
+  // mask a denied link.
+  const scopedClientIds = user.clientAccess.mode === 'scoped'
+    ? user.clientAccess.clientIds
+    : undefined;
+  const associationVisibility = scopedClientIds
+    ? `AND NOT EXISTS (
+        SELECT 1 FROM document_associations da
+        WHERE da.tenant = ?::uuid
+          AND da.document_id = d.document_id
+          AND da.entity_type = 'client'
+          AND da.entity_id IS NOT NULL
+          AND da.entity_id::text <> ALL(?::text[])
+      )`
+    : '';
+
+  return {
+    sql: `EXISTS (
+      SELECT 1 FROM documents d
+      WHERE d.tenant = ?::uuid
+        AND d.document_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END
+        ${associationVisibility}
+    )`,
+    bindings: scopedClientIds
+      ? [user.tenant, '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', user.tenant, scopedClientIds]
+      : [user.tenant, '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+  };
+}
+
 export interface SearchVisibilityRow {
   type: SearchObjectType;
   id: string;
@@ -571,7 +605,7 @@ registerSearchVisibilityVerifier('document', async (knex, user, row) => {
   // grants access when one linked client is allowed but another is denied;
   // the old first-row check had no deterministic database ordering either.
   return associations.length === 0 || associations.every(({ entity_id }) => hasClientAccess(user, entity_id));
-});
+}, compileDocumentVisibilitySql);
 
 registerCompiledSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
   const task = await tenantScopedRoot<{ assigned_users: unknown }>(knex, user, 'workflow_tasks')
