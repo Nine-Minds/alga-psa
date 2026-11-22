@@ -86,4 +86,15 @@ describe('workflow-worker system email Helm rendering', () => {
       valueFrom: { secretKeyRef: { name: 's', key: 'k' } },
     });
   });
+
+  it('renders numeric and boolean extraEnv values as quoted strings', () => {
+    const out = render({
+      extraEnv: [
+        { name: 'A', value: 5 },
+        { name: 'B', value: true },
+      ],
+    });
+    expect(out.find((e) => e.name === 'A')).toEqual({ name: 'A', value: '5' });
+    expect(out.find((e) => e.name === 'B')).toEqual({ name: 'B', value: 'true' });
+  });
 });

@@ -75,9 +75,14 @@ function getOrCreateRegistry(): AuthEmailProvider {
 }
 
 /**
- * Register email provider implementations (called at app startup)
+ * Register email provider implementations (called at app startup).
+ * isSystemEmailConfigured is required so the compiler flags any registration
+ * that would leave registerUser hitting the throwing default.
  */
-export function registerAuthEmailProvider(impl: Partial<AuthEmailProvider>): void {
+export type AuthEmailProviderRegistration = Partial<AuthEmailProvider> &
+  Pick<AuthEmailProvider, 'isSystemEmailConfigured'>;
+
+export function registerAuthEmailProvider(impl: AuthEmailProviderRegistration): void {
   const current = getOrCreateRegistry();
   globalThis.__algaAuthEmailRegistry = { ...current, ...impl };
 }

@@ -237,7 +237,13 @@ spec:
 
             # Additional environment variables
             {{- range .Values.extraEnv }}
-            {{- toYaml (list .) | nindent 12 }}
+            - name: {{ .name | quote }}
+              {{- if hasKey . "valueFrom" }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ .value | toString | quote }}
+              {{- end }}
             {{- end }}
 
           ports:
