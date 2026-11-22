@@ -964,7 +964,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "All-boards filter in a tenant with three ITIL boards lists Hardware once"
   },
   {
@@ -973,7 +973,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Two non-ITIL boards with a same-named own category are listed exactly as before this change"
   },
   {
@@ -982,7 +982,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client portal ticket filter lists each standard category once"
   },
   {
@@ -991,7 +991,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Selecting Hardware in the all-boards filter returns Hardware tickets from all three ITIL boards"
   },
   {
@@ -1000,7 +1000,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A link holding one board's Hardware id, opened on all boards, returns Hardware tickets from every ITIL board"
   },
   {
@@ -1009,7 +1009,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Excluding a standard category excludes it on every board"
   },
   {
@@ -1018,7 +1018,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "On a single board's tab the filter matches only that board's tickets"
   },
   {
@@ -1027,7 +1027,7 @@
     "featureIds": [
       "F059"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A saved view holding another ITIL board's Hardware id, loaded on this board, filters by this board's Hardware and reports nothing dropped"
   },
   {
@@ -1036,7 +1036,7 @@
     "featureIds": [
       "F059"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "An id that is not a standard category of any board is still dropped by the loader"
   },
   {
@@ -1045,7 +1045,7 @@
     "featureIds": [
       "F060"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST ticket stats tickets_by_category has one Hardware entry counting tickets from every ITIL board"
   },
   {
@@ -1054,7 +1054,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A checklist apply rule on Hardware with no board applies to a new ticket with Hardware on each of two ITIL boards"
   },
   {
@@ -1063,7 +1063,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A checklist apply rule on a non-standard category matches only that category row"
   },
   {

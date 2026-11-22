@@ -21,6 +21,8 @@ const SAMPLE_VALUES: Record<string, PredicateClause['value']> = {
   status_closed: false,
   status_name: 'Open',
   category: [UUID],
+  category_id: UUID,
+  subcategory_id: UUID,
   sla_state: 'breached',
   involves_user: UUID,
   seat_responsibility: 'client_it',

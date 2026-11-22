@@ -359,11 +359,50 @@ fallback and no create on an ITIL board; five new strings in every locale.
   `itilBoardFieldRules` 27/27, `inboundTicketDefaultsPriorityBoard` 8/8, plus the two contract
   suites. `npm run test:i18n`'s validator, audit and glossary checks are green.
 
+### Commit group 6 — `category-filters` (done)
+
+Landed: `shared/lib/tickets/standardCategoryFilterOptions.ts` (registered in `shared/tsup.config.ts`
+and `shared/package.json`); the standard-aware category match in
+`shared/lib/ticketQuery/ticketQuerySchema.ts`; the de-duplicated feed in `optimizedTicketActions`
+and the client portal `TicketList`; the alias translation in `validateCapturedFilters`, fed from the
+options payload through `TicketingDashboardContainer`.
+
+- **Amendment 1, answered.** A checklist apply rule's category predicate is *not* evaluated through
+  `ticketFilterPredicates.ts`. `shared/lib/ticketChecklists/applyTemplates.ts` compiles the rule's
+  stored `where` against `createTicketQuerySchema` and selects the fragment against the ticket row;
+  the checklist settings screen writes `path: 'category_id'`, while the ticket list's legacy-filter
+  codec writes the computed `category` path. The layer both share is the ticket query schema, so R9
+  lives there: `category`, `category_id` and `subcategory_id` all match "this row, or any board's
+  copy of the same standard category". `category_id` and `subcategory_id` stopped being plain
+  columns for exactly that reason, which is why they now carry explicit operator sets and a
+  resolver that reproduces the column semantics (including the null comparisons) around the widened
+  match. T117 is the test that decides it, and it drives a real ticket row.
+- **One SQL shape, four callers.** The match is `?? IN (…) OR EXISTS (SELECT 1 FROM categories
+  __cself JOIN categories __ctarget …)`, tenant-correlated on both sides, so the list filter, a
+  saved view, a shared link and a checklist rule all widen identically. A category with no standard
+  link compiles to the same comparison as before, so nothing changes for the tenant's own
+  categories (T108, T118).
+- **De-duplication and translation are one function.** `standardCategoryFilterOptions` returns the
+  kept rows *and* the aliases it created (dropped id → representative id). Without the aliases the
+  saved-view loader would still drop a stored id, because the known universe it validates against
+  is the de-duplicated list. The representative is the row with the lowest `(board_id, category_id)`,
+  so every representative comes from one board and the parent/child shape survives; a kept child's
+  parent is re-pointed anyway, so a partial set cannot orphan one.
+- **`categoryAliases` is additive on the options payload.** An older cached payload has no such
+  key, which the container reads as "nothing to translate" — the same convention the tag universes
+  already use there.
+- **F060 needed no code.** `ApiTicketController` already groups `tickets_by_category` by
+  `category_name`, so the boards' copies of one standard row collapse into one entry; T116 asserts
+  that on real rows instead of assuming it.
+- Run against this slot's database: `itilCategoryFilters` 11/11, `itilSecondBoardSurfaces` 14
+  covered + 30 todos, `ticketQuerySchema` + `ticketFilterPredicates` 50/50,
+  `checklistRulePredicates` 5/5, the portal contract test 2/2.
+
 ### Groups not started
 
-Commit groups 6–16 (`category-filters` through `docs`) are untouched: their features and tests are
-still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 have to
-reach production together (see Rollout), so they stay on this branch.
+Commit groups 7–16 (`impact-urgency` through `docs`) are untouched: their features and tests are
+still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
+production together (see Rollout) and are all on this branch.
 
 ## Commands
 

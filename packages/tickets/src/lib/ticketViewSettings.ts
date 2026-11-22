@@ -300,6 +300,13 @@ export function validateCapturedFilters(
     userIds?: readonly string[];
     teamIds?: readonly string[];
     tags?: readonly string[];
+    /**
+     * R9. Category ids the known universe no longer lists because another board's copy of the same
+     * standard category stands for them. A stored value is translated through this map before it is
+     * validated, so a saved view on a second ITIL board keeps its category filter instead of
+     * silently losing it. Built by `standardCategoryFilterOptions`.
+     */
+    categoryAliases?: Readonly<Record<string, string>>;
     /** Tag definition ids by `where` tag path; an absent universe cannot be validated, so is kept. */
     whereTagIds?: Partial<Record<'tags' | 'contact.tags' | 'client.tags', ReadonlySet<string>>>;
   },
@@ -326,13 +333,16 @@ export function validateCapturedFilters(
     return kept.length > 0 ? kept : undefined;
   };
 
+  const aliasCategory = (value: string) => known.categoryAliases?.[value] ?? value;
+  const aliasCategoryList = (values: string[] | undefined) => values?.map(aliasCategory);
+
   out.statusId = keepScalar(filters.statusId, known.statusIds);
   out.priorityId = keepScalar(filters.priorityId, known.priorityIds);
-  out.categoryId = keepScalar(filters.categoryId, known.categoryIds);
+  out.categoryId = keepScalar(filters.categoryId ? aliasCategory(filters.categoryId) : undefined, known.categoryIds);
   out.clientId = keepScalar(filters.clientId, known.clientIds);
   out.contactId = keepScalar(filters.contactId, known.contactIds);
-  out.categoryIds = keepList(filters.categoryIds, known.categoryIds);
-  out.excludeCategoryIds = keepList(filters.excludeCategoryIds, known.categoryIds);
+  out.categoryIds = keepList(aliasCategoryList(filters.categoryIds), known.categoryIds);
+  out.excludeCategoryIds = keepList(aliasCategoryList(filters.excludeCategoryIds), known.categoryIds);
   // The "Me" sentinel is not a user id, so it must survive whatever the known-user universe is.
   const assigneeIds = normalizeAssignedToIdList(filters.assignedToIds);
   const knownUserIds = known.userIds;

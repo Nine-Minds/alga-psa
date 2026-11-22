@@ -44,6 +44,7 @@ export default defineConfig({
     'lib/itil/slaTargets': 'lib/itil/slaTargets.ts',
     'lib/itil/priorityMatrix': 'lib/itil/priorityMatrix.ts',
     'lib/tickets/boardFieldRules': 'lib/tickets/boardFieldRules.ts',
+    'lib/tickets/standardCategoryFilterOptions': 'lib/tickets/standardCategoryFilterOptions.ts',
     'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',
     'workflow/index': 'workflow/index.ts',
     'workflow/runtime/index': 'workflow/runtime/index.ts',

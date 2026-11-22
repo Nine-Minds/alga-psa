@@ -82,6 +82,8 @@
     "./lib/itil/priorityMatrix.js": "./dist/lib/itil/priorityMatrix.js",
     "./lib/tickets/boardFieldRules": "./dist/lib/tickets/boardFieldRules.js",
     "./lib/tickets/boardFieldRules.js": "./dist/lib/tickets/boardFieldRules.js",
+    "./lib/tickets/standardCategoryFilterOptions": "./dist/lib/tickets/standardCategoryFilterOptions.js",
+    "./lib/tickets/standardCategoryFilterOptions.js": "./dist/lib/tickets/standardCategoryFilterOptions.js",
     "./lib/ticketStatusClock": "./dist/lib/ticketStatusClock.js",
     "./lib/ticketStatusClock.js": "./dist/lib/ticketStatusClock.js",
     "./lib/email/sanitizeEmailHtml": "./dist/lib/email/sanitizeEmailHtml.js",

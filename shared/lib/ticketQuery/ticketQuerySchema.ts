@@ -105,16 +105,32 @@ const COMPUTED_RESOLVERS = (() => {
    * `category in [ids]`: the ticket's category OR subcategory is one of the ids. Selecting a parent
    * matches its subcategorized tickets; selecting a subcategory matches via subcategory_id.
    * `not_in` is the compiler's negation, so a ticket with neither is kept.
+   *
+   * R9: an id that names a standard category also matches the other boards' copies of the same
+   * standard row, so one filter entry spans every ITIL board and a stored id keeps matching.
    */
   category: (alias, value) => {
     const ids = list(value);
     if (ids.length === 0) return { sql: 'FALSE', bindings: [] };
-    const marks = ids.map(() => '?').join(', ');
+    const onCategory = sameCategoryOrStandardCopy(alias, 'category_id', ids);
+    const onSubcategory = sameCategoryOrStandardCopy(alias, 'subcategory_id', ids);
     return {
-      sql: `COALESCE(?? IN (${marks}) OR ?? IN (${marks}), FALSE)`,
-      bindings: [`${alias}.category_id`, ...ids, `${alias}.subcategory_id`, ...ids],
+      sql: `COALESCE(${onCategory.sql} OR ${onSubcategory.sql}, FALSE)`,
+      bindings: [...onCategory.bindings, ...onSubcategory.bindings],
     };
   },
+
+  /**
+   * `category_id` and `subcategory_id` as the checklist apply rules and the saved-view rows name
+   * them: a column comparison, widened by R9 so a standard category matches every board's copy of
+   * the same standard row. A category with no standard link behaves exactly as the column did.
+   *
+   * They are computed rather than plain columns *because* of R9: a checklist rule's category
+   * predicate is evaluated here (`shared/lib/ticketChecklists/applyTemplates.ts` compiles the rule
+   * against this schema), not in the ticket list's legacy-filter codec.
+   */
+  category_id: (alias, value, _nowIso, operator) => categoryColumnFragment(alias, 'category_id', value, operator),
+  subcategory_id: (alias, value, _nowIso, operator) => categoryColumnFragment(alias, 'subcategory_id', value, operator),
 
   /**
    * `sla_state equals on_track|breached|paused`. `breached` is the shared definition in
@@ -213,6 +229,71 @@ const COMPUTED_RESOLVERS = (() => {
   } satisfies Record<string, Resolver>;
 })();
 
+/**
+ * R9. "This category, or any board's copy of the same standard category."
+ *
+ * A category id with a `standard_category_id` names a standard category, and every ITIL board owns
+ * its own copy of it (D9); a stored filter, link or rule holding one board's copy must keep
+ * matching the same tickets on every board. An id with no standard link matches itself only, so
+ * nothing changes for the tenant's own categories.
+ */
+function sameCategoryOrStandardCopy(alias: string, column: string, ids: PredicateLiteral[]): SqlFragment {
+  const marks = ids.map(() => '?').join(', ');
+  return {
+    sql: `(?? IN (${marks}) OR EXISTS (
+      SELECT 1 FROM categories AS __cself
+      JOIN categories AS __ctarget
+        ON __ctarget.tenant = __cself.tenant
+       AND __ctarget.standard_category_id = __cself.standard_category_id
+      WHERE __cself.tenant = ??
+        AND __cself.category_id = ??
+        AND __cself.standard_category_id IS NOT NULL
+        AND __ctarget.category_id IN (${marks})))`,
+    bindings: [
+      `${alias}.${column}`,
+      ...ids,
+      `${alias}.tenant`,
+      `${alias}.${column}`,
+      ...ids,
+    ],
+  };
+}
+
+/** The column operators of `category_id`/`subcategory_id`, widened by R9. */
+function categoryColumnFragment(
+  alias: string,
+  column: string,
+  value: PredicateValue | undefined,
+  operator: PredicateOperator
+): SqlFragment {
+  const colBinding = `${alias}.${column}`;
+  if (operator === 'is_not_empty') {
+    return { sql: '?? IS NOT NULL', bindings: [colBinding] };
+  }
+
+  const ids = list(value).filter((id) => id !== null && id !== undefined);
+  if (operator === 'in') {
+    if (ids.length === 0) return { sql: 'FALSE', bindings: [] };
+    const match = sameCategoryOrStandardCopy(alias, column, ids);
+    return { sql: `COALESCE(${match.sql}, FALSE)`, bindings: match.bindings };
+  }
+
+  // `equals`/`not_equals` against null ask "is there a value", as every column does.
+  if (ids.length === 0) {
+    if (operator === 'not_equals') return { sql: '?? IS NOT NULL', bindings: [colBinding] };
+    return { sql: '?? IS NULL', bindings: [colBinding] };
+  }
+
+  const match = sameCategoryOrStandardCopy(alias, column, [ids[0]]);
+  if (operator === 'not_equals') {
+    return {
+      sql: `COALESCE(?? IS NOT NULL AND NOT ${match.sql}, FALSE)`,
+      bindings: [colBinding, ...match.bindings],
+    };
+  }
+  return { sql: `COALESCE(${match.sql}, FALSE)`, bindings: match.bindings };
+}
+
 export type TicketComputedAttributeName = keyof typeof COMPUTED_RESOLVERS;
 
 /** Static facts about each computed attribute; the test asserts this is the complete set. */
@@ -225,6 +306,8 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   status_closed: { type: 'boolean', operators: ['equals'] },
   status_name: { type: 'string', operators: ['equals'] },
   category: { type: 'uuid', operators: ['in', 'not_in'] },
+  category_id: { type: 'uuid', operators: ['equals', 'not_equals', 'in', 'not_in', 'is_empty', 'is_not_empty'] },
+  subcategory_id: { type: 'uuid', operators: ['equals', 'not_equals', 'in', 'not_in', 'is_empty', 'is_not_empty'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
   seat_responsibility: { type: 'string', operators: ['equals'] },
@@ -263,8 +346,8 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       board_id: uuidColumn('board_id'),
       status_id: uuidColumn('status_id'),
       priority_id: uuidColumn('priority_id'),
-      category_id: uuidColumn('category_id'),
-      subcategory_id: uuidColumn('subcategory_id'),
+      category_id: computed('category_id', nowIso),
+      subcategory_id: computed('subcategory_id', nowIso),
       location_id: uuidColumn('location_id', ['equals', 'in', 'not_in', 'is_empty', 'is_not_empty']),
       assigned_to: uuidColumn('assigned_to'),
       assigned_team_id: uuidColumn('assigned_team_id'),

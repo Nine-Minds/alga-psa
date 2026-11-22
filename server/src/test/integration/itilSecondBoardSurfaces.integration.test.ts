@@ -16,6 +16,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 
 // Probes call the real server actions, so the two seams every action goes through are pointed at
@@ -86,6 +87,31 @@ interface Surface {
   probe?: (db: Knex, fixture: ItilSecondBoardFixture) => Promise<void>;
   /** Present while the row is expected to fail: what is wrong today. */
   expectedFail?: string;
+}
+
+/** A ticket on one board, for the probes that need the predicate engine to look at a real row. */
+async function insertProbeTicket(
+  db: Knex,
+  fixture: ItilSecondBoardFixture,
+  boardId: string,
+  values: { categoryId?: string | null } = {}
+): Promise<string> {
+  const ticketId = randomUUID();
+  const statusId = Object.entries(fixture.boards).find(([, id]) => id === boardId)![0] as keyof ItilSecondBoardFixture['statuses'];
+  await tenantDb(db, fixture.tenantId).table('tickets').insert({
+    tenant: fixture.tenantId,
+    ticket_id: ticketId,
+    ticket_number: `T-${ticketId.slice(0, 8)}`,
+    title: 'Surface probe ticket',
+    board_id: boardId,
+    status_id: fixture.statuses[statusId],
+    priority_id: fixture.itilPriorityIds[3],
+    client_id: fixture.clientId,
+    category_id: values.categoryId ?? null,
+    entered_by: fixture.userId,
+    entered_at: new Date().toISOString(),
+  });
+  return ticketId;
 }
 
 const SURFACES: Surface[] = [
@@ -273,20 +299,66 @@ const SURFACES: Surface[] = [
     surface: 'Checklist apply rules',
     commitGroup: 'category-filters',
     claims: ['Checklist apply rules'],
-    expectedFail:
-      'a rule naming a standard category with no board matches only the board holding the original row',
+    probe: async (db, fixture) => {
+      const { createTicketQuerySchema } = await import('@alga-psa/shared/lib/ticketQuery/ticketQuerySchema');
+      const { compilePredicateFragment } = await import('@alga-psa/predicates/sql');
+      // A rule naming the first ITIL board's copy, with no board of its own, matches a ticket
+      // holding the second board's copy of the same standard category (R9).
+      const onOne = Object.entries(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne]);
+      const [standardId, categoryOnOne] = onOne[0];
+      const categoryOnTwo = fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId];
+      const ticketId = await insertProbeTicket(db, fixture, fixture.boards.itilTwo, {
+        categoryId: categoryOnTwo,
+      });
+      const fragment = compilePredicateFragment(
+        createTicketQuerySchema(() => new Date().toISOString()),
+        { join: 'and', clauses: [{ path: 'category_id', operator: 'equals', value: categoryOnOne }] } as any,
+        { rootAlias: 't' }
+      );
+      const row = (await tenantDb(db, fixture.tenantId)
+        .table('tickets as t')
+        .where('t.ticket_id', ticketId)
+        .select(db.raw(`(${fragment.sql}) AS ??`, [...(fragment.bindings as any[]), 'matched']))
+        .first()) as { matched: boolean };
+      expect(row.matched).toBe(true);
+    },
   },
   {
     surface: 'All-boards and client portal category filters',
     commitGroup: 'category-filters',
     claims: [],
-    expectedFail: 'one entry per board’s copy of a standard category, and no standard-aware matching',
+    probe: async (db, fixture) => {
+      const { standardCategoryFilterOptions } = await import('@alga-psa/shared/lib/tickets/standardCategoryFilterOptions');
+      const rows = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .orderBy('display_order', 'asc')
+        .orderBy('category_name', 'asc')
+        .select('category_id', 'category_name', 'board_id', 'parent_category', 'standard_category_id');
+      const { categories, aliases } = standardCategoryFilterOptions(rows as any[]);
+      const standardCount = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne]).length;
+      // One entry per standard category, plus the tenant's own two and ITIL Two's extra.
+      expect(categories).toHaveLength(standardCount + 3);
+      expect(Object.keys(aliases)).toHaveLength(standardCount);
+    },
   },
   {
     surface: 'Saved list views',
     commitGroup: 'category-filters',
     claims: [],
-    expectedFail: 'the view loader drops a category id it does not know for the board instead of translating it',
+    probe: async (db, fixture) => {
+      const { standardCategoryFilterOptions } = await import('@alga-psa/shared/lib/tickets/standardCategoryFilterOptions');
+      const { validateCapturedFilters } = await import('../../../../packages/tickets/src/lib/ticketViewSettings');
+      const rows = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .select('category_id', 'category_name', 'board_id', 'parent_category', 'standard_category_id');
+      const { categories, aliases } = standardCategoryFilterOptions(rows as any[]);
+      const storedId = Object.keys(aliases)[0];
+      const validated = validateCapturedFilters(
+        { categoryIds: [storedId] },
+        { categoryIds: categories.map((category: any) => category.category_id), categoryAliases: aliases }
+      );
+      expect(validated.categoryIds).toEqual([aliases[storedId]]);
+    },
   },
   {
     surface: 'Impact × Urgency on MSP create and update',

@@ -640,6 +640,9 @@ export default function TicketingDashboardContainer({
     statusIds: effectiveOptions.statusOptions.map(option => option.value),
     priorityIds: effectiveOptions.priorityOptions.map(option => option.value),
     categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
+    // R9: another ITIL board's copy of a standard category is translated, not dropped. An older
+    // cached options payload has no aliases, which means "nothing to translate".
+    categoryAliases: (effectiveOptions as { categoryAliases?: Record<string, string> }).categoryAliases,
     // No clientIds universe: the client filter is a server-searched picker, so a saved client id
     // cannot be validated without loading every client. An absent universe means "cannot validate".
     userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
@@ -650,6 +653,7 @@ export default function TicketingDashboardContainer({
     effectiveOptions.statusOptions,
     effectiveOptions.priorityOptions,
     effectiveOptions.categories,
+    (effectiveOptions as { categoryAliases?: Record<string, string> }).categoryAliases,
     effectiveOptions.users,
     effectiveOptions.contactTagDefinitions,
     effectiveOptions.clientTagDefinitions,

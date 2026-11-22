@@ -10,6 +10,7 @@ import {
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
 import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
 import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import { standardCategoryFilterOptions } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
@@ -2753,10 +2754,14 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
 
-      // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
+      // Every category of the tenant: this list is rendered on the all-boards tab and on a single
+      // board's tab alike. R9 keeps one entry per standard category, whichever board's copy it is,
+      // and the aliases let a stored filter holding another board's copy be translated rather than
+      // dropped.
       tenantScopedTable(trx, 'categories', tenant)
         .orderBy('display_order', 'asc')
-        .orderBy('category_name', 'asc'),
+        .orderBy('category_name', 'asc')
+        .then((rows) => standardCategoryFilterOptions(rows as any[])),
       
       // Assignee and user options are internal staff only: a portal (client) user is never a valid assignee,
       // for any client, whoever is asking. A seat technician is offered the people projection instead of the
@@ -2849,7 +2854,8 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         priorityOptions,
         boardOptions,
         agentOptions,
-        categories,
+        categories: categories.categories,
+        categoryAliases: categories.aliases,
       users: safeUsers,
         contactTagDefinitions,
         clientTagDefinitions,

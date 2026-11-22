@@ -19,6 +19,7 @@ import { getClientTickets, updateTicketStatus, getClientPortalTicketStatuses } f
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
+import { dedupeStandardCategoriesForFilter } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import type { IStatus } from '@alga-psa/types';
@@ -202,7 +203,8 @@ export function TicketList() {
           }))
         ]);
 
-        setCategories(categories);
+        // R9: the portal filter spans boards, so a standard category is listed once.
+        setCategories(dedupeStandardCategoriesForFilter(categories));
       } catch (error) {
         console.error('Failed to load options:', error);
         setError(t('messages.filtersError', 'Failed to load filter options.'));

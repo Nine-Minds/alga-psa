@@ -509,7 +509,7 @@
     "prdRefs": [
       "R9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The ticket list category filter, on the all-boards tab and on a board's tab, and the client portal ticket filter list a standard category once; non-standard categories are listed as today"
   },
   {
@@ -518,7 +518,7 @@
     "prdRefs": [
       "R9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The predicate engine's category match treats a standard category as that standard category on every board in scope, whichever board's copy the value holds; this covers ticket list filters, saved view filters and checklist apply rules"
   },
   {
@@ -527,7 +527,7 @@
     "prdRefs": [
       "R9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Loading a saved view or tab filter on a board translates a standard category of another board to this board's copy instead of dropping it"
   },
   {
@@ -536,7 +536,7 @@
     "prdRefs": [
       "R9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST ticket stats keep grouping tickets_by_category by category name, so a standard category is one row across boards; REST category usage stats stay one row per category"
   },
   {
