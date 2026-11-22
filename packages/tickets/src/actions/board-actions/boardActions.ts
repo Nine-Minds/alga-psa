@@ -693,7 +693,7 @@ function describeBoardRemovals(counts: Record<string, number>): string {
  *
  * @param boardId - The board to delete
  * @param force - If true, delete categories and subcategories too (still blocks on tickets)
- * @param cleanupItil - If true and this is the last ITIL board, cleanup unused ITIL priorities/categories
+ * @param cleanupItil - If true and this is the last ITIL board, cleanup unused ITIL priorities
  */
 interface DeleteBoardResult {
   success: boolean;
@@ -863,30 +863,18 @@ export const deleteBoard = withAuth(async (
       };
     }
 
-    // 4. Check if this is an ITIL board (categories are shared across ITIL boards)
-    const isItilCategoryBoard = board.category_type === 'itil';
+    // 5. Get the categories this board owns. Every board owns its own, ITIL or not (R2/D9), so
+    // there is one rule here as well.
+    const allCategories = await tenantScopedTable('categories')
+      .where({ board_id: boardId })
+      .select('category_id');
+    const allCategoryIds = allCategories.map((c: { category_id: string }) => c.category_id);
 
-    // 5. Get categories for this board (only for custom boards)
-    // ITIL categories are shared and shouldn't block individual board deletion
-    let allCategoryIds: string[] = [];
-    if (!isItilCategoryBoard) {
-      const allCategories = await tenantScopedTable('categories')
-        .where({ board_id: boardId })
-        .select('category_id');
-      allCategoryIds = allCategories.map((c: { category_id: string }) => c.category_id);
-    }
-
-    // 6. Check for tickets directly on this board
-    // For custom boards, also check tickets in board's categories
+    // 6. Check for tickets directly on this board. A ticket on ANOTHER board that holds one of
+    // these categories already breaks R2; it does not block the delete — the category it holds is
+    // kept without a board in step 9 so the ticket keeps its value and stays editable (D3).
     const ticketCountResult = await tenantScopedTable('tickets')
-      .where(function() {
-        this.where('board_id', boardId);
-        // Only check category-based tickets for custom boards
-        if (!isItilCategoryBoard && allCategoryIds.length > 0) {
-          this.orWhereIn('category_id', allCategoryIds)
-            .orWhereIn('subcategory_id', allCategoryIds);
-        }
-      })
+      .where({ board_id: boardId })
       .count('ticket_id as count')
       .first();
 
@@ -933,9 +921,8 @@ export const deleteBoard = withAuth(async (
     addCascadedCount('notification_rules', notificationRuleResult?.count);
     addCascadedCount('portal_visibility_assignments', portalVisibilityResult?.count);
 
-    // 7. If custom board has categories and force=false, prompt for confirmation
-    // ITIL categories are shared and handled separately via ITIL cleanup
-    if (!isItilCategoryBoard && allCategoryIds.length > 0 && !force) {
+    // 7. If the board has categories and force=false, prompt for confirmation
+    if (allCategoryIds.length > 0 && !force) {
       const counts = {
         categories: allCategoryIds.length,
         ...(statusCount > 0 ? { statuses: statusCount } : {}),
@@ -987,7 +974,7 @@ export const deleteBoard = withAuth(async (
         return {
           success: false,
           code: 'LAST_ITIL_BOARD',
-          message: 'This is the last ITIL board. Do you want to also remove unused ITIL priorities and categories?',
+          message: 'This is the last ITIL board. Do you want to also remove the ITIL priorities no ticket uses?',
           dependencies: ['itil_data']
         };
       }
@@ -1005,14 +992,8 @@ export const deleteBoard = withAuth(async (
       const cleanedParts: string[] = [];
       const skippedParts: string[] = [];
 
-      if (cleanupResult.categoriesDeleted > 0) {
-        cleanedParts.push(`${cleanupResult.categoriesDeleted} ITIL categor${cleanupResult.categoriesDeleted === 1 ? 'y' : 'ies'}`);
-      }
       if (cleanupResult.prioritiesDeleted > 0) {
         cleanedParts.push(`${cleanupResult.prioritiesDeleted} ITIL priorit${cleanupResult.prioritiesDeleted === 1 ? 'y' : 'ies'}`);
-      }
-      if (cleanupResult.categoriesSkippedReason) {
-        skippedParts.push(`categories (${cleanupResult.categoriesSkippedReason})`);
       }
       if (cleanupResult.prioritiesSkippedReason) {
         skippedParts.push(`priorities (${cleanupResult.prioritiesSkippedReason})`);
@@ -1026,21 +1007,9 @@ export const deleteBoard = withAuth(async (
       }
     }
 
-    // 8c. ITIL categories are shared across ITIL boards, so any that survived
-    // cleanup must stop pointing at the board we are about to delete.
-    const fallbackItilBoard = await tenantScopedTable('boards')
-      .whereNot('board_id', boardId)
-      .where('category_type', 'itil')
-      .orderBy('board_name', 'asc')
-      .first('board_id');
-
-    const repointedItilCategories = await tenantScopedTable('categories')
-      .where({ board_id: boardId, is_from_itil_standard: true })
-      .update({ board_id: fallbackItilBoard?.board_id ?? null });
-
-    // The lightweight path below validates in its own transaction and therefore
-    // cannot see the re-point above, so boards that needed one take the main path.
-    if (!force && !isLastItilBoard && allCategoryIds.length === 0 && repointedItilCategories === 0) {
+    // The board's categories go with it (step 9); nothing is re-pointed to another board, because
+    // every board owns its own set (D9).
+    if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
       const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
         // Release the references that have no cascade of their own, then clean
         // up board statuses (can't be deleted manually due to "at least one
@@ -1087,11 +1056,53 @@ export const deleteBoard = withAuth(async (
       };
     }
 
-    // 9. Delete custom categories (ITIL categories are shared and cleaned up separately)
-    if (!isItilCategoryBoard && allCategoryIds.length > 0) {
-      await tenantScopedTable('categories')
+    // 9. Delete the board's categories with it. One exception: a category a ticket on another
+    // board still holds is kept, without a board, so that ticket keeps its value (D3). Children
+    // are deleted before their parents (categories_tenant_parent_category_foreign), and a parent
+    // a surviving child still points at is kept too.
+    let keptBoardlessCategories = 0;
+    if (allCategoryIds.length > 0) {
+      const usedRows: Array<{ category_id: string | null; subcategory_id: string | null }> = await tenantScopedTable('tickets')
+        .where(function() {
+          this.whereIn('category_id', allCategoryIds).orWhereIn('subcategory_id', allCategoryIds);
+        })
+        .select('category_id', 'subcategory_id');
+      const keep = new Set<string>();
+      for (const row of usedRows) {
+        if (row.category_id && allCategoryIds.includes(row.category_id)) keep.add(row.category_id);
+        if (row.subcategory_id && allCategoryIds.includes(row.subcategory_id)) keep.add(row.subcategory_id);
+      }
+
+      const rows: Array<{ category_id: string; parent_category: string | null }> = await tenantScopedTable('categories')
         .where({ board_id: boardId })
-        .delete();
+        .select('category_id', 'parent_category');
+      // A kept child keeps its parent alive, so the hierarchy it shows stays readable.
+      for (const row of rows) {
+        if (!row.parent_category || !keep.has(row.category_id)) continue;
+        let parent = rows.find(candidate => candidate.category_id === row.parent_category);
+        while (parent) {
+          keep.add(parent.category_id);
+          parent = parent.parent_category
+            ? rows.find(candidate => candidate.category_id === parent!.parent_category)
+            : undefined;
+        }
+      }
+
+      if (keep.size > 0) {
+        keptBoardlessCategories = await tenantScopedTable('categories')
+          .whereIn('category_id', [...keep])
+          .update({ board_id: null });
+      }
+
+      const deletable = rows.filter(row => !keep.has(row.category_id));
+      const childIds = deletable.filter(row => row.parent_category).map(row => row.category_id);
+      if (childIds.length > 0) {
+        await tenantScopedTable('categories').whereIn('category_id', childIds).delete();
+      }
+      const parentIds = deletable.filter(row => !row.parent_category).map(row => row.category_id);
+      if (parentIds.length > 0) {
+        await tenantScopedTable('categories').whereIn('category_id', parentIds).delete();
+      }
     }
 
     // 10. Release the references that have no cascade of their own, then clean
@@ -1117,8 +1128,12 @@ export const deleteBoard = withAuth(async (
 
     return {
       success: true,
-      message: !isItilCategoryBoard && allCategoryIds.length > 0
-        ? `Board and ${allCategoryIds.length} categor${allCategoryIds.length === 1 ? 'y' : 'ies'} deleted.${itilCleanupMessage}`
+      message: allCategoryIds.length > 0
+        ? `Board and ${allCategoryIds.length - keptBoardlessCategories} categor${allCategoryIds.length - keptBoardlessCategories === 1 ? 'y' : 'ies'} deleted.${
+            keptBoardlessCategories > 0
+              ? ` Kept ${keptBoardlessCategories} categor${keptBoardlessCategories === 1 ? 'y' : 'ies'} still used by tickets on other boards.`
+              : ''
+          }${itilCleanupMessage}`
         : `Board deleted.${itilCleanupMessage}`
     };
   });

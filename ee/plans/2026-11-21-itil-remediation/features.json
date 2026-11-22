@@ -338,7 +338,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listCategoriesForBoard returns the categories whose board_id is the board, for ITIL and non-ITIL boards alike, with standard_category_id"
   },
   {
@@ -347,7 +347,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getTicketCategoriesByBoard, the ticket-form hydration in optimizedTicketActions and GET /api/v1/tickets/categories call listCategoriesForBoard; the list-by-flag branch is removed"
   },
   {
@@ -356,7 +356,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "findBoardFieldProblems checks that a category's board is the ticket's board and that a subcategory is a child of the category"
   },
   {
@@ -365,7 +365,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The separate category checks in ticketFieldReferences, co-managed ticketEditing and the asset maintenance workflow action are replaced by the shared check"
   },
   {
@@ -374,7 +374,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ItilStandardsService gives a board its standard set by inserting the standard rows that board lacks, keyed by standard_category_id; it never reads or changes another board's categories"
   },
   {
@@ -383,7 +383,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board delete removes the board's categories with it, except a category still used by a ticket on another board, which is kept without a board; the re-pointing step and the category half of cleanupUnusedItilStandards are removed"
   },
   {
@@ -392,7 +392,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A standard row on an ITIL board cannot be renamed, re-parented, moved or deleted through web actions"
   },
   {
@@ -401,7 +401,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A standard row on an ITIL board cannot be changed or deleted through REST CategoryService or the reference-data delete"
   },
   {
@@ -410,7 +410,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Adding a category to an ITIL board is refused in web settings and REST create"
   },
   {
@@ -419,7 +419,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "copyTicketCategoriesToBoard accepts only a non-ITIL target board and copies rows without the standard link or flag"
   },
   {
@@ -428,7 +428,7 @@
     "prdRefs": [
       "Problem 6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "updateTicketCategory accepts only name, display order and parent"
   },
   {
@@ -437,7 +437,7 @@
     "prdRefs": [
       "Problem 6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "deleteCategory, updateCategory, updateTicketCategory and deleteReferenceDataItem for categories require the ticket_settings permission"
   },
   {
@@ -446,7 +446,7 @@
     "prdRefs": [
       "Problem 6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST deleteTicketCategory refuses a category in use as a subcategory"
   },
   {
@@ -455,7 +455,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Categories settings shows an ITIL board's own set with a Standard badge, disables edit, delete and add there, and offers only non-ITIL boards as copy targets"
   },
   {
@@ -464,7 +464,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import matches categories within the row's board and, on an ITIL board, reports an unmatched category per row instead of creating it"
   },
   {
@@ -473,7 +473,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Pickers that filter categories by board list the standard set on every ITIL board: co-managed edit, inbound email defaults, workflow designer (both copies), Huntress settings, inbound webhook mapping, checklist rules, REST category list, tree and search, onboarding"
   },
   {
@@ -482,7 +482,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "New category strings use translation keys in every locale; new controls have kebab-case ids"
   },
   {
@@ -491,7 +491,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A category with no board is offered by no picker and refused as a new selection; CSV import drops its _global category fallback"
   },
   {
@@ -500,7 +500,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "translateStandardCategoryForBoard returns the board's own copy of the same standard category when given a standard category of another board, and nothing for any other category"
   },
   {

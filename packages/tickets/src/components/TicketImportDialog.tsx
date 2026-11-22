@@ -462,16 +462,21 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
       });
       setCategoryResolutions(prev => {
         const existing = new Map(prev.map(r => [r.originalCategoryName.toLowerCase(), r]));
-        const validCategoryIds = new Set((refData.categoriesByBoard[defaultBoardId] || refData.categoriesByBoard['_global'] || []).map(category => category.category_id));
+        const validCategoryIds = new Set((refData.categoriesByBoard[defaultBoardId] || []).map(category => category.category_id));
+        // R2: nothing is created on a board that uses the standard ITIL categories.
+        const categoryBoardInfo = refData.boards.find(b => b.board_id === defaultBoardId);
+        const defaultCategoryAction: CategoryResolutionAction =
+          (categoryBoardInfo as { category_type?: string } | undefined)?.category_type === 'itil' ? 'skip' : 'create';
         return validation.unmatchedCategories.map(name => {
           const prev = existing.get(name.toLowerCase());
           if (prev) {
             const mappedCategoryId = prev.mappedCategoryId && validCategoryIds.has(prev.mappedCategoryId)
               ? prev.mappedCategoryId
               : undefined;
-            return { ...prev, boardId: defaultBoardId, mappedCategoryId };
+            const action = defaultCategoryAction === 'skip' && prev.action === 'create' ? 'skip' : prev.action;
+            return { ...prev, action, boardId: defaultBoardId, mappedCategoryId };
           }
-          return { originalCategoryName: name, boardId: defaultBoardId, action: 'create' as CategoryResolutionAction };
+          return { originalCategoryName: name, boardId: defaultBoardId, action: defaultCategoryAction };
         });
       });
       setContactResolutions(prev => {
@@ -656,10 +661,17 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     return (board as { priority_type?: string } | undefined)?.priority_type === 'itil';
   }, [initialBoards, defaultBoardId]);
 
-  // Board categories for category resolution
+  // R2: a board with the standard ITIL categories owns exactly its copy of the standard set, so
+  // an unmatched category there is mapped or skipped, never created.
+  const isItilCategoryBoard = useMemo(() => {
+    const board = initialBoards.find(b => b.board_id === defaultBoardId);
+    return (board as { category_type?: string } | undefined)?.category_type === 'itil';
+  }, [initialBoards, defaultBoardId]);
+
+  // Board categories for category resolution. A category with no board belongs to no board (R2).
   const boardCategories = useMemo(() => {
     if (!referenceData || !defaultBoardId) return [];
-    return referenceData.categoriesByBoard[defaultBoardId] || referenceData.categoriesByBoard['_global'] || [];
+    return referenceData.categoriesByBoard[defaultBoardId] || [];
   }, [referenceData, defaultBoardId]);
 
   // Board options for dropdown
@@ -1378,7 +1390,10 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
               {unmatchedCategories.length > 0 && (
                 <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                   <button type="button" onClick={() => toggleSection('categories')} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]">
-                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">{t('importDialog.resolve.sections.categories', { defaultValue: 'Categories ({{count}} unmatched)', count: unmatchedCategories.length })}</span>
+                    <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-100))]">
+                      {t('importDialog.resolve.sections.categories', { defaultValue: 'Categories ({{count}} unmatched)', count: unmatchedCategories.length })}
+                      {isItilCategoryBoard && <Badge variant="warning" size="sm" className="ml-2">{t('importDialog.resolve.itilCategoryCreateDisabled', { defaultValue: 'ITIL board — create disabled' })}</Badge>}
+                    </span>
                     <ChevronDown className={`h-4 w-4 text-[rgb(var(--color-text-400))] transition-transform ${expandedSections.has('categories') ? '' : '-rotate-90'}`} />
                   </button>
                   {expandedSections.has('categories') && (
@@ -1396,7 +1411,7 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                { value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) },
+                                ...(!isItilCategoryBoard ? [{ value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) }] : []),
                                 { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
                                 { value: 'skip', label: t('importDialog.resolve.skipUncategorized', { defaultValue: 'Skip (leave uncategorized)' }) },
                               ]}

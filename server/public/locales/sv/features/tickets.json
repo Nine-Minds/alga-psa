@@ -110,6 +110,7 @@
       },
       "required": "Obligatoriskt",
       "itilCreateDisabled": "ITIL-tavla – det går inte att skapa nya värden",
+      "itilCategoryCreateDisabled": "ITIL-tavla – det går inte att skapa nya värden",
       "needsInterpretation": "Behöver tolkas",
       "createNew": "Skapa ny",
       "mapToExisting": "Mappa till befintlig",
@@ -1384,6 +1385,8 @@
       "copyEmpty": "Det finns inga kategorier på den här tavlan.",
       "copying": "Kopierar…",
       "copyBoardTypeMismatch": "Ärendekategorier kan bara kopieras mellan tavlor med samma kategorityp.",
+      "standardBadge": "Standard",
+      "itilBoardNotice": "Den här tavlan använder standardkategorierna för ITIL. De kan inte byta namn, flyttas eller tas bort, och ingen annan kategori kan läggas till på tavlan.",
       "copyConflicts_one": "{{count}} överhoppad kategori har en annan överordnad kategori på måltavlan.",
       "copyConflicts_other": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan."
     },
@@ -1774,7 +1777,9 @@
       "missingFieldNamed": "Ett obligatoriskt kategorifält saknas: {{field}}.",
       "referenceInvalid": "Den valda tavlan eller överordnade kategorin är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "En kategori med de här inställningarna finns redan.",
-      "invalidValue": "Ett av kategorivärdena är ogiltigt. Ladda om sidan och försök igen."
+      "invalidValue": "Ett av kategorivärdena är ogiltigt. Ladda om sidan och försök igen.",
+      "standardLocked": "En standardkategori för ITIL kan inte ändras så länge tavlan använder standardkategorierna för ITIL.",
+      "itilBoardOwnsItsSet": "Den här tavlan använder standardkategorierna för ITIL; lägg till kategorin på en tavla med egna kategorier."
     },
     "import": {
       "invalidValue": "Ett av de importerade ärendevärdena är ogiltigt. Uppdatera referensdata och försök igen.",

@@ -110,6 +110,7 @@
       },
       "required": "Verplicht",
       "itilCreateDisabled": "ITIL-bord — aanmaken uitgeschakeld",
+      "itilCategoryCreateDisabled": "ITIL-bord — aanmaken uitgeschakeld",
       "needsInterpretation": "Interpretatie nodig",
       "createNew": "Nieuw aanmaken",
       "mapToExisting": "Toewijzen aan bestaand item",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "Geen categorieën op dit bord.",
       "copying": "Kopiëren…",
       "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype.",
+      "standardBadge": "Standaard",
+      "itilBoardNotice": "Dit bord gebruikt de standaard ITIL-categorieën. Ze kunnen niet worden hernoemd, verplaatst of verwijderd en er kan geen andere categorie aan dit bord worden toegevoegd.",
       "copyConflicts_one": "{{count}} overgeslagen categorie heeft een andere bovenliggende categorie op het doelbord.",
       "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
       "copyConflicts_few": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht categorieveld: {{field}}.",
       "referenceInvalid": "Het geselecteerde bord of de bovenliggende categorie is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een categorie met deze instellingen.",
-      "invalidValue": "Een van de categoriewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de categoriewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "standardLocked": "Een standaard ITIL-categorie kan niet worden gewijzigd zolang het bord de standaard ITIL-categorieën gebruikt.",
+      "itilBoardOwnsItsSet": "Dit bord gebruikt de standaard ITIL-categorieën; voeg de categorie toe aan een bord met eigen categorieën."
     },
     "import": {
       "invalidValue": "Een van de geïmporteerde ticketwaarden is ongeldig. Vernieuw de referentiegegevens en probeer het opnieuw.",

@@ -142,6 +142,7 @@
       },
       "required": "Obrigatório",
       "itilCreateDisabled": "Quadro ITIL — criação desativada",
+      "itilCategoryCreateDisabled": "Quadro ITIL — criação desativada",
       "needsInterpretation": "Precisa de interpretação",
       "createNew": "Criar novo",
       "mapToExisting": "Mapear para existente",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "Não há categorias neste quadro.",
       "copying": "Copiando…",
       "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria.",
+      "standardBadge": "Padrão",
+      "itilBoardNotice": "Este quadro usa as categorias padrão de ITIL. Elas não podem ser renomeadas, movidas nem excluídas, e nenhuma outra categoria pode ser adicionada a este quadro.",
       "copyConflicts_one": "{{count}} categoria ignorada tem uma categoria pai diferente no quadro de destino.",
       "copyConflicts_other": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino.",
       "copyConflicts_few": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Falta um campo obrigatório da categoria: {{field}}.",
       "referenceInvalid": "O quadro ou a categoria principal selecionados não são mais válidos. Atualize a página e tente novamente.",
       "duplicate": "Já existe uma categoria com estas configurações.",
-      "invalidValue": "Um dos valores da categoria é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores da categoria é inválido. Atualize a página e tente novamente.",
+      "standardLocked": "Uma categoria padrão de ITIL não pode ser alterada enquanto o quadro usar as categorias padrão de ITIL.",
+      "itilBoardOwnsItsSet": "Este quadro usa as categorias padrão de ITIL; adicione a categoria a um quadro com categorias próprias."
     },
     "import": {
       "invalidValue": "Um dos valores de ticket importados é inválido. Atualize os dados de referência e tente novamente.",

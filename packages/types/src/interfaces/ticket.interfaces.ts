@@ -255,6 +255,8 @@ export interface ITicketCategory extends TenantEntity {
   description?: string;
   display_order?: number;
   is_from_itil_standard?: boolean; // Flag to distinguish ITIL categories from custom categories
+  /** The `standard_categories.id` this row was copied from; set by ITIL seeding alone. */
+  standard_category_id?: string | null;
 }
 
 export interface IAgentSchedule {

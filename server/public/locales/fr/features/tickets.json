@@ -142,6 +142,7 @@
       },
       "required": "Obligatoire",
       "itilCreateDisabled": "Tableau ITIL — création désactivée",
+      "itilCategoryCreateDisabled": "Tableau ITIL — création désactivée",
       "needsInterpretation": "Interprétation requise",
       "createNew": "Créer un nouvel élément",
       "mapToExisting": "Associer à un élément existant",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "Aucune catégorie sur ce tableau.",
       "copying": "Copie en cours…",
       "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie.",
+      "standardBadge": "Standard",
+      "itilBoardNotice": "Ce tableau utilise les catégories ITIL standard. Elles ne peuvent pas être renommées, déplacées ni supprimées, et aucune autre catégorie ne peut être ajoutée à ce tableau.",
       "copyConflicts_one": "{{count}} catégorie ignorée a une catégorie parente différente sur le tableau cible.",
       "copyConflicts_other": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
       "copyConflicts_few": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Un champ obligatoire de la catégorie est manquant : {{field}}.",
       "referenceInvalid": "Le tableau ou la catégorie parente sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
       "duplicate": "Une catégorie avec ces paramètres existe déjà.",
-      "invalidValue": "L’une des valeurs de la catégorie n’est pas valide. Veuillez actualiser la page et réessayer."
+      "invalidValue": "L’une des valeurs de la catégorie n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "standardLocked": "Une catégorie ITIL standard ne peut pas être modifiée tant que son tableau utilise les catégories ITIL standard.",
+      "itilBoardOwnsItsSet": "Ce tableau utilise les catégories ITIL standard ; ajoutez la catégorie à un tableau disposant de ses propres catégories."
     },
     "import": {
       "invalidValue": "L’une des valeurs de ticket importées n’est pas valide. Veuillez actualiser les données de référence et réessayer.",

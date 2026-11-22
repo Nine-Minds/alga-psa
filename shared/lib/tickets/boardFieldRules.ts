@@ -53,6 +53,8 @@ export interface BoardFieldCategory {
   board_id?: string | null;
   parent_category?: string | null;
   is_from_itil_standard?: boolean | null;
+  /** The `standard_categories.id` this row was copied from; null for a tenant's own category. */
+  standard_category_id?: string | null;
 }
 
 export type BoardFieldName = 'board_id' | 'priority_id' | 'category_id' | 'subcategory_id' | 'itil_impact' | 'itil_urgency';
@@ -75,7 +77,14 @@ const PRIORITY_COLUMNS = [
   'is_from_itil_standard',
   'itil_priority_level',
 ] as const;
-const CATEGORY_COLUMNS = ['category_id', 'category_name', 'board_id', 'parent_category', 'is_from_itil_standard'] as const;
+const CATEGORY_COLUMNS = [
+  'category_id',
+  'category_name',
+  'board_id',
+  'parent_category',
+  'is_from_itil_standard',
+  'standard_category_id',
+] as const;
 
 export async function loadBoard(
   conn: Knex | Knex.Transaction,
@@ -187,6 +196,85 @@ export async function listPrioritiesForKind(
   return rows;
 }
 
+/**
+ * R2. The categories a board offers: the rows owned by that board, whatever its kind. An ITIL
+ * board owns its own copy of the standard set (D9), so there is one rule for both kinds and no
+ * flag is consulted. Categories with no board belong to no board and are offered by nobody.
+ *
+ * Parents come before their own children, each group in `display_order` then name order, which is
+ * the order every category picker renders.
+ */
+export async function listCategoriesForBoard(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string
+): Promise<BoardFieldCategory[]> {
+  const rows = (await tenantDb(conn, tenant)
+    .table('categories')
+    .where({ board_id: boardId })
+    .select('*')
+    .orderBy('display_order', 'asc')
+    .orderBy('category_name', 'asc')) as BoardFieldCategory[];
+  return orderCategoriesHierarchically(rows);
+}
+
+/** Parents first, each followed by its own children; anything orphaned keeps its place at the end. */
+export function orderCategoriesHierarchically<T extends { category_id: string; parent_category?: string | null }>(
+  categories: T[]
+): T[] {
+  const parents = categories.filter((category) => !category.parent_category);
+  const childrenByParent = new Map<string, T[]>();
+  for (const category of categories) {
+    if (!category.parent_category) continue;
+    const siblings = childrenByParent.get(category.parent_category);
+    if (siblings) siblings.push(category);
+    else childrenByParent.set(category.parent_category, [category]);
+  }
+
+  const ordered: T[] = [];
+  const placed = new Set<string>();
+  for (const parent of parents) {
+    ordered.push(parent);
+    placed.add(parent.category_id);
+    for (const child of childrenByParent.get(parent.category_id) ?? []) {
+      ordered.push(child);
+      placed.add(child.category_id);
+    }
+  }
+  for (const category of categories) {
+    if (!placed.has(category.category_id)) ordered.push(category);
+  }
+  return ordered;
+}
+
+/**
+ * R2. The target board's own copy of the same standard category.
+ *
+ * Integrations, workflows and API callers hold one board's category id; after D9 every ITIL board
+ * has its own copy of each standard row, so a write naming another board's copy is translated
+ * rather than refused. Returns null for a category that is already on the target board, for a
+ * category with no standard link, and for a target board that owns no copy of that standard row.
+ * A subcategory is translated to the matching child of the target board's copy of its parent.
+ */
+export async function translateStandardCategoryForBoard(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  categoryId: string,
+  boardId: string
+): Promise<string | null> {
+  if (!categoryId || !boardId) return null;
+  const category = await loadCategory(conn, tenant, categoryId);
+  if (!category) return null;
+  if (category.board_id === boardId) return null;
+  if (!category.standard_category_id) return null;
+
+  const copy = await tenantDb(conn, tenant)
+    .table('categories')
+    .where({ board_id: boardId, standard_category_id: category.standard_category_id })
+    .first('category_id');
+  return (copy as { category_id: string } | undefined)?.category_id ?? null;
+}
+
 export interface BoardFieldCandidate {
   boardId: string | null | undefined;
   priorityId?: string | null;
@@ -274,15 +362,26 @@ export async function findBoardFieldProblems(
   return problems;
 }
 
-/** R2: a category is valid for a board when it is owned by that board. */
+/**
+ * R2: a category is valid for a board when it is owned by that board — the same rule for ITIL and
+ * for the tenant's own categories, because every ITIL board owns its copy of the standard set (D9).
+ * A category with no board belongs to no board, so it is not a valid selection anywhere; a ticket
+ * that already holds one keeps it, because R5 only checks what a change touches.
+ */
 function describeCategoryBoardProblem(
   category: BoardFieldCategory,
   board: BoardFieldBoard | null,
   boardId: string | null
 ): BoardFieldProblem | null {
   if (!boardId) return null;
-  if (!category.board_id) return null;
   if (category.board_id === boardId) return null;
+  if (!category.board_id) {
+    return {
+      field: 'category_id',
+      message: `Category ‘${category.category_name}’ belongs to no board`,
+      messageParams: { category: category.category_name },
+    };
+  }
   return {
     field: 'category_id',
     message: `Category ‘${category.category_name}’ does not belong to ${board ? `board ‘${board.board_name}’` : 'the selected board'}`,

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
+import { findBoardFieldProblems } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -215,8 +216,15 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
         if (request.patch.priority_id && !await owner.table('priorities').where({ priority_id: request.patch.priority_id, item_type: 'ticket' }).forShare().first('priority_id')) {
           throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
         }
-        if (request.patch.category_id && !await owner.table('categories').where({ category_id: request.patch.category_id, board_id: row.board_id })
-          .whereNull('parent_category').forShare().first('category_id')) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
+        // R2 lives in the shared rules module, which this package can import (the tickets package it
+        // deliberately cannot). The row lock stays: the rule is shared, the read is still SELECT … FOR SHARE.
+        if (request.patch.category_id) {
+          await owner.table('categories').where({ category_id: request.patch.category_id }).forShare().first('category_id');
+          const problems = await findBoardFieldProblems(context.trx, resource.tenant, {
+            boardId: row.board_id, categoryId: request.patch.category_id,
+          });
+          if (problems.length > 0) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
+        }
         const actorReferenceId = await ensureCoManagedActorReference(context);
         const assertWriteAuthority = async (trx: Knex.Transaction) => {
           if (trx !== context.trx) throw new CoManagedSharedWorkError();

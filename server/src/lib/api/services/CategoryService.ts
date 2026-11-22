@@ -384,6 +384,8 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      await this.assertBoardAcceptsNewCategory(trx, context, data.board_id);
+
       // Validate parent category if provided
       if (data.parent_category) {
         const parent = await this.buildTenantScopedQuery(trx, context)
@@ -468,6 +470,11 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertCategoryMutable(trx, context, id);
+      if (data.board_id !== undefined) {
+        await this.assertBoardAcceptsNewCategory(trx, context, data.board_id);
+      }
+
       // Validate parent category change if provided
       if (data.parent_category !== undefined) {
         if (data.parent_category) {
@@ -565,6 +572,8 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertCategoryMutable(trx, context, id);
+
       // Check if category has children
       const childrenCount = await this.buildTenantScopedQuery(trx, context)
         .where('parent_category', id)
@@ -575,9 +584,12 @@ export class CategoryService extends BaseService {
         throw new ConflictError('Cannot delete category that has child categories');
       }
 
-      // Check if category is in use by tickets
+      // Check if category is in use by tickets — as the ticket's category or as its subcategory;
+      // the second half was missing, so a subcategory in use could be deleted out from under it.
       const usageCount = await tenantDb(trx, context.tenant).table('tickets')
-        .where('category_id', id)
+        .where((builder) => {
+          builder.where('category_id', id).orWhere('subcategory_id', id);
+        })
         .count('* as count')
         .first();
 
@@ -632,6 +644,8 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertCategoryMutable(trx, context, categoryId);
+
       // Validate new parent if provided
       if (newParentId) {
         const parent = await this.buildTenantScopedQuery(trx, context)
@@ -842,6 +856,50 @@ export class CategoryService extends BaseService {
   // ========================================================================
   // UTILITY METHODS
   // ========================================================================
+
+  /** Whether a board owns the standard ITIL set, so its categories are not an API caller's to edit. */
+  private async isItilCategoryBoard(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    boardId: string | null | undefined
+  ): Promise<boolean> {
+    if (!boardId) return false;
+    const board = await tenantDb(trx, context.tenant).table('boards')
+      .where('board_id', boardId)
+      .first('category_type');
+    return board?.category_type === 'itil';
+  }
+
+  /**
+   * R2: while its board is ITIL, a standard row cannot be renamed, re-parented, moved or deleted.
+   * The web settings screen refuses the same writes.
+   */
+  private async assertCategoryMutable(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    categoryId: string
+  ): Promise<void> {
+    const category = await this.buildTenantScopedQuery(trx, context)
+      .where('category_id', categoryId)
+      .first('category_name', 'board_id', 'standard_category_id');
+    if (!category?.standard_category_id) return;
+    if (!(await this.isItilCategoryBoard(trx, context, category.board_id))) return;
+    throw new ValidationError(
+      `Standard ITIL category '${category.category_name}' cannot be changed while its board uses the standard ITIL categories`
+    );
+  }
+
+  /** R2: an ITIL board holds exactly its copy of the standard set; nothing else is added to it. */
+  private async assertBoardAcceptsNewCategory(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    boardId: string | null | undefined
+  ): Promise<void> {
+    if (!(await this.isItilCategoryBoard(trx, context, boardId))) return;
+    throw new ValidationError(
+      'This board uses the standard ITIL categories; add the category to a board with its own categories instead'
+    );
+  }
 
   /**
    * Enrich categories with hierarchy information

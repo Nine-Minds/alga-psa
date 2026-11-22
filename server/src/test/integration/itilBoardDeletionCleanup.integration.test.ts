@@ -513,7 +513,10 @@ describe('ITIL board deletion cleanup', () => {
     expect(remainingStatuses).toEqual([survivingStatusId]);
   }, HOOK_TIMEOUT);
 
-  it('re-points ITIL categories to a remaining ITIL board when another one is left', async () => {
+  // T087 — F043 of `ee/plans/2026-11-21-itil-remediation` (`category-rules`). Replaces the
+  // re-pointing test: every ITIL board owns its own categories (D9), so the deleted board's
+  // categories go with it and the surviving board's set is untouched.
+  it('deletes an ITIL board’s own categories and leaves the other ITIL board’s set alone', async () => {
     const defaultBoardId = uuidv4();
     const dyingItilBoardId = uuidv4();
     const survivingItilBoardId = uuidv4();
@@ -524,27 +527,42 @@ describe('ITIL board deletion cleanup', () => {
     ]);
 
     const priorityIds = await createItilPriorities(tenantId, userId, [1]);
-    const categoryId = uuidv4();
-    await tenantTable(tenantId, 'categories').insert({
-      tenant: tenantId,
-      category_id: categoryId,
-      category_name: 'Incident',
-      board_id: dyingItilBoardId,
-      is_from_itil_standard: true,
-      created_by: userId,
-    });
+    const standardRow = await db('standard_categories')
+      .where({ is_itil_standard: true })
+      .whereNull('parent_category_uuid')
+      .first('id');
+    const dyingCategoryId = uuidv4();
+    const survivingCategoryId = uuidv4();
+    await tenantTable(tenantId, 'categories').insert([
+      {
+        tenant: tenantId,
+        category_id: dyingCategoryId,
+        category_name: 'Incident',
+        board_id: dyingItilBoardId,
+        standard_category_id: standardRow.id,
+        is_from_itil_standard: true,
+        created_by: userId,
+      },
+      {
+        tenant: tenantId,
+        category_id: survivingCategoryId,
+        category_name: 'Incident',
+        board_id: survivingItilBoardId,
+        standard_category_id: standardRow.id,
+        is_from_itil_standard: true,
+        created_by: userId,
+      },
+    ]);
 
-    const result = await deleteBoard(dyingItilBoardId);
+    const result = await deleteBoard(dyingItilBoardId, true);
 
     expect(result.success).toBe(true);
 
     const remainingBoards = await tenantTable(tenantId, 'boards').pluck('board_id');
     expect(remainingBoards.sort()).toEqual([defaultBoardId, survivingItilBoardId].sort());
 
-    const category = await tenantTable(tenantId, 'categories')
-      .where({ category_id: categoryId })
-      .first('board_id');
-    expect(category.board_id).toBe(survivingItilBoardId);
+    const categories = await tenantTable(tenantId, 'categories').select('category_id', 'board_id');
+    expect(categories).toEqual([{ category_id: survivingCategoryId, board_id: survivingItilBoardId }]);
 
     // Other ITIL boards remain, so the shared ITIL priorities stay put.
     const remainingPriorities = await tenantTable(tenantId, 'priorities').pluck('priority_id');

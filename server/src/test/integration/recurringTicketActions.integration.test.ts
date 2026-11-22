@@ -215,7 +215,7 @@ describe('recurring ticket actions (integration)', () => {
       const wrongCategory = await actions.createRecurringTicketDefinition(
         definitionInput(f, { overrides: { category: { category_id: f.categoryId, subcategory_id: null } } }) as any
       );
-      expect((wrongCategory as any).actionError).toContain('does not belong to the selected board');
+      expect((wrongCategory as any).actionError).toContain('does not belong to board');
       expect((await tenantDb(testDb, f.tenant).table('recurring_ticket_definitions')).length).toBe(0);
     });
 
@@ -403,7 +403,7 @@ describe('recurring ticket actions (integration)', () => {
       const wrongBoard: any = await actions.updateRecurringTicketClient(categoryRow.definition_client_id, {
         overrides: { board: { board_id: f.boardId, status_id: null } }, contact_id: null, location_id: null, asset_ids: [],
       });
-      expect(wrongBoard.actionError).toContain('does not belong to the selected board');
+      expect(wrongBoard.actionError).toContain('does not belong to board');
     });
   });
 

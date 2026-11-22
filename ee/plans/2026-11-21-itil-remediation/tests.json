@@ -676,7 +676,7 @@
     "featureIds": [
       "F038"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listCategoriesForBoard returns the same 35 names for two ITIL boards, with different ids"
   },
   {
@@ -685,7 +685,7 @@
     "featureIds": [
       "F038"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listCategoriesForBoard on a non-ITIL board returns only its own categories"
   },
   {
@@ -694,7 +694,7 @@
     "featureIds": [
       "F038"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "listCategoriesForBoard on an ITIL board also returns a non-standard category attached to it"
   },
   {
@@ -703,7 +703,7 @@
     "featureIds": [
       "F039"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getTicketCategoriesByBoard, ticket-form hydration and GET /api/v1/tickets/categories return the same list for the same board"
   },
   {
@@ -712,7 +712,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A category from another board is reported, on ITIL and non-ITIL boards"
   },
   {
@@ -721,7 +721,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A subcategory whose parent is not the ticket's category is reported"
   },
   {
@@ -730,7 +730,7 @@
     "featureIds": [
       "F041"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A template and a recurring schedule on the second ITIL board save with a standard category and generate an occurrence"
   },
   {
@@ -739,7 +739,7 @@
     "featureIds": [
       "F041"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Co-managed edit and the maintenance-ticket workflow action accept a standard category on the second ITIL board"
   },
   {
@@ -748,7 +748,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Creating a second ITIL board gives it 35 rows and changes no row on any other board"
   },
   {
@@ -757,7 +757,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A non-ITIL board's category named like a standard one keeps its flag, board and children when an ITIL board is created"
   },
   {
@@ -766,7 +766,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Two ITIL boards created concurrently end with one set each"
   },
   {
@@ -775,7 +775,7 @@
     "featureIds": [
       "F043"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Deleting one of two ITIL boards leaves the other board's set intact"
   },
   {
@@ -784,7 +784,7 @@
     "featureIds": [
       "F043"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The itilBoardDeletionCleanup integration tests are updated and pass"
   },
   {
@@ -793,7 +793,7 @@
     "featureIds": [
       "F044"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Web update, re-parent and delete of a standard row on an ITIL board are refused"
   },
   {
@@ -802,7 +802,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST update and delete and reference-data delete of a standard row on an ITIL board are refused"
   },
   {
@@ -811,7 +811,7 @@
     "featureIds": [
       "F046"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Web add and REST create of a category on an ITIL board are refused; on a non-ITIL board they succeed"
   },
   {
@@ -820,7 +820,7 @@
     "featureIds": [
       "F047"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Copy to an ITIL board is refused; copy from an ITIL board to a non-ITIL board creates plain categories"
   },
   {
@@ -829,7 +829,7 @@
     "featureIds": [
       "F048"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "updateTicketCategory ignores or rejects board_id, is_from_itil_standard and standard_category_id in its input"
   },
   {
@@ -838,7 +838,7 @@
     "featureIds": [
       "F049"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Each category mutation is refused for a user without the ticket_settings permission"
   },
   {
@@ -847,7 +847,7 @@
     "featureIds": [
       "F050"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST delete of a category used only as a ticket's subcategory is refused"
   },
   {
@@ -856,7 +856,7 @@
     "featureIds": [
       "F051"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Categories settings on the second ITIL board shows 35 rows with the Standard badge and no enabled edit, delete or add"
   },
   {
@@ -865,7 +865,7 @@
     "featureIds": [
       "F051"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The copy dialog lists no ITIL board as a target"
   },
   {
@@ -874,7 +874,7 @@
     "featureIds": [
       "F052"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import to the second ITIL board matches a standard category by name"
   },
   {
@@ -883,7 +883,7 @@
     "featureIds": [
       "F052"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import to an ITIL board with an unknown category reports the row and creates no category"
   },
   {
@@ -892,7 +892,7 @@
     "featureIds": [
       "F053"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Surface suite: each listed category picker returns the 35 standard categories for the second ITIL board"
   },
   {
@@ -901,7 +901,7 @@
     "featureIds": [
       "F054"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every new category key exists in every locale and passes the glossary checks"
   },
   {
@@ -910,7 +910,7 @@
     "featureIds": [
       "F043"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Deleting an ITIL board whose category is still used by a ticket on another board keeps that category without a board and deletes the rest"
   },
   {
@@ -919,7 +919,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A boardless category appears in no picker and is refused on ticket create and on a category change"
   },
   {
@@ -928,7 +928,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket holding a boardless category saves a title and status change"
   },
   {
@@ -937,7 +937,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import does not match a boardless category by name"
   },
   {
@@ -946,7 +946,7 @@
     "featureIds": [
       "F056"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Given the first ITIL board's Hardware and the second ITIL board, the function returns the second board's Hardware; for a subcategory it returns the matching child"
   },
   {
@@ -955,7 +955,7 @@
     "featureIds": [
       "F056"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Given a non-standard category of another board, or a non-ITIL target board, the function returns nothing"
   },
   {

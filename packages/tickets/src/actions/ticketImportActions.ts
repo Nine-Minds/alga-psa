@@ -49,6 +49,7 @@ function ticketImportActionErrorFrom(error: unknown): TicketImportActionError | 
     }
     if (
       error.message === 'Cannot create custom priorities for an ITIL board. Map unmatched priorities to existing ITIL priorities or use the default.' ||
+      error.message.startsWith('Cannot create categories on a board that uses the standard ITIL categories') ||
       error.message === 'No ticket statuses found for the selected board. Please configure statuses first.' ||
       error.message === 'No ticket priorities found. Please configure priorities first.'
     ) {
@@ -333,10 +334,12 @@ export const getTicketImportReferenceData = withAuth(async (
       });
     }
 
-    // Group categories by board
+    // Group categories by board. A category with no board belongs to no board (R2), so it is
+    // offered for no row — there is no `_global` bucket any more.
     const categoriesByBoard: ITicketImportReferenceData['categoriesByBoard'] = {};
     allCategories.forEach((c: { category_id: string; category_name: string; board_id: string | null; parent_category: string | null }) => {
-      const boardId = c.board_id || '_global';
+      const boardId = c.board_id;
+      if (!boardId) return;
       if (!categoriesByBoard[boardId]) categoriesByBoard[boardId] = [];
       categoriesByBoard[boardId].push({
         category_id: c.category_id,
@@ -438,6 +441,21 @@ export const importTickets = withAuth(async (
 
     if (boardPriorityType === 'itil' && priorityResolutions.some(r => r.action === 'create')) {
       throw new Error('Cannot create custom priorities for an ITIL board. Map unmatched priorities to existing ITIL priorities or use the default.');
+    }
+
+    // R2: a board with the standard ITIL categories owns exactly its copy of the standard set, so
+    // an unmatched category on such a board is reported for the row rather than created.
+    const itilCategoryBoardIds = new Set<string>(
+      await tenantScopedTable('boards').where({ category_type: 'itil' }).pluck('board_id')
+    );
+    const itilCategoryCreates = categoryResolutions.filter(
+      r => r.action === 'create' && r.boardId && itilCategoryBoardIds.has(r.boardId)
+    );
+    if (itilCategoryCreates.length > 0) {
+      const names = itilCategoryCreates.map(r => `"${r.originalCategoryName}"`).join(', ');
+      throw new Error(
+        `Cannot create categories on a board that uses the standard ITIL categories: ${names}. Map them to a standard category or skip them.`
+      );
     }
 
     let ticketsCreated = 0;

@@ -142,6 +142,7 @@
       },
       "required": "Required",
       "itilCreateDisabled": "ITIL board — create disabled",
+      "itilCategoryCreateDisabled": "ITIL board — create disabled",
       "needsInterpretation": "Needs interpretation",
       "createNew": "Create new",
       "mapToExisting": "Map to existing",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "No categories on this board.",
       "copying": "Copying…",
       "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type.",
+      "standardBadge": "Standard",
+      "itilBoardNotice": "This board uses the standard ITIL categories. They cannot be renamed, moved or deleted, and no other category can be added to this board.",
       "copyConflicts_one": "{{count}} skipped category has a different parent on the target board.",
       "copyConflicts_other": "{{count}} skipped categories have a different parent on the target board.",
       "copyConflicts_few": "{{count}} skipped categories have a different parent on the target board.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Missing required category field: {{field}}.",
       "referenceInvalid": "The selected board or parent category is no longer valid. Please refresh and try again.",
       "duplicate": "A category with these settings already exists.",
-      "invalidValue": "One of the category values is invalid. Please refresh and try again."
+      "invalidValue": "One of the category values is invalid. Please refresh and try again.",
+      "standardLocked": "A standard ITIL category cannot be changed while its board uses the standard ITIL categories.",
+      "itilBoardOwnsItsSet": "This board uses the standard ITIL categories; add the category to a board with its own categories instead."
     },
     "import": {
       "invalidValue": "One of the imported ticket values is invalid. Please refresh reference data and try again.",

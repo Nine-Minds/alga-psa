@@ -61,3 +61,34 @@ describe('categories settings quick-add refactor contract', () => {
     expect(source).toContain('await fetchCategories();');
   });
 });
+
+/**
+ * T095–T096 — F051 of `ee/plans/2026-11-21-itil-remediation` (`category-rules`).
+ *
+ * The screen reads the standard link off the row, so the same rule decides the badge and the
+ * disabled controls on every ITIL board, not just the first one.
+ */
+describe('ITIL board categories are read-only in settings (F051)', () => {
+  it('T095: a standard row of an ITIL board carries the Standard badge and no enabled edit or delete', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain("boards.filter(board => board.category_type === 'itil').map(board => board.board_id)");
+    expect(source).toContain('Boolean(category.standard_category_id) && itilBoardIds.has(category.board_id)');
+    expect(source).toContain("t('settings.categories.standardBadge', 'Standard')");
+    expect(source).toContain('{isStandardRow(record) && (');
+    expect(source).toContain('disabled={isStandardRow(record)}');
+    expect(source).toContain("const selectedBoardIsItil = boardFilter !== 'all' && itilBoardIds.has(boardFilter);");
+    expect(source).toContain('disabled={selectedBoardIsItil}');
+    expect(source).toContain("t(\n                'settings.categories.itilBoardNotice',");
+  });
+
+  it('T096: the copy dialog offers no ITIL board as a target', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain(
+      "boards.filter(board => board.board_id !== copySourceBoard && board.category_type !== 'itil')"
+    );
+    // The add and import dialogs already excluded them; keep that true.
+    expect(source).toContain("boards\n                        .filter(ch => ch.category_type !== 'itil')");
+  });
+});

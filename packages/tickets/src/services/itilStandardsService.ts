@@ -85,16 +85,26 @@ export class ItilStandardsService {
   }
 
   /**
-   * Copy ITIL standard categories to tenant's categories table
+   * Give one board its own copy of the standard ITIL category set (D9).
+   *
+   * A row is recognised by `standard_category_id` — the standard row it was copied from — and only
+   * among the categories of this board. Nothing outside the board is read or changed, so a second
+   * ITIL board gets its own full set and a tenant's own category that happens to carry a standard
+   * name keeps its board, its children and its flag. Parents are inserted before their children so
+   * a child always has the board's own parent.
    */
   static async copyItilCategoriesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string, boardId?: string): Promise<void> {
     const db = tenantDb(trx, tenant);
 
+    if (!boardId) {
+      console.warn('[ItilStandardsService] No board given; ITIL categories are owned by a board and cannot be seeded tenant-wide.');
+      return;
+    }
+
     // Get ITIL standard categories from reference table
     const itilCategories = await db.table('standard_categories')
       .where('is_itil_standard', true)
-      .select('*')
-      .orderBy('parent_category_uuid', 'asc'); // Parents first
+      .select('*');
 
     console.log(`[ItilStandardsService] Found ${itilCategories.length} ITIL categories in standard_categories for tenant ${tenant}`);
 
@@ -103,91 +113,54 @@ export class ItilStandardsService {
       return;
     }
 
-    // Create a mapping of standard IDs to tenant IDs
-    const idMap: Record<string, string> = {};
+    // What this board already owns, keyed by the standard row it came from.
+    const ownRows: Array<{ category_id: string; standard_category_id: string | null }> = await db.table('categories')
+      .where({ board_id: boardId })
+      .whereNotNull('standard_category_id')
+      .select('category_id', 'standard_category_id');
+    const byStandardId = new Map<string, string>(
+      ownRows.map(row => [row.standard_category_id as string, row.category_id])
+    );
 
-    // First pass: Insert parent categories
-    const parentCategories = itilCategories.filter(cat => !cat.parent_category_uuid);
+    const insertCopy = async (stdCategory: { id: string; category_name: string; display_order?: number | null }, parentId: string | null) => {
+      const newCategoryId = uuidv4();
+      await db.table('categories').insert({
+        category_id: newCategoryId,
+        tenant: tenant,
+        category_name: stdCategory.category_name,
+        parent_category: parentId,
+        board_id: boardId,
+        standard_category_id: stdCategory.id,
+        is_from_itil_standard: true,
+        display_order: stdCategory.display_order ?? 0,
+        created_by: createdBy,
+        created_at: trx.fn.now()
+      });
+      byStandardId.set(stdCategory.id, newCategoryId);
+    };
 
-    for (const stdCategory of parentCategories) {
-      // Check if already exists in tenant categories
-      const existing = await db.table('categories')
-        .where('category_name', stdCategory.category_name)
-        .whereNull('parent_category')
-        .first();
-
-      if (!existing) {
-        const newCategoryId = uuidv4();
-        console.log(`[ItilStandardsService] Inserting ITIL category "${stdCategory.category_name}" (${newCategoryId}) for tenant ${tenant}`);
-        await db.table('categories').insert({
-          category_id: newCategoryId,
-          tenant: tenant,
-          category_name: stdCategory.category_name,
-          parent_category: null,
-          board_id: boardId,
-          is_from_itil_standard: true,
-          created_by: createdBy,
-          created_at: trx.fn.now()
-        });
-
-        idMap[stdCategory.id] = newCategoryId;
-      } else {
-        idMap[stdCategory.id] = existing.category_id;
-
-        // Update to mark as ITIL if not already marked
-        if (!existing.is_from_itil_standard) {
-          console.log(`[ItilStandardsService] Updating existing category "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
-          await db.table('categories')
-            .where('category_id', existing.category_id)
-            .update({
-              is_from_itil_standard: true
-            });
-        }
-      }
+    // First pass: the board's own parents.
+    for (const stdCategory of itilCategories.filter(category => !category.parent_category_uuid)) {
+      if (byStandardId.has(stdCategory.id)) continue;
+      console.log(`[ItilStandardsService] Inserting ITIL category "${stdCategory.category_name}" on board ${boardId} for tenant ${tenant}`);
+      await insertCopy(stdCategory, null);
     }
 
-    // Second pass: Insert subcategories with mapped parent IDs
-    const subCategories = itilCategories.filter(cat => cat.parent_category_uuid);
-
-    for (const stdCategory of subCategories) {
-      const parentId = idMap[stdCategory.parent_category_uuid];
+    // Second pass: children, under this board's copy of their parent.
+    for (const stdCategory of itilCategories.filter(category => category.parent_category_uuid)) {
+      const parentId = byStandardId.get(stdCategory.parent_category_uuid);
 
       if (!parentId) {
         console.warn(`[ItilStandardsService] Could not find parent mapping for subcategory ${stdCategory.category_name}`);
         continue;
       }
 
-      // Check if already exists in tenant categories
-      const existing = await db.table('categories')
-        .where('category_name', stdCategory.category_name)
-        .where('parent_category', parentId)
-        .first();
-
-      if (!existing) {
-        const newSubcategoryId = uuidv4();
-        console.log(`[ItilStandardsService] Inserting ITIL subcategory "${stdCategory.category_name}" (${newSubcategoryId}) for tenant ${tenant}`);
-        await db.table('categories').insert({
-          category_id: newSubcategoryId,
-          tenant: tenant,
-          category_name: stdCategory.category_name,
-          parent_category: parentId,
-          board_id: boardId,
-          is_from_itil_standard: true,
-          created_by: createdBy,
-          created_at: trx.fn.now()
-        });
-      } else if (!existing.is_from_itil_standard) {
-        // Update to mark as ITIL if not already marked
-        console.log(`[ItilStandardsService] Updating existing subcategory "${stdCategory.category_name}" to mark as ITIL for tenant ${tenant}`);
-        await db.table('categories')
-          .where('category_id', existing.category_id)
-          .update({
-            is_from_itil_standard: true
-          });
-      }
+      if (byStandardId.has(stdCategory.id)) continue;
+      console.log(`[ItilStandardsService] Inserting ITIL subcategory "${stdCategory.category_name}" on board ${boardId} for tenant ${tenant}`);
+      await insertCopy(stdCategory, parentId);
     }
 
-    console.log(`[ItilStandardsService] Completed copying ITIL categories for tenant ${tenant}`);
+    console.log(`[ItilStandardsService] Completed copying ITIL categories for board ${boardId}, tenant ${tenant}`);
   }
 
   /**
@@ -236,20 +209,18 @@ export class ItilStandardsService {
    * This is called when switching from ITIL to custom, and when the last ITIL
    * board is deleted — in that case the board row still exists (the delete runs
    * after this cleanup), so it is passed in `excludeBoardIds` and ignored.
-   * Returns information about what was cleaned up
+   *
+   * Priorities only: they are tenant-wide, so retiring them needs a tenant-wide sweep. Categories
+   * belong to a board (D9) and go with it in `deleteBoard`.
    */
   static async cleanupUnusedItilStandards(trx: Knex.Transaction, tenant: string, excludeBoardIds: string[] = []): Promise<{
     prioritiesDeleted: number;
-    categoriesDeleted: number;
     prioritiesSkippedReason?: string;
-    categoriesSkippedReason?: string;
   }> {
     const db = tenantDb(trx, tenant);
     const result = {
       prioritiesDeleted: 0,
-      categoriesDeleted: 0,
-      prioritiesSkippedReason: undefined as string | undefined,
-      categoriesSkippedReason: undefined as string | undefined
+      prioritiesSkippedReason: undefined as string | undefined
     };
 
     // Get count of ITIL priorities for logging
@@ -311,110 +282,6 @@ export class ItilStandardsService {
     } else {
       result.prioritiesSkippedReason = `${itilPriorityBoardCount} board(s) still use ITIL priorities`;
       console.log(`[ItilStandardsService.cleanup] Skipped priority cleanup: ${result.prioritiesSkippedReason}`);
-    }
-
-    // Get count of ITIL categories for logging
-    const itilCategoriesResult = await db.table('categories')
-      .where('is_from_itil_standard', true)
-      .count('* as count')
-      .first();
-    const itilCategoriesCount = Number(itilCategoriesResult?.count || 0);
-
-    console.log(`[ItilStandardsService.cleanup] Found ${itilCategoriesCount} ITIL categories for tenant ${tenant}`);
-
-    // Check if any boards still use ITIL categories
-    const itilCategoryBoardsQuery = db.table('boards')
-      .where('category_type', 'itil')
-      .count('* as count');
-    if (excludeBoardIds.length > 0) {
-      itilCategoryBoardsQuery.whereNotIn('board_id', excludeBoardIds);
-    }
-    const itilCategoryBoards = await itilCategoryBoardsQuery.first();
-
-    const itilCategoryBoardCount = Number(itilCategoryBoards?.count || 0);
-    console.log(`[ItilStandardsService.cleanup] Boards with category_type='itil': ${itilCategoryBoardCount}`);
-
-    if (itilCategoryBoardCount === 0) {
-      // No boards use ITIL categories - delete unused ones individually
-      // Get ITIL categories that ARE used by tickets (as category or subcategory)
-      const itilCategoryIds = db.table('categories')
-        .select('category_id')
-        .where('is_from_itil_standard', true);
-      const usedCategoryIds = await db.table('tickets')
-        .where(function() {
-          this.whereIn('category_id', itilCategoryIds.clone())
-            .orWhereIn('subcategory_id', itilCategoryIds.clone());
-        })
-        .select('category_id', 'subcategory_id');
-
-      // Collect unique category IDs that are in use
-      const usedIds = new Set<string>();
-      for (const ticket of usedCategoryIds) {
-        if (ticket.category_id) usedIds.add(ticket.category_id);
-        if (ticket.subcategory_id) usedIds.add(ticket.subcategory_id);
-      }
-      const usedCategoryIdArray = Array.from(usedIds);
-
-      console.log(`[ItilStandardsService.cleanup] ITIL categories in use by tickets: ${usedCategoryIdArray.length}`);
-
-      // Delete ITIL categories that are NOT in use
-      // Note: Must delete subcategories first (children), then parent categories
-      // First, get all ITIL categories to understand parent-child relationships
-      const allItilCategories = await db.table('categories')
-        .where('is_from_itil_standard', true)
-        .select('category_id', 'parent_category');
-
-      // Separate into parents (no parent_category) and children (has parent_category)
-      const parentIds = allItilCategories
-        .filter(c => !c.parent_category)
-        .map(c => c.category_id);
-      const childIds = allItilCategories
-        .filter(c => c.parent_category)
-        .map(c => c.category_id);
-
-      // Delete unused children first
-      let deletedCount = 0;
-      if (childIds.length > 0) {
-        const childDeleteQuery = db.table('categories')
-          .where('is_from_itil_standard', true)
-          .whereNotNull('parent_category')
-          .whereIn('category_id', childIds);
-
-        if (usedCategoryIdArray.length > 0) {
-          childDeleteQuery.whereNotIn('category_id', usedCategoryIdArray);
-        }
-
-        deletedCount += await childDeleteQuery.del();
-      }
-
-      // Then delete unused parents, skipping any parent a surviving child still
-      // points at (categories_tenant_parent_category_foreign)
-      const parentDeleteCandidates = parentIds.filter(id => !usedIds.has(id));
-      if (parentDeleteCandidates.length > 0) {
-        const stillReferencedParentIds: string[] = await db.table('categories')
-          .whereIn('parent_category', parentDeleteCandidates)
-          .distinct('parent_category')
-          .pluck('parent_category');
-        const stillReferencedParentIdSet = new Set(stillReferencedParentIds);
-        const deletableParentIds = parentDeleteCandidates.filter(id => !stillReferencedParentIdSet.has(id));
-
-        if (deletableParentIds.length > 0) {
-          deletedCount += await db.table('categories')
-            .whereIn('category_id', deletableParentIds)
-            .del();
-        }
-      }
-
-      result.categoriesDeleted = deletedCount;
-
-      if (usedCategoryIdArray.length > 0) {
-        result.categoriesSkippedReason = `${usedCategoryIdArray.length} categor${usedCategoryIdArray.length === 1 ? 'y' : 'ies'} still in use`;
-      }
-
-      console.log(`[ItilStandardsService.cleanup] Deleted ${deletedCount} unused ITIL categories, kept ${usedCategoryIdArray.length} in use`);
-    } else {
-      result.categoriesSkippedReason = `${itilCategoryBoardCount} board(s) still use ITIL categories`;
-      console.log(`[ItilStandardsService.cleanup] Skipped category cleanup: ${result.categoriesSkippedReason}`);
     }
 
     return result;

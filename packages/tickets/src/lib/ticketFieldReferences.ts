@@ -204,32 +204,14 @@ export async function findTicketFieldReferenceProblems(
     problems.push({ field: 'priority_id', message: 'A priority is required: choose one on the template or override it for this schedule' });
   }
 
-  if (fields.subcategory_id && !fields.category_id) {
-    problems.push({ field: 'subcategory_id', message: 'A subcategory requires a category' });
-  }
-  if (fields.category_id) {
-    const category = await db
-      .table('categories')
-      .where({ category_id: fields.category_id })
-      .first('category_id', 'category_name', 'board_id', 'parent_category');
-    if (!category) {
-      problems.push({ field: 'category_id', message: 'The selected category no longer exists' });
-    } else if (fields.board_id && category.board_id && category.board_id !== fields.board_id) {
-      problems.push({ field: 'category_id', message: `Category ‘${category.category_name}’ does not belong to the selected board` });
-    } else if (category.parent_category) {
-      problems.push({ field: 'category_id', message: `Category ‘${category.category_name}’ is a subcategory` });
-    }
-    if (category && fields.subcategory_id) {
-      const sub = await db
-        .table('categories')
-        .where({ category_id: fields.subcategory_id })
-        .first('category_id', 'category_name', 'parent_category');
-      if (!sub) {
-        problems.push({ field: 'subcategory_id', message: 'The selected subcategory no longer exists' });
-      } else if (sub.parent_category !== fields.category_id) {
-        problems.push({ field: 'subcategory_id', message: `Subcategory ‘${sub.category_name}’ does not belong to the selected category` });
-      }
-    }
+  // R2 is one rule in one place: the category belongs to the board, the subcategory to its parent.
+  for (const problem of await findBoardFieldProblems(conn, tenant, {
+    boardId: fields.board_id,
+    categoryId: fields.category_id,
+    subcategoryId: fields.subcategory_id,
+  })) {
+    if (problem.field !== 'category_id' && problem.field !== 'subcategory_id') continue;
+    problems.push({ field: problem.field, message: problem.message });
   }
 
   const userIds = [...new Set([fields.assigned_to, ...additionalAgentIds].filter((id): id is string => Boolean(id)))];

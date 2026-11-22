@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
 import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
+import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
@@ -694,26 +695,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       // Categories for the ticket's current board. This must match
       // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
       // show tenant-wide categories before the client-side board fetch returns.
+      // Both go through the shared rule (R2): a board's categories are the rows
+      // it owns, ITIL board or not.
       (async () => {
         if (!ticket.board_id) {
           return tenantScopedTable(trx, 'categories', tenant)
             .orderBy('category_name', 'asc');
         }
 
-        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
-          .where({ board_id: ticket.board_id })
-          .select('category_type')
-          .first();
-
-        if (ticketBoard?.category_type === 'itil') {
-          return tenantScopedTable(trx, 'categories', tenant)
-            .where('is_from_itil_standard', true)
-            .orderBy('category_name', 'asc');
-        }
-
-        return tenantScopedTable(trx, 'categories', tenant)
-          .where({ board_id: ticket.board_id })
-          .orderBy('category_name', 'asc');
+        return listCategoriesForBoard(trx, tenant, ticket.board_id);
       })()
     ]);
 

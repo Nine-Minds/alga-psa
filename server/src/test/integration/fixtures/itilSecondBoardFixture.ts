@@ -4,18 +4,18 @@
  * A tenant shaped like the one the bugs live on:
  *
  * - `Own Work` — the tenant's own categories and priorities;
- * - `ITIL One` — the first board on which ITIL was enabled, so today's `copyItilCategoriesToTenant`
- *   stamped the one standard category set with *its* board id;
- * - `ITIL Two` — a second ITIL board, which is where every picker and writer goes wrong;
+ * - `ITIL One` — the first board on which ITIL was enabled;
+ * - `ITIL Two` — a second ITIL board, which is where every picker and writer used to go wrong;
  * - `Legacy Mixed` — the tenant's own categories with ITIL priorities, a board the server accepts
  *   today and which must keep working (D4) although no new one can be created.
  *
  * Both priority families exist, because priorities are tenant-wide in two families (R3).
  *
- * The ITIL categories are seeded the way the product seeds them *today*: one set, owned by the
- * first ITIL board. The `category-schema` and `category-rules` groups give every ITIL board its own
- * copy; when they land, this fixture changes with them and `expectedItilCategoryOwnership` says
- * which shape it is building.
+ * The ITIL categories are seeded the way the product seeds them after the `category-schema` and
+ * `category-rules` groups: every ITIL board owns its own copy of the standard set, each row
+ * carrying the `standard_categories.id` it came from (D9). `expectedItilCategoryOwnership` says
+ * which shape the fixture is building. `ITIL Two` also carries one category that is not a standard
+ * row, which R2 says stays attached and is listed.
  */
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,7 +24,7 @@ import { tenantDb } from '@alga-psa/db';
 export type ItilCategoryOwnership = 'single-set-on-first-itil-board' | 'per-board-copies';
 
 /** The shape the fixture builds. Flipped by the category groups, with their migration. */
-export const expectedItilCategoryOwnership: ItilCategoryOwnership = 'single-set-on-first-itil-board';
+export const expectedItilCategoryOwnership: ItilCategoryOwnership = 'per-board-copies';
 
 export interface ItilSecondBoardFixture {
   tenantId: string;
@@ -49,8 +49,12 @@ export interface ItilSecondBoardFixture {
   itilPriorityIds: Record<number, string>;
   /** The tenant's own categories on `Own Work`: a parent and its child. */
   ownCategory: { parentId: string; childId: string };
-  /** The ITIL standard category rows, keyed by `standard_categories.id`. */
+  /** `ITIL One`'s copies of the standard category rows, keyed by `standard_categories.id`. */
   itilCategoryIdsByStandardId: Record<string, string>;
+  /** Every ITIL board's copies, keyed by board id then `standard_categories.id`. */
+  itilCategoryIdsByBoard: Record<string, Record<string, string>>;
+  /** A category of `ITIL Two` that is not a standard row: it stays attached and is listed (R2). */
+  itilTwoOwnCategoryId: string;
 }
 
 function tt(db: Knex, tenantId: string, table: string) {
@@ -256,7 +260,8 @@ export async function createItilSecondBoardFixture(db: Knex): Promise<ItilSecond
     },
   ]);
 
-  // The ITIL standard category set, stamped on the first ITIL board (today's behaviour).
+  // Every ITIL board owns its own copy of the standard set, each row linked to the standard row it
+  // came from (D9). Parents are inserted before their children.
   const standardCategories = await db('standard_categories')
     .where({ is_itil_standard: true })
     .orderByRaw('parent_category_uuid IS NOT NULL')
@@ -265,23 +270,41 @@ export async function createItilSecondBoardFixture(db: Knex): Promise<ItilSecond
     throw new Error('standard_categories holds no ITIL rows: the fixture cannot build an ITIL board');
   }
 
-  const itilCategoryIdsByStandardId: Record<string, string> = {};
-  for (const row of standardCategories) {
-    const categoryId = uuidv4();
-    itilCategoryIdsByStandardId[row.id] = categoryId;
-    await tt(db, tenantId, 'categories').insert({
-      tenant: tenantId,
-      category_id: categoryId,
-      category_name: row.category_name,
-      board_id: boards.itilOne,
-      parent_category: row.parent_category_uuid
-        ? itilCategoryIdsByStandardId[row.parent_category_uuid] ?? null
-        : null,
-      display_order: row.display_order ?? null,
-      is_from_itil_standard: true,
-      created_by: userId,
-    });
+  const itilCategoryIdsByBoard: Record<string, Record<string, string>> = {};
+  for (const boardId of [boards.itilOne, boards.itilTwo]) {
+    const byStandardId: Record<string, string> = {};
+    itilCategoryIdsByBoard[boardId] = byStandardId;
+    for (const row of standardCategories) {
+      const categoryId = uuidv4();
+      byStandardId[row.id] = categoryId;
+      await tt(db, tenantId, 'categories').insert({
+        tenant: tenantId,
+        category_id: categoryId,
+        category_name: row.category_name,
+        board_id: boardId,
+        parent_category: row.parent_category_uuid
+          ? byStandardId[row.parent_category_uuid] ?? null
+          : null,
+        display_order: row.display_order ?? null,
+        standard_category_id: row.id,
+        is_from_itil_standard: true,
+        created_by: userId,
+      });
+    }
   }
+  const itilCategoryIdsByStandardId = itilCategoryIdsByBoard[boards.itilOne];
+
+  // A category attached to an ITIL board that is not a standard row (R2: it is listed).
+  const itilTwoOwnCategoryId = uuidv4();
+  await tt(db, tenantId, 'categories').insert({
+    tenant: tenantId,
+    category_id: itilTwoOwnCategoryId,
+    category_name: 'Board-only extra',
+    board_id: boards.itilTwo,
+    parent_category: null,
+    display_order: 900,
+    created_by: userId,
+  });
 
   return {
     tenantId,
@@ -294,6 +317,8 @@ export async function createItilSecondBoardFixture(db: Knex): Promise<ItilSecond
     itilPriorityIds,
     ownCategory,
     itilCategoryIdsByStandardId,
+    itilCategoryIdsByBoard,
+    itilTwoOwnCategoryId,
   };
 }
 

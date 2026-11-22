@@ -16,6 +16,7 @@ import {
   type MaintenanceScheduleRow,
 } from '../../../../services/assets/maintenanceLifecycle';
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
+import { findBoardFieldProblems, translateStandardCategoryForBoard } from '../../../../lib/tickets/boardFieldRules';
 import {
   uuidSchema, isoDateTimeSchema, withTenantTransaction, requirePermission,
   writeRunAudit, throwActionError, rethrowAsStandardError, type TenantTxContext,
@@ -199,17 +200,25 @@ export function registerAssetMaintenanceActions(): void {
       let categoryId: string | undefined;
       let subcategoryId: string | undefined;
       if (input.category_id) {
-        const category = await db.table('categories').where({ category_id: input.category_id })
+        // A caller holding another ITIL board's copy of a standard category means this standard
+        // category (R2), so it is translated to the selected board's copy before being checked.
+        const translated = await translateStandardCategoryForBoard(tx.trx, tx.tenantId, input.category_id, input.board_id);
+        const selectedId = translated ?? input.category_id;
+        const category = await db.table('categories').where({ category_id: selectedId })
           .first<{ category_id: string; board_id: string | null; parent_category: string | null }>();
-        // Board-less categories are tenant-global; otherwise the category must live on the selected board.
-        if (!category || (category.board_id && category.board_id !== input.board_id)) {
+        if (!category) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id must exist and belong to the selected board' });
         }
+        // R2 through the shared rules module: the category is the board's, the subcategory its child.
+        const problems = await findBoardFieldProblems(tx.trx, tx.tenantId, {
+          boardId: input.board_id,
+          categoryId: category.parent_category ?? category.category_id,
+          subcategoryId: category.parent_category ? category.category_id : null,
+        });
+        if (problems.length > 0) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: `category_id must exist and belong to the selected board: ${problems[0].message}` });
+        }
         if (category.parent_category) {
-          const parent = await db.table('categories').where({ category_id: category.parent_category }).first();
-          if (!parent) {
-            throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'category_id subcategory has no parent category' });
-          }
           categoryId = category.parent_category;
           subcategoryId = category.category_id;
         } else {

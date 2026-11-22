@@ -312,9 +312,56 @@ tests) and `server/src/test/integration/itilDevSeedCategories.integration.test.t
   back and drives `up()`/`down()` itself. T061 instead asserts the real set on a bootstrapped
   development database, which also runs the migration against the real schema.
 
+### Commit group 5 — `category-rules` (done)
+
+Landed: `listCategoriesForBoard` and `translateStandardCategoryForBoard` in the shared module;
+the three flag-based listers switched to the shared lister; the category half of
+`ticketFieldReferences`, co-managed `ticketEditing` and the asset-maintenance workflow action
+delegating to `findBoardFieldProblems`; per-board seeding keyed by `standard_category_id` in
+`ItilStandardsService.copyItilCategoriesToTenant`; board delete taking its own categories with it;
+the locks on a standard row in the web actions, `CategoryService` and the reference-data delete;
+the `updateTicketCategory` whitelist and the permission gates; the Standard badge and the
+read-only ITIL board in `CategoriesSettings`; CSV import matching per board with no `_global`
+fallback and no create on an ITIL board; five new strings in every locale.
+
+- **F053 needed no query change.** The nine `board_id`-only pickers the SCRATCHPAD traced
+  (inbound defaults, workflow designer ×2, Huntress, inbound webhook mapping, checklist rules,
+  REST list/tree/search, co-managed, onboarding) were *already* asking the right question; what
+  was wrong was the data they asked it of. Per-board copies make them correct as they stand, which
+  is why the group's diff holds no picker edits. The surface rows prove it rather than a code
+  change claiming it.
+- **The cross-board category message now names the board.** The shared rule says
+  `Category ‘X’ does not belong to board ‘B’` where the two copies said
+  `… the selected board`. Two assertions in `recurringTicketActions.integration.test.ts` were
+  updated to the new text; the PRD asks the messages to name the value and the board.
+- **A boardless category is now a reported problem** (R2), which means the template and schedule
+  validator reports it too — it is a dangling reference under the new rule. A ticket that already
+  holds one still saves every other field, because the patch check only looks at what a change
+  touches (T103).
+- **Board delete stopped blocking on another board's ticket.** The old check counted tickets
+  holding the board's categories, whatever board the ticket was on. Under R2 that is rule-breaking
+  data, not a reason to refuse: the delete keeps those categories without a board (and their
+  parents, so the hierarchy still reads) and deletes the rest. D3 — the ticket keeps its value.
+- **`cleanupUnusedItilStandards` is priorities only.** Its category half and the two
+  `categories*` fields of its result are gone: a board's categories go with the board, so there is
+  nothing tenant-wide left to sweep. The last-ITIL-board prompt no longer offers to remove
+  categories.
+- **The co-managed surface row split in two.** Its category half is covered here; the priority
+  list it offers is still both families, so a second row carries that to `priority-pickers`. The
+  two plan tokens are split across them, one each, so T044 still sees exactly one claim per token.
+- **No `ApiCategoryController` signature change was needed** (the plan asked for it to be noted):
+  the guards live inside `CategoryService`, so the controller and the route schemas are untouched.
+- **`updateTicketCategory` is now a gated three-field write** (name, display order, parent) and
+  `deleteCategory` requires `ticket_settings:delete`; both return the existing
+  `permissionError` shape, which is what T093 asserts.
+- Run against this slot's database: `itilCategoryBoardRules` 28/28, `itilBoardDeletionCleanup`
+  5/5 (its re-point test rewritten as T087), `itilSecondBoardSurfaces` 11 covered + 33 todos,
+  `itilBoardFieldRules` 27/27, `inboundTicketDefaultsPriorityBoard` 8/8, plus the two contract
+  suites. `npm run test:i18n`'s validator, audit and glossary checks are green.
+
 ### Groups not started
 
-Commit groups 5–16 (`category-rules` through `docs`) are untouched: their features and tests are
+Commit groups 6–16 (`category-filters` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 have to
 reach production together (see Rollout), so they stay on this branch.
 

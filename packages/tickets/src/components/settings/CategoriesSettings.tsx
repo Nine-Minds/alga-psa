@@ -364,6 +364,15 @@ const CategoriesSettings = (): React.JSX.Element => {
   
   const filteredCategories = getFilteredCategories();
 
+  // R2: a board with the standard ITIL categories owns exactly its copy of the standard set. Those
+  // rows are the product's, so edit, delete and add are closed on that board.
+  const itilBoardIds = new Set(
+    boards.filter(board => board.category_type === 'itil').map(board => board.board_id)
+  );
+  const isStandardRow = (category: ITicketCategory) =>
+    Boolean(category.standard_category_id) && itilBoardIds.has(category.board_id);
+  const selectedBoardIsItil = boardFilter !== 'all' && itilBoardIds.has(boardFilter);
+
   const columns: ColumnDefinition<ITicketCategory>[] = [
     {
       title: t('settings.categories.name', 'Name'),
@@ -376,9 +385,9 @@ const CategoriesSettings = (): React.JSX.Element => {
           <span className={`text-gray-700 font-medium ${record.parent_category ? '' : 'font-semibold'}`}>
             {value}
           </span>
-          {record.is_from_itil_standard && (
+          {isStandardRow(record) && (
             <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-              {t('categories.itilBadge')}
+              {t('settings.categories.standardBadge', 'Standard')}
             </span>
           )}
         </div>
@@ -432,11 +441,13 @@ const CategoriesSettings = (): React.JSX.Element => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               id={`edit-category-${value}-button`}
+              disabled={isStandardRow(record)}
               onClick={() => startEditing(record)}>
               {t('actions.edit', 'Edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-category-${value}-button`}
+              disabled={isStandardRow(record)}
               onClick={() => openDeleteDialog(record)}
               className="text-red-600"
             >
@@ -482,9 +493,20 @@ const CategoriesSettings = (): React.JSX.Element => {
           pageSize={pageSize}
           onItemsPerPageChange={handlePageSizeChange}
         />
+        {selectedBoardIsItil && (
+          <Alert className="mt-4">
+            <AlertDescription id="itil-board-categories-notice">
+              {t(
+                'settings.categories.itilBoardNotice',
+                'This board uses the standard ITIL categories. They cannot be renamed, moved or deleted, and no other category can be added to this board.'
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="mt-4 flex gap-2">
-          <Button 
+          <Button
             id="add-category-button"
+            disabled={selectedBoardIsItil}
             onClick={() => {
               setEditingCategory(null);
               // Start with empty form - order will be calculated based on parent selection
@@ -544,7 +566,8 @@ const CategoriesSettings = (): React.JSX.Element => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="copy-target-board">{t('settings.categories.copyTargetLabel', 'Target board')}</Label>
-              <CustomSelect id="copy-target-board" value={copyTargetBoard} disabled={isCopyingCategories} onValueChange={setCopyTargetBoard} options={boards.filter(board => board.board_id !== copySourceBoard).map(board => ({ value: board.board_id || '', label: board.board_name || '' }))} placeholder={t('settings.categories.copyTargetBoard', 'Select target board')} className="w-full" />
+              {/* R2: an ITIL board holds exactly its own copy of the standard set, so it is never a copy target. */}
+              <CustomSelect id="copy-target-board" value={copyTargetBoard} disabled={isCopyingCategories} onValueChange={setCopyTargetBoard} options={boards.filter(board => board.board_id !== copySourceBoard && board.category_type !== 'itil').map(board => ({ value: board.board_id || '', label: board.board_name || '' }))} placeholder={t('settings.categories.copyTargetBoard', 'Select target board')} className="w-full" />
             </div>
             {copySourceBoard && (() => {
               const sourceCategories = categories.filter(category => category.board_id === copySourceBoard);

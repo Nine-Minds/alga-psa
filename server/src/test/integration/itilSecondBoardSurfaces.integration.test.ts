@@ -150,34 +150,124 @@ const SURFACES: Surface[] = [
     surface: 'Categories settings',
     commitGroup: 'category-rules',
     claims: ['Categories settings'],
-    expectedFail:
-      'the second ITIL board has no categories of its own, and getAllCategories does not select the ITIL flag, so no Standard badge renders',
+    probe: async (db, fixture) => {
+      const { getAllCategories } = await import('../../../../packages/tickets/src/actions/ticketCategoryActions');
+      const all = (await getAllCategories()) as any[];
+      const onTwo = all.filter((category) => category.board_id === fixture.boards.itilTwo);
+      // The screen badges a standard row and disables its edit and delete, so the flag and the
+      // standard link have to travel with the row.
+      expect(onTwo.filter((category) => category.standard_category_id)).toHaveLength(
+        Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo]).length
+      );
+      expect(onTwo.every((category) => 'is_from_itil_standard' in category)).toBe(true);
+    },
   },
   {
     surface: 'Main ticket category picker',
     commitGroup: 'category-rules',
     claims: [],
-    expectedFail:
-      'getTicketCategoriesByBoard lists ITIL boards by flag, so the second ITIL board shows the first board’s rows and the validator then refuses them',
+    probe: async (db, fixture) => {
+      const { getTicketCategoriesByBoard } = await import('../../../../packages/tickets/src/actions/ticketCategoryActions');
+      const onOne = (await getTicketCategoriesByBoard(fixture.boards.itilOne)) as any;
+      const onTwo = (await getTicketCategoriesByBoard(fixture.boards.itilTwo)) as any;
+      const names = (result: any) => result.categories.map((category: any) => category.category_name).sort();
+      // The same set by name on both boards, different rows, and each offered value passes the
+      // server's own check on that board.
+      expect(names(onTwo)).toEqual([...names(onOne), 'Board-only extra'].sort());
+      expect(
+        onTwo.categories.every((category: any) => category.board_id === fixture.boards.itilTwo)
+      ).toBe(true);
+      for (const category of onTwo.categories.filter((row: any) => !row.parent_category)) {
+        await expect(
+          findBoardFieldProblems(db, fixture.tenantId, {
+            boardId: fixture.boards.itilTwo,
+            categoryId: category.category_id,
+          })
+        ).resolves.toEqual([]);
+      }
+    },
   },
   {
     surface: 'REST `/categories/ticket`, tree, search',
     commitGroup: 'category-rules',
     claims: ['REST `/categories/ticket`, tree, search'],
-    expectedFail: 'CategoryService filters by board_id alone, so the second ITIL board returns nothing',
+    probe: async (db, fixture) => {
+      const rows = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .where({ board_id: fixture.boards.itilTwo })
+        .select('category_id');
+      // CategoryService, the tree and the search all filter by board_id; with a per-board copy
+      // that is now the whole set, where before the second ITIL board returned nothing.
+      expect(rows.length).toBe(
+        Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo]).length + 1
+      );
+    },
   },
   {
     surface: 'Templates and recurring schedules',
     commitGroup: 'category-rules',
     claims: ['Templates', 'recurring schedules'],
-    expectedFail:
-      'ticketFieldReferences refuses a category whose board_id is the first ITIL board, so a template on the second cannot save one',
+    probe: async (db, fixture) => {
+      const { findTicketFieldReferenceProblems } = await import('../../../../packages/tickets/src/lib/ticketFieldReferences');
+      const standardIds = fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo];
+      const parent = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .where({ board_id: fixture.boards.itilTwo })
+        .whereNull('parent_category')
+        .whereNotNull('standard_category_id')
+        .first('category_id');
+      const child = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .where({ board_id: fixture.boards.itilTwo, parent_category: parent.category_id })
+        .first('category_id');
+      expect(Object.keys(standardIds).length).toBeGreaterThan(0);
+      await expect(
+        findTicketFieldReferenceProblems(db, fixture.tenantId, {
+          fields: {
+            board_id: fixture.boards.itilTwo,
+            status_id: fixture.statuses.itilTwo,
+            priority_id: fixture.itilPriorityIds[3],
+            category_id: parent.category_id,
+            subcategory_id: child?.category_id ?? null,
+          },
+          schedule: true,
+        })
+      ).resolves.toEqual([]);
+    },
   },
   {
-    surface: 'Co-managed ticket edit',
+    surface: 'Co-managed ticket edit categories',
     commitGroup: 'category-rules',
-    claims: ['Co-managed ticket edit', 'co-managed edit'],
-    expectedFail: 'lists categories by board_id and offers every ticket priority',
+    claims: ['Co-managed ticket edit'],
+    probe: async (db, fixture) => {
+      // The co-managed edit checks a category through the shared rule, so the second ITIL board's
+      // own copy is accepted and the first board's copy of the same standard row is not.
+      const onTwo = Object.values(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo])[0];
+      const onOne = Object.values(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne])[0];
+      const parentOnTwo = await tenantDb(db, fixture.tenantId)
+        .table('categories')
+        .where({ board_id: fixture.boards.itilTwo })
+        .whereNull('parent_category')
+        .first('category_id');
+      await expect(
+        findBoardFieldProblems(db, fixture.tenantId, {
+          boardId: fixture.boards.itilTwo,
+          categoryId: parentOnTwo.category_id,
+        })
+      ).resolves.toEqual([]);
+      expect(onTwo).not.toBe(onOne);
+      const refused = await findBoardFieldProblems(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        categoryId: onOne,
+      });
+      expect(refused.map((problem) => problem.field)).toContain('category_id');
+    },
+  },
+  {
+    surface: 'Co-managed ticket edit priorities',
+    commitGroup: 'priority-pickers',
+    claims: ['co-managed edit'],
+    expectedFail: 'the co-managed option search offers every ticket priority, of both families',
   },
   {
     surface: 'Checklist apply rules',
@@ -512,12 +602,22 @@ describe('ITIL second-board surfaces (integration)', () => {
       (await db('standard_categories').where({ is_itil_standard: true }).count('* as n').first() as any).n
     );
     const flagged = await tt('categories').where({ is_from_itil_standard: true }).select('category_id', 'board_id');
-    expect(flagged).toHaveLength(standardCount);
     const boardsHoldingTheSet = new Set(flagged.map((row: any) => row.board_id));
     if (expectedItilCategoryOwnership === 'single-set-on-first-itil-board') {
+      expect(flagged).toHaveLength(standardCount);
       expect([...boardsHoldingTheSet]).toEqual([fixture.boards.itilOne]);
     } else {
+      expect(flagged).toHaveLength(standardCount * 2);
       expect([...boardsHoldingTheSet].sort()).toEqual([fixture.boards.itilOne, fixture.boards.itilTwo].sort());
+      // Each board's copies are distinct rows linked to the same standard rows.
+      for (const boardId of [fixture.boards.itilOne, fixture.boards.itilTwo]) {
+        const links = await tt('categories').where({ board_id: boardId }).whereNotNull('standard_category_id').pluck('standard_category_id');
+        expect(new Set(links).size).toBe(standardCount);
+      }
+      // The non-standard category of ITIL Two stays attached to it (R2).
+      const extra = await tt('categories').where({ category_id: fixture.itilTwoOwnCategoryId }).first('board_id', 'standard_category_id');
+      expect(extra.board_id).toBe(fixture.boards.itilTwo);
+      expect(extra.standard_category_id).toBeNull();
     }
   }, HOOK_TIMEOUT);
 

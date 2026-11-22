@@ -728,6 +728,37 @@ export const deleteReferenceDataItem = withAuth(async (
     };
   }
 
+  if (dataType === 'categories') {
+    // This path reached the categories table with no authorization and no ITIL guard. Both are
+    // required now: deleting board configuration is a ticket_settings mutation, and a standard row
+    // of an ITIL board is the product's, not the tenant's (R2).
+    const { knex } = await createTenantKnex();
+    const guard = await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(_user, 'ticket_settings', 'delete', trx)) {
+        return 'Permission denied: Cannot delete ticket settings';
+      }
+      const category = await tenantDb(trx, tenant).table('categories')
+        .where({ category_id: itemId })
+        .first('category_name', 'board_id', 'standard_category_id');
+      if (!category?.standard_category_id || !category.board_id) return null;
+      const board = await tenantDb(trx, tenant).table('boards')
+        .where({ board_id: category.board_id })
+        .first('category_type');
+      if (board?.category_type !== 'itil') return null;
+      return `Standard ITIL category ‘${category.category_name}’ cannot be deleted while its board uses the standard ITIL categories.`;
+    });
+    if (guard) {
+      return {
+        success: false,
+        canDelete: false,
+        code: guard.startsWith('Permission denied') ? 'PERMISSION_DENIED' : 'VALIDATION_FAILED',
+        message: guard,
+        dependencies: [],
+        alternatives: [],
+      };
+    }
+  }
+
   try {
     const config = referenceDataConfigs[dataType];
 

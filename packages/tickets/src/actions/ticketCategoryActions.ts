@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITicketCategory, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
+import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -15,6 +16,14 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type CategoryActionError = ActionMessageError | ActionPermissionError;
+
+/**
+ * R2. While its board is ITIL, a standard row cannot be renamed, re-parented, moved or deleted,
+ * and no other category can be added to that board. Both refusals start with these prefixes so
+ * `categoryActionErrorFrom` passes them through to the user with a translation key.
+ */
+const STANDARD_CATEGORY_LOCKED_PREFIX = 'Standard ITIL category';
+const ITIL_BOARD_OWNS_ITS_SET_PREFIX = 'This board uses the standard ITIL categories';
 
 const EXPECTED_CATEGORY_MESSAGES = [
   'Category name is required',
@@ -30,6 +39,9 @@ const EXPECTED_CATEGORY_MESSAGES = [
   'Cannot copy subcategories without their parent categories',
   'Ticket categories can only be copied between boards with the same category type',
   'Permission denied: Cannot update ticket settings',
+  'Permission denied: Cannot delete ticket settings',
+  STANDARD_CATEGORY_LOCKED_PREFIX,
+  ITIL_BOARD_OWNS_ITS_SET_PREFIX,
 ];
 
 function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
@@ -42,6 +54,12 @@ function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
         error.message,
         'features/tickets:settings.categories.copyBoardTypeMismatch',
       );
+    }
+    if (error.message.startsWith(STANDARD_CATEGORY_LOCKED_PREFIX)) {
+      return actionError(error.message, 'features/tickets:errors.category.standardLocked');
+    }
+    if (error.message.startsWith(ITIL_BOARD_OWNS_ITS_SET_PREFIX)) {
+      return actionError(error.message, 'features/tickets:errors.category.itilBoardOwnsItsSet');
     }
     if (EXPECTED_CATEGORY_MESSAGES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);
@@ -80,6 +98,49 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   tenant: string
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(conn, tenant).table<Row>(table);
+}
+
+/** Whether a board owns the standard ITIL set, so its categories are not the admin's to edit. */
+async function isItilCategoryBoard(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string | null | undefined
+): Promise<boolean> {
+  if (!boardId) return false;
+  const board = await tenantScopedTable(conn, 'boards', tenant)
+    .where('board_id', boardId)
+    .first('category_type') as { category_type?: string | null } | undefined;
+  return board?.category_type === 'itil';
+}
+
+/** R2: a standard row of an ITIL board is the product's, not the tenant's. */
+async function assertCategoryMutable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  categoryId: string
+): Promise<void> {
+  const category = await tenantScopedTable(conn, 'categories', tenant)
+    .where('category_id', categoryId)
+    .first('category_name', 'board_id', 'standard_category_id') as
+      { category_name: string; board_id?: string | null; standard_category_id?: string | null } | undefined;
+  if (!category) return;
+  if (!category.standard_category_id) return;
+  if (!(await isItilCategoryBoard(conn, tenant, category.board_id))) return;
+  throw new Error(
+    `${STANDARD_CATEGORY_LOCKED_PREFIX} ‘${category.category_name}’ cannot be changed while its board uses the standard ITIL categories`
+  );
+}
+
+/** R2: an ITIL board holds exactly its copy of the standard set; nothing else is added to it. */
+async function assertBoardAcceptsNewCategory(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string | null | undefined
+): Promise<void> {
+  if (!(await isItilCategoryBoard(conn, tenant, boardId))) return;
+  throw new Error(
+    `${ITIL_BOARD_OWNS_ITS_SET_PREFIX}; add the category to a board with its own categories instead`
+  );
 }
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
@@ -148,6 +209,8 @@ export const createTicketCategory = withAuth(async (user, { tenant }, categoryNa
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertBoardAcceptsNewCategory(trx, tenant, boardId);
+
       // Check if category with same name exists in the board
       const existingCategory = await tenantScopedTable(trx, 'categories', tenant)
         .where({
@@ -206,7 +269,6 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
       const boards = await tenantScopedTable<{ board_id: string; category_type?: string | null }>(trx, 'boards', tenant)
         .whereIn('board_id', [sourceBoardId, targetBoardId]).select('board_id', 'category_type');
       if (boards.length !== 2) throw new Error('Board not found');
-      const sourceBoard = boards.find(board => board.board_id === sourceBoardId);
       const targetBoard = boards.find(board => board.board_id === targetBoardId);
       const sourceCategories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .where({ board_id: sourceBoardId }).select('*').orderBy('display_order').orderBy('category_name');
@@ -216,8 +278,12 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
       if (selected.some(category => category.parent_category && !selectedIds.has(category.parent_category))) {
         throw new Error('Cannot copy subcategories without their parent categories');
       }
-      if ((sourceBoard?.category_type === 'itil') !== (targetBoard?.category_type === 'itil')) {
-        throw new Error('Ticket categories can only be copied between boards with the same category type');
+      // R2: an ITIL board holds exactly its own copy of the standard set, so it is never a copy
+      // target. Copying the other way is allowed and produces plain categories of the target board.
+      if (targetBoard?.category_type === 'itil') {
+        throw new Error(
+          `${ITIL_BOARD_OWNS_ITS_SET_PREFIX}; it cannot receive copied categories`
+        );
       }
 
       const targetCategories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
@@ -247,7 +313,8 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
           category_name: normalizedName,
           display_order: category.display_order,
           created_by: user.user_id,
-          is_from_itil_standard: category.is_from_itil_standard ?? false,
+          // A copy is the target board's own category: no standard link, no flag (R2/R3).
+          is_from_itil_standard: false,
         }).returning('*');
         targetCategories.push(copy);
         mappedIds.set(category.category_id, copy.category_id);
@@ -308,15 +375,28 @@ export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket_settings', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+      await assertCategoryMutable(trx, tenant, categoryId);
+
+      // Only the three fields a category screen owns. The board, the ITIL flag and the standard
+      // link are set by board setup and ITIL seeding alone (R2/R3), never by a caller's payload.
+      const updateData: Pick<ITicketCategory, 'category_name' | 'display_order' | 'parent_category'> =
+        {} as Pick<ITicketCategory, 'category_name' | 'display_order' | 'parent_category'>;
+      if (categoryData.category_name !== undefined) updateData.category_name = categoryData.category_name.trim();
+      if (categoryData.display_order !== undefined) updateData.display_order = categoryData.display_order;
+      if (categoryData.parent_category !== undefined) updateData.parent_category = categoryData.parent_category;
+
       // Check if new name conflicts with existing category in the same board
-      if (categoryData.category_name) {
+      if (updateData.category_name) {
         const categoryForBoard = await tenantScopedTable(trx, 'categories', tenant)
           .where({ category_id: categoryId })
           .first();
         const existingCategory = await tenantScopedTable(trx, 'categories', tenant)
           .where({
-            category_name: categoryData.category_name,
-            board_id: categoryData.board_id || categoryForBoard?.board_id
+            category_name: updateData.category_name,
+            board_id: categoryForBoard?.board_id
           })
           .whereNot('category_id', categoryId)
           .first();
@@ -330,11 +410,21 @@ export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId
         throw new Error("user is not logged in");
       }
 
+      if (Object.keys(updateData).length === 0) {
+        const unchanged = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+          .where({ category_id: categoryId })
+          .first();
+        if (!unchanged) {
+          throw new Error('Ticket category not found');
+        }
+        return unchanged;
+      }
+
       const [updatedCategory] = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .where({
           category_id: categoryId
         })
-        .update(categoryData)
+        .update(updateData)
         .returning('*');
 
       if (!updatedCategory) {
@@ -399,27 +489,12 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
         display_itil_urgency: board.display_itil_urgency || false,
       };
 
-      // Fetch categories for this board from tenant's categories table
-      // (ITIL categories are copied to tenant table when board is configured for ITIL)
-      let categories: ITicketCategory[];
-
-      if (boardConfig.category_type === 'itil') {
-        // For ITIL boards, get all ITIL categories regardless of which board they were created for
-        categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
-          .where('is_from_itil_standard', true)
-          .orderBy('category_name');
-      } else {
-        // For custom boards, get categories specific to this board
-        categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
-          .where('board_id', boardId)
-          .orderBy('category_name');
-      }
-
-      // Apply hierarchical ordering
-      const orderedCategories = await orderCategoriesHierarchically(categories);
+      // R2: a board's categories are the rows it owns, whatever its kind — an ITIL board owns its
+      // own copy of the standard set (D9). One rule, one implementation (the shared rules module).
+      const categories = (await listCategoriesForBoard(trx, tenant, boardId)) as unknown as ITicketCategory[];
 
       return {
-        categories: orderedCategories,
+        categories,
         boardConfig
       };
     });
@@ -437,8 +512,18 @@ export const getAllCategories = withAuth(async (_user, { tenant }): Promise<ITic
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // The standard link travels with the row: the settings screen badges a standard category
+      // and disables its edit, delete and add controls (R2).
       const categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
-        .select('category_id', 'category_name', 'display_order', 'parent_category', 'board_id')
+        .select(
+          'category_id',
+          'category_name',
+          'display_order',
+          'parent_category',
+          'board_id',
+          'is_from_itil_standard',
+          'standard_category_id'
+        )
         .orderBy('display_order', 'asc');
 
       return categories;
@@ -470,6 +555,8 @@ export const createCategory = withAuth(async (user, { tenant }, data: {
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertBoardAcceptsNewCategory(trx, tenant, data.board_id);
+
       // If no display_order provided, get the next available order
       let displayOrder = data.display_order;
       if (displayOrder === undefined || displayOrder === 0) {
@@ -550,6 +637,14 @@ export const updateCategory = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(_user, 'ticket_settings', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+      await assertCategoryMutable(trx, tenant, categoryId);
+      if (data.board_id !== undefined) {
+        await assertBoardAcceptsNewCategory(trx, tenant, data.board_id);
+      }
+
       // Check if this is a parent category and board is being changed
       const currentCategory = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .where({ category_id: categoryId })
@@ -654,22 +749,15 @@ async function validateCategoryDeletionInternal(
     };
   }
 
-  if (category.is_from_itil_standard) {
-    const itilBoardsResult = await tenantScopedTable(trx, 'boards', tenant)
-      .where('category_type', 'itil')
-      .count('* as count')
-      .first();
-
-    const itilBoardCount = Number(itilBoardsResult?.count || 0);
-    if (itilBoardCount > 0) {
-      return {
-        canDelete: false,
-        code: 'VALIDATION_FAILED',
-        message: `Cannot delete ITIL category while ${itilBoardCount} ITIL board${itilBoardCount === 1 ? ' exists' : 's exist'}. Delete the ITIL board${itilBoardCount === 1 ? '' : 's'} first.`,
-        dependencies: [],
-        alternatives: []
-      };
-    }
+  // R2: a standard row is part of its ITIL board's set and goes only when the board does.
+  if (category.standard_category_id && await isItilCategoryBoard(trx, tenant, category.board_id as string | null)) {
+    return {
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: `${STANDARD_CATEGORY_LOCKED_PREFIX} ‘${category.category_name}’ cannot be deleted while its board uses the standard ITIL categories. Change the board's type or delete the board.`,
+      dependencies: [],
+      alternatives: []
+    };
   }
 
   const allSubcategoryIds = await collectAllSubcategoryIds(trx, categoryId, tenant);
@@ -758,6 +846,19 @@ export const deleteCategory = withAuth(async (
   force = false
 ): Promise<DeleteCategoryResult> => {
   const { knex: db } = await createTenantKnex();
+  const permitted = await withTransaction(db, (trx: Knex.Transaction) =>
+    hasPermission(_user, 'ticket_settings', 'delete', trx)
+  );
+  if (!permitted) {
+    return {
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot delete ticket settings',
+      dependencies: [],
+      alternatives: [],
+      success: false
+    };
+  }
   const validation = await withTransaction(db, (trx: Knex.Transaction) =>
     validateCategoryDeletionInternal(trx, tenant, categoryId)
   );

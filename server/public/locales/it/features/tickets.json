@@ -142,6 +142,7 @@
       },
       "required": "Obbligatorio",
       "itilCreateDisabled": "Bacheca ITIL — creazione disabilitata",
+      "itilCategoryCreateDisabled": "Bacheca ITIL — creazione disabilitata",
       "needsInterpretation": "Da interpretare",
       "createNew": "Crea nuovo",
       "mapToExisting": "Associa a esistente",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "Nessuna categoria in questa scheda.",
       "copying": "Copia in corso…",
       "copyBoardTypeMismatch": "Le categorie dei ticket possono essere copiate solo tra bacheche dello stesso tipo di categoria.",
+      "standardBadge": "Standard",
+      "itilBoardNotice": "Questa bacheca usa le categorie ITIL standard. Non possono essere rinominate, spostate o eliminate e a questa bacheca non è possibile aggiungere altre categorie.",
       "copyConflicts_one": "{{count}} categoria ignorata ha una categoria padre diversa nella scheda di destinazione.",
       "copyConflicts_other": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione.",
       "copyConflicts_few": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio della categoria: {{field}}.",
       "referenceInvalid": "La bacheca o la categoria principale selezionate non sono più valide. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già una categoria con queste impostazioni.",
-      "invalidValue": "Uno dei valori della categoria non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della categoria non è valido. Aggiornare la pagina e riprovare.",
+      "standardLocked": "Una categoria ITIL standard non può essere modificata finché la sua bacheca usa le categorie ITIL standard.",
+      "itilBoardOwnsItsSet": "Questa bacheca usa le categorie ITIL standard; aggiunga la categoria a una bacheca con categorie proprie."
     },
     "import": {
       "invalidValue": "Uno dei valori del ticket importati non è valido. Aggiornare i dati di riferimento e riprovare.",

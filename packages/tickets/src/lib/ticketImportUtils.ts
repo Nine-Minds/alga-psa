@@ -368,7 +368,8 @@ export function validateTicketImportData(
     // Category lookup (board-scoped)
     if (row.category?.trim()) {
       const key = row.category.trim().toLowerCase();
-      const boardCategories = categoryLookupByBoard[targetBoardId] || categoryLookupByBoard['_global'] || {};
+      // A category with no board belongs to no board (R2), so a row matches only within its own board.
+      const boardCategories = categoryLookupByBoard[targetBoardId] || {};
       if (!boardCategories[key] && !unmatchedCategoriesMap.has(key)) {
         unmatchedCategoriesMap.set(key, row.category.trim());
       }
@@ -620,7 +621,7 @@ export function processTicketRows(
     }
 
     // Resolve category (with resolution support)
-    const boardCats = categoryLookupByBoard[targetBoardId] || categoryLookupByBoard['_global'] || {};
+    const boardCats = categoryLookupByBoard[targetBoardId] || {};
     let categoryId: string | null = null;
     if (row.category?.trim()) {
       const catKey = row.category.trim().toLowerCase();

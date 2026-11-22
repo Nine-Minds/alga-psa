@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { runWithTenant } from '@/lib/db';
 import { hasPermission } from '@/lib/auth/rbac';
@@ -40,31 +41,22 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
       const knex = await getConnection(tenantId);
       const db = tenantDb(knex, tenantId);
 
-      // An ITIL board's categories are keyed by is_from_itil_standard, not by
-      // board_id: the standards are copied once per tenant and stamped with the
-      // first board that enabled ITIL, so every later ITIL board owns none of
-      // them. Must match getTicketCategoriesByBoard (ticketCategoryActions) and
-      // the form hydration in optimizedTicketActions, or the picker is empty and
-      // a board that requires a category on close cannot be satisfied.
-      const board = query.board_id
-        ? await db.table('boards')
-          .where({ board_id: query.board_id })
-          .select('category_type')
-          .first()
-        : null;
-
-      const categories = await db.table('categories')
-        .modify((queryBuilder) => {
-          if (!query.board_id) return;
-          if (board?.category_type === 'itil') {
-            queryBuilder.where('is_from_itil_standard', true);
-            return;
-          }
-          queryBuilder.where({ board_id: query.board_id });
-        })
-        .select('category_id', 'category_name', 'parent_category', 'board_id', 'display_order')
-        .orderBy('display_order', 'asc')
-        .orderBy('category_name', 'asc');
+      // R2: a board's categories are the rows it owns, ITIL board or not — every ITIL board owns
+      // its own copy of the standard set (D9). Must match getTicketCategoriesByBoard
+      // (ticketCategoryActions) and the form hydration in optimizedTicketActions, which call the
+      // same shared lister.
+      const categories = query.board_id
+        ? (await listCategoriesForBoard(knex, tenantId, query.board_id)).map((category) => ({
+            category_id: category.category_id,
+            category_name: category.category_name,
+            parent_category: category.parent_category ?? null,
+            board_id: category.board_id ?? null,
+            display_order: (category as { display_order?: number | null }).display_order ?? null,
+          }))
+        : await db.table('categories')
+          .select('category_id', 'category_name', 'parent_category', 'board_id', 'display_order')
+          .orderBy('display_order', 'asc')
+          .orderBy('category_name', 'asc');
 
       return createSuccessResponse(categories, 200, undefined, apiRequest);
     });

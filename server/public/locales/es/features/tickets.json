@@ -142,6 +142,7 @@
       },
       "required": "Obligatorio",
       "itilCreateDisabled": "Tablero ITIL — creación deshabilitada",
+      "itilCategoryCreateDisabled": "Tablero ITIL — creación deshabilitada",
       "needsInterpretation": "Requiere interpretación",
       "createNew": "Crear nuevo",
       "mapToExisting": "Asociar con existente",
@@ -1496,6 +1497,8 @@
       "copyEmpty": "No hay categorías en este tablero.",
       "copying": "Copiando…",
       "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría.",
+      "standardBadge": "Estándar",
+      "itilBoardNotice": "Este tablero usa las categorías estándar de ITIL. No se pueden renombrar, mover ni eliminar, y no se puede agregar ninguna otra categoría a este tablero.",
       "copyConflicts_one": "{{count}} categoría omitida tiene una categoría superior distinta en el tablero de destino.",
       "copyConflicts_other": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
       "copyConflicts_few": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
@@ -1912,7 +1915,9 @@
       "missingFieldNamed": "Falta un campo obligatorio de la categoría: {{field}}.",
       "referenceInvalid": "El tablero o la categoría principal seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una categoría con esta configuración.",
-      "invalidValue": "Uno de los valores de la categoría no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores de la categoría no es válido. Actualice la página e inténtelo de nuevo.",
+      "standardLocked": "Una categoría estándar de ITIL no se puede cambiar mientras su tablero use las categorías estándar de ITIL.",
+      "itilBoardOwnsItsSet": "Este tablero usa las categorías estándar de ITIL; agregue la categoría a un tablero con sus propias categorías."
     },
     "import": {
       "invalidValue": "Uno de los valores de ticket importados no es válido. Actualice los datos de referencia e inténtelo de nuevo.",
