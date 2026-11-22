@@ -119,7 +119,7 @@ Templates and recurring: listing is canonical (`useTicketFieldReferenceData.ts:1
 ### Where category ids are stored besides tickets
 - Board delete step 8c (`boardActions.ts:1029-1039`) moves surviving ITIL categories to another ITIL board, or sets `board_id` to NULL when none is left. So flagged categories without a board exist wherever the last ITIL board was deleted while tickets still used them, and a later ITIL board reuses them through the name match.
 - Saved views: `boards.list_view_settings` (migration `20260819120000`, schema `board-actions/boardViewSettingsSchema.ts`) captures ticket filters, including `categoryId`, `categoryIds`, `excludeCategoryIds`. `packages/tickets/src/lib/ticketViewSettings.ts:278-335` drops ids that are not in the known set for the board, silently by design.
-- Personal board tabs: `packages/tickets/src/lib/boardTabs.ts`, `ticketWhereStorage.ts`, `ticketListUrlSync.ts`. Where the per-tab filters are persisted (server preference or browser) is not confirmed; the loader translation in `category-filters` covers the browser case.
+- Personal views: `list_views.settings` jsonb, with the default-view pointer and last active board in `user_preferences` (`packages/list-views/src/models/listViewModel.ts`, `packages/tickets/src/lib/boardTabs.ts:29`). All server-side.
 - Ticket list URL parameters carry the same three keys (`server/src/app/msp/tickets/page.tsx:127-137`), so shared links hold category ids too.
 - CSV import treats a category without a board as `_global` and matches it for any board (`ticketImportActions.ts:339`, `ticketImportUtils.ts:371,623`).
 - Priority model: `packages/reference-data/src/models/priority.ts:60` inserts `{ ...priority, tenant }`.
@@ -138,7 +138,7 @@ Templates and recurring: listing is canonical (`useTicketFieldReferenceData.ts:1
 - `packages/tickets/src/lib/itilUtils.server.ts`: no importers; reads the global `standard_priorities`.
 - `packages/tickets/src/lib/itilUtils.ts`: `isSlaBreached`, `getEscalationLevel`, `ItilCategories`, `ItilResolutionCodes`, `formatItilCategoryDisplay`, `getItilCategoriesAsTicketCategories` have no users outside the file.
 - `ticketFieldOptionsActions.ts`: `getAvailablePriorities`, `getAvailableCategories` unused; stray `console.log('categories', …)` at L187.
-- `server/src/lib/models/ticketCategory.tsx:63` and the raw insert at `shared/services/emailService.ts:401`: no callers found — confirm before deleting.
+- `server/src/lib/models/ticketCategory.tsx`: imported only by `CategoryService.ts:14`, which never uses it.
 - `docs/itil/itil-integration.md` lists fields and features that are not implemented.
 
 ## Gotchas
@@ -153,15 +153,28 @@ Templates and recurring: listing is canonical (`useTicketFieldReferenceData.ts:1
 - Existing guard scripts to model on: `scripts/guard-*.mjs`, wired as `guard:*` npm scripts and in `.github/workflows/`.
 - Glossary and locale gates fail CI on a single miss; add strings to every locale in the same group.
 
-## To verify before or during implementation
+## Code checks (done 2026-11-22)
 
-- Whether the production webpack build gives server actions the same module instance as startup code (affects the SLA hook).
-- Which JSON settings store a category id without a board id (workflow definitions, Huntress, webhook mappings, checklist rules, recurring overrides).
-- Whether REST `PriorityService` blocks editing ITIL priorities the way the web action does (`priorityActions.ts:235`).
-- Where the all-boards ticket filter and the client portal ticket filter load their category lists, and which reports or dashboards group tickets by category (scope of `category-filters`).
-- Where personal board-tab filters are persisted.
-- Whether any flow creates a category without a board on purpose; R2 stops offering and accepting them.
-- Whether `ee/temporal-workflows` can import from `@alga-psa/shared` for the shared SLA defaults.
+| Check | Result |
+|---|---|
+| Does the production build share one module instance between startup code and server actions? | No, by the repo's own account. `packages/auth/src/lib/emailRegistry.ts:6-12` says Next webpack chunk boundaries create separate module instances for instrumentation and server-action contexts; `packages/tickets/src/lib/ticketListViews.ts:14`, `ticketResponsibility.ts:11` and two authorization registries hold their state on `globalThis` for that reason. The SLA hooks are plain module variables (`itilStandardsService.ts:7`, `ticketActions.ts:164`), `@alga-psa/tickets` is in `transpilePackages` (bundled, `server/next.config.mjs:559`), and `BoardsSettings.tsx` is a client component importing the `'use server'` board actions. So registering at startup is not enough on its own: the hooks move to `globalThis`. Not confirmed by running a production build; the `sla` group has a test for that. |
+| Which settings hold a category id without a board? | With a board, so the migration can re-point: Huntress settings (`huntressActions.ts:261-264`, `boardId` + `categoryId`), workflow `tickets.create` inputs (`tickets.ts:426-454`), inbound webhook `handler_config` (`board_id` is a required field, `inboundActions.ts:96`), recurring overrides (board falls back to the template). Without a board: workflow `tickets.update_fields` (`tickets.ts:765`, only a ticket id), checklist apply rules (board is an optional predicate, migration `20261028120000`). Those are handled by translation at write time and by the predicate engine. |
+| Does REST block editing ITIL priorities? | There is nothing to block. `server/src/app/api/v1/priorities/route.ts` and `[id]/route.ts` export only `GET`; `PriorityService` overrides only `list` and `getById`. The priority write hole is in the reference-data model and web actions only. |
+| Can `ee/temporal-workflows` import from `@alga-psa/shared`? | Yes. It is a dependency (`ee/temporal-workflows/package.json:40`) and already imported in that package. |
+| Where do the cross-board category filters load their lists? | MSP ticket list: every category of the tenant, `optimizedTicketActions.ts:2767`, passed un-narrowed to `CategoryPicker` on every tab, including a single board's (`TicketingDashboard.tsx:522,2977`). The picker has no board label and no de-duplication. Client portal: `getTicketCategories()` in `packages/client-portal/src/components/tickets/TicketList.tsx:178`. The filter is applied in `packages/tickets/src/lib/ticketFilterPredicates.ts:82-98` and matches `category_id` or `subcategory_id`. |
+| Which reports group tickets by category? | Two REST surfaces only. Ticket stats `tickets_by_category` is keyed by category name (`ApiTicketController.ts:397`), so it already merges same-named categories. Category usage stats group by category id (`CategoryService.ts:789-800`) and stay one row per category. No dashboard or report definition groups by ticket category. |
+| Where are personal views and tab filters stored? | On the server: `list_views.settings` jsonb (migration `20260922120000`) and `user_preferences` for the default-view pointer and the last active board (`packages/list-views/src/models/listViewModel.ts`, `boardTabs.ts:29`). No category id is kept in browser storage. Shared links carry them in the URL. |
+| Does any flow create a category without a board on purpose? | No. Web create requires a board (`ticketCategoryActions.ts:145,467`); the REST create schema requires `board_id` (`categorySchemas.ts:73`), which makes the `whereNull('board_id')` branches in `CategoryService.ts:414-434` unreachable; onboarding, CSV import and reference-data import all pass a board. Boardless rows come only from board delete step 8c and from migration `20260805090000`, which detached categories of boards that no longer existed. |
+| Are the two dead-code candidates really unused? | `server/src/lib/models/ticketCategory.tsx`: its only importer is `CategoryService.ts:14`, which never uses it. Removable with that import. `shared/services/emailService.ts`: used only by `emailServiceContactLookup.integration.test.ts`; it is not a production write path, and it stays. |
+
+What the checks changed in the plan:
+- SLA hooks are held on `globalThis`; registering at startup alone would not reach server actions.
+- A write that names another ITIL board's standard category is translated to the ticket's board's copy (R2). Without this, a workflow `tickets.update_fields` with a fixed category, and API callers holding the shared id, would be refused on every ITIL board but one after the migration.
+- Standard-aware matching sits in the predicate engine (R9), so checklist rules are covered together with list filters and saved views.
+- The category filter lists every tenant category on a single board's tab too, so the one-entry-per-standard-category rule applies there as well.
+- REST priority guards and the `emailService.ts` removal are dropped from scope.
+
+Still open: a free-form workflow expression comparing a ticket's category to a literal id cannot be found or re-pointed.
 
 ## Commands
 

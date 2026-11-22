@@ -16,7 +16,7 @@ This plan puts the rules in one shared place, makes every screen that offers a p
 2. **ITIL categories only work on the first ITIL board.** `ItilStandardsService.copyItilCategoriesToTenant` creates one set per tenant, stamped with the `board_id` of the first board that enabled ITIL. The main ticket form lists them by flag, but nine other pickers filter by `board_id` alone and come back empty on any other ITIL board, and the validator at `ticketFieldReferences.ts:211` rejects the category the picker just offered, so templates and recurring tickets cannot save one there.
 3. **The standard set is matched by name.** The copy step looks up existing rows by name across the whole tenant and flags whatever it finds, so a tenant's own "Hardware" category on another board becomes an ITIL row with ITIL children hung under it. The Impact × Urgency result is turned into a priority with `priority_name LIKE 'P{n} -%'`; if nothing matches, whatever priority the client sent is kept.
 4. **Board setup depends on the entry point.** The REST board API writes a raw row: no statuses, no default priority, no ITIL rows, and delete skips every check the web runs. On the web, the default priority is chosen before the ITIL priorities exist. The server accepts a board whose categories and priorities are of different kinds although the settings screen offers one switch. A board's kind cannot be changed from the UI at all.
-5. **The automatic SLA policy for a new ITIL board depends on a page render.** The hook that creates it is registered from an MSP layout component, not at server startup, and is skipped silently when unset. The policy is found by its name. Workflow `TICKET_SLA_STAGE_*` events are computed from a hard-coded table of hours instead of the ticket's SLA.
+5. **The automatic SLA policy for a new ITIL board depends on a page render.** The hook that creates it is a module-level variable registered from an MSP layout component, not at server startup, and is skipped silently when unset. Board creation runs as a server action called from a client component, which Next bundles separately from the layout, so the action may never see the registration. The policy is found by its name. Workflow `TICKET_SLA_STAGE_*` events are computed from a hard-coded table of hours instead of the ticket's SLA.
 6. **Category and priority writes have holes.** `updateTicketCategory` accepts arbitrary fields including the ITIL flag and `board_id`; web `deleteCategory` has no permission check; the reference-data delete used by onboarding has neither a permission check nor an ITIL guard; the priority model spreads its input into the insert (`packages/reference-data/src/models/priority.ts:60`), so a crafted call can set the ITIL flag and level; the Activities inline priority picker writes a ticket's priority with no check.
 
 ## Decisions
@@ -71,6 +71,7 @@ Decided by Natallia (2026-11-22):
 - Each ITIL board owns a copy of the standard set. Each standard row carries `standard_category_id`.
 - While its board is ITIL, a standard row cannot be renamed, re-parented, moved or deleted, and no other category can be added to that board (settings, REST, CSV import, copy between boards).
 - Categories already attached to an ITIL board that are not standard rows stay attached and are listed.
+- A write that supplies a standard category belonging to another board is translated to the ticket's board's copy of the same standard category before it is checked. Integrations, workflows and API callers that hold one board's id keep working on every ITIL board.
 - A category with no board is offered by no picker and is not accepted as a new selection. A ticket that already holds one keeps it and stays editable (R5).
 
 **R3. Priorities come in two families.** A ticket priority is valid for a board when its family (`is_from_itil_standard`) matches the board's `priority_type`. The flag and `itil_priority_level` are set only by ITIL seeding.
@@ -102,13 +103,13 @@ On a board with the tenant's own priorities, Impact and Urgency are not stored.
 | Templates, recurring schedules (already) | Data-migration import |
 | Bundle sync (the child keeps its own priority), Activities inline picker, co-managed edit | |
 
-Fall back means: the configured priority if it fits the board; otherwise the board's default priority (R7); otherwise the configured priority unchanged. A category that does not belong to the board is dropped.
+Fall back means: the configured priority if it fits the board; otherwise the board's default priority (R7); otherwise the configured priority unchanged. A category that does not belong to the board and cannot be translated (R2) is dropped.
 
 **R7. Default priority of a board.** `boards.default_priority_id` if it fits the board; otherwise the level-3 ITIL priority on an ITIL board, or the lowest-order ticket priority of the tenant's own on other boards; otherwise none.
 
 **R8. SLA.** Creating a board with ITIL priorities on a PSA tenant creates the "ITIL Standard" policy if the tenant has none, adds any missing targets for the ITIL priorities, and assigns it to the new board unless the board already has a policy. Nothing else assigns a policy, including a change of board kind (D6). AlgaDesk tenants are skipped as today.
 
-**R9. Category lists that span boards** (the all-boards ticket filter, the client portal ticket filter, reports grouped by category). A standard category appears once, and choosing it matches that standard category on every board in scope. A filter value that holds one board's copy is treated the same way, so existing links and saved views keep returning the same tickets. Non-standard categories are listed as today.
+**R9. Matching tickets by category across boards.** The ticket list filter lists every category of the tenant on every tab, and so does the client portal filter. There, a standard category appears once, and choosing it matches that standard category on every board in scope. The match lives in the predicate engine, so it applies equally to ticket list filters, saved view filters and checklist apply rules, and a stored value that holds one board's copy is treated the same way: existing links, views and rules keep matching the same tickets. Non-standard categories are listed and matched as today. REST ticket stats already group by category name.
 
 ## Users and Primary Flows
 
@@ -140,8 +141,9 @@ All new strings go through `t()` in every locale; every new interactive element 
 - `sla_policies.is_itil_standard boolean NOT NULL DEFAULT false`, at most one per tenant.
 - `boards.display_itil_impact` and `boards.display_itil_urgency` are dropped; nothing reads them.
 - `tickets.itil_priority_level` stays but is no longer written or accepted from clients; readers take the level from the priority row (D8).
+- The SLA hooks in `packages/tickets` (ITIL policy setup, SLA cancellation) are held on `globalThis`, the way `ticketListViews.ts` and `ticketResponsibility.ts` hold their providers, because Next builds separate module instances for startup code and server actions.
 - Shared module `shared/lib/tickets/boardFieldRules.ts`: plain functions taking a knex connection or transaction and a tenant, so server actions, REST services, co-managed and `shared/workflow` can all call it. The Impact × Urgency matrix moves to `shared/lib/itil/priorityMatrix.ts`.
-- REST: `GET /api/v1/tickets/priorities` accepts `board_id` and returns `itil_priority_level`. Board create, update and delete behave like the web. Board `PUT` with a changed kind runs the type switch. Category and priority create, update and delete enforce R2 and R3. OpenAPI is regenerated.
+- REST: `GET /api/v1/tickets/priorities` accepts `board_id` and returns `itil_priority_level`. Board create, update and delete behave like the web. Board `PUT` with a changed kind runs the type switch. Category create, update and delete enforce R2. The priority API stays read-only. OpenAPI is regenerated.
 
 ### Category migration
 
@@ -154,8 +156,10 @@ One migration, idempotent, run per tenant, Citus-safe (self-contained `tenantDb`
    - `tickets.category_id` and `subcategory_id`
    - `ticket_templates`, recurring definitions, their overrides and client overrides
    - `inbound_ticket_defaults`
-   - saved views: `categoryId`, `categoryIds` and `excludeCategoryIds` in `boards.list_view_settings` and in stored personal board-tab filters
-   - JSON settings that name both a board and a category: workflow action inputs, Huntress settings, inbound webhook mappings, checklist rules
+   - saved views: `categoryId`, `categoryIds` and `excludeCategoryIds` in `boards.list_view_settings`, and in `list_views.settings` when the view's filters name a single ITIL board
+   - settings that hold a board and a category together: Huntress settings, workflow `tickets.create` inputs with a fixed board, inbound webhook `handler_config` with a static board, checklist rules that name a board
+
+   Settings that hold a category without a board (workflow `tickets.update_fields`, a checklist rule with no board, a view spanning all boards) are not re-pointed. They keep working through translation at write time (R2) and standard-aware matching (R9).
 5. **Clear** the flag and link on every mapped row that is not on an ITIL board. They become ordinary categories: of their board if they have one, boardless otherwise. No row is deleted.
 6. **Add** the unique index.
 
@@ -193,30 +197,30 @@ The work lands as 16 commits, one per group, in this order. Every feature and te
 | 2 | `email-hotfix` | Inbound defaults form, save check, warning; email falls back | F014–F019 | T032–T042 | 1 |
 | 3 | `test-harness` | Fixture with two ITIL boards and the surface suite, all rows expected-fail | F020–F021 | T043–T044 | 1 |
 | 4 | `category-schema` | The category migration, remap table, reversal, dev seeds | F022–F037 | T045–T074 | — |
-| 5 | `category-rules` | Listing and validity by board, per-board seeding, locks, permission and whitelist fixes | F038–F055 | T075–T104 | 1, 4 |
-| 6 | `category-filters` | One entry per standard category across boards; view loader translation | F056–F059 | T105–T114 | 4, 5 |
-| 7 | `impact-urgency` | Impact × Urgency rule on MSP paths, service requests, templates; level derived; "Not assessed" | F060–F067 | T115–T129 | 1 |
-| 8 | `writers-create` | The rule inside `TicketModel.createTicket` and every create path | F068–F079 | T130–T147 | 1, 5, 7 |
-| 9 | `writers-update` | Patch preparation at every update site, board moves, bundle sync | F080–F088 | T148–T161 | 1, 5, 7 |
-| 10 | `priority-pickers` | Every priority picker lists by board | F089–F099 | T162–T174 | 1 |
-| 11 | `board-lifecycle` | Shared create, update and delete for web and REST; no mixed boards | F100–F109 | T175–T187 | 1, 5 |
-| 12 | `board-type-switch` | The switch action, its summary and the settings dialog | F110–F118 | T188–T203 | 11 |
-| 13 | `sla` | Hook at startup, policy flag, target top-up, single defaults, real-SLA stage events | F119–F126 | T204–T216 | 7, 11 |
-| 14 | `cleanup` | Dead code and the two unread board columns | F127–F131 | T217–T221 | 7, 13 |
-| 15 | `guard` | Build guard and writer contract test | F132–F133 | T222–T224 | 8, 9, 10 |
-| 16 | `docs` | Rewritten ITIL doc, report script, OpenAPI | F134–F137 | T225–T228 | all |
+| 5 | `category-rules` | Listing and validity by board, per-board seeding, translation between boards' copies, locks, permission and whitelist fixes | F038–F056 | T075–T106 | 1, 4 |
+| 6 | `category-filters` | One entry per standard category in filters; standard-aware matching in the predicate engine; view loader translation | F057–F060 | T107–T118 | 4, 5 |
+| 7 | `impact-urgency` | Impact × Urgency rule on MSP paths, service requests, templates; level derived; "Not assessed" | F061–F068 | T119–T133 | 1 |
+| 8 | `writers-create` | The rule inside `TicketModel.createTicket` and every create path | F069–F081 | T134–T154 | 1, 5, 7 |
+| 9 | `writers-update` | Patch preparation at every update site, board moves, bundle sync | F082–F091 | T155–T170 | 1, 5, 7 |
+| 10 | `priority-pickers` | Every priority picker lists by board | F092–F102 | T171–T183 | 1 |
+| 11 | `board-lifecycle` | Shared create, update and delete for web and REST; no mixed boards | F103–F112 | T184–T196 | 1, 5 |
+| 12 | `board-type-switch` | The switch action, its summary and the settings dialog | F113–F121 | T197–T212 | 11 |
+| 13 | `sla` | Hooks on `globalThis` and registered at startup, policy flag, target top-up, single defaults, real-SLA stage events | F122–F129 | T213–T227 | 7, 11 |
+| 14 | `cleanup` | Dead code and the two unread board columns | F130–F134 | T228–T232 | 7, 13 |
+| 15 | `guard` | Build guard and writer contract test | F135–F136 | T233–T235 | 8, 9, 10 |
+| 16 | `docs` | Rewritten ITIL doc, report script, OpenAPI | F137–F140 | T236–T239 | all |
 
 Releases: commits 1–2 can ship alone as the hotfix. Commits 4, 5 and 6 must reach production together (see Rollout). Everything else can ship as it lands.
 
 ## Risks
 
-- **Paths that start refusing.** Client portal create, CSV import, Teams, workflow `update_fields`, inbound webhook update and REST category and priority writes did not validate before. Callers that relied on that get a field error. The messages name the field, the value and the board.
+- **Paths that start refusing.** Client portal create, CSV import, Teams, workflow `update_fields`, inbound webhook update and REST category writes did not validate before. Callers that relied on that get a field error. The messages name the field, the value and the board.
 - **Categories that become visible.** Categories attached to an ITIL board that are not standard rows are hidden by the main picker today and will be listed after phase 3.
-- **Ids stored where the migration cannot see them.** A setting that stores a category id without a board, or a view kept in the browser, cannot be re-pointed. The view loader therefore translates a standard category of another board to the current board's copy instead of dropping it (R9), and `itil_category_remap` allows a later correction.
+- **Ids stored where the migration cannot see them.** A setting that stores a category id without a board cannot be re-pointed. Writes translate it (R2), the predicate engine matches it by standard category (R9), and the view loader translates it instead of dropping it. A free-form workflow expression that compares a ticket's category to a literal id is not covered: it keeps matching on the board that holds the original row and stops matching on other ITIL boards.
 - **Cross-board grouping changes filter semantics.** A link that today returns one board's "Hardware" tickets from an all-boards view returns every ITIL board's after R9.
 - **SLA stage events.** Building them from the ticket's SLA means tickets without an SLA emit none. Workflows keyed on those events for such tickets stop firing.
 - **A board switched away from ITIL keeps an ITIL-only SLA policy.** New tickets there get no due dates until the admin changes the policy. This follows from D1; the confirmation says so.
-- **Hook at startup.** `registerSlaIntegration` pulls server-only dependencies; it must be imported the way `initializeApp` imports its other registrations. Whether the production webpack build shares one module instance between startup code and server actions is unverified and gets a test.
+- **Hook at startup.** `registerSlaIntegration` pulls server-only dependencies; it must be imported the way `initializeApp` imports its other registrations. The registration only reaches server actions because the hooks are held on `globalThis`; a test loads the module twice to prove it, and one runs against a production build.
 
 ## Open Questions
 
@@ -235,6 +239,8 @@ None. Items still to verify in code before implementation are listed in `SCRATCH
 - A board with different category and priority kinds cannot be created or produced by an update; an existing one still saves other edits.
 - Changing a board's kind changes no ticket, inbound default, template, schedule or SLA assignment, and the confirmation states the board's SLA after the switch.
 - No call to a category or priority create or update can set the ITIL flag, level or standard link.
+- A write that names another ITIL board's standard category stores the ticket's own board's copy.
+- A checklist rule on a standard category with no board applies on every ITIL board.
 - No migration in this plan changes a ticket's priority, Impact or Urgency, or assigns an SLA policy.
 - The guard script fails on a new direct read of `priorities` or `categories` for a picker, or a new direct write of a ticket's priority, category or board, outside the allow-list.
 - `docs/itil/itil-integration.md` describes the rules above and nothing that does not exist.
