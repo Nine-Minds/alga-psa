@@ -61,7 +61,9 @@ describe('copyTicketCategoriesToBoard', () => {
       { category_id: 'child', category_name: 'Child', board_id: 'source', parent_category: 'parent', display_order: 2 },
     ];
     nextId = 0;
+    hasPermissionMock.mockReset();
     hasPermissionMock.mockResolvedValue(true);
+    publishEventMock.mockReset();
     publishEventMock.mockResolvedValue(undefined);
   });
 
@@ -86,8 +88,15 @@ describe('copyTicketCategoriesToBoard', () => {
     expect(await copyTicketCategoriesToBoard('source', 'source', ['parent'])).toMatchObject({ actionError: expect.stringContaining('must be different') });
   });
 
-  it('rejects a board category type mismatch', async () => {
+  // R2/D9: an ITIL board holds exactly its own copy of the standard set, so it is never a copy
+  // target. Copying out of an ITIL board is allowed and lands as plain rows of the target board.
+  it('rejects an ITIL target board, which owns its own set', async () => {
     boards[1].category_type = 'itil';
-    expect(await copyTicketCategoriesToBoard('source', 'target', ['parent'])).toMatchObject({ actionError: expect.stringContaining('same category type') });
+    expect(await copyTicketCategoriesToBoard('source', 'target', ['parent'])).toMatchObject({ actionError: expect.stringContaining('cannot receive copied categories') });
+  });
+
+  it('allows an ITIL source board with a non-ITIL target', async () => {
+    boards[0].category_type = 'itil';
+    expect(await copyTicketCategoriesToBoard('source', 'target', ['parent', 'child'])).toMatchObject({ created: 2, skipped: 0, conflicts: 0 });
   });
 });

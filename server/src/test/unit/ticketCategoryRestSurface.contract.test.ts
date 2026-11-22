@@ -32,12 +32,15 @@ describe('ticket category REST surface', () => {
     expect(text).toContain("'parent_category'");
   });
 
-  it('resolves an ITIL board by the standards flag, like the web picker does', () => {
+  // R2/D9: every ITIL board owns its own copy of the standard set, so the board's own rows are the
+  // answer on an ITIL board too. The route asks the shared lister rather than the ITIL flag, which
+  // only ever found the first ITIL board's set.
+  it('resolves a board through the shared lister, like the web picker does', () => {
     const text = source('server/src/app/api/v1/tickets/categories/route.ts');
 
-    expect(text).toContain("table('boards')");
-    expect(text).toContain("category_type");
-    expect(text).toContain("queryBuilder.where('is_from_itil_standard', true)");
+    expect(text).toContain("from '@alga-psa/shared/lib/tickets/boardFieldRules'");
+    expect(text).toContain('listCategoriesForBoard(knex, tenantId, query.board_id)');
+    expect(text).not.toContain("is_from_itil_standard");
   });
 
   it('accepts a category pair and clears either side with null', () => {
