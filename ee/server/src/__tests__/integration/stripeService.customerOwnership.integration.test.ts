@@ -91,8 +91,10 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.raw('TRUNCATE tenants, stripe_customers, stripe_subscriptions, audit_logs');
-  await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk');
-  await db.raw('DROP TABLE IF EXISTS stripe_customer_bindings');
+  // Qualify fixture DDL: until the migration recreates it, an unqualified
+  // stripe_customer_bindings would resolve through search_path to public's.
+  await db.raw(`ALTER TABLE ${SCHEMA}.stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.stripe_customer_bindings`);
   await db('tenants').insert([
     { tenant: TENANT_A, email: SHARED_EMAIL },
     { tenant: TENANT_B, email: SHARED_EMAIL },
