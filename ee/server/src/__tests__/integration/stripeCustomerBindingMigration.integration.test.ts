@@ -60,7 +60,7 @@ async function expectSentinelsIntact(ownerSchema = sentinelSchema) {
   expect(constraint.rows).toEqual([{ convalidated: true }]);
 }
 
-async function createFixture(options: { nullableExternalId?: boolean } = {}) {
+async function createFixture(options: { nullableExternalId?: boolean; distributeCustomers?: boolean } = {}) {
   await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customers')} CASCADE`);
   await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customer_bindings')} CASCADE`);
   await db.raw(`
@@ -71,7 +71,7 @@ async function createFixture(options: { nullableExternalId?: boolean } = {}) {
       PRIMARY KEY (tenant, stripe_customer_id),
       UNIQUE (tenant, stripe_customer_external_id)
     )`);
-  if (isCitus) {
+  if (isCitus && options.distributeCustomers !== false) {
     await db.raw(`SELECT create_distributed_table('${schema}.stripe_customers', 'tenant')`);
   }
 }
@@ -240,6 +240,25 @@ suite('Stripe customer binding migration ownership enforcement', () => {
       await trx('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_new' });
     });
     expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_new' })).toHaveLength(1);
+  });
+
+  it.skipIf(!isCitus)('enforces global ownership for Citus local mappings when the FK graph includes distributed tables', async () => {
+    await createFixture({ distributeCustomers: false });
+    await db('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_local_owner' });
+
+    await migration.up(db);
+    await forwardMigration.up(db);
+
+    const ownershipConstraints = await db.raw(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'stripe_customers'::regclass
+        AND conname IN ('stripe_customers_binding_owner_fk', 'stripe_customers_global_owner_key')`);
+    expect(ownershipConstraints.rows).toEqual([{ conname: 'stripe_customers_global_owner_key' }]);
+
+    const rejectedCrossTenantWrite = db('stripe_customers')
+      .insert({ tenant: tenantB, stripe_customer_external_id: 'cus_local_owner' })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedCrossTenantWrite).toBeInstanceOf(Error);
   });
 
   it('rejects duplicate tenant ownership and rolls back enforcement state', async () => {
