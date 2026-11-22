@@ -109,7 +109,7 @@ export class TaxService {
       isTaxable: is_taxable,
       currencyCode,
     });
-    if (!outcome.resolved) {
+    if (outcome.resolved === false) {
       throw noTaxRateError(outcome);
     }
     const { resolved, ...result } = outcome;
@@ -173,7 +173,7 @@ export class TaxService {
       isTaxable: is_taxable,
       currencyCode,
     });
-    if (!outcome.resolved) {
+    if (outcome.resolved === false) {
       throw periodTaxError(outcome);
     }
     const { resolved, ...result } = outcome;

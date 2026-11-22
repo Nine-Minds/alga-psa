@@ -1041,6 +1041,30 @@ export const calculateQuoteDraftTax = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  // The draft's tax is billing data about its client, so it is authorized as a
+  // quote read: the saved quote (when there is one) and the draft as the editor
+  // holds it (its client may have been changed but not yet saved).
+  const billingUser = user as BillingAuthUser;
+  const readDenied = () => permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
+  let saved: IQuote | null = null;
+  if (input.quote_id) {
+    saved = await getAuthorizedQuoteForRead(knex, tenant, billingUser, input.quote_id);
+    if (!saved) {
+      return readDenied();
+    }
+  }
+  const draftClientId = input.client_id ?? saved?.client_id ?? null;
+  if (draftClientId && draftClientId !== saved?.client_id) {
+    const { decision } = await authorizeQuoteReadDecision(knex, tenant, billingUser, {
+      quote_id: saved?.quote_id,
+      created_by: saved?.created_by ?? billingUser.user_id,
+      client_id: draftClientId,
+    });
+    if (!decision.allowed) {
+      return readDenied();
+    }
+  }
+
   return resolveQuoteDraftTax(knex, tenant, input);
 });
 
