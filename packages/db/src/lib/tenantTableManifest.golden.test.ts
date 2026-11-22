@@ -5,6 +5,7 @@ import {
   TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
   computeTenantDeletionOrder,
+  deletionEdges,
   placeTenantTable,
   tenantDeletionOrder,
   type TenantTableEntry,
@@ -29,6 +30,14 @@ describe('tenant table manifest golden order', () => {
     expect(computed.order).toEqual(literal.filter(table => sharedTables.has(table)));
     expect(computeTenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(computed);
     expect(tenantDeletionOrder()).toEqual(computed.order);
+  });
+
+  it('orders Stripe customer mappings before the bindings their ownership FK restricts', () => {
+    const ownerFk = deletionEdges().filter(fk => fk.name === 'stripe_customers_binding_owner_fk');
+    expect(ownerFk).toEqual([expect.objectContaining({ child: 'stripe_customers', parent: 'stripe_customer_bindings' })]);
+    const order = tenantDeletionOrder();
+    expect(order.indexOf('stripe_customers')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('stripe_customers')).toBeLessThan(order.indexOf('stripe_customer_bindings'));
   });
 
   it('has 631 unique ordered names', () => {
