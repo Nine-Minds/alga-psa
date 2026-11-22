@@ -9,14 +9,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
-import { createContract, updateContract } from '@alga-psa/billing/actions/contractActions';
-import { copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
+import { saveQuickAddContract } from '@alga-psa/billing/actions/contractWizardActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { IClient } from '@alga-psa/types';
-import { createClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Coins } from 'lucide-react';
@@ -115,8 +113,7 @@ export function ContractDialog({
   } = presetSelection;
 
   // The selected client (currency source), looked up by id; the picker searches the server.
-  const { client: selectedClient, isLoading: isLoadingSelectedClient, prime: primeSelectedClient } =
-    useBillingClient(clientId || null);
+  const { client: selectedClient, prime: primeSelectedClient } = useBillingClient(clientId || null);
 
   // Load contract line presets when the dialog opens
   useEffect(() => {
@@ -204,79 +201,37 @@ export function ContractDialog({
     setValidationErrors([]);
 
     try {
-      // Get currency code from client or editing contract
-      let currencySource: IClient | null = selectedClient;
-      if (!editingContract?.currency_code && !currencySource && isLoadingSelectedClient) {
-        // Submitted before the by-id lookup returned: read it now rather than default to USD.
-        const lookedUp = await getClientByIdForBilling(clientId);
-        if (isReturnedActionError(lookedUp)) {
-          setValidationErrors([getErrorMessage(lookedUp)]);
-          return;
-        }
-        currencySource = lookedUp;
-      }
-      const currencyCode = editingContract?.currency_code || currencySource?.default_currency_code || 'USD';
-
-      // Create the contract (without client-specific fields)
-      const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
+      // One transactional save: the contract header, the selected presets as
+      // contract lines, and the client assignment with its dates, renewal
+      // settings, PO fields and billing profile. The dates are sent as the
+      // local calendar days the pickers show, not a UTC-shifted ISO slice.
+      const saved = await saveQuickAddContract({
+        contract_id: editingContract?.contract_id,
         contract_name: contractName,
-        contract_description: contractDescription || undefined,
-        owner_client_id: clientId,
+        description: contractDescription || null,
+        client_id: clientId,
+        billing_profile_id: billingProfileId,
         billing_frequency: billingFrequency,
-        is_active: saveAsActive,
-        status: (saveAsActive ? 'active' : 'draft') as 'active' | 'draft',
-        is_template: false,
-        currency_code: currencyCode,
-      };
-
-      let contract: IContract | null = null;
-      if (editingContract?.contract_id) {
-        contract = await updateContract(editingContract.contract_id, contractData);
-      } else {
-        contract = await createContract(contractData);
-      }
-      if (isReturnedActionError(contract)) {
-        setValidationErrors([getErrorMessage(contract)]);
+        start_date: dateToString(startDate),
+        end_date: endDate ? dateToString(endDate) : null,
+        use_tenant_renewal_defaults: useTenantRenewalDefaults,
+        renewal_mode: useTenantRenewalDefaults ? undefined : renewalMode,
+        notice_period_days:
+          !useTenantRenewalDefaults && renewalMode !== 'none' ? parsedNoticePeriodDays : undefined,
+        renewal_term_months:
+          !useTenantRenewalDefaults && renewalMode === 'auto' ? parsedRenewalTermMonths : undefined,
+        po_required: poRequired,
+        po_number: poRequired ? poNumber : null,
+        po_amount: poRequired ? poAmount : null,
+        preset_lines: Array.from(selectedContractLinePresetIds).map((presetId) => ({
+          preset_id: presetId,
+          overrides: buildPresetOverrides(presetId),
+        })),
+        save_as_active: saveAsActive,
+      });
+      if (isReturnedActionError(saved)) {
+        setValidationErrors([getErrorMessage(saved)]);
         return;
-      }
-
-      // Add selected contract line presets to the contract (copy them into actual contract lines)
-      if (contract && selectedContractLinePresetIds.size > 0) {
-        const copyResults = await Promise.all(
-          Array.from(selectedContractLinePresetIds).map(presetId =>
-            copyPresetToContractLine(contract!.contract_id, presetId, buildPresetOverrides(presetId))
-          )
-        );
-        const expectedCopyError = copyResults.find(isReturnedActionError);
-        if (expectedCopyError) {
-          setValidationErrors([getErrorMessage(expectedCopyError)]);
-          return;
-        }
-      }
-
-      // Then create the client contract assignment with PO fields
-      if (contract && clientId && startDate) {
-        const assignmentResult = await createClientContractForBilling({
-          client_id: clientId,
-          contract_id: contract.contract_id,
-          billing_profile_id: billingProfileId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
-          is_active: saveAsActive,
-          use_tenant_renewal_defaults: useTenantRenewalDefaults,
-          renewal_mode: useTenantRenewalDefaults ? undefined : renewalMode,
-          notice_period_days:
-            !useTenantRenewalDefaults && renewalMode !== 'none' ? parsedNoticePeriodDays : undefined,
-          renewal_term_months:
-            !useTenantRenewalDefaults && renewalMode === 'auto' ? parsedRenewalTermMonths : undefined,
-          po_required: poRequired,
-          po_number: poRequired ? poNumber : null,
-          po_amount: poRequired ? poAmount : null,
-        });
-        if (isReturnedActionError(assignmentResult)) {
-          setValidationErrors([getErrorMessage(assignmentResult)]);
-          return;
-        }
       }
 
       resetForm();

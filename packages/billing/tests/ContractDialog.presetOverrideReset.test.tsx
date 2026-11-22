@@ -12,19 +12,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
   getClientByIdForBilling: vi.fn(),
-  createClientContractForBilling: vi.fn(),
   getContractLinePresets: vi.fn(),
   getContractLinePresetServiceCounts: vi.fn(),
   getContractLinePresetServices: vi.fn(),
   getContractLinePresetFixedConfig: vi.fn(),
-  copyPresetToContractLine: vi.fn(),
-  createContract: vi.fn(),
+  saveQuickAddContract: vi.fn(),
   getServices: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
   getClientByIdForBilling: actionMocks.getClientByIdForBilling,
-  createClientContractForBilling: actionMocks.createClientContractForBilling,
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLinePresetActions', () => ({
@@ -32,12 +29,10 @@ vi.mock('@alga-psa/billing/actions/contractLinePresetActions', () => ({
   getContractLinePresetServiceCounts: actionMocks.getContractLinePresetServiceCounts,
   getContractLinePresetServices: actionMocks.getContractLinePresetServices,
   getContractLinePresetFixedConfig: actionMocks.getContractLinePresetFixedConfig,
-  copyPresetToContractLine: actionMocks.copyPresetToContractLine,
 }));
 
-vi.mock('@alga-psa/billing/actions/contractActions', () => ({
-  createContract: actionMocks.createContract,
-  updateContract: vi.fn(),
+vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
+  saveQuickAddContract: actionMocks.saveQuickAddContract,
 }));
 
 vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
@@ -177,9 +172,7 @@ describe('ContractDialog preset override reset', () => {
     actionMocks.getServices.mockResolvedValue({
       services: [{ service_id: 'svc-eng', service_name: 'Senior Engineer', default_rate: 8500 }],
     });
-    actionMocks.createContract.mockResolvedValue({ contract_id: 'contract-1' });
-    actionMocks.createClientContractForBilling.mockResolvedValue({ client_contract_id: 'assignment-1' });
-    actionMocks.copyPresetToContractLine.mockResolvedValue('line-1');
+    actionMocks.saveQuickAddContract.mockResolvedValue({ contract_id: 'contract-1', contract_line_ids: ['line-1'] });
   });
 
   const renderDialog = () =>
@@ -224,13 +217,11 @@ describe('ContractDialog preset override reset', () => {
     fireEvent.submit(document.getElementById('contract-dialog-form')!);
 
     await waitFor(() => {
-      expect(actionMocks.copyPresetToContractLine).toHaveBeenCalledTimes(1);
+      expect(actionMocks.saveQuickAddContract).toHaveBeenCalledTimes(1);
     });
 
-    const [contractId, presetId, overrides] = actionMocks.copyPresetToContractLine.mock.calls[0];
-    expect(contractId).toBe('contract-1');
-    expect(presetId).toBe('preset-hourly');
-    expect(overrides).toBeUndefined();
+    const [submission] = actionMocks.saveQuickAddContract.mock.calls[0];
+    expect(submission.preset_lines).toEqual([{ preset_id: 'preset-hourly', overrides: undefined }]);
   });
 
   it('re-initializes the preset inputs from preset defaults on the next expand', async () => {
