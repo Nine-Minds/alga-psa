@@ -27,6 +27,7 @@ import type {
   ISO8601String,
 } from '@alga-psa/types';
 
+import { effectiveDefaultTaxRateId, planClientDefaultTaxRate } from './defaultTaxRate';
 import { divideRational, multiplyRational, normalizeTaxCapAmount, rationalInteger, regionalTaxAmount, toRational } from './taxCapMath';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -217,7 +218,7 @@ export interface TaxCalculationInput {
    * Called when the profile has no settings row, after the exemption and
    * taxability checks. The engine never writes: a caller that wants missing
    * defaults provisioned (the invoice-side `TaxService`) supplies the writer and
-   * the engine uses the row it returns. Quotes pass nothing and read defaults.
+   * the engine uses the row it returns. Callers that pass nothing get the defaults provisioning would create, computed in memory.
    */
   provisionMissingSettings?: () => Promise<IClientTaxSettings>;
 }
@@ -235,7 +236,7 @@ export interface TaxPeriodCalculationInput {
    * Called when the profile has no settings row, after the exemption and
    * taxability checks. The engine never writes: a caller that wants missing
    * defaults provisioned (the invoice-side `TaxService`) supplies the writer and
-   * the engine uses the row it returns. Quotes pass nothing and read defaults.
+   * the engine uses the row it returns. Callers that pass nothing get the defaults provisioning would create, computed in memory.
    */
   provisionMissingSettings?: () => Promise<IClientTaxSettings>;
 }
@@ -509,16 +510,53 @@ async function calculateSimpleTax(
   return { taxAmount: applyCap(taxAmount, taxRate.cap_amount), taxRate: taxPercentage };
 }
 
-/** Settings for a calculation: the stored row, else what the caller provisions, else defaults. */
+/**
+ * Settings for a calculation: the stored row, else what the caller provisions,
+ * else defaults in memory. `inMemoryDefaults` is true only for the last case:
+ * no row was stored and nothing was provisioned, so the client's default rate
+ * association may also be missing and must be planned, not assumed absent.
+ */
 async function settingsForCalculation(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   input: { clientId: string; billingProfileId?: string; provisionMissingSettings?: () => Promise<IClientTaxSettings> },
-): Promise<IClientTaxSettings> {
+): Promise<{ settings: IClientTaxSettings; inMemoryDefaults: boolean }> {
   const row = await findClientTaxSettingsRow(knexOrTrx, tenant, input.clientId, input.billingProfileId);
-  if (row) return row;
-  if (input.provisionMissingSettings) return input.provisionMissingSettings();
-  return readClientTaxSettings(knexOrTrx, tenant, input.clientId, input.billingProfileId);
+  if (row) return { settings: row, inMemoryDefaults: false };
+  if (input.provisionMissingSettings) {
+    return { settings: await input.provisionMissingSettings(), inMemoryDefaults: false };
+  }
+  return {
+    settings: await readClientTaxSettings(knexOrTrx, tenant, input.clientId, input.billingProfileId),
+    inMemoryDefaults: true,
+  };
+}
+
+/**
+ * The client-wide default rate id the default-rate fallback charges, or null.
+ * With stored (or provisioned) settings it is the stored association. With no
+ * settings row and no provisioning hook it is what provisioning would create,
+ * planned read-only by `planClientDefaultTaxRate` (the initializer's own rules),
+ * so a non-provisioning caller prices the client exactly as invoices do.
+ */
+async function clientDefaultTaxRateId(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  inMemoryDefaults: boolean,
+): Promise<string | null> {
+  if (inMemoryDefaults) {
+    return effectiveDefaultTaxRateId(await planClientDefaultTaxRate(knexOrTrx, tenant, clientId));
+  }
+  const assoc = await tenantDb(knexOrTrx, tenant).table('client_tax_rates')
+    .where({
+      client_id: clientId,
+      is_default: true,
+    })
+    .whereNull('location_id')
+    .select('tax_rate_id')
+    .first();
+  return assoc ? (assoc.tax_rate_id as string) : null;
 }
 
 async function isClientTaxExempt(
@@ -560,7 +598,7 @@ export async function calculateTaxForAmount(
 
   // Check reverse charge applicability BEFORE any tax calculation
   // Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions)
-  const taxSettings = await settingsForCalculation(knexOrTrx, tenant, input);
+  const { settings: taxSettings, inMemoryDefaults } = await settingsForCalculation(knexOrTrx, tenant, input);
   if (taxSettings.is_reverse_charge_applicable) {
     return { resolved: true, taxAmount: 0, taxRate: 0 };
   }
@@ -617,16 +655,9 @@ export async function calculateTaxForAmount(
 
   // Fallback: Get the client's default tax rate if no regionCode provided
   // Find the default tax rate association
-  const defaultRateAssoc = await db.table('client_tax_rates')
-    .where({
-      client_id: clientId,
-      is_default: true,
-    })
-    .whereNull('location_id')
-    .select('tax_rate_id')
-    .first();
+  const defaultTaxRateId = await clientDefaultTaxRateId(knexOrTrx, tenant, clientId, inMemoryDefaults);
 
-  if (!defaultRateAssoc) {
+  if (!defaultTaxRateId) {
     // No default rate configured: zero tax, not unresolved (no region to name).
     return { resolved: true, taxAmount: 0, taxRate: 0 };
   }
@@ -634,7 +665,7 @@ export async function calculateTaxForAmount(
   // Fetch the actual tax rate details using the ID found
   const taxRate = await db.table<ITaxRate>('tax_rates')
     .where({
-      tax_rate_id: defaultRateAssoc.tax_rate_id,
+      tax_rate_id: defaultTaxRateId,
       is_active: true // Ensure the default rate is active
     })
     // Add date validity check similar to regionCode logic
@@ -721,7 +752,7 @@ export async function calculateTaxForPeriod(
     return { resolved: true, ...emptyPeriodResult() };
   }
 
-  const taxSettings = await settingsForCalculation(knexOrTrx, tenant, input);
+  const { settings: taxSettings, inMemoryDefaults } = await settingsForCalculation(knexOrTrx, tenant, input);
   if (taxSettings.is_reverse_charge_applicable) {
     return { resolved: true, ...emptyPeriodResult() };
   }
@@ -795,22 +826,15 @@ export async function calculateTaxForPeriod(
   }
 
   // Default-rate fallback, mirroring the single-date calculation's precedence.
-  const defaultRateAssoc = await db.table('client_tax_rates')
-    .where({
-      client_id: clientId,
-      is_default: true,
-    })
-    .whereNull('location_id')
-    .select('tax_rate_id')
-    .first();
+  const defaultTaxRateId = await clientDefaultTaxRateId(knexOrTrx, tenant, clientId, inMemoryDefaults);
 
-  if (!defaultRateAssoc) {
+  if (!defaultTaxRateId) {
     return { resolved: false, reason: 'no_default_rate', clientId, startDate: normalizedStart, endDate: normalizedEnd };
   }
 
   const taxRate = await db.table<ITaxRate>('tax_rates')
     .where({
-      tax_rate_id: defaultRateAssoc.tax_rate_id,
+      tax_rate_id: defaultTaxRateId,
       is_active: true
     })
     .andWhere('start_date', '<', normalizedEnd)
@@ -831,7 +855,7 @@ export async function calculateTaxForPeriod(
       resolved: false,
       reason: 'default_rate_inactive',
       clientId,
-      defaultTaxRateId: defaultRateAssoc.tax_rate_id,
+      defaultTaxRateId: defaultTaxRateId,
       startDate: normalizedStart,
       endDate: normalizedEnd,
     };

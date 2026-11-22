@@ -112,12 +112,12 @@ client-wide rate association (`client_tax_rates`, `is_default`). The association
 Decision: the engine stays write-free. `calculateTaxForAmount` / `calculateTaxForPeriod` take an optional
 `provisionMissingSettings` callback, called only when the profile has no row and only after the exemption and
 taxability checks (the exact point the old code provisioned). `TaxService.calculateTax` /
-`calculateTaxForPeriod` pass `createDefaultTaxSettings`; quotes pass nothing and read defaults in memory.
+`calculateTaxForPeriod` pass `createDefaultTaxSettings`; quotes pass nothing and get the defaults provisioning would create, computed in memory: the engine's default-rate fallback asks `planClientDefaultTaxRate` (`shared/billingClients/defaultTaxRate.ts`, the initializer's own rules, read-only) for the effective default rate id when there is no settings row and no hook.
 `TaxService.isReverseChargeApplicable` provisions as before.
 
 | Reader (file: function) | With no row | Action |
 | --- | --- | --- |
-| `shared/billingClients/taxEngine.ts`: `readClientTaxSettings`, `findClientTaxSettingsRow` | Default settings in memory; no writes | Kept write-free. Added `findClientTaxSettingsRow` and the `provisionMissingSettings` seam. |
+| `shared/billingClients/taxEngine.ts`: `readClientTaxSettings`, `findClientTaxSettingsRow` | Default settings in memory; no writes; the default rate id comes from the read-only planner | Kept write-free. Added `findClientTaxSettingsRow` and the `provisionMissingSettings` seam. |
 | `packages/billing/src/services/taxService.ts`: `calculateTax`, `calculateTaxForPeriod`, `isReverseChargeApplicable` | Before: engine read defaults, so a client with no default rate association was taxed 0 (single date) or hit `NO_TAX_RATE` (period) | **Fixed at the reader**: provisions via `createDefaultTaxSettings` exactly as before. Invoice results unchanged. |
 | `packages/billing/src/lib/billing/billingEngine.ts`: tax-identity load (~l.1066-1100) | Already provisions per profile in its load phase when tax would be read | Already handled. No change. |
 | `packages/billing/src/actions/invoiceGeneration.ts`: `createInvoiceFromBillingResult` (~l.4031) | Calls `ensureDefaultTaxSettings` when the client has no default region | Already handled. No change. |

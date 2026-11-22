@@ -508,4 +508,137 @@ describe('One tax engine: quotes and invoices', () => {
       expect((await Quote.getById(db(), tenant(), quoteId))!.converted_invoice_id ?? null).toBeNull();
     });
   });
+
+  describe('T013: a client with no settings row is taxed at the default provisioning would create', () => {
+    const RATE_DATE = '2026-03-10';
+
+    async function setTenantDefault(rateId: string | null) {
+      await db()('tenant_settings')
+        .insert({ tenant: tenant(), default_tax_rate_id: rateId })
+        .onConflict('tenant')
+        .merge({ default_tax_rate_id: rateId });
+    }
+
+    /** A client with no settings row, no region, no location tax region and no associations. */
+    async function bareClient(name: string) {
+      const clientId = randomUUID();
+      await db()('clients').insert({
+        tenant: tenant(), client_id: clientId, client_name: name, billing_cycle: 'monthly',
+        is_tax_exempt: false, region_code: null, url: '', is_inactive: false,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      });
+      await ensureDefaultBillingProfile({ db: db(), tenantId: tenant() }, clientId);
+      return clientId;
+    }
+
+    const settingsRows = (clientId: string) =>
+      db()('client_tax_settings').where({ tenant: tenant(), client_id: clientId });
+    const associationRows = (clientId: string) =>
+      db()('client_tax_rates').where({ tenant: tenant(), client_id: clientId });
+
+    async function tenantDefault10() {
+      await addRegion('QTX-DEF', 'Tenant default region');
+      const rateId = await addRate({ region_code: 'QTX-DEF', tax_percentage: 10 });
+      await setTenantDefault(rateId);
+      return rateId;
+    }
+
+    const engineTax = (clientId: string) =>
+      calculateTaxForAmount(db(), tenant(), { clientId, netAmount: 10000, date: RATE_DATE });
+
+    it('quote tax equals TaxService, both conversion paths tax the invoice the same, and the engine writes nothing', async () => {
+      await tenantDefault10();
+      await db()('client_tax_settings').where({ tenant: tenant(), client_id: context.clientId }).del();
+      // Identical twin for the TaxService side so its provisioning cannot leak into the quote side.
+      const twinId = await bareClient('Twin client');
+      const expected = await new TaxService().calculateTax(twinId, 10000, QUOTE_DATE);
+      expect(expected.taxAmount).toBe(1000);
+      expect(await settingsRows(twinId)).toHaveLength(1);
+
+      const quotes = [] as Array<{ quoteId: string; itemId: string }>;
+      for (let i = 0; i < 2; i += 1) {
+        const { quoteId, items } = await createQuote([{ unit_price: 10000 }], 'accepted');
+        await recalculateQuoteFinancials(db(), tenant(), quoteId);
+        const row = await readItem(items[0].quote_item_id);
+        expect(Number(row.tax_amount)).toBe(expected.taxAmount);
+        expect(row.tax_unresolved).toBe(false);
+        quotes.push({ quoteId, itemId: items[0].quote_item_id });
+      }
+
+      // The engine wrote nothing for the quote-side client.
+      expect(await settingsRows(context.clientId)).toHaveLength(0);
+      expect(await associationRows(context.clientId)).toHaveLength(0);
+
+      for (const [convert, { quoteId }] of [
+        [(id: string) => convertQuoteToDraftInvoice(db(), tenant(), id), quotes[0]],
+        [(id: string) => workerConvertQuoteToDraftInvoice(db(), tenant(), id), quotes[1]],
+      ] as const) {
+        const result = await convert(quoteId);
+        const invoice = await db()('invoices')
+          .where({ tenant: tenant(), invoice_id: result.invoice.invoice_id }).first();
+        expect(Number(invoice.tax)).toBe(expected.taxAmount);
+        expect(Number(invoice.total_amount)).toBe(10000 + expected.taxAmount);
+      }
+    });
+
+    it('the draft editor tax agrees too', async () => {
+      await tenantDefault10();
+      await db()('client_tax_settings').where({ tenant: tenant(), client_id: context.clientId }).del();
+      const { quoteId, items } = await createQuote([{ unit_price: 10000 }]);
+      const draft = await resolveQuoteDraftTax(db(), tenant(), {
+        client_id: context.clientId,
+        quote_id: quoteId,
+        quote_date: QUOTE_DATE,
+        currency_code: 'USD',
+        items: [{
+          id: items[0].quote_item_id, quantity: 1, unit_price: 10000, is_optional: false,
+          is_selected: true, is_recurring: false, is_taxable: true, tax_region: null,
+        }],
+      } as any);
+      expect(draft.rows[items[0].quote_item_id].taxAmount).toBe(1000);
+      expect(await settingsRows(context.clientId)).toHaveLength(0);
+    });
+
+    describe('engine planner outcomes (no settings row, no provisioning hook)', () => {
+      it('tenant default present: charges it and writes nothing', async () => {
+        await tenantDefault10();
+        const clientId = await bareClient('Planner client A');
+        expect(await engineTax(clientId)).toMatchObject({ resolved: true, taxAmount: 1000, taxRate: 10 });
+        expect(await settingsRows(clientId)).toHaveLength(0);
+        expect(await associationRows(clientId)).toHaveLength(0);
+      });
+
+      it('no tenant default and no active rate: 0, nothing written', async () => {
+        await setTenantDefault(null);
+        await db()('tax_rates').where({ tenant: tenant() }).update({ is_active: false });
+        const clientId = await bareClient('Planner client B');
+        expect(await engineTax(clientId)).toEqual({ resolved: true, taxAmount: 0, taxRate: 0 });
+        expect(await settingsRows(clientId)).toHaveLength(0);
+        expect(await associationRows(clientId)).toHaveLength(0);
+      });
+
+      it('an existing client-wide association wins over the tenant default', async () => {
+        await tenantDefault10();
+        await addRegion('QTX-OWN', 'Own default region');
+        const ownRateId = await addRate({ region_code: 'QTX-OWN', tax_percentage: 5 });
+        const clientId = await bareClient('Planner client C');
+        await db()('client_tax_rates').insert({
+          tenant: tenant(), client_id: clientId, tax_rate_id: ownRateId, is_default: true, location_id: null,
+        });
+        expect(await engineTax(clientId)).toMatchObject({ resolved: true, taxAmount: 500, taxRate: 5 });
+        expect(await settingsRows(clientId)).toHaveLength(0);
+        expect(await associationRows(clientId)).toHaveLength(1);
+      });
+
+      it('a non-default association for the tenant default rate counts as promoted, without being promoted', async () => {
+        const rateId = await tenantDefault10();
+        const clientId = await bareClient('Planner client D');
+        await db()('client_tax_rates').insert({
+          tenant: tenant(), client_id: clientId, tax_rate_id: rateId, is_default: false, location_id: null,
+        });
+        expect(await engineTax(clientId)).toMatchObject({ resolved: true, taxAmount: 1000 });
+        expect((await associationRows(clientId))[0].is_default).toBe(false);
+      });
+    });
+  });
 });

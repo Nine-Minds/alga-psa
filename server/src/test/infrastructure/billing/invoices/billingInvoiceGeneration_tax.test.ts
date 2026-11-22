@@ -227,12 +227,13 @@ describe('Billing Invoice Tax Calculations', () => {
       expect(await settingsRows()).toHaveLength(0);
       expect(await defaultAssociations()).toHaveLength(0);
 
-      // The shared engine alone reads defaults and writes nothing: with no default
-      // rate to apply it taxes nothing rather than inventing a rate.
+      // The shared engine alone writes nothing, but it prices the client at the
+      // default provisioning would create (the tenant default, 10%), so a caller
+      // that does not provision (quotes) agrees with the invoice side below.
       const engineOutcome = await calculateTaxForAmount(context.db, context.tenantId, {
         clientId, netAmount: 10000, date: '2026-06-01',
       });
-      expect(engineOutcome).toMatchObject({ resolved: true, taxAmount: 0 });
+      expect(engineOutcome).toMatchObject({ resolved: true, taxAmount: 1000 });
       expect(await settingsRows()).toHaveLength(0);
       expect(await defaultAssociations()).toHaveLength(0);
 

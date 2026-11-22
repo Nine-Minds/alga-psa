@@ -461,6 +461,120 @@ export async function assertValidDefaultTaxRateCandidate(
   return rate;
 }
 
+/**
+ * What provisioning would do about the client-wide default association.
+ *
+ *  - `none`: no tenant default exists; nothing is created.
+ *  - `keep`: the client already has a client-wide default (authoritative).
+ *  - `promote`: a non-default, client-wide association for the resolved rate
+ *    exists and would be flagged default.
+ *  - `insert`: a client-wide default association for the resolved rate would be
+ *    inserted.
+ */
+export type ClientDefaultTaxPlan =
+  | { action: 'none' }
+  | { action: 'keep'; taxRateId: string }
+  | { action: 'promote'; taxRateId: string; clientTaxRatesId: string }
+  | { action: 'insert'; taxRateId: string };
+
+/** The client-wide default rate id a plan leaves in effect, or null. */
+export function effectiveDefaultTaxRateId(plan: ClientDefaultTaxPlan): string | null {
+  return plan.action === 'none' ? null : plan.taxRateId;
+}
+
+/**
+ * The single statement of the default-association rules, shared by the writer
+ * (`lock: true`, under the writer's locks) and the read-only planner.
+ * Lock order with `lock: true`: existing default association, then the resolved
+ * rate and its region, then the matching association.
+ */
+async function planClientDefaultTax(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  options: { date?: string; lock: boolean }
+): Promise<ClientDefaultTaxPlan> {
+  const db = tenantDb(conn, tenant);
+  const lockRows = <T extends Knex.QueryBuilder>(query: T): T =>
+    (options.lock ? query.forUpdate() : query) as T;
+
+  // An explicit client-wide default is authoritative: do not resolve (and
+  // therefore do not fail on) the tenant default when one already exists.
+  const existingDefault = await lockRows(
+    db
+      .table('client_tax_rates')
+      .where({ client_id: clientId, is_default: true })
+      .whereNull('location_id')
+  ).first();
+  if (existingDefault) {
+    return { action: 'keep', taxRateId: existingDefault.tax_rate_id };
+  }
+
+  const date = options.date ?? currentAssignmentDate();
+  let resolved: ResolvedDefaultTaxRate;
+  try {
+    resolved = await resolveClientDefaultTaxRate(conn, tenant, date, { lock: options.lock });
+  } catch (error) {
+    // A tenant-wide default is optional. Fresh installations and tenants that
+    // have not configured tax yet must still be able to create clients. Do not
+    // fabricate a zero-rate or a client/rate association. A configured-but-
+    // invalid default remains a hard failure via InvalidDefaultTaxRateError.
+    if (error instanceof NoActiveTaxRateError) {
+      return { action: 'none' };
+    }
+    throw error;
+  }
+
+  // Look the association up by the resolved rate, not the oldest row: an older
+  // association for a different rate must not be promoted, and an existing
+  // non-default association for the resolved rate must be promoted in place
+  // rather than inserted again.
+  const matchingAssociation = await lockRows(
+    db
+      .table('client_tax_rates')
+      .where({ client_id: clientId, tax_rate_id: resolved.taxRateId })
+      .whereNull('location_id')
+  ).first();
+
+  if (matchingAssociation) {
+    return matchingAssociation.is_default
+      ? { action: 'keep', taxRateId: resolved.taxRateId }
+      : {
+          action: 'promote',
+          taxRateId: resolved.taxRateId,
+          clientTaxRatesId: matchingAssociation.client_tax_rates_id,
+        };
+  }
+
+  const conflictingLocationAssociation = await db
+    .table('client_tax_rates')
+    .where({ client_id: clientId, tax_rate_id: resolved.taxRateId })
+    .whereNotNull('location_id')
+    .first();
+  if (conflictingLocationAssociation) {
+    throw new InvalidDefaultTaxRateError(
+      `Cannot set a client-wide default tax rate for client ${clientId}: the resolved rate already has a location-specific association. Review the client's tax associations before retrying.`
+    );
+  }
+  return { action: 'insert', taxRateId: resolved.taxRateId };
+}
+
+/**
+ * Read-only planner: the client-wide default that provisioning
+ * (`initializeClientDefaultTax`) would leave in effect for this client, without
+ * writing anything or taking any lock. Throws the same
+ * `InvalidDefaultTaxRateError`s the initializer would. The tax engine uses it
+ * for callers that do not provision, so quotes compute what invoices would.
+ */
+export async function planClientDefaultTaxRate(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  options: { date?: string } = {}
+): Promise<ClientDefaultTaxPlan> {
+  return planClientDefaultTax(conn, tenant, clientId, { date: options.date, lock: false });
+}
+
 export interface InitializeClientDefaultTaxOptions {
   billingProfileId?: string;
   date?: string;
@@ -522,70 +636,26 @@ export async function initializeClientDefaultTax(
       .where({ client_id: clientId, billing_profile_id: billingProfileId })
       .first();
 
-  // An explicit client-wide default is authoritative: do not resolve (and
-  // therefore do not fail on) the tenant default when one already exists.
-  const existingDefault = await db
-    .table('client_tax_rates')
-    .where({ client_id: clientId, is_default: true })
-    .whereNull('location_id')
-    .forUpdate()
-    .first();
-  if (existingDefault) {
-    return (await readSettings()) as IClientTaxSettings;
-  }
+  // The plan is computed under the writer's locks (client row already locked;
+  // association rows and the resolved rate/region locked in the planner's
+  // documented order), then applied here.
+  const plan = await planClientDefaultTax(conn, tenant, clientId, {
+    date: options.date,
+    lock: true,
+  });
 
-  const date = options.date ?? currentAssignmentDate();
-  let resolved: ResolvedDefaultTaxRate;
-  try {
-    resolved = await resolveClientDefaultTaxRate(conn, tenant, date, { lock: true });
-  } catch (error) {
-    // A tenant-wide default is optional. Fresh installations and tenants that
-    // have not configured tax yet must still be able to create clients. Keep
-    // the profile-keyed settings row, but do not fabricate a zero-rate or a
-    // client/rate association. A configured-but-invalid default remains a hard
-    // failure via InvalidDefaultTaxRateError above.
-    if (error instanceof NoActiveTaxRateError) {
-      return (await readSettings()) as IClientTaxSettings;
-    }
-    throw error;
-  }
-
-  // Look the association up by the resolved rate, not the oldest row: an older
-  // association for a different rate must not be promoted, and an existing
-  // non-default association for the resolved rate must be promoted in place
-  // rather than inserted again.
-  const matchingAssociation = await db
-    .table('client_tax_rates')
-    .where({ client_id: clientId, tax_rate_id: resolved.taxRateId })
-    .whereNull('location_id')
-    .forUpdate()
-    .first();
-
-  if (matchingAssociation) {
-    if (!matchingAssociation.is_default) {
-      await db
-        .table('client_tax_rates')
-        .where({
-          client_tax_rates_id: matchingAssociation.client_tax_rates_id,
-          tenant,
-        })
-        .update({ is_default: true, updated_at: conn.fn.now() });
-    }
-  } else {
-    const conflictingLocationAssociation = await db
+  if (plan.action === 'promote') {
+    await db
       .table('client_tax_rates')
-      .where({ client_id: clientId, tax_rate_id: resolved.taxRateId })
-      .whereNotNull('location_id')
-      .first();
-    if (conflictingLocationAssociation) {
-      throw new InvalidDefaultTaxRateError(
-        `Cannot set a client-wide default tax rate for client ${clientId}: the resolved rate already has a location-specific association. Review the client's tax associations before retrying.`
-      );
-    }
-
+      .where({
+        client_tax_rates_id: plan.clientTaxRatesId,
+        tenant,
+      })
+      .update({ is_default: true, updated_at: conn.fn.now() });
+  } else if (plan.action === 'insert') {
     await db.table('client_tax_rates').insert({
       client_id: clientId,
-      tax_rate_id: resolved.taxRateId,
+      tax_rate_id: plan.taxRateId,
       is_default: true,
       location_id: null,
       tenant,
