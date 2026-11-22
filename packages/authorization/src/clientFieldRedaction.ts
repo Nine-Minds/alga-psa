@@ -1,6 +1,5 @@
 import type { IClientLocation } from '@alga-psa/types';
-import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { isCoManagedResourceHidden } from './sharedWorkProjection';
+import { isFieldHiddenByRedaction, isResourceHiddenByRedaction } from './redaction';
 
 const CLIENT_QUICK_VIEW_FIELD_ALIASES: Record<string, string[]> = {
   properties: ['url', 'properties.website'],
@@ -17,10 +16,11 @@ const CLIENT_QUICK_VIEW_FIELD_ALIASES: Record<string, string[]> = {
   logoUrl: ['logo', 'properties.logo', 'client_name'],
   logoWideUrl: ['logo_wide_url', 'properties.logo', 'client_name'],
 };
+
 export function isClientQuickViewFieldHidden(redactedFields: readonly string[], field: string): boolean {
   const aliases = CLIENT_QUICK_VIEW_FIELD_ALIASES[field] ?? [];
-  return isCoManagedResourceHidden(redactedFields, ['client', 'clients'])
-    || isCoManagedReadFieldHidden(redactedFields, [
+  return isResourceHiddenByRedaction(redactedFields, ['client', 'clients'])
+    || isFieldHiddenByRedaction(redactedFields, [
       field,
       `clients.${field}`,
       ...aliases,
@@ -37,13 +37,14 @@ const CLIENT_LOCATION_FIELD_SOURCES: Partial<Record<keyof IClientLocation, strin
   city: 'location_address', state_province: 'location_address', postal_code: 'location_address',
   country_code: 'location_address', country_name: 'location_address', region_code: 'location_address',
 };
+
 export function isClientLocationFieldHidden(redactedFields: readonly string[], field: string): boolean {
   return isClientQuickViewFieldHidden(redactedFields, CLIENT_LOCATION_FIELD_SOURCES[field as keyof IClientLocation] ?? field)
-    || isCoManagedReadFieldHidden(redactedFields, [field, `clients.${field}`, `client_locations.${field}`]);
+    || isFieldHiddenByRedaction(redactedFields, [field, `clients.${field}`, `client_locations.${field}`]);
 }
 
 export function isClientLocationResourceHidden(redactedFields: readonly string[]): boolean {
-  return isCoManagedResourceHidden(redactedFields, ['client_locations'])
+  return isResourceHiddenByRedaction(redactedFields, ['client_locations'])
     || isClientLocationFieldHidden(redactedFields, 'location_id')
     || isClientLocationFieldHidden(redactedFields, 'client_id');
 }

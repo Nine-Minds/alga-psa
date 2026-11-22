@@ -65,6 +65,14 @@
     "./clientReadAuthorization": {
       "types": "./src/clientReadAuthorization.ts",
       "import": "./dist/clientReadAuthorization.js"
+    },
+    "./redaction": {
+      "types": "./src/redaction.ts",
+      "import": "./dist/redaction.js"
+    },
+    "./clientFieldRedaction": {
+      "types": "./src/clientFieldRedaction.ts",
+      "import": "./dist/clientFieldRedaction.js"
     }
   },
   "scripts": {

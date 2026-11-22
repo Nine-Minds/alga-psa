@@ -71,7 +71,7 @@ import { loadProjectRowsByDecision, projectPickerProjection } from '../lib/proje
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
 import { isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
-import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/co-managed/clientFieldRedaction';
+import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/authorization/clientFieldRedaction';
 import { createClientAccessDecider } from '@alga-psa/authorization/clientReadAuthorization';
 import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 

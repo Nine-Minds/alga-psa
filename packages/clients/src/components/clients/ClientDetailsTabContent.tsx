@@ -21,7 +21,7 @@ import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
-import { isClientQuickViewFieldHidden } from '@alga-psa/co-managed/clientFieldRedaction';
+import { isClientQuickViewFieldHidden } from '@alga-psa/authorization/clientFieldRedaction';
 import { clientSinceInputValue } from '../../lib/clientSince';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { ClientLanguagePreference } from './ClientLanguagePreference';

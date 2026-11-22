@@ -1,5 +1,6 @@
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { CoManagedSharedWorkError } from './sharedWorkErrors';
+import { isResourceHiddenByRedaction } from '@alga-psa/authorization/redaction';
 
 /** Alias lists a reader's redactions are matched against, one per display name. Single source for the project list, task list and assigned-task queue. */
 /** The whole customer task resource; a reader who has either hidden may not read or write the task at all. */
@@ -45,11 +46,8 @@ export const CO_MANAGED_TASK_FIELD_SOURCE: CoManagedFieldSource = {
  * treat `tasks.description` as hiding `tasks`: a field-level redaction must not drop the resource.
  */
 export function isCoManagedResourceHidden(redactions: readonly string[], resource: readonly string[]): boolean {
-  return redactions.some(field => {
-    if (typeof field !== 'string') throw new CoManagedSharedWorkError();
-    if (field === '*' || field === 'fields') return true;
-    return resource.includes(field.startsWith('fields.') ? field.slice(7) : field);
-  });
+  if (redactions.some((field) => typeof field !== 'string')) throw new CoManagedSharedWorkError();
+  return isResourceHiddenByRedaction(redactions, resource);
 }
 
 /**

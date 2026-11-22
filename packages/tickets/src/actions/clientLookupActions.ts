@@ -19,7 +19,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { createClientAccessDecider } from '@alga-psa/authorization/clientReadAuthorization';
-import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/co-managed/clientFieldRedaction';
+import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/authorization/clientFieldRedaction';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 // MSP-only lookups: these actions back internal ticket UIs and expose
