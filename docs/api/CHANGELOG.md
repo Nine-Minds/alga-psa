@@ -2,6 +2,31 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-21 — Inbound webhook management works with API keys; authentication failures return `401`
+
+**Affected endpoints:** every `/api/v1/inbound-webhooks` route (list, create, get, update, delete, `test`, `capture-sample`, `rotate-secret`, `actions`, `deliveries`, delivery detail and `replay`), and any `/api/v1` route whose handler raises an authentication error
+
+The inbound webhook management routes only recognized a signed-in browser session. A caller that authenticated with an API key reached the handler without an identity and got `500`, so integrations could not create, inspect or replay inbound webhooks over REST.
+
+**Changes:**
+
+- All inbound webhook management routes now accept an API key (`x-api-key`) as well as a browser session. The key's user must hold the matching `inbound_webhook` permission (`read`, `create`, `update`, `delete` or `replay`); a key without it gets `403`. No new permissions were added, and request and response shapes are unchanged.
+- An authentication failure on a `/api/v1` route now returns `401` with `{"error": {"code": "UNAUTHORIZED", "message": "..."}}` instead of falling through to `500 INTERNAL_ERROR`. Errors that already carried their own status code keep it.
+- The receiver endpoint `POST /api/inbound/{tenantSlug}/{webhookSlug}` is not affected; it still authenticates each delivery with the webhook's own `auth_type`.
+
+## 2026-11-21 — Bulk invoice cancel requires `invoice:void`; permissions rechecked for each invoice
+
+**Affected endpoint:** `POST /api/v1/financial/bulk/invoices`
+
+This tightens the permission model described in the 2026-11-09 entry below. Each bulk operation now needs the same lifecycle permission as the matching single-invoice action, and a permission removed while a batch is running stops the remaining invoices from being processed.
+
+**Changes:**
+
+- The route requires `financial:update`. The service also requires `invoice:update` plus the permission for the chosen operation: `invoice:finalize` for `finalize` and `invoice:void` for `cancel`. Holding only `invoice:update` or `financial:update` is no longer enough for either operation, and the request returns `403` before any invoice is touched.
+- The operation's permission is checked once before the batch starts and again before each invoice. If the caller loses it partway through, each remaining invoice is reported in `results` with `success: false` and a permission error; invoices already processed stay finalized or voided.
+- `cancel` still requires `accounting_integrations:remote_mutate`, checked per invoice, when an accounting integration is connected.
+- API-key callers are recorded as the actor on the void, so cancellation ledger metadata names the API key's user.
+
 ## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
 
 **Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call
