@@ -150,6 +150,7 @@ describe('IMAP maintenance route authorization', () => {
       const response = await post(endpoint.name, 'arbitrary-nonempty-key');
 
       expect(response.status).toBe(200);
+      expect(state.permissionChecks).toBe(1);
       expect(state.providerLookups).toBe(1);
       expect(state.tenantKnexCalls).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);
