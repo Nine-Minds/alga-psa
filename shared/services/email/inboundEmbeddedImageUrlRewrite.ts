@@ -78,6 +78,39 @@ function blocksFallbackFromText(text: string) {
   ];
 }
 
+function withoutBlockIds(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutBlockIds);
+  if (!value || typeof value !== 'object') return value;
+
+  const record = value as Record<string, unknown>;
+  const isBlockNoteNode = typeof record.type === 'string' && typeof record.id === 'string';
+  return Object.fromEntries(Object.entries(record)
+    .filter(([key]) => !(isBlockNoteNode && key === 'id'))
+    .map(([key, child]) => [key, withoutBlockIds(child)]));
+}
+
+function deterministicBlockId(seed: string, path: string): string {
+  const bytes = createHash('sha256').update(`${seed}\0${path}`, 'utf8').digest().subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function stabilizeBlockIds(value: unknown, seed: string, path = 'root'): unknown {
+  if (Array.isArray(value)) return value.map((child, index) => stabilizeBlockIds(child, seed, `${path}.${index}`));
+  if (!value || typeof value !== 'object') return value;
+
+  const record = value as Record<string, unknown>;
+  const isBlockNoteNode = typeof record.type === 'string' && typeof record.id === 'string';
+  return Object.fromEntries(Object.entries(record).map(([key, child]) => [
+    key,
+    isBlockNoteNode && key === 'id'
+      ? deterministicBlockId(seed, path)
+      : stabilizeBlockIds(child, seed, `${path}.${key}`),
+  ]));
+}
+
 export async function blocksFromEmailBody(params: {
   html?: string;
   text?: string;
@@ -116,7 +149,13 @@ export async function canonicalizeInboundReplyBody(params: {
   html?: string;
   text?: string;
 }): Promise<{ blocks: unknown[]; serialized: string; html: string; text: string; sha256: string }> {
-  const blocks = await blocksFromEmailBody(params);
+  const parsedBlocks = await blocksFromEmailBody(params);
+  // BlockNote assigns fresh IDs while converting HTML. IDs are editor metadata,
+  // not reply content, so derive them from the ID-free tree and node position.
+  // This keeps the persisted representation and approval digest stable when
+  // the same sanitized HTML is parsed again during redemption.
+  const seed = createHash('sha256').update(JSON.stringify(withoutBlockIds(parsedBlocks)), 'utf8').digest('hex');
+  const blocks = stabilizeBlockIds(parsedBlocks, seed) as unknown[];
   const serialized = JSON.stringify(blocks);
   const html = convertBlockNoteToHTML(blocks);
   const text = htmlToVisibleText(html).trim();

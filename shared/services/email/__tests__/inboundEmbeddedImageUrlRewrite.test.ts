@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyEmbeddedImageUrlMappingsToStoredBodies,
   blocksFromEmailBody,
+  canonicalizeInboundReplyBody,
   preserveEmbeddedImageUrlBlocks,
   rewriteEmbeddedImageSourcesInContent,
 } from '../inboundEmbeddedImageUrlRewrite';
@@ -79,6 +80,24 @@ describe('inboundEmbeddedImageUrlRewrite', () => {
       async (_tenantId: string, callback: (trx: any, db: any) => Promise<any>) =>
         callback({ fn: { now: () => 'DB_NOW' } }, db)
     );
+  });
+
+  it('keeps formatted HTML canonical across reparsing for approval and persistence', async () => {
+    const input = {
+      html: '<p><strong>Same reply</strong> <a href="https://example.com/status">Status</a></p>',
+      text: 'Different plain alternative',
+    };
+
+    const first = await canonicalizeInboundReplyBody(input);
+    const second = await canonicalizeInboundReplyBody(input);
+
+    expect(second.sha256).toBe(first.sha256);
+    expect(second.serialized).toBe(first.serialized);
+    expect(second.html).toBe(first.html);
+    expect(second.html).toContain('<strong>Same reply</strong>');
+    expect(second.html).toContain('href="https://example.com/status"');
+    expect(second.text).toContain('Same reply');
+    expect(second.text).not.toContain('Different plain alternative');
   });
 
   it('rewrites cid sources in a content string in place', () => {

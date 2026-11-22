@@ -372,6 +372,120 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
   });
 }
 
+async function withNativeSenderConfirmationLock<T>(db: any, tenant: string, id: string, work: () => Promise<T>): Promise<T> {
+  // A session lock must outlive the short claim update: a stale lease can be
+  // replaced while the original worker is processing, but only after it has
+  // finished message deduplication and persistence.
+  const lockKey = `inbound-native-confirmation:${tenant}:${id}`;
+  const lockConnection = await db.transaction();
+  let locked = false;
+  try {
+    await lockConnection.raw('select pg_advisory_lock(hashtext(?))', [lockKey]);
+    locked = true;
+    return await work();
+  } finally {
+    try {
+      if (locked) await lockConnection.raw('select pg_advisory_unlock(hashtext(?))', [lockKey]);
+    } finally {
+      await lockConnection.rollback();
+    }
+  }
+}
+
+async function redeemNativeSenderConfirmation(
+  db: any,
+  claims: { tenant: string; sourceId: string; expiresAt: string },
+  user: { tenant?: string; user_id?: string; user_type?: string; email?: string | null },
+): Promise<{ ticketId: string; commentId: string } | null> {
+  return withNativeSenderConfirmationLock(db, claims.tenant, claims.sourceId, async () => {
+    const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
+      .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+      .first('recipient', 'payload', 'updated_at');
+    if (!row?.payload) return null;
+    const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+    const native = payload.nativeReply;
+    const expectedContentSha256 = native?.contentSha256;
+    if (payload.target !== 'native' || !native
+      || payload.expiresAt !== claims.expiresAt
+      || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
+      || Date.parse(payload.expiresAt) <= Date.now()
+      || user.tenant !== payload.actor.tenant || user.user_id !== payload.actor.userId
+      || user.email?.trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()
+      || native.replyToken !== payload.replyToken || classifyReplyToken(payload.replyToken) !== 'native'
+      || native.providerId !== payload.providerId
+      || native.providerMessageId !== payload.providerMessageId
+      || native.emailData.tenant !== claims.tenant
+      || native.emailData.providerId !== native.providerId
+      || (native.emailData.providerIdentity || native.emailData.id) !== native.providerMessageId
+      || inboundMessageSha256(native.emailData) !== native.messageSha256
+      || createHash('sha256').update(native.content, 'utf8').digest('hex') !== expectedContentSha256
+      || expectedContentSha256 !== payload.contentSha256
+      || sourceId(claims.tenant, native.providerId, native.providerMessageId, payload.actor) !== claims.sourceId) return null;
+
+    const authorized = await db.transaction(async (trx: any) => {
+      const currentUser = await tenantDb(trx, claims.tenant).table('users')
+        .where({ user_id: payload.actor.userId, user_type: 'internal', is_inactive: false }).first();
+      if (!currentUser || String(currentUser.email ?? '').trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()) return false;
+      const target = await tenantDb(trx, claims.tenant).table('email_reply_tokens')
+        .where({ token: payload.replyToken }).first('ticket_id', 'comment_id');
+      if (!target || target.ticket_id !== payload.ticketId
+        || (native.parentCommentId && target.comment_id !== native.parentCommentId)) return false;
+      const ticket = await tenantDb(trx, claims.tenant).table('tickets').where({ ticket_id: payload.ticketId }).first();
+      if (!ticket) return false;
+      const roles = await tenantDb(trx, claims.tenant).table('user_roles').where({ user_id: payload.actor.userId }).select('role_id');
+      const actor = { ...currentUser, tenant: claims.tenant, roles } as any;
+      const { hasPermission } = await import('@alga-psa/authorization/rbac');
+      if (!await hasPermission(actor, 'ticket', 'update', trx)) return false;
+      const { authorizeTicketRecordAccess } = await import('../../../packages/tickets/src/lib/ticketRecordAuthorization');
+      try {
+        await authorizeTicketRecordAccess({ trx, tenant: claims.tenant, user: actor, ticketId: payload.ticketId, action: 'update', ticketRow: ticket as any });
+      } catch (error) {
+        if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
+        throw error;
+      }
+      return true;
+    });
+    if (!authorized) return null;
+
+    const redemptionId = randomUUID();
+    const claimedPayload: ConfirmationPayload = { ...payload, state: 'redeeming', redemptionId };
+    const claimed = await tenantDb(db, claims.tenant).table('co_management_deliveries')
+      .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+      .where((query: any) => query.whereRaw("payload->>'state' = 'pending'")
+        .orWhere((stale: any) => stale.whereRaw("payload->>'state' = 'redeeming'")
+          .andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
+      .update({ payload: claimedPayload, updated_at: db.fn.now() });
+    if (!claimed) return null;
+
+    let completed = false;
+    try {
+      const { processInboundEmailInApp } = await import('../../../shared/services/email/processInboundEmailInApp');
+      const result = await processInboundEmailInApp({ tenantId: claims.tenant, providerId: native.providerId, emailData: native.emailData }, {
+        confirmedInternalActor: {
+          userId: payload.actor.userId,
+          email: String(row.recipient),
+          providerMessageId: native.providerMessageId,
+          contentSha256: native.contentSha256,
+        },
+      });
+      if ((result.outcome !== 'replied' && result.outcome !== 'deduped') || result.ticketId !== payload.ticketId || !result.commentId) return null;
+      await tenantDb(db, claims.tenant).table('co_management_deliveries')
+        .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+        .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
+        .update({ payload: { ...payload, state: 'approved' }, updated_at: db.fn.now() });
+      completed = true;
+      return { ticketId: result.ticketId, commentId: result.commentId };
+    } finally {
+      if (!completed) {
+        await tenantDb(db, claims.tenant).table('co_management_deliveries')
+          .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+          .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
+          .update({ payload: { ...payload, state: 'pending' }, updated_at: db.fn.now() });
+      }
+    }
+  });
+}
+
 /** Server recovery delivery; the email-service process can safely leave the intent pending. */
 export async function deliverPendingSenderConfirmations(tenant: string, limit = 100): Promise<{ sent: number; failed: number }> {
   try { getWorkflowEmailProvider(); } catch { return { sent: 0, failed: 0 }; }
@@ -414,9 +528,8 @@ export async function approveInboundSenderConfirmation(token: string, user: {
     .first('recipient', 'payload', 'updated_at');
   if (!row?.payload) return null;
   const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-  const expectedContentSha256 = payload.target === 'native' && payload.nativeReply
-    ? payload.nativeReply.contentSha256
-    : createHash('sha256').update(payload.text, 'utf8').digest('hex');
+  if (payload.target === 'native') return redeemNativeSenderConfirmation(db, claims, user);
+  const expectedContentSha256 = createHash('sha256').update(payload.text, 'utf8').digest('hex');
   if (payload.expiresAt !== claims.expiresAt || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
     || Date.parse(payload.expiresAt) <= Date.now()
     || user.tenant !== payload.actor.tenant || user.user_id !== payload.actor.userId
@@ -438,60 +551,6 @@ export async function approveInboundSenderConfirmation(token: string, user: {
 
   let completed = false;
   try {
-    if (payload.target === 'native') {
-      const native = payload.nativeReply;
-      if (!native || native.replyToken !== payload.replyToken || classifyReplyToken(payload.replyToken) !== 'native'
-        || native.providerId !== payload.providerId
-        || native.providerMessageId !== payload.providerMessageId
-        || native.emailData.tenant !== claims.tenant
-        || native.emailData.providerId !== native.providerId
-        || (native.emailData.providerIdentity || native.emailData.id) !== native.providerMessageId
-        || inboundMessageSha256(native.emailData) !== native.messageSha256
-        || createHash('sha256').update(native.content, 'utf8').digest('hex') !== native.contentSha256
-        || native.contentSha256 !== payload.contentSha256
-        || sourceId(claims.tenant, native.providerId, native.providerMessageId, payload.actor) !== claims.sourceId) return null;
-
-      const authorized = await db.transaction(async (trx) => {
-        const currentUser = await tenantDb(trx, claims.tenant).table('users')
-          .where({ user_id: payload.actor.userId, user_type: 'internal', is_inactive: false }).first();
-        if (!currentUser || String(currentUser.email ?? '').trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()) return false;
-        const target = await tenantDb(trx, claims.tenant).table('email_reply_tokens')
-          .where({ token: payload.replyToken }).first('ticket_id', 'comment_id');
-        if (!target || target.ticket_id !== payload.ticketId
-          || (native.parentCommentId && target.comment_id !== native.parentCommentId)) return false;
-        const ticket = await tenantDb(trx, claims.tenant).table('tickets').where({ ticket_id: payload.ticketId }).first();
-        if (!ticket) return false;
-        const roles = await tenantDb(trx, claims.tenant).table('user_roles').where({ user_id: payload.actor.userId }).select('role_id');
-        const actor = { ...currentUser, tenant: claims.tenant, roles } as any;
-        const { hasPermission } = await import('@alga-psa/authorization/rbac');
-        if (!await hasPermission(actor, 'ticket', 'update', trx)) return false;
-        const { authorizeTicketRecordAccess } = await import('../../../packages/tickets/src/lib/ticketRecordAuthorization');
-        try {
-          await authorizeTicketRecordAccess({ trx, tenant: claims.tenant, user: actor, ticketId: payload.ticketId, action: 'update', ticketRow: ticket as any });
-        } catch (error) {
-          if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
-          throw error;
-        }
-        return true;
-      });
-      if (!authorized) return null;
-      const { processInboundEmailInApp } = await import('../../../shared/services/email/processInboundEmailInApp');
-      const result = await processInboundEmailInApp({ tenantId: claims.tenant, providerId: native.providerId, emailData: native.emailData }, {
-        confirmedInternalActor: {
-          userId: payload.actor.userId,
-          email: String(row.recipient),
-          providerMessageId: native.providerMessageId,
-          contentSha256: native.contentSha256,
-        },
-      });
-      if ((result.outcome !== 'replied' && result.outcome !== 'deduped') || result.ticketId !== payload.ticketId || !result.commentId) return null;
-      await tenantDb(db, claims.tenant).table('co_management_deliveries')
-        .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
-        .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
-        .update({ payload: { ...payload, state: 'approved' }, updated_at: db.fn.now() });
-      completed = true;
-      return { ticketId: result.ticketId, commentId: result.commentId };
-    }
     const reply = await tenantDb(db, claims.tenant).table('email_reply_tokens')
       .where({ tenant: claims.tenant, token: payload.replyToken }).first('metadata');
     if (!reply) return null;

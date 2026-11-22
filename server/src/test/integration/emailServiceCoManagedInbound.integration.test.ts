@@ -530,7 +530,19 @@ describe('email-service boot registers co-managed inbound', () => {
     await db('role_permissions').insert({ tenant: ticketTenant, role_id: roleId, permission_id: permissionId });
     await db('user_roles').insert({ tenant: ticketTenant, user_id: actorId, role_id: roleId });
     const originalBoard = await db('boards').where({ tenant: ticketTenant }).first('inbound_reply_reopen_enabled', 'inbound_reply_reopen_cutoff_hours', 'inbound_reply_reopen_status_id', 'inbound_reply_ai_ack_suppression_enabled');
-    const ticket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('status_id', 'board_id');
+    const ticket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('status_id', 'board_id', 'priority_id', 'client_id');
+    const inboundDefaultsId = uuidv4();
+    await db('inbound_ticket_defaults').insert({
+      id: inboundDefaultsId, tenant: ticketTenant, short_name: `native-${MARK}`, display_name: `Native ${MARK}`,
+      description: 'Native confirmation defaults', board_id: ticket.board_id, status_id: ticket.status_id,
+      priority_id: ticket.priority_id, client_id: ticket.client_id, entered_by: techId,
+      is_active: true, is_default: false, created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await db('email_providers').insert({
+      id: PROVIDER_ID, tenant: ticketTenant, provider_type: 'google', provider_name: `Gmail ${MARK}`,
+      mailbox: 'support@msp.example.test', is_active: true, status: 'connected', inbound_ticket_defaults_id: inboundDefaultsId,
+      created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
     let closedStatus = await db('statuses').where({ tenant: ticketTenant, board_id: ticket.board_id, status_type: 'ticket', is_closed: true }).first('status_id');
     if (!closedStatus?.status_id) {
       const statusId = uuidv4();
@@ -545,22 +557,30 @@ describe('email-service boot registers co-managed inbound', () => {
     await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ status_id: closedStatus.status_id, is_closed: true, closed_at: new Date(Date.now() - 60_000) });
     try {
       const replyToken = `native:${uuidv4()}`, replyText = `authorized-native-reply-${MARK}`;
+      const replyHtml = `<p><strong>${replyText}</strong> <a href="https://example.com/native-status">Status</a></p><p>[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]</p>`;
+      const replyPlain = `${replyText}\n\n[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]`;
       await db('email_reply_tokens').insert({ tenant: ticketTenant, token: replyToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: actorEmail });
       const raw = Buffer.from([
         `From: Native Owner <${actorEmail}>`, 'To: support@msp.example.test', 'Subject: Re: Shared ticket',
         `Message-ID: <native-confirm-${MARK}@msp.example.test>`, 'Authentication-Results: mx.google.com; dkim=pass header.d=msp.example.test',
         'Authentication-Results: attacker.invalid; dmarc=pass header.from=msp.example.test', `AuthSource: ${actorEmail}`, `AuthAs: ${actorEmail}`,
-        '', `${replyText}\n\n[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]`,
+        'MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="native-reply"', '',
+        '--native-reply', 'Content-Type: text/plain; charset=utf-8', '', replyPlain,
+        '--native-reply', 'Content-Type: text/html; charset=utf-8', '', replyHtml, '--native-reply--',
       ].join('\r\n'));
       const adapter = new GmailAdapter({ id: PROVIDER_ID, tenant: ticketTenant, name: 'Gmail fixture', provider_type: 'google', mailbox: 'support@msp.example.test', folder_to_monitor: 'INBOX', active: true, webhook_notification_url: '', connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any);
       const headers = raw.toString().split('\r\n').filter(line => /^[^\s:]+:/.test(line)).map(line => {
         const colon = line.indexOf(':'); return { name: line.slice(0, colon), value: line.slice(colon + 1).trim() };
       });
-      (adapter as any).gmail = { users: { messages: { get: async () => ({ data: { id: `native-confirm-${MARK}`, labelIds: ['INBOX'], payload: { headers, body: { data: Buffer.from(`${replyText}\n\n[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]`).toString('base64') } } } }) } } };
+      (adapter as any).gmail = { users: { messages: { get: async () => ({ data: { id: `native-confirm-${MARK}`, labelIds: ['INBOX'], payload: { headers, parts: [
+        { mimeType: 'text/plain', body: { data: Buffer.from(replyPlain).toString('base64') } },
+        { mimeType: 'text/html', body: { data: Buffer.from(replyHtml).toString('base64') } },
+      ] } } }) } } };
       (adapter as any).downloadMessageSource = async () => raw;
       const message: any = await adapter.getMessageDetails(`native-confirm-${MARK}`);
       expect(message.senderAuthentication?.author?.provenance).not.toBe('provider_attested_author');
       expect(message.senderAuthentication?.contact?.authorization).toBe('untrusted');
+      expect(message.body?.html).toContain('<strong>');
       const initial: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
       expect(initial).toMatchObject({ outcome: 'quarantined', reason: 'native_sender_confirmation_requested', ticketId });
       expect(await sharedComments(replyText)).toHaveLength(0);
@@ -570,15 +590,87 @@ describe('email-service boot registers co-managed inbound', () => {
       const confirmationToken = new URL(url).searchParams.get('token')!;
       expect(await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: techId, user_type: 'internal', email: 'other@msp.example.test' })).toBeNull();
       expect(await sharedComments(replyText)).toHaveLength(0);
-      const approved = await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: actorId, user_type: 'internal', email: actorEmail });
+      const actor = { tenant: ticketTenant, user_id: actorId, user_type: 'internal', email: actorEmail };
+      const actions = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+      const originalWrite = actions.createCommentFromEmail;
+      let releaseFirst!: () => void, firstAtWrite!: () => void;
+      const paused = new Promise<void>((resolve) => { firstAtWrite = resolve; });
+      const resume = new Promise<void>((resolve) => { releaseFirst = resolve; });
+      const slowWrite = vi.spyOn(actions, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
+        // The message dedupe has passed; hold the first worker before its comment write.
+        firstAtWrite();
+        await resume;
+        return originalWrite(...args);
+      });
+      const firstApproval = approveInboundSenderConfirmation(confirmationToken, actor);
+      await paused;
+      const { sourceId } = JSON.parse(Buffer.from(confirmationToken.split('.')[0], 'base64url').toString());
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_confirmation', source_id: sourceId })
+        .update({ updated_at: new Date(Date.now() - 61_000) });
+      let secondFinished = false;
+      const secondApproval = approveInboundSenderConfirmation(confirmationToken, actor).then(result => {
+        secondFinished = true;
+        return result;
+      });
+      try {
+        await vi.waitFor(async () => {
+          const waiting = await db.raw("select 1 from pg_locks where locktype = 'advisory' and not granted and objid = (hashtext(?)::bigint & 4294967295)::oid",
+            [`inbound-native-confirmation:${ticketTenant}:${sourceId}`]);
+          expect(secondFinished || waiting.rows.length > 0).toBe(true);
+        });
+        expect(secondFinished).toBe(false);
+      } finally {
+        releaseFirst();
+        slowWrite.mockRestore();
+      }
+      const [approved, staleRetry] = await Promise.all([firstApproval, secondApproval]);
       expect(approved).toMatchObject({ ticketId });
+      expect(staleRetry).toBeNull();
       const rows = await sharedComments(replyText);
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ author_type: 'internal', user_id: actorId });
+      expect(rows[0].note).toContain('"bold":true');
+      expect(rows[0].note).toContain('https://example.com/native-status');
       const reopened = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('status_id', 'is_closed');
       expect(reopened).toMatchObject({ status_id: reopenedStatus, is_closed: false });
-      expect(await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: actorId, user_type: 'internal', email: actorEmail })).toBeNull();
+      expect(await approveInboundSenderConfirmation(confirmationToken, actor)).toBeNull();
       expect(await sharedComments(replyText)).toHaveLength(1);
+
+      const recoveryToken = `native:${uuidv4()}`, recoveryText = `authorized-native-recovery-${MARK}`;
+      const recoveryHtml = `<p><strong>${recoveryText}</strong></p><p>[ALGA-REPLY-TOKEN ${recoveryToken} ticketId=${ticketId}]</p>`;
+      const recoveryPlain = `${recoveryText}\n\n[ALGA-REPLY-TOKEN ${recoveryToken} ticketId=${ticketId}]`;
+      await db('email_reply_tokens').insert({ tenant: ticketTenant, token: recoveryToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: actorEmail });
+      const recoveryMessageId = `native-recovery-${MARK}`;
+      const recoveryRaw = Buffer.from([
+        `From: Native Owner <${actorEmail}>`, 'To: support@msp.example.test', 'Subject: Re: Shared ticket',
+        `Message-ID: <${recoveryMessageId}@msp.example.test>`, 'MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="native-recovery"', '',
+        '--native-recovery', 'Content-Type: text/plain; charset=utf-8', '', recoveryPlain,
+        '--native-recovery', 'Content-Type: text/html; charset=utf-8', '', recoveryHtml, '--native-recovery--',
+      ].join('\r\n'));
+      const recoveryHeaders = recoveryRaw.toString().split('\r\n').filter(line => /^[^\s:]+:/.test(line)).map(line => {
+        const colon = line.indexOf(':'); return { name: line.slice(0, colon), value: line.slice(colon + 1).trim() };
+      });
+      (adapter as any).gmail.users.messages.get = async () => ({ data: { id: recoveryMessageId, labelIds: ['INBOX'], payload: { headers: recoveryHeaders, parts: [
+        { mimeType: 'text/plain', body: { data: Buffer.from(recoveryPlain).toString('base64') } },
+        { mimeType: 'text/html', body: { data: Buffer.from(recoveryHtml).toString('base64') } },
+      ] } } });
+      (adapter as any).downloadMessageSource = async () => recoveryRaw;
+      const recoveryMessage = await adapter.getMessageDetails(recoveryMessageId);
+      expect(await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: recoveryMessage })).toMatchObject({ outcome: 'quarantined', reason: 'native_sender_confirmation_requested' });
+      const recoveryUrl = String((sendEmail.mock.calls[1] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const recoveryConfirmationToken = new URL(recoveryUrl).searchParams.get('token')!;
+      const processModule = await import('../../../../shared/services/email/processInboundEmailInApp');
+      const originalProcess = processModule.processInboundEmailInApp;
+      const persistThenInterrupt = vi.spyOn(processModule, 'processInboundEmailInApp').mockImplementationOnce(async (...args: any[]) => {
+        await originalProcess(...args);
+        throw new Error('simulated interruption after native comment persistence');
+      });
+      await expect(approveInboundSenderConfirmation(recoveryConfirmationToken, actor)).rejects.toThrow('simulated interruption after native comment persistence');
+      persistThenInterrupt.mockRestore();
+      expect(await sharedComments(recoveryText)).toHaveLength(1);
+      expect(await approveInboundSenderConfirmation(recoveryConfirmationToken, actor)).toMatchObject({ ticketId });
+      expect(await sharedComments(recoveryText)).toHaveLength(1);
+      expect(await approveInboundSenderConfirmation(recoveryConfirmationToken, actor)).toBeNull();
     } finally {
       await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ status_id: ticket.status_id, is_closed: false, closed_at: null });
       await db('statuses').where({ tenant: ticketTenant, board_id: ticket.board_id, name: `Closed ${MARK}` }).delete();
@@ -586,6 +678,8 @@ describe('email-service boot registers co-managed inbound', () => {
         inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
         inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
         inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false });
+      await db('email_providers').where({ tenant: ticketTenant, id: PROVIDER_ID }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: ticketTenant, id: inboundDefaultsId }).delete();
       resetWorkflowEmailProvider();
       if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
       if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
