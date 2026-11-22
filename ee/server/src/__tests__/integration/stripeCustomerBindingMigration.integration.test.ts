@@ -2,10 +2,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import knexFactory, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const migration = require('../../../migrations/20261031090000_create_stripe_customer_bindings.cjs');
 const forwardMigration = require('../../../migrations/20261122120000_enforce_stripe_customer_binding_ownership.cjs');
+const validateMigration = require('../../../migrations/20261122120100_validate_stripe_customer_binding_ownership.cjs');
 const connectionString = process.env.STRIPE_BINDING_TEST_DATABASE_URL;
 const isCitus = process.env.STRIPE_BINDING_TEST_CITUS === '1';
 const schema = `stripe_binding_migration_${process.pid}_${randomUUID().replaceAll('-', '')}`;
@@ -85,6 +89,14 @@ async function createLocalCustomerDistributedTenantGraph() {
     ADD CONSTRAINT stripe_customers_legacy_tenant_fk
     FOREIGN KEY (tenant) REFERENCES ${fixtureTable('tenants')} (tenant)`);
   await db.raw('SELECT create_distributed_table(?::regclass, \'tenant\')', [`${schema}.tenants`]);
+}
+
+async function ownershipConstraintState() {
+  const { rows } = await db.raw(`
+    SELECT convalidated FROM pg_constraint
+    WHERE conname = 'stripe_customers_binding_owner_fk'
+      AND conrelid = 'stripe_customers'::regclass`);
+  return rows;
 }
 
 async function waitForMigrationLock(timeoutMs = 5_000) {
@@ -244,6 +256,11 @@ suite('Stripe customer binding migration ownership enforcement', () => {
         AND conrelid = 'stripe_customers'::regclass`);
     expect(notYetValidated.rows).toEqual([{ convalidated: false }]);
     await forwardMigration.up(db);
+    // The locked backfill migrations only add the FK NOT VALID; validation is
+    // the separately recorded transaction:false migration that follows.
+    expect(await ownershipConstraintState()).toEqual([{ convalidated: false }]);
+    await validateMigration.up(db);
+    expect(await ownershipConstraintState()).toEqual([{ convalidated: true }]);
 
     expect(await db('stripe_customer_bindings').select('stripe_customer_external_id', 'tenant').orderBy('stripe_customer_external_id'))
       .toEqual([
@@ -309,6 +326,7 @@ suite('Stripe customer binding migration ownership enforcement', () => {
     expect(await queuedLegacyInsert).toBeInstanceOf(Error);
 
     await forwardMigration.up(db);
+    await validateMigration.up(db);
     expect(await db('stripe_customer_bindings')
       .whereIn('stripe_customer_external_id', ['cus_local_existing', 'cus_local_race_before_lock'])
       .orderBy('stripe_customer_external_id')
@@ -413,11 +431,33 @@ suite('Stripe customer binding migration ownership enforcement', () => {
 
     expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_forward' }).first('tenant'))
       .toEqual({ tenant: tenantA });
-    const constraint = await db.raw(`
-      SELECT convalidated FROM pg_constraint
-      WHERE conname = 'stripe_customers_binding_owner_fk'
-        AND conrelid = 'stripe_customers'::regclass`);
-    expect(constraint.rows).toEqual([{ convalidated: true }]);
+    expect(await ownershipConstraintState()).toEqual([{ convalidated: false }]);
+    const rejectedUnboundWrite = db('stripe_customers')
+      .insert({ tenant: tenantA, stripe_customer_external_id: 'cus_forward_unbound' })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedUnboundWrite).toBeInstanceOf(Error);
+
+    await validateMigration.up(db);
+    expect(await ownershipConstraintState()).toEqual([{ convalidated: true }]);
+  });
+
+  it('validates ownership in a separate transaction:false migration recorded after enforcement', async () => {
+    const migrationsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../migrations');
+    const names = fs.readdirSync(migrationsDir).filter((name) => /^\d{14}_.+\.cjs$/.test(name)).sort();
+    const enforceIndex = names.indexOf('20261122120000_enforce_stripe_customer_binding_ownership.cjs');
+    const validateIndex = names.indexOf('20261122120100_validate_stripe_customer_binding_ownership.cjs');
+    expect(enforceIndex).toBeGreaterThanOrEqual(0);
+    expect(validateIndex).toBeGreaterThan(enforceIndex);
+    expect(validateMigration.config).toEqual({ transaction: false });
+    for (const name of [
+      '20261031090000_create_stripe_customer_bindings.cjs',
+      '20261122120000_enforce_stripe_customer_binding_ownership.cjs',
+    ]) {
+      expect(fs.readFileSync(path.join(migrationsDir, name), 'utf8')).not.toMatch(/VALIDATE\s+CONSTRAINT/i);
+    }
+
+    await db.raw(`CREATE TABLE ${fixtureTable('stripe_customer_bindings')} (stripe_customer_external_id text PRIMARY KEY, tenant uuid NOT NULL)`);
+    await expect(validateMigration.up(db)).rejects.toThrow(/missing Stripe customer ownership constraint/);
   });
 
   it('does not omit nullable mapping rows from preflight or enforcement scope', async () => {
