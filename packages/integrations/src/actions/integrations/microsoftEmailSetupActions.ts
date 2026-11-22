@@ -30,6 +30,7 @@ import {
   getMicrosoftPlatformAppServedConsumers,
   MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
 } from '../../lib/microsoftPlatformApp';
+import { MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME } from '../../lib/microsoftPlatformAppServed';
 import {
   createMicrosoftEmailProfilePendingConsentInternal,
   getMicrosoftEmailConsentProfileInternal,
@@ -565,7 +566,7 @@ export async function completeMicrosoftEmailApplicationCreation(input: {
       path: '/applications',
       accessToken,
       body: buildMicrosoftEmailApplicationManifest({
-        displayName: input.state.displayName || 'AlgaPSA Microsoft Email',
+        displayName: input.state.displayName || MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME,
         mailboxRedirectUri: metadata.mailboxRedirectUri,
         setupRedirectUri: metadata.setupRedirectUri,
       }),

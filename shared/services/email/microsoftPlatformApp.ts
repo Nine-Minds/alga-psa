@@ -9,6 +9,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 import {
   getMicrosoftPlatformAppServedConsumers,
+  MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
   hasMicrosoftProfileCapability,
   normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
@@ -88,8 +89,8 @@ export async function getMicrosoftPlatformClientId(): Promise<string | null> {
 // without pulling this module's server dependencies into the browser bundle.
 export { getMicrosoftPlatformAppServedConsumers };
 
-/** Display name for new supplied-app profiles. It must not say "Email": the app serves more than email. */
-export const MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME = 'Alga platform Microsoft app';
+// Defined in the client-safe module; re-exported so server imports keep resolving.
+export { MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME };
 
 export function normalizeMicrosoftClientIdForComparison(value: string | null | undefined): string {
   return (value || '')

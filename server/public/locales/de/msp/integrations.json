@@ -1780,13 +1780,16 @@
         "callbackUri": "Postfach-Callback-URI",
         "complete": {
           "consentDone": "Von Ihrem Microsoft 365-Administrator genehmigt. Sie können jetzt ein Postfach verbinden.",
+          "consentDoneCalendar": "Von Ihrem Microsoft 365-Administrator genehmigt. Sie können jetzt ein Postfach oder einen Kalender verbinden.",
           "consentPending": "Ein Microsoft 365-Administrator Ihrer Organisation muss den Zugriff genehmigen, bevor Postfächer verbunden werden können.",
+          "consentPendingCalendar": "Ein Microsoft 365-Administrator Ihrer Organisation muss den Zugriff genehmigen, bevor Postfächer und Kalender verbunden werden können.",
           "profileCreated": "Microsoft Email profile created and bound",
           "ready": "Microsoft ist bereit",
           "waiting": "Warten auf Administratorgenehmigung"
         },
         "consent": {
           "confirmedDescription": "Die Microsoft-App ist für die Postfachautorisierung bereit.",
+          "confirmedDescriptionCalendar": "Die Microsoft-App ist für die Postfach- und Kalenderautorisierung bereit.",
           "confirmedTitle": "Administratoreinwilligung bestätigt",
           "url": "URL für die Administratoreinwilligung",
           "urlLabel": "Einwilligungs-URL",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} kopiert",
         "description": "Wählen Sie aus, wie AlgaPSA eine Verbindung mit Microsoft herstellt. Die Postfächer verbinden Sie separat.",
+        "descriptionCalendar": "Wählen Sie, wie AlgaPSA sich mit Microsoft verbindet. Postfächer und Kalender verbinden Sie separat.",
         "errors": {
           "automated": "Die automatische Erstellung der Microsoft-App konnte nicht gestartet werden.",
           "generic": "Die Einrichtung von Microsoft-E-Mail wurde nicht abgeschlossen.",

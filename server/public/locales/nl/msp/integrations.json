@@ -1780,13 +1780,16 @@
         "callbackUri": "Callback-URI van postvak",
         "complete": {
           "consentDone": "Goedgekeurd door uw Microsoft 365-beheerder. U kunt nu een postvak verbinden.",
+          "consentDoneCalendar": "Goedgekeurd door uw Microsoft 365-beheerder. U kunt nu een postvak of een agenda verbinden.",
           "consentPending": "Een Microsoft 365-beheerder van uw organisatie moet de toegang goedkeuren voordat postvakken kunnen worden verbonden.",
+          "consentPendingCalendar": "Een Microsoft 365-beheerder van uw organisatie moet toegang goedkeuren voordat postvakken en agenda's kunnen worden verbonden.",
           "profileCreated": "Microsoft-e-mailprofiel aangemaakt en gekoppeld",
           "ready": "Microsoft is gereed",
           "waiting": "Wachten op goedkeuring van de beheerder"
         },
         "consent": {
           "confirmedDescription": "De Microsoft-app is gereed voor postvakautorisatie.",
+          "confirmedDescriptionCalendar": "De Microsoft-app is klaar voor autorisatie van postvakken en agenda's.",
           "confirmedTitle": "Beheerderstoestemming bevestigd",
           "url": "URL voor beheerderstoestemming",
           "urlLabel": "Toestemmings-URL",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} gekopieerd",
         "description": "Kies hoe AlgaPSA verbinding maakt met Microsoft. U verbindt postvakken afzonderlijk.",
+        "descriptionCalendar": "Kies hoe AlgaPSA verbinding maakt met Microsoft. U verbindt postvakken en agenda's afzonderlijk.",
         "errors": {
           "automated": "Kan het automatisch maken van de Microsoft-app niet starten.",
           "generic": "De configuratie van Microsoft-e-mail is niet voltooid.",

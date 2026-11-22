@@ -1780,13 +1780,16 @@
         "callbackUri": "URI de retorno da caixa de correio",
         "complete": {
           "consentDone": "Aprovado pelo seu administrador do Microsoft 365. Agora você pode conectar uma caixa de correio.",
+          "consentDoneCalendar": "Aprovado pelo administrador do Microsoft 365. Agora você pode conectar uma caixa de correio ou um calendário.",
           "consentPending": "Um administrador do Microsoft 365 da sua organização precisa aprovar o acesso antes que as caixas de correio possam ser conectadas.",
+          "consentPendingCalendar": "Um administrador do Microsoft 365 da sua organização deve aprovar o acesso antes que as caixas de correio e os calendários possam ser conectados.",
           "profileCreated": "Microsoft Email profile created and bound",
           "ready": "A Microsoft está pronta",
           "waiting": "Aguardando a aprovação do administrador"
         },
         "consent": {
           "confirmedDescription": "O aplicativo da Microsoft está pronto para autorizar a caixa de correio.",
+          "confirmedDescriptionCalendar": "O aplicativo da Microsoft está pronto para a autorização de caixas de correio e calendários.",
           "confirmedTitle": "Consentimento do administrador confirmado",
           "url": "URL de consentimento do administrador",
           "urlLabel": "URL de consentimento",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} copiado",
         "description": "Escolha como o AlgaPSA se conecta à Microsoft. Você conectará as caixas de correio separadamente.",
+        "descriptionCalendar": "Escolha como o AlgaPSA se conecta ao Microsoft. Você conectará as caixas de correio e os calendários separadamente.",
         "errors": {
           "automated": "Não foi possível iniciar a criação automática do aplicativo da Microsoft.",
           "generic": "A configuração do email da Microsoft não foi concluída.",

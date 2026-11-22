@@ -8,6 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import {
+  MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME,
+  MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME,
+} from '../../../lib/microsoftPlatformAppServed';
 import { CALENDAR_SETUP_ENTRY_PATH, MAILBOX_SETUP_ENTRY_PATH, resolveProductNavDestination } from '@alga-psa/types';
 
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
@@ -283,6 +287,19 @@ function buildBindings(overrides: Array<Record<string, unknown>> | null = null) 
   ];
 }
 
+function suppliedBindings(calendarProfileId: string | null) {
+  const rows = buildBindings([
+    { consumerType: 'msp_sso', consumerLabel: 'MSP SSO', profileId: 'profile-1', profileDisplayName: 'Primary Profile', isArchived: false },
+    { consumerType: 'email', consumerLabel: 'Email', profileId: 'platform-profile', profileDisplayName: 'Alga platform Microsoft app', isArchived: false },
+  ]);
+  if (calendarProfileId) {
+    rows.push({ consumerType: 'calendar', consumerLabel: 'Calendar', profileId: calendarProfileId, profileDisplayName: 'Calendar app', isArchived: false });
+  }
+  return rows;
+}
+
+const SUPPLIED_EMAIL_SETUP = { state: 'ready', source: 'platform', hosted: true, platformOffered: true, automatedCreationAvailable: true, profileId: 'platform-profile' };
+
 describe('MicrosoftIntegrationSettings contracts', () => {
   const originalEdition = process.env.NEXT_PUBLIC_EDITION;
 
@@ -438,9 +455,8 @@ describe('MicrosoftIntegrationSettings contracts', () => {
 
   it('T008: supplied-app ready banner offers mailbox and calendar actions (EE) plus calendar approval', async () => {
     const user = userEvent.setup();
-    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
-      emailSetup: { state: 'ready', source: 'platform', hosted: true, platformOffered: true, automatedCreationAvailable: true, profileId: 'platform-profile' },
-    }));
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({ emailSetup: SUPPLIED_EMAIL_SETUP }));
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: suppliedBindings('platform-profile') });
     getMicrosoftEmailAdminConsentUrlMock.mockResolvedValue({ success: true, url: 'https://login.microsoftonline.com/t/adminconsent' });
     const open = vi.fn().mockReturnValue({ focus: vi.fn() });
     Object.defineProperty(window, 'open', { configurable: true, value: open });
@@ -454,6 +470,101 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await user.click(screen.getByRole('button', { name: 'Approve calendar access' }));
     expect(getMicrosoftEmailAdminConsentUrlMock).toHaveBeenCalledWith({ profileId: 'platform-profile' });
     expect(open).toHaveBeenCalledWith('https://login.microsoftonline.com/t/adminconsent', expect.any(String), expect.any(String));
+  });
+
+  it('banner: Calendar unbound on a supplied-app tenant still shows the calendar wording and action', async () => {
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({ emailSetup: SUPPLIED_EMAIL_SETUP }));
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: suppliedBindings(null) });
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByRole('button', { name: 'Connect a calendar →' })).toBeInTheDocument();
+    expect(screen.getByText(/mailboxes and calendars with it/)).toBeInTheDocument();
+  });
+
+  it('banner: Calendar on a tenant-owned profile (mixed) makes no calendar claim and offers no supplied-app calendar action', async () => {
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({ emailSetup: SUPPLIED_EMAIL_SETUP }));
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: suppliedBindings('profile-2') });
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByRole('button', { name: 'Connect a mailbox →' })).toBeInTheDocument();
+    expect(screen.getByText('The Microsoft app is approved and ready for mailbox sign-in.')).toBeInTheDocument();
+    expect(screen.queryByText(/mailboxes and calendars with it/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect a calendar →' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve calendar access' })).not.toBeInTheDocument();
+  });
+
+  async function openSetupDialog(user: ReturnType<typeof userEvent.setup>) {
+    const emailSetup = { state: 'not_configured', source: null, hosted: true, platformOffered: true, automatedCreationAvailable: true };
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({ emailSetup }));
+    getMicrosoftEmailSetupOptionsMock.mockResolvedValue({
+      success: true,
+      callbackUri: 'https://psa.example.com/api/auth/microsoft/callback',
+      setupCallbackUri: 'https://psa.example.com/api/auth/microsoft/email-setup/callback',
+      emailSetup,
+      platformApplication: { available: true },
+      automatedCreationAvailable: true,
+    });
+    render(<MicrosoftIntegrationSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Set up Microsoft' }));
+    return screen.findByRole('dialog', { name: 'Set up Microsoft' });
+  }
+
+  it('setup dialog (EE): default name has no "Email", is what the platform path submits, and copy mentions calendars', async () => {
+    const user = userEvent.setup();
+    configureMicrosoftEmailPlatformApplicationMock.mockResolvedValue({
+      success: true, profileId: 'p', displayName: 'Alga platform Microsoft app', tenantId: 't', clientId: 'c', adminConsentUrl: 'https://login.microsoftonline.com/t/adminconsent',
+    });
+    const dialog = await openSetupDialog(user);
+    expect(within(dialog).getByText(/connect mailboxes and calendars separately/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: /Use the app provided by AlgaPSA/ }));
+    const nameInput = within(dialog).getByLabelText('Profile display name') as HTMLInputElement;
+    expect(nameInput.value).toBe(MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME);
+    expect(nameInput.value).not.toMatch(/email/i);
+    await user.type(within(dialog).getByLabelText('Microsoft tenant ID or verified domain'), 'contoso.onmicrosoft.com');
+    await user.click(within(dialog).getByRole('button', { name: 'Create profile and continue' }));
+
+    await waitFor(() => expect(configureMicrosoftEmailPlatformApplicationMock).toHaveBeenCalled());
+    const submitted = configureMicrosoftEmailPlatformApplicationMock.mock.calls[0][0];
+    expect(submitted.displayName).toBe(MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME);
+    expect(submitted.displayName).not.toMatch(/email/i);
+    expect(await within(dialog).findByText(/before mailboxes and calendars can connect/)).toBeInTheDocument();
+  });
+
+  it('setup dialog (EE): automated and manual paths default to a name without "Email" and keep mailbox-only completion wording', async () => {
+    const user = userEvent.setup();
+    configureMicrosoftEmailManualApplicationMock.mockResolvedValue({
+      success: true, profileId: 'p', displayName: 'x', tenantId: 't', clientId: 'c', adminConsentUrl: 'https://login.microsoftonline.com/t/adminconsent',
+    });
+    const dialog = await openSetupDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: /Enter an existing app manually/ }));
+    const nameInput = within(dialog).getByLabelText('Profile display name') as HTMLInputElement;
+    expect(nameInput.value).toBe(MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME);
+    expect(nameInput.value).not.toMatch(/email/i);
+    await user.type(within(dialog).getByLabelText('Client ID'), 'cid');
+    await user.type(within(dialog).getByLabelText('Client secret'), 'secret');
+    await user.type(within(dialog).getByLabelText('Microsoft tenant ID'), 'contoso.onmicrosoft.com');
+    await user.click(within(dialog).getByRole('button', { name: 'Save app and continue' }));
+    const waiting = await within(dialog).findByText(/must approve access before mailboxes can connect/);
+    expect(waiting.textContent).not.toMatch(/calendar/i);
+  });
+
+  it('setup dialog (CE): intro and completion text mention mailboxes only', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    const user = userEvent.setup();
+    configureMicrosoftEmailPlatformApplicationMock.mockResolvedValue({
+      success: true, profileId: 'p', displayName: 'x', tenantId: 't', clientId: 'c', adminConsentUrl: 'https://login.microsoftonline.com/t/adminconsent',
+    });
+    const dialog = await openSetupDialog(user);
+    expect(within(dialog).getByText('Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /Use the app provided by AlgaPSA/ }));
+    await user.type(within(dialog).getByLabelText('Microsoft tenant ID or verified domain'), 'contoso.onmicrosoft.com');
+    await user.click(within(dialog).getByRole('button', { name: 'Create profile and continue' }));
+    const waiting = await within(dialog).findByText(/must approve access before mailboxes can connect/);
+    expect(waiting.textContent).not.toMatch(/calendar/i);
+    expect(dialog.textContent).not.toMatch(/calendar/i);
   });
 
   it('T008: without calendar (CE) the supplied-app banner offers the mailbox action only', async () => {

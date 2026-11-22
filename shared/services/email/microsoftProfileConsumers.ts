@@ -99,3 +99,9 @@ export function getMicrosoftPlatformAppServedConsumers(
 ): MicrosoftProfileConsumer[] {
   return visibleConsumers.includes('calendar') ? ['email', 'calendar'] : ['email'];
 }
+
+/** Display name for new supplied-app profiles. It must not say "Email": the app serves more than email. */
+export const MICROSOFT_PLATFORM_PROFILE_DISPLAY_NAME = 'Alga platform Microsoft app';
+
+/** Default display name for tenant-owned (automated / manual) app profiles. Does not say "Email". */
+export const MICROSOFT_TENANT_APP_DEFAULT_DISPLAY_NAME = 'AlgaPSA Microsoft app';

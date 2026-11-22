@@ -1780,13 +1780,16 @@
         "callbackUri": "URI de devolución de llamada del buzón",
         "complete": {
           "consentDone": "Aprobado por su administrador de Microsoft 365. Ahora puede conectar un buzón.",
+          "consentDoneCalendar": "Aprobado por su administrador de Microsoft 365. Ya puede conectar un buzón o un calendario.",
           "consentPending": "Un administrador de Microsoft 365 de su organización debe aprobar el acceso antes de que se puedan conectar los buzones.",
+          "consentPendingCalendar": "Un administrador de Microsoft 365 de su organización debe aprobar el acceso antes de que se puedan conectar los buzones y los calendarios.",
           "profileCreated": "Microsoft Email profile created and bound",
           "ready": "Microsoft está listo",
           "waiting": "Esperando la aprobación del administrador"
         },
         "consent": {
           "confirmedDescription": "La aplicación de Microsoft está lista para autorizar el buzón.",
+          "confirmedDescriptionCalendar": "La aplicación de Microsoft está lista para la autorización de buzones y calendarios.",
           "confirmedTitle": "Consentimiento de administrador confirmado",
           "url": "URL de consentimiento de administrador",
           "urlLabel": "URL de consentimiento",
@@ -1794,6 +1797,7 @@
         },
         "copied": "Se copió {{label}}",
         "description": "Elija cómo se conecta AlgaPSA con Microsoft. Conectará los buzones por separado.",
+        "descriptionCalendar": "Elija cómo se conecta AlgaPSA con Microsoft. Conectará los buzones y los calendarios por separado.",
         "errors": {
           "automated": "No se pudo iniciar la creación automatizada de la aplicación de Microsoft.",
           "generic": "No se completó la configuración del correo electrónico de Microsoft.",

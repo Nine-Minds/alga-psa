@@ -1780,13 +1780,16 @@
         "callbackUri": "Återanrops-URI för e-postlåda",
         "complete": {
           "consentDone": "Godkänt av din Microsoft 365-administratör. Du kan nu ansluta en e-postlåda.",
+          "consentDoneCalendar": "Godkänt av din Microsoft 365-administratör. Du kan nu ansluta en postlåda eller en kalender.",
           "consentPending": "En Microsoft 365-administratör i din organisation måste godkänna åtkomst innan e-postlådor kan anslutas.",
+          "consentPendingCalendar": "En Microsoft 365-administratör i din organisation måste godkänna åtkomst innan postlådor och kalendrar kan anslutas.",
           "profileCreated": "Microsoft-e-postprofil har skapats",
           "ready": "Microsoft är klart",
           "waiting": "Väntar på administratörsgodkännande"
         },
         "consent": {
           "confirmedDescription": "Microsoft-appen är klar för auktorisering av e-postlåda.",
+          "confirmedDescriptionCalendar": "Microsoft-appen är redo för auktorisering av postlådor och kalendrar.",
           "confirmedTitle": "Administratörssamtycke bekräftat",
           "approvalLink": "Godkännandelänk",
           "url": "URL för administratörssamtycke",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} har kopierats",
         "description": "Välj hur AlgaPSA ansluter till Microsoft. Du ansluter e-postlådor separat.",
+        "descriptionCalendar": "Välj hur AlgaPSA ansluter till Microsoft. Du ansluter postlådor och kalendrar separat.",
         "errors": {
           "automated": "Det gick inte att starta automatiskt skapande av Microsoft-appen.",
           "generic": "Konfigurationen av Microsoft-e-post slutfördes inte.",

@@ -1780,13 +1780,16 @@
         "callbackUri": "Mailbox callback URI",
         "complete": {
           "consentDone": "Approved by your Microsoft 365 administrator. You can now connect a mailbox.",
+          "consentDoneCalendar": "Approved by your Microsoft 365 administrator. You can now connect a mailbox or a calendar.",
           "consentPending": "A Microsoft 365 administrator for your organization must approve access before mailboxes can connect.",
+          "consentPendingCalendar": "A Microsoft 365 administrator for your organization must approve access before mailboxes and calendars can connect.",
           "profileCreated": "Microsoft Email profile created",
           "ready": "Microsoft is ready",
           "waiting": "Waiting for admin approval"
         },
         "consent": {
           "confirmedDescription": "The Microsoft app is ready for mailbox authorization.",
+          "confirmedDescriptionCalendar": "The Microsoft app is ready for mailbox and calendar authorization.",
           "confirmedTitle": "Administrator consent confirmed",
           "approvalLink": "Approval link",
           "url": "Administrator consent URL",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} copied",
         "description": "Choose how AlgaPSA connects to Microsoft. You will connect mailboxes separately.",
+        "descriptionCalendar": "Choose how AlgaPSA connects to Microsoft. You will connect mailboxes and calendars separately.",
         "errors": {
           "automated": "Could not start automated Microsoft app creation.",
           "generic": "Microsoft Email setup did not complete.",

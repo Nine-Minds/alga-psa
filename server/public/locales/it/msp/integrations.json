@@ -1780,13 +1780,16 @@
         "callbackUri": "URI di callback della casella di posta",
         "complete": {
           "consentDone": "Il tuo amministratore di Microsoft 365 ha approvato l'accesso. Ora puoi collegare una cassetta postale.",
+          "consentDoneCalendar": "Approvato dal tuo amministratore Microsoft 365. Ora puoi collegare una casella di posta o un calendario.",
           "consentPending": "Un amministratore di Microsoft 365 della tua organizzazione deve approvare l'accesso prima che sia possibile collegare le cassette postali.",
+          "consentPendingCalendar": "Un amministratore Microsoft 365 della tua organizzazione deve approvare l'accesso prima che le caselle di posta e i calendari possano connettersi.",
           "profileCreated": "Microsoft Email profile created and bound",
           "ready": "Microsoft è pronto",
           "waiting": "In attesa dell'approvazione dell'amministratore"
         },
         "consent": {
           "confirmedDescription": "L'app Microsoft è pronta per autorizzare la casella di posta.",
+          "confirmedDescriptionCalendar": "L'app Microsoft è pronta per l'autorizzazione di caselle di posta e calendari.",
           "confirmedTitle": "Consenso amministratore confermato",
           "url": "URL per il consenso amministratore",
           "urlLabel": "URL di consenso",
@@ -1794,6 +1797,7 @@
         },
         "copied": "{{label}} copiato",
         "description": "Scegli come AlgaPSA si collega a Microsoft. Collegherai le cassette postali separatamente.",
+        "descriptionCalendar": "Scegli come AlgaPSA si connette a Microsoft. Collegherai le caselle di posta e i calendari separatamente.",
         "errors": {
           "automated": "Impossibile avviare la creazione automatica dell'app Microsoft.",
           "generic": "La configurazione dell'email Microsoft non è stata completata.",

@@ -386,6 +386,16 @@ export function MicrosoftIntegrationSettings({
     () => new Map(bindings.map((binding) => [binding.consumerType, binding])),
     [bindings]
   );
+  // The supplied app serves Calendar for this tenant only when the edition serves it AND Calendar is
+  // not bound to a tenant-owned profile. emailSetup.profileId is the supplied-app profile whenever
+  // emailSetup.source === 'platform' (server-derived; no client-id comparison in the browser). An
+  // unbound Calendar counts as supplied: reconcile / consent-time binding attach it (PRD "Existing
+  // platform profiles are reconciled").
+  const calendarBindingProfileId = bindingByConsumer.get('calendar')?.profileId ?? null;
+  const suppliedAppServesCalendar =
+    platformServesCalendar &&
+    emailSetup?.source === 'platform' &&
+    (!calendarBindingProfileId || calendarBindingProfileId === emailSetup.profileId);
   const teamsAvailability = resolveTeamsAvailability({
     isEnterpriseEdition,
     requireTenantContext: false,
@@ -780,7 +790,7 @@ export function MicrosoftIntegrationSettings({
                   {t('integrations.microsoft.settings.platform.suppliedTitle', { defaultValue: 'Microsoft is ready to connect' })}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {platformServesCalendar
+                  {suppliedAppServesCalendar
                     ? t('integrations.microsoft.settings.platform.suppliedReadyDescriptionCalendar', { defaultValue: 'The Microsoft app supplied by AlgaPSA is approved. You can connect Outlook mailboxes and calendars with it.' })
                     : t('integrations.microsoft.settings.platform.readyDescription', { defaultValue: 'The Microsoft app is approved and ready for mailbox sign-in.' })}
                 </div>
@@ -792,7 +802,7 @@ export function MicrosoftIntegrationSettings({
                   >
                     {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
                   </Button>
-                  {platformServesCalendar && (
+                  {suppliedAppServesCalendar && (
                     <Button
                       id="microsoft-platform-connect-calendar"
                       type="button"
@@ -801,7 +811,7 @@ export function MicrosoftIntegrationSettings({
                       {t('integrations.microsoft.settings.platform.connectCalendarAction', { defaultValue: 'Connect a calendar →' })}
                     </Button>
                   )}
-                  {platformServesCalendar && (
+                  {suppliedAppServesCalendar && (
                     <Button
                       id="microsoft-platform-approve-calendar"
                       type="button"
@@ -813,7 +823,7 @@ export function MicrosoftIntegrationSettings({
                     </Button>
                   )}
                 </div>
-                {platformServesCalendar && (
+                {suppliedAppServesCalendar && (
                   <div className="mt-2 text-xs text-muted-foreground">
                     {t('integrations.microsoft.settings.platform.approveCalendarHint', { defaultValue: 'Use "Approve calendar access" if your Microsoft administrator approved this app before calendar was included.' })}
                   </div>
