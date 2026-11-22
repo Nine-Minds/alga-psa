@@ -373,6 +373,42 @@ describe('document association cross-client authorization', () => {
     if (mspStorageProviderId) await table('storage_providers').where({ provider_id: mspStorageProviderId }).del();
   });
 
+  it('resolves portal target scope for a database-loaded user without a clientId', async () => {
+    const user = await table('users').where({ user_id: clientAUserId }).first();
+    expect(user.clientId).toBeUndefined();
+    const permissions = new Set(['document:read', 'document:create', 'ticket:read', 'ticket:update']);
+    setMockUser(user, [...permissions]);
+    setupCommonMocks({ tenantId, userId: clientAUserId, user,
+      permissionCheck: (_user, resource, action) => permissions.has(`${resource}:${action}`) });
+    const { canUploadDocument } = await import('@alga-psa/documents/lib/documentPermissions');
+
+    expect(await canUploadDocument(user, { ticketId: ticketAVisibleId })).toBe(true);
+    expect(await canUploadDocument(user, { ticketId: ticketAHiddenBoardId })).toBe(false);
+    expect(await canUploadDocument(user, { ticketId: ticketBId })).toBe(false);
+    expect(await canUploadDocument(user, { ticketId: uuidv4() })).toBe(false);
+    expect(await canUploadDocument({ ...user, user_id: uuidv4() }, { ticketId: ticketAVisibleId })).toBe(false);
+    const search = await searchDocumentAssociationEntities('ticket', '', 1, 50);
+    expect(search.options.map((item: { value: string }) => item.value).sort()).toEqual([ticketAVisibleId, ticketAVisibleSecondId].sort());
+    expect(search.total).toBe(2);
+
+    const missingUser = { ...user, user_id: uuidv4() };
+    setMockUser(missingUser, [...permissions]);
+    setupCommonMocks({ tenantId, userId: missingUser.user_id, user: missingUser,
+      permissionCheck: (_user, resource, action) => permissions.has(`${resource}:${action}`) });
+    expect(await searchDocumentAssociationEntities('ticket', '', 1, 50)).toEqual({ options: [], total: 0 });
+  });
+
+  it('allows only recognized MSP principal types for tenant association targets', async () => {
+    const { assertAuthorizedAssociationTarget } = await import('@shared/lib/documentAssociationTargetAuthorization');
+    for (const [userType, allowed] of [
+      ['internal', true], ['service', true], ['client', false], [undefined, false], ['unknown', false],
+    ] as const) {
+      const principal = { user_id: mspUserId, tenant: tenantId, user_type: userType } as import('@alga-psa/types').IUser;
+      expect(await db.transaction((trx) =>
+        assertAuthorizedAssociationTarget(trx, tenantId, principal, 'tenant', tenantId, 'update'))).toBe(allowed);
+    }
+  });
+
   it('scopes search counts and rejects cross-client attach, upload, and removal without persisted changes', async () => {
     const clientUser = createMockUser('client', {
       user_id: clientAUserId, tenant: tenantId, clientId: clientAId,

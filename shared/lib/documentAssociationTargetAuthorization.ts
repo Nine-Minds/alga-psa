@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { IUser, IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/authorization/rbac';
 import { createAssetReadContext, filterReadableAssets, resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
@@ -27,6 +28,21 @@ interface AssociationTargetAdapter {
 
 const dbTable = (conn: Knex.Transaction, tenant: string, table: string) => tenantDb(conn, tenant).table(table);
 const associationKey = (entityType: string, entityId: string) => `${entityType}:${entityId}`;
+
+/** Database-loaded users need the same contact scope as session-enriched users. */
+async function resolveAssociationUser(conn: Knex.Transaction, tenant: string, user: IUser): Promise<IUser | null> {
+  if (isMspPrincipalUserType(user.user_type)) return user;
+  if (!isClientUserType(user.user_type)) return null;
+  if (user.clientId) return user;
+  const db = tenantDb(conn, tenant);
+  const query = db.table('users as u');
+  db.tenantJoin(query, 'contacts as c', 'u.contact_id', 'c.contact_name_id');
+  const contact = await query
+    .where({ 'u.user_id': user.user_id, 'u.user_type': 'client', 'u.is_inactive': false, 'c.is_inactive': false })
+    .select('c.client_id', 'c.contact_name_id').first();
+  if (!contact?.client_id) return null;
+  return { ...user, clientId: contact.client_id, contact_id: contact.contact_name_id };
+}
 
 /** Shared entity-to-client mapping for both target checks and document relationship records. */
 export async function resolveAssociationTargetClientIds(
@@ -88,7 +104,8 @@ async function hasTargetPermission(user: IUser, resource: string, action: Target
 }
 
 async function clientOwns(conn: Knex.Transaction, tenant: string, user: IUser, clientId: string | null | undefined): Promise<boolean> {
-  return user.user_type !== 'client' || Boolean(user.clientId && clientId && user.clientId === clientId);
+  return isMspPrincipalUserType(user.user_type) ||
+    Boolean(isClientUserType(user.user_type) && user.clientId && clientId && user.clientId === clientId);
 }
 
 function directClientScope(column: string): SearchScope {
@@ -98,7 +115,7 @@ function directClientScope(column: string): SearchScope {
 }
 
 async function ticketScope(query: Knex.QueryBuilder, conn: Knex.Transaction, tenant: string, user: IUser, alias: string): Promise<void> {
-  if (user.user_type !== 'client') return;
+  if (!isClientUserType(user.user_type)) return;
   query.where(`${alias}.client_id`, user.clientId ?? '__no_client_scope__');
   if (!user.contact_id) {
     query.whereRaw('1 = 0');
@@ -245,7 +262,7 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
       if (!await hasTargetPermission(user, 'ticket', action, conn)) return false;
       const row = await dbTable(conn, tenant, 'tickets').select('client_id').where({ ticket_id: id }).first();
       if (!row || !await clientOwns(conn, tenant, user, row.client_id)) return false;
-      return user.user_type !== 'client' || canAccessAttachmentTicket(conn, tenant, user.user_id, id);
+      return isMspPrincipalUserType(user.user_type) || canAccessAttachmentTicket(conn, tenant, user.user_id, id);
     },
   },
   asset: {
@@ -293,7 +310,7 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
       if (!await hasTargetPermission(user, 'billing', action, conn)) return false;
       const contract = await dbTable(conn, tenant, 'contracts').select('contract_id').where({ contract_id: id }).first();
       if (!contract) return false;
-      if (user.user_type !== 'client') return true;
+      if (isMspPrincipalUserType(user.user_type)) return true;
       if (!user.clientId) return false;
       const clientIdsByTarget = await resolveAssociationTargetClientIds(conn, tenant, [{ entity_type: 'contract', entity_id: id }]);
       const clientIds = clientIdsByTarget.get(associationKey('contract', id)) ?? [];
@@ -340,18 +357,18 @@ const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
       const row = await dbTable(conn, tenant, 'users as u')
         .leftJoin('contacts as c', function joinContact() { this.on('u.contact_id', '=', 'c.contact_name_id').andOn('u.tenant', '=', 'c.tenant'); })
         .select('u.user_id', 'c.client_id').where('u.user_id', id).first();
-      return Boolean(row && (user.user_type !== 'client' ? true : id === user.user_id || await clientOwns(conn, tenant, user, row.client_id)));
+      return Boolean(row && (isMspPrincipalUserType(user.user_type) || id === user.user_id || await clientOwns(conn, tenant, user, row.client_id)));
     },
   },
   team: {
     permissionResource: 'team',
-    assertTarget: async (conn, tenant, user, id, action) => user.user_type !== 'client' &&
+    assertTarget: async (conn, tenant, user, id, action) => isMspPrincipalUserType(user.user_type) &&
       await hasTargetPermission(user, 'team', action, conn) &&
       Boolean(await dbTable(conn, tenant, 'teams').select('team_id').where({ team_id: id }).first()),
   },
   tenant: {
     permissionResource: 'tenant',
-    assertTarget: async (_conn, tenant, user, id) => user.user_type !== 'client' && id === tenant,
+    assertTarget: async (_conn, tenant, user, id) => isMspPrincipalUserType(user.user_type) && id === tenant,
   },
   document: {
     permissionResource: 'document',
@@ -373,7 +390,9 @@ export async function applyAssociationTargetSearchScope(
 ): Promise<boolean> {
   const adapter = adapters[entityType];
   if (!adapter || !await hasTargetPermission(user, adapter.permissionResource, 'read', conn)) return false;
-  await adapter.scopeSearch?.(query, conn, tenant, user, alias);
+  const principal = await resolveAssociationUser(conn, tenant, user);
+  if (!principal) return false;
+  await adapter.scopeSearch?.(query, conn, tenant, principal, alias);
   return true;
 }
 
@@ -388,5 +407,7 @@ export async function assertAuthorizedAssociationTarget(
   const adapter = adapters[entityType as AssociationTargetEntity];
   // Unknown target kinds fail closed for every principal; a document grant cannot
   // substitute for target authorization.
-  return Boolean(adapter && entityId && await adapter.assertTarget(conn, tenant, user, entityId, action));
+  if (!adapter || !entityId) return false;
+  const principal = await resolveAssociationUser(conn, tenant, user);
+  return Boolean(principal && await adapter.assertTarget(conn, tenant, principal, entityId, action));
 }
