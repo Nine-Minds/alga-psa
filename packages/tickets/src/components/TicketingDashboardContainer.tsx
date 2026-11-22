@@ -259,6 +259,9 @@ export default function TicketingDashboardContainer({
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [loadedAt, setLoadedAt] = useState(() => consolidatedData.loadedAt ?? Date.now());
   const [loadedFilters, setLoadedFilters] = useState<Partial<ITicketListFilters>>(initialFilters ?? {});
+  // The request behind the last full-list rows. A focused fetch replaces loadedFilters with the focused
+  // request; when something other than a fetch ends the focus (a server refresh), this restores it.
+  const fullListLoadedFiltersRef = useRef<Partial<ITicketListFilters>>(initialFilters ?? {});
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
   const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
   const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
@@ -306,7 +309,9 @@ export default function TicketingDashboardContainer({
 
   // Sync state when consolidatedData changes (e.g., from router.refresh())
   useEffect(() => {
-    // The server's rows are the full list, so any focus overlay is over.
+    // The server's rows are the full list, so any focus overlay is over, and change tracking must
+    // classify against the full list's request again rather than the focused ticket_id clause.
+    if (shownFocusRef.current) setLoadedFilters(fullListLoadedFiltersRef.current);
     commitFocus(null);
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
@@ -572,6 +577,7 @@ export default function TicketingDashboardContainer({
       setTickets(result.tickets);
       setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
       setLoadedFilters(currentFiltersWithDefaults);
+      if (!requestFocus) fullListLoadedFiltersRef.current = currentFiltersWithDefaults;
       setTotalCount(result.totalCount);
       setNamedViews(result.views);
       setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);

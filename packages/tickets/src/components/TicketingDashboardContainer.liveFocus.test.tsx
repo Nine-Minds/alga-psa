@@ -240,6 +240,28 @@ describe('ticket list live-change focus overlay', () => {
     expect(dashboardProps!.loadedFilters.where).toBeUndefined();
   });
 
+  it('T008: a server refresh (e.g. after a bulk action) ends focus and hands change tracking the full list\'s request', async () => {
+    const view = renderFocusable();
+    const fullListFilters = dashboardProps!.loadedFilters;
+    await enterFocus();
+    expect(dashboardProps!.loadedFilters.where?.clauses[0]).toMatchObject({ path: 'ticket_id' });
+
+    // router.refresh() delivers new consolidatedData for the URL's (full-list) filters.
+    view.rerender(
+      <TicketingDashboardContainer
+        consolidatedData={{ ...consolidatedData, tickets: [...FULL_ROWS] as any, totalCount: 2, loadedAt: 700 }}
+        currentUser={currentUser}
+        initialFilters={{ boardIds: ['board-a'], statusId: 'closed-x', sortBy: 'title', sortDirection: 'asc' }}
+      />,
+    );
+
+    await waitFor(() => expect(dashboardProps!.focus).toBeNull());
+    expect(dashboardProps!.initialTickets).toEqual(FULL_ROWS);
+    expect(dashboardProps!.loadedAt).toBe(700);
+    expect(dashboardProps!.loadedFilters).toEqual(fullListFilters);
+    expect(dashboardProps!.loadedFilters.where).toBeUndefined();
+  });
+
   it('T009: changing a filter while focused leaves focus and applies the edit to the original filters', async () => {
     renderFocusable();
     await enterFocus();
