@@ -40,7 +40,7 @@ How conditions combine:
 
 - A field with **no** condition is always shown.
 - A field with several conditions is shown only when **all** of them pass. There is no OR; conditions are combined with AND only.
-- A field used as `source` should appear **earlier** in the form than the field it controls. Fields are evaluated from top to bottom, so a later field has not been decided yet. "Show when…" only offers earlier fields for this reason.
+- A field used as `source` should appear **earlier** in the form than the field it controls. A later field is accepted but not supported, and it may not behave as expected because fields are evaluated from top to bottom, so a later field has not been decided yet. "Show when…" only offers earlier fields for this reason.
 - A hidden field counts as empty. If you hide a controlling field, every field that depends on it is evaluated against an empty value too, so those fields are hidden or shown according to that empty value. Choose conditions with that in mind.
 - Answers to hidden fields, including prefilled values, are not submitted with the request. A prefilled value only reaches the ticket or workflow if its field is visible.
 - For `select` fields, compare against the option's stored value, not its display label.

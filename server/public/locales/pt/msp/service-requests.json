@@ -176,28 +176,28 @@
         "config": "Configuração de comportamento do formulário (objeto JSON)",
         "save": "Salvar configuração de comportamento do formulário",
         "help": {
-          "whatItIs": "Este painel guarda a visibilidade dos campos e os valores pré-preenchidos como JSON. «Mostrar quando…» em cada campo é a forma habitual de configurar a visibilidade. Use este painel para edições em massa e para contextDefaults, que não têm outro editor.",
+          "whatItIs": "Este painel salva a visibilidade dos campos e os valores pré-preenchidos como JSON. «Mostrar quando…» em cada campo é a forma habitual de configurar a visibilidade. Use este painel para edições em massa e para contextDefaults, que não têm outro editor.",
           "ruleShapeTitle": "Regras de visibilidade",
           "ruleShape": "Cada entrada de visibilityRules tem estas propriedades. value só é necessário para equals e does not equal.",
-          "ruleAll": "Todas as condições de um campo têm de ser cumpridas. As condições são combinadas apenas com AND.",
+          "ruleAll": "Todas as condições de um campo precisam ser cumpridas. As condições são combinadas apenas com AND.",
           "ruleNone": "Um campo sem condições é sempre mostrado.",
           "ruleSource": "source é uma chave de campo, ou um de context.requesterUserId, context.clientId e context.contactId.",
-          "ruleEarlier": "Um campo usado como source tem de aparecer no formulário antes do campo que controla.",
-          "ruleHidden": "Um campo oculto conta como vazio, por isso ocultar um campo de controlo também oculta os campos que dependem dele.",
-          "ruleHiddenAnswers": "As respostas dos campos ocultos, incluindo os valores pré-preenchidos, não são enviadas com o pedido.",
+          "ruleEarlier": "Um campo usado como source deve aparecer no formulário antes do campo que ele controla. Um campo posterior é aceito, mas não é suportado e pode não se comportar como esperado, porque os campos são avaliados de cima para baixo.",
+          "ruleHidden": "Um campo oculto conta como vazio. Se você ocultar um campo de controle, os campos que dependem dele também são avaliados com um valor vazio, portanto são ocultados ou mostrados de acordo com esse resultado.",
+          "ruleHiddenAnswers": "As respostas dos campos ocultos, incluindo os valores pré-preenchidos, não são enviadas com a solicitação.",
           "operatorsTitle": "Operadores",
-          "operatorsIntro": "operator tem de ser um dos seguintes:",
+          "operatorsIntro": "operator precisa ser um dos seguintes:",
           "contextTitle": "Valores pré-preenchidos (contextDefaults)",
-          "contextIntro": "contextDefaults associa uma chave de campo ao valor inicial desse campo. Estes marcadores são substituídos por dados do utilizador do cliente que abre o formulário:",
+          "contextIntro": "contextDefaults associa uma chave de campo ao valor inicial desse campo. Estes marcadores são substituídos por dados do usuário do cliente que abre o formulário:",
           "placeholders": {
-            "clientId": "o cliente do utilizador solicitante",
-            "contactId": "o contacto do utilizador solicitante (vazio se não existir)",
-            "requesterUserId": "o utilizador solicitante"
+            "clientId": "o cliente do usuário solicitante",
+            "contactId": "o contato do usuário solicitante (vazio se não existir)",
+            "requesterUserId": "o usuário solicitante"
           },
           "timingTitle": "Quando se aplica",
-          "timing": "Os valores pré-preenchidos são preenchidos quando o cliente abre o formulário. As condições são verificadas no navegador enquanto o cliente preenche o formulário e novamente ao submeter.",
+          "timing": "Os valores pré-preenchidos são preenchidos quando o cliente abre o formulário. As condições são verificadas no navegador enquanto o cliente preenche o formulário e novamente ao enviar.",
           "editionTitle": "Disponibilidade",
-          "edition": "Este painel requer o fornecedor de comportamento de formulário avançado do Enterprise.",
+          "edition": "Este painel requer o provedor de comportamento de formulário avançado do Enterprise.",
           "examplesTitle": "Exemplos",
           "examples": {
             "showWhen": {
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Mostrar «Site code» apenas para um cliente e pré-preencher «Client reference» com o ID do cliente",
-              "note": "Substitua o ID de cliente do exemplo pelo ID do seu cliente. O valor pré-preenchido é um ID, e o cliente pode vê-lo e editá-lo no formulário."
+              "note": "Substitua o ID de cliente do exemplo pelo ID do seu cliente. Abra o cliente no portal MSP e copie o ID do endereço, /msp/clients/<ID do cliente>. O valor pré-preenchido é um ID, e o cliente pode vê-lo e editá-lo no formulário."
             }
           },
           "copy": "Copiar",
@@ -218,7 +218,7 @@
       },
       "visibility": {
         "title": "Quem pode ver este formulário",
-        "description": "Controla quais utilizadores do cliente podem abrir este pedido. Não mostra nem oculta respostas dentro do formulário.",
+        "description": "Controla quais usuários do cliente podem abrir esta solicitação. Não mostra nem oculta respostas dentro do formulário.",
         "audience": {
           "removedReferences": "As seleções de público indisponíveis foram removidas. Revise e salve o público.",
           "reference_client_id": "Cliente",

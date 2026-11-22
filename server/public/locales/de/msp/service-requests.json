@@ -182,20 +182,20 @@
           "ruleAll": "Jede Bedingung eines Felds muss erfüllt sein. Bedingungen werden ausschließlich mit UND verknüpft.",
           "ruleNone": "Ein Feld ohne Bedingung wird immer angezeigt.",
           "ruleSource": "source ist ein Feldschlüssel oder einer von context.requesterUserId, context.clientId und context.contactId.",
-          "ruleEarlier": "Ein als source verwendetes Feld muss im Formular vor dem Feld stehen, das es steuert.",
-          "ruleHidden": "Ein ausgeblendetes Feld gilt als leer. Wird ein steuerndes Feld ausgeblendet, werden daher auch die davon abhängigen Felder ausgeblendet.",
+          "ruleEarlier": "Ein als source verwendetes Feld sollte im Formular vor dem Feld stehen, das es steuert. Ein Feld weiter unten wird zwar akzeptiert, aber nicht unterstützt und verhält sich möglicherweise nicht wie erwartet, weil die Felder von oben nach unten ausgewertet werden.",
+          "ruleHidden": "Ein ausgeblendetes Feld gilt als leer. Wird ein steuerndes Feld ausgeblendet, werden die davon abhängigen Felder ebenfalls mit einem leeren Wert ausgewertet und je nach diesem Ergebnis ein- oder ausgeblendet.",
           "ruleHiddenAnswers": "Antworten auf ausgeblendete Felder, einschließlich vorausgefüllter Werte, werden nicht mit der Anfrage übermittelt.",
           "operatorsTitle": "Operatoren",
           "operatorsIntro": "operator muss einer der folgenden Werte sein:",
           "contextTitle": "Vorausgefüllte Werte (contextDefaults)",
-          "contextIntro": "contextDefaults ordnet einem Feldschlüssel den Anfangswert des Felds zu. Diese Platzhalter werden durch Angaben des Clientbenutzers ersetzt, der das Formular öffnet:",
+          "contextIntro": "contextDefaults ordnet einem Feldschlüssel den Anfangswert des Felds zu. Diese Platzhalter werden durch Angaben des Kundenbenutzers ersetzt, der das Formular öffnet:",
           "placeholders": {
-            "clientId": "der Client des anfragenden Benutzers",
+            "clientId": "der Kunde des anfragenden Benutzers",
             "contactId": "der Kontakt des anfragenden Benutzers (leer, falls keiner vorhanden)",
             "requesterUserId": "der anfragende Benutzer"
           },
           "timingTitle": "Wann es gilt",
-          "timing": "Vorausgefüllte Werte werden eingetragen, wenn der Client das Formular öffnet. Bedingungen werden im Browser geprüft, während der Client das Formular ausfüllt, und beim Absenden erneut.",
+          "timing": "Vorausgefüllte Werte werden eingetragen, wenn der Kunde das Formular öffnet. Bedingungen werden im Browser geprüft, während der Kunde das Formular ausfüllt, und beim Absenden erneut.",
           "editionTitle": "Verfügbarkeit",
           "edition": "Für dieses Panel ist der Enterprise-Anbieter für erweitertes Formularverhalten erforderlich.",
           "examplesTitle": "Beispiele",
@@ -207,8 +207,8 @@
               "title": "„Company“ ausblenden, wenn „I am the end user“ angekreuzt ist"
             },
             "clientScoped": {
-              "title": "„Site code“ nur für einen Client anzeigen und „Client reference“ mit der Client-ID vorausfüllen",
-              "note": "Ersetzen Sie die Beispiel-Client-ID durch die ID Ihres Clients. Der vorausgefüllte Wert ist eine ID, und der Client kann ihn im Formular sehen und bearbeiten."
+              "title": "„Site code“ nur für einen Kunden anzeigen und „Client reference“ mit der Kunden-ID vorausfüllen",
+              "note": "Ersetzen Sie die Beispiel-Kunden-ID durch die ID Ihres Kunden. Öffnen Sie den Kunden im MSP-Portal und kopieren Sie die ID aus der Adresse, /msp/clients/<Kunden-ID>. Der vorausgefüllte Wert ist eine ID, und der Kunde kann ihn im Formular sehen und bearbeiten."
             }
           },
           "copy": "Kopieren",
@@ -218,7 +218,7 @@
       },
       "visibility": {
         "title": "Wer dieses Formular sehen kann",
-        "description": "Legt fest, welche Clientbenutzer diese Anfrage öffnen können. Antworten innerhalb des Formulars werden dadurch nicht ein- oder ausgeblendet.",
+        "description": "Legt fest, welche Kundenbenutzer diese Anfrage öffnen können. Antworten innerhalb des Formulars werden dadurch nicht ein- oder ausgeblendet.",
         "audience": {
           "removedReferences": "Nicht verfügbare Zielgruppenauswahlen wurden entfernt. Prüfen und speichern Sie die Zielgruppe.",
           "reference_client_id": "Kunde",

@@ -182,8 +182,8 @@
           "ruleAll": "Toutes les conditions d’un champ doivent être remplies. Les conditions sont combinées uniquement avec AND.",
           "ruleNone": "Un champ sans condition est toujours affiché.",
           "ruleSource": "source est une clé de champ, ou l’une de context.requesterUserId, context.clientId et context.contactId.",
-          "ruleEarlier": "Un champ utilisé comme source doit apparaître dans le formulaire avant le champ qu’il contrôle.",
-          "ruleHidden": "Un champ masqué compte comme vide : masquer un champ de contrôle masque donc aussi les champs qui en dépendent.",
+          "ruleEarlier": "Un champ utilisé comme source devrait apparaître dans le formulaire avant le champ qu’il contrôle. Un champ situé plus bas est accepté mais n’est pas pris en charge, et il peut ne pas se comporter comme prévu, car les champs sont évalués de haut en bas.",
+          "ruleHidden": "Un champ masqué compte comme vide. Si vous masquez un champ de contrôle, les champs qui en dépendent sont aussi évalués avec une valeur vide : ils sont donc masqués ou affichés selon ce résultat.",
           "ruleHiddenAnswers": "Les réponses aux champs masqués, y compris les valeurs préremplies, ne sont pas envoyées avec la demande.",
           "operatorsTitle": "Opérateurs",
           "operatorsIntro": "operator doit être l’une des valeurs suivantes :",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Afficher « Site code » uniquement pour un client et préremplir « Client reference » avec l’ID du client",
-              "note": "Remplacez l’ID de client de l’exemple par l’ID de votre client. La valeur préremplie est un ID, et le client peut la voir et la modifier dans le formulaire."
+              "note": "Remplacez l’ID de client de l’exemple par l’ID de votre client. Ouvrez le client dans le portail MSP et copiez l’ID depuis l’adresse, /msp/clients/<ID du client>. La valeur préremplie est un ID, et le client peut la voir et la modifier dans le formulaire."
             }
           },
           "copy": "Copier",

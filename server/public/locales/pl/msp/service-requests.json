@@ -182,8 +182,8 @@
           "ruleAll": "Wszystkie warunki pola muszą być spełnione. Warunki łączy się wyłącznie operatorem AND.",
           "ruleNone": "Pole bez warunku jest zawsze widoczne.",
           "ruleSource": "source to klucz pola albo jedna z wartości context.requesterUserId, context.clientId i context.contactId.",
-          "ruleEarlier": "Pole użyte jako source musi występować w formularzu wcześniej niż pole, którym steruje.",
-          "ruleHidden": "Ukryte pole jest traktowane jak puste, więc ukrycie pola sterującego ukrywa też pola od niego zależne.",
+          "ruleEarlier": "Pole użyte jako source powinno występować w formularzu wcześniej niż pole, którym steruje. Pole późniejsze jest akceptowane, ale nieobsługiwane i może nie działać zgodnie z oczekiwaniami, ponieważ pola są oceniane od góry do dołu.",
+          "ruleHidden": "Ukryte pole jest traktowane jak puste. Jeśli ukryjesz pole sterujące, pola od niego zależne są również oceniane względem pustej wartości, więc są ukrywane lub pokazywane zależnie od tego wyniku.",
           "ruleHiddenAnswers": "Odpowiedzi w ukrytych polach, w tym wstępnie wypełnione wartości, nie są wysyłane razem ze zgłoszeniem.",
           "operatorsTitle": "Operatory",
           "operatorsIntro": "operator musi być jedną z wartości:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Pokaż „Site code” tylko dla jednego klienta i wstępnie wypełnij „Client reference” identyfikatorem klienta",
-              "note": "Zastąp przykładowy identyfikator klienta identyfikatorem swojego klienta. Wstępnie wypełniona wartość to identyfikator, który klient widzi i może edytować w formularzu."
+              "note": "Zastąp przykładowy identyfikator klienta identyfikatorem swojego klienta. Otwórz klienta w portalu MSP i skopiuj identyfikator z adresu, /msp/clients/<identyfikator klienta>. Wstępnie wypełniona wartość to identyfikator, który klient widzi i może edytować w formularzu."
             }
           },
           "copy": "Kopiuj",

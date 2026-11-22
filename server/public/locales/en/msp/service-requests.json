@@ -182,8 +182,8 @@
           "ruleAll": "Every condition on a field must pass. Conditions are combined with AND only.",
           "ruleNone": "A field with no condition is always shown.",
           "ruleSource": "source is a field key, or one of context.requesterUserId, context.clientId and context.contactId.",
-          "ruleEarlier": "A field used as source must appear earlier in the form than the field it controls.",
-          "ruleHidden": "A hidden field counts as empty, so hiding a controlling field also hides the fields that depend on it.",
+          "ruleEarlier": "A field used as source should appear earlier in the form than the field it controls. A later field is accepted but not supported, and it may not behave as expected because fields are evaluated from top to bottom.",
+          "ruleHidden": "A hidden field counts as empty. If you hide a controlling field, the fields that depend on it are evaluated against an empty value too, so they are hidden or shown according to that result.",
           "ruleHiddenAnswers": "Answers to hidden fields, including prefilled values, are not submitted with the request.",
           "operatorsTitle": "Operators",
           "operatorsIntro": "operator must be one of:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Show “Site code” only for one client, and prefill “Client reference” with the client’s ID",
-              "note": "Replace the example client ID with the ID of your client. The prefilled value is an ID, and the client can see and edit it in the form."
+              "note": "Replace the example client ID with the ID of your client. Open the client in the MSP portal and copy the ID from the address, /msp/clients/<client ID>. The prefilled value is an ID, and the client can see and edit it in the form."
             }
           },
           "copy": "Copy",

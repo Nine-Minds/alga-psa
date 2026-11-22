@@ -182,8 +182,8 @@
           "ruleAll": "Alla villkor för ett fält måste uppfyllas. Villkor kombineras bara med AND.",
           "ruleNone": "Ett fält utan villkor visas alltid.",
           "ruleSource": "source är en fältnyckel eller en av context.requesterUserId, context.clientId och context.contactId.",
-          "ruleEarlier": "Ett fält som används som source måste ligga tidigare i formuläret än det fält det styr.",
-          "ruleHidden": "Ett dolt fält räknas som tomt, så om du döljer ett styrande fält döljs också de fält som beror på det.",
+          "ruleEarlier": "Ett fält som används som source bör ligga tidigare i formuläret än det fält det styr. Ett senare fält accepteras men stöds inte, och det kanske inte beter sig som förväntat eftersom fälten utvärderas uppifrån och ned.",
+          "ruleHidden": "Ett dolt fält räknas som tomt. Om du döljer ett styrande fält utvärderas de fält som beror på det också mot ett tomt värde, så de döljs eller visas beroende på det resultatet.",
           "ruleHiddenAnswers": "Svar i dolda fält, inklusive förifyllda värden, skickas inte med begäran.",
           "operatorsTitle": "Operatorer",
           "operatorsIntro": "operator måste vara något av följande:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Visa ”Site code” bara för en klient och förifyll ”Client reference” med klientens ID",
-              "note": "Ersätt exemplets klient-ID med ID:t för din klient. Det förifyllda värdet är ett ID, och klienten kan se och redigera det i formuläret."
+              "note": "Ersätt exemplets klient-ID med ID:t för din klient. Öppna klienten i MSP-portalen och kopiera ID:t från adressen, /msp/clients/<klient-ID>. Det förifyllda värdet är ett ID, och klienten kan se och redigera det i formuläret."
             }
           },
           "copy": "Kopiera",

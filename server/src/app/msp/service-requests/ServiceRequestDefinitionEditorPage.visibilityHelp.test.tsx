@@ -96,6 +96,11 @@ describe('service request editor: who can see this form / show or hide fields', 
     for (const id of ['showWhen', 'hideWhen', 'clientScoped']) {
       expect(document.getElementById(`service-request-form-behavior-example-${id}`)).not.toBeNull();
     }
+    const help = en.editor.execution.advanced.help;
+    expect(help.examples.clientScoped.note).toContain('/msp/clients/');
+    expect(help.ruleEarlier).toContain('should');
+    expect(help.ruleEarlier).not.toContain('must');
+    expect(help.ruleHidden).not.toContain('also hides');
     const details = document.getElementById('service-request-form-behavior-config-advanced') as HTMLDetailsElement;
     expect(details.open).toBe(false);
     expect(details.querySelector('summary')?.textContent).toBe('Edit as JSON');

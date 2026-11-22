@@ -176,14 +176,14 @@
         "config": "Configuratie formuliergedrag (JSON-object)",
         "save": "Configuratie formuliergedrag opslaan",
         "help": {
-          "whatItIs": "Dit paneel slaat de zichtbaarheid van velden en vooraf ingevulde waarden op als JSON. “Tonen als…” bij elk veld is de gebruikelijke manier om zichtbaarheid in te stellen. Gebruik dit paneel voor bulkwijzigingen en voor contextDefaults, waarvoor geen andere editor bestaat.",
+          "whatItIs": "Dit paneel slaat de zichtbaarheid van velden en vooraf ingevulde waarden op als JSON. „Tonen wanneer…” bij elk veld is de gebruikelijke manier om zichtbaarheid in te stellen. Gebruik dit paneel voor bulkwijzigingen en voor contextDefaults, waarvoor geen andere editor bestaat.",
           "ruleShapeTitle": "Zichtbaarheidsregels",
           "ruleShape": "Elk item in visibilityRules heeft deze eigenschappen. value is alleen nodig voor equals en does not equal.",
           "ruleAll": "Elke voorwaarde van een veld moet slagen. Voorwaarden worden alleen met AND gecombineerd.",
           "ruleNone": "Een veld zonder voorwaarde wordt altijd getoond.",
           "ruleSource": "source is een veldsleutel of een van context.requesterUserId, context.clientId en context.contactId.",
-          "ruleEarlier": "Een veld dat als source wordt gebruikt, moet eerder in het formulier staan dan het veld dat het aanstuurt.",
-          "ruleHidden": "Een verborgen veld telt als leeg. Als je een aansturend veld verbergt, worden dus ook de velden verborgen die ervan afhangen.",
+          "ruleEarlier": "Een veld dat als source wordt gebruikt, hoort eerder in het formulier te staan dan het veld dat het aanstuurt. Een later veld wordt geaccepteerd maar niet ondersteund, en gedraagt zich mogelijk niet zoals verwacht, omdat velden van boven naar beneden worden geëvalueerd.",
+          "ruleHidden": "Een verborgen veld telt als leeg. Als je een aansturend veld verbergt, worden de velden die ervan afhangen ook met een lege waarde geëvalueerd, en dus verborgen of getoond op basis van dat resultaat.",
           "ruleHiddenAnswers": "Antwoorden op verborgen velden, inclusief vooraf ingevulde waarden, worden niet met het verzoek verzonden.",
           "operatorsTitle": "Operators",
           "operatorsIntro": "operator moet een van de volgende zijn:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "“Site code” alleen tonen voor één klant en “Client reference” vooraf invullen met het klant-ID",
-              "note": "Vervang het voorbeeld-klant-ID door het ID van jouw klant. De vooraf ingevulde waarde is een ID, en de klant kan die in het formulier zien en aanpassen."
+              "note": "Vervang het voorbeeld-klant-ID door het ID van jouw klant. Open de klant in het MSP-portaal en kopieer het ID uit het adres, /msp/clients/<klant-ID>. De vooraf ingevulde waarde is een ID, en de klant kan die in het formulier zien en aanpassen."
             }
           },
           "copy": "Kopiëren",

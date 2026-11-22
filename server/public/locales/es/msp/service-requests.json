@@ -182,8 +182,8 @@
           "ruleAll": "Todas las condiciones de un campo deben cumplirse. Las condiciones se combinan solo con AND.",
           "ruleNone": "Un campo sin condiciones siempre se muestra.",
           "ruleSource": "source es una clave de campo, o uno de context.requesterUserId, context.clientId y context.contactId.",
-          "ruleEarlier": "Un campo usado como source debe aparecer en el formulario antes del campo que controla.",
-          "ruleHidden": "Un campo oculto cuenta como vacío, por lo que ocultar un campo de control también oculta los campos que dependen de él.",
+          "ruleEarlier": "Un campo usado como source debería aparecer en el formulario antes del campo que controla. Un campo posterior se acepta pero no es compatible, y puede que no se comporte como se espera porque los campos se evalúan de arriba abajo.",
+          "ruleHidden": "Un campo oculto cuenta como vacío. Si oculta un campo de control, los campos que dependen de él también se evalúan con un valor vacío, por lo que se ocultan o se muestran según ese resultado.",
           "ruleHiddenAnswers": "Las respuestas de los campos ocultos, incluidos los valores rellenados previamente, no se envían con la solicitud.",
           "operatorsTitle": "Operadores",
           "operatorsIntro": "operator debe ser uno de los siguientes:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Mostrar «Site code» solo para un cliente y rellenar previamente «Client reference» con el ID del cliente",
-              "note": "Sustituya el ID de cliente del ejemplo por el ID de su cliente. El valor rellenado previamente es un ID, y el cliente puede verlo y editarlo en el formulario."
+              "note": "Sustituya el ID de cliente del ejemplo por el ID de su cliente. Abra el cliente en el portal MSP y copie el ID de la dirección, /msp/clients/<ID de cliente>. El valor rellenado previamente es un ID, y el cliente puede verlo y editarlo en el formulario."
             }
           },
           "copy": "Copiar",

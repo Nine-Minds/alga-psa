@@ -182,8 +182,8 @@
           "ruleAll": "Tutte le condizioni di un campo devono essere soddisfatte. Le condizioni sono combinate solo con AND.",
           "ruleNone": "Un campo senza condizioni è sempre visibile.",
           "ruleSource": "source è una chiave di campo, oppure uno tra context.requesterUserId, context.clientId e context.contactId.",
-          "ruleEarlier": "Un campo usato come source deve comparire nel modulo prima del campo che controlla.",
-          "ruleHidden": "Un campo nascosto conta come vuoto, quindi nascondere un campo di controllo nasconde anche i campi che dipendono da esso.",
+          "ruleEarlier": "Un campo usato come source dovrebbe comparire nel modulo prima del campo che controlla. Un campo successivo viene accettato ma non è supportato e potrebbe non comportarsi come previsto, perché i campi vengono valutati dall’alto verso il basso.",
+          "ruleHidden": "Un campo nascosto conta come vuoto. Se nascondi un campo di controllo, anche i campi che dipendono da esso vengono valutati con un valore vuoto, quindi risultano nascosti o visibili in base a quell’esito.",
           "ruleHiddenAnswers": "Le risposte ai campi nascosti, compresi i valori precompilati, non vengono inviate con la richiesta.",
           "operatorsTitle": "Operatori",
           "operatorsIntro": "operator deve essere uno dei seguenti:",
@@ -208,7 +208,7 @@
             },
             "clientScoped": {
               "title": "Mostra «Site code» solo per un cliente e precompila «Client reference» con l’ID del cliente",
-              "note": "Sostituisci l’ID cliente dell’esempio con l’ID del tuo cliente. Il valore precompilato è un ID e il cliente può vederlo e modificarlo nel modulo."
+              "note": "Sostituisci l’ID cliente dell’esempio con l’ID del tuo cliente. Apri il cliente nel portale MSP e copia l’ID dall’indirizzo, /msp/clients/<ID cliente>. Il valore precompilato è un ID e il cliente può vederlo e modificarlo nel modulo."
             }
           },
           "copy": "Copia",
