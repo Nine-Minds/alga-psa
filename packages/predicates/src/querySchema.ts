@@ -3,10 +3,13 @@ import type { PredicateClause, PredicateLiteral, PredicateNode, PredicateOperato
 
 export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestamp';
 
+/** Values emitted by the predicate compiler: literals plus Knex identifier names. */
+export type SqlBinding = PredicateLiteral;
+
 /** A fragment of SQL with positional `?` bindings and `??` identifier bindings (knex syntax). */
 export interface SqlFragment {
   sql: string;
-  bindings: unknown[];
+  bindings: SqlBinding[];
 }
 
 export interface ColumnAttribute {
