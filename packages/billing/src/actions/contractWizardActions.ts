@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
@@ -23,7 +24,7 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { createClientContractAssignment, resolveClientContractCurrency } from '@alga-psa/shared/billingClients';
+import { ClientContractError, createClientContractAssignment, resolveClientContractCurrency } from '@alga-psa/shared/billingClients';
 import {
   listTemplateCurrencies,
   resolveTemplateAmounts,
@@ -36,8 +37,14 @@ import {
 } from '../lib/billing/discountAuthoring';
 
 
+import Contract from '../models/contract';
 import ContractLine from '../models/contractLine';
 import ContractLineFixedConfig from '../models/contractLineFixedConfig';
+import {
+  applyContractHeaderUpdate,
+  ContractUpdateError,
+  publishContractHeaderUpdated,
+} from '../lib/contractUpdate';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { getContractLineServicesWithConfigurations } from './contractLineServiceActions';
 
@@ -72,11 +79,16 @@ import {
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
+  IUserWithRoles,
 } from '@alga-psa/types';
 import {
   BucketOverlayInput,
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
+import {
+  copyPresetToContractLineInTransaction,
+  type ContractLinePresetCopyOverrides,
+} from '../services/contractLinePresetCopyService';
 import { createBucketPoolInTransaction } from './bucketPoolActions';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
@@ -88,6 +100,7 @@ import {
 import {
   contractWizardActionErrorFrom,
   fixedLineNoServiceMessage,
+  isRecurringChangeConfirmation,
   CONTRACT_DISCOUNT_PREFIX,
   RecurringTotalChangeRequiresConfirmation,
   currencyPricingMissingError,
@@ -444,6 +457,12 @@ export type ClientContractWizardSubmission = {
   round_up_to_nearest?: number;
   /** One extra Hourly line (plus block config) per entry; ignored when cloning a template. */
   prepaid_block_lines?: ClientPrepaidBlockLineInput[];
+  /**
+   * Contract line presets copied into this contract inside the save transaction
+   * (one line per entry), so the lines commit with the header and the client
+   * assignment. Ignored when cloning a template.
+   */
+  preset_lines?: Array<{ preset_id: string; overrides?: ContractLinePresetCopyOverrides }>;
   /**
    * Published template to clone. When set the server clones every template line
    * (services, rates, configs, pools, defaults) inside the same transaction and
@@ -1323,7 +1342,6 @@ export const createClientContractFromWizard = withAuth(async (
   submission: ClientContractWizardSubmission,
   options?: { isDraft?: boolean }
 ): Promise<ContractWizardResult | RecurringTotalChangeConfirmation | ContractWizardActionError> => {
-  const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
   if (!isBypass) {
@@ -1333,6 +1351,23 @@ export const createClientContractFromWizard = withAuth(async (
       return permissionError('Permission denied: Cannot create billing contracts', 'msp/contracts:errors.wizard.permissions.createContracts');
     }
   }
+
+  return runClientContractWizardSave(user, tenant, submission, options);
+});
+
+/**
+ * The client-contract save itself, after authorization: the header, its lines
+ * and the client assignment in ONE transaction, with CONTRACT_CREATED (and the
+ * renewal domain event) published after commit. Shared with the quick-add
+ * dialog's save (`saveQuickAddContract`) so there is a single creation path.
+ */
+async function runClientContractWizardSave(
+  user: IUserWithRoles,
+  tenant: string,
+  submission: ClientContractWizardSubmission,
+  options?: { isDraft?: boolean }
+): Promise<ContractWizardResult | RecurringTotalChangeConfirmation | ContractWizardActionError> {
+  const isDraft = options?.isDraft ?? false;
 
   const { knex } = await createTenantKnex();
 
@@ -2294,6 +2329,17 @@ export const createClientContractFromWizard = withAuth(async (
       }
     }
 
+    // Contract line presets (quick add): copied here, before the client
+    // assignment, so a refused assignment rolls the lines back with the header.
+    const presetLineInputs = !templateId && Array.isArray(submission.preset_lines) ? submission.preset_lines : [];
+    for (const entry of presetLineInputs) {
+      const presetId = typeof entry?.preset_id === 'string' ? entry.preset_id.trim() : '';
+      if (!presetId) continue;
+      createdContractLineIds.push(
+        await copyPresetToContractLineInTransaction(trx, user, tenant, contractId, presetId, entry.overrides),
+      );
+    }
+
     // Guard (existing drafts only): the rebuilt contract must bill what the saved one did, unless the
     // user has seen and acknowledged the server-computed change. Throwing rolls the transaction back.
     if (existingContractId && baselineMonthlyCents !== null) {
@@ -2482,6 +2528,231 @@ export const createClientContractFromWizard = withAuth(async (
       };
     }
     const expected = contractWizardActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick add contract (ContractDialog)
+// ---------------------------------------------------------------------------
+
+/**
+ * What the quick-add contract dialog collects. One payload for one server
+ * action: the dialog used to make three unguarded calls (contract header,
+ * preset copies, client assignment) and a failure in the second or third left
+ * a saved header with no assignment, which a retry duplicated.
+ */
+export type QuickAddContractSubmission = {
+  /** Edit an existing contract header instead of creating one. */
+  contract_id?: string;
+  contract_name: string;
+  description?: string | null;
+  client_id: string;
+  billing_profile_id?: string | null;
+  billing_frequency: string;
+  /** Local calendar date, `YYYY-MM-DD`. */
+  start_date: string;
+  end_date?: string | null;
+  use_tenant_renewal_defaults: boolean;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  po_required?: boolean;
+  po_number?: string | null;
+  po_amount?: number | null;
+  preset_lines?: Array<{ preset_id: string; overrides?: ContractLinePresetCopyOverrides }>;
+  /** Save as an active contract; false saves it as a draft. */
+  save_as_active: boolean;
+};
+
+/**
+ * Assignment refusals (a billing profile of another client, a missing client)
+ * carry their own message class; the wizard's mapper does not know it, and the
+ * dialog renders returned action errors rather than thrown ones.
+ */
+function quickAddActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (error instanceof ClientContractError || error instanceof ContractUpdateError) {
+    return actionError(error.message);
+  }
+  return contractWizardActionErrorFrom(error);
+}
+
+const normalizedPresetLines = (submission: QuickAddContractSubmission) =>
+  (Array.isArray(submission.preset_lines) ? submission.preset_lines : []).filter(
+    (entry) => typeof entry?.preset_id === 'string' && entry.preset_id.trim().length > 0,
+  );
+
+/**
+ * Save the quick-add contract dialog in one transaction: the contract header,
+ * the selected presets copied into contract lines, and the client contract
+ * assignment with its dates, renewal settings, PO fields and billing profile.
+ * All or nothing — a refusal anywhere leaves no contract behind, so retrying
+ * cannot produce a second header.
+ */
+export const saveQuickAddContract = withAuth(async (
+  user,
+  { tenant },
+  submission: QuickAddContractSubmission
+): Promise<ContractWizardResult | ContractWizardActionError> => {
+  const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+  const editingContractId =
+    typeof submission.contract_id === 'string' && submission.contract_id.trim().length > 0
+      ? submission.contract_id.trim()
+      : null;
+  const presetLines = normalizedPresetLines(submission);
+  const saveAsActive = submission.save_as_active !== false;
+
+  // The dialog's own effective permissions, not the wizard's: creating the
+  // header needs billing:create (billing:update when editing one), copying a
+  // preset into a line needs billing:create, and the client assignment needs
+  // client:create.
+  if (!isBypass) {
+    const [canCreateBilling, canUpdateBilling, canCreateClient] = await Promise.all([
+      hasPermission(user, 'billing', 'create'),
+      editingContractId ? hasPermission(user, 'billing', 'update') : Promise.resolve(true),
+      hasPermission(user, 'client', 'create'),
+    ]);
+    const canWriteHeader = editingContractId
+      ? canUpdateBilling && (presetLines.length === 0 || canCreateBilling)
+      : canCreateBilling;
+    if (!canWriteHeader || !canCreateClient) {
+      return permissionError(
+        'Permission denied: Cannot create billing contracts',
+        'msp/contracts:errors.wizard.permissions.createContracts',
+      );
+    }
+
+    // The contract is billed to this client, so the actor's client scope has to
+    // reach it: a client their bundle rules hide is not one they may bill.
+    const { knex: scopeKnex } = await createTenantKnex();
+    const clientScope = await createClientScopeContext(scopeKnex, tenant, user);
+    if (!(await clientScope.permits('client', submission.client_id))) {
+      return permissionError(
+        'Permission denied: Cannot create billing contracts for this client',
+        'msp/contracts:errors.wizard.permissions.createContracts',
+      );
+    }
+  }
+
+  if (!editingContractId) {
+    // Create: the wizard's save with no wizard line input. A new contract's
+    // currency is resolved there from the client record, so the currency_code
+    // below is never read — the browser no longer decides it.
+    return runClientContractWizardSave(
+      user,
+      tenant,
+      {
+        contract_name: submission.contract_name,
+        description: submission.description ?? undefined,
+        client_id: submission.client_id,
+        billing_profile_id: submission.billing_profile_id ?? null,
+        billing_frequency: submission.billing_frequency,
+        currency_code: 'USD',
+        start_date: submission.start_date,
+        end_date: submission.end_date ?? undefined,
+        use_tenant_renewal_defaults: submission.use_tenant_renewal_defaults,
+        renewal_mode: submission.renewal_mode,
+        notice_period_days: submission.notice_period_days,
+        renewal_term_months: submission.renewal_term_months,
+        po_required: submission.po_required ?? false,
+        po_number: submission.po_number ?? undefined,
+        po_amount: submission.po_amount ?? undefined,
+        enable_proration: false,
+        preset_lines: presetLines,
+      },
+      { isDraft: !saveAsActive },
+    ).then(
+      // The recurring-change confirmation belongs to rebuilding an existing
+      // draft, which quick add never does; it is not a save the dialog can
+      // treat as done.
+      (saved) =>
+        isRecurringChangeConfirmation(saved)
+          ? actionError('This contract could not be saved because its recurring total changed. Please reload and try again.')
+          : saved,
+      (error: unknown) => {
+        const expected = quickAddActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+      },
+    );
+  }
+
+  // Edit: the header update, the preset copies and the new assignment in one
+  // transaction, with CONTRACT_UPDATED published after commit.
+  const { knex } = await createTenantKnex();
+  try {
+    const { applied, result } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const current = await Contract.getById(trx, tenant, editingContractId);
+      if (!current) {
+        throw new Error('Contract not found');
+      }
+
+      const headerUpdate = await applyContractHeaderUpdate(trx, tenant, current, {
+        contract_name: submission.contract_name,
+        contract_description: submission.description ?? null,
+        billing_frequency: submission.billing_frequency,
+        is_active: saveAsActive,
+        status: saveAsActive ? 'active' : 'draft',
+        currency_code:
+          current.currency_code ?? (await resolveClientContractCurrency(trx, tenant, submission.client_id)),
+      });
+
+      const createdContractLineIds: string[] = [];
+      for (const entry of presetLines) {
+        createdContractLineIds.push(
+          await copyPresetToContractLineInTransaction(
+            trx,
+            user,
+            tenant,
+            editingContractId,
+            entry.preset_id.trim(),
+            entry.overrides,
+          ),
+        );
+      }
+
+      const assignment = await createClientContractAssignment(trx, tenant, {
+        client_id: submission.client_id,
+        contract_id: editingContractId,
+        start_date: submission.start_date,
+        end_date: submission.end_date ?? null,
+        is_active: saveAsActive,
+        renewal_mode: submission.use_tenant_renewal_defaults ? undefined : submission.renewal_mode,
+        notice_period_days: submission.notice_period_days,
+        renewal_term_months: submission.renewal_term_months,
+        use_tenant_renewal_defaults: submission.use_tenant_renewal_defaults,
+        po_required: submission.po_required ?? false,
+        po_number: submission.po_number ?? null,
+        po_amount: submission.po_amount ?? null,
+        billing_profile_id: submission.billing_profile_id ?? null,
+      });
+
+      if (assignment.is_active) {
+        // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
+        await syncRecurringServicePeriodsForContract(trx, {
+          tenant,
+          contractId: editingContractId,
+          sourceRunPrefix: 'contract_quick_add_save',
+        });
+        await syncPrepaidBlockIssuancesForContract(trx, tenant, editingContractId);
+      }
+
+      return {
+        applied: headerUpdate,
+        result: {
+          contract_id: editingContractId,
+          contract_line_id: createdContractLineIds[0],
+          contract_line_ids: createdContractLineIds,
+        } satisfies ContractWizardResult,
+      };
+    });
+
+    await publishContractHeaderUpdated(tenant, applied, user.user_id);
+    return result;
+  } catch (error) {
+    console.error('Error saving quick add contract:', error);
+    const expected = quickAddActionErrorFrom(error);
     if (expected) return expected;
     throw error;
   }
