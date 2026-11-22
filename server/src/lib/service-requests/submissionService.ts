@@ -16,6 +16,7 @@ import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 import { isUniqueViolationOnIndex } from './pgUniqueConstraint';
 import { validateLookupAnswers } from './lookupFields';
+import { isUnsupportedPublishedFieldType } from './fieldTypes';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -232,6 +233,11 @@ export function validateSubmissionAgainstPublishedSchema(input: {
     if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
       continue;
     }
+    // A legacy published field of a type this build does not support is drawn as an inert row in the
+    // portal: there is nothing to answer, so requiring it would make the whole form unsubmittable.
+    if (isUnsupportedPublishedFieldType(field.type)) {
+      continue;
+    }
     // Messages reach the requester, so name the field by its label, not its internal key.
     const fieldLabel =
       typeof field.label === 'string' && field.label.trim().length > 0 ? field.label.trim() : field.key;
@@ -309,7 +315,17 @@ export async function submitPortalServiceRequest(
     clientId,
     contactId,
   });
-  const visibleFieldKeySet = new Set(visibleFieldKeys);
+  // An unsupported-type field cannot be answered in the portal, so a value posted for it is dropped
+  // like a hidden answer rather than stored as if it were free text.
+  const formFields = Array.isArray((definitionDetail.formSchema as any)?.fields)
+    ? ((definitionDetail.formSchema as any).fields as any[])
+    : [];
+  const unsupportedFieldKeys = new Set(
+    formFields
+      .filter((field) => typeof field?.key === 'string' && isUnsupportedPublishedFieldType(field?.type))
+      .map((field) => field.key as string)
+  );
+  const visibleFieldKeySet = new Set(visibleFieldKeys.filter((key) => !unsupportedFieldKeys.has(key)));
   const visiblePayload = Object.fromEntries(
     Object.entries(payload).filter(([key]) => visibleFieldKeySet.has(key))
   );

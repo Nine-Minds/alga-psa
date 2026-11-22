@@ -357,6 +357,51 @@ describe('service request lookup fields', () => {
     expect(await submissionCount(fx.tenant)).toBe('0');
   });
 
+  describe('legacy published version with an unsupported field type', () => {
+    // Publishable on main (the type check was unreachable), so such versions may exist in live use.
+    const legacyFields = (required: boolean) => [
+      { key: 'summary', type: 'short-text', label: 'Summary', required: true },
+      { key: 'satisfaction', type: 'rating', label: 'Satisfaction score', required },
+    ];
+
+    it('stays submittable when the unsupported question is required (the portal shows it as unavailable)', async () => {
+      const fx = await createTenant();
+      const definitionId = await publishDefinition(fx, { fields: legacyFields(true) });
+
+      const result = await submit(fx, definitionId, { summary: 'Printer jams' });
+      expect(result.executionStatus).toBe('succeeded');
+      expect(result.createdTicketId).toBeTruthy();
+    });
+
+    it('stays submittable when the unsupported question is optional', async () => {
+      const fx = await createTenant();
+      const definitionId = await publishDefinition(fx, { fields: legacyFields(false) });
+
+      const result = await submit(fx, definitionId, { summary: 'Printer jams' });
+      expect(result.executionStatus).toBe('succeeded');
+    });
+
+    it('drops a value posted for the unsupported question instead of storing it as free text', async () => {
+      const fx = await createTenant();
+      const definitionId = await publishDefinition(fx, { fields: legacyFields(true) });
+
+      const result = await submit(fx, definitionId, { summary: 'Printer jams', satisfaction: '5' });
+      const submission = await tenantTable(fx.tenant, 'service_request_submissions')
+        .where({ submission_id: result.submissionId })
+        .first();
+      expect(submission.submitted_payload).toEqual({ summary: 'Printer jams' });
+    });
+
+    it('still enforces its supported required questions', async () => {
+      const fx = await createTenant();
+      const definitionId = await publishDefinition(fx, { fields: legacyFields(true) });
+
+      await expect(submit(fx, definitionId, {})).rejects.toThrow(/Required field missing: "Summary"/);
+      await expect(submit(fx, definitionId, {})).rejects.not.toThrow(/Satisfaction score/);
+      expect(await submissionCount(fx.tenant)).toBe('0');
+    });
+  });
+
   describe('hidden lookup', () => {
     const fields = [
       { key: 'needs_manager', type: 'checkbox', label: 'Needs manager', required: false },

@@ -16,6 +16,7 @@ import {
   type VisibilityContext,
   type VisibilityRule,
 } from '../../../../lib/service-requests/formVisibility';
+import { isUnsupportedPublishedFieldType } from '../../../../lib/service-requests/fieldTypes';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function toIsoDateString(value: Date | undefined): string {
@@ -95,8 +96,6 @@ interface RequestServiceFormLabels {
   /** Shown instead of an input for a field whose type this form does not know. */
   unsupportedField: string;
 }
-
-const KNOWN_FIELD_TYPES = new Set(['short-text', 'long-text', 'select', 'checkbox', 'date', 'file-upload', 'lookup']);
 
 interface RequestServiceFormVisibility {
   enabled: boolean;
@@ -183,7 +182,7 @@ export function RequestServiceForm({
       if (!field.required || (visibleFieldKeys && !visibleFieldKeys.has(key))) {
         return;
       }
-      if (field.type !== undefined && !KNOWN_FIELD_TYPES.has(field.type)) {
+      if (isUnsupportedPublishedFieldType(field.type)) {
         return; // inert row: there is nothing to fill in
       }
       if (field.type === 'file-upload') {
@@ -243,7 +242,7 @@ export function RequestServiceForm({
 
         // Defence in depth: a published version only exists if its schema validated, but a legacy
         // definition must never masquerade as a free-text question.
-        if (field.type !== undefined && !KNOWN_FIELD_TYPES.has(field.type)) {
+        if (isUnsupportedPublishedFieldType(field.type)) {
           return (
             <div key={key} className="space-y-1">
               <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">{label}</p>

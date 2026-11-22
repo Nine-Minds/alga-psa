@@ -2,14 +2,9 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { saveServiceRequestDefinitionDraft, type ServiceRequestDefinitionManagementRow } from './definitionManagement';
 
-export type BasicFormFieldType =
-  | 'short-text'
-  | 'long-text'
-  | 'select'
-  | 'checkbox'
-  | 'date'
-  | 'file-upload'
-  | 'lookup';
+import { isSupportedBasicFormFieldType, type BasicFormFieldType } from './fieldTypes';
+
+export type { BasicFormFieldType } from './fieldTypes';
 
 export type BasicFormLookupEntity = 'contact' | 'user';
 export type BasicFormLookupScope = 'requester-client' | 'tenant';
@@ -68,15 +63,6 @@ interface DraftFormSchemaRow {
 }
 
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
-const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>([
-  'short-text',
-  'long-text',
-  'select',
-  'checkbox',
-  'date',
-  'file-upload',
-  'lookup',
-]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -204,7 +190,7 @@ export function resolveStaticDefaultValues(
 
     // Not defaultable: file uploads, lookups (option set is data), and types we do not recognise
     // (a legacy row keeps its raw type; it must not pick up string defaults as if it were text).
-    if (field.type === 'file-upload' || field.type === 'lookup' || !SUPPORTED_FIELD_TYPES.has(field.type)) {
+    if (field.type === 'file-upload' || field.type === 'lookup' || !isSupportedBasicFormFieldType(field.type)) {
       continue;
     }
 
@@ -283,7 +269,7 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
     }
     seenKeys.add(field.key);
 
-    if (!SUPPORTED_FIELD_TYPES.has(field.type)) {
+    if (!isSupportedBasicFormFieldType(field.type)) {
       errors.push(
         `${fieldRef} ("${field.label}") has unsupported type "${String(field.type)}"`
       );

@@ -7,6 +7,7 @@ import {
 import { renderServiceRequestTemplate } from '../../lib/service-requests/ticketTextTemplate';
 import { buildTicketDescription } from '../../lib/service-requests/providers/builtins/ticketOnlyExecutionProvider';
 import { getSubmissionFieldDisplay } from '../../app/client-portal/request-services/submissionFieldPresentation';
+import { validateSubmissionAgainstPublishedSchema } from '../../lib/service-requests/submissionService';
 
 const lookup = (extra: Record<string, unknown> = {}) => ({
   key: 'manager',
@@ -113,5 +114,20 @@ describe('lookup answers render as labels, never ids', () => {
       getSubmissionFieldDisplay(field, schema.fields, { manager: id }, [], { labels, unavailableText: '(gone)' });
     expect(show({ manager: 'Jane Doe' })).toEqual({ kind: 'text', text: 'Jane Doe' });
     expect(show({})).toEqual({ kind: 'text', text: '(gone)' });
+  });
+});
+
+describe('submission required check vs unsupported published types', () => {
+  const formSchema = {
+    fields: [
+      { key: 'summary', type: 'short-text', label: 'Summary', required: true },
+      { key: 'satisfaction', type: 'rating', label: 'Satisfaction score', required: true },
+      { key: 'untyped', label: 'Untyped', required: true },
+    ],
+  };
+
+  it('does not require a question the portal cannot render, but still requires the others', () => {
+    const errors = validateSubmissionAgainstPublishedSchema({ formSchema, payload: {} });
+    expect(errors).toEqual(['Required field missing: "Summary"', 'Required field missing: "Untyped"']);
   });
 });
