@@ -666,9 +666,9 @@ async function assertMayChangeComment(
 }
 
 /**
- * Scheduled comments may only be changed by a principal who can currently
- * update the owning ticket. Internal user type and authorship do not grant
- * schedule-management authority on their own.
+ * Scheduled comments may only be changed by their internal author while that
+ * author can currently update the owning ticket. Ticket access does not grant
+ * authority over another user's withheld reply.
  */
 async function assertMayManageScheduledComment(
   trx: Knex.Transaction,
@@ -691,6 +691,9 @@ async function assertMayManageScheduledComment(
     ticketId: existing.ticket_id,
     action: 'update',
   });
+  if (!isMspPrincipalUserType(user.user_type) || existing.user_id !== user.user_id) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
+  }
 }
 
 export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {

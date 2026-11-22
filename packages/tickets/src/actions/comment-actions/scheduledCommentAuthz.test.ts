@@ -89,7 +89,7 @@ const unauthorized = /Permission denied|Cannot access ticket/;
 describe('scheduled comment authorization', () => {
   beforeEach(() => {
     mocks.currentUser = { user_id: 'internal-user', user_type: 'internal', roles: [] };
-    mocks.comment = scheduledComment();
+    mocks.comment = scheduledComment('internal-user');
     mocks.writes = [];
     mocks.hasPermission.mockReset().mockResolvedValue(true);
     mocks.authorizeTicketRecordAccess.mockReset().mockResolvedValue(undefined);
@@ -117,12 +117,13 @@ describe('scheduled comment authorization', () => {
     expect(mocks.cancelScheduledJob).not.toHaveBeenCalled();
   });
 
-  it('allows a non-author with ticket:update and current record access', async () => {
-    await expect(cancelScheduledComment('comment-1')).resolves.toBeUndefined();
+  it('denies a non-author with ticket:update and current record access', async () => {
+    mocks.comment = scheduledComment('another-internal-user');
+    await expect(cancelScheduledComment('comment-1')).rejects.toThrow(unauthorized);
     expect(mocks.authorizeTicketRecordAccess).toHaveBeenCalledWith(expect.objectContaining({ ticketId: 'ticket-1', action: 'update' }));
-    expect(mocks.writes).toContainEqual(expect.objectContaining({ table: 'comments', values: expect.objectContaining({ publish_state: 'canceled' }) }));
-    expect(mocks.withdrawCommentAttachments).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'comment-1');
-    expect(mocks.cancelScheduledJob).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(mocks.writes).toEqual([]);
+    expect(mocks.withdrawCommentAttachments).not.toHaveBeenCalled();
+    expect(mocks.cancelScheduledJob).not.toHaveBeenCalled();
   });
 
   it('cancel fails closed when the scheduled comment has no owning ticket', async () => {
@@ -153,11 +154,12 @@ describe('scheduled comment authorization', () => {
     expect(mocks.cancelScheduledJob).not.toHaveBeenCalled();
   });
 
-  it('allows a non-author to reschedule with ticket:update and current record access', async () => {
-    await expect(rescheduleScheduledComment('comment-1', '2030-01-01T00:00:00.000Z', 'UTC')).resolves.toBeUndefined();
+  it('denies a non-author to reschedule with ticket:update and current record access', async () => {
+    mocks.comment = scheduledComment('another-internal-user');
+    await expect(rescheduleScheduledComment('comment-1', '2030-01-01T00:00:00.000Z', 'UTC')).rejects.toThrow(unauthorized);
     expect(mocks.authorizeTicketRecordAccess).toHaveBeenCalledWith(expect.objectContaining({ ticketId: 'ticket-1', action: 'update' }));
-    expect(mocks.cancelScheduledJob).toHaveBeenCalledWith('job-1', 'tenant-1');
-    expect(mocks.scheduleJobAt).toHaveBeenCalledTimes(1);
-    expect(mocks.writes).toContainEqual(expect.objectContaining({ table: 'comments', values: expect.objectContaining({ scheduled_publish_tz: 'UTC' }) }));
+    expect(mocks.cancelScheduledJob).not.toHaveBeenCalled();
+    expect(mocks.scheduleJobAt).not.toHaveBeenCalled();
+    expect(mocks.writes).toEqual([]);
   });
 });

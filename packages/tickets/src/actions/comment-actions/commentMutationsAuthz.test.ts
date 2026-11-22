@@ -2,9 +2,11 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createComment, updateComment, deleteComment } from './commentActions';
+import { createComment, updateComment, deleteComment, cancelScheduledComment, rescheduleScheduledComment } from './commentActions';
 import { toggleCommentReaction, getCommentsReactionsBatch } from './commentReactionActions';
 import * as ticketAuthz from '../../lib/ticketRecordAuthorization';
+import { cancelScheduledJob, scheduleJobAt } from '@alga-psa/core';
+import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -553,5 +555,103 @@ describe('comment mutations: client principals need record access to the owning 
       expect(result.returned).toBe('new-comment-id');
       expect(commentInsert.mock.calls[0][2]).toMatchObject({ author_type: 'internal' });
     });
+  });
+});
+
+describe('scheduled comment management: real ticket authorization plus authorship', () => {
+  const scheduledComment = (author: string) => ({
+    comment_id: 'scheduled-1', ticket_id: 'ticket-1', user_id: author,
+    author_type: 'internal', publish_state: 'scheduled', scheduled_publish_at: '2030-01-01T00:00:00.000Z',
+    scheduled_publish_tz: 'UTC', schedule_job_id: 'job-1', tenant: 'tenant-1',
+  });
+  const scheduledAttachments = [{ attachment_id: 'attachment-1', comment_id: 'scheduled-1', state: 'attached' }];
+
+  beforeEach(() => {
+    writes = [];
+    listRows = { ticket_comment_attachments: scheduledAttachments.map((row) => ({ ...row })) };
+    bundleRules = [];
+    currentUser = client;
+    ticketRow = ownTicket;
+    commentRow = scheduledComment('i-1');
+    hasPermissionMock.mockReset().mockResolvedValue(true);
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    withTransactionMock.mockReset().mockImplementation(async (_k: any, cb: any) => cb(makeTrx()));
+    vi.mocked(cancelScheduledJob).mockReset().mockResolvedValue(true);
+    vi.mocked(scheduleJobAt).mockReset().mockResolvedValue({ jobId: 'job-2' } as any);
+    vi.mocked(withdrawCommentAttachments).mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s denies a client with ticket:update and current ticket access over another agent’s schedule', async (_operation, run) => {
+    const original = { ...commentRow };
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+
+    expect(commentRow).toEqual(original);
+    expect(listRows.ticket_comment_attachments).toEqual(scheduledAttachments);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(withdrawCommentAttachments)).not.toHaveBeenCalled();
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+  });
+
+  it('allows an internal author to cancel after real ticket record authorization', async () => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+
+    await expect(cancelScheduledComment('scheduled-1')).resolves.toBeUndefined();
+
+    expect(writes).toContainEqual({ table: 'comments', op: 'update' });
+    expect(vi.mocked(withdrawCommentAttachments)).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'scheduled-1');
+    expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
+  });
+
+  it('allows an internal author to reschedule after real ticket record authorization', async () => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+
+    await expect(rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')).resolves.toBeUndefined();
+
+    expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(vi.mocked(scheduleJobAt)).toHaveBeenCalledTimes(1);
+    expect(writes).toContainEqual({ table: 'comments', op: 'update' });
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s does not let an internal non-author manage another user’s schedule', async (_operation, run) => {
+    currentUser = { ...mspUser, user_id: 'i-2' };
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+
+    expect(writes).toEqual([]);
+    expect(vi.mocked(withdrawCommentAttachments)).not.toHaveBeenCalled();
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s denies the author when ticket:update is absent or record access is denied', async (_operation, run) => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+
+    hasPermissionMock.mockResolvedValue(true);
+    bundleRules = ['read', 'update'].map((action) => ({ id: `rule-${action}`, resource: 'ticket', action, templateKey: 'own_or_assigned' }));
+    ticketRow = ownTicket;
+    await expect(run()).rejects.toThrow(/Ticket not found|Cannot access ticket|Permission denied/);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
   });
 });
