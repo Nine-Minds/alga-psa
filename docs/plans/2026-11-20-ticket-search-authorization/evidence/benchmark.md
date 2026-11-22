@@ -279,34 +279,42 @@ This historical run covers the default document verifier at these three sizes an
 
 ## Repaired SQL-filtered document search at 150, 500 and 1,500 candidates
 
-The production-path harness now measures the active default document verifier through SQL visibility predicates for both typeahead (page size 5) and full search (page size 100). Application revision `8ed50f3b799b5803d13ee2808ba189201e790edb` was measured with PostgreSQL 15.4 (`Debian 15.4-2.pgdg120+1`). The fixture contains 1,500 indexed candidates, 1,350 tenant source documents, 150 stale index-only candidates, and 1,504 client association rows. The fixture includes internal-readable documents, portal-readable documents, denied associations, multiple client associations with one denied association, and stale source rows.
+The active default document verifier compiles tenant-scoped source existence and all-client-association visibility into counts and result SQL. Application revision `efe60671e54abfc8333a06ce823901b50fd11574` was measured on PostgreSQL 15.4 (`Debian 15.4-2.pgdg120+1`). The isolated fixture has 1,500 indexed candidates: 1,350 source documents, 150 stale index-only candidates, and 1,504 client association rows. It includes readable and denied associations, multiply-associated documents with one allowed and one denied client, and stale source rows. The multiply-associated candidate subsets contain 16, 52 and 154 rows at the respective sizes; these counts are derived from generated associations.
 
-The contexts are an unrestricted internal document reader and an actual client portal document reader scoped to the fixture client. For each candidate size, the harness validates exact document groups and totals, first-page fixture identities and uniqueness, and that no standalone document or association verification query is issued. Full search additionally walks all visible identities at page size 100, checking unique IDs and cursor termination. Each size, context and entry point used one warmup and five timed sequential requests at concurrency 1. Request timings include principal and policy resolution, authorization, counts and the first page. Full cursor traversal is asserted outside the timing samples. Statement counts are deterministic and remain constant across all three candidate sizes for each entry point/context:
+The benchmark runs `ANALYZE documents`, `ANALYZE document_associations` and `ANALYZE app_search_index` after fixture insertion and before warmup or timed requests. Fixture setup and statistics preparation are outside measured request boundaries. Each scenario has one warmup and five measured sequential requests at concurrency 1. Typeahead uses page size 5; full search uses page size 100 and additionally walks every authorized identity across unique, terminating cursors. Timed requests assert exact groups/totals, expected identities and zero standalone source/association verification SELECTs.
 
-| Candidates | Context | Entry point | Authorized total | SQL statements/request | Document / association verification SELECTs | p95 ms |
-|---:|---|---|---:|---:|---:|---:|
-| 150 | Internal | Typeahead (5) | 135 | 10 | 0 / 0 | 15.30 |
-| 150 | Internal | Full search (100) | 135 | 10 | 0 / 0 | 14.81 |
-| 150 | Client portal | Typeahead (5) | 92 | 3 | 0 / 0 | 826.72 |
-| 150 | Client portal | Full search (100) | 92 | 3 | 0 / 0 | 861.49 |
-| 500 | Internal | Typeahead (5) | 450 | 10 | 0 / 0 | 17.90 |
-| 500 | Internal | Full search (100) | 450 | 10 | 0 / 0 | 17.66 |
-| 500 | Client portal | Typeahead (5) | 308 | 3 | 0 / 0 | 770.74 |
-| 500 | Client portal | Full search (100) | 308 | 3 | 0 / 0 | 821.89 |
-| 1,500 | Internal | Typeahead (5) | 1,350 | 10 | 0 / 0 | 20.81 |
-| 1,500 | Internal | Full search (100) | 1,350 | 10 | 0 / 0 | 20.24 |
-| 1,500 | Client portal | Typeahead (5) | 926 | 3 | 0 / 0 | 977.19 |
-| 1,500 | Client portal | Full search (100) | 926 | 3 | 0 / 0 | 805.10 |
+| Candidates | Context | Entry point | Authorized total | SQL statements/request | Document / association verification SELECTs | Multiply associated | Nearest-rank p95 ms |
+|---:|---|---|---:|---:|---:|---:|---:|
+| 150 | Internal | Typeahead (5) | 135 | 10 | 0 / 0 | 16 | 133.12 |
+| 150 | Internal | Full search (100) | 135 | 10 | 0 / 0 | 16 | 157.76 |
+| 150 | Client portal | Typeahead (5) | 92 | 3 | 0 / 0 | 16 | 143.44 |
+| 150 | Client portal | Full search (100) | 92 | 3 | 0 / 0 | 16 | 149.85 |
+| 500 | Internal | Typeahead (5) | 450 | 10 | 0 / 0 | 52 | 148.75 |
+| 500 | Internal | Full search (100) | 450 | 10 | 0 / 0 | 52 | 152.83 |
+| 500 | Client portal | Typeahead (5) | 308 | 3 | 0 / 0 | 52 | 161.19 |
+| 500 | Client portal | Full search (100) | 308 | 3 | 0 / 0 | 52 | 174.79 |
+| 1,500 | Internal | Typeahead (5) | 1,350 | 10 | 0 / 0 | 154 | 185.68 |
+| 1,500 | Internal | Full search (100) | 1,350 | 10 | 0 / 0 | 154 | 201.80 |
+| 1,500 | Client portal | Typeahead (5) | 926 | 3 | 0 / 0 | 154 | 177.54 |
+| 1,500 | Client portal | Full search (100) | 926 | 3 | 0 / 0 | 154 | 186.85 |
 
-The raw five latency samples, raw statement samples, fixture counts and procedure are in [index-acl-measurements.json](index-acl-measurements.json). The previous 1,500-candidate fallback reached 2,873/2,874 SQL statements and 714.03/979.35 ms p95 for the two historical internal contexts. The repaired internal request uses 10 statements; the scoped portal request uses 3. Portal latency ranged from 0.75 to 0.98 seconds p95 in this fixture despite bounded statements; its bottleneck was not isolated, so those timings are not presented as a latency improvement. The measured statement growth is independent of candidate count.
+Statement counts are deterministic and flat at 10 for internal and 3 for client-portal requests at all three candidate sizes. The production-path harness also captures both portal count and page SQL, runs `EXPLAIN (ANALYZE, FORMAT JSON)`, and asserts one `document_associations` scan loop per SQL statement. The observed plan used the uncorrelated denied-ID set: 424 denied association rows and one scan loop for both count and page queries.
+
+### Planner diagnosis and cold-tenant assessment
+
+The first SQL-filtered measurements are retained in `document_visibility_sql_pre_analyze_run` and were made before statistics preparation. The independent pre-ANALYZE EXPLAIN showed a correlated `Nested Loop Anti`: the association tenant-index scan ran 1,359 times, removed 486,116 candidate rows by join filter, and consumed about 405–416 ms per query. In the supplied diagnostic, `ANALYZE` of the three tables reduced the request using that old correlated form to 13.09 ms.
+
+The repair now expresses denied client associations as an uncorrelated set of document IDs. The captured plan shows the association subquery hashed and run once, so stale or absent tenant-local planner statistics cannot restore a per-candidate association scan. A newly populated or cold tenant can still incur one tenant-scoped association scan for each count/page SQL statement; this fixture does not establish cold-tenant latency or behavior under a very large association table. No separate cold-tenant EXPLAIN was captured. The measured p95 range is 133.12–201.80 ms; these are sequential integration timings and the benchmark does not isolate all application-level latency or claim a production latency guarantee.
+
+The older `document_visibility_sql_pre_analyze_run` is historical and preserves the original unprepared-statistics measurements. The earlier per-candidate verifier fallback remains separately documented in [historical default document fallback](benchmark.md#historical-default-document-fallback-at-150-500-and-1500-candidates), including its 2,873/2,874 statements at 1,500 candidates. The current repair uses 10 internal or 3 portal statements and no per-document verification queries.
 
 Reproduce from `server/`:
 
 ```sh
-SEARCH_BENCH_REVISION=8ed50f3b799b5803d13ee2808ba189201e790edb \
+SEARCH_BENCH_REVISION=efe60671e54abfc8333a06ce823901b50fd11574 \
   npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
   --coverage.enabled=false --no-file-parallelism --reporter=verbose --silent=false \
   -t "SQL-filtered document visibility"
 ```
 
-This run measures the shared typeahead authorization engine without the outer action telemetry/rate-limit/project-access wrapper. It does not measure custom verifier fallback, ticket/comment evaluator fallback, production traffic, or concurrent load.
+This run measures the shared typeahead authorization engine without the outer action telemetry/rate-limit/project-access wrapper. It does not measure cold-tenant EXPLAIN, arbitrary replacement-verifier fallback, ticket/comment evaluator fallback, production traffic, or concurrent load.

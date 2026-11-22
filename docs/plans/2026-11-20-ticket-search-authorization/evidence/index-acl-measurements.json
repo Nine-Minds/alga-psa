@@ -668,7 +668,612 @@
     ]
   },
   "document_visibility_sql_repair_run": {
-    "measurement_status": "repaired default document visibility SQL path; historical document_fallback_run retained separately",
+    "measurement_status": "current document visibility repair measured after planner-statistics preparation",
+    "application_revision": "efe60671e54abfc8333a06ce823901b50fd11574",
+    "postgres_version": "15.4 (Debian 15.4-2.pgdg120+1)",
+    "harness": "server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts",
+    "fixture": {
+      "matching_document_candidates": 1500,
+      "source_documents": 1350,
+      "stale_index_candidates": 150,
+      "document_client_associations": 1504,
+      "fixture_composition": "Readable client-associated rows, denied client-associated rows, 154 multiply-associated live documents with one allowed and one denied client, and 150 stale index-only rows.",
+      "multiply_associated_candidates_by_subset": {
+        "150": 16,
+        "500": 52,
+        "1500": 154
+      },
+      "sources": [
+        "public.documents",
+        "public.document_associations",
+        "public.document_types",
+        "public.app_search_index"
+      ]
+    },
+    "contexts": {
+      "unrestricted_internal": "Internal document:read principal with clientAccess all.",
+      "client_portal_scoped": "Client portal document:read principal scoped to the fixture client; every client association must be in scope."
+    },
+    "procedure": {
+      "warmups": 1,
+      "samples": 5,
+      "concurrency": 1,
+      "page_size": 100,
+      "timing_boundary": "performance.now around the request path, including principal and policy resolution, SQL visibility, counts and first page; fixture setup and warmup excluded. Full-search cursor walk validated outside the timed request samples.",
+      "statement_method": "Knex query events on the transaction connection during each timed request; standalone document and association verification SELECTs counted separately from SQL visibility predicates.",
+      "percentile": "Nearest-rank p95; with five samples the p95 is the maximum.",
+      "visibility_confirmation": "canCompileSearchVisibility(document) is true; the active verifier compiler admits source existence and all-association client scope in page/count SQL. Timed requests issue no separate document or association verification SELECTs.",
+      "planner_statistics": "ANALYZE documents, document_associations and app_search_index ran after isolated fixture insertion and before the benchmark warmup or timed requests; fixture setup and ANALYZE are outside timing boundaries.",
+      "plan_diagnosis": "The independent pre-ANALYZE correlated NOT EXISTS plan used a Nested Loop Anti with the document_associations tenant index scan at 1,359 loops, 486,116 join-filter removals, and 405\u2013416 ms execution. ANALYZE of documents, document_associations and app_search_index reduced the old correlated-query request to 13.09 ms. The current uncorrelated denied-ID subquery plan is a hashed SubPlan: the association scan ran once (424 rows, about 0.5\u20130.6 ms) rather than once per source candidate.",
+      "cold_tenant_assessment": "No separate cold-tenant EXPLAIN was captured. The current denied-association SELECT has no reference to the outer document row, so PostgreSQL evaluates/materializes its denied-ID set once per count or page statement; this removes the candidate-count multiplier even with stale or absent tenant-local statistics. A cold tenant can still pay one scan of its tenant association rows per statement, so the measured warm-fixture latency is not a cold-tenant latency guarantee.",
+      "plan_regression_assertion": "Before timed scenarios, the production typeahead path is captured and run through EXPLAIN (ANALYZE, FORMAT JSON) after statistics preparation. The test asserts one document_associations scan node with Actual Loops = 1 for both count and page SQL; the former correlated plan would fail at 1,359 loops.",
+      "observed_current_plan": {
+        "association_query_count": 2,
+        "document_associations_actual_loops_per_query": [
+          1,
+          1
+        ],
+        "document_associations_actual_rows_per_query": [
+          424,
+          424
+        ],
+        "plan": "hashed uncorrelated denied-ID subplan"
+      }
+    },
+    "measurements": [
+      {
+        "scenario": "150-unrestricted-internal-typeahead",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 150,
+        "authorized_total": 135,
+        "stale_source_candidates": 15,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 16,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          133.12,
+          128.32,
+          120.18,
+          130.18,
+          128.4
+        ],
+        "p95_ms": 133.12,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "150-unrestricted-internal-full",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 150,
+        "authorized_total": 135,
+        "stale_source_candidates": 15,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 16,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          157.76,
+          153.76,
+          150.75,
+          139.62,
+          151.62
+        ],
+        "p95_ms": 157.76,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      },
+      {
+        "scenario": "150-client-portal-scoped-typeahead",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 150,
+        "authorized_total": 92,
+        "stale_source_candidates": 15,
+        "denied_association_candidates": 43,
+        "multiply_associated_candidates": 16,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          124.82,
+          126.16,
+          127.89,
+          143.44,
+          125.38
+        ],
+        "p95_ms": 143.44,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "150-client-portal-scoped-full",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 150,
+        "authorized_total": 92,
+        "stale_source_candidates": 15,
+        "denied_association_candidates": 43,
+        "multiply_associated_candidates": 16,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          126.63,
+          149.85,
+          129.96,
+          126.95,
+          130.69
+        ],
+        "p95_ms": 149.85,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      },
+      {
+        "scenario": "500-unrestricted-internal-typeahead",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 500,
+        "authorized_total": 450,
+        "stale_source_candidates": 50,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 52,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          135.66,
+          134.89,
+          135.67,
+          148.75,
+          143.04
+        ],
+        "p95_ms": 148.75,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "500-unrestricted-internal-full",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 500,
+        "authorized_total": 450,
+        "stale_source_candidates": 50,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 52,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          147.51,
+          152.83,
+          151.69,
+          140.52,
+          152.13
+        ],
+        "p95_ms": 152.83,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      },
+      {
+        "scenario": "500-client-portal-scoped-typeahead",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 500,
+        "authorized_total": 308,
+        "stale_source_candidates": 50,
+        "denied_association_candidates": 142,
+        "multiply_associated_candidates": 52,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          161.19,
+          157.01,
+          146.65,
+          148.79,
+          145.99
+        ],
+        "p95_ms": 161.19,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "500-client-portal-scoped-full",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 500,
+        "authorized_total": 308,
+        "stale_source_candidates": 50,
+        "denied_association_candidates": 142,
+        "multiply_associated_candidates": 52,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          172.47,
+          136.13,
+          174.79,
+          172.4,
+          164.07
+        ],
+        "p95_ms": 174.79,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      },
+      {
+        "scenario": "1500-unrestricted-internal-typeahead",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 1500,
+        "authorized_total": 1350,
+        "stale_source_candidates": 150,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 154,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          181.64,
+          182.65,
+          179.61,
+          185.68,
+          172.43
+        ],
+        "p95_ms": 185.68,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "1500-unrestricted-internal-full",
+        "authorization_context": "Internal user with unrestricted client access.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 1500,
+        "authorized_total": 1350,
+        "stale_source_candidates": 150,
+        "denied_association_candidates": 0,
+        "multiply_associated_candidates": 154,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          173.11,
+          181.84,
+          201.8,
+          187.26,
+          191.82
+        ],
+        "p95_ms": 201.8,
+        "raw_statement_count_samples": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "median_statements": 10,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      },
+      {
+        "scenario": "1500-client-portal-scoped-typeahead",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAuthorizedSearchCandidates, page size 5, no snippets",
+        "matching_document_candidates": 1500,
+        "authorized_total": 926,
+        "stale_source_candidates": 150,
+        "denied_association_candidates": 424,
+        "multiply_associated_candidates": 154,
+        "complete_pagination_validated": false,
+        "raw_latency_samples_ms": [
+          173.76,
+          177.54,
+          164.9,
+          170.79,
+          175.76
+        ],
+        "p95_ms": 177.54,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 5
+      },
+      {
+        "scenario": "1500-client-portal-scoped-full",
+        "authorization_context": "Client portal scoped to 6402ecb1-1cd5-418e-b206-203d314d9dc7; denied and multiply-associated documents are excluded.",
+        "entry_point": "runAppSearch first page, page size 100",
+        "matching_document_candidates": 1500,
+        "authorized_total": 926,
+        "stale_source_candidates": 150,
+        "denied_association_candidates": 424,
+        "multiply_associated_candidates": 154,
+        "complete_pagination_validated": true,
+        "raw_latency_samples_ms": [
+          174.34,
+          186.85,
+          168.74,
+          161.31,
+          149.06
+        ],
+        "p95_ms": 186.85,
+        "raw_statement_count_samples": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "median_statements": 3,
+        "raw_document_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "raw_association_verification_select_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "warmup_requests": 1,
+        "measured_requests": 5,
+        "concurrency": 1,
+        "page_size": 100
+      }
+    ],
+    "validation": "All 12 scenarios assert exact authorized group and total counts, expected first-page identities, uniqueness, and zero separate documents/document_associations verification SELECTs. Full-search pagination walks every authorized identity at each size and context with unique IDs and terminates. Statement-count assertions are deterministic across five samples and invariant across 150/500/1500 candidates for each context/entry point.",
+    "reproduction": "From server/: SEARCH_BENCH_REVISION=efe60671e54abfc8333a06ce823901b50fd11574 npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts --coverage.enabled=false --no-file-parallelism --reporter=verbose --silent=false -t \"SQL-filtered document visibility\"",
+    "limits": [
+      "Sequential integration timings are not production load evidence. The measured five-sample p95 values ranged from 133.12 to 201.80 ms; no production latency or concurrent-load guarantee is claimed.",
+      "The benchmark measures the shared typeahead authorization engine directly, without the outer action telemetry/rate-limit/project-access wrapper.",
+      "Cold-tenant EXPLAIN, fallback verifier behavior, arbitrary custom/replacement verifiers without SQL compilers, ticket/comment evaluator fallback, production traffic and concurrent load were not measured."
+    ],
+    "historical_diagnosis": "The first repaired SQL measurements did not ANALYZE the freshly populated tables. An independent pre-ANALYZE EXPLAIN later showed the correlated association anti-join scanning document_associations 1,359 times (about 405\u2013416 ms). After ANALYZE of documents, document_associations and app_search_index, that query measured 13.09 ms.",
+    "routine_plan_risk": "Superseded by the uncorrelated denied-document set in the current repair; retained here as historical evidence only."
+  },
+  "document_visibility_sql_pre_analyze_run": {
+    "measurement_status": "historical SQL-filtered document visibility before planner-statistics preparation; superseded by document_visibility_sql_repair_run",
     "application_revision": "8ed50f3b799b5803d13ee2808ba189201e790edb",
     "postgres_version": "15.4 (Debian 15.4-2.pgdg120+1)",
     "harness": "server/src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts",
@@ -708,7 +1313,7 @@
         "authorized_total": 135,
         "stale_source_candidates": 15,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 20,
+        "multiply_associated_candidates": 16,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           15.3,
@@ -753,7 +1358,7 @@
         "authorized_total": 135,
         "stale_source_candidates": 15,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 20,
+        "multiply_associated_candidates": 16,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           14.81,
@@ -798,7 +1403,7 @@
         "authorized_total": 92,
         "stale_source_candidates": 15,
         "denied_association_candidates": 43,
-        "multiply_associated_candidates": 20,
+        "multiply_associated_candidates": 16,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           788.78,
@@ -843,7 +1448,7 @@
         "authorized_total": 92,
         "stale_source_candidates": 15,
         "denied_association_candidates": 43,
-        "multiply_associated_candidates": 20,
+        "multiply_associated_candidates": 16,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           778.37,
@@ -888,7 +1493,7 @@
         "authorized_total": 450,
         "stale_source_candidates": 50,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 65,
+        "multiply_associated_candidates": 52,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           17.9,
@@ -933,7 +1538,7 @@
         "authorized_total": 450,
         "stale_source_candidates": 50,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 65,
+        "multiply_associated_candidates": 52,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           15.73,
@@ -978,7 +1583,7 @@
         "authorized_total": 308,
         "stale_source_candidates": 50,
         "denied_association_candidates": 142,
-        "multiply_associated_candidates": 65,
+        "multiply_associated_candidates": 52,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           766.21,
@@ -1023,7 +1628,7 @@
         "authorized_total": 308,
         "stale_source_candidates": 50,
         "denied_association_candidates": 142,
-        "multiply_associated_candidates": 65,
+        "multiply_associated_candidates": 52,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           752.32,
@@ -1068,7 +1673,7 @@
         "authorized_total": 1350,
         "stale_source_candidates": 150,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 193,
+        "multiply_associated_candidates": 154,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           20.81,
@@ -1113,7 +1718,7 @@
         "authorized_total": 1350,
         "stale_source_candidates": 150,
         "denied_association_candidates": 0,
-        "multiply_associated_candidates": 193,
+        "multiply_associated_candidates": 154,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           20.24,
@@ -1158,7 +1763,7 @@
         "authorized_total": 926,
         "stale_source_candidates": 150,
         "denied_association_candidates": 424,
-        "multiply_associated_candidates": 193,
+        "multiply_associated_candidates": 154,
         "complete_pagination_validated": false,
         "raw_latency_samples_ms": [
           752.1,
@@ -1203,7 +1808,7 @@
         "authorized_total": 926,
         "stale_source_candidates": 150,
         "denied_association_candidates": 424,
-        "multiply_associated_candidates": 193,
+        "multiply_associated_candidates": 154,
         "complete_pagination_validated": true,
         "raw_latency_samples_ms": [
           754.66,
@@ -1247,6 +1852,8 @@
       "Sequential integration timings are not production load evidence. Client-portal request p95 ranged from about 0.75 to 0.98 seconds despite 3 SQL statements; this latency was not isolated to a specific query.",
       "The benchmark measures the shared typeahead authorization engine directly, without the outer action telemetry/rate-limit/project-access wrapper.",
       "Fallback verifier behavior, including arbitrary custom replacements without SQL compilers and ticket/comment evaluator fallback, is not included in these document measurements."
-    ]
+    ],
+    "historical_diagnosis": "The first repaired SQL measurements did not ANALYZE the freshly populated tables. An independent pre-ANALYZE EXPLAIN later showed the correlated association anti-join scanning document_associations 1,359 times (about 405\u2013416 ms). After ANALYZE of documents, document_associations and app_search_index, that query measured 13.09 ms.",
+    "routine_plan_risk": "Superseded by the uncorrelated denied-document set in the current repair; retained here as historical evidence only."
   }
 }
