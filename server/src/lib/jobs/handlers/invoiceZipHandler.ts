@@ -17,6 +17,7 @@ import { JobStatus } from 'server/src/types/job';
 
 export interface InvoiceZipJobData extends Record<string, unknown> {
   jobServiceId: string;
+  forwardedExecutionId?: string;
   invoiceIds: string[];
   tenantId: string;
   requesterId: string;
@@ -167,6 +168,7 @@ export class InvoiceZipJobHandler {
         await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
           tenantId,
           pgBossJobId,
+          forwardedExecutionId: data.forwardedExecutionId,
           stepResult: {
             step: step.type,
             status: 'started',
@@ -194,6 +196,7 @@ export class InvoiceZipJobHandler {
         await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
           tenantId,
           pgBossJobId,
+          forwardedExecutionId: data.forwardedExecutionId,
           stepResult: {
             step: step.type,
             status: 'completed',
@@ -222,6 +225,7 @@ export class InvoiceZipJobHandler {
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
         tenantId,
         pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
         stepResult: {
           step: zipStep.type,
           status: 'started',
@@ -305,6 +309,7 @@ export class InvoiceZipJobHandler {
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
         tenantId,
         pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
         stepResult: {
           step: zipStep.type,
           status: 'completed',
@@ -316,6 +321,7 @@ export class InvoiceZipJobHandler {
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Completed, {
         tenantId,
         pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
         details: `Successfully processed and bundled ${fileRecords.length} invoice(s) into ZIP archive`
       });
       
@@ -337,7 +343,8 @@ export class InvoiceZipJobHandler {
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
         error: failureDetails.error,
         tenantId,
-        pgBossJobId
+        pgBossJobId,
+        forwardedExecutionId: data.forwardedExecutionId,
       });
       throw error;
     }

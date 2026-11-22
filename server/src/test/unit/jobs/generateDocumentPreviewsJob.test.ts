@@ -66,8 +66,6 @@ describe('generate-document-previews job', () => {
       'utf8',
     );
     expect(GENERATE_DOCUMENT_PREVIEWS_JOB).toBe('generate-document-previews');
-    expect(activities).toContain(
-      "registerJobHandlerForActivities('generate-document-previews', forwardJobToServer('generate-document-previews'));",
-    );
+    expect(activities).toMatch(/registerForwardedJobHandler\(\s*'generate-document-previews'\s*\)/);
   });
 });
