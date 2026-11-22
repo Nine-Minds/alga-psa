@@ -124,6 +124,7 @@
       "dismissError": "Nie udało się odrzucić zadania: {{message}}"
     },
     "retryLater": "Spróbuj ponownie później.",
+    "tryAgain": "Spróbuj ponownie",
     "adHoc": {
       "endBeforeStart": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia.",
       "fields": {
