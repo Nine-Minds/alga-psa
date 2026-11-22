@@ -613,17 +613,23 @@ describe('email-service boot registers co-managed inbound', () => {
         return result;
       });
       try {
-        await vi.waitFor(async () => {
-          const waiting = await db.raw("select 1 from pg_locks where locktype = 'advisory' and not granted and objid = (hashtext(?)::bigint & 4294967295)::oid",
-            [`inbound-native-confirmation:${ticketTenant}:${sourceId}`]);
-          expect(secondFinished || waiting.rows.length > 0).toBe(true);
-        });
+        // The focused invocation runs with DB_POOL_MAX=2. Let the stale retry
+        // contend while the first redemption is paused after message dedupe.
+        await new Promise(resolve => setTimeout(resolve, 200));
         expect(secondFinished).toBe(false);
       } finally {
         releaseFirst();
         slowWrite.mockRestore();
       }
-      const [approved, staleRetry] = await Promise.all([firstApproval, secondApproval]);
+      let contentionTimeout: ReturnType<typeof setTimeout> | undefined;
+      const [approved, staleRetry] = await Promise.race([
+        Promise.all([firstApproval, secondApproval]),
+        new Promise<never>((_, reject) => {
+          contentionTimeout = setTimeout(() => reject(new Error('Native confirmation contention exhausted the admin pool.')), 8_000);
+        }),
+      ]).finally(() => {
+        if (contentionTimeout) clearTimeout(contentionTimeout);
+      });
       expect(approved).toMatchObject({ ticketId });
       expect(staleRetry).toBeNull();
       const rows = await sharedComments(replyText);

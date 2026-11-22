@@ -373,22 +373,27 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
 }
 
 async function withNativeSenderConfirmationLock<T>(db: any, tenant: string, id: string, work: () => Promise<T>): Promise<T> {
-  // A session lock must outlive the short claim update: a stale lease can be
-  // replaced while the original worker is processing, but only after it has
-  // finished message deduplication and persistence.
+  // Never wait on an advisory lock while holding a pool connection. At a small
+  // pool size, a blocked waiter can take the connection the current lock holder
+  // needs to finish. Failed try-lock attempts roll back before backing off.
   const lockKey = `inbound-native-confirmation:${tenant}:${id}`;
-  const lockConnection = await db.transaction();
-  let locked = false;
-  try {
-    await lockConnection.raw('select pg_advisory_lock(hashtext(?))', [lockKey]);
-    locked = true;
-    return await work();
-  } finally {
+  const waitDeadline = Date.now() + 120_000;
+  let retryDelayMs = 25;
+  while (true) {
+    const lockTransaction = await db.transaction();
     try {
-      if (locked) await lockConnection.raw('select pg_advisory_unlock(hashtext(?))', [lockKey]);
+      const result = await lockTransaction.raw('select pg_try_advisory_xact_lock(hashtext(?)) as locked', [lockKey]);
+      if (Boolean(result.rows?.[0]?.locked)) return await work();
     } finally {
-      await lockConnection.rollback();
+      // The transaction-scoped lock is released here on both the acquired and
+      // unsuccessful paths. The unsuccessful path therefore never sleeps
+      // while retaining an admin-pool connection.
+      await lockTransaction.rollback();
     }
+
+    if (Date.now() >= waitDeadline) throw new Error('Timed out waiting for native sender confirmation redemption lock.');
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    retryDelayMs = Math.min(retryDelayMs * 2, 500);
   }
 }
 
