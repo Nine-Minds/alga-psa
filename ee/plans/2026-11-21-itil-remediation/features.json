@@ -194,7 +194,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration adds categories.standard_category_id (nullable uuid) and creates itil_category_remap (tenant, board_id, standard_category_id, old_category_id, new_category_id)"
   },
   {
@@ -203,7 +203,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration first maps every flagged category to its standard row by name and parent name, wherever it sits: on an ITIL board, on a non-ITIL board, or with no board; children under a flagged parent are mapped through that parent"
   },
   {
@@ -212,7 +212,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "As its last data step, after all re-pointing, the migration clears the flag and link on every mapped row that is not on an ITIL board; no row is deleted"
   },
   {
@@ -221,7 +221,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration gives every ITIL board its own set: rows already on the board are linked in place and keep their ids, missing standard rows are inserted parents first"
   },
   {
@@ -230,7 +230,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration re-points tickets.category_id and subcategory_id on an ITIL board from a mapped category that is not the board's own to the board's copy of the same standard category, and records the pair in itil_category_remap"
   },
   {
@@ -239,7 +239,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration re-points ticket_templates, recurring definitions (columns, overrides and client overrides) and inbound_ticket_defaults the same way"
   },
   {
@@ -248,7 +248,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration re-points category ids in settings that hold a board and a category together: Huntress settings, workflow tickets.create inputs with a fixed board, inbound webhook handler_config with a static board, and checklist rules that name a board; settings without a board are left"
   },
   {
@@ -257,7 +257,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration adds a partial unique index on (tenant, board_id, standard_category_id) where the link is set"
   },
   {
@@ -266,7 +266,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration is idempotent, runs per tenant, uses the self-contained tenantDb shim, selects values before updating by parameter, and sets transaction false"
   },
   {
@@ -275,7 +275,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration changes no ticket's priority, Impact or Urgency and no category on the board that holds the set today"
   },
   {
@@ -284,7 +284,7 @@
     "prdRefs": [
       "Gotchas"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Dev seeds create the ITIL board before the ITIL categories and seed the set onto that board"
   },
   {
@@ -293,7 +293,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A standard child on an ITIL board whose parent sits on another board or on none is re-parented to that board's own parent"
   },
   {
@@ -302,7 +302,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration re-points categoryId, categoryIds and excludeCategoryIds in boards.list_view_settings and in list_views.settings whose filters name a single ITIL board; views spanning boards are left"
   },
   {
@@ -311,7 +311,7 @@
     "prdRefs": [
       "Category migration"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Flagged categories with no board: references from ITIL boards move to the board's copy; references from other boards are untouched; the rows stay, without flag or board"
   },
   {
@@ -320,7 +320,7 @@
     "prdRefs": [
       "Reversal"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration down() uses itil_category_remap to restore every re-pointed reference, removes the inserted copies, restores parents, flags and links, and drops the table and column"
   },
   {
@@ -329,7 +329,7 @@
     "prdRefs": [
       "Reversal"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "itil_category_remap is kept after the migration with one row per replaced (board, old id) pair, so a setting found later can be corrected from it"
   },
   {

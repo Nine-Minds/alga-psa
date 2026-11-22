@@ -401,7 +401,7 @@
     "featureIds": [
       "F022"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After migration, categories has standard_category_id and the partial unique index"
   },
   {
@@ -410,7 +410,7 @@
     "featureIds": [
       "F023"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A flagged category with a standard name and parent is mapped to the matching standard row, on an ITIL board, on a non-ITIL board and with no board"
   },
   {
@@ -419,7 +419,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A flagged category with a non-standard name loses the flag and gets no link"
   },
   {
@@ -428,7 +428,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A flagged category on a non-ITIL board loses the flag and stays on that board"
   },
   {
@@ -437,7 +437,7 @@
     "featureIds": [
       "F025"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A tenant with one set and three ITIL boards ends with three complete sets, one per board, each child under its own board's parent"
   },
   {
@@ -446,7 +446,7 @@
     "featureIds": [
       "F025"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "An ITIL board with a partial set gets only the missing rows"
   },
   {
@@ -455,7 +455,7 @@
     "featureIds": [
       "F025"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A tenant with ITIL boards and no flagged categories at all gets a full set per board"
   },
   {
@@ -464,7 +464,7 @@
     "featureIds": [
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket on the second ITIL board using a shared category ends up on that board's copy with the same name and parent"
   },
   {
@@ -473,7 +473,7 @@
     "featureIds": [
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket on the board that held the set keeps its category id"
   },
   {
@@ -482,7 +482,7 @@
     "featureIds": [
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket on a non-ITIL board using a formerly flagged category keeps its category id"
   },
   {
@@ -491,7 +491,7 @@
     "featureIds": [
       "F027"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Templates, recurring definitions, their overrides and inbound defaults on the second ITIL board point at that board's copy"
   },
   {
@@ -500,7 +500,7 @@
     "featureIds": [
       "F028"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A workflow tickets.create input with a fixed second ITIL board and a shared category is re-pointed; a tickets.update_fields input, which has no board, is unchanged"
   },
   {
@@ -509,7 +509,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inserting a second row for the same board and standard category violates the index"
   },
   {
@@ -518,7 +518,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Running the migration twice produces the same rows"
   },
   {
@@ -527,7 +527,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The migration runs against a Citus-distributed schema"
   },
   {
@@ -536,7 +536,7 @@
     "featureIds": [
       "F031"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket priority_id, itil_impact and itil_urgency are identical before and after the migration for every ticket"
   },
   {
@@ -545,7 +545,7 @@
     "featureIds": [
       "F032"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A freshly seeded dev database has the ITIL set on the ITIL board and none on other boards"
   },
   {
@@ -556,7 +556,7 @@
       "F025",
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The set sits on a board that is no longer ITIL while two other boards are: tickets on both ITIL boards end on their own board's copy with the same name and parent"
   },
   {
@@ -565,7 +565,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In that case the original rows stay on the non-ITIL board with their ids, without flag or link, and its tickets are untouched"
   },
   {
@@ -575,7 +575,7 @@
       "F023",
       "F033"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A tenant's own Hardware on a non-ITIL board was flagged and ITIL children hung under it: the ITIL board gets its own Hardware and the ITIL children end under it"
   },
   {
@@ -585,7 +585,7 @@
       "F024",
       "F033"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In that case the tenant's Hardware keeps its board, its own children and its tickets, and loses the flag"
   },
   {
@@ -595,7 +595,7 @@
       "F026",
       "F033"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket on the ITIL board using one of those re-parented children keeps the same subcategory row and gets the board's own parent as its category"
   },
   {
@@ -604,7 +604,7 @@
     "featureIds": [
       "F035"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Boardless flagged categories used by a ticket on an ITIL board and a ticket on a non-ITIL board: the first is re-pointed, the second is untouched, the rows end without flag or board"
   },
   {
@@ -613,7 +613,7 @@
     "featureIds": [
       "F034"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "boards.list_view_settings on a second ITIL board with categoryIds and excludeCategoryIds points at that board's copies after migration and the view loader drops nothing"
   },
   {
@@ -622,7 +622,7 @@
     "featureIds": [
       "F034"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A personal view in list_views whose filters name the second ITIL board and a categoryId is re-pointed; one that spans all boards is unchanged"
   },
   {
@@ -631,7 +631,7 @@
     "featureIds": [
       "F034"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A saved view on a non-ITIL board is unchanged"
   },
   {
@@ -640,7 +640,7 @@
     "featureIds": [
       "F037"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "itil_category_remap has one row per replaced (board, old id) pair and none for a board that kept its rows"
   },
   {
@@ -649,7 +649,7 @@
     "featureIds": [
       "F036"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "down() after up() restores the original category id on every ticket, template, schedule, inbound default and saved view, and removes every inserted copy"
   },
   {
@@ -658,7 +658,7 @@
     "featureIds": [
       "F036"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "up, down, up yields the same rows as a single up"
   },
   {
@@ -667,7 +667,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The migration deletes no category row"
   },
   {

@@ -137,7 +137,7 @@ All new strings go through `t()` in every locale; every new interactive element 
 ## Data Model and API
 
 - `categories.standard_category_id uuid NULL`: the `standard_categories.id` a row was copied from. Partial unique index on `(tenant, board_id, standard_category_id)` where not null. `is_from_itil_standard` stays and is kept equal to "has a standard link".
-- `itil_category_remap (tenant, board_id, standard_category_id, old_category_id, new_category_id)`: one row per category id the migration replaced on a board. Kept after the migration.
+- `itil_category_remap (tenant, remap_id, kind, board_id, standard_category_id, old_category_id, new_category_id, old_parent_category, created_at)`: the migration's journal. `kind = 'replace'` is the row the plan asks for — one per category id the migration replaced on a board, looked up by `(board_id, old_category_id)`. The other three kinds are what `down()` needs and nothing else can derive: `'insert'` (a copy the migration created), `'reparent'` (a standard child whose parent moved, with the parent it had) and `'unflag'` (a row that lost `is_from_itil_standard`). Kept after the migration.
 - `sla_policies.is_itil_standard boolean NOT NULL DEFAULT false`, at most one per tenant.
 - `boards.display_itil_impact` and `boards.display_itil_urgency` are dropped; nothing reads them.
 - `tickets.itil_priority_level` stays but is no longer written or accepted from clients; readers take the level from the priority row (D8).
@@ -172,7 +172,9 @@ Outcomes worth stating:
 
 ### Reversal
 
-`down()` uses `itil_category_remap` to move every reference in step 4 back to its old id, removes the copies inserted in step 3, restores parents, flags and links, and drops the table and column. The table is otherwise kept, so a setting found later that still holds an old id for a board can be corrected by looking up `(board_id, old_category_id)`.
+`down()` reads `itil_category_remap` newest first and undoes each kind: `'replace'` moves every reference in step 4 back to its old id, `'reparent'` restores the parent, `'unflag'` restores the flag, `'insert'` deletes the copy. Links need no restoring: the column is dropped with the table at the end. The table is otherwise kept, so a setting found later that still holds an old id for a board can be corrected by looking up `(board_id, old_category_id)`.
+
+One limit, by construction: if a tenant held two mapped rows for the same standard category and one board referenced both, `down()` cannot tell which reference came from which id and restores them in journal order.
 
 ## Rollout
 

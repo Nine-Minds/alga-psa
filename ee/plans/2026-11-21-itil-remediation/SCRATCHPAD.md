@@ -267,11 +267,56 @@ Landed: `server/src/test/integration/fixtures/itilSecondBoardFixture.ts` and
   the run output: 37 todos today, three covered rows (the shared rules, the inbound-defaults picker
   and the inbound-email writer).
 
+### Fix after the first round's test run
+
+`resolveTicketPriorityFields` fed a stored Impact × Urgency pair back into the matrix on a write that
+only moved the priority, so an assessed ITIL ticket snapped back to the old pair's priority and kept
+the assessment (T003). The stored pair is now used only when the write supplies part of the
+assessment or leaves the priority where it is. D5 holds: a direct priority change clears both;
+re-sending the stored priority is not a change and keeps them.
+
+### Commit group 4 — `category-schema` (done)
+
+Landed: `server/migrations/20261122120000_itil_categories_per_board.cjs`, the
+`itil_category_remap` entry in both tenant-table metadata snapshots, the dev seed renamed
+`80_itil_categories.cjs` → `86_itil_categories.cjs` (after `85_itil_priorities.cjs` creates the ITIL
+board) and rewritten to seed per ITIL board with `standard_category_id`, plus
+`server/migrations/__tests__/itilCategoriesPerBoardMigration.integration.test.ts` (29 of the group's
+tests) and `server/src/test/integration/itilDevSeedCategories.integration.test.ts` (T061).
+
+- **The remap table is a journal, not only a remap** (PRD updated). `down()` has to delete the
+  copies the migration inserted, restore the parents it moved and the flags it cleared, and none of
+  that is derivable afterwards: an unflagged row is indistinguishable from an ordinary category, and
+  an inserted copy from one linked in place. So the table carries a `kind` column with
+  `replace` / `insert` / `reparent` / `unflag`, and `replace` rows are exactly the pairs the PRD
+  describes — `(tenant, board_id, old_category_id)` still answers "what did this board's X become?".
+  A journal row is written only when a mutation happens, which is also what keeps the run idempotent.
+- **The flag is written as "has a standard link".** Step 5 is implemented as one reconciliation:
+  a row keeps the flag only when it is the chosen copy on an ITIL board, every other row loses it.
+  That covers the plan's step 5 and F047 (a flagged row whose name is not a standard one) in one
+  pass, and makes a re-run a no-op.
+- **One copy per board, so duplicates stay as ordinary categories.** If two rows on the same ITIL
+  board map to the same standard row (possible through the old name match), the older one becomes
+  the board's copy and the other keeps its id, its board and its tickets without the flag — the
+  partial unique index allows only one. References to it are re-pointed to the board's copy.
+- **`list_views` is re-pointed only when the view names one board.** `filters.boardId === B`, or a
+  single-entry `filters.boardIds`. A view spanning boards is left to R9 matching, as the plan says.
+- **Static ids in settings.** Huntress is `rmm_integrations.settings.boardId/categoryId`; a workflow
+  `tickets.create` is `config.inputMapping.board_id/category_id` on an `action.call` step, found
+  recursively through control blocks, in both `workflow_definitions.draft_definition` and every
+  `workflow_definition_versions.definition_json`; an inbound webhook is a quoted JSONata literal in
+  `handler_config.field_mapping`, and the quote style is kept.
+- **The migration suite runs on a fixture schema** holding only the tables the migration touches
+  (the pattern of the other suites in `server/migrations/__tests__/`), with a three-parent
+  stand-in standard set so a scenario reads. The bootstrap applies the migration, each test rolls it
+  back and drives `up()`/`down()` itself. T061 instead asserts the real set on a bootstrapped
+  development database, which also runs the migration against the real schema.
+
 ### Groups not started
 
-Commit groups 4–16 (`category-schema` through `docs`) are untouched: their features and tests are
-still `implemented: false` and their surface rows are still expected-fail. The next commit is
-`category-schema`, and groups 4, 5 and 6 have to reach production together (see Rollout).
+Commit groups 5–16 (`category-rules` through `docs`) are untouched: their features and tests are
+still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 have to
+reach production together (see Rollout), so they stay on this branch.
 
 ## Commands
 

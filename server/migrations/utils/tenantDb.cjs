@@ -327,6 +327,7 @@ const TENANT_TABLE_METADATA = {
   client_portal_visibility_group_boards: { scope: 'tenant' },
   client_portal_visibility_groups: { scope: 'tenant' },
   inbound_ticket_defaults: { scope: 'tenant' },
+  itil_category_remap: { scope: 'tenant' },
   mobile_device_assets: { scope: 'tenant' },
   microsoft_email_provider_config: { scope: 'tenant' },
   microsoft_profile_consumer_bindings: { scope: 'tenant' },
