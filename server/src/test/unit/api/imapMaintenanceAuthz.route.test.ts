@@ -6,6 +6,7 @@ import * as reconnectRoute from '../../../app/api/email/imap/reconnect/route';
 const state = vi.hoisted(() => ({
   user: null as any,
   canUpdateSettings: false,
+  productAllowed: true,
   providerLookups: 0,
   updates: [] as Array<{ table: string; values: unknown; where: unknown }>,
   permissionChecks: 0,
@@ -14,6 +15,7 @@ const state = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   assertTenantProductAccess: vi.fn(),
   productAccessError: new Error('Product access denied'),
+  productChecks: [] as unknown[],
   knex: Object.assign(() => undefined, { fn: { now: () => 'now' } }),
 }));
 
@@ -108,16 +110,21 @@ describe('IMAP maintenance route authorization', () => {
     vi.clearAllMocks();
     state.user = { user_id: 'staff-1', tenant: 'tenant-from-session', user_type: 'internal' };
     state.canUpdateSettings = false;
+    state.productAllowed = true;
     state.providerLookups = 0;
     state.updates = [];
     state.permissionChecks = 0;
     state.tenantKnexCalls = 0;
     state.tenantDbCalls = [];
+    state.productChecks = [];
     state.createTenantKnex.mockImplementation(async () => {
       state.tenantKnexCalls += 1;
       return { knex: state.knex, tenant: 'tenant-from-session' };
     });
-    state.assertTenantProductAccess.mockResolvedValue(undefined);
+    state.assertTenantProductAccess.mockImplementation(async (input: unknown) => {
+      state.productChecks.push(input);
+      if (!state.productAllowed) throw state.productAccessError;
+    });
   });
 
   for (const endpoint of endpoints) {
@@ -150,6 +157,31 @@ describe('IMAP maintenance route authorization', () => {
       expect(state.updates).toEqual([]);
     });
 
+    it(`${endpoint.name}: rejects a session tenant mismatch before permission or provider access`, async () => {
+      state.user = { ...state.user, tenant: 'another-tenant' };
+      state.canUpdateSettings = true;
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'Tenant mismatch' });
+      expect(state.permissionChecks).toBe(0);
+      expect(state.productChecks).toEqual([]);
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
+    it(`${endpoint.name}: rejects an administrator without product access before reading or changing provider state`, async () => {
+      state.canUpdateSettings = true;
+      state.productAllowed = false;
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(state.permissionChecks).toBe(1);
+      expect(state.productChecks).toHaveLength(1);
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
     it(`${endpoint.name}: permits an authorized administrator and scopes reads to the session tenant`, async () => {
       state.canUpdateSettings = true;
       const response = await post(endpoint.name, 'arbitrary-nonempty-key');
@@ -164,6 +196,12 @@ describe('IMAP maintenance route authorization', () => {
         capability: 'email_to_ticket',
         allowedProducts: ['psa', 'algadesk'],
       });
+      expect(state.productChecks).toEqual([{
+        tenantId: 'tenant-from-session',
+        userId: 'staff-1',
+        capability: 'email_to_ticket',
+        allowedProducts: ['psa', 'algadesk'],
+      }]);
       expect(state.providerLookups).toBe(1);
       expect(state.tenantKnexCalls).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);

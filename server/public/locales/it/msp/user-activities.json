@@ -124,6 +124,7 @@
       "dismissError": "Impossibile rifiutare l'attività: {{message}}"
     },
     "retryLater": "Riprova più tardi.",
+    "tryAgain": "Riprova",
     "adHoc": {
       "endBeforeStart": "L'ora di fine deve essere successiva all'ora di inizio.",
       "fields": {
