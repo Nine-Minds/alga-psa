@@ -41583,6 +41583,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Service Requests"
     ],
+    "rbacResource": "client",
     "approvalRequired": false,
     "parameters": [
       {
@@ -41640,7 +41641,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Service Requests"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "definitionId",

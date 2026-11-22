@@ -536,5 +536,48 @@ describe('MSP submit service request on behalf of a client contact', () => {
       expect(await submitForm(definitionId, f)).toMatchObject({ status: 'error', code: 'forbidden' });
       expect((await apiSubmit(f, f.technicianId, definitionId)).status).toBe(403);
     });
+
+    it('a client-type user holding all three permissions is refused (403) by both API endpoints; nothing is written', async () => {
+      const f = await createFixture();
+      await seedDefaultRoles(f);
+      const clientTypeUserId = uuidv4();
+      await createUser(f.tenant, clientTypeUserId, 'client-type', { user_type: 'client' });
+      // hasPermission only counts client-flagged roles/permissions for a client-type user, so the role and
+      // the grants are client-flagged: the permission rows alone grant everything, leaving user_type the
+      // only thing that can refuse.
+      const roleId = uuidv4();
+      await t(f.tenant, 'roles').insert({ tenant: f.tenant, role_id: roleId, role_name: 'Client-type full grants', msp: false, client: true });
+      for (const [resource, action] of [['ticket', 'create'], ['client', 'read'], ['contact', 'read']]) {
+        let permission = await t(f.tenant, 'permissions').where({ resource, action, client: true }).first('permission_id');
+        if (!permission) {
+          permission = { permission_id: uuidv4() };
+          await t(f.tenant, 'permissions').insert({ tenant: f.tenant, permission_id: permission.permission_id, resource, action, msp: false, client: true });
+        }
+        await t(f.tenant, 'role_permissions').insert({ tenant: f.tenant, role_id: roleId, permission_id: permission.permission_id });
+      }
+      await t(f.tenant, 'user_roles').insert({ tenant: f.tenant, user_id: clientTypeUserId, role_id: roleId });
+      const definitionId = await createDefinition(f);
+      seam.user = { user_id: clientTypeUserId, tenant: f.tenant, user_type: 'client', roles: [] };
+
+      // Sanity: the permission rows alone would pass; only the user-type rule can be refusing.
+      const { hasPermission } = await import('@alga-psa/auth');
+      for (const [resource, action] of [['ticket', 'create'], ['client', 'read'], ['contact', 'read']]) {
+        expect(await hasPermission(seam.user, resource, action, db)).toBe(true);
+      }
+
+      const submitResponse = await apiSubmit(f, clientTypeUserId, definitionId);
+      expect(submitResponse.status).toBe(403);
+
+      const controller = new ApiServiceRequestController();
+      const catalogRequest = new NextRequest(
+        `http://localhost/api/v1/service-requests/catalog?clientId=${f.clientId}&contactId=${f.contactWithUser}`
+      );
+      Object.assign(catalogRequest, { context: { tenant: f.tenant, userId: clientTypeUserId, user: seam.user } });
+      vi.spyOn(controller as any, 'authenticate').mockResolvedValue(catalogRequest);
+      expect((await controller.catalog()(catalogRequest)).status).toBe(403);
+
+      expect(await countRows(f.tenant, 'service_request_submissions')).toBe(0);
+      expect(await countRows(f.tenant, 'tickets')).toBe(0);
+    });
   });
 });
