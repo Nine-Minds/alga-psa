@@ -91,6 +91,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.raw('TRUNCATE tenants, stripe_customers, stripe_subscriptions, audit_logs');
+  await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk');
   await db.raw('DROP TABLE IF EXISTS stripe_customer_bindings');
   await db('tenants').insert([
     { tenant: TENANT_A, email: SHARED_EMAIL },
@@ -101,17 +102,20 @@ beforeEach(async () => {
 
 describe('migration: global uniqueness of stripe_customer_external_id', () => {
   it('pre-flight fails listing cross-tenant duplicates, changes nothing, and does not auto-resolve', async () => {
+    await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT stripe_customers_binding_owner_fk');
     await db.raw('DROP TABLE stripe_customer_bindings');
     await db('stripe_customers').insert([
       { tenant: TENANT_A, stripe_customer_external_id: 'cus_dup', email: 'x' },
       { tenant: TENANT_B, stripe_customer_external_id: 'cus_dup', email: 'x' },
     ]);
     await expect(migration.up(db)).rejects.toThrow(/cus_dup.*\[.*\]/s);
-    expect((await db.schema.hasTable('stripe_customer_bindings'))).toBe(false);
+    expect((await db.schema.hasTable('stripe_customer_bindings'))).toBe(true);
+    expect(await db('stripe_customer_bindings')).toHaveLength(0);
     expect(await count('stripe_customers')).toBe(2);
   });
 
   it('backfills bindings from existing rows when there are no duplicates', async () => {
+    await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT stripe_customers_binding_owner_fk');
     await db.raw('DROP TABLE stripe_customer_bindings');
     await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_old', email: 'x' });
     await migration.up(db);
@@ -138,6 +142,73 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
 });
 
 describe('getOrImportCustomer ownership proof', () => {
+  const seedExistingMapping = async (tenant = TENANT_A, externalId = 'cus_existing') => {
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: externalId, tenant });
+    await db('stripe_customers').insert({
+      tenant, stripe_customer_external_id: externalId, billing_tenant: MASTER,
+      email: SHARED_EMAIL, name: 'Existing customer',
+    });
+  };
+
+  it('accepts an existing mapping only after retrieving matching binding and remote ownership', async () => {
+    await seedExistingMapping();
+    const customer: FakeCustomer = { id: 'cus_existing', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } };
+    const service = makeService([customer]);
+
+    const row = await service.getOrImportCustomer(TENANT_A);
+
+    expect(row.stripe_customer_external_id).toBe('cus_existing');
+    expect(service.stripe.customers.retrieve).toHaveBeenCalledWith('cus_existing');
+    expect(service.stripe.customers.list).not.toHaveBeenCalled();
+    expect(service.stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(service.importSubscription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing binding', 'none' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } } as FakeCustomer, 'already_bound'],
+    ['binding names another tenant', 'foreign' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A } } as FakeCustomer, 'already_bound'],
+    ['remote metadata is missing', 'matching' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: {} } as FakeCustomer, 'not_owned'],
+    ['remote metadata names another tenant', 'matching' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_B } } as FakeCustomer, 'not_owned'],
+    ['remote ownership metadata conflicts', 'matching' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_A, alga_tenant_id: TENANT_B } } as FakeCustomer, 'not_owned'],
+    ['remote customer is deleted', 'matching' as const, { id: 'cus_existing', email: SHARED_EMAIL, metadata: {}, deleted: true } as FakeCustomer, 'customer_deleted'],
+  ])('refuses an existing mapping when %s before downstream work', async (_name, bindingMode, remote, code) => {
+    if (bindingMode === 'matching') await seedExistingMapping();
+    if (bindingMode === 'none') {
+      await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT stripe_customers_binding_owner_fk');
+      await db('stripe_customers').insert({
+        tenant: TENANT_A, stripe_customer_external_id: 'cus_existing', billing_tenant: MASTER,
+        email: SHARED_EMAIL, name: 'Existing customer',
+      });
+    }
+    if (bindingMode === 'foreign') {
+      await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT stripe_customers_binding_owner_fk');
+      await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_existing', tenant: TENANT_B });
+      await db('stripe_customers').insert({
+        tenant: TENANT_A, stripe_customer_external_id: 'cus_existing', billing_tenant: MASTER,
+        email: SHARED_EMAIL, name: 'Existing customer',
+      });
+    }
+    const service = makeService([remote]);
+
+    await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code });
+
+    expect(service.stripe.customers.list).not.toHaveBeenCalled();
+    expect(service.stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(service.importSubscription).not.toHaveBeenCalled();
+  });
+
+  it('refuses when remote ownership lookup fails before downstream work', async () => {
+    await seedExistingMapping();
+    const service = makeService([]);
+    service.stripe.customers.retrieve.mockRejectedValue(new Error('Stripe unavailable'));
+
+    await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code: 'not_owned' });
+
+    expect(service.stripe.customers.retrieve).toHaveBeenCalledWith('cus_existing');
+    expect(service.stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(service.importSubscription).not.toHaveBeenCalled();
+  });
+
   it('two tenants share an email: tenant A imports only the customer whose metadata names A', async () => {
     const customers: FakeCustomer[] = [
       { id: 'cus_other', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_B } },

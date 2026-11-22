@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const migration = require('../../../migrations/20261031090000_create_stripe_customer_bindings.cjs');
-const forwardMigration = require('../../../migrations/20261103130000_enforce_stripe_customer_binding_ownership.cjs');
+const forwardMigration = require('../../../migrations/20261122120000_enforce_stripe_customer_binding_ownership.cjs');
 const connectionString = process.env.STRIPE_BINDING_TEST_DATABASE_URL;
 const isCitus = process.env.STRIPE_BINDING_TEST_CITUS === '1';
 const schema = `stripe_binding_migration_${process.pid}_${randomUUID().replaceAll('-', '')}`;
@@ -211,6 +211,12 @@ suite('Stripe customer binding migration ownership enforcement', () => {
     ]);
 
     await migration.up(db);
+    const notYetValidated = await db.raw(`
+      SELECT convalidated FROM pg_constraint
+      WHERE conname = 'stripe_customers_binding_owner_fk'
+        AND conrelid = 'stripe_customers'::regclass`);
+    expect(notYetValidated.rows).toEqual([{ convalidated: false }]);
+    await forwardMigration.up(db);
 
     expect(await db('stripe_customer_bindings').select('stripe_customer_external_id', 'tenant').orderBy('stripe_customer_external_id'))
       .toEqual([

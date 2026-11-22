@@ -506,6 +506,59 @@ export class StripeService {
       .first();
 
     if (customer) {
+      const stripeCustomerId = customer.stripe_customer_external_id;
+      const binding = stripeCustomerId
+        ? await tenantDb(knex, tenantId)
+            .unscoped('stripe_customer_bindings', 'Verify the global owner of an existing Stripe customer mapping')
+            .where({ stripe_customer_external_id: stripeCustomerId })
+            .first()
+        : undefined;
+
+      if (!binding || binding.tenant !== tenantId) {
+        const err = new StripeOwnershipError(
+          'already_bound',
+          tenantId,
+          stripeCustomerId ? [stripeCustomerId] : [],
+          !binding
+            ? 'Existing Stripe customer mapping has no global ownership binding.'
+            : `Existing Stripe customer mapping belongs to this tenant but its binding names tenant ${binding.tenant}.`,
+        );
+        logger.warn(`[StripeService] Refusing existing Stripe customer mapping: ${err.detail}`);
+        throw err;
+      }
+
+      let response: Stripe.Response<Stripe.Customer | Stripe.DeletedCustomer> | Stripe.Customer | Stripe.DeletedCustomer;
+      try {
+        response = await this.stripe.customers.retrieve(stripeCustomerId);
+      } catch (cause) {
+        const err = new StripeOwnershipError(
+          'not_owned', tenantId, [stripeCustomerId],
+          `Could not retrieve the existing Stripe customer to verify ownership: ${String(cause)}`,
+        );
+        logger.warn(`[StripeService] Refusing existing Stripe customer mapping: ${err.detail}`);
+        throw err;
+      }
+
+      if (response.deleted) {
+        const err = new StripeOwnershipError(
+          'customer_deleted', tenantId, [stripeCustomerId], 'The mapped Stripe customer has been deleted.',
+        );
+        logger.warn(`[StripeService] Refusing existing Stripe customer mapping: ${err.detail}`);
+        throw err;
+      }
+
+      const remoteCustomer = response as Stripe.Customer;
+      if (remoteCustomer.id !== stripeCustomerId || stripeMetadataTenant(remoteCustomer) !== tenantId) {
+        const err = new StripeOwnershipError(
+          'not_owned', tenantId, [stripeCustomerId],
+          remoteCustomer.id !== stripeCustomerId
+            ? 'Stripe returned a different customer id for the existing mapping.'
+            : 'Stripe customer metadata does not name this tenant.',
+        );
+        logger.warn(`[StripeService] Refusing existing Stripe customer mapping: ${err.detail}`);
+        throw err;
+      }
+
       logger.info(`[StripeService] Customer found in database for tenant ${tenantId}`);
       return customer;
     }

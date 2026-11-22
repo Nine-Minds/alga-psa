@@ -4,9 +4,9 @@
  * stripe_customers may be distributed by tenant, so global ownership is stored
  * in a Citus reference table and enforced by a composite foreign key. The
  * reference table must be converted before adding the FK to a distributed
- * table. The migration then takes an ACCESS EXCLUSIVE lock on stripe_customers
- * before scanning it, fencing both legacy and current writers until the
- * backfill and validated FK commit together.
+ * table. The migration takes an ACCESS EXCLUSIVE lock on stripe_customers
+ * before scanning it, fencing legacy and current writers through backfill and
+ * NOT VALID FK creation. A later forward migration validates the constraint.
  */
 
 const TABLE = 'stripe_customer_bindings';
@@ -150,7 +150,7 @@ async function enforceOwnership(knex) {
     }
 
     const constraint = await trx.raw(
-      'SELECT convalidated FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
+      'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
       [OWNER_CONSTRAINT]
     );
     if (constraint.rows.length === 0) {
@@ -158,15 +158,16 @@ async function enforceOwnership(knex) {
         ALTER TABLE stripe_customers
         ADD CONSTRAINT ${OWNER_CONSTRAINT}
         FOREIGN KEY (stripe_customer_external_id, tenant)
-        REFERENCES ${TABLE} (stripe_customer_external_id, tenant)`);
-    } else if (!constraint.rows[0].convalidated) {
-      await trx.raw(`ALTER TABLE stripe_customers VALIDATE CONSTRAINT ${OWNER_CONSTRAINT}`);
+        REFERENCES ${TABLE} (stripe_customer_external_id, tenant)
+        NOT VALID`);
     }
   });
 }
 
 exports.up = enforceOwnership;
 exports.enforceOwnership = enforceOwnership;
+exports.ownerConstraint = OWNER_CONSTRAINT;
+exports.bindingTable = TABLE;
 
 exports.down = async function down(knex) {
   await knex.raw(`ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS ${OWNER_CONSTRAINT}`);
