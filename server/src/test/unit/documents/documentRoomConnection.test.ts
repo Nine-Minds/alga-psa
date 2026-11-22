@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { execFileSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HocuspocusProvider } from '@hocuspocus/provider';
 import {
@@ -25,6 +26,39 @@ const credential = (expiresInMs = 60_000) => ({ token: 'signed-credential', expi
 afterEach(() => vi.useRealTimers());
 
 describe('document room credential renewal lifecycle', () => {
+  it('connects and tears down through the package export without server aliases', () => {
+    // Vitest's source aliases bypass package exports. Exercise a real consumer
+    // in Node so an unpublished entry cannot be hidden by those aliases.
+    execFileSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', `
+      import assert from 'node:assert/strict';
+      import { EventEmitter } from 'node:events';
+      import { startDocumentRoomConnection } from '@alga-psa/documents/lib/documentRoomConnection';
+
+      let connected = false;
+      const provider = Object.assign(new EventEmitter(), {
+        configuration: { websocketProvider: { webSocket: null } },
+        setConfiguration(config) { Object.assign(this.configuration, config); },
+        async connect() { connected = true; },
+        disconnect() {},
+      });
+      const connection = startDocumentRoomConnection(
+        provider,
+        async () => ({ token: 'consumer-credential', expiresAt: Date.now() + 60_000 }),
+        error => { throw error; },
+      );
+      try {
+        await connection.ready;
+        assert.equal(connected, true);
+        assert.equal(provider.configuration.token, 'consumer-credential');
+        assert.equal(provider.configuration.preserveConnection, false);
+        assert.equal(provider.listenerCount('authenticationFailed'), 1);
+      } finally {
+        connection.stop();
+      }
+      assert.equal(provider.listenerCount('authenticationFailed'), 0);
+    `], { cwd: __dirname, timeout: 10_000, stdio: 'pipe' });
+  });
+
   it('bounds transient renewal retries and reports an actionable exhausted state', async () => {
     vi.useFakeTimers();
     const provider = createProvider();
