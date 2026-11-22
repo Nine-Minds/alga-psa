@@ -10,6 +10,8 @@ describe('resolveSystemEmailState', () => {
     ['flag "true" + resend key', { EMAIL_ENABLE: 'true', RESEND_API_KEY: 're_x' }, { state: 'configured', providerType: 'resend' }],
     ['flag "TRUE" + resend key', { EMAIL_ENABLE: 'TRUE', RESEND_API_KEY: 're_x' }, { state: 'configured', providerType: 'resend' }],
     ['flag "yes" + resend key', { EMAIL_ENABLE: 'yes', RESEND_API_KEY: 're_x' }, { state: 'configured', providerType: 'resend' }],
+    ['flag "0" + resend key', { EMAIL_ENABLE: '0', RESEND_API_KEY: 're_x' }, { state: 'configured', providerType: 'resend' }],
+    ['flag "no" + smtp host', { EMAIL_ENABLE: 'no', EMAIL_HOST: 'h' }, { state: 'configured', providerType: 'smtp' }],
     ['flag unset + only EMAIL_HOST', { EMAIL_HOST: 'smtp.example.com' }, { state: 'configured', providerType: 'smtp' }],
     ['resend key wins over host when type unset', { RESEND_API_KEY: 're_x', EMAIL_HOST: 'h' }, { state: 'configured', providerType: 'resend' }],
     ['flag "false" + credentials', { EMAIL_ENABLE: 'false', RESEND_API_KEY: 're_x' }, { state: 'disabled' }],

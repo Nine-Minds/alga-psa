@@ -242,7 +242,7 @@ spec:
               valueFrom:
                 {{- toYaml .valueFrom | nindent 16 }}
               {{- else }}
-              value: {{ .value | toString | quote }}
+              value: {{ if kindIs "invalid" .value }}""{{ else }}{{ .value | toString | quote }}{{ end }}
               {{- end }}
             {{- end }}
 

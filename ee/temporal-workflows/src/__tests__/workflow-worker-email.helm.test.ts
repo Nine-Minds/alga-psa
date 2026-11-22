@@ -92,9 +92,16 @@ describe('workflow-worker system email Helm rendering', () => {
       extraEnv: [
         { name: 'A', value: 5 },
         { name: 'B', value: true },
+        { name: 'C' },
+        { name: 'D', value: false },
+        { name: 'E', value: 0 },
       ],
     });
     expect(out.find((e) => e.name === 'A')).toEqual({ name: 'A', value: '5' });
     expect(out.find((e) => e.name === 'B')).toEqual({ name: 'B', value: 'true' });
+    // value-less entry must render "" (not "<nil>"); false/0 must not be blanked (no `default ""`)
+    expect(out.find((e) => e.name === 'C')).toEqual({ name: 'C', value: '' });
+    expect(out.find((e) => e.name === 'D')).toEqual({ name: 'D', value: 'false' });
+    expect(out.find((e) => e.name === 'E')).toEqual({ name: 'E', value: '0' });
   });
 });
