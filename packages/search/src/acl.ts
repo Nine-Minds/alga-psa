@@ -159,17 +159,16 @@ function compileDocumentVisibilitySql(user: SearchAclPrincipal): SqlFragment {
   if (!user.tenant) return { sql: 'FALSE', bindings: [] };
 
   // Mirror the source verifier: the document must exist in this tenant, and
-  // every client association must pass. The NOT EXISTS form preserves the
-  // verifier's empty-association allow rule and cannot let one allowed link
-  // mask a denied link.
+  // every client association must pass. Compare against the uncorrelated set
+  // of denied document IDs so PostgreSQL can hash that set once per request,
+  // even before tenant-local planner statistics have caught up.
   const scopedClientIds = user.clientAccess.mode === 'scoped'
     ? user.clientAccess.clientIds
     : undefined;
   const associationVisibility = scopedClientIds
-    ? `AND NOT EXISTS (
-        SELECT 1 FROM document_associations da
+    ? `AND d.document_id NOT IN (
+        SELECT da.document_id FROM document_associations da
         WHERE da.tenant = ?::uuid
-          AND da.document_id = d.document_id
           AND da.entity_type = 'client'
           AND da.entity_id IS NOT NULL
           AND da.entity_id::text <> ALL(?::text[])

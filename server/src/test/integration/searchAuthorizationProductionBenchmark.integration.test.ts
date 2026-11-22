@@ -890,6 +890,19 @@ describe('production search authorization PostgreSQL benchmark', () => {
       });
       await db.batchInsert('app_search_index', indexRows, 500);
 
+      // Prepare planner statistics for the freshly populated benchmark fixture
+      // outside every warmup and timed request.
+      await db.raw('ANALYZE documents');
+      await db.raw('ANALYZE document_associations');
+      await db.raw('ANALYZE app_search_index');
+
+      const associationsByDocument = new Map<string, typeof associations>();
+      for (const association of associations) {
+        const linked = associationsByDocument.get(association.document_id) ?? [];
+        linked.push(association);
+        associationsByDocument.set(association.document_id, linked);
+      }
+
       expect(canCompileSearchVisibility('document')).toBe(true);
       const scenarios: Array<{ size: typeof sizes[number]; query: string }> = [
         { size: 150, query: 'small' },
@@ -902,7 +915,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
           { name: 'unrestricted-internal', user: ctx.user, expected: documentIds.slice(0, scenario.size).filter((_, index) => (index + 1) % 10 !== 0) },
           { name: 'client-portal-scoped', user: portalUser, expected: documentIds.slice(0, scenario.size).filter((id, index) => {
             if ((index + 1) % 10 === 0) return false;
-            const linked = associations.filter((association) => association.document_id === id);
+            const linked = associationsByDocument.get(id) ?? [];
             return linked.every(({ entity_id }) => entity_id === fixture.clientId);
           }) },
         ];
@@ -991,7 +1004,8 @@ describe('production search authorization PostgreSQL benchmark', () => {
               authorized_total: expectedTotal,
               stale_source_candidates: Math.floor(scenario.size / 10),
               denied_association_candidates: scenario.size - Math.floor(scenario.size / 10) - expectedTotal,
-              multiply_associated_candidates: Math.ceil((scenario.size - Math.floor(scenario.size / 10)) / 7),
+              multiply_associated_candidates: documentIds.slice(0, scenario.size)
+                .filter((id) => (associationsByDocument.get(id)?.length ?? 0) > 1).length,
               complete_pagination_validated: variant === 'full',
               raw_latency_samples_ms: latencies.map((value) => Number(value.toFixed(2))),
               p95_ms: Number(sortedLatencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
@@ -1033,6 +1047,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
           timing_boundary: 'performance.now around the request path, including principal and policy resolution, SQL visibility, counts and first page; fixture setup and warmup excluded. Full-search cursor walk validated outside the timed request samples.',
           statement_method: 'Knex query events on the transaction connection during each timed request; standalone document and association verification SELECTs counted separately from correlated EXISTS predicates.',
           percentile: 'Nearest-rank p95; with five samples the p95 is the maximum.',
+          planner_statistics: 'ANALYZE documents, document_associations and app_search_index after fixture population and before any warmup or measured request; setup is outside timing boundaries.',
           visibility_confirmation: 'canCompileSearchVisibility(document) is true; the active verifier compiler admits source existence and all-association client scope in page/count SQL. Timed requests issue no separate document or association verification SELECTs.',
         },
         measurements,
