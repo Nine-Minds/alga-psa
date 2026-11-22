@@ -1167,7 +1167,9 @@
       "send_one": "Stuur {{count}} e-mail",
       "send_other": "Stuur {{count}} e-mails",
       "sending_one": "{{count}}-factuur verzenden...",
-      "sending_other": "{{count}}-facturen verzenden..."
+      "sending_other": "{{count}}-facturen verzenden...",
+      "schedule": "Plannen",
+      "scheduling": "Bezig met plannen..."
     },
     "toasts": {
       "noValidRecipients": "Geen geldige ontvangers gevonden",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "{{count}} facturen succesvol verzonden",
       "sentFailure_one": "Kan {{count}}-factuur niet verzenden",
       "sentFailure_other": "Kan {{count}}-facturen niet verzenden",
-      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt"
+      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt",
+      "scheduled": "Factuure-mail ingepland"
     },
     "errors": {
       "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
-      "sendFailed": "Het verzenden van e-mails is niet gelukt"
+      "sendFailed": "Het verzenden van e-mails is niet gelukt",
+      "scheduleFailed": "Factuure-mail inplannen mislukt"
     }
   },
   "generateTab": {
@@ -2878,7 +2882,8 @@
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
       "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
-      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist",
+      "invoiceSend": "Toestemming geweigerd: toestemming voor het verzenden van facturen is vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",

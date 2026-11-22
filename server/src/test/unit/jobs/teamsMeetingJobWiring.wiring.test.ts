@@ -70,9 +70,7 @@ describe('Teams meeting job wiring', () => {
   });
 
   it('T037: the temporal worker forwards teams-meeting-cleanup to the server', () => {
-    expect(jobActivitiesSource).toContain(
-      "registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));"
-    );
+    expect(jobActivitiesSource).toMatch(/registerForwardedJobHandler\(\s*'teams-meeting-cleanup'\s*\)/);
   });
 
   it('T037: the maintenance fan-out includes the teams meeting sweep', () => {

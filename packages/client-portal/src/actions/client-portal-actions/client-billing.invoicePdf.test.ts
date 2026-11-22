@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const currentUser = { user_id: 'user-1', tenant: 'tenant-1', roles: [] };
+let currentUser = { user_id: 'user-1', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
 
 const getConnectionMock = vi.fn();
 const generateAndStoreMock = vi.fn();
 const getStoredInvoicePdfMock = vi.fn();
+const enqueueImmediateJobMock = vi.fn();
+const getClientIdFromPortalUserMock = vi.fn(async (): Promise<string | null> => 'client-1');
+const hasClientBillingReadPermissionMock = vi.fn(async () => true);
 let storedInvoiceDocument: { file_id: string } | undefined;
 let invoiceRow: Record<string, unknown> | undefined;
+let jobRow: Record<string, unknown> | undefined;
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -18,7 +22,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (conn: any, handler: (trx: any) => Promise<unknown>) => handler(conn),
-  createTenantKnex: vi.fn(),
+  createTenantKnex: vi.fn(async () => ({ knex: await getConnectionMock() })),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
@@ -27,12 +31,13 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('./clientBillingPermissions', () => ({
-  getClientIdFromPortalUser: vi.fn(async () => 'client-1'),
-  hasClientBillingReadPermission: vi.fn(async () => true),
+  getClientIdFromPortalUser: getClientIdFromPortalUserMock,
+  hasClientBillingReadPermission: hasClientBillingReadPermissionMock,
 }));
 
-vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({
-  scheduleInvoiceEmailAction: vi.fn(),
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  enqueueImmediateJob: enqueueImmediateJobMock,
 }));
 
 vi.mock('@alga-psa/billing/models/invoice', () => ({ default: {} }));
@@ -55,26 +60,110 @@ vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({
 }));
 vi.mock('@alga-psa/jobs', () => ({ JobService: class {}, JobStatus: {} }));
 
-function makeChain(result: unknown) {
+function makeChain(result: unknown, tableName?: string) {
   const chain: any = {};
+  let selectedResult = result;
   for (const method of ['where', 'whereNot', 'whereNotNull', 'orderBy', 'select', 'join', 'leftJoin']) {
-    chain[method] = vi.fn(() => chain);
+    chain[method] = vi.fn((criteria?: Record<string, unknown>) => {
+      if (tableName === 'invoices' && criteria?.client_id && (result as any)?.client_id !== criteria.client_id) {
+        selectedResult = undefined;
+      }
+      return chain;
+    });
   }
-  chain.first = vi.fn(async () => result);
+  chain.first = vi.fn(async () => selectedResult);
+  chain.then = (resolve: (value: unknown) => unknown) => Promise.resolve(selectedResult).then(resolve);
   return chain;
 }
 
-describe('downloadClientInvoicePdf', () => {
+describe('client billing actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUser = { user_id: 'user-1', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
+    getClientIdFromPortalUserMock.mockResolvedValue('client-1');
+    hasClientBillingReadPermissionMock.mockResolvedValue(true);
     storedInvoiceDocument = undefined;
     invoiceRow = { invoice_id: 'invoice-1', client_id: 'client-1', status: 'sent', invoice_number: 'INV-001' };
+    jobRow = { job_id: 'job-1', status: 'completed', metadata: {} };
+    enqueueImmediateJobMock.mockResolvedValue({ jobId: 'job-1', scheduledJobId: 'scheduled-1' });
 
     getConnectionMock.mockResolvedValue((table: string) => {
-      if (table === 'invoices') return makeChain(invoiceRow);
+      if (table === 'invoices') return makeChain(invoiceRow, table);
+      if (table === 'jobs') return makeChain(jobRow);
+      if (table === 'job_details') return makeChain([]);
       if (table === 'document_associations as da') return makeChain(storedInvoiceDocument);
       throw new Error(`Unexpected table: ${table}`);
     });
+  });
+
+  it('lets a portal client resend only an owned invoice through a fixed job payload', async () => {
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toEqual({ success: true });
+    expect(enqueueImmediateJobMock).toHaveBeenCalledWith('invoice_email', expect.objectContaining({
+      invoiceIds: ['invoice-1'],
+      tenantId: 'tenant-1',
+      user_id: 'user-1',
+      metadata: expect.objectContaining({ invoice_count: 1 }),
+    }));
+    const payload = enqueueImmediateJobMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.keys(payload).sort()).toEqual(['invoiceIds', 'metadata', 'steps', 'tenantId', 'user_id']);
+    expect(payload.steps).toEqual([
+      {
+        stepName: 'PDF Generation for Invoice invoice-1',
+        type: 'pdf_generation',
+        metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-1' },
+      },
+      {
+        stepName: 'Email Sending for Invoice invoice-1',
+        type: 'email_sending',
+        metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-1' },
+      },
+    ]);
+    expect(payload).not.toHaveProperty('senderId');
+    expect(payload).not.toHaveProperty('customMessage');
+  });
+
+  it('does not enqueue a resend for an invoice owned by another client', async () => {
+    invoiceRow = { invoice_id: 'invoice-other-client', client_id: 'client-2', status: 'sent', invoice_number: 'INV-002' };
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-other-client');
+
+    expect(result).toMatchObject({ actionError: 'Invoice not found or access denied' });
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies an internal MSP session with an owned linked-contact invoice and billing access before enqueueing', async () => {
+    currentUser = { user_id: 'internal-1', user_type: 'internal', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
+    // The invoice fixture belongs to client-1, and the test setup grants portal
+    // billing read access. Identity must still be rejected before either lookup.
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized' });
+    expect(hasClientBillingReadPermissionMock).toHaveBeenCalledTimes(0);
+    expect(getConnectionMock).not.toHaveBeenCalled();
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies a portal user without contact identity before enqueueing', async () => {
+    currentUser = { ...currentUser, contact_id: '' };
+    getClientIdFromPortalUserMock.mockResolvedValue(null);
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized' });
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies a portal user without billing read permission before enqueueing', async () => {
+    hasClientBillingReadPermissionMock.mockResolvedValue(false);
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized to access invoice data' });
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
   });
 
   it('returns the stored PDF the client was issued instead of regenerating', async () => {

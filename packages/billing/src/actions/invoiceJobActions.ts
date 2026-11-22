@@ -17,6 +17,7 @@ import { getClientById } from '@alga-psa/shared/billingClients/clients';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
 import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
+import { buildInvoiceEmailJobPayload } from '../lib/invoiceEmailJobPayload';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -38,6 +39,7 @@ const INVOICE_ZIP_SCHEDULE_FAILURE = 'Failed to start invoice PDF generation. Pl
 const INVOICE_EMAIL_SCHEDULE_FAILURE = 'Failed to start invoice email sending. Please try again.';
 const INVOICE_EMAIL_RECIPIENT_FAILURE = 'Failed to load recipient information for this invoice.';
 const INVOICE_EMAIL_SEND_FAILURE = 'Failed to send invoice email. Please try again.';
+const INVOICE_SEND_CAPABILITY = { resource: 'invoice', action: 'send' } as const;
 
 export type InvoiceJobActionError =
   | { readonly actionError: string }
@@ -124,8 +126,8 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   invoiceIds: string[],
   senderId?: string
 ): Promise<ScheduleInvoiceJobResult> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
+  if (!await hasPermission(user, INVOICE_SEND_CAPABILITY.resource, INVOICE_SEND_CAPABILITY.action)) {
+    return permissionError('Permission denied: invoice send required', 'msp/invoicing:errors.permissions.invoiceSend');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {
@@ -157,31 +159,14 @@ export const scheduleInvoiceEmailAction = withAuth(async (
     });
   }
 
-  const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, clientName }) => [
-    {
-      stepName: `PDF Generation for Invoice #${invoiceNumber} (${clientName})`,
-      type: 'pdf_generation',
-      metadata: { invoiceId, tenantId: tenant },
-    },
-    {
-      stepName: `Email Sending for Invoice #${invoiceNumber} (${clientName})`,
-      type: 'email_sending',
-      metadata: { invoiceId, tenantId: tenant },
-    },
-  ]);
-
-  const jobData = {
+  const labels = new Map(invoiceDetails.map((d) => [d.invoiceId, `Invoice #${d.invoiceNumber} (${d.clientName})`]));
+  const jobData = buildInvoiceEmailJobPayload({
+    tenant,
+    userId: user.user_id,
     invoiceIds,
     senderId,
-    tenantId: tenant,
-    user_id: user.user_id,
-    steps,
-    metadata: {
-      user_id: user.user_id,
-      invoice_count: invoiceIds.length,
-      tenantId: tenant,
-    },
-  };
+    labelFor: (invoiceId) => labels.get(invoiceId) ?? `Invoice ${invoiceId}`,
+  });
 
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
@@ -450,8 +435,8 @@ export const sendInvoiceEmailAction = withAuth(async (
   customMessage?: string,
   senderId?: string
 ): Promise<SendInvoiceEmailsResult | InvoiceJobActionError> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
+  if (!await hasPermission(user, INVOICE_SEND_CAPABILITY.resource, INVOICE_SEND_CAPABILITY.action)) {
+    return permissionError('Permission denied: invoice send required', 'msp/invoicing:errors.permissions.invoiceSend');
   }
   const { knex } = await createTenantKnex();
 
