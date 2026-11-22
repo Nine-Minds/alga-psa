@@ -124,6 +124,7 @@
       "dismissError": "Aufgabe konnte nicht verworfen werden: {{message}}"
     },
     "retryLater": "Bitte versuchen Sie es später erneut.",
+    "tryAgain": "Erneut versuchen",
     "adHoc": {
       "endBeforeStart": "Die Endzeit muss nach der Startzeit liegen.",
       "fields": {

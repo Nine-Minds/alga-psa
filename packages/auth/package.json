@@ -14,6 +14,10 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./lib/meetingDocumentActor": {
+      "import": "./src/lib/meetingDocumentActor.ts",
+      "types": "./src/lib/meetingDocumentActor.ts"
+    },
     "./session": {
       "import": "./src/lib/session.ts",
       "types": "./src/lib/session.ts"
