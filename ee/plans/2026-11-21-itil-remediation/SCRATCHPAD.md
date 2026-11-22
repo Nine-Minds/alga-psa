@@ -245,6 +245,34 @@ writes; fall-back priority resolution in `createTicketFromEmail`; the four new s
   `createTicketFromEmail` calls it with `policy: 'fallback'` and passes the result to the create — the
   one thing that can silently regress.
 
+### Commit group 3 — `test-harness` (done)
+
+Landed: `server/src/test/integration/fixtures/itilSecondBoardFixture.ts` and
+`server/src/test/integration/itilSecondBoardSurfaces.integration.test.ts`.
+
+- **The fixture builds today's shape, not the target shape.** The ITIL category set is stamped on the
+  first ITIL board only, because that is what `copyItilCategoriesToTenant` does. The exported
+  `expectedItilCategoryOwnership` says which shape is being built, and the `category-schema` /
+  `category-rules` commits flip it to `per-board-copies` together with the migration — so the fixture
+  and the product change in the same commit. The ITIL priorities and the standard category names are
+  read from `standard_priorities` / `standard_categories`, so the fixture follows the product's set.
+- **Two things keep the table honest.** `T044` parses the PRD's refuse/fall-back table and the
+  SCRATCHPAD's traced-pickers table and requires every surface named there to be claimed by exactly
+  one row (38 tokens today); a second check requires the set of groups with expected-fail rows to be
+  exactly the set of groups still unimplemented in `features.json`, so flipping a group's flags
+  without flipping its surface rows fails here.
+- **The two table-versus-plan checks sit outside the database `describe`**, so they run in every lane;
+  only the fixture test and the per-surface probes need Postgres.
+- **Expected-fail rows are `it.todo`**, which is what makes "no expected-fail rows left" readable in
+  the run output: 37 todos today, three covered rows (the shared rules, the inbound-defaults picker
+  and the inbound-email writer).
+
+### Groups not started
+
+Commit groups 4–16 (`category-schema` through `docs`) are untouched: their features and tests are
+still `implemented: false` and their surface rows are still expected-fail. The next commit is
+`category-schema`, and groups 4, 5 and 6 have to reach production together (see Rollout).
+
 ## Commands
 
 ```bash

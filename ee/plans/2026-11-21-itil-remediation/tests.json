@@ -383,7 +383,7 @@
     "featureIds": [
       "F020"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Fixture produces two ITIL boards, one non-ITIL board and one mixed board with the expected kinds, priorities and categories"
   },
   {
@@ -392,7 +392,7 @@
     "featureIds": [
       "F021"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The suite fails when a surface listed in the PRD has no row in the table"
   },
   {

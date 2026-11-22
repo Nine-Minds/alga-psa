@@ -176,7 +176,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Integration fixture that builds a tenant with one non-ITIL board, two ITIL boards, one legacy mixed board, both priority families and own categories"
   },
   {
@@ -185,7 +185,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Table-driven suite itilSecondBoardSurfaces listing every picker and writer from the PRD; each surface is marked expected-fail until its commit group lands"
   },
   {
