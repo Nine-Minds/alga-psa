@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   providerLookups: 0,
   updates: [] as Array<{ table: string; values: unknown; where: unknown }>,
   permissionChecks: 0,
+  tenantKnexCalls: 0,
   tenantDbCalls: [] as unknown[],
   productChecks: [] as unknown[],
   knex: Object.assign(() => undefined, { fn: { now: () => 'now' } }),
@@ -19,7 +20,10 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => state.user,
 }));
 vi.mock('@/lib/db', () => ({
-  createTenantKnex: async () => ({ knex: state.knex, tenant: 'tenant-from-session' }),
+  createTenantKnex: async () => {
+    state.tenantKnexCalls += 1;
+    return { knex: state.knex, tenant: 'tenant-from-session' };
+  },
 }));
 vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: async (input: unknown) => {
@@ -113,6 +117,7 @@ describe('IMAP maintenance route authorization', () => {
     state.providerLookups = 0;
     state.updates = [];
     state.permissionChecks = 0;
+    state.tenantKnexCalls = 0;
     state.tenantDbCalls = [];
     state.productChecks = [];
   });
@@ -186,6 +191,7 @@ describe('IMAP maintenance route authorization', () => {
         allowedProducts: ['psa', 'algadesk'],
       }]);
       expect(state.providerLookups).toBe(1);
+      expect(state.tenantKnexCalls).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);
       expect(state.tenantDbCalls).toEqual([{ connection: state.knex, tenant: 'tenant-from-session' }]);
     });

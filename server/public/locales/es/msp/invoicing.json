@@ -1204,7 +1204,9 @@
       "send_one": "Enviar correo electrónico {{count}}",
       "send_other": "Enviar correos electrónicos {{count}}",
       "sending_one": "Enviando factura {{count}}...",
-      "sending_other": "Enviando facturas {{count}}..."
+      "sending_other": "Enviando facturas {{count}}...",
+      "schedule": "Programar",
+      "scheduling": "Programando..."
     },
     "toasts": {
       "noValidRecipients": "No se encontraron destinatarios válidos",
@@ -1212,11 +1214,13 @@
       "sentSuccess_other": "Facturas {{count}} enviadas exitosamente",
       "sentFailure_one": "No se pudo enviar la factura {{count}}",
       "sentFailure_other": "No se pudieron enviar facturas {{count}}",
-      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló"
+      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló",
+      "scheduled": "Correo de factura programado"
     },
     "errors": {
       "loadRecipients": "No se pudo cargar la información del destinatario",
-      "sendFailed": "No se pudieron enviar correos electrónicos"
+      "sendFailed": "No se pudieron enviar correos electrónicos",
+      "scheduleFailed": "No se pudo programar el correo de la factura"
     }
   },
   "generateTab": {
@@ -2945,7 +2949,8 @@
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
       "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
-      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas",
+      "invoiceSend": "Permiso denegado: se requiere permiso para enviar facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",

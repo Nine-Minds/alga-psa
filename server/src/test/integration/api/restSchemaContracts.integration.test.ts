@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestTenant } from '../../e2e/helpers/testSetup';
 import { withMigratedSchemaContract } from '../utils/schemaContract';
 
 const connection = vi.hoisted(() => ({ db: undefined as Knex | undefined, tenant: undefined as string | undefined }));
@@ -26,21 +27,25 @@ describe('REST query contracts against the migrated schema', () => {
   let tenant: string;
 
   beforeAll(async () => {
-    // The REST contract needs the development tenant/board fixtures. Other
-    // integration suites may leave the shared database bootstrapped without
-    // seeds, so establish the fixture set this suite depends on itself.
-    db = await createTestDbConnection({ recreate: true });
-    const row = await db('tenants').first<{ tenant: string }>('tenant');
-    if (!row) throw new Error('The integration database has no tenant fixture');
-    tenant = row.tenant;
+    db = await createTestDbConnection({ recreate: false });
+    const fixture = await createTestTenant(db, { companyName: `Schema contract ${randomUUID()}` });
+    tenant = fixture.tenant.tenantId;
+    const boardId = randomUUID();
+    await db('boards').insert({
+      tenant,
+      board_id: boardId,
+      board_name: 'Schema contract board',
+      is_default: true,
+      is_inactive: false,
+    });
+    board = boardId;
   }, 300_000);
+
+  let board: string;
 
   afterAll(async () => { await db?.destroy(); });
 
   it('executes the board update and both category tree scopes inside rollback transactions', async () => {
-    const board = await db('boards').where({ tenant }).first<{ board_id: string }>('board_id');
-    if (!board) throw new Error('The integration database has no board fixture');
-
     const withServiceContract = (name: string, exercise: (context: { tenant: string; userId: string }) => Promise<void>) =>
       withMigratedSchemaContract(db, name, async (trx) => {
       connection.db = trx;
@@ -56,8 +61,8 @@ describe('REST query contracts against the migrated schema', () => {
 
     await withServiceContract('board read/update', async (context) => {
       const boardService = new BoardService();
-      expect(await boardService.getById(board.board_id, context)).toBeDefined();
-      const updatedBoard = await boardService.update(board.board_id, {
+      expect(await boardService.getById(board, context)).toBeDefined();
+      const updatedBoard = await boardService.update(board, {
           board_name: `Schema contract ${randomUUID()}`,
           default_assigned_team_id: null,
         }, context);
@@ -69,7 +74,7 @@ describe('REST query contracts against the migrated schema', () => {
     });
 
     await withServiceContract('board-scoped category tree', async (context) => {
-      expect(await new CategoryService().getCategoryTree(board.board_id, context)).toBeDefined();
+      expect(await new CategoryService().getCategoryTree(board, context)).toBeDefined();
     });
   });
 
