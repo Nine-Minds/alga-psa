@@ -69,6 +69,7 @@ db:
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
 publicBaseUrl: https://alga.local
+publicWebhookBaseUrl: "$(NEXT_PUBLIC_BASE_URL)"
 
 extraEnv:
   - name: REDIS_HOST

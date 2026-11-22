@@ -229,7 +229,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   // These routes can open ticket details, including the shared SLA badge.
-  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents'],
+  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'msp/licensing', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents'],
   // msp/dashboard carries the shared "Good morning" greeting used by the queue.
   '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard', 'features/documents'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents'],
@@ -246,7 +246,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-entry': ['common', 'msp/core', 'msp/settings', 'msp/time-entry', 'features/tickets', 'features/documents'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
-  '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests', 'features/documents'],
+  '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests', 'client-portal/service-requests', 'features/documents'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
   '/msp/settings/opportunities': ['common', 'msp/core', 'msp/settings', 'msp/opportunities', 'features/documents'],
   '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/extensions', 'msp/keyboard-shortcuts', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing', 'msp/calendar', 'msp/integrations', 'features/documents'],
@@ -255,7 +255,6 @@ export const ROUTE_NAMESPACES = {
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing', 'msp/settings'],
-  // Departure and the MSP archive; the rest of the co-managed screens keep their defaultValue fallbacks.
   '/msp/co-managed': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
   '/msp/co-management': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing', 'msp/settings'],

@@ -25,6 +25,8 @@ vi.mock('@alga-psa/db', () => ({
   }),
   assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  // Covered by packages/db clientPortalAdminFlag.test.ts and the policyActions wiring suite.
+  syncContactClientAdminFlag: async () => undefined,
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,

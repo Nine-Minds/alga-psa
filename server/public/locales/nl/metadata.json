@@ -453,6 +453,9 @@
       "detail": {
         "fallbackTitle": "Serviceaanvraag"
       },
+      "formBuilder": {
+        "title": "Formulierbouwer"
+      },
       "submit": {
         "title": "Serviceaanvraag indienen"
       }

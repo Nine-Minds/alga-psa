@@ -158,6 +158,13 @@ function createUserModelTrx(state: UserModelState) {
       };
     }
 
+    // Nor any shared-workspace membership (FR-E7 / FR-E7b).
+    if (table === 'asset_associations as aa' || table === 'asset_group_members as m') {
+      return {
+        where: () => ({ whereIn: () => ({ distinct: async () => [] }) }),
+      };
+    }
+
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
         join: () => ({
@@ -281,9 +288,12 @@ describe('portal user creation preserves client portal visibility assignments', 
       effectiveAssetScope: 'client',
       projectScope: 'client',
       effectiveProjectScope: 'client',
-      // Contact scope adds the (empty) hierarchy and the watcher grant; admins
-      // and client-scoped users get neither.
-      ...(effectiveTicketScope === 'contact' ? { visibleContactIds: ['contact-1'], watchGrant: true } : {}),
+      // Contact scope adds the (empty) hierarchy, the watcher grant and the
+      // (empty) shared-workspace ticket list; admins and client-scoped users
+      // get none of them.
+      ...(effectiveTicketScope === 'contact'
+        ? { visibleContactIds: ['contact-1'], watchGrant: true, workspaceTicketIds: [] }
+        : {}),
     });
   });
 

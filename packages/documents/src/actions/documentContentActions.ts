@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
 import { addDocument, getAuthorizedDocumentById } from './documentActions';
+import { isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import { isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
     documentActionErrorFrom,
@@ -122,6 +123,9 @@ export const updateDocumentContent = withAuth(async (
             const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
             if (!authorizedDocument) {
                 return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
+            }
+            if (isDocumentFieldRedacted(authorizedDocument, 'content')) {
+                return permissionError('Permission denied: Cannot update redacted document content', 'documents:errors.permissions.update');
             }
 
             const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);

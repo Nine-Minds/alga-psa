@@ -147,7 +147,8 @@
       "viewDetails": "Ver detalhes",
       "editAsset": "Editar recurso",
       "createTicket": "Criar ticket",
-      "refreshData": "Atualizar dados"
+      "refreshData": "Atualizar dados",
+      "fullAdd": "Adição completa"
     },
     "table": {
       "name": "Nome",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Digitalizar etiqueta de ativo",
+    "help": "Digitalize uma etiqueta impressa com um leitor de código de barras ou insira a etiqueta exatamente como impressa. O registro de recebimento correspondente será aberto.",
     "input": "Digitalize ou insira uma etiqueta",
     "loading": "Buscando…",
     "find": "Encontrar ativo",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Recebimento com etiqueta prévia",
-    "title": "Iniciar recebimento com etiqueta prévia",
     "help": "Crie um registro permanente do ativo com os dados mínimos e imprima duas cópias da etiqueta. Digitalize qualquer cópia depois para completar este mesmo registro.",
     "client": "Cliente",
     "clientRequired": "Escolha um cliente para continuar.",
     "createFailed": "Não foi possível criar o registro de recebimento.",
     "name": "Descrição breve (opcional)",
     "creating": "Criando…",
-    "createPrint": "Criar e imprimir o par"
+    "createPrint": "Criar e imprimir o par",
+    "modePrint": "Imprimir novas etiquetas",
+    "modeResume": "Retomar a partir da etiqueta"
   }
 }

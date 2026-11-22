@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Request submitted",
-    "requestIdLabel": "Request ID: ",
-    "ticketIdLabel": "Ticket ID: ",
     "unableToSubmit": "Unable to submit request",
     "formTitle": "Request Form",
     "noFields": "No fields configured.",
@@ -19,7 +17,19 @@
     "datePlaceholder": "Select date",
     "optionLabel": "Option {{index}}",
     "submit": "Submit Request",
-    "requiredField": "This field is required."
+    "requiredField": "This field is required.",
+    "validation": {
+      "type": "This answer is not in the expected form.",
+      "pattern": "This answer is not in the expected form.",
+      "minLength": "Use at least {{minLength}} characters.",
+      "maxLength": "Use {{maxLength}} characters or fewer.",
+      "min": "Enter {{min}} or more.",
+      "max": "Enter {{max}} or less.",
+      "minDate": "Pick {{minDate}} or later.",
+      "maxDate": "Pick {{maxDate}} or earlier.",
+      "minSelected": "Pick at least {{minSelected}}.",
+      "maxSelected": "Pick {{maxSelected}} at most."
+    }
   },
   "myRequests": {
     "title": "My Requests",
@@ -43,10 +53,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Back to My Requests",
-    "requestIdLabel": "Request ID:",
     "statusSection": "Status",
     "submittedAt": "Submitted: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Submitted Answers",
     "noResponse": "No response",
     "attachmentsTitle": "Attachments",
@@ -71,5 +79,12 @@
   },
   "myRequestsAll": {
     "title": "Your requests"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, submitted {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "View ticket"
   }
 }

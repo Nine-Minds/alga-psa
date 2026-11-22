@@ -29,6 +29,7 @@
     "invoiceTitle": "INVOICE",
     "issueDate": "Issue Date",
     "locationSubtotal": "Location Subtotal",
+    "unassignedLocation": "Quote-wide",
     "monthly": "Monthly",
     "monthlyItems": "Monthly Items",
     "monthlyTotal": "Monthly Total",

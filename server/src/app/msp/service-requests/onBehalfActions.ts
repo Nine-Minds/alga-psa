@@ -7,11 +7,14 @@ import {
   getVisiblePublishedServiceRequestDefinitionDetail,
   resolveSubmissionVisibility,
   toPortalFormView,
-  validateSubmissionAgainstPublishedSchema,
+  collectSubmissionValidationIssues,
+  ServiceRequestSubmissionValidationError,
   type ServiceRequestPortalCatalogItem,
   type ServiceRequestSubmissionAttachmentInput,
   type ServiceRequestPortalFormView,
 } from '../../../lib/service-requests';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
+import { describeSubmissionIssues } from '../../../lib/service-requests/submissionIssueMessages';
 import {
   listDefinitionsForRequester,
   MspSubmissionError,
@@ -72,7 +75,7 @@ export const getOnBehalfDefinitionFormAction = withAuth(async (
   };
 });
 
-function outcomeForError(error: unknown): OnBehalfSubmitOutcome {
+async function outcomeForError(error: unknown): Promise<OnBehalfSubmitOutcome> {
   if (error instanceof ServiceRequestPermissionError) {
     return { status: 'error', code: 'forbidden', message: error.message };
   }
@@ -82,6 +85,9 @@ function outcomeForError(error: unknown): OnBehalfSubmitOutcome {
       code: error.code === 'contact_not_found' ? 'contact_not_found' : 'not_visible',
       message: error.message,
     };
+  }
+  if (error instanceof ServiceRequestSubmissionValidationError) {
+    return { status: 'error', code: 'invalid', message: await describeSubmissionIssues(error.issues) };
   }
   if (error instanceof Error && error.message.startsWith('Submission validation failed:')) {
     return { status: 'error', code: 'invalid', message: error.message };
@@ -104,7 +110,7 @@ export const submitOnBehalfServiceRequestAction = withAuth(async (
   try {
     await requireMspSubmitPermissions(user, MSP_SUBMIT_PERMISSIONS, knex);
   } catch (error) {
-    return outcomeForError(error);
+    return await outcomeForError(error);
   }
 
   return withTransaction(knex, async (trx): Promise<OnBehalfSubmitOutcome> => {
@@ -127,6 +133,12 @@ export const submitOnBehalfServiceRequestAction = withAuth(async (
       const pendingUploads: Array<{ fieldKey: string; file: File }> = [];
       for (const field of fields) {
         if (!field || typeof field.key !== 'string') continue;
+        // A display block carries no answer and never appears in a payload.
+        if (getFieldElementKind(field.type) === 'display') continue;
+        if (field.type === 'multi-select') {
+          payload[field.key] = formData.getAll(field.key).filter((entry): entry is string => typeof entry === 'string');
+          continue;
+        }
         const value = formData.get(field.key);
         if (field.type === 'file-upload') {
           if (typeof File !== 'undefined' && value instanceof File && value.size > 0) {
@@ -149,14 +161,14 @@ export const submitOnBehalfServiceRequestAction = withAuth(async (
         })
       );
       const visibleUploads = pendingUploads.filter((upload) => visibleKeys.has(upload.fieldKey));
-      const validationErrors = validateSubmissionAgainstPublishedSchema({
+      const validationIssues = collectSubmissionValidationIssues({
         formSchema: detail.formSchema,
         payload,
         attachments: visibleUploads.map((upload) => ({ fieldKey: upload.fieldKey, fileId: `pending:${upload.file.name}` })),
         visibleFieldKeys: [...visibleKeys],
       });
-      if (validationErrors.length > 0) {
-        return { status: 'error', code: 'invalid', message: validationErrors.join('; ') };
+      if (validationIssues.length > 0) {
+        return { status: 'error', code: 'invalid', message: await describeSubmissionIssues(validationIssues) };
       }
 
       const attachments: ServiceRequestSubmissionAttachmentInput[] = [];
@@ -198,7 +210,7 @@ export const submitOnBehalfServiceRequestAction = withAuth(async (
       };
     } catch (error) {
       await Promise.allSettled(uploadedFileIds.map((fileId) => StorageService.deleteFile(fileId, user.user_id)));
-      return outcomeForError(error);
+      return await outcomeForError(error);
     }
   });
 });

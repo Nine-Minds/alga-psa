@@ -1225,11 +1225,23 @@
           "viewDetails": "View details"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contact failed",
+          "contactsFailed_other": "{{count}} contacts failed",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "and {{count}} more",
           "noResults": "No tenant results recorded.",
+          "noticeHeading": "Notes",
+          "stages": {
+            "create": "creating",
+            "link": "linking",
+            "match": "matching"
+          },
           "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
+          "summaryFailed": "Contacts that failed: {{count}}",
           "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "unknown"
+          "unknownTenant": "unknown",
+          "userUnknown": "unknown user"
         },
         "empty": "No sync runs found yet.",
         "errors": {

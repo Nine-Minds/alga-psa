@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -17,6 +16,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
+import {
+  getBasicFormWidthClass,
+  normalizeBasicFormSchema,
+} from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from '../../../../components/service-requests/RequestServiceForm';
 
@@ -25,8 +28,6 @@ interface RequestServiceDetailPageProps {
     definitionId: string;
   }>;
   searchParams?: Promise<{
-    submitted?: string;
-    ticketId?: string;
     error?: string;
   }>;
 }
@@ -43,10 +44,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
     notFound();
   }
 
-  const submittedRequestId =
-    typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;
-  const submittedTicketId =
-    typeof resolvedSearchParams?.ticketId === 'string' ? resolvedSearchParams.ticketId : null;
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
@@ -54,19 +51,25 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   // resubmit the same key, letting the server deduplicate them into a single
   // submission. Reloading the page starts a fresh attempt with a fresh key.
   const clientSubmissionKey = crypto.randomUUID();
-  const fields = Array.isArray((detail.formSchema as any)?.fields)
-    ? ((detail.formSchema as any).fields as any[])
-    : [];
-  // Rules arrive pre-parsed from the server and are only non-empty for the
-  // advanced provider, so nothing else about form behavior reaches this page.
+  // One normalizer decides what an element is, so the portal and the builder agree.
+  const formSchema = normalizeBasicFormSchema(detail.formSchema);
+  const fields = formSchema.fields;
+  // Rules arrive assembled and pre-parsed from the server — element conditions plus, where
+  // it applies, the advanced provider's own list — so nothing else about form behavior
+  // reaches this page.
   const visibilityRules = detail.visibilityRules;
   const visibilityEnabled = visibilityRules.length > 0;
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
     : null;
 
+  // The page takes the measure the form was authored at, so a boxed form sits in a card its
+  // own size instead of a narrow column stranded in a page-wide one. The author chooses it
+  // in the builder's form settings; "Full width" gives the page back to the form.
+  const widthClass = getBasicFormWidthClass(formSchema.settings);
+
   return (
-    <div className="space-y-4">
+    <div className={`${widthClass} space-y-4`}>
       <div>
         <h1 className="text-2xl font-semibold">{detail.title}</h1>
         <div className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
@@ -77,29 +80,8 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <p className="text-sm text-[rgb(var(--color-text-700))]">{detail.description}</p>
       )}
 
-      {submittedRequestId && (
-        <Alert variant="success">
-          <AlertTitle>{t('detail.submitted')}</AlertTitle>
-          <AlertDescription>
-            <p>
-              {t('detail.requestIdLabel')}
-              <span className="font-mono">{submittedRequestId}</span>
-            </p>
-            {submittedTicketId && (
-              <p>
-                {t('detail.ticketIdLabel')}
-                <Link
-                  href={`/client-portal/tickets/${submittedTicketId}`}
-                  className="font-mono underline"
-                >
-                  {submittedTicketId}
-                </Link>
-              </p>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* A successful submit redirects to the catalog, which confirms it and says the form's
+          own success message; this page only has to answer a refused one. */}
       {submitError && (
         <Alert variant="destructive">
           <AlertTitle>{t('detail.unableToSubmit')}</AlertTitle>
@@ -107,30 +89,15 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         </Alert>
       )}
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
+      <section className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
         {fields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
         ) : (
           <RequestServiceForm
             action={submitAction}
-            fields={fields.map((field: any, index: number) => ({
-              key: typeof field?.key === 'string' ? field.key : `field_${index}`,
-              label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
-              type: typeof field?.type === 'string' ? field.type : undefined,
-              required: !!field?.required,
-              helpText: typeof field?.helpText === 'string' ? field.helpText : null,
-              options: Array.isArray(field?.options)
-                ? field.options.map((option: any, optionIndex: number) => {
-                    const value = typeof option?.value === 'string' ? option.value : '';
-                    const label =
-                      typeof option?.label === 'string'
-                        ? option.label
-                        : value || t('detail.optionLabel', { index: optionIndex + 1 });
-                    return { value, label };
-                  })
-                : undefined,
-            }))}
+            fields={fields}
+            settings={formSchema.settings}
             initialValues={detail.initialValues}
             visibility={{
               enabled: visibilityEnabled && visibilityContext !== null,
@@ -143,6 +110,18 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
               requiredField: t('detail.requiredField'),
+              validation: {
+                type: t('detail.validation.type'),
+                minLength: t('detail.validation.minLength'),
+                maxLength: t('detail.validation.maxLength'),
+                pattern: t('detail.validation.pattern'),
+                min: t('detail.validation.min'),
+                max: t('detail.validation.max'),
+                minDate: t('detail.validation.minDate'),
+                maxDate: t('detail.validation.maxDate'),
+                minSelected: t('detail.validation.minSelected'),
+                maxSelected: t('detail.validation.maxSelected'),
+              },
             }}
           />
         )}

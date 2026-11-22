@@ -243,6 +243,7 @@
       "descriptionPlaceholder": "Vermeld wat u verwachtte, wat er gebeurde en welke klant of factuur het betreft.",
       "replyTo": "Antwoorden gaan naar {{email}}",
       "success": "Verzonden naar de support van Nine Minds. Antwoorden gaan naar {{email}}.",
+      "successWithTicket": "Verzonden naar de support van Nine Minds als ticket {{ticketNumber}}. Antwoorden gaan naar {{email}}.",
       "submit": "Naar Nine Minds sturen",
       "sending": "Verzenden…",
       "cancel": "Annuleren",

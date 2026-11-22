@@ -243,6 +243,7 @@
       "descriptionPlaceholder": "Indica cosa ti aspettavi, cosa è successo e quale cliente o fattura è coinvolto.",
       "replyTo": "Le risposte arrivano a {{email}}",
       "success": "Inviato al supporto Nine Minds. Le risposte arrivano a {{email}}.",
+      "successWithTicket": "Inviato al supporto Nine Minds come ticket {{ticketNumber}}. Le risposte arrivano a {{email}}.",
       "submit": "Invia a Nine Minds",
       "sending": "Invio in corso…",
       "cancel": "Annulla",

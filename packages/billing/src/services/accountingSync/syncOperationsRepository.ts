@@ -238,6 +238,33 @@ export class SyncOperationsRepository {
     return query.update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
+  /**
+   * Retire queued work that must never reach the provider — the entity was
+   * deliberately unlinked in AlgaPSA only. 'skipped' is the existing terminal
+   * status for work that will not be delivered, and the reason is stored on
+   * `last_error` so the errored-ops list explains itself. Adapter- and
+   * realm-agnostic on purpose: the entity is leaving the integration entirely,
+   * so every pending push for it goes, whichever realm queued it.
+   */
+  async skipPending(
+    tenant: string,
+    operations: SyncOperationType[],
+    algaEntityType: string,
+    algaEntityIds: string[],
+    reason: string
+  ): Promise<number> {
+    if (algaEntityIds.length === 0 || operations.length === 0) {
+      return 0;
+    }
+
+    return this.table(tenant)
+      .whereIn('operation', operations)
+      .where({ alga_entity_type: algaEntityType })
+      .whereIn('alga_entity_id', algaEntityIds)
+      .whereIn('status', ['pending', 'in_progress'])
+      .update({ status: 'skipped', processed_at: this.knex.fn.now(), last_error: reason });
+  }
+
   async countByStatus(
     tenant: string,
     adapterType: string,

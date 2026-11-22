@@ -1225,11 +1225,23 @@
           "viewDetails": "Ver detalhes"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contato com falha",
+          "contactsFailed_other": "{{count}} contatos com falha",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "e mais {{count}}",
           "noResults": "Nenhum resultado de tenant registrado.",
+          "noticeHeading": "Notas",
+          "stages": {
+            "create": "criação",
+            "link": "associação",
+            "match": "correspondência"
+          },
           "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
+          "summaryFailed": "Contatos com falha: {{count}}",
           "summarySkipped": "Resultados de provisionamento ignorados: {{count}}",
           "tenantHeader": "Tenant: {{tenant}} · {{status}}",
-          "unknownTenant": "desconhecido"
+          "unknownTenant": "desconhecido",
+          "userUnknown": "usuário desconhecido"
         },
         "empty": "Nenhuma execução de sincronização foi encontrada ainda.",
         "errors": {

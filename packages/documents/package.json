@@ -58,6 +58,10 @@
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
     },
+    "./lib/documentRoomConnection": {
+      "import": "./src/lib/documentRoomConnection.ts",
+      "types": "./src/lib/documentRoomConnection.ts"
+    },
     "./lib/documentPreviewJob": {
       "import": "./src/lib/documentPreviewJob.ts",
       "types": "./src/lib/documentPreviewJob.ts"

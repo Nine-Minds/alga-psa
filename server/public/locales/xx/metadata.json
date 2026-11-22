@@ -452,10 +452,13 @@
       "detail": {
         "fallbackTitle": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧ⟧"
       },
+      "title": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧş⟧",
+      "formBuilder": {
+        "title": "⟦Ƒȯřḿ ƀŭīŀḓḗř⟧"
+      },
       "submit": {
         "title": "⟦Şŭƀḿīŧ Şḗřṽīƈḗ Řḗʠŭḗşŧ⟧"
-      },
-      "title": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧş⟧"
+      }
     },
     "settings": {
       "extensions": {

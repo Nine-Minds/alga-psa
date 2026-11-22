@@ -11,6 +11,7 @@ import { getContactsByClient } from '@alga-psa/clients/actions';
 import type { IContact } from '@alga-psa/types';
 import type { ServiceRequestPortalCatalogItem } from '../../../../lib/service-requests';
 import { RequestServiceForm } from '../../../../components/service-requests/RequestServiceForm';
+import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import {
   getOnBehalfDefinitionFormAction,
   listOnBehalfCatalogAction,
@@ -53,6 +54,9 @@ function SubmitOnBehalfFlow({
   initialDefinitionId,
 }: Omit<SubmitOnBehalfPageProps, 'canSubmit'>) {
   const { t } = useTranslation('msp/service-requests');
+  // Validation wording is shared with the portal form so a technician reads the same sentence a
+  // client would; only the page chrome lives in msp/service-requests.
+  const { t: tForm } = useTranslation('client-portal/service-requests');
   const [clientId, setClientId] = useState<string | null>(initialClientId);
   const [contactId, setContactId] = useState<string>(initialContactId ?? '');
   const [definitionId, setDefinitionId] = useState<string>(initialDefinitionId ?? '');
@@ -128,9 +132,10 @@ function SubmitOnBehalfFlow({
     [clientId, contactId, definitionId]
   );
 
-  const fields = Array.isArray((formView?.form.formSchema as any)?.fields)
-    ? ((formView!.form.formSchema as any).fields as any[])
-    : [];
+  // The one normalizer the portal and the form builder use, so v2 element types, settings and
+  // display blocks reach the shared form exactly as the portal gives them.
+  const formSchema = normalizeBasicFormSchema(formView?.form.formSchema);
+  const fields = formSchema.fields;
   const rules = formView?.form.visibilityRules ?? [];
 
   return (
@@ -244,25 +249,8 @@ function SubmitOnBehalfFlow({
               ) : (
                 <RequestServiceForm
                   action={submit}
-                  fields={fields.map((field: any, index: number) => ({
-                    key: typeof field?.key === 'string' ? field.key : `field_${index}`,
-                    label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
-                    type: typeof field?.type === 'string' ? field.type : undefined,
-                    required: !!field?.required,
-                    helpText: typeof field?.helpText === 'string' ? field.helpText : null,
-                    options: Array.isArray(field?.options)
-                      ? field.options.map((option: any, optionIndex: number) => {
-                          const value = typeof option?.value === 'string' ? option.value : '';
-                          return {
-                            value,
-                            label:
-                              typeof option?.label === 'string'
-                                ? option.label
-                                : value || t('submit.optionLabel', { defaultValue: 'Option {{index}}', index: optionIndex + 1 }),
-                          };
-                        })
-                      : undefined,
-                  }))}
+                  fields={fields}
+                  settings={formSchema.settings}
                   initialValues={formView.form.initialValues}
                   visibility={{
                     enabled: rules.length > 0,
@@ -275,6 +263,18 @@ function SubmitOnBehalfFlow({
                     datePlaceholder: t('submit.datePlaceholder', { defaultValue: 'Select a date' }),
                     submit: t('submit.submit', { defaultValue: 'Submit request' }),
                     requiredField: t('submit.requiredField', { defaultValue: 'This field is required' }),
+                    validation: {
+                      type: tForm('detail.validation.type'),
+                      minLength: tForm('detail.validation.minLength'),
+                      maxLength: tForm('detail.validation.maxLength'),
+                      pattern: tForm('detail.validation.pattern'),
+                      min: tForm('detail.validation.min'),
+                      max: tForm('detail.validation.max'),
+                      minDate: tForm('detail.validation.minDate'),
+                      maxDate: tForm('detail.validation.maxDate'),
+                      minSelected: tForm('detail.validation.minSelected'),
+                      maxSelected: tForm('detail.validation.maxSelected'),
+                    },
                   }}
                 />
               )}

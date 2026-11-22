@@ -252,6 +252,9 @@
       "detail": {
         "fallbackTitle": "Solicitação de serviço"
       },
+      "formBuilder": {
+        "title": "Editor de formulário"
+      },
       "submit": {
         "title": "Enviar solicitação de serviço"
       }

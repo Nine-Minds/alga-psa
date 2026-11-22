@@ -27,7 +27,9 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
       const knex = await getConnection(tenantId);
       const priorities = await tenantDb(knex, tenantId).table('priorities')
         .where({ item_type: 'ticket' })
-        .select('priority_id', 'priority_name')
+        // is_from_itil_standard lets a caller offer only what a board accepts: an ITIL board takes ITIL
+        // priorities, every other board its custom ones (ticket create refuses the mismatch).
+        .select('priority_id', 'priority_name', 'is_from_itil_standard')
         .orderBy('priority_name', 'asc');
 
       return createSuccessResponse(priorities, 200, undefined, apiRequest);

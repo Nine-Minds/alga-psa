@@ -86,7 +86,8 @@ describe('independent upgrade against the Stripe emulator and a real database', 
   const client = () => sessionShape(createIndependentPsaStripeClient(SECRET));
 
   const deliver = async (event: Stripe.Event) => {
-    const handlers = createCoManagedPaymentHandlers({ priceId: () => undefined, sync: async () => {}, finalizeCheckout: async () => {},
+    const handlers = createCoManagedPaymentHandlers({ recognizedPrices: () => undefined, refreshRecognition: async () => false,
+      sync: async () => {}, finalizeCheckout: async () => {},
       upgradePayment: (e, t, d) => handleCoManagedUpgradePaymentEvent(d, client(), t, e) });
     return dispatchPaymentEvent(handlers, { event, tenantId: tenant, knex: db });
   };

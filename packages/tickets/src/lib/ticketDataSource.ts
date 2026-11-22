@@ -54,7 +54,6 @@ import type {
   getContactByContactNameId,
   getContactsByClient,
   getClientById,
-  getAllClients,
   getClientBillingProfiles,
   getContactEffectiveLocation,
   searchClientsForPicker,
@@ -496,7 +495,6 @@ export interface TicketPeopleMethods {
   getContactByContactNameId: typeof getContactByContactNameId;
   getContactsByClient: typeof getContactsByClient;
   getClientById: typeof getClientById;
-  getAllClients: typeof getAllClients;
   getClientLocations: typeof getClientLocations;
   getClientBillingProfiles: typeof getClientBillingProfiles;
   getContactEffectiveLocation: typeof getContactEffectiveLocation;

@@ -6,7 +6,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectVitestInventory, hasCurrentManualRunnerReview } from '../lib/vitest-inventory-collection.mjs';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
-import { isAdditionalWorkspaceTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+import { isAdditionalWorkspaceTest, isIntegrationTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+
+test('the private IMAP review harness registers its opt-in case without executing workstation services', t => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const output = mkdtempSync(path.join(tmpdir(), 'private-imap-inventory-'));
+  t.after(() => rmSync(output, { recursive: true, force: true }));
+  const runners = JSON.parse(readFileSync(path.join(root, 'scripts/manual-vitest-runners.json'), 'utf8'));
+  const runner = runners.find(entry => entry.runner === 'private-imap-ingestion-review');
+  const collection = collectVitestInventory({ root, runner, output,
+    env: { ...process.env, DB_HOST: '127.0.0.1', DB_PORT: '0', REQUIRE_DB: '' } });
+  assert.equal(collection.status, 'passed', collection.failures.join('\n'));
+  assert.equal(collection.mandatory, false);
+  assert.deepEqual(collection.files, ['server/src/test/manual/imapPrivateTargetPersistedIngestion.integration.test.ts']);
+  assert.equal(isIntegrationTest(collection.files[0]), false);
+  const cases = JSON.parse(readFileSync(path.join(collection.collectionDirectory, 'collected-tests.json'), 'utf8'));
+  assert.equal(cases.length, 1);
+  assert.equal(cases[0].skipped, false);
+});
 
 test('manual Vitest runner reviews remain valid through their stated expiry date', t => {
   const root = fileURLToPath(new URL('../../', import.meta.url));

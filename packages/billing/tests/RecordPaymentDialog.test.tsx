@@ -1,0 +1,256 @@
+// @vitest-environment jsdom
+
+/**
+ * The manual Record Payment dialog (alga-2026-0003329 / alga-2026-0003183):
+ * the amount must default to the balance due, a partial amount must be
+ * allowed, and the submit must hand the action minor units.
+ */
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom';
+
+const mocks = vi.hoisted(() => ({
+  getInvoicePaymentSummary: vi.fn(),
+  recordManualInvoicePayment: vi.fn(),
+  translate: vi.fn(),
+}));
+
+// Only the server actions are mocked: the method list is a plain module the
+// client imports for real, because a 'use server' file cannot export it.
+vi.mock('@alga-psa/billing/actions/invoicePaymentActions', () => ({
+  getInvoicePaymentSummary: mocks.getInvoicePaymentSummary,
+  recordManualInvoicePayment: mocks.recordManualInvoicePayment,
+}));
+vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useOptionalI18n: () => null,
+  useTranslation: () => ({ t: mocks.translate }),
+  useFormatters: () => ({ locale: 'en-US', formatDate: () => 'today', formatCurrency: (v: number) => `$${v}` }),
+}));
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children, footer, title }: any) => (
+    isOpen ? <div role="dialog" aria-label={title}>{children}{footer}</div> : null
+  ),
+  DialogContent: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+}));
+vi.mock('@alga-psa/ui/components/Alert', () => ({
+  Alert: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  AlertDescription: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+}));
+vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({ default: ({ text }: { text: string }) => <div>{text}</div> }));
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: ({ label, ...props }: any) => <input aria-label={label} {...props} />,
+}));
+vi.mock('@alga-psa/ui/components/TextArea', () => ({
+  TextArea: ({ label, ...props }: any) => <textarea aria-label={label} {...props} />,
+}));
+vi.mock('@alga-psa/ui/components/CurrencyInput', () => ({
+  CurrencyInput: ({ id, label, value, onChange, disabled }: any) => (
+    <input
+      id={id}
+      aria-label={label}
+      disabled={disabled}
+      value={value ?? ''}
+      onChange={(event) => onChange(Number(event.target.value))}
+    />
+  ),
+}));
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({
+  Checkbox: ({ id, label, checked, onChange, disabled }: any) => (
+    <label htmlFor={id}>
+      <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={onChange} />
+      {label}
+    </label>
+  ),
+}));
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  DatePicker: ({ id, label }: any) => <input id={id} aria-label={label} readOnly />,
+}));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ id, value, onValueChange, options, disabled }: any) => (
+    <select id={id} value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>
+      {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  ),
+}));
+
+import { RecordPaymentDialog } from '../src/components/billing-dashboard/invoicing/RecordPaymentDialog';
+import { MANUAL_PAYMENT_METHODS } from '../src/lib/payments/manualPaymentMethods';
+
+const summary = (overrides: Record<string, unknown> = {}) => ({
+  invoiceId: 'inv-1',
+  invoiceNumber: 'INV-000008',
+  status: 'sent',
+  currencyCode: 'USD',
+  totalAmount: 10000,
+  creditApplied: 0,
+  totalPaid: 0,
+  balanceDue: 10000,
+  canRecordPayment: true,
+  blockedReason: null,
+  ...overrides,
+});
+
+describe('RecordPaymentDialog', () => {
+  beforeEach(() => {
+    mocks.translate.mockImplementation((key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key);
+    mocks.getInvoicePaymentSummary.mockResolvedValue(summary());
+    mocks.recordManualInvoicePayment.mockResolvedValue({ success: true, paymentId: 'pay-1', newStatus: 'paid', balanceDue: 0 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('defaults the amount to the balance due and submits it in minor units', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" invoiceNumber="INV-000008" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    await waitFor(() => expect(amount).toHaveValue('100'));
+
+    fireEvent.click(screen.getByText('Record Payment'));
+
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ invoiceId: 'inv-1', amount: 10000, method: 'manual' }),
+    ));
+  });
+
+  // The list reached the dialog as a server-action proxy while it lived in the
+  // 'use server' module, so the render died on MANUAL_PAYMENT_METHODS.map.
+  it('offers every manual payment method', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    await screen.findByLabelText('Amount');
+    const options = Array.from(screen.getByLabelText('Payment method').querySelectorAll('option'));
+    expect(options.map((option) => option.getAttribute('value'))).toEqual([...MANUAL_PAYMENT_METHODS]);
+  });
+
+  it('allows a partial amount and passes the chosen method and reference', async () => {
+    const onClose = vi.fn();
+    render(<RecordPaymentDialog isOpen onClose={onClose} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '40' } });
+    fireEvent.change(screen.getByLabelText('Payment method') ?? screen.getByRole('combobox'), { target: { value: 'check' } });
+    fireEvent.change(screen.getByLabelText('Reference'), { target: { value: '1042' } });
+
+    fireEvent.click(screen.getByText('Record Payment'));
+
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 4000, method: 'check', referenceNumber: '1042' }),
+    ));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  // Any amount at all used to be accepted, so an extra digit silently became
+  // money the client never owed (operator report on alga-2026-0003329).
+  it('warns about an amount above the balance due and holds the submit', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+
+    expect(screen.getByText(/more than the balance due/)).toBeInTheDocument();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+
+    fireEvent.click(screen.getByText('Record Payment'));
+    expect(mocks.recordManualInvoicePayment).not.toHaveBeenCalled();
+  });
+
+  it('records the overpayment with an explicit acknowledgement once confirmed', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    fireEvent.click(screen.getByText('Record Payment'));
+
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 15000, allowOverpayment: true }),
+    ));
+  });
+
+  it('withdraws the acknowledgement when the amount is edited again', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getByText('Record Payment').closest('button')).toBeEnabled();
+
+    fireEvent.change(amount, { target: { value: '250' } });
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+  });
+
+  it('says nothing about overpayment for an amount within the balance', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '40' } });
+
+    expect(screen.queryByText(/more than the balance due/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Record Payment'));
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 4000, allowOverpayment: undefined }),
+    ));
+  });
+
+  it('surfaces an action refusal and keeps the dialog open', async () => {
+    mocks.recordManualInvoicePayment.mockResolvedValue({
+      actionError: 'Cannot record a payment for an invoice with status: cancelled.',
+      messageKey: 'msp/invoicing:errors.recordPayment.statusNotPayable',
+    });
+    const onClose = vi.fn();
+    render(<RecordPaymentDialog isOpen onClose={onClose} invoiceId="inv-1" />);
+
+    await screen.findByLabelText('Amount');
+    fireEvent.click(screen.getByText('Record Payment'));
+
+    expect(await screen.findByText('Cannot record a payment for an invoice with status: cancelled.')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // The dialog used to disable every field with no message at all, so it could
+  // open as a silent dead end (alga-2026-0003329 review).
+  it('explains a settled invoice instead of showing a dead form', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue(summary({
+      status: 'paid', balanceDue: 0, totalPaid: 10000, canRecordPayment: false, blockedReason: 'no_balance_due',
+    }));
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    expect(await screen.findByText('This invoice has no balance due.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+  });
+
+  it('names the status when the invoice can never take a payment', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue(summary({
+      status: 'cancelled', canRecordPayment: false, blockedReason: 'status_not_payable',
+    }));
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    expect(await screen.findByText(/Cannot record a payment for an invoice with status/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+  });
+
+  it('surfaces a failed summary load rather than a disabled form', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue({
+      permissionError: 'Permission denied: recording invoice payments requires the invoice payment permission.',
+      messageKey: 'msp/invoicing:errors.recordPayment.permissionDenied',
+    });
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    expect(await screen.findByText(/Permission denied/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+  });
+});

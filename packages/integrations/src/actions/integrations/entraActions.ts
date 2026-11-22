@@ -374,6 +374,19 @@ export type EntraSyncHistoryResponse = {
   runs: EntraSyncHistoryRun[];
 };
 
+/** One user's failure (or field notice) within a client's sync. Display fields only. */
+// LEVERAGE: pattern entra-user-issue-shape — same issue DTO declared in server sync/types.ts, temporal types/entra-sync.ts and integrations entraActions.ts; no shared package spans the workflow sandbox, server and UI
+export type EntraSyncRunUserIssue = {
+  severity: 'failure' | 'notice';
+  stage: 'match' | 'link' | 'create';
+  entraObjectId: string;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  contactNameId?: string | null;
+  field?: 'phone_numbers';
+  message: string;
+};
+
 /** What one run did to one client. */
 export type EntraSyncRunTenantResult = {
   managedTenantId: string | null;
@@ -384,6 +397,8 @@ export type EntraSyncRunTenantResult = {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  failed?: number;
+  userIssues?: EntraSyncRunUserIssue[];
   errorMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;

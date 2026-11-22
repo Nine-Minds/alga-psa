@@ -452,10 +452,13 @@
       "detail": {
         "fallbackTitle": "Service Request"
       },
+      "title": "Service Requests",
+      "formBuilder": {
+        "title": "Form builder"
+      },
       "submit": {
         "title": "Submit Service Request"
-      },
-      "title": "Service Requests"
+      }
     },
     "settings": {
       "extensions": {

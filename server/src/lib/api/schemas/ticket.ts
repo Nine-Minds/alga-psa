@@ -150,7 +150,8 @@ export const createTicketFieldsSchema = z.object({
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
   subcategory_id: uuidSchema.optional(),
-  assigned_to: uuidSchema.optional(),
+  assigned_to: uuidSchema.nullable().optional(),
+  assigned_team_id: uuidSchema.nullable().optional(),
   priority_id: uuidSchema,
   // Optional classification references; stored as nullable same-tenant UUIDs.
   severity_id: uuidSchema.optional(),
@@ -536,8 +537,12 @@ export const createTicketCommentSchema = z.object({
   // No default: an unspecified visibility is distinguishable from an explicit false
   // (a service principal's unspecified comment is internal; an explicit public one needs act-as).
   is_internal: z.boolean().optional(),
-  /** Audience for a co-managed workspace; ignored natively. Must agree with is_internal. */
-  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
+  /**
+   * Audience of a new thread on a co-managed ticket. Must agree with is_internal. `shared_it` (the MSP and the
+   * client's IT) is open only on a ticket whose client has a live seat arrangement; a seat technician writes
+   * `requester` or `shared_it`, never `organization_private`.
+   */
+  collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),

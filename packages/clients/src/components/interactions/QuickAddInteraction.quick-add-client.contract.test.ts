@@ -18,10 +18,9 @@ describe('quick add interaction client creation wiring contract', () => {
     expect(source).toContain("setSelectedContactId('');");
     expect(source).toContain('open={isQuickAddClientOpen}');
     expect(source).toContain('onOpenChange={setIsQuickAddClientOpen}');
-    expect(source).toContain(
-      '(client) => client.client_id === newClient.client_id,',
-    );
-    expect(source).toContain('nextClients[existingIndex] = newClient;');
+    // The created client is selected by id; the picker resolves its name server-side, so no list is patched.
+    expect(source).not.toContain('getAllClients');
+    expect(source).toContain('searchClients={searchClientsForPicker}');
     expect(source).toContain('handleClientSelect(newClient.client_id);');
     expect(source).toContain('skipSuccessDialog');
   });

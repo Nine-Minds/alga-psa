@@ -4,6 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { spawnSync, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { citusRuntimeFiles } from '../lib/citus-runtime-inventory.mjs';
 
 test('Citus CLI independently requires both complete suites and replaces stale green artifacts', t => {
   const root = mkdtempSync(path.join(tmpdir(), 'citus-gate-'));
@@ -14,12 +15,8 @@ test('Citus CLI independently requires both complete suites and replaces stale g
   };
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-citus-execution.mjs', import.meta.url), path.join(root, 'scripts/verify-citus-execution.mjs'));
-  const runnerSource = readFileSync(new URL('../run-citus-runtime-tests.mjs', import.meta.url), 'utf8');
-  const runnerFiles = [...runnerSource.match(/const files = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
-  assert.ok(runnerFiles.length > 1, 'Citus runner must declare more than one required suite');
   const files = {
-    // Seed exactly what the runtime runner collects so the gate cannot drift from its producer.
-    'citus-runtime': runnerFiles,
+    'citus-runtime': citusRuntimeFiles,
     'temporal-database': [
       'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',
       'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts',
@@ -56,7 +53,14 @@ test('Citus CLI independently requires both complete suites and replaces stale g
     assert.equal(child.status, result.status === 'passed' ? 0 : 1, child.stderr);
     return result;
   };
-  assert.equal(run().status, 'passed');
+  const complete = run();
+  assert.equal(complete.status, 'passed', complete.failures.join('\n'));
+  const seatTrialMigration = 'server/migrations/__tests__/coManagedSeatTrialTicketWorkMigration.integration.test.ts';
+  seed('citus-runtime', citusRuntimeFiles.filter(file => file !== seatTrialMigration));
+  const missingSeatTrial = run();
+  assert.equal(missingSeatTrial.status, 'failed');
+  assert.ok(missingSeatTrial.failures.includes(`citus-runtime: Uncollected candidate: ${seatTrialMigration}`));
+  seed('citus-runtime');
   for (const CITUS_JOB_RESULT of ['failure', 'cancelled', 'skipped', '']) assert.equal(run({ CITUS_JOB_RESULT }).status, 'failed');
   for (const lane of Object.keys(files)) {
     seed(lane, files[lane].slice(1));

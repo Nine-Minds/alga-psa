@@ -14,6 +14,11 @@ import {
   renderServiceRequestTemplate,
   type ServiceRequestTemplateFormat,
 } from '../../ticketTextTemplate';
+import {
+  describeFormAnswer,
+  getFieldElementKind,
+  groupFormElementsBySection,
+} from '../../formSchema';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
   const value = config[key];
@@ -87,33 +92,31 @@ const textCell = (text: string, bold = false) => [
   { type: 'text', text, styles: bold ? { bold: true } : {} },
 ];
 
-const paragraph = (text: string) => ({ type: 'paragraph', content: textCell(text) });
+const paragraph = (text: string, bold = false) => ({
+  type: 'paragraph',
+  content: textCell(text, bold),
+});
 
-// LEVERAGE: pattern service-request-answer-display — the portal submission page (submissionFieldPresentation.ts) resolves the same label/option/checkbox display values.
 function describeAnswer(
   field: FormFieldSnapshot | undefined,
   value: unknown,
   format: ServiceRequestTemplateFormat
 ): string {
-  if (value === null || value === undefined || value === '') {
-    return '—';
-  }
-  if (field?.type === 'checkbox') {
-    return value === true || value === 'true' || value === 'on' || value === '1' ? format.yes : format.no;
-  }
-  if (field?.type === 'select' && Array.isArray(field.options)) {
-    const selected = field.options.find((option) => option?.value === String(value));
-    if (typeof selected?.label === 'string' && selected.label.trim()) {
-      return selected.label;
-    }
-  }
-  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  return describeFormAnswer(field, value, { ...format, empty: '—' });
+}
+
+function elementLabel(element: FormFieldSnapshot): string {
+  return typeof element?.label === 'string' && element.label.trim()
+    ? element.label.trim()
+    : String(element?.key ?? '');
 }
 
 /**
- * The ticket description as serialized rich-text blocks: the configured prefix,
- * then one row per answer with the field's label, in form order. Cells use the
- * inline-array form, which the ticket editor and the notification email
+ * The ticket description as serialized rich-text blocks: the configured prefix, then the
+ * answers in form order. A form with sections gets one labelled block per section — the
+ * section's name, then a table of its answers — so the technician reads the request in the
+ * shape it was asked. Answers the schema does not describe follow in a table of their own.
+ * Cells use the inline-array form, which the ticket editor and the notification email
  * renderer both read.
  */
 export function buildTicketDescription(
@@ -136,27 +139,56 @@ export function buildTicketDescription(
     ? (formSchema.fields as FormFieldSnapshot[]).filter((field) => typeof field?.key === 'string')
     : [];
   const fieldByKey = new Map(fields.map((field) => [field.key as string, field]));
-  const orderedKeys = [
-    ...fields.map((field) => field.key as string).filter((key) => key in payload),
-    ...Object.keys(payload).filter((key) => !fieldByKey.has(key)),
-  ];
 
-  if (orderedKeys.length === 0) {
+  // One table per section, in form order; a form without sections stays a single table.
+  const tables: Array<{ label?: string; keys: string[] }> = [];
+  for (const group of groupFormElementsBySection(fields)) {
+    const keys = group.elements
+      .filter(
+        (element) =>
+          typeof element?.key === 'string' &&
+          getFieldElementKind(element.type) === 'input' &&
+          element.key in payload
+      )
+      .map((element) => element.key as string);
+    if (keys.length === 0) {
+      continue;
+    }
+    tables.push({ label: group.section ? elementLabel(group.section) : undefined, keys });
+  }
+
+  // Answers the schema does not describe (a key removed from a later draft) still show up.
+  const undescribedKeys = Object.keys(payload).filter((key) => !fieldByKey.has(key));
+  if (undescribedKeys.length > 0) {
+    const last = tables[tables.length - 1];
+    if (last && last.label === undefined) {
+      last.keys.push(...undescribedKeys);
+    } else {
+      tables.push({ keys: undescribedKeys });
+    }
+  }
+
+  if (tables.length === 0) {
     blocks.push(paragraph(emptySummary));
     return JSON.stringify(blocks);
   }
 
-  blocks.push({
-    type: 'table',
-    content: {
-      type: 'tableContent',
-      rows: orderedKeys.map((key) => {
-        const field = fieldByKey.get(key);
-        const label = typeof field?.label === 'string' && field.label.trim() ? field.label.trim() : key;
-        return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key], text.format))] };
-      }),
-    },
-  });
+  for (const table of tables) {
+    if (table.label) {
+      blocks.push(paragraph(table.label, true));
+    }
+    blocks.push({
+      type: 'table',
+      content: {
+        type: 'tableContent',
+        rows: table.keys.map((key) => {
+          const field = fieldByKey.get(key);
+          const label = typeof field?.label === 'string' && field.label.trim() ? field.label.trim() : key;
+          return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key], text.format))] };
+        }),
+      },
+    });
+  }
   return JSON.stringify(blocks);
 }
 

@@ -14,6 +14,7 @@
     "communityEditionDescription": "De zelfgehoste Community Edition biedt een onbeperkt aantal gebruikers zonder licentiebeperkingen of extra kosten."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Onbeperkt",
     "metaTitle": "Aankoop voltooid",
     "scheduledTitle": "Wijziging succesvol ingepland!",
     "updatedTitle": "Update geslaagd!",
@@ -395,9 +396,52 @@
   },
   "errors": {
     "notSignedIn": "Niet geautoriseerd. Meld u aan om licenties te beheren.",
-    "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
+    "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist",
+    "accountManagementUpdate": "Toestemming geweigerd: updaterechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "trial": {
+      "title": "Proefperiode van 15 dagen voor een gezamenlijk beheerde plek",
+      "description": "Nodig een technicus van de klant uit om op de door u gekozen borden te werken. De 15 dagen gaan in bij de eerste aanmelding. Toegang vereist een actief basisabonnement of een actieve proefperiode van het basisabonnement.",
+      "terms": "Een betaalde plek kost {{amount}} per maand. De proefperiode eindigt zonder kosten, tenzij u betaalde capaciteit bevestigt.",
+      "status": {
+        "active": "Actief",
+        "pending": "Wacht op eerste aanmelding",
+        "base_paused": "Basisabonnement gepauzeerd",
+        "expired": "Proefperiode verlopen",
+        "paid": "Betaalde plek in gebruik",
+        "ended": "Proefperiode beëindigd",
+        "checkout_pending": "Wacht op betaling"
+      },
+      "purchaseAwaitingVerification": "Aankoop wacht op verificatie",
+      "conversionFailed": "De overstap naar een betaalde plek is niet voltooid. Bekijk de beschikbare betaalde capaciteit of probeer de aankoop opnieuw.",
+      "deadline": "De proefperiode voor de plek eindigt op {{date}}.",
+      "baseUntil": "De huidige basistoegang eindigt op {{date}}.",
+      "openSetup": "Plekinstellingen van de klant openen",
+      "invite": "Technicus voor 15 dagen uitnodigen",
+      "resend": "Uitnodiging opnieuw sturen",
+      "replace": "Technicus vervangen",
+      "cancelInvitation": "Uitnodiging annuleren",
+      "restoreBase": "Basistoegang herstellen in Account",
+      "resumePurchase": "Aankoop hervatten",
+      "cancelConversion": "Omzetting van de plek annuleren",
+      "spareSeatTerms": "Gebruik nu één beschikbare betaalde plek. Het totale aantal plekken in de pool blijft gelijk.",
+      "confirmSpareSeat": "Gebruik van één betaalde plek bevestigen",
+      "keepSeat": "Deze plek behouden",
+      "refresh": "Proefperiode vernieuwen",
+      "returnToTrial": "Terug naar de proefperiode voor de klantplek",
+      "notice": {
+        "invitationSaved": "Uitnodiging opgeslagen. Probeer hieronder opnieuw te verzenden.",
+        "deliveryFailed": "Verzenden mislukt. U kunt het opnieuw proberen.",
+        "replacementSent": "Uitnodiging naar de vervangende technicus verzonden.",
+        "replacementSaved": "Vervangende technicus opgeslagen. Probeer de uitnodiging opnieuw te verzenden."
+      },
+      "error": {
+        "boardChoicesFailed": "De beschikbare borden konden niet worden geladen.",
+        "actionFailed": "Deze actie kon niet worden afgerond. Vernieuw de proefperiode en probeer het opnieuw.",
+        "paymentFailed": "De betaling kon niet worden afgerond. Controleer de status van de proefperiode."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Deze werkruimte heeft geen co-managed pool. Voeg co-managed plekken toe om dit te gebruiken.",
@@ -694,6 +738,8 @@
     "proRequired": "Een Pro PSA-abonnement is vereist om klantwerkruimtes te sponsoren.",
     "loadError": "De capaciteit aan klantplaatsen kon niet worden geladen. Probeer het opnieuw.",
     "purchaseError": "De aankoop van plaatsen kon niet worden voltooid. U kunt deze veilig hervatten.",
+    "termsChanged": "De prijs is gewijzigd nadat u de aankoop hebt gecontroleerd. Controleer de bijgewerkte voorwaarden voordat u bevestigt.",
+    "offerUnavailable": "U kunt tijdelijk geen nieuwe plaatsen kopen. Er is niets in rekening gebracht.",
     "checkoutExpired": "Deze checkout is verlopen. Start een nieuwe aankoop om verder te gaan.",
     "grace": "Verleng uw licentie of los het capaciteitstekort op vóór {{date}} om klantwerkruimtes beschrijfbaar te houden.",
     "readOnly": "De coulanceperiode eindigde op {{date}}. Herstel de gelicentieerde capaciteit om wijzigingen in klantwerkruimtes te hervatten.",
@@ -701,7 +747,19 @@
     "checkoutUnavailable": "Ingebedde checkout is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
     "pendingCapacity_one": "Een aankoop van {{count}} plaats is in behandeling.",
     "pendingCapacity_other": "Een aankoop van {{count}} plaatsen is in behandeling.",
+    "buySeats": "Co-managed plekken kopen",
+    "awaitingVerification_one": "Uw aankoop van {{count}} plek wacht op betalingsverificatie. De plek verschijnt hier zodra de betaling is bevestigd.",
+    "awaitingVerification_other": "Uw aankoop van {{count}} plekken wacht op betalingsverificatie. De plekken verschijnen hier zodra de betaling is bevestigd.",
+    "refreshStatus": "Status vernieuwen",
+    "purchaseOnly": {
+      "intro": "Koop hier een pool co-managed plekken. Wijs na de aankoop plekken toe aan klanten via het klantdossier."
+    },
     "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
+    "billingCustomerUnlinked": "Er kon geen Stripe-factureringsaccount voor deze werkruimte worden geverifieerd. Neem contact op met ondersteuning om het account te koppelen.",
+    "proSubscriptionRequired": "Voor co-managed seats is een lopend Pro-abonnement vereist. Controleer uw abonnement in Accountbeheer.",
+    "offerPaused": "Aankopen van nieuwe seats zijn gepauzeerd. Neem contact op met uw accountmanager voor een update.",
+    "offerMisconfigured": "De aanbieding voor co-managed seats is niet goed ingesteld. Neem contact op met support.",
+    "offerTemporarilyUnavailable": "Prijzen zijn tijdelijk niet beschikbaar. Probeer het binnenkort opnieuw.",
     "purchaseNeedsAdmin": "Een accountbeheerder moet co-managed capaciteit toevoegen.",
     "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",
     "purchaseUnavailable": "Gehoste co-managed aankoop is niet beschikbaar in deze implementatie.",

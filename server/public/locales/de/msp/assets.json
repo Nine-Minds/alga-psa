@@ -147,7 +147,8 @@
       "viewDetails": "Details anzeigen",
       "editAsset": "Asset bearbeiten",
       "createTicket": "Ticket erstellen",
-      "refreshData": "Daten aktualisieren"
+      "refreshData": "Daten aktualisieren",
+      "fullAdd": "Vollständig hinzufügen"
     },
     "table": {
       "name": "Name",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Asset-Tag scannen",
+    "help": "Scannen Sie ein gedrucktes Etikett mit einem Barcodescanner oder geben Sie den Tag genau wie gedruckt ein. Der zugehörige Erfassungsdatensatz wird geöffnet.",
     "input": "Tag scannen oder eingeben",
     "loading": "Suche läuft…",
     "find": "Asset suchen",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Erfassung per Etikett",
-    "title": "Erfassung per Etikett starten",
     "help": "Erstellen Sie einen dauerhaften Asset-Datensatz mit Mindestangaben und drucken Sie zwei Exemplare seines Etiketts. Scannen Sie später eines davon, um denselben Datensatz zu vervollständigen.",
     "client": "Kunde",
     "clientRequired": "Wählen Sie einen Kunden, um fortzufahren.",
     "createFailed": "Der Erfassungsdatensatz konnte nicht erstellt werden.",
     "name": "Kurzbeschreibung (optional)",
     "creating": "Wird erstellt…",
-    "createPrint": "Erstellen und Etikettenpaar drucken"
+    "createPrint": "Erstellen und Etikettenpaar drucken",
+    "modePrint": "Neue Etiketten drucken",
+    "modeResume": "Über Etikett fortsetzen"
   }
 }

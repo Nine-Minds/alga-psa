@@ -600,6 +600,7 @@
       "descriptionPlaceholder": "Include what you expected, what happened, and any client or invoice involved.",
       "replyTo": "Replies go to {{email}}",
       "success": "Sent to Nine Minds support. Replies go to {{email}}.",
+      "successWithTicket": "Sent to Nine Minds support as ticket {{ticketNumber}}. Replies go to {{email}}.",
       "submit": "Send to Nine Minds",
       "sending": "Sending…",
       "cancel": "Cancel",

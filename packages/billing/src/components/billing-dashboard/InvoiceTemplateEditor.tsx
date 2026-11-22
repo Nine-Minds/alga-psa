@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'; // Impo
 import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Correct function name
 import { IInvoiceTemplate } from '@alga-psa/types';
 import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
 import { Editor } from '@monaco-editor/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DesignerVisualWorkspace } from '../invoice-designer/DesignerVisualWorkspace';
@@ -34,6 +36,10 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const templateId = requestedTemplateId ?? createdTemplateId;
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
+  const focus = useDesignerFocusPreference('invoice_layout');
+  // In focus mode every level between the card and the designer shell passes the
+  // remaining height down, so the shell fills the window instead of a fixed budget.
+  const fillHeight = focus.isFocused ? 'flex min-h-0 flex-1 flex-col' : '';
   const router = useRouter();
   const searchParams = useSearchParams();
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
@@ -180,7 +186,8 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     return () => {
       window.removeEventListener('resize', calculateHeight);
     };
-  }, [isLoading]); // Recalculate if loading state changes (might affect layout)
+    // Focus mode moves the editor up the window, so its height is recomputed too.
+  }, [isLoading, focus.isFocused]);
 
 
   const handleSave = async () => {
@@ -290,8 +297,16 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   // One compact header row (title, name, status, actions) leaves the rest of the
   // window to the designer, so the page itself never needs to scroll while editing.
   return (
-    <Card>
-       <CardHeader className="pb-3">
+    <DesignerFocusSurface
+      id="invoice-template-editor-surface"
+      focused={focus.isFocused}
+      onFocusedChange={focus.setFocused}
+    >
+    <Card
+      className={fillHeight ? `${fillHeight} rounded-none border-0` : undefined}
+      style={focus.isFocused ? { boxShadow: 'none' } : undefined}
+    >
+       <CardHeader className="pb-3 shrink-0">
          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
            <BackNav>
              {t('templateEditor.actions.back', {
@@ -332,6 +347,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                  })
                  : t('templateEditor.fields.notSaved', { defaultValue: 'Not saved yet' })}
              </span>
+             <DesignerFocusToggle id="invoice-template-editor-focus-toggle" />
              <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>
                {t('templateEditor.actions.close', { defaultValue: 'Close' })}
              </Button>
@@ -348,8 +364,12 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
            </Alert>
          )}
        </CardHeader>
-       <CardContent className="pt-0">
-           <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
+       <CardContent className={`pt-0 ${fillHeight}`.trim()}>
+           <Tabs
+             value={editorTab}
+             onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}
+             className={fillHeight || undefined}
+           >
              <TabsList>
                <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">
                  {t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}
@@ -358,16 +378,23 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                  {t('templateEditor.tabs.code', { defaultValue: 'Code' })}
                </TabsTrigger>
              </TabsList>
-             <TabsContent value="visual" className="pt-3">
-               <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
+             <TabsContent value="visual" className={`pt-3 ${fillHeight}`.trim()}>
+               <div
+                 className={`border rounded overflow-hidden bg-card ${fillHeight}`.trim()}
+                 id="invoice-template-visual-designer"
+               >
                    <DesignerVisualWorkspace
                      previewPaused={isLoading}
                      visualWorkspaceTab={visualWorkspaceTab}
                      onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+                     fillHeight={focus.isFocused}
                    />
                  </div>
              </TabsContent>
-             <TabsContent value="code" className="pt-3">
+             <TabsContent
+               value="code"
+               className={`pt-3 ${focus.isFocused ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+             >
                <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
                  <AlertDescription>
                    {t('templateEditor.alerts.codeReadonly', {
@@ -400,6 +427,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
            </Tabs>
         </CardContent>
     </Card>
+    </DesignerFocusSurface>
   );
 };
 

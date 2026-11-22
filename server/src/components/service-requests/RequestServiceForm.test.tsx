@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { RequestServiceForm } from "./RequestServiceForm";
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from "./clientSubmissionKey";
+import type { BasicFormField } from "../../lib/service-requests/formSchema";
 
 describe("RequestServiceForm long-text fields", () => {
   afterEach(() => cleanup());
@@ -111,7 +112,7 @@ describe("RequestServiceForm live conditional visibility", () => {
     rules: [{ fieldKey: "vpn_reason", source: "needs_vpn", operator: "is-true" as const }],
     context: { requesterUserId: "user-1", clientId: "client-1", contactId: null },
   };
-  const fields = [
+  const fields: BasicFormField[] = [
     { key: "needs_vpn", type: "checkbox", label: "Needs VPN" },
     { key: "vpn_reason", type: "short-text", label: "VPN Reason", required: true },
   ];
@@ -221,5 +222,57 @@ describe("RequestServiceForm live conditional visibility", () => {
     await user.click(screen.getByRole("button", { name: "Submit request" }));
     expect(action).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("RequestServiceForm conditional sections", () => {
+  afterEach(() => cleanup());
+
+  const labels = {
+    selectPlaceholder: "Select",
+    datePlaceholder: "Date",
+    submit: "Submit request",
+    requiredField: "This field is required.",
+  };
+  const fields: BasicFormField[] = [
+    { key: "needs_laptop", type: "checkbox", label: "Needs a laptop?" },
+    {
+      key: "hardware",
+      type: "section",
+      label: "Hardware",
+      visibleWhen: [{ source: "needs_laptop", operator: "is-true" }],
+    },
+    { key: "laptop_model", type: "short-text", label: "Laptop model", required: true },
+  ];
+  const visibility = {
+    enabled: true,
+    rules: [{ fieldKey: "hardware", source: "needs_laptop", operator: "is-true" as const }],
+    context: { requesterUserId: "user-1", clientId: "client-1", contactId: null },
+  };
+
+  it("hides the section and the questions it owns, and submits neither", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={fields}
+        initialValues={{}}
+        visibility={visibility}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Hardware" })).toBeNull();
+    expect(document.getElementById("request-service-field-laptop_model")).toBeNull();
+
+    // The hidden question is required, yet submitting is not blocked by it.
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await user.click(screen.getByRole("checkbox", { name: "Needs a laptop?" }));
+    expect(screen.getByRole("heading", { name: "Hardware" })).toBeInTheDocument();
+    expect(document.getElementById("request-service-field-laptop_model")).not.toBeNull();
   });
 });

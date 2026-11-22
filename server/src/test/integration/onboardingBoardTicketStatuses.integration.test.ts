@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

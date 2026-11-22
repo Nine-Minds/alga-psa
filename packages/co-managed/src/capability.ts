@@ -28,6 +28,7 @@ import {
   registerCoManagedLifecycleProvider,
 } from '@alga-psa/licensing/lifecycle';
 import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
+import { whereEntitlementOperational } from '@alga-psa/licensing/entitlement-operational';
 import { CO_MANAGED_CAPABILITY } from './permissionsCapability';
 // Side effect: registers the seat authority resolver with the authorization kernel in every process that boots here.
 import './seatAuthority';
@@ -46,10 +47,11 @@ import './seatInvitationRegistration';
 
 const READ_REASON = 'co-managed capability resolver: pre-tenant-context participation read, filtered by tenant ids';
 
-/** Eligibility: has this tenant a durable (flag-independent) co-managed entitlement? */
+/** Eligibility: has this tenant a durable (flag-independent) co-managed entitlement that was ever active?
+ * A pending hosted row at capacity 0 (an unpaid observation) is not operational authority. */
 export async function hasCoManagedEntitlement(tenantId: string, db?: Knex): Promise<boolean> {
   const conn = db ?? await getAdminConnection();
-  const row = await tenantDb(conn, tenantId).table('co_managed_entitlements').first('tenant');
+  const row = await whereEntitlementOperational(tenantDb(conn, tenantId).table('co_managed_entitlements')).first('tenant');
   return Boolean(row);
 }
 
@@ -63,7 +65,7 @@ export async function coManagedParticipants(tenantIds: readonly string[], db?: K
   const [asCustomer, asSponsor, entitled, products] = await Promise.all([
     discovery.unscoped('co_management_relationships', READ_REASON).whereIn('tenant', ids).distinct('tenant'),
     discovery.unscoped('co_management_relationships', READ_REASON).whereIn('sponsor_tenant', ids).distinct('sponsor_tenant'),
-    discovery.unscoped('co_managed_entitlements', READ_REASON).whereIn('tenant', ids).select('tenant'),
+    whereEntitlementOperational(discovery.unscoped('co_managed_entitlements', READ_REASON).whereIn('tenant', ids)).select('tenant'),
     discovery.unscoped('tenants', READ_REASON).whereIn('tenant', ids).where('product_code', 'co_managed').select('tenant'),
   ]);
   return new Set<string>([

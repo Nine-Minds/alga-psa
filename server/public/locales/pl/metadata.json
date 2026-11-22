@@ -445,6 +445,9 @@
       "detail": {
         "fallbackTitle": "Zgłoszenie serwisowe"
       },
+      "formBuilder": {
+        "title": "Kreator formularza"
+      },
       "submit": {
         "title": "Prześlij zgłoszenie usługi"
       }
