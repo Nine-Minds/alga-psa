@@ -13,11 +13,10 @@ import type {
 import { toPublicProvider } from './toPublicProvider';
 import { requireOutboundEmailAdmin, requireOutboundEmailReader } from './mspOutboundEmailAccess';
 import { assertSafeOutboundUrl, UnsafeOutboundUrlError } from '../../lib/outboundUrlPolicy';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
-import axios from 'axios';
-import https from 'node:https';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -1660,15 +1659,19 @@ export const testEmailProviderConnection = withAuth(async (
               'missing_config'
             );
           }
-          let tokenTarget: Awaited<ReturnType<typeof assertSafeImapOauthTokenEndpoint>>;
+          // Legacy rows may predate URL validation at save time. Reject them
+          // before reading tenant credentials, then pin fresh DNS at send time.
           try {
-            tokenTarget = await assertSafeImapOauthTokenEndpoint(config.oauth_token_url);
+            await assertPublicHttpsUrl(config.oauth_token_url);
+            await assertSafeImapOauthTokenEndpoint(config.oauth_token_url);
           } catch {
+            console.warn('IMAP OAuth token URL rejected by outbound policy');
             return emailProviderOperationError(
-              'IMAP OAuth token endpoint is not an allowed target.',
+              'The IMAP OAuth token URL is not allowed. Update the OAuth settings and reconnect the mailbox.',
               'missing_config'
             );
           }
+
           const secretNames = getImapOauthSecretNames(config);
           const secretRefreshToken = await secretProvider.getTenantSecret(tenant, secretNames.refreshToken);
           const refreshToken = secretRefreshToken || config.refresh_token;
@@ -1692,28 +1695,11 @@ export const testEmailProviderConnection = withAuth(async (
             params.append('client_secret', clientSecret as string);
           }
 
-          // Rows saved before issuer binding existed may hold any URL; never send
-          // a refresh token or client secret to one that fails the policy.
-          try {
-            await assertSafeOutboundUrl(config.oauth_token_url);
-          } catch (policyError) {
-            console.warn('IMAP OAuth token URL rejected by outbound policy:', policyError);
-            return emailProviderOperationError(
-              'The IMAP OAuth token URL is not allowed. Update the OAuth settings and reconnect the mailbox.',
-              'missing_config'
-            );
-          }
-
           let response;
           try {
-            response = await axios.post(config.oauth_token_url, params as any, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              maxRedirects: 0,
-              proxy: false,
-              httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
-            });
-          } catch (oauthError) {
-            console.warn('IMAP OAuth token refresh failed:', oauthError);
+            response = await postSafeOutboundForm<{ access_token: string; expires_in?: number }>(config.oauth_token_url, params);
+          } catch {
+            console.warn('IMAP OAuth token refresh failed');
             return emailProviderOperationError(
               'IMAP OAuth token refresh failed. Reconnect the mailbox and try again.',
               'oauth_refresh_failed'

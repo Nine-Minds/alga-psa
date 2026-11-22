@@ -4,11 +4,10 @@
  * secret resolution and persistence behavior without import cycles.
  */
 
-import axios from 'axios';
-import https from 'node:https';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
 import {
   assertImapOauthCredentialIssuerBound,
   assertSafeImapOauthTokenEndpoint,
@@ -83,10 +82,11 @@ export async function refreshImapAccessToken(params: {
     throw new Error('IMAP OAuth token URL or client ID missing');
   }
 
-  // Check the durable DB binding before reading secrets: CompositeSecretProvider
-  // may still return an environment fallback after its write provider deletes a key.
+  // Check the durable DB binding before reading secrets: secret-provider
+  // fallbacks must not revive credentials for a different token issuer.
   assertImapOauthCredentialIssuerBound(provider);
-  const tokenTarget = await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
+  await assertPublicHttpsUrl(provider.oauth_token_url);
+  await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
 
   const { clientSecret, refreshToken } = await getImapOauthSecrets(provider);
   if (!refreshToken) {
@@ -101,12 +101,12 @@ export async function refreshImapAccessToken(params: {
     paramsBody.append('client_secret', clientSecret);
   }
 
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    maxRedirects: 0,
-    proxy: false,
-    httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
-  });
+  let response;
+  try {
+    response = await postSafeOutboundForm<{ access_token?: string; expires_in?: number }>(provider.oauth_token_url, paramsBody);
+  } catch {
+    throw new Error('IMAP OAuth token refresh failed');
+  }
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {
     throw new Error('IMAP OAuth refresh returned no access token');
