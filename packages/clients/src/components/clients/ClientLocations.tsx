@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
-import type { IClientLocation } from '@alga-psa/types';
+import type { IClientLocation, ClientLocationView } from '@alga-psa/types';
 import { 
   getClientLocations, 
   createClientLocation, 
@@ -57,7 +57,7 @@ interface ClientLocationsProps {
   clientId: string;
   isEditing: boolean;
   /** Quick-view callers must provide the authorized, field-masked loader. */
-  loadLocations?: () => Promise<IClientLocation[] | null>;
+  loadLocations?: () => Promise<ClientLocationView[] | null>;
   /** Quick-view caller applies source-project and field-mask checks before a location update. */
   updateLocation?: (locationId: string, patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>) => Promise<void | ClientLocationActionError>;
 }
@@ -101,11 +101,11 @@ interface LocationFormData {
 }
 
 interface LocationCardProps {
-  location: IClientLocation;
-  onEdit: (location: IClientLocation) => void;
+  location: ClientLocationView;
+  onEdit: (location: ClientLocationView) => void;
   onDelete: (locationId: string) => void;
   onSetDefault: (locationId: string) => void;
-  formatAddress: (location: IClientLocation) => string;
+  formatAddress: (location: ClientLocationView) => string;
   showActions?: boolean;
 }
 
@@ -214,7 +214,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 helperText={t('clients.locations.card.phoneHelper', 'Phone number for this location')}
               >
                 <div className="mt-1">
-                  <><span>{t('clients.locations.card.phoneLabel', 'Phone')}: </span><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code} /></>
+                  <><span>{t('clients.locations.card.phoneLabel', 'Phone')}: </span><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code ?? undefined} /></>
                 </div>
               </LocationDetailField>
             )}
@@ -314,10 +314,10 @@ const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles
 
 export default function ClientLocations({ clientId, isEditing, loadLocations: loadAuthorizedLocations, updateLocation: updateAuthorizedLocation }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
-  const [locations, setLocations] = useState<IClientLocation[]>([]);
+  const [locations, setLocations] = useState<ClientLocationView[]>([]);
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<IClientLocation | null>(null);
+  const [editingLocation, setEditingLocation] = useState<ClientLocationView | null>(null);
   const [formData, setFormData] = useState<LocationFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
@@ -325,10 +325,12 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
   const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [locationToDelete, setLocationToDelete] = useState<IClientLocation | null>(null);
+  const [locationToDelete, setLocationToDelete] = useState<ClientLocationView | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const loadRequestRef = useRef(0);
+  const savedFormRef = useRef<LocationFormData | null>(null);
+  const isFieldRedacted = (field: keyof LocationFormData) => editingLocation?.redactedFields?.includes(field) ?? false;
   const { toast } = useToast();
 
   // Form field automation IDs
@@ -547,6 +549,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
 
   const handleAddLocation = () => {
     setEditingLocation(null);
+    savedFormRef.current = null;
     setFormData({
       ...initialFormData,
       ...(tenantDefaultCountry
@@ -565,7 +568,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
    * Kingdom". Match the stored name instead, so the field shows the country and
    * saving repairs the code.
    */
-  const storedCountryForPicker = (location: IClientLocation) => {
+  const storedCountryForPicker = (location: ClientLocationView) => {
     const code = (location.country_code || '').trim().toUpperCase();
     if (!code || !countries.some((country) => country.code === code)) {
       const name = (location.country_name || '').trim().toLowerCase();
@@ -574,17 +577,17 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
         return { country_code: byName.code, country_name: byName.name };
       }
     }
-    return { country_code: location.country_code, country_name: location.country_name };
+    return { country_code: location.country_code ?? '', country_name: location.country_name ?? '' };
   };
 
-  const handleEditLocation = (location: IClientLocation) => {
+  const handleEditLocation = (location: ClientLocationView) => {
     setEditingLocation(location);
-    setFormData({
+    const nextFormData: LocationFormData = {
       location_name: location.location_name || '',
-      address_line1: location.address_line1,
+      address_line1: location.address_line1 ?? '',
       address_line2: location.address_line2 || '',
       address_line3: location.address_line3 || '',
-      city: location.city,
+      city: location.city ?? '',
       state_province: location.state_province || '',
       postal_code: location.postal_code || '',
       ...storedCountryForPicker(location),
@@ -599,7 +602,15 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
       default_billing_profile_id: location.default_billing_profile_id ?? null,
       is_shipping_address: location.is_shipping_address || false,
       is_default: location.is_default || false
-    });
+    };
+    savedFormRef.current = {
+      ...nextFormData,
+      country_code: location.country_code ?? '',
+      country_name: location.country_name ?? '',
+    };
+    setFormData(nextFormData);
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
     setIsDialogOpen(true);
   };
 
@@ -614,13 +625,13 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
     const errors: string[] = [];
     
     // Validate required fields
-    if (!formData.address_line1.trim()) {
+    if (!isFieldRedacted('address_line1') && !formData.address_line1.trim()) {
       errors.push(t('clients.locations.form.addressLine1', 'Address Line 1'));
     }
-    if (!formData.city.trim()) {
+    if (!isFieldRedacted('city') && !formData.city.trim()) {
       errors.push(t('clients.locations.form.city', 'City'));
     }
-    if (!formData.country_code || !formData.country_name) {
+    if ((!isFieldRedacted('country_code') && !formData.country_code) || (!isFieldRedacted('country_name') && !formData.country_name)) {
       errors.push(t('clients.locations.form.country', 'Country'));
     }
     
@@ -640,7 +651,11 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
       };
 
       if (editingLocation) {
-        const { client_id, ...updateData } = locationData;
+        const updateData = Object.fromEntries(Object.entries(locationData).filter(([field, value]) =>
+          field !== 'client_id'
+          && !isFieldRedacted(field as keyof LocationFormData)
+          && value !== savedFormRef.current?.[field as keyof LocationFormData]
+        ));
         const result = updateAuthorizedLocation
           ? await updateAuthorizedLocation(editingLocation.location_id, updateData)
           : await updateClientLocation(editingLocation.location_id, updateData);
@@ -759,7 +774,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
     }));
   };
 
-  const formatAddress = (location: IClientLocation) => {
+  const formatAddress = (location: ClientLocationView) => {
     const addressParts: string[] = [];
     
     // Combine address lines (address_line1, address_line2, address_line3)
@@ -887,7 +902,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               type="button"
               onClick={() => (document.getElementById('client-location-form') as HTMLFormElement | null)?.requestSubmit()}
               disabled={isLoading}
-              className={!formData.address_line1 || !formData.city || !formData.country_name ? 'opacity-50' : ''}
+              className={(!isFieldRedacted('address_line1') && !formData.address_line1) || (!isFieldRedacted('city') && !formData.city) || (!isFieldRedacted('country_name') && !formData.country_name) ? 'opacity-50' : ''}
             >
               {isLoading
                 ? t('status.saving', 'Saving...')
@@ -915,6 +930,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <Label htmlFor="location-name-input">{t('clients.locations.form.locationName', 'Location Name')}</Label>
               <Input
                 id="location-name-input"
+                disabled={isFieldRedacted('location_name')}
                 value={formData.location_name}
                 onChange={(e) => {
                   setFormData(prev => ({ ...prev, location_name: e.target.value }));
@@ -925,17 +941,18 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
             </div>
             
             <div {...addressLine1FieldProps}>
-              <Label htmlFor="address-line1-input">{t('clients.locations.form.addressLine1', 'Address Line 1')} *</Label>
+              <Label htmlFor="address-line1-input">{t('clients.locations.form.addressLine1', 'Address Line 1')}{!isFieldRedacted('address_line1') && ' *'}</Label>
               <Input
                 id="address-line1-input"
+                disabled={isFieldRedacted('address_line1')}
                 value={formData.address_line1}
                 onChange={(e) => {
                   setFormData(prev => ({ ...prev, address_line1: e.target.value }));
                   clearErrorIfSubmitted();
                 }}
                 placeholder={t('clients.locations.form.placeholder.addressLine1', 'Enter address *')}
-                className={hasAttemptedSubmit && !formData.address_line1.trim() ? 'border-red-500' : ''}
-                required
+                className={hasAttemptedSubmit && !isFieldRedacted('address_line1') && !formData.address_line1.trim() ? 'border-red-500' : ''}
+                required={!isFieldRedacted('address_line1')}
               />
             </div>
             
@@ -943,6 +960,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <Label htmlFor="address-line2-input">{t('clients.locations.form.addressLine2', 'Address Line 2')}</Label>
               <Input
                 id="address-line2-input"
+                disabled={isFieldRedacted('address_line2')}
                 value={formData.address_line2}
                 onChange={(e) => setFormData(prev => ({ ...prev, address_line2: e.target.value }))}
               />
@@ -952,6 +970,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <Label htmlFor="address-line3-input">{t('clients.locations.form.addressLine3', 'Address Line 3')}</Label>
               <Input
                 id="address-line3-input"
+                disabled={isFieldRedacted('address_line3')}
                 value={formData.address_line3}
                 onChange={(e) => setFormData(prev => ({ ...prev, address_line3: e.target.value }))}
               />
@@ -959,17 +978,18 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
             
             <div className="grid grid-cols-2 gap-4">
               <div {...cityFieldProps}>
-                <Label htmlFor="city-input">{t('clients.locations.form.city', 'City')} *</Label>
+                <Label htmlFor="city-input">{t('clients.locations.form.city', 'City')}{!isFieldRedacted('city') && ' *'}</Label>
                 <Input
                   id="city-input"
+                  disabled={isFieldRedacted('city')}
                   value={formData.city}
                   onChange={(e) => {
                     setFormData(prev => ({ ...prev, city: e.target.value }));
                     clearErrorIfSubmitted();
                   }}
                   placeholder={t('clients.locations.form.placeholder.city', 'Enter city *')}
-                  className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
-                  required
+                  className={hasAttemptedSubmit && !isFieldRedacted('city') && !formData.city.trim() ? 'border-red-500' : ''}
+                  required={!isFieldRedacted('city')}
                 />
               </div>
               
@@ -977,6 +997,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
                 <Label htmlFor="state-province-input">{t('clients.locations.form.stateProvince', 'State/Province')}</Label>
                 <Input
                   id="state-province-input"
+                  disabled={isFieldRedacted('state_province')}
                   value={formData.state_province}
                   onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
                 />
@@ -986,14 +1007,15 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
                 <Label htmlFor="postal-code-input">{t('clients.locations.form.postalCode', 'Postal Code')}</Label>
                 <Input
                   id="postal-code-input"
+                  disabled={isFieldRedacted('postal_code')}
                   value={formData.postal_code}
                   onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
                 />
               </div>
               
               <div {...countryPickerFieldProps}>
-                <Label htmlFor="country-picker">{t('clients.locations.form.country', 'Country')} *</Label>
-                <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                <Label htmlFor="country-picker">{t('clients.locations.form.country', 'Country')}{!isFieldRedacted('country_code') && ' *'}</Label>
+                <div className={hasAttemptedSubmit && !isFieldRedacted('country_code') && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                   <CountryPicker
                     data-automation-id="country-picker"
                     value={formData.country_code}
@@ -1002,7 +1024,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
                       clearErrorIfSubmitted();
                     }}
                     countries={countries}
-                    disabled={isLoadingCountries || isLoading}
+                    disabled={isLoadingCountries || isLoading || isFieldRedacted('country_code') || isFieldRedacted('country_name')}
                     placeholder={isLoadingCountries
                       ? t('clients.locations.form.placeholder.loadingCountries', 'Loading countries...')
                       : t('clients.locations.form.placeholder.country', 'Select Country *')}
@@ -1013,6 +1035,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               
               <div {...phoneFieldProps}>
                 <PhoneInput
+                  disabled={isFieldRedacted('phone') || isFieldRedacted('phone_extension')}
                   label={t('clients.locations.form.phone', 'Phone')}
                   value={formData.phone || ''}
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
@@ -1029,6 +1052,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
                 <Label htmlFor="email-input" className="block">{t('clients.locations.form.email', 'Email')}</Label>
                 <Input
                   id="email-input"
+                  disabled={isFieldRedacted('email')}
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
@@ -1040,6 +1064,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <Label htmlFor="tax-region-select">{t('clients.locations.form.taxRegion', 'Tax Region')}</Label>
               <CustomSelect
                 id="tax-region-select"
+                disabled={isFieldRedacted('region_code')}
                 value={formData.region_code || 'none'}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, region_code: value === 'none' ? null : value }))}
                 options={[
@@ -1057,6 +1082,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <Label htmlFor="notes-input">{t('clients.locations.form.notes', 'Notes')}</Label>
               <TextArea
                 id="notes-input"
+                disabled={isFieldRedacted('notes')}
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={3}
@@ -1067,6 +1093,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <div className="flex items-center space-x-2" {...isDefaultFieldProps}>
                 <Switch
                   id="is-default-switch"
+                  disabled={isFieldRedacted('is_default')}
                   checked={formData.is_default}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_default: checked }))}
                 />
@@ -1076,6 +1103,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <div className="flex items-center space-x-2" {...isBillingAddressFieldProps}>
                 <Switch
                   id="is-billing-address-switch"
+                  disabled={isFieldRedacted('is_billing_address')}
                   checked={formData.is_billing_address}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_billing_address: checked }))}
                 />
@@ -1085,6 +1113,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
               <div className="flex items-center space-x-2" {...isShippingAddressFieldProps}>
                 <Switch
                   id="is-shipping-address-switch"
+                  disabled={isFieldRedacted('is_shipping_address')}
                   checked={formData.is_shipping_address}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_shipping_address: checked }))}
                 />
@@ -1101,6 +1130,7 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
             */}
             <BillingProfilePicker
               id="location-default-billing-profile"
+              disabled={isFieldRedacted('default_billing_profile_id')}
               clientId={clientId}
               loadProfiles={loadClientBillingProfiles}
               value={formData.default_billing_profile_id ?? null}

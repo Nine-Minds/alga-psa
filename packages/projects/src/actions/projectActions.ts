@@ -7,6 +7,7 @@ import ProjectTaskModel from '../models/projectTask';
 import type {
   IClient,
   IClientLocation,
+  ClientLocationView,
   IClientWithLocation,
   IProject,
   IProjectPhase,
@@ -101,6 +102,29 @@ function isClientQuickViewFieldHidden(redactedFields: readonly string[], field: 
     ...aliases,
     ...aliases.map((alias) => `clients.${alias}`),
   ]);
+}
+
+const CLIENT_LOCATION_FIELD_SOURCES: Partial<Record<keyof IClientLocation, string>> = {
+  email: 'location_email',
+  phone: 'location_phone', phone_extension: 'location_phone',
+  fax: 'location_phone', fax_extension: 'location_phone',
+  address_line1: 'location_address', address_line2: 'location_address', address_line3: 'location_address',
+  city: 'location_address', state_province: 'location_address', postal_code: 'location_address',
+  country_code: 'location_address', country_name: 'location_address', region_code: 'location_address',
+};
+const CLIENT_LOCATION_READ_ONLY_FIELDS = new Set([
+  'location_id', 'client_id', 'tenant', 'created_at', 'updated_at', 'redactedFields',
+]);
+
+function isClientLocationFieldHidden(redactedFields: readonly string[], field: string): boolean {
+  return isClientQuickViewFieldHidden(redactedFields, CLIENT_LOCATION_FIELD_SOURCES[field as keyof IClientLocation] ?? field)
+    || isCoManagedReadFieldHidden(redactedFields, [field, `clients.${field}`, `client_locations.${field}`]);
+}
+
+function isClientLocationResourceHidden(redactedFields: readonly string[]): boolean {
+  return isCoManagedResourceHidden(redactedFields, ['client_locations'])
+    || isClientLocationFieldHidden(redactedFields, 'location_id')
+    || isClientLocationFieldHidden(redactedFields, 'client_id');
 }
 
 type ProjectScheduleAmountRow = {
@@ -508,7 +532,7 @@ export const getProjectClientLocationsQuickView = withAuth(async (
   { tenant },
   clientId: string,
   sourceProjectId?: string,
-): Promise<IClientLocation[] | null> => {
+): Promise<ClientLocationView[] | null> => {
   const { knex } = await createTenantKnex();
   if (!await hasPermission(user, 'client', 'read', knex)) {
     throw new Error('Permission denied: Cannot read clients');
@@ -522,6 +546,7 @@ export const getProjectClientLocationsQuickView = withAuth(async (
       trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
     );
     if (!redactedFields) return null;
+    if (isClientLocationResourceHidden(redactedFields)) return [];
 
     const locations = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
       .where({ client_id: clientId, is_active: true })
@@ -529,26 +554,12 @@ export const getProjectClientLocationsQuickView = withAuth(async (
       .orderBy('location_name', 'asc');
 
     return locations.map((location) => {
-      const masked = { ...location } as Record<string, any>;
-      if (isClientQuickViewFieldHidden(redactedFields, 'location_email')) masked.email = null;
-      if (isClientQuickViewFieldHidden(redactedFields, 'location_phone')) {
-        masked.phone = null;
-        masked.phone_extension = null;
-        masked.fax = null;
-        masked.fax_extension = null;
+      const hiddenFields = Object.keys(location).filter((field) => isClientLocationFieldHidden(redactedFields, field));
+      const masked: Record<string, unknown> = { ...location };
+      for (const field of hiddenFields) {
+        masked[field] = null;
       }
-      if (isClientQuickViewFieldHidden(redactedFields, 'location_address')) {
-        masked.address_line1 = null;
-        masked.address_line2 = null;
-        masked.address_line3 = null;
-        masked.city = null;
-        masked.state_province = null;
-        masked.postal_code = null;
-        masked.country_code = null;
-        masked.country_name = null;
-        masked.region_code = null;
-      }
-      return masked as IClientLocation;
+      return { ...masked, redactedFields: hiddenFields } as ClientLocationView;
     });
   });
 });
@@ -577,6 +588,9 @@ export const updateProjectClientLocationQuickView = withAuth(async (
       trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
     );
     if (!redactedFields) return null;
+    if (isClientLocationResourceHidden(redactedFields)) {
+      throw new Error('Permission denied: Cannot read client locations');
+    }
     const location = await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
       .where({ client_id: clientId, location_id: locationId, is_active: true })
       .first();
@@ -585,18 +599,10 @@ export const updateProjectClientLocationQuickView = withAuth(async (
   if (!authorization) return actionError('Location not found');
 
   const safePatch = { ...updateData } as Record<string, unknown>;
-  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_email')) delete safePatch.email;
-  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_phone')) {
-    delete safePatch.phone;
-    delete safePatch.phone_extension;
-    delete safePatch.fax;
-    delete safePatch.fax_extension;
-  }
-  if (isClientQuickViewFieldHidden(authorization.redactedFields, 'location_address')) {
-    for (const field of [
-      'address_line1', 'address_line2', 'address_line3', 'city', 'state_province',
-      'postal_code', 'country_code', 'country_name', 'region_code',
-    ]) delete safePatch[field];
+  for (const field of Object.keys(safePatch)) {
+    if (CLIENT_LOCATION_READ_ONLY_FIELDS.has(field) || isClientLocationFieldHidden(authorization.redactedFields, field)) {
+      delete safePatch[field];
+    }
   }
 
   const result = await updateClientLocation(locationId, safePatch as Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>);

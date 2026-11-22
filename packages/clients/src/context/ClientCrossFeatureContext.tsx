@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import type { IClient, IClientLocation, IClientWithLocation, ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
+import type { IClient, IClientLocation, ClientLocationView, IClientWithLocation, ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ClientSoftwareSummaryParams, ClientSoftwareSummaryResponse } from '@alga-psa/types';
 
@@ -177,7 +177,7 @@ export interface ClientCrossFeatureCallbacks {
     sourceProjectId?: string,
   ) => Promise<IClientWithLocation | IClient | ActionMessageError | ActionPermissionError | null>;
   /** Authorization and field-mask boundary for locations shown inside a quick view. */
-  loadClientQuickViewLocations?: (clientId: string, sourceProjectId?: string) => Promise<IClientLocation[] | null>;
+  loadClientQuickViewLocations?: (clientId: string, sourceProjectId?: string) => Promise<ClientLocationView[] | null>;
   /** Partial location update that preserves fields hidden from this quick view. */
   updateClientQuickViewLocation?: (
     clientId: string,

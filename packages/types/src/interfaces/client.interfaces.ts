@@ -123,6 +123,13 @@ export interface IClientLocation extends TenantEntity {
   updated_at?: ISO8601String;
 }
 
+/** A location read projection; hidden values are null and cannot be edited in the form. */
+export type ClientLocationView = {
+  [Field in keyof IClientLocation]: IClientLocation[Field] | null;
+} & Pick<IClientLocation, 'location_id' | 'client_id'> & {
+  redactedFields?: Array<keyof IClientLocation>;
+};
+
 // Type for client with default location data joined
 export interface IClientWithLocation extends IClient {
   location_email?: string;

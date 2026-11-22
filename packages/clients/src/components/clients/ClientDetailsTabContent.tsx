@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { IClient, IClientLocation, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { IClient, IClientLocation, ClientLocationView, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
@@ -179,7 +179,7 @@ export interface ClientDetailsTabContentProps {
   isLoadingSlaPolicies: boolean;
   isInDrawer: boolean;
   locationsRefreshKey: number;
-  loadQuickViewLocations?: () => Promise<IClientLocation[] | null>;
+  loadQuickViewLocations?: () => Promise<ClientLocationView[] | null>;
   updateQuickViewLocation?: (
     locationId: string,
     patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>,

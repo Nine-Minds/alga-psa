@@ -301,7 +301,47 @@ describe('project action authorization boundaries', () => {
       country_code: null, country_name: null, region_code: null,
     })]);
     expect(JSON.stringify(result)).not.toContain('SECRET');
+    expect(result?.[0].redactedFields).toEqual(expect.arrayContaining(['email', 'phone', 'address_line1', 'city', 'country_code']));
     expect(state.queryTable).toHaveBeenCalledWith('client_locations');
+  });
+
+  it.each([
+    ['fields.client_locations.email', 'email'],
+    ['fields.notes', 'notes'],
+    ['fields.location_phone', 'phone'],
+    ['fields.location_address', 'address_line1'],
+  ])('carries the %s field mask to the form and preserves it on writes', async (redaction, field) => {
+    state.clientRows = [{ client_id: 'c1' }];
+    state.clientDecisions.set('c1', { allowed: true, redactedFields: [redaction] });
+    state.locationRows = [{ location_id: 'l1', client_id: 'c1', location_name: 'HQ', [field]: 'PRIVATE' }];
+    const rows = await getProjectClientLocationsQuickView('c1');
+    expect(rows?.[0]).toMatchObject({ [field]: null, redactedFields: expect.arrayContaining([field]) });
+
+    await updateProjectClientLocationQuickView('c1', 'l1', { location_name: 'Renamed', [field]: '' });
+    expect(state.updateQuickViewLocation).toHaveBeenCalledWith('l1', { location_name: 'Renamed' });
+  });
+
+  it.each(['fields.client_locations', 'fields.client_locations.location_id', 'fields.client_locations.client_id'])(
+    'does not expose a location whose identity or resource is hidden by %s', async (redaction) => {
+      state.clientRows = [{ client_id: 'c1' }];
+      state.clientDecisions.set('c1', { allowed: true, redactedFields: [redaction] });
+      await expect(getProjectClientLocationsQuickView('c1')).resolves.toEqual([]);
+      expect(state.queryTable).not.toHaveBeenCalledWith('client_locations');
+      await expect(updateProjectClientLocationQuickView('c1', 'l1', { location_name: 'Renamed' }))
+        .rejects.toThrow('Permission denied');
+      expect(state.updateQuickViewLocation).not.toHaveBeenCalled();
+    },
+  );
+
+  it('never forwards caller-supplied location identity or projection metadata into the writer', async () => {
+    state.clientRows = [{ client_id: 'c1' }];
+    state.clientDecisions.set('c1', { allowed: true, redactedFields: [] });
+    state.locationRows = [{ location_id: 'l1', client_id: 'c1' }];
+    await updateProjectClientLocationQuickView('c1', 'l1', {
+      location_name: 'Renamed', client_id: 'other-client', tenant: 'other-tenant',
+      location_id: 'other-location', redactedFields: [],
+    } as any);
+    expect(state.updateQuickViewLocation).toHaveBeenCalledWith('l1', { location_name: 'Renamed' });
   });
 
   it('does not return locations after coarse client-read denial', async () => {

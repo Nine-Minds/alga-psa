@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { createElement, useCallback } from 'react';
 import { toast as hotToast } from 'react-hot-toast';
 
 interface ToastOptions {
@@ -19,7 +19,7 @@ function renderToastContent({ title, description }: ToastOptions) {
 }
 
 export function useToast() {
-  const toast = (options: ToastOptions | string) => {
+  const toast = useCallback((options: ToastOptions | string) => {
     if (typeof options === 'string') {
       return hotToast(options);
     }
@@ -31,7 +31,7 @@ export function useToast() {
     }
 
     return hotToast.success(content);
-  };
+  }, []);
 
   return { toast, toasts: [] as ToastOptions[] };
 }

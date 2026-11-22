@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
+import type { ClientLocationView } from '@alga-psa/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,9 +9,9 @@ const actions = vi.hoisted(() => ({
   updateClient: vi.fn(async (_id: string, patch: any, _projectId?: string) => ({ client_id: _id, ...patch })),
   loadClientQuickView: vi.fn(),
   updateClientQuickView: vi.fn(),
-  loadClientQuickViewLocations: vi.fn(async () => []),
+  loadClientQuickViewLocations: vi.fn(async (): Promise<ClientLocationView[]> => []),
   updateClientQuickViewLocation: vi.fn(async () => undefined),
-  getUnrestrictedLocations: vi.fn(async () => { throw new Error('quick-view must not use the unrestricted location action'); }),
+  getUnrestrictedLocations: vi.fn(async (..._args: unknown[]) => { throw new Error('quick-view must not use the unrestricted location action'); }),
   getSlaPolicies: vi.fn(async () => []),
   startEntraSync: vi.fn(),
   entraFeatureEnabled: false,
@@ -125,8 +126,9 @@ describe('ClientQuickView project drawer workflows', () => {
     actions.loadClientQuickView.mockReset().mockImplementation((clientId: string, sourceProjectId?: string) => actions.loadClient(clientId, sourceProjectId));
     actions.updateClientQuickView.mockReset().mockImplementation((clientId: string, patch: any, sourceProjectId?: string) => actions.updateClient(clientId, patch, sourceProjectId));
     actions.loadClientQuickViewLocations.mockReset().mockResolvedValue([{
-      location_id: 'location-1', client_id: 'client-1', location_name: 'HQ', email: null, phone: null,
-      address_line1: null, city: null, is_active: true, is_default: true,
+      location_id: 'location-1', client_id: 'client-1', tenant: 'tenant-1', location_name: 'HQ', email: null, phone: null,
+      address_line1: null, city: null, country_code: null, country_name: null, is_active: true, is_default: true,
+      redactedFields: ['email', 'phone', 'address_line1', 'city', 'country_code', 'country_name'],
     }]);
     actions.updateClientQuickViewLocation.mockReset().mockResolvedValue(undefined);
     actions.startEntraSync.mockReset();
