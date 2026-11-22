@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { findBoardFieldProblems } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { isClientUser } from './mspOutboundEmailAccess';
 import { requireInboundTicketDefaultsAdmin } from './mspInboundTicketDefaultsAccess';
 import type { InboundTicketDefaults } from '@alga-psa/types';
@@ -76,10 +77,33 @@ const assertTicketStatusBelongsToBoard = async (
   }
 };
 
+/**
+ * R3 at the save boundary. These defaults are a writer configuration, not a ticket: inbound email
+ * creates every ticket on this board with this priority, so a row holding the other family's
+ * priority silently sends them all to the board's default. The whole effective pair is checked on
+ * every save, including one that only touches the description, so a row saved before the rule
+ * existed has to be fixed before it can be saved again.
+ */
+const assertPriorityFitsBoard = async (
+  knex: DefaultsKnex,
+  tenant: string,
+  boardId: string,
+  priorityId: string
+): Promise<void> => {
+  const problems = await findBoardFieldProblems(knex, tenant, { boardId, priorityId });
+  const problem = problems.find((candidate) => candidate.field === 'priority_id');
+  if (problem) {
+    expectedInboundTicketDefaultsError(
+      problem.message,
+      problem.messageKey ?? 'msp/email-providers:errors.inboundDefaults.priorityNotValidForBoard'
+    );
+  }
+};
+
 export const getInboundTicketDefaults = withAuth(async (
   user,
   { tenant }
-): Promise<{ defaults: InboundTicketDefaults[]; error?: string }> => {
+): Promise<{ defaults: InboundTicketDefaults[]; priorityMismatchIds?: string[]; error?: string }> => {
   if (isClientUser(user)) return { defaults: [], error: 'Permission denied' };
   const { knex } = await createTenantKnex();
   const access = await requireInboundTicketDefaultsAdmin(user, knex, 'read');
@@ -107,7 +131,19 @@ export const getInboundTicketDefaults = withAuth(async (
         'updated_at'
       );
 
-    return { defaults };
+    // Rows stored before R3 was enforced: the list badges them, because every email they match
+    // gets the board's default priority instead of the one configured here.
+    const priorityMismatchIds: string[] = [];
+    for (const row of defaults) {
+      if (!row.board_id || !row.priority_id) continue;
+      const problems = await findBoardFieldProblems(knex, tenant, {
+        boardId: row.board_id,
+        priorityId: row.priority_id,
+      });
+      if (problems.some((problem) => problem.field === 'priority_id')) priorityMismatchIds.push(row.id);
+    }
+
+    return { defaults, priorityMismatchIds };
   } catch (error) {
     console.error('Failed to load inbound ticket defaults:', error);
     return {
@@ -147,6 +183,7 @@ export const createInboundTicketDefaults = withAuth(async (
     }
 
     await assertTicketStatusBelongsToBoard(knex, tenant, data.board_id, data.status_id);
+    await assertPriorityFitsBoard(knex, tenant, data.board_id, data.priority_id);
 
     const locationId = data.location_id || null;
     if (locationId) {
@@ -249,6 +286,13 @@ export const updateInboundTicketDefaults = withAuth(async (
       }
 
       await assertTicketStatusBelongsToBoard(knex, tenant, finalBoardId, finalStatusId);
+    }
+
+    // The effective pair, whatever this patch touched: see assertPriorityFitsBoard.
+    const effectiveBoardId = data.board_id !== undefined ? data.board_id : current.board_id;
+    const effectivePriorityId = data.priority_id !== undefined ? data.priority_id : current.priority_id;
+    if (effectiveBoardId && effectivePriorityId) {
+      await assertPriorityFitsBoard(knex, tenant, effectiveBoardId, effectivePriorityId);
     }
 
     const finalClientId = data.client_id !== undefined ? data.client_id : current.client_id;

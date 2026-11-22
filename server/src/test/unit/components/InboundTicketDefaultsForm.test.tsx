@@ -16,6 +16,7 @@ const {
   mockCreateInboundTicketDefaults,
   mockUpdateInboundTicketDefaults,
   mockGetAllPriorities,
+  mockGetPrioritiesByBoardType,
   mockGetAllUsersBasic,
   pickerClients,
   mockGetUserAvatarUrlsBatchAction,
@@ -26,6 +27,7 @@ const {
   mockCreateInboundTicketDefaults: vi.fn(),
   mockUpdateInboundTicketDefaults: vi.fn(),
   mockGetAllPriorities: vi.fn(),
+  mockGetPrioritiesByBoardType: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
   // Options the mocked ClientPicker offers; the real picker searches on the server.
   pickerClients: { current: [] as any[] },
@@ -182,6 +184,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 vi.mock('@alga-psa/reference-data/actions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
+  getPrioritiesByBoardType: mockGetPrioritiesByBoardType,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -236,6 +239,7 @@ describe('InboundTicketDefaultsForm', () => {
     mockGetCategoriesByBoard.mockResolvedValue({ categories: [] });
     pickerClients.current = sampleClients;
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
+    mockGetPrioritiesByBoardType.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
     mockGetUserAvatarUrlsBatchAction.mockResolvedValue({});
   });
@@ -350,6 +354,166 @@ describe('InboundTicketDefaultsForm', () => {
     });
 
     expect(screen.queryByRole('option', { name: 'New (Default)' })).not.toBeInTheDocument();
+  });
+
+  /**
+   * ITIL remediation (ee/plans/2026-11-21-itil-remediation), commit group `email-hotfix`.
+   * The priority select offers the selected board's family only, because inbound email creates
+   * every ticket on that board with the priority stored here.
+   */
+  const itilPriorities = [
+    { priority_id: 'itil-3', priority_name: 'P3 - Medium', color: '#F59E0B', is_from_itil_standard: true, itil_priority_level: 3 },
+    { priority_id: 'itil-1', priority_name: 'P1 - Critical', color: '#DC2626', is_from_itil_standard: true, itil_priority_level: 1 },
+  ];
+
+  function withTwoKindsOfBoard() {
+    mockGetTicketFieldOptions.mockResolvedValue({
+      options: {
+        ...sampleFieldOptions,
+        boards: [
+          { id: 'board-1', name: 'General', is_default: true },
+          { id: 'board-itil', name: 'ITIL Service Desk', is_default: false },
+          { id: 'board-2', name: 'Projects', is_default: false },
+        ],
+      },
+    });
+    mockGetAllPriorities.mockResolvedValue([...samplePriorities, ...itilPriorities]);
+    mockGetPrioritiesByBoardType.mockImplementation(async (boardId: string) =>
+      boardId === 'board-itil' ? itilPriorities : samplePriorities
+    );
+    mockGetAvailableStatuses.mockResolvedValue({ statuses: [{ id: 'status-1', name: 'New', is_default: true }] });
+  }
+
+  it('T032: offers only the priorities the selected board uses', async () => {
+    const user = userEvent.setup();
+    withTwoKindsOfBoard();
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm defaults={null} onSuccess={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    await waitFor(() => expect(mockGetTicketFieldOptions).toHaveBeenCalled());
+    const boardSelect = await screen.findByLabelText('Board *');
+
+    await user.selectOptions(boardSelect, 'board-itil');
+    await waitFor(() => {
+      expect(mockGetPrioritiesByBoardType).toHaveBeenCalledWith('board-itil', 'ticket');
+      expect(screen.getByRole('option', { name: 'P1 - Critical' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('option', { name: 'Medium' })).not.toBeInTheDocument();
+
+    await user.selectOptions(boardSelect, 'board-1');
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Medium' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('option', { name: 'P1 - Critical' })).not.toBeInTheDocument();
+  });
+
+  it('T033: a board change clears a priority the new board does not offer and keeps one it does', async () => {
+    const user = userEvent.setup();
+    withTwoKindsOfBoard();
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm defaults={null} onSuccess={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    await waitFor(() => expect(mockGetTicketFieldOptions).toHaveBeenCalled());
+    const boardSelect = await screen.findByLabelText('Board *');
+    const prioritySelect = screen.getByLabelText('Priority *') as HTMLSelectElement;
+
+    await user.selectOptions(boardSelect, 'board-1');
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Medium' })).toBeInTheDocument());
+    await user.selectOptions(prioritySelect, 'priority-1');
+    expect(prioritySelect.value).toBe('priority-1');
+
+    // Same kind: the selection survives.
+    await user.selectOptions(boardSelect, 'board-2');
+    await waitFor(() => expect(mockGetPrioritiesByBoardType).toHaveBeenCalledWith('board-2', 'ticket'));
+    expect(prioritySelect.value).toBe('priority-1');
+
+    // The other kind: the selection is cleared rather than saved against the new board.
+    await user.selectOptions(boardSelect, 'board-itil');
+    await waitFor(() => expect(prioritySelect.value).toBe(''));
+    expect(screen.queryByText(/not one this board offers/)).not.toBeInTheDocument();
+  });
+
+  it('T037: a stored priority the board does not offer is kept and warned about, a fitting one is not', async () => {
+    const user = userEvent.setup();
+    withTwoKindsOfBoard();
+    mockUpdateInboundTicketDefaults.mockResolvedValue({ defaults: { id: 'defaults-1' } });
+
+    const storedOnItilBoard = {
+      id: 'defaults-1',
+      tenant: 'tenant-1',
+      short_name: 'catch-all',
+      display_name: 'Catch All Defaults',
+      board_id: 'board-itil',
+      status_id: 'status-1',
+      priority_id: 'priority-1',
+      client_id: 'client-1',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    } as any;
+
+    const { unmount } = renderWithProviders(
+      <InboundTicketDefaultsForm defaults={storedOnItilBoard} onSuccess={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    const warning = await screen.findByText(/not one this board offers/);
+    expect(warning).toBeInTheDocument();
+    expect(warning.id).toBe('priority-board-mismatch-warning');
+
+    // The stored value is kept, not silently swapped: a save still carries it, and the server
+    // refuses it (the save-side check), so the admin has to choose rather than be corrected.
+    await user.click(screen.getByRole('button', { name: 'Update Defaults' }));
+    await waitFor(() => expect(mockUpdateInboundTicketDefaults).toHaveBeenCalled());
+    expect(mockUpdateInboundTicketDefaults.mock.calls[0][1]).toMatchObject({
+      board_id: 'board-itil',
+      priority_id: 'priority-1',
+    });
+
+    unmount();
+    cleanup();
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm
+        defaults={{ ...storedOnItilBoard, priority_id: 'itil-3' }}
+        onSuccess={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText('Priority *') as HTMLSelectElement).value).toBe('itil-3')
+    );
+    expect(screen.queryByText(/not one this board offers/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no longer exists/)).not.toBeInTheDocument();
+  });
+
+  it('T037: a stored priority that no longer exists is reported as missing', async () => {
+    withTwoKindsOfBoard();
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm
+        defaults={{
+          id: 'defaults-2',
+          tenant: 'tenant-1',
+          short_name: 'catch-all',
+          display_name: 'Catch All Defaults',
+          board_id: 'board-itil',
+          status_id: 'status-1',
+          priority_id: 'deleted-priority',
+          client_id: 'client-1',
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        } as any}
+        onSuccess={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText(/no longer exists/)).toBeInTheDocument();
   });
 
   it('submits location_id as null (not undefined) after the client changes so a stale location is cleared', async () => {

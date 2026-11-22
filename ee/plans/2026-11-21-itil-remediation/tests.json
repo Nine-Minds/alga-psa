@@ -284,7 +284,7 @@
     "featureIds": [
       "F014"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound defaults form on an ITIL board offers only ITIL priorities; on a non-ITIL board only the tenant's own"
   },
   {
@@ -293,7 +293,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Changing the board to one of the other kind clears the selected priority; changing between boards of the same kind keeps it"
   },
   {
@@ -302,7 +302,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Saving inbound defaults with a wrong-family priority fails with a priority field error and stores nothing"
   },
   {
@@ -311,7 +311,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Saving inbound defaults with a deleted priority fails with a priority field error"
   },
   {
@@ -320,7 +320,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Saving an existing non-fitting row with only its description changed and the priority untouched is refused with the same error"
   },
   {
@@ -329,7 +329,7 @@
     "featureIds": [
       "F017"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A stored row with a non-fitting priority renders the warning in the form and the badge in the list; a fitting row renders neither"
   },
   {
@@ -338,7 +338,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Email to a board whose default row has a fitting priority creates the ticket with that priority"
   },
   {
@@ -347,7 +347,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Email to a board whose default row has a non-fitting priority creates the ticket with the board's default priority"
   },
   {
@@ -356,7 +356,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Email to a board with a non-fitting priority and no fitting priority in the tenant still creates the ticket, with the configured priority"
   },
   {
@@ -365,7 +365,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Email to a board whose default row points at a deleted priority creates the ticket with the board's default priority"
   },
   {
@@ -374,7 +374,7 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every new inbound-defaults key exists in every locale and passes the glossary checks"
   },
   {

@@ -330,7 +330,8 @@
     },
     "badges": {
       "active": "Actif",
-      "inactive": "Inactif"
+      "inactive": "Inactif",
+      "priorityNotOnBoard": "Priorité absente de ce tableau"
     },
     "fields": {
       "board": "Tableau :",

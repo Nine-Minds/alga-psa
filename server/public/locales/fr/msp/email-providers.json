@@ -450,7 +450,9 @@
       "boardRequired": "Le tableau est requis",
       "statusRequired": "Le statut est requis",
       "priorityRequired": "La priorité est requise",
-      "clientRequired": "La société est requise"
+      "clientRequired": "La société est requise",
+      "priorityBoardMismatch": "La priorité enregistrée n’est pas proposée par ce tableau ; les e-mails utilisent donc la priorité par défaut du tableau. Choisissez une priorité pour ce tableau.",
+      "priorityMissing": "La priorité enregistrée n’existe plus ; les e-mails utilisent donc la priorité par défaut du tableau. Choisissez une priorité pour ce tableau."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Échec de la mise à jour des valeurs par défaut des tickets entrants. Veuillez réessayer.",
       "locationRequiresClient": "Sélectionnez une société avant de sélectionner un emplacement",
       "locationClientMismatch": "L’emplacement sélectionné n’appartient pas à la société sélectionnée",
-      "referencedByProviders": "Cette configuration est encore utilisée par les fournisseurs d’e-mail suivants : {{providers}}. Sélectionnez d’autres valeurs par défaut des tickets entrants pour ces fournisseurs avant de la supprimer."
+      "referencedByProviders": "Cette configuration est encore utilisée par les fournisseurs d’e-mail suivants : {{providers}}. Sélectionnez d’autres valeurs par défaut des tickets entrants pour ces fournisseurs avant de la supprimer.",
+      "priorityNotValidForBoard": "La priorité sélectionnée n’est pas valide pour le tableau sélectionné"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Autorisation refusée : impossible de lire les options de champ de ticket",

@@ -216,6 +216,35 @@ matrix instead of holding a second copy; the PR #3880 helpers in `ticketFieldRef
   the harness in `itilBoardDeletionCleanup.integration.test.ts` and is first executed by CI. The unit and
   contract tests in the group were run locally.
 
+### Commit group 2 — `email-hotfix` (done)
+
+Landed: the board-filtered priority select, clear-on-board-change and stored-value warning in
+`InboundTicketDefaultsForm.tsx`; the mismatch badge in `InboundTicketDefaultsManager.tsx` fed by a new
+`priorityMismatchIds` on `getInboundTicketDefaults`; `assertPriorityFitsBoard` on both inbound-defaults
+writes; fall-back priority resolution in `createTicketFromEmail`; the four new strings in every locale.
+
+- **`getPrioritiesByBoardType` now delegates to the shared lister.** The plan lists the per-component
+  family filters under `priority-pickers`, but the canonical action is what the inbound-defaults form
+  has to call, so it moved here. It also now returns the whole priority row (as it did before) — the
+  shared lister selects `*` for the list functions and narrow column sets for the checks.
+- **Inbound defaults are validated as a whole, not as a patch.** R5 ("only what a change touches")
+  is a rule about tickets. A defaults row is a writer configuration: every email it matches is created
+  with the priority stored in it, so the effective `(board, priority)` pair is checked on every save,
+  including a description-only one (T036). A row saved before the rule existed cannot be saved again
+  until its priority is fixed, and the list badges it in the meantime.
+- **The form keeps a stored non-fitting priority rather than clearing it**, so the admin can see what
+  was configured; a board change the admin makes does clear it. The picker cannot *display* a value it
+  does not offer, so T037 proves the value survived by checking the payload of the save instead of the
+  select's DOM value.
+- **The inbound-defaults authz gate was already there.** `requireInboundTicketDefaultsAdmin` is applied
+  to read, write and delete on `main`; the plan's "beside the new authz gate" needed no work.
+- **T038–T041 test the rule, not `createTicketFromEmail` end to end.** That function dynamically imports
+  `withAdminTransaction`, `TicketModel.createTicketWithRetry`, the workflow publisher and the analytics
+  tracker; standing all of that up adds no coverage of the decision under test. The four cases run
+  against `resolveTicketPriorityFields` with the real database, and a contract test asserts that
+  `createTicketFromEmail` calls it with `policy: 'fallback'` and passes the result to the create — the
+  one thing that can silently regress.
+
 ## Commands
 
 ```bash

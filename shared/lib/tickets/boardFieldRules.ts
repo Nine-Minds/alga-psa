@@ -164,10 +164,12 @@ export async function listPrioritiesForKind(
   kind: BoardFieldKind,
   itemType: 'ticket' | 'project_task' = 'ticket'
 ): Promise<BoardFieldPriority[]> {
+  // The whole row: this is the list every picker renders, and the components read colour, order
+  // and the ITIL level off it.
   const query = tenantDb(conn, tenant)
     .table('priorities')
     .where({ item_type: itemType })
-    .select(...PRIORITY_COLUMNS);
+    .select('*');
 
   if (kind === 'itil') {
     const rows = (await query

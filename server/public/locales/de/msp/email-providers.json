@@ -450,7 +450,9 @@
       "boardRequired": "Board ist erforderlich",
       "statusRequired": "Status ist erforderlich",
       "priorityRequired": "Priorität ist erforderlich",
-      "clientRequired": "Firma ist erforderlich"
+      "clientRequired": "Firma ist erforderlich",
+      "priorityBoardMismatch": "Die gespeicherte Priorität wird von diesem Board nicht angeboten, daher verwenden E-Mails die Standardpriorität des Boards. Wählen Sie eine Priorität für dieses Board.",
+      "priorityMissing": "Die gespeicherte Priorität existiert nicht mehr, daher verwenden E-Mails die Standardpriorität des Boards. Wählen Sie eine Priorität für dieses Board."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "locationRequiresClient": "Wählen Sie zuerst eine Firma aus, bevor Sie einen Standort auswählen",
       "locationClientMismatch": "Der ausgewählte Standort gehört nicht zur ausgewählten Firma",
-      "referencedByProviders": "Diese Konfiguration wird noch von folgenden E-Mail-Anbietern verwendet: {{providers}}. Wählen Sie bei diesen Anbietern andere Standardwerte für eingehende Tickets aus, bevor Sie sie löschen."
+      "referencedByProviders": "Diese Konfiguration wird noch von folgenden E-Mail-Anbietern verwendet: {{providers}}. Wählen Sie bei diesen Anbietern andere Standardwerte für eingehende Tickets aus, bevor Sie sie löschen.",
+      "priorityNotValidForBoard": "Die ausgewählte Priorität ist für das ausgewählte Board nicht gültig"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Berechtigung verweigert: Ticketfeldoptionen können nicht gelesen werden",

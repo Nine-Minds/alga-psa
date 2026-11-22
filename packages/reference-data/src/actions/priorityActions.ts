@@ -5,6 +5,7 @@ import Priority from '../models/priority';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
+import { listPrioritiesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import {
@@ -267,43 +268,15 @@ export const updatePriority = withAuth(async (_user, { tenant }, priorityId: str
 });
 
 /**
- * Get priorities filtered by board's priority type
- * Returns ITIL priorities if board uses ITIL, custom priorities otherwise
+ * The priorities a board offers (R3): the ITIL family on an ITIL board, the tenant's own
+ * everywhere else. The rule lives in `@alga-psa/shared/lib/tickets/boardFieldRules`, so this
+ * action and every write path agree on what a board offers.
  */
 export const getPrioritiesByBoardType = withAuth(async (_user, { tenant }, boardId: string, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // Get the board's priority type
-      const board = await tenantScopedTable(trx, 'boards', tenant)
-        .select('priority_type')
-        .where({ board_id: boardId })
-        .first() as { priority_type?: string | null } | undefined;
-
-      if (!board) {
-        return [];
-      }
-
-      // Get priorities based on board's priority type
-      let query = tenantScopedTable(trx, 'priorities', tenant)
-        .select('*') as Knex.QueryBuilder;
-
-      if (itemType) {
-        query = query.where({ item_type: itemType });
-      }
-
-      if (board.priority_type === 'itil') {
-        // For ITIL boards, return only ITIL priorities
-        query = query.where({ is_from_itil_standard: true });
-      } else {
-        // For custom boards, return only custom priorities
-        query = query.where(function() {
-          this.where({ is_from_itil_standard: false })
-            .orWhereNull('is_from_itil_standard');
-        });
-      }
-
-      return await query.orderBy('order_number', 'asc') as IPriority[];
+      return (await listPrioritiesForBoard(trx, tenant, boardId, itemType ?? 'ticket')) as unknown as IPriority[];
     } catch (error) {
       console.error(`Error fetching priorities for board ${boardId}:`, error);
       throw error;

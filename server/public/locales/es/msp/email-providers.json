@@ -450,7 +450,9 @@
       "boardRequired": "Se requiere tablero",
       "statusRequired": "Se requiere estado",
       "priorityRequired": "Se requiere prioridad",
-      "clientRequired": "Se requiere empresa"
+      "clientRequired": "Se requiere empresa",
+      "priorityBoardMismatch": "La prioridad guardada no es una que ofrezca este tablero, por lo que los correos electrónicos usan la prioridad predeterminada del tablero. Elija una prioridad para este tablero.",
+      "priorityMissing": "La prioridad guardada ya no existe, por lo que los correos electrónicos usan la prioridad predeterminada del tablero. Elija una prioridad para este tablero."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
       "locationRequiresClient": "Seleccione una empresa antes de seleccionar una ubicación",
       "locationClientMismatch": "La ubicación seleccionada no pertenece a la empresa seleccionada",
-      "referencedByProviders": "Esta configuración todavía la usan los siguientes proveedores de correo electrónico: {{providers}}. Seleccione otros valores predeterminados de tickets entrantes en esos proveedores antes de eliminarla."
+      "referencedByProviders": "Esta configuración todavía la usan los siguientes proveedores de correo electrónico: {{providers}}. Seleccione otros valores predeterminados de tickets entrantes en esos proveedores antes de eliminarla.",
+      "priorityNotValidForBoard": "La prioridad seleccionada no es válida para el tablero seleccionado"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permiso denegado: no se pueden leer las opciones de campo de ticket",

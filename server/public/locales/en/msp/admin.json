@@ -330,7 +330,8 @@
     },
     "badges": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "priorityNotOnBoard": "Priority not on this board"
     },
     "fields": {
       "board": "Board:",

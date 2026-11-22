@@ -5,6 +5,7 @@
  */
 
 import { ticketCreationWithActor } from '../../lib/tickets/ticketLifecycleEvents';
+import { resolveTicketPriorityFields } from '../../lib/tickets/boardFieldRules';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -1335,6 +1336,27 @@ export async function createTicketFromEmail(
         }
       }
 
+      // R6: an inbound email has nobody to show a field error to, so a priority that does not fit
+      // the board falls back to the board's default rather than dropping the email. The defaults
+      // row that supplied it is badged in settings until an admin picks a fitting priority.
+      let priorityId = ticketData.priority_id;
+      if (ticketData.board_id) {
+        const resolved = await resolveTicketPriorityFields(trx, tenant, {
+          boardId: ticketData.board_id,
+          priorityId: ticketData.priority_id ?? null,
+          policy: 'fallback',
+        });
+        if ((resolved.priority_id ?? undefined) !== priorityId) {
+          console.warn('createTicketFromEmail: configured priority does not fit the board; using the board default', {
+            tenant,
+            boardId: ticketData.board_id,
+            configuredPriorityId: ticketData.priority_id ?? null,
+            usedPriorityId: resolved.priority_id,
+          });
+        }
+        priorityId = resolved.priority_id ?? undefined;
+      }
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -1344,7 +1366,7 @@ export async function createTicketFromEmail(
         source: ticketData.source || 'email',
         board_id: ticketData.board_id,
         status_id: ticketData.status_id,
-        priority_id: ticketData.priority_id,
+        priority_id: priorityId,
         category_id: ticketData.category_id,
         subcategory_id: ticketData.subcategory_id,
         location_id: locationId,

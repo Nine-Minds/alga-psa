@@ -450,7 +450,9 @@
       "boardRequired": "Tavla krävs",
       "statusRequired": "Status krävs",
       "priorityRequired": "Prioritet krävs",
-      "clientRequired": "Kund krävs"
+      "clientRequired": "Kund krävs",
+      "priorityBoardMismatch": "Den sparade prioriteten erbjuds inte av den här tavlan, så e-post använder tavlans standardprioritet. Välj en prioritet för den här tavlan.",
+      "priorityMissing": "Den sparade prioriteten finns inte längre, så e-post använder tavlans standardprioritet. Välj en prioritet för den här tavlan."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Det gick inte att uppdatera standardinställningarna för inkommande ärenden. Försök igen.",
       "locationRequiresClient": "Välj en kund innan du väljer en plats",
       "locationClientMismatch": "Den valda platsen tillhör inte den valda kunden",
-      "referencedByProviders": "Den här konfigurationen används fortfarande av följande e-postleverantörer: {{providers}}. Välj andra standardvärden för inkommande ärenden för de leverantörerna innan du tar bort den."
+      "referencedByProviders": "Den här konfigurationen används fortfarande av följande e-postleverantörer: {{providers}}. Välj andra standardvärden för inkommande ärenden för de leverantörerna innan du tar bort den.",
+      "priorityNotValidForBoard": "Den valda prioriteten är inte giltig för den valda tavlan"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Åtkomst nekad: Det går inte att läsa alternativen för ärendefält",

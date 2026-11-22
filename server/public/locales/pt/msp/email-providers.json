@@ -450,7 +450,9 @@
       "boardRequired": "Quadro é obrigatório",
       "statusRequired": "O status é obrigatório",
       "priorityRequired": "Prioridade é obrigatória",
-      "clientRequired": "A empresa é obrigatória"
+      "clientRequired": "A empresa é obrigatória",
+      "priorityBoardMismatch": "A prioridade salva não é oferecida por este quadro, portanto os emails usam a prioridade padrão do quadro. Escolha uma prioridade para este quadro.",
+      "priorityMissing": "A prioridade salva não existe mais, portanto os emails usam a prioridade padrão do quadro. Escolha uma prioridade para este quadro."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Falha ao atualizar os padrões de tickets de entrada. Tente novamente.",
       "locationRequiresClient": "Selecione uma empresa antes de selecionar uma localização",
       "locationClientMismatch": "A localização selecionada não pertence à empresa selecionada",
-      "referencedByProviders": "Esta configuração ainda é usada pelos seguintes provedores de email: {{providers}}. Selecione outros padrões de tickets recebidos nesses provedores antes de excluí-la."
+      "referencedByProviders": "Esta configuração ainda é usada pelos seguintes provedores de email: {{providers}}. Selecione outros padrões de tickets recebidos nesses provedores antes de excluí-la.",
+      "priorityNotValidForBoard": "A prioridade selecionada não é válida para o quadro selecionado"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permissão negada: não é possível ler as opções de campo do ticket",

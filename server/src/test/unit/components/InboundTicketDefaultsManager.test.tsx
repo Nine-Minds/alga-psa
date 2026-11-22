@@ -19,6 +19,7 @@ const {
   mockGetAllClients,
   pickerClients,
   mockGetAllPriorities,
+  mockGetPrioritiesByBoardType,
   mockGetAllUsersBasic,
   mockGetUserAvatarUrlsBatchAction,
 } = vi.hoisted(() => ({
@@ -31,6 +32,7 @@ const {
   // Options the mocked ClientPicker offers; the real picker searches on the server.
   pickerClients: { current: [] as any[] },
   mockGetAllPriorities: vi.fn(),
+  mockGetPrioritiesByBoardType: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
   mockGetUserAvatarUrlsBatchAction: vi.fn(),
 }));
@@ -157,6 +159,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
 vi.mock('@alga-psa/reference-data/actions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
+  getPrioritiesByBoardType: mockGetPrioritiesByBoardType,
 }));
 
 // The form imports user actions from @alga-psa/user-composition/actions.
@@ -202,6 +205,7 @@ describe('InboundTicketDefaultsManager', () => {
     mockGetAllClients.mockResolvedValue(sampleClients);
     pickerClients.current = sampleClients;
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
+    mockGetPrioritiesByBoardType.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
     mockGetUserAvatarUrlsBatchAction.mockResolvedValue(new Map());
     mockCreateInboundTicketDefaults.mockResolvedValue({
@@ -265,6 +269,58 @@ describe('InboundTicketDefaultsManager', () => {
     await waitFor(() => expect(mockCreateInboundTicketDefaults).toHaveBeenCalled());
     const payload = mockCreateInboundTicketDefaults.mock.calls[0]?.[0];
     expect(payload).toMatchObject({ client_id: 'client-1' });
+  });
+
+  /**
+   * ITIL remediation (ee/plans/2026-11-21-itil-remediation), commit group `email-hotfix`:
+   * a row whose stored priority is not one its board offers is badged in the list, because every
+   * email it matches gets the board's default priority instead.
+   */
+  it('T037: badges a defaults row whose priority is not on its board, and leaves a fitting row alone', async () => {
+    const rows = [
+      {
+        id: 'defaults-mismatch',
+        short_name: 'itil-catch-all',
+        display_name: 'ITIL Catch All',
+        description: '',
+        is_active: true,
+        board_id: 'board-itil',
+        status_id: 'status-1',
+        priority_id: 'priority-1',
+        client_id: 'client-1',
+        entered_by: null,
+      },
+      {
+        id: 'defaults-ok',
+        short_name: 'catch-all',
+        display_name: 'Catch All',
+        description: '',
+        is_active: true,
+        board_id: 'board-1',
+        status_id: 'status-1',
+        priority_id: 'priority-1',
+        client_id: 'client-1',
+        entered_by: null,
+      },
+    ];
+    mockGetInboundTicketDefaults.mockResolvedValue({
+      defaults: rows,
+      priorityMismatchIds: ['defaults-mismatch'],
+    });
+
+    renderWithProviders(<InboundTicketDefaultsManager onDefaultsChange={vi.fn()} />);
+
+    await waitFor(() => expect(mockGetInboundTicketDefaults).toHaveBeenCalled());
+
+    const badge = await screen.findByText('Priority not on this board');
+    expect(badge).toBeInTheDocument();
+    expect(
+      document.getElementById('inbound-defaults-priority-mismatch-defaults-mismatch')
+    ).not.toBeNull();
+    expect(
+      document.getElementById('inbound-defaults-priority-mismatch-defaults-ok')
+    ).toBeNull();
+    expect(screen.getAllByText('Priority not on this board')).toHaveLength(1);
   });
 
   it('displays "Company is required" when client is not selected', async () => {

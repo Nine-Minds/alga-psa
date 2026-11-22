@@ -450,7 +450,9 @@
       "boardRequired": "Bord is vereist",
       "statusRequired": "Status is vereist",
       "priorityRequired": "Prioriteit is vereist",
-      "clientRequired": "Bedrijf is vereist"
+      "clientRequired": "Bedrijf is vereist",
+      "priorityBoardMismatch": "De opgeslagen prioriteit wordt niet door dit bord aangeboden, dus e-mails gebruiken de standaardprioriteit van het bord. Kies een prioriteit voor dit bord.",
+      "priorityMissing": "De opgeslagen prioriteit bestaat niet meer, dus e-mails gebruiken de standaardprioriteit van het bord. Kies een prioriteit voor dit bord."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Kan de standaardwaarden voor inkomende tickets niet bijwerken. Probeer het opnieuw.",
       "locationRequiresClient": "Selecteer eerst een bedrijf voordat u een locatie selecteert",
       "locationClientMismatch": "De geselecteerde locatie hoort niet bij het geselecteerde bedrijf",
-      "referencedByProviders": "Deze configuratie wordt nog gebruikt door de volgende e-mailproviders: {{providers}}. Selecteer andere standaardwaarden voor inkomende tickets bij die providers voordat u deze verwijdert."
+      "referencedByProviders": "Deze configuratie wordt nog gebruikt door de volgende e-mailproviders: {{providers}}. Selecteer andere standaardwaarden voor inkomende tickets bij die providers voordat u deze verwijdert.",
+      "priorityNotValidForBoard": "De geselecteerde prioriteit is niet geldig voor het geselecteerde bord"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Toestemming geweigerd: ticketveldopties kunnen niet worden gelezen",

@@ -43,6 +43,9 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
   const [showForm, setShowForm] = useState(false);
   const [editingDefaults, setEditingDefaults] = useState<InboundTicketDefaults | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  // Rows whose stored priority is not one its board offers (R3): emails they match get the
+  // board's default priority, so the row is badged until an admin picks a fitting one.
+  const [priorityMismatchIds, setPriorityMismatchIds] = useState<string[]>([]);
   const [fieldOptions, setFieldOptions] = useState<TicketFieldOptions>({
     boards: [],
     statuses: [],
@@ -83,6 +86,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         setError(data.error);
       }
       setDefaults(data.defaults || []);
+      setPriorityMismatchIds(data.priorityMismatchIds || []);
     } catch (err: any) {
       console.error('Failed to load inbound ticket defaults:', err);
       setError(t('inboundDefaults.errors.load', { defaultValue: 'Failed to load ticket defaults' }));
@@ -255,6 +259,16 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                           </>
                         )}
                       </Badge>
+                      {priorityMismatchIds.includes(defaultConfig.id) && (
+                        <Badge
+                          id={`inbound-defaults-priority-mismatch-${defaultConfig.id}`}
+                          variant="warning"
+                        >
+                          {t('inboundDefaults.badges.priorityNotOnBoard', {
+                            defaultValue: 'Priority not on this board',
+                          })}
+                        </Badge>
+                      )}
                     </div>
                     
                     {defaultConfig.description && (

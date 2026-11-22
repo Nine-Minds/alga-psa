@@ -450,7 +450,9 @@
       "boardRequired": "La bacheca è obbligatoria",
       "statusRequired": "Lo stato è obbligatorio",
       "priorityRequired": "La priorità è obbligatoria",
-      "clientRequired": "Il cliente è obbligatorio"
+      "clientRequired": "Il cliente è obbligatorio",
+      "priorityBoardMismatch": "La priorità salvata non è tra quelle offerte da questa bacheca, quindi le email usano la priorità predefinita della bacheca. Scegli una priorità per questa bacheca.",
+      "priorityMissing": "La priorità salvata non esiste più, quindi le email usano la priorità predefinita della bacheca. Scegli una priorità per questa bacheca."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare.",
       "locationRequiresClient": "Seleziona un cliente prima di selezionare una posizione",
       "locationClientMismatch": "La posizione selezionata non appartiene al cliente selezionato",
-      "referencedByProviders": "Questa configurazione è ancora usata dai seguenti provider email: {{providers}}. Seleziona altri valori predefiniti dei ticket in entrata per quei provider prima di eliminarla."
+      "referencedByProviders": "Questa configurazione è ancora usata dai seguenti provider email: {{providers}}. Seleziona altri valori predefiniti dei ticket in entrata per quei provider prima di eliminarla.",
+      "priorityNotValidForBoard": "La priorità selezionata non è valida per la bacheca selezionata"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Autorizzazione negata: impossibile leggere le opzioni dei campi del ticket",

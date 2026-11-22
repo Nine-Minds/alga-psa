@@ -666,7 +666,9 @@
       "boardRequired": "Tablica jest wymagana",
       "statusRequired": "Status jest wymagany",
       "priorityRequired": "Wymagany jest priorytet",
-      "clientRequired": "Firma jest wymagana"
+      "clientRequired": "Firma jest wymagana",
+      "priorityBoardMismatch": "Zapisany priorytet nie jest oferowany przez tę tablicę, dlatego wiadomości e-mail używają domyślnego priorytetu tablicy. Wybierz priorytet dla tej tablicy.",
+      "priorityMissing": "Zapisany priorytet już nie istnieje, dlatego wiadomości e-mail używają domyślnego priorytetu tablicy. Wybierz priorytet dla tej tablicy."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
       "locationRequiresClient": "Wybierz firmę, zanim wybierzesz lokalizację",
       "locationClientMismatch": "Wybrana lokalizacja nie należy do wybranej firmy",
-      "referencedByProviders": "Ta konfiguracja jest nadal używana przez następujących dostawców poczty e-mail: {{providers}}. Wybierz inne domyślne ustawienia zgłoszeń przychodzących dla tych dostawców, zanim ją usuniesz."
+      "referencedByProviders": "Ta konfiguracja jest nadal używana przez następujących dostawców poczty e-mail: {{providers}}. Wybierz inne domyślne ustawienia zgłoszeń przychodzących dla tych dostawców, zanim ją usuniesz.",
+      "priorityNotValidForBoard": "Wybrany priorytet nie jest prawidłowy dla wybranej tablicy"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Odmowa uprawnień: nie można odczytać opcji pól zgłoszenia",

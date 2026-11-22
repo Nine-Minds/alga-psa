@@ -17,7 +17,7 @@ import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types'
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IPriority } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
@@ -73,6 +73,10 @@ export function InboundTicketDefaultsForm({
   const [error, setError] = useState<string | null>(null);
 
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+  // The priorities the selected board offers (R3). `null` until a board is chosen, when the whole
+  // ticket list is shown — there is no board yet to fit, and the board is required to save.
+  const [boardPriorities, setBoardPriorities] = useState<IPriority[] | null>(null);
+  const [priorityWarning, setPriorityWarning] = useState<string | null>(null);
   const [usersWithRoles, setUsersWithRoles] = useState<IUser[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -161,6 +165,76 @@ export function InboundTicketDefaultsForm({
       active = false;
     };
   }, [formData.board_id]);
+
+  /**
+   * A board offers one family of priorities (R3), and inbound email creates its tickets with the
+   * priority stored here, so a row holding the other family's priority makes every email land with
+   * the board's default instead. Load the board's own list, clear a selection the new board does
+   * not offer, and warn — rather than clear — when it is the stored value, so the admin can see
+   * what was configured before choosing again.
+   */
+  useEffect(() => {
+    let active = true;
+
+    const loadPrioritiesForBoard = async () => {
+      if (!formData.board_id) {
+        setBoardPriorities(null);
+        setPriorityWarning(null);
+        return;
+      }
+
+      try {
+        const offered = (await getPrioritiesByBoardType(formData.board_id, 'ticket')) as IPriority[];
+        if (!active) return;
+        setBoardPriorities(offered || []);
+      } catch (_err) {
+        if (!active) return;
+        // Keep the list empty rather than offering priorities the board may refuse.
+        setBoardPriorities([]);
+      }
+    };
+
+    loadPrioritiesForBoard();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.board_id]);
+
+  useEffect(() => {
+    if (!formData.board_id || boardPriorities === null) {
+      setPriorityWarning(null);
+      return;
+    }
+    if (!formData.priority_id || boardPriorities.some((priority) => priority.priority_id === formData.priority_id)) {
+      setPriorityWarning(null);
+      return;
+    }
+
+    const isStoredValue =
+      Boolean(defaults) &&
+      defaults?.board_id === formData.board_id &&
+      defaults?.priority_id === formData.priority_id;
+
+    if (!isStoredValue) {
+      setPriorityWarning(null);
+      setFormData(prev => (prev.priority_id ? { ...prev, priority_id: '' } : prev));
+      return;
+    }
+
+    const stillExists = priorities.some((priority) => priority.priority_id === formData.priority_id);
+    setPriorityWarning(
+      stillExists
+        ? t('inboundDefaultsForm.validation.priorityBoardMismatch', {
+            defaultValue:
+              'The saved priority is not one this board offers, so emails use the board’s default priority. Choose a priority for this board.',
+          })
+        : t('inboundDefaultsForm.validation.priorityMissing', {
+            defaultValue:
+              'The saved priority no longer exists, so emails use the board’s default priority. Choose a priority for this board.',
+          })
+    );
+  }, [formData.board_id, formData.priority_id, boardPriorities, priorities, defaults, t]);
 
   // Populate form when editing
   useEffect(() => {
@@ -467,15 +541,20 @@ export function InboundTicketDefaultsForm({
               id="priority_id"
               value={formData.priority_id}
               onValueChange={(value) => handleDefaultChange('priority_id', value)}
-              options={priorities.map(p => ({ 
-                value: p.priority_id, 
-                label: p.priority_name, 
-                color: p.color 
+              options={(boardPriorities ?? priorities).map(p => ({
+                value: p.priority_id,
+                label: p.priority_name,
+                color: p.color
               }))}
               placeholder={t('inboundDefaultsForm.fields.priority.placeholder', {
                 defaultValue: 'Select priority',
               })}
             />
+            {priorityWarning && (
+              <p id="priority-board-mismatch-warning" className="text-xs text-amber-600 mt-1">
+                {priorityWarning}
+              </p>
+            )}
           </div>
 
           {/* Optional Fields */}

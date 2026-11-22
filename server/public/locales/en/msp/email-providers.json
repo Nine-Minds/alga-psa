@@ -450,7 +450,9 @@
       "boardRequired": "Board is required",
       "statusRequired": "Status is required",
       "priorityRequired": "Priority is required",
-      "clientRequired": "Company is required"
+      "clientRequired": "Company is required",
+      "priorityBoardMismatch": "The saved priority is not one this board offers, so emails use the board’s default priority. Choose a priority for this board.",
+      "priorityMissing": "The saved priority no longer exists, so emails use the board’s default priority. Choose a priority for this board."
     },
     "fields": {
       "shortName": {
@@ -1157,7 +1159,8 @@
       "updateFailed": "Failed to update inbound ticket defaults. Please try again.",
       "locationRequiresClient": "Select a client before selecting a location",
       "locationClientMismatch": "The selected location does not belong to the selected client",
-      "referencedByProviders": "This configuration is still used by the following email providers: {{providers}}. Select different inbound ticket defaults on those providers before deleting it."
+      "referencedByProviders": "This configuration is still used by the following email providers: {{providers}}. Select different inbound ticket defaults on those providers before deleting it.",
+      "priorityNotValidForBoard": "The selected priority is not valid for the selected board"
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permission denied: Cannot read ticket field options",

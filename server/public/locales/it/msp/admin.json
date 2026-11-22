@@ -330,7 +330,8 @@
     },
     "badges": {
       "active": "Attivo",
-      "inactive": "Inattivo"
+      "inactive": "Inattivo",
+      "priorityNotOnBoard": "Priorità non presente in questa bacheca"
     },
     "fields": {
       "board": "Bacheca:",
