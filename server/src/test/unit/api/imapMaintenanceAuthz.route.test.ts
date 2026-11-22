@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { createTenantKnex } from '@/lib/db';
+import { assertTenantProductAccess } from '@/lib/productAccess';
 import * as resyncRoute from '../../../app/api/email/imap/resync/route';
 import * as reconnectRoute from '../../../app/api/email/imap/reconnect/route';
 
 const state = vi.hoisted(() => ({
   user: null as any,
+  tenant: 'tenant-from-session',
   canUpdateSettings: false,
+  productAllowed: true,
+  productAccessError: new Error('Email to ticket is unavailable'),
   providerLookups: 0,
   updates: [] as Array<{ table: string; values: unknown; where: unknown }>,
   permissionChecks: 0,
@@ -17,11 +22,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => state.user,
 }));
 vi.mock('@/lib/db', () => ({
-  createTenantKnex: async () => ({ knex: state.knex, tenant: 'tenant-from-session' }),
+  createTenantKnex: vi.fn(async () => ({ knex: state.knex, tenant: state.tenant })),
 }));
 vi.mock('@/lib/productAccess', () => ({
-  assertTenantProductAccess: async () => undefined,
-  isProductAccessError: () => false,
+  assertTenantProductAccess: vi.fn(async () => {
+    if (!state.productAllowed) throw state.productAccessError;
+  }),
+  isProductAccessError: (error: unknown) => error === state.productAccessError,
   toProductAccessDeniedResponse: () => new Response(null, { status: 403 }),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -103,7 +110,9 @@ describe('IMAP maintenance route authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.user = { user_id: 'staff-1', tenant: 'tenant-from-session', user_type: 'internal' };
+    state.tenant = 'tenant-from-session';
     state.canUpdateSettings = false;
+    state.productAllowed = true;
     state.providerLookups = 0;
     state.updates = [];
     state.permissionChecks = 0;
@@ -140,11 +149,44 @@ describe('IMAP maintenance route authorization', () => {
       expect(state.updates).toEqual([]);
     });
 
+    it(`${endpoint.name}: rejects a tenant mismatch before permission or provider access`, async () => {
+      state.canUpdateSettings = true;
+      state.tenant = 'another-tenant';
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'Tenant mismatch' });
+      expect(state.permissionChecks).toBe(0);
+      expect(assertTenantProductAccess).not.toHaveBeenCalled();
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
+    it(`${endpoint.name}: rejects administrators without product access before provider access`, async () => {
+      state.canUpdateSettings = true;
+      state.productAllowed = false;
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(state.permissionChecks).toBe(1);
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
     it(`${endpoint.name}: permits an authorized administrator and scopes reads to the session tenant`, async () => {
       state.canUpdateSettings = true;
       const response = await post(endpoint.name, 'arbitrary-nonempty-key');
 
       expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ success: true });
+      expect(createTenantKnex).toHaveBeenCalledTimes(1);
+      expect(state.permissionChecks).toBe(1);
+      expect(assertTenantProductAccess).toHaveBeenCalledExactlyOnceWith({
+        tenantId: 'tenant-from-session',
+        userId: 'staff-1',
+        capability: 'email_to_ticket',
+        allowedProducts: ['psa', 'algadesk'],
+      });
       expect(state.providerLookups).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);
       expect(state.tenantDbCalls).toEqual([{ connection: state.knex, tenant: 'tenant-from-session' }]);
