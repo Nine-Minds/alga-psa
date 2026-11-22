@@ -1849,7 +1849,7 @@
     "validation": "All 12 scenarios assert exact group and total counts, expected first-page identities, uniqueness, and zero separate documents/document_associations verification SELECTs. Full-search pagination walks every authorized identity at each size and context with unique IDs and terminates. Statement-count assertions are deterministic across five samples and invariant across 150/500/1500 candidates for each context/entry point.",
     "reproduction": "From server/: SEARCH_BENCH_REVISION=8ed50f3b799b5803d13ee2808ba189201e790edb npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts --coverage.enabled=false --no-file-parallelism --reporter=verbose --silent=false -t \"SQL-filtered document visibility\"",
     "limits": [
-      "Sequential integration timings are not production load evidence. Client-portal request p95 ranged from about 0.75 to 0.98 seconds despite 3 SQL statements; this latency was not isolated to a specific query.",
+      "Historical pre-statistics SQL-filtered timings are not production load evidence. Client-portal request p95 ranged from about 0.75 to 0.98 seconds despite 3 SQL statements; the later EXPLAIN diagnosis found the correlated association scan at 1,359 loops. These samples are superseded by document_visibility_sql_repair_run.",
       "The benchmark measures the shared typeahead authorization engine directly, without the outer action telemetry/rate-limit/project-access wrapper.",
       "Fallback verifier behavior, including arbitrary custom replacements without SQL compilers and ticket/comment evaluator fallback, is not included in these document measurements."
     ],
