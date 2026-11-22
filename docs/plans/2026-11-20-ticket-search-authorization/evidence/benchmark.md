@@ -237,9 +237,11 @@ SEARCH_BENCH_REVISION=cc641b43be4bc197b533b245bab5823da07541e5 \
   --coverage.enabled=false --reporter=verbose --silent=false
 ```
 
-These results are a small sequential integration sample, not a production performance claim or a comparison against an unmeasured revision. The default document verifier and any custom or replacement verifier registration without a matching SQL compiler use the candidate scan; the test-only client verifier in the ranking-cursor fixture is one such registration. Ticket and comment searches also use their evaluator fallback when the shared ticket policy cannot be compiled or resolved. The measurements above cover only the compiled mixed ticket/comment/project path.
+These results are a small sequential integration sample, not a production performance claim or a comparison against an unmeasured revision. Custom or replacement verifier registrations without a matching SQL compiler use the candidate scan; the test-only client verifier in the ranking-cursor fixture is one such registration. Ticket and comment searches also use their evaluator fallback when the shared ticket policy cannot be compiled or resolved. The measurements above cover only the compiled mixed ticket/comment/project path.
 
-## Default document fallback at 150, 500 and 1,500 candidates
+## Historical default document fallback at 150, 500 and 1,500 candidates
+
+The following measurements are historical evidence of the review objection before the SQL repair. They are retained for comparison; the current default document verifier is SQL compiled.
 
 The same committed PostgreSQL production-path harness measured document-only searches through the default document source verifier. The application source revision was `ac9a7ff01da020e4d7118b580e5d7a45f79d031a`; PostgreSQL was 15.4 (`Debian 15.4-2.pgdg120+1`). The isolated fixture contains 1,500 matching `app_search_index` document rows, 1,350 corresponding `documents` source records, and one client association for each source record. Every tenth matching index row lacks its source document, so authorization must deny 15, 50 and 150 stale candidates at the three tested sizes.
 
@@ -273,4 +275,38 @@ SEARCH_BENCH_REVISION=ac9a7ff01da020e4d7118b580e5d7a45f79d031a \
   -t "default document source-verification fallback"
 ```
 
-This evidence covers the default document verifier at these three sizes and the two internal contexts listed above. It does not measure client-portal document visibility, ticket/comment evaluator fallback, or custom/replacement verifier registrations without matching SQL compilers, including the test-only client verifier used by the cursor fixture. It does not establish a latency bound for those implementations or for candidate sets larger than the measured fixture. These sequential PostgreSQL results are not production traffic or load-test evidence.
+This historical run covers the default document verifier at these three sizes and the two internal contexts listed above. It does not measure client-portal document visibility. These sequential PostgreSQL results are not production traffic or load-test evidence.
+
+## Repaired SQL-filtered document search at 150, 500 and 1,500 candidates
+
+The production-path harness now measures the active default document verifier through SQL visibility predicates for both typeahead (page size 5) and full search (page size 100). Application revision `8ed50f3b799b5803d13ee2808ba189201e790edb` was measured with PostgreSQL 15.4 (`Debian 15.4-2.pgdg120+1`). The fixture contains 1,500 indexed candidates, 1,350 tenant source documents, 150 stale index-only candidates, and 1,504 client association rows. The fixture includes internal-readable documents, portal-readable documents, denied associations, multiple client associations with one denied association, and stale source rows.
+
+The contexts are an unrestricted internal document reader and an actual client portal document reader scoped to the fixture client. For each candidate size, the harness validates exact document groups and totals, first-page fixture identities and uniqueness, and that no standalone document or association verification query is issued. Full search additionally walks all visible identities at page size 100, checking unique IDs and cursor termination. Each size, context and entry point used one warmup and five timed sequential requests at concurrency 1. Request timings include principal and policy resolution, authorization, counts and the first page. Full cursor traversal is asserted outside the timing samples. Statement counts are deterministic and remain constant across all three candidate sizes for each entry point/context:
+
+| Candidates | Context | Entry point | Authorized total | SQL statements/request | Document / association verification SELECTs | p95 ms |
+|---:|---|---|---:|---:|---:|---:|
+| 150 | Internal | Typeahead (5) | 135 | 10 | 0 / 0 | 15.30 |
+| 150 | Internal | Full search (100) | 135 | 10 | 0 / 0 | 14.81 |
+| 150 | Client portal | Typeahead (5) | 92 | 3 | 0 / 0 | 826.72 |
+| 150 | Client portal | Full search (100) | 92 | 3 | 0 / 0 | 861.49 |
+| 500 | Internal | Typeahead (5) | 450 | 10 | 0 / 0 | 17.90 |
+| 500 | Internal | Full search (100) | 450 | 10 | 0 / 0 | 17.66 |
+| 500 | Client portal | Typeahead (5) | 308 | 3 | 0 / 0 | 770.74 |
+| 500 | Client portal | Full search (100) | 308 | 3 | 0 / 0 | 821.89 |
+| 1,500 | Internal | Typeahead (5) | 1,350 | 10 | 0 / 0 | 20.81 |
+| 1,500 | Internal | Full search (100) | 1,350 | 10 | 0 / 0 | 20.24 |
+| 1,500 | Client portal | Typeahead (5) | 926 | 3 | 0 / 0 | 977.19 |
+| 1,500 | Client portal | Full search (100) | 926 | 3 | 0 / 0 | 805.10 |
+
+The raw five latency samples, raw statement samples, fixture counts and procedure are in [index-acl-measurements.json](index-acl-measurements.json). The previous 1,500-candidate fallback reached 2,873/2,874 SQL statements and 714.03/979.35 ms p95 for the two historical internal contexts. The repaired internal request uses 10 statements; the scoped portal request uses 3. Portal latency ranged from 0.75 to 0.98 seconds p95 in this fixture despite bounded statements; its bottleneck was not isolated, so those timings are not presented as a latency improvement. The measured statement growth is independent of candidate count.
+
+Reproduce from `server/`:
+
+```sh
+SEARCH_BENCH_REVISION=8ed50f3b799b5803d13ee2808ba189201e790edb \
+  npx vitest run src/test/integration/searchAuthorizationProductionBenchmark.integration.test.ts \
+  --coverage.enabled=false --no-file-parallelism --reporter=verbose --silent=false \
+  -t "SQL-filtered document visibility"
+```
+
+This run measures the shared typeahead authorization engine without the outer action telemetry/rate-limit/project-access wrapper. It does not measure custom verifier fallback, ticket/comment evaluator fallback, production traffic, or concurrent load.

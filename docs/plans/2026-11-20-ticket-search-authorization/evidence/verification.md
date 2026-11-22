@@ -80,3 +80,16 @@ Both regressions were run against pre-fix implementation revision `7b20448d1e490
 
 - The production-schema authorization test failed while running compiled counts with PostgreSQL `operator does not exist: uuid = text` for the ticket/comment correlation. The same suite passes on revised `e3ad618d24d244e7e4161dfc7a1b7e67de75385e`.
 - The supplied `/tmp/pr4133-lead-review-max-page.test.ts` reproduction returned 100 results and total 1,500 but failed because `nextCursor` was `undefined`. The revised PostgreSQL test verifies three terminating mixed-result pages of 100, 100 and 5.
+
+## Document visibility SQL repair
+
+- Production-path benchmark rerun passed on exact implementation revision `8ed50f3b799b5803d13ee2808ba189201e790edb` (PostgreSQL 15.4).
+- The default document verifier now has a matching registered SQL compiler. The predicate denies absent source rows, binds source/association checks to the principal tenant, and denies scoped access when any client association is outside the allowed set. Replacing the document verifier with one that has no compiler removes the default SQL predicate and uses the verifier fallback. Existing index-ACL-only and custom-verifier fallback paths remain intact.
+- PostgreSQL benchmark/regression file: 9 tests passed, including source-existence and multiple-association behavior, allowing verifier replacement, and 12 performance scenarios across 150/500/1,500 candidates, typeahead/full search, and unrestricted/client-portal contexts.
+- Search unit suites (`searchAuthorizationRegression`, `searchActions`, `searchAcl`, `searchQuery`, `searchSql`): 5 files, 66 tests passed.
+- PostgreSQL authorization, document, and pagination suites (`searchAuthorizationProduction`, `searchRankingCursor`, `documentPermissionsIntegration`, `documentContentAuthorization`): 4 files, 24 tests passed.
+- Existing ticket authorization suites (five Bento reads, two sibling reads, record authorization): 4 files, 20 tests passed.
+- `npx tsc --noEmit -p packages/search/tsconfig.json` and `npx tsc --noEmit -p packages/tickets/tsconfig.json` passed. `npx nx run search:build` and `npx nx run tickets:build` passed; Nx used cached dependency outputs.
+- PostgreSQL 15.4 benchmark: one warmup plus five sequential samples per scenario, concurrency 1. Internal document search used 10 SQL statements for each of 150/500/1,500 candidates; client-portal scoped search used 3. Both contexts issued zero standalone document/association verification SELECTs. Exact totals were 135/450/1,350 internally and 92/308/926 for the portal. Full search walked all visible rows with unique identities and terminating cursors. Raw p95 and latency samples are in [benchmark.md](benchmark.md#repaired-sql-filtered-document-search-at-150-500-and-1500-candidates) and [index-acl-measurements.json](index-acl-measurements.json).
+- Portal p95 ranged approximately 0.75–0.98 seconds despite bounded SQL statement counts; its latency source was not isolated. The benchmark exercises the shared typeahead engine directly without the outer action wrapper and is not production load evidence.
+- No application server was started. No fresh browser/production validation or `security-finding-resolved` check is claimed.
