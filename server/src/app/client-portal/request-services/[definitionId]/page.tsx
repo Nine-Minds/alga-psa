@@ -6,7 +6,6 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
   getRequestServiceDefinitionDetailAction,
-  getRequestServiceLookupOptionsAction,
   getRequestServiceVisibilityContextAction,
   submitRequestServiceDefinitionAction,
 } from './actions';
@@ -65,10 +64,8 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
     : null;
-  // Options for lookup fields, resolved on the server from the session's client. Only fetched when
-  // the form has a lookup field, and only for a definition this requester can see.
-  const hasLookupField = fields.some((field: any) => field?.type === 'lookup');
-  const lookupOptions = hasLookupField ? await getRequestServiceLookupOptionsAction(definitionId) : {};
+  // Options for lookup fields arrive with the detail, resolved on the server from the session's client.
+  const lookupOptions = detail.lookupOptions ?? {};
 
   return (
     <div className="space-y-4">

@@ -19,6 +19,11 @@ import {
 } from '../../../../lib/service-requests';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
+export type RequestServicePortalFormWithLookups = ServiceRequestPortalFormView & {
+  /** Server-resolved options for each lookup field, keyed by field key; `{}` when the form has none. */
+  lookupOptions: Record<string, LookupOption[]>;
+};
+
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,
   params: Record<string, string | null | undefined>
@@ -82,44 +87,19 @@ function requestServiceSubmitErrorMessage(error: unknown): string {
   return 'Unable to submit request. Please review the form and try again.';
 }
 
+/**
+ * The portal form for one definition the requester can see, plus the options for its lookup fields.
+ * Lookup options ride on this action on purpose: there is no general "list contacts" action, scope is
+ * derived from the session's client (never a parameter), and a definition that is not visible yields
+ * nothing at all. Forms without lookup fields get an empty map and no extra query.
+ */
 export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   definitionId: string
-): Promise<ServiceRequestPortalFormView | null> => {
+): Promise<RequestServicePortalFormWithLookups | null> => {
   if (!isClientUserType(currentUser.user_type)) {
     return null;
-  }
-
-  const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx) => {
-    const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
-    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
-      trx,
-      {
-        tenant,
-        requesterUserId: currentUser.user_id,
-        clientId,
-        contactId: currentUser.contact_id ?? null,
-      },
-      definitionId
-    );
-    return detail ? toPortalFormView(detail) : null;
-  });
-});
-
-/**
- * Options for the lookup fields of ONE definition the requester can see. This is deliberately not a
- * general "list contacts" action: it takes no client id, derives scope from the session, and returns
- * nothing for a definition that is not visible or has no lookup fields.
- */
-export const getRequestServiceLookupOptionsAction = withAuth(async (
-  currentUser: IUserWithRoles,
-  { tenant }: AuthContext,
-  definitionId: string
-): Promise<Record<string, LookupOption[]>> => {
-  if (!isClientUserType(currentUser.user_type)) {
-    return {};
   }
 
   const { knex } = await createTenantKnex();
@@ -132,14 +112,15 @@ export const getRequestServiceLookupOptionsAction = withAuth(async (
       definitionId
     );
     if (!detail) {
-      return {};
+      return null;
     }
-    return resolveLookupOptionsForFields(
+    const lookupOptions = await resolveLookupOptionsForFields(
       trx,
       tenant,
-      (detail.formSchema as { fields?: unknown }).fields,
+      (detail.formSchema as { fields?: unknown } | null)?.fields,
       requester
     );
+    return { ...toPortalFormView(detail), lookupOptions };
   });
 });
 
