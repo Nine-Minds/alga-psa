@@ -18,7 +18,7 @@ export default function CoManagedSeatExplainer() {
       <ol className="space-y-4">
         {STEPS.map((step, index) => (
           <li key={step} className="flex gap-3">
-            <span aria-hidden="true" className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] text-sm font-semibold text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.2)] dark:text-[rgb(var(--color-primary-200))]">{index + 1}</span>
+            <span aria-hidden="true" className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] text-sm font-semibold text-[rgb(var(--color-primary-700))]">{index + 1}</span>
             <div>
               <p className="font-semibold text-[rgb(var(--color-text-900))]">{t(`coManaged.howItWorks.${step}.title`)}</p>
               <p className="text-sm text-[rgb(var(--color-text-600))]">{t(`coManaged.howItWorks.${step}.body`)}</p>
