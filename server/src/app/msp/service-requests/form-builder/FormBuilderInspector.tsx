@@ -364,7 +364,7 @@ export function FormBuilderInspector({
       </InspectorGroup>
 
       {isUnsupportedFieldType(element.type) ? (
-        <p id="service-request-form-builder-unsupported-type" role="note" className="text-sm text-destructive">
+        <p id="service-request-form-builder-unsupported-type" role="note" className="px-4 py-2 text-sm text-destructive">
           {t('formBuilder.inspector.unsupportedType', { type: String(element.type) })}
         </p>
       ) : null}
