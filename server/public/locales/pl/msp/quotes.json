@@ -275,7 +275,8 @@
       "editQuote": "Edytuj ofertę",
       "newQuote": "Nowa oferta",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Suma oferty"
+      "quoteTotalLabel": "Suma oferty",
+      "totalsError": "Podatek i suma są nieaktualne – edytuj pozycje ponownie lub odśwież stronę."
     },
     "breadcrumb": {
       "billing": "Rozliczenia",
@@ -387,7 +388,8 @@
       "standardLayout": "Standardowy",
       "customLayout": "Niestandardowy",
       "tenantDefault": "Domyślny dla organizacji",
-      "changeLayout": "Zmień"
+      "changeLayout": "Zmień",
+      "totalsError": "Nie udało się zaktualizować podatku i sumy. Wyświetlane kwoty mogą być nieaktualne."
     },
     "sectionTitles": {
       "title": "Tytuły sekcji oferty grupowanej",

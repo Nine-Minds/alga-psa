@@ -10,6 +10,7 @@ import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defa
 import {
   calculateTaxForAmount,
   calculateTaxForPeriod as calculateTaxForPeriodWithEngine,
+  findClientTaxSettingsRow,
   noTaxRateMessage,
   readClientTaxSettings,
   type UnresolvedPeriodTax,
@@ -108,6 +109,7 @@ export class TaxService {
       regionCode,
       isTaxable: is_taxable,
       currencyCode,
+      provisionMissingSettings: () => this.createDefaultTaxSettings(clientId),
     });
     if (outcome.resolved === false) {
       throw noTaxRateError(outcome);
@@ -172,6 +174,7 @@ export class TaxService {
       regionCode,
       isTaxable: is_taxable,
       currencyCode,
+      provisionMissingSettings: () => this.createDefaultTaxSettings(clientId),
     });
     if (outcome.resolved === false) {
       throw periodTaxError(outcome);
@@ -227,6 +230,14 @@ export class TaxService {
   }
 
   async isReverseChargeApplicable(clientId: string): Promise<boolean> {
+    // Pre-engine behaviour: this read provisioned a missing settings row.
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax settings lookup');
+    }
+    if (!(await findClientTaxSettingsRow(knex, tenant, clientId))) {
+      await this.createDefaultTaxSettings(clientId);
+    }
     const taxSettings = await this.getClientTaxSettings(clientId);
     return taxSettings.is_reverse_charge_applicable;
   }

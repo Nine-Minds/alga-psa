@@ -88,3 +88,74 @@ prerequisite because its acceptance invoice copies quote tax and recomputes noth
 
 - Plan validation: `python3 ~/.claude/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-11-16-quote-tax-engine-unification`
 - Worker import guard: `node services/workflow-worker/scripts/validate-runtime-imports.mjs`
+
+
+## Repair round 3 (PR #4473 review)
+
+### Finding 1: editor tax failure is visible
+
+`QuoteForm.tsx` reads `draftTax.error`. On a rejected call, a permission error or a message error, the header
+(`#quote-form-header-total-error`, inline `text-destructive` text with `role="alert"`) and the sidebar
+(`#quote-form-sidebar-total-error`, standard destructive `Alert`) say the figures are not current, and the total,
+subtotal, discount and tax show the "—" placeholder instead of the stale figures. The error clears on the next
+successful result. A superseded response never reaches `setState` (request-id guard), so it cannot raise the error.
+Copy: `quoteForm.header.totalsError` / `quoteForm.sidebar.totalsError` in `msp/quotes.json` (all locales; xx/yy
+regenerated). Tests: `useQuoteDraftTax.test.tsx` (reject, permission, message, stale), `QuoteForm.test.tsx`.
+
+### Finding 2: `client_tax_settings` reader inventory
+
+What the old insert-on-read did: `TaxService.getClientTaxSettings` called `createDefaultTaxSettings` when the model
+returned null, i.e. `initializeClientDefaultTax`: default billing profile, the settings row **and** the tenant-default
+client-wide rate association (`client_tax_rates`, `is_default`). The association is what made the default-rate path
+(no region) tax a client at all. So "no row" could change invoice results, not only leave a row missing.
+
+Decision: the engine stays write-free. `calculateTaxForAmount` / `calculateTaxForPeriod` take an optional
+`provisionMissingSettings` callback, called only when the profile has no row and only after the exemption and
+taxability checks (the exact point the old code provisioned). `TaxService.calculateTax` /
+`calculateTaxForPeriod` pass `createDefaultTaxSettings`; quotes pass nothing and read defaults in memory.
+`TaxService.isReverseChargeApplicable` provisions as before.
+
+| Reader (file: function) | With no row | Action |
+| --- | --- | --- |
+| `shared/billingClients/taxEngine.ts`: `readClientTaxSettings`, `findClientTaxSettingsRow` | Default settings in memory; no writes | Kept write-free. Added `findClientTaxSettingsRow` and the `provisionMissingSettings` seam. |
+| `packages/billing/src/services/taxService.ts`: `calculateTax`, `calculateTaxForPeriod`, `isReverseChargeApplicable` | Before: engine read defaults, so a client with no default rate association was taxed 0 (single date) or hit `NO_TAX_RATE` (period) | **Fixed at the reader**: provisions via `createDefaultTaxSettings` exactly as before. Invoice results unchanged. |
+| `packages/billing/src/lib/billing/billingEngine.ts`: tax-identity load (~l.1066-1100) | Already provisions per profile in its load phase when tax would be read | Already handled. No change. |
+| `packages/billing/src/actions/invoiceGeneration.ts`: `createInvoiceFromBillingResult` (~l.4031) | Calls `ensureDefaultTaxSettings` when the client has no default region | Already handled. No change. |
+| `packages/billing/src/actions/taxSettingsActions.ts`: `getClientTaxSettings` | Returns null | The settings forms call `createDefaultTaxSettings` on null. Already handled. |
+| `packages/billing/src/models/clientTaxSettings.ts`: `ClientTaxSettings.get` | Returns null (it still calls `ensureClientDefaultBillingProfile`, a profile write that predates the branch). No non-test callers in `src`. | Left alone. |
+| `packages/billing/src/actions/taxSourceActions.ts` and `shared/billingClients/taxSettings.ts`: tax source | `?.tax_source_override` on a missing row falls back to the tenant default | Already handles a missing row. |
+| `packages/billing/src/actions/billingAndTax.ts` (two `cts` left joins) | `tax_source` is null, same as a null override | Already handles a missing row. |
+| `ee/server/src/lib/billing/simulator/readOnlyTaxPorts.ts` | `Boolean(settings?.is_reverse_charge_applicable)` is false | Already handles a missing row (read-only by design). |
+| `ee/temporal-workflows/src/db/product-upgrade-operations.ts` | Creates missing rows during upgrade and reports clients still missing | Already provisions. |
+| `packages/clients/src/actions/clientActions.ts`, `packages/clients/src/lib/clientMergePlan.ts`, `server/src/lib/api/services/ClientService.ts`, `shared/workflow/.../businessOperations/clients.ts`, tenant deletion/test utils | Delete or move rows; zero rows is a no-op | Already handles a missing row. |
+| Client creation (`shared/models/clientCreation.ts` `createClientWithDefaults`, used by `clientActions`, `ClientService`, workflows, imports, Entra/Datto) | Calls `initializeClientDefaultTax` in the client transaction | Already provisions explicitly. Only legacy clients lack a row. |
+
+Fixture: `taxService.rateSelection.db.test.ts` is **reverted to its original** (no `initializeClientDefaultTax` call);
+it passes unchanged. The `modelBackedTenantDb` unit-test helper remains (it only routes the engine's reads to the
+existing model stubs). Test: `billingInvoiceGeneration_tax.test.ts` "taxes a client that has no client_tax_settings row
+exactly as before" (engine writes nothing and taxes 0 with no default; TaxService provisions and taxes at 10%; manual
+invoice end to end). `quoteTaxEngine.test.ts` T003 now also asserts TaxService provisions (plan T003 text adjusted).
+
+### Finding 3: public quote "changed" path
+
+What was missing: the public fingerprint covers per-row engine tax, but the stored `quotes.subtotal/discount_total/
+tax/total_amount` were never compared with the engine. A page rendered after a rate correction fingerprints
+identically at submit, so a sent quote with stale stored totals could be accepted at the stale figure.
+
+Fix: `reconcileQuoteTotalsWithEngine` (`quoteCalculationService.ts`) recomputes through `resolveQuoteTaxes`; if the
+stored figures differ it persists the corrected ones (`recalculateQuoteFinancials`) and returns true.
+`decideInTransaction` (`quoteLinkDecisionService.ts`) calls it after input validation, before the fingerprint check,
+and returns `{ status: 'changed' }`; the write commits with that transaction. So "changed" comes once, then the
+reloaded page (fresh fingerprint over corrected figures) submits successfully.
+
+For the review step's fixture and demo:
+- Public page: `/quote/<token>` (`server/src/app/quote/[token]/page.tsx`). Submit: `POST /api/quote/<token>/decision`
+  -> `submitQuoteLinkDecision`; `changed` is HTTP 409 `{ "status": "changed" }`. The panel shows "This quote has
+  changed" (`#quote-link-changed`); the client must **reload** the page to see the corrected total.
+- Fixture: quote `status = 'sent'`, a minted access link (`QuoteAccessLinks.mint`), a taxable item, a client with
+  `region_code` and an active `tax_rates` row, and stored `quotes.tax` / `total_amount` not equal to the engine's
+  (e.g. save the quote, then raise the rate, or `UPDATE quotes SET tax = 0, total_amount = subtotal`).
+- Columns to check: `quotes.subtotal, discount_total, tax, total_amount, status`; `quote_decisions` (no row after the
+  first submit, one row after the second); `quote_activities`.
+- DB test: `server/src/test/integration/quoteLinkDecision.integration.test.ts` "stored tax that differs from the
+  engine". Fixtures there now call `recalculateQuoteFinancials` so a sent quote's stored totals match the engine.

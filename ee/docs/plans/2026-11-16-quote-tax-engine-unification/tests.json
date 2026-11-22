@@ -19,7 +19,7 @@
   },
   {
     "id": "T003",
-    "description": "DB: calculating tax for a client with no client_tax_settings row returns default-settings tax and leaves the table unchanged; for a client with two billing profiles, the default profile's reverse-charge setting is the one applied",
+    "description": "DB: calculating tax for a client with no client_tax_settings row returns default-settings tax and the engine leaves the table unchanged (the invoice-side TaxService provisions the row, as it always did); for a client with two billing profiles, the default profile's reverse-charge setting is the one applied",
     "implemented": true,
     "featureIds": [
       "F004",

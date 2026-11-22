@@ -35,8 +35,9 @@ const result = (tax: number, total: number) => ({
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => { resolve = res; });
-  return { promise, resolve };
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
 };
 
 const flush = async (ms = QUOTE_DRAFT_TAX_DEBOUNCE_MS) => {
@@ -109,5 +110,47 @@ describe('useQuoteDraftTax', () => {
     await act(async () => { slow.resolve(result(1, 2)); });
     expect(hook.current.result?.totals.total_amount).toBe(302500);
     expect(hook.current.isLoading).toBe(false);
+  });
+
+  describe('failures', () => {
+    const props = (price: number) => ({ items: [item({ unit_price: price })], clientId: 'c1', currencyCode: 'USD' });
+
+    it.each([
+      ['a rejected call', () => calculateQuoteDraftTax.mockRejectedValueOnce(new Error('network down')), 'network down'],
+      ['a permission error', () => calculateQuoteDraftTax.mockResolvedValueOnce({ permissionError: 'Permission denied' }), 'Failed to calculate tax'],
+      ['a message error', () => calculateQuoteDraftTax.mockResolvedValueOnce({ actionError: 'nope' }), 'Failed to calculate tax'],
+    ])('sets error after %s, keeps the last result, and clears on the next success', async (_l, arrange, message) => {
+      calculateQuoteDraftTax.mockResolvedValueOnce(result(3500, 113500));
+      const { result: hook, rerender } = renderHook(({ price }) => useQuoteDraftTax(props(price)), { initialProps: { price: 100000 } });
+      await flush();
+      expect(hook.current.error).toBeNull();
+
+      arrange();
+      rerender({ price: 200000 });
+      await flush();
+      expect(hook.current.error).toBe(message);
+      expect(hook.current.isLoading).toBe(false);
+      expect(hook.current.result?.totals.total_amount).toBe(113500);
+
+      calculateQuoteDraftTax.mockResolvedValueOnce(result(2500, 302500));
+      rerender({ price: 300000 });
+      await flush();
+      expect(hook.current.error).toBeNull();
+      expect(hook.current.result?.totals.total_amount).toBe(302500);
+    });
+
+    it('does not raise the error for a superseded request that fails', async () => {
+      const slow = deferred<never>();
+      calculateQuoteDraftTax.mockReturnValueOnce(slow.promise);
+      const { result: hook, rerender } = renderHook(({ price }) => useQuoteDraftTax(props(price)), { initialProps: { price: 100000 } });
+      await flush();
+
+      calculateQuoteDraftTax.mockResolvedValueOnce(result(2500, 302500));
+      rerender({ price: 300000 });
+      await flush();
+      await act(async () => { slow.reject(new Error('late')); });
+      expect(hook.current.error).toBeNull();
+      expect(hook.current.result?.totals.total_amount).toBe(302500);
+    });
   });
 });

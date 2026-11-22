@@ -275,7 +275,8 @@
       "editQuote": "Editar cotización",
       "newQuote": "Nueva cotización",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Total de la cotización"
+      "quoteTotalLabel": "Total de la cotización",
+      "totalsError": "Los impuestos y el total no están actualizados: edite de nuevo las partidas o recargue la página."
     },
     "breadcrumb": {
       "billing": "Facturación",
@@ -387,7 +388,8 @@
       "standardLayout": "Estándar",
       "customLayout": "Personalizado",
       "tenantDefault": "Predeterminado del tenant",
-      "changeLayout": "Cambiar"
+      "changeLayout": "Cambiar",
+      "totalsError": "No se pudieron actualizar los impuestos ni el total. Las cifras mostradas pueden estar desactualizadas."
     },
     "sectionTitles": {
       "title": "Títulos de sección de cotización agrupada",

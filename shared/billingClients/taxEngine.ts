@@ -213,6 +213,13 @@ export interface TaxCalculationInput {
   currencyCode?: string | null;
   /** Billing profile whose settings apply; defaults to the client's default profile. */
   billingProfileId?: string;
+  /**
+   * Called when the profile has no settings row, after the exemption and
+   * taxability checks. The engine never writes: a caller that wants missing
+   * defaults provisioned (the invoice-side `TaxService`) supplies the writer and
+   * the engine uses the row it returns. Quotes pass nothing and read defaults.
+   */
+  provisionMissingSettings?: () => Promise<IClientTaxSettings>;
 }
 
 export interface TaxPeriodCalculationInput {
@@ -224,6 +231,13 @@ export interface TaxPeriodCalculationInput {
   isTaxable?: boolean;
   currencyCode?: string | null;
   billingProfileId?: string;
+  /**
+   * Called when the profile has no settings row, after the exemption and
+   * taxability checks. The engine never writes: a caller that wants missing
+   * defaults provisioned (the invoice-side `TaxService`) supplies the writer and
+   * the engine uses the row it returns. Quotes pass nothing and read defaults.
+   */
+  provisionMissingSettings?: () => Promise<IClientTaxSettings>;
 }
 
 /** Message `TaxService` has always raised for a region with no rate on a date. */
@@ -322,14 +336,29 @@ export async function readClientTaxSettings(
   clientId: string,
   billingProfileId?: string,
 ): Promise<IClientTaxSettings> {
-  const db = tenantDb(knexOrTrx, tenant);
-  const defaults: IClientTaxSettings = {
+  const row = await findClientTaxSettingsRow(knexOrTrx, tenant, clientId, billingProfileId);
+  if (row) return row;
+  return {
     tenant,
     client_id: clientId,
     billing_profile_id: billingProfileId,
     is_reverse_charge_applicable: false,
   };
+}
 
+/**
+ * The stored settings row for the named billing profile (else the client's
+ * default profile), or null when none exists. Read-only: this is how a caller
+ * that wants to provision a missing row (the invoice-side `TaxService`) finds
+ * out that it is missing, without the engine ever writing.
+ */
+export async function findClientTaxSettingsRow(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  billingProfileId?: string,
+): Promise<IClientTaxSettings | null> {
+  const db = tenantDb(knexOrTrx, tenant);
   let profileId = billingProfileId;
   if (!profileId) {
     const profile = await db.table('client_billing_profiles')
@@ -338,12 +367,12 @@ export async function readClientTaxSettings(
       .first();
     profileId = profile?.billing_profile_id as string | undefined;
   }
-  if (!profileId) return defaults;
+  if (!profileId) return null;
 
   const row = await db.table<IClientTaxSettings>('client_tax_settings')
     .where({ client_id: clientId, billing_profile_id: profileId })
     .first();
-  return row ?? { ...defaults, billing_profile_id: profileId };
+  return row ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -480,6 +509,18 @@ async function calculateSimpleTax(
   return { taxAmount: applyCap(taxAmount, taxRate.cap_amount), taxRate: taxPercentage };
 }
 
+/** Settings for a calculation: the stored row, else what the caller provisions, else defaults. */
+async function settingsForCalculation(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  input: { clientId: string; billingProfileId?: string; provisionMissingSettings?: () => Promise<IClientTaxSettings> },
+): Promise<IClientTaxSettings> {
+  const row = await findClientTaxSettingsRow(knexOrTrx, tenant, input.clientId, input.billingProfileId);
+  if (row) return row;
+  if (input.provisionMissingSettings) return input.provisionMissingSettings();
+  return readClientTaxSettings(knexOrTrx, tenant, input.clientId, input.billingProfileId);
+}
+
 async function isClientTaxExempt(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -519,7 +560,7 @@ export async function calculateTaxForAmount(
 
   // Check reverse charge applicability BEFORE any tax calculation
   // Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions)
-  const taxSettings = await readClientTaxSettings(knexOrTrx, tenant, clientId, input.billingProfileId);
+  const taxSettings = await settingsForCalculation(knexOrTrx, tenant, input);
   if (taxSettings.is_reverse_charge_applicable) {
     return { resolved: true, taxAmount: 0, taxRate: 0 };
   }
@@ -680,7 +721,7 @@ export async function calculateTaxForPeriod(
     return { resolved: true, ...emptyPeriodResult() };
   }
 
-  const taxSettings = await readClientTaxSettings(knexOrTrx, tenant, clientId, input.billingProfileId);
+  const taxSettings = await settingsForCalculation(knexOrTrx, tenant, input);
   if (taxSettings.is_reverse_charge_applicable) {
     return { resolved: true, ...emptyPeriodResult() };
   }

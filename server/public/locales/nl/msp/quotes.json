@@ -275,7 +275,8 @@
       "editQuote": "Offerte bewerken",
       "newQuote": "Nieuwe offerte",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Offertetotaal"
+      "quoteTotalLabel": "Offertetotaal",
+      "totalsError": "Belasting en totaal zijn niet actueel: pas de regels opnieuw aan of laad de pagina opnieuw."
     },
     "breadcrumb": {
       "billing": "Facturering",
@@ -387,7 +388,8 @@
       "standardLayout": "Standaard",
       "customLayout": "Aangepast",
       "tenantDefault": "Tenant-standaard",
-      "changeLayout": "Wijzigen"
+      "changeLayout": "Wijzigen",
+      "totalsError": "Belasting en totaal konden niet worden bijgewerkt. De getoonde bedragen zijn mogelijk verouderd."
     },
     "sectionTitles": {
       "title": "Sectietitels voor gegroepeerde offertes",

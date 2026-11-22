@@ -275,7 +275,8 @@
       "editQuote": "Redigera offert",
       "newQuote": "Ny offert",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Offertens totalsumma"
+      "quoteTotalLabel": "Offertens totalsumma",
+      "totalsError": "Moms och totalsumma är inte aktuella – redigera raderna igen eller ladda om sidan."
     },
     "breadcrumb": {
       "billing": "Fakturering",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Anpassad",
       "tenantDefault": "Organisationens standardinställning",
-      "changeLayout": "Ändra"
+      "changeLayout": "Ändra",
+      "totalsError": "Moms och totalsumma kunde inte uppdateras. De visade beloppen kan vara inaktuella."
     },
     "sectionTitles": {
       "title": "Avsnittsrubriker för grupperad offert",

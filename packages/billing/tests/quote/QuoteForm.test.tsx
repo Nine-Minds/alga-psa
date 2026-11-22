@@ -66,7 +66,7 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
-  isActionMessageError: (value: any) => Boolean(value && value.messageKey),
+  isActionMessageError: (value: any) => Boolean(value && (value.messageKey || typeof value.actionError === 'string')),
   isActionPermissionError: (value: any) => Boolean(value && value.permissionError),
   getErrorMessage: (value: any) =>
     (value && (value.permissionError || value.message)) || 'error',
@@ -875,5 +875,31 @@ describe('QuoteForm engine-sourced totals (alga-2026-0003321)', () => {
     expect(request.currency_code).toBe('USD');
     expect(request.quote_id).toBe('quote-1');
     expect(request.items.map((item: any) => item.id)).toEqual(['cap-1', 'cap-2']);
+  });
+  it.each([
+    ['a rejected call', () => actions.calculateQuoteDraftTax.mockRejectedValue(new Error('boom'))],
+    ['a permission error', () => actions.calculateQuoteDraftTax.mockResolvedValue({ permissionError: 'Permission denied' })],
+    ['a message error', () => actions.calculateQuoteDraftTax.mockResolvedValue({ actionError: 'nope' })],
+  ])('tells the user the totals are not current after %s, never showing the old figures', async (_label, arrange) => {
+    actions.calculateQuoteDraftTax.mockResolvedValueOnce(engineResult);
+    renderForm({ quoteId: 'quote-1' });
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(document.getElementById('quote-form-header-total')?.textContent).toBe('$1135.00'), { timeout: 3000 });
+    expect(document.getElementById('quote-form-header-total-error')).toBeNull();
+
+    // Next engine call fails (the edit that triggers it is simulated by the line-items editor stub).
+    arrange();
+    await act(async () => {
+      (lineItemsEditorMock.current as any)?.onChange?.([
+        ...capQuote.quote_items.map((q) => ({ ...q, local_id: q.quote_item_id })),
+        { local_id: 'new', description: 'x', quantity: 1, unit_price: 5, is_taxable: true },
+      ]);
+    });
+
+    await waitFor(() => expect(document.getElementById('quote-form-header-total-error')).not.toBeNull(), { timeout: 3000 });
+    expect(document.getElementById('quote-form-header-total-error')?.textContent).toContain('not current');
+    expect(document.body.textContent).toContain('Tax and total could not be updated');
+    expect(document.getElementById('quote-form-header-total')?.textContent).toBe('—');
+    expect(document.getElementById('quote-form-sidebar-total')?.textContent).toBe('—');
   });
 });

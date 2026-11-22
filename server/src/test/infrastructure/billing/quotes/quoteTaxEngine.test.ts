@@ -148,7 +148,7 @@ describe('One tax engine: quotes and invoices', () => {
   });
 
   describe('T003: read-only settings, per-profile resolution', () => {
-    it('inserts nothing when the client has no client_tax_settings row', async () => {
+    it('the engine inserts nothing when the client has no client_tax_settings row; TaxService provisions it', async () => {
       await addRegion('RATED', 'Rated');
       await addRate({ tax_percentage: 10 });
       await db()('client_tax_settings').where({ tenant: tenant(), client_id: context.clientId }).del();
@@ -159,9 +159,13 @@ describe('One tax engine: quotes and invoices', () => {
         clientId: context.clientId, netAmount: 10000, date: QUOTE_DATE, regionCode: 'RATED',
       });
       expect(outcome).toMatchObject({ resolved: true, taxAmount: 1000, taxRate: 10 });
+      expect(await count()).toBe(before);
+
+      // The invoice-side TaxService is a reader that provisions (its results never
+      // depended on the engine): same tax, and the default row is created.
       const viaService = await new TaxService().calculateTax(context.clientId, 10000, QUOTE_DATE, 'RATED');
       expect(viaService).toEqual({ taxAmount: 1000, taxRate: 10 });
-      expect(await count()).toBe(before);
+      expect(await count()).toBe(before + 1);
     });
 
     it("applies the default profile's reverse-charge setting when the client has two profiles", async () => {

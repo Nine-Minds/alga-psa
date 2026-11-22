@@ -1631,8 +1631,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // ---------------------------------------------------------------------------
 
   const PENDING_TAX_PLACEHOLDER = '—';
+  // A failed engine call leaves the previous figures stale: show the placeholder
+  // instead of them, plus an alert, until the next successful result.
+  const draftTaxFailed = Boolean(draftTax.error);
   const formatEngineMoney = (minorUnits: number | undefined): string =>
-    draftTotals && minorUnits !== undefined
+    draftTotals && !draftTaxFailed && minorUnits !== undefined
       ? formatDraftQuoteMoney(minorUnits, form.currency_code)
       : PENDING_TAX_PLACEHOLDER;
   const formattedTotal = formatEngineMoney(draftTotals?.total_amount);
@@ -1749,6 +1752,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 >
                   {formattedTotal}
                 </div>
+                {draftTaxFailed && (
+                  <p id="quote-form-header-total-error" role="alert" className="mt-1 max-w-xs text-xs text-destructive">
+                    {t('quoteForm.header.totalsError', {
+                      defaultValue: 'Tax and total are not current — try editing the line items again or reload.',
+                    })}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -2232,6 +2242,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 >
                   {formattedTotal}
                 </div>
+                {draftTaxFailed && (
+                  <Alert id="quote-form-sidebar-total-error" variant="destructive" className="mt-3">
+                    <AlertDescription>
+                      {t('quoteForm.sidebar.totalsError', {
+                        defaultValue: 'Tax and total could not be updated. The figures shown may be out of date.',
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {formattedRecurringMonthly && (
                   <div className="mt-1 text-sm text-muted-foreground">
                     {t('quoteForm.sidebar.recurringPerMonth', { defaultValue: '{{amount}} recurring / month', amount: formattedRecurringMonthly })}

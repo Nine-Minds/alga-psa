@@ -275,7 +275,8 @@
       "editQuote": "Edit Quote",
       "newQuote": "New Quote",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Quote total"
+      "quoteTotalLabel": "Quote total",
+      "totalsError": "Tax and total are not current — try editing the line items again or reload."
     },
     "breadcrumb": {
       "billing": "Billing",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Custom",
       "tenantDefault": "Tenant default",
-      "changeLayout": "Change"
+      "changeLayout": "Change",
+      "totalsError": "Tax and total could not be updated. The figures shown may be out of date."
     },
     "sectionTitles": {
       "title": "Grouped quote section titles",

@@ -275,7 +275,8 @@
       "editQuote": "Modifica preventivo",
       "newQuote": "Nuovo preventivo",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Totale preventivo"
+      "quoteTotalLabel": "Totale preventivo",
+      "totalsError": "Imposte e totale non sono aggiornati: modifica di nuovo le voci o ricarica la pagina."
     },
     "breadcrumb": {
       "billing": "Fatturazione",
@@ -387,7 +388,8 @@
       "standardLayout": "Standard",
       "customLayout": "Personalizzato",
       "tenantDefault": "Predefinito tenant",
-      "changeLayout": "Modifica"
+      "changeLayout": "Modifica",
+      "totalsError": "Impossibile aggiornare imposte e totale. Gli importi mostrati potrebbero non essere aggiornati."
     },
     "sectionTitles": {
       "title": "Titoli delle sezioni del preventivo raggruppato",

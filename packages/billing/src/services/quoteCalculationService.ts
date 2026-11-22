@@ -137,6 +137,52 @@ export async function recalculateQuoteFinancials(
     });
 }
 
+/**
+ * Brings a quote's stored totals into line with the shared tax engine.
+ *
+ * The totals on a `sent` quote were written by an earlier engine (or by an edit
+ * made before a rate changed), so the figure a client is about to sign can differ
+ * from what the engine says today. Recomputes through the same resolution the
+ * editor uses; when subtotal, discounts, tax or total differ from what is stored,
+ * persists the corrected figures and returns true, so the caller can tell the
+ * signer the quote changed. Returns false, writing nothing, when they agree.
+ */
+export async function reconcileQuoteTotalsWithEngine(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string
+): Promise<boolean> {
+  const db = tenantDb(knexOrTrx, tenant);
+  const quote = await db.table('quotes')
+    .where({ quote_id: quoteId })
+    .first() as (QuoteCalculationContext & Record<string, unknown>) | undefined;
+  if (!quote) return false;
+
+  const items = await db.table('quote_items')
+    .where({ quote_id: quoteId })
+    .orderBy('display_order', 'asc')
+    .orderBy('created_at', 'asc') as QuoteItemRow[];
+
+  const { totals } = await resolveQuoteTaxes(knexOrTrx, tenant, quote, items);
+  const stored = {
+    subtotal: Number(quote.subtotal ?? 0),
+    discountTotal: Number(quote.discount_total ?? 0),
+    tax: Number(quote.tax ?? 0),
+    totalAmount: Number(quote.total_amount ?? 0),
+  };
+  if (
+    stored.subtotal === totals.subtotal &&
+    stored.discountTotal === totals.discountTotal &&
+    stored.tax === totals.tax &&
+    stored.totalAmount === totals.totalAmount
+  ) {
+    return false;
+  }
+
+  await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
+  return true;
+}
+
 /** A draft line as the editor holds it; `id` is the editor's stable row key. */
 export interface QuoteDraftTaxItem extends Omit<QuoteItemRow, 'quote_item_id'> {
   id: string;

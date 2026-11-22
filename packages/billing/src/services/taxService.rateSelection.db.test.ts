@@ -18,7 +18,6 @@ vi.mock('@shared/services/productAccessGuard', () => ({
 import ClientTaxSettings from '../models/clientTaxSettings';
 import { TaxService } from './taxService';
 import { addTaxRate, updateTaxRate } from '../actions/taxRateActions';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
 
 let db: Knex;
 let clientId: string;
@@ -63,9 +62,6 @@ beforeEach(async () => {
     rate({ tenant: foreignTenant, tax_percentage: 90 }),
   ]);
   await context.db('client_tax_rates').insert({ tenant: context.tenant, client_id: clientId, tax_rate_id: defaultRateId, is_default: true });
-  // Client creation provisions default tax settings. Tax calculation no longer
-  // inserts them on read, so the fixture provisions them the way creation does.
-  await initializeClientDefaultTax(context.db, context.tenant, clientId);
 });
 afterEach(async () => { await context.db?.rollback(); context.db = undefined; });
 

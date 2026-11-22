@@ -275,7 +275,8 @@
       "editQuote": "Editar cotação",
       "newQuote": "Nova cotação",
       "version": "v{{version}}",
-      "quoteTotalLabel": "Cotação total"
+      "quoteTotalLabel": "Cotação total",
+      "totalsError": "O imposto e o total não estão atualizados: edite os itens novamente ou recarregue a página."
     },
     "breadcrumb": {
       "billing": "Faturamento",
@@ -387,7 +388,8 @@
       "standardLayout": "Padrão",
       "customLayout": "Personalizado",
       "tenantDefault": "Padrão do locatário",
-      "changeLayout": "Mudar"
+      "changeLayout": "Mudar",
+      "totalsError": "Não foi possível atualizar o imposto e o total. Os valores exibidos podem estar desatualizados."
     },
     "sectionTitles": {
       "title": "Títulos das seções da cotação agrupada",
