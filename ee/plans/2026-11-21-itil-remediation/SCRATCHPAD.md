@@ -10,8 +10,23 @@ Working notes for `PRD.md`. Findings are from reading code on `main` at `e776e1f
 | D2 | New ITIL boards keep the automatic "ITIL Standard" policy | Natallia, 2026-11-21 |
 | D3 | Rule-breaking tickets stay editable; nothing rewrites them silently | Natallia, 2026-11-21 |
 | D4 | No new mixed boards; existing ones untouched | Natallia, 2026-11-21 |
-| A1 | Per-board copies of ITIL categories; priorities stay tenant-wide | Proposed by Natallia for "every board", narrowed to categories in discussion; not confirmed |
-| A2 | Impact/Urgency may be empty on ITIL tickets | Draft assumption; not confirmed |
+| D5 | A direct priority change on an assessed ITIL ticket clears Impact/Urgency; they may be empty | Review, 2026-11-21 |
+| D6 | Switching an existing board to ITIL assigns no SLA; the switch summary states the board's SLA | Review, 2026-11-21 |
+| D7 | Workflow `tickets.create` and inbound webhook create fall back | Review, 2026-11-21 |
+| D8 | Ticket ITIL level is derived from the priority, not stored | Review, 2026-11-21 |
+| D9 | Per-board copies of ITIL categories, like non-ITIL boards; priorities stay tenant-wide | Natallia, 2026-11-22 |
+| D10 | Cross-board category lists and reports show a standard category once (R9) | Natallia, 2026-11-22 |
+
+Review of the first draft (2026-11-21) found seven gaps, all now in the PRD:
+1. Migration order: clearing flags before re-pointing lost the mapping. Now map, copy, re-point, then clear.
+2. Flagged categories with no board were not covered.
+3. Saved list views hold category ids and the loader drops unknown ones.
+4. Cross-board filters and reports would show one entry per board.
+5. No reversal path. Now `itil_category_remap` plus `down()`.
+6. The type-switch summary did not mention SLA.
+7. The priority model had the same mass-assignment hole as categories.
+
+Rejected alternative for D5: writing the matrix-diagonal pair. It stores Impact and Urgency values nobody chose and pollutes reporting on them.
 
 Why per-board categories and not per-board priorities:
 - Custom categories and statuses are already board-owned, so per-board ITIL categories make `category.board_id = ticket.board_id` the only rule. The nine `board_id`-only pickers become correct without a query change.
@@ -101,6 +116,14 @@ Templates and recurring: listing is canonical (`useTicketFieldReferenceData.ts:1
 - `deleteReferenceDataItem('categories')` (`referenceDataActions.ts:714-766`): no authorization, no ITIL guard; used by onboarding (`TicketingConfigStep.tsx:1056`).
 - REST `deleteTicketCategory` (`CategoryService.ts:564-590`): checks `tickets.category_id` but not `subcategory_id`.
 
+### Where category ids are stored besides tickets
+- Board delete step 8c (`boardActions.ts:1029-1039`) moves surviving ITIL categories to another ITIL board, or sets `board_id` to NULL when none is left. So flagged categories without a board exist wherever the last ITIL board was deleted while tickets still used them, and a later ITIL board reuses them through the name match.
+- Saved views: `boards.list_view_settings` (migration `20260819120000`, schema `board-actions/boardViewSettingsSchema.ts`) captures ticket filters, including `categoryId`, `categoryIds`, `excludeCategoryIds`. `packages/tickets/src/lib/ticketViewSettings.ts:278-335` drops ids that are not in the known set for the board, silently by design.
+- Personal board tabs: `packages/tickets/src/lib/boardTabs.ts`, `ticketWhereStorage.ts`, `ticketListUrlSync.ts`. Where the per-tab filters are persisted (server preference or browser) is not confirmed; the loader translation in `category-filters` covers the browser case.
+- Ticket list URL parameters carry the same three keys (`server/src/app/msp/tickets/page.tsx:127-137`), so shared links hold category ids too.
+- CSV import treats a category without a board as `_global` and matches it for any board (`ticketImportActions.ts:339`, `ticketImportUtils.ts:371,623`).
+- Priority model: `packages/reference-data/src/models/priority.ts:60` inserts `{ ...priority, tenant }`.
+
 ### SLA
 - Hook: `registerSlaIntegration` (`packages/msp-composition/src/tickets/registerSlaIntegration.ts`) is called only from `server/src/app/msp/_components/WorkspaceRouteLayout.tsx:9`. `/msp/settings` and `/msp/onboarding` do not use that layout.
 - `server/src/lib/initializeApp.ts` already has a register-then-assert pattern (`assert…NotifierRegistered`); use it.
@@ -135,6 +158,9 @@ Templates and recurring: listing is canonical (`useTicketFieldReferenceData.ts:1
 - Whether the production webpack build gives server actions the same module instance as startup code (affects the SLA hook).
 - Which JSON settings store a category id without a board id (workflow definitions, Huntress, webhook mappings, checklist rules, recurring overrides).
 - Whether REST `PriorityService` blocks editing ITIL priorities the way the web action does (`priorityActions.ts:235`).
+- Where the all-boards ticket filter and the client portal ticket filter load their category lists, and which reports or dashboards group tickets by category (scope of `category-filters`).
+- Where personal board-tab filters are persisted.
+- Whether any flow creates a category without a board on purpose; R2 stops offering and accepting them.
 - Whether `ee/temporal-workflows` can import from `@alga-psa/shared` for the shared SLA defaults.
 
 ## Commands

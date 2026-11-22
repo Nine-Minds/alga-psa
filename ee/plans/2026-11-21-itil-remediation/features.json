@@ -100,6 +100,24 @@
   },
   {
     "id": "F012",
+    "commitGroup": "core-rules",
+    "prdRefs": [
+      "R3"
+    ],
+    "implemented": false,
+    "description": "Priority create and update accept only name, colour, order and item type in the reference-data model, the web actions and REST PriorityService; the ITIL flag and level are set only by ITIL seeding"
+  },
+  {
+    "id": "F013",
+    "commitGroup": "core-rules",
+    "prdRefs": [
+      "R3"
+    ],
+    "implemented": false,
+    "description": "An ITIL priority cannot be edited or deleted through REST, as on the web"
+  },
+  {
+    "id": "F014",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "UX / UI Notes"
@@ -108,7 +126,7 @@
     "description": "Inbound ticket defaults form lists only priorities that fit the selected board"
   },
   {
-    "id": "F013",
+    "id": "F015",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "UX / UI Notes"
@@ -117,7 +135,7 @@
     "description": "Changing the board in the inbound ticket defaults form clears a selected priority that no longer fits"
   },
   {
-    "id": "F014",
+    "id": "F016",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "R6"
@@ -126,7 +144,7 @@
     "description": "Saving inbound ticket defaults refuses a priority of the wrong family or one that no longer exists, with a field error"
   },
   {
-    "id": "F015",
+    "id": "F017",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "UX / UI Notes"
@@ -135,7 +153,7 @@
     "description": "A stored inbound default whose priority does not fit its board or no longer exists shows a warning in the form and a badge in the defaults list"
   },
   {
-    "id": "F016",
+    "id": "F018",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "R6"
@@ -144,7 +162,7 @@
     "description": "Inbound email ticket creation resolves its priority with policy fallback"
   },
   {
-    "id": "F017",
+    "id": "F019",
     "commitGroup": "email-hotfix",
     "prdRefs": [
       "UX / UI Notes"
@@ -153,7 +171,7 @@
     "description": "New inbound-defaults strings use translation keys in every locale; new controls have kebab-case ids"
   },
   {
-    "id": "F018",
+    "id": "F020",
     "commitGroup": "test-harness",
     "prdRefs": [
       "Acceptance Criteria"
@@ -162,7 +180,7 @@
     "description": "Integration fixture that builds a tenant with one non-ITIL board, two ITIL boards, one legacy mixed board, both priority families and own categories"
   },
   {
-    "id": "F019",
+    "id": "F021",
     "commitGroup": "test-harness",
     "prdRefs": [
       "Acceptance Criteria"
@@ -171,31 +189,13 @@
     "description": "Table-driven suite itilSecondBoardSurfaces listing every picker and writer from the PRD; each surface is marked expected-fail until its commit group lands"
   },
   {
-    "id": "F020",
-    "commitGroup": "category-schema",
-    "prdRefs": [
-      "Category migration"
-    ],
-    "implemented": false,
-    "description": "Migration adds categories.standard_category_id (nullable uuid)"
-  },
-  {
-    "id": "F021",
-    "commitGroup": "category-schema",
-    "prdRefs": [
-      "Category migration"
-    ],
-    "implemented": false,
-    "description": "Migration links each flagged category to its standard row by name and parent name"
-  },
-  {
     "id": "F022",
     "commitGroup": "category-schema",
     "prdRefs": [
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration clears is_from_itil_standard on rows that cannot be linked or sit on a board whose categories are not ITIL"
+    "description": "Migration adds categories.standard_category_id (nullable uuid) and creates itil_category_remap (tenant, board_id, standard_category_id, old_category_id, new_category_id)"
   },
   {
     "id": "F023",
@@ -204,7 +204,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration inserts the missing standard rows for every ITIL board that has no set of its own, parents before children"
+    "description": "Migration first maps every flagged category to its standard row by name and parent name, wherever it sits: on an ITIL board, on a non-ITIL board, or with no board; children under a flagged parent are mapped through that parent"
   },
   {
     "id": "F024",
@@ -213,7 +213,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration re-points tickets.category_id and subcategory_id on other ITIL boards to that board's copy of the same standard category"
+    "description": "As its last data step, after all re-pointing, the migration clears the flag and link on every mapped row that is not on an ITIL board; no row is deleted"
   },
   {
     "id": "F025",
@@ -222,7 +222,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration re-points ticket_templates, recurring definitions (columns, overrides and client overrides) and inbound_ticket_defaults the same way"
+    "description": "Migration gives every ITIL board its own set: rows already on the board are linked in place and keep their ids, missing standard rows are inserted parents first"
   },
   {
     "id": "F026",
@@ -231,7 +231,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration re-points category ids in JSON settings that name both a board and a category (workflow action inputs, Huntress settings, inbound webhook mappings, checklist rules); settings without a board are left"
+    "description": "Migration re-points tickets.category_id and subcategory_id on an ITIL board from a mapped category that is not the board's own to the board's copy of the same standard category, and records the pair in itil_category_remap"
   },
   {
     "id": "F027",
@@ -240,7 +240,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration adds a partial unique index on (tenant, board_id, standard_category_id) where the link is set"
+    "description": "Migration re-points ticket_templates, recurring definitions (columns, overrides and client overrides) and inbound_ticket_defaults the same way"
   },
   {
     "id": "F028",
@@ -249,7 +249,7 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration is idempotent, runs per tenant, uses the self-contained tenantDb shim, selects values before updating by parameter, and sets transaction false"
+    "description": "Migration re-points category ids in JSON settings that name both a board and a category (workflow action inputs, Huntress settings, inbound webhook mappings, checklist rules); settings without a board are left"
   },
   {
     "id": "F029",
@@ -258,10 +258,28 @@
       "Category migration"
     ],
     "implemented": false,
-    "description": "Migration changes no ticket's priority, Impact or Urgency and no category on the board that holds the set today"
+    "description": "Migration adds a partial unique index on (tenant, board_id, standard_category_id) where the link is set"
   },
   {
     "id": "F030",
+    "commitGroup": "category-schema",
+    "prdRefs": [
+      "Category migration"
+    ],
+    "implemented": false,
+    "description": "Migration is idempotent, runs per tenant, uses the self-contained tenantDb shim, selects values before updating by parameter, and sets transaction false"
+  },
+  {
+    "id": "F031",
+    "commitGroup": "category-schema",
+    "prdRefs": [
+      "Category migration"
+    ],
+    "implemented": false,
+    "description": "Migration changes no ticket's priority, Impact or Urgency and no category on the board that holds the set today"
+  },
+  {
+    "id": "F032",
     "commitGroup": "category-schema",
     "prdRefs": [
       "Gotchas"
@@ -270,67 +288,49 @@
     "description": "Dev seeds create the ITIL board before the ITIL categories and seed the set onto that board"
   },
   {
-    "id": "F031",
-    "commitGroup": "category-rules",
-    "prdRefs": [
-      "R2"
-    ],
-    "implemented": false,
-    "description": "listCategoriesForBoard returns the categories whose board_id is the board, for ITIL and non-ITIL boards alike, with standard_category_id"
-  },
-  {
-    "id": "F032",
-    "commitGroup": "category-rules",
-    "prdRefs": [
-      "R2"
-    ],
-    "implemented": false,
-    "description": "getTicketCategoriesByBoard, the ticket-form hydration in optimizedTicketActions and GET /api/v1/tickets/categories call listCategoriesForBoard; the list-by-flag branch is removed"
-  },
-  {
     "id": "F033",
-    "commitGroup": "category-rules",
+    "commitGroup": "category-schema",
     "prdRefs": [
-      "R2"
+      "Category migration"
     ],
     "implemented": false,
-    "description": "findBoardFieldProblems checks that a category's board is the ticket's board and that a subcategory is a child of the category"
+    "description": "A standard child on an ITIL board whose parent sits on another board or on none is re-parented to that board's own parent"
   },
   {
     "id": "F034",
-    "commitGroup": "category-rules",
+    "commitGroup": "category-schema",
     "prdRefs": [
-      "R2"
+      "Category migration"
     ],
     "implemented": false,
-    "description": "The separate category checks in ticketFieldReferences, co-managed ticketEditing and the asset maintenance workflow action are replaced by the shared check"
+    "description": "Migration re-points categoryId, categoryIds and excludeCategoryIds in boards.list_view_settings and in stored personal board-tab filters on ITIL boards"
   },
   {
     "id": "F035",
-    "commitGroup": "category-rules",
+    "commitGroup": "category-schema",
     "prdRefs": [
-      "R2"
+      "Category migration"
     ],
     "implemented": false,
-    "description": "ItilStandardsService gives a board its standard set by inserting the standard rows that board lacks, keyed by standard_category_id; it never reads or changes another board's categories"
+    "description": "Flagged categories with no board: references from ITIL boards move to the board's copy; references from other boards are untouched; the rows stay, without flag or board"
   },
   {
     "id": "F036",
-    "commitGroup": "category-rules",
+    "commitGroup": "category-schema",
     "prdRefs": [
-      "R2"
+      "Reversal"
     ],
     "implemented": false,
-    "description": "Board delete removes the board's categories with it; the re-pointing step and the category half of cleanupUnusedItilStandards are removed"
+    "description": "Migration down() uses itil_category_remap to restore every re-pointed reference, removes the inserted copies, restores parents, flags and links, and drops the table and column"
   },
   {
     "id": "F037",
-    "commitGroup": "category-rules",
+    "commitGroup": "category-schema",
     "prdRefs": [
-      "R2"
+      "Reversal"
     ],
     "implemented": false,
-    "description": "A standard row on an ITIL board cannot be renamed, re-parented, moved or deleted through web actions"
+    "description": "itil_category_remap is kept after the migration with one row per replaced (board, old id) pair, so a setting found later can be corrected from it"
   },
   {
     "id": "F038",
@@ -339,7 +339,7 @@
       "R2"
     ],
     "implemented": false,
-    "description": "A standard row on an ITIL board cannot be changed or deleted through REST CategoryService or the reference-data delete"
+    "description": "listCategoriesForBoard returns the categories whose board_id is the board, for ITIL and non-ITIL boards alike, with standard_category_id"
   },
   {
     "id": "F039",
@@ -348,7 +348,7 @@
       "R2"
     ],
     "implemented": false,
-    "description": "Adding a category to an ITIL board is refused in web settings and REST create"
+    "description": "getTicketCategoriesByBoard, the ticket-form hydration in optimizedTicketActions and GET /api/v1/tickets/categories call listCategoriesForBoard; the list-by-flag branch is removed"
   },
   {
     "id": "F040",
@@ -357,52 +357,52 @@
       "R2"
     ],
     "implemented": false,
-    "description": "copyTicketCategoriesToBoard accepts only a non-ITIL target board and copies rows without the standard link or flag"
+    "description": "findBoardFieldProblems checks that a category's board is the ticket's board and that a subcategory is a child of the category"
   },
   {
     "id": "F041",
     "commitGroup": "category-rules",
     "prdRefs": [
-      "Problem 6"
+      "R2"
     ],
     "implemented": false,
-    "description": "updateTicketCategory accepts only name, display order and parent"
+    "description": "The separate category checks in ticketFieldReferences, co-managed ticketEditing and the asset maintenance workflow action are replaced by the shared check"
   },
   {
     "id": "F042",
     "commitGroup": "category-rules",
     "prdRefs": [
-      "Problem 6"
+      "R2"
     ],
     "implemented": false,
-    "description": "deleteCategory, updateCategory, updateTicketCategory and deleteReferenceDataItem for categories require the ticket_settings permission"
+    "description": "ItilStandardsService gives a board its standard set by inserting the standard rows that board lacks, keyed by standard_category_id; it never reads or changes another board's categories"
   },
   {
     "id": "F043",
     "commitGroup": "category-rules",
     "prdRefs": [
-      "Problem 6"
+      "R2"
     ],
     "implemented": false,
-    "description": "REST deleteTicketCategory refuses a category in use as a subcategory"
+    "description": "Board delete removes the board's categories with it, except a category still used by a ticket on another board, which is kept without a board; the re-pointing step and the category half of cleanupUnusedItilStandards are removed"
   },
   {
     "id": "F044",
     "commitGroup": "category-rules",
     "prdRefs": [
-      "UX / UI Notes"
+      "R2"
     ],
     "implemented": false,
-    "description": "Categories settings shows an ITIL board's own set with a Standard badge, disables edit, delete and add there, and offers only non-ITIL boards as copy targets"
+    "description": "A standard row on an ITIL board cannot be renamed, re-parented, moved or deleted through web actions"
   },
   {
     "id": "F045",
     "commitGroup": "category-rules",
     "prdRefs": [
-      "UX / UI Notes"
+      "R2"
     ],
     "implemented": false,
-    "description": "CSV import matches categories within the row's board and, on an ITIL board, reports an unmatched category per row instead of creating it"
+    "description": "A standard row on an ITIL board cannot be changed or deleted through REST CategoryService or the reference-data delete"
   },
   {
     "id": "F046",
@@ -411,10 +411,73 @@
       "R2"
     ],
     "implemented": false,
-    "description": "Pickers that filter categories by board list the standard set on every ITIL board: co-managed edit, inbound email defaults, workflow designer (both copies), Huntress settings, inbound webhook mapping, checklist rules, REST category list, tree and search, onboarding"
+    "description": "Adding a category to an ITIL board is refused in web settings and REST create"
   },
   {
     "id": "F047",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "R2"
+    ],
+    "implemented": false,
+    "description": "copyTicketCategoriesToBoard accepts only a non-ITIL target board and copies rows without the standard link or flag"
+  },
+  {
+    "id": "F048",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "Problem 6"
+    ],
+    "implemented": false,
+    "description": "updateTicketCategory accepts only name, display order and parent"
+  },
+  {
+    "id": "F049",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "Problem 6"
+    ],
+    "implemented": false,
+    "description": "deleteCategory, updateCategory, updateTicketCategory and deleteReferenceDataItem for categories require the ticket_settings permission"
+  },
+  {
+    "id": "F050",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "Problem 6"
+    ],
+    "implemented": false,
+    "description": "REST deleteTicketCategory refuses a category in use as a subcategory"
+  },
+  {
+    "id": "F051",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": false,
+    "description": "Categories settings shows an ITIL board's own set with a Standard badge, disables edit, delete and add there, and offers only non-ITIL boards as copy targets"
+  },
+  {
+    "id": "F052",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": false,
+    "description": "CSV import matches categories within the row's board and, on an ITIL board, reports an unmatched category per row instead of creating it"
+  },
+  {
+    "id": "F053",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "R2"
+    ],
+    "implemented": false,
+    "description": "Pickers that filter categories by board list the standard set on every ITIL board: co-managed edit, inbound email defaults, workflow designer (both copies), Huntress settings, inbound webhook mapping, checklist rules, REST category list, tree and search, onboarding"
+  },
+  {
+    "id": "F054",
     "commitGroup": "category-rules",
     "prdRefs": [
       "UX / UI Notes"
@@ -423,7 +486,52 @@
     "description": "New category strings use translation keys in every locale; new controls have kebab-case ids"
   },
   {
-    "id": "F048",
+    "id": "F055",
+    "commitGroup": "category-rules",
+    "prdRefs": [
+      "R2"
+    ],
+    "implemented": false,
+    "description": "A category with no board is offered by no picker and refused as a new selection; CSV import drops its _global category fallback"
+  },
+  {
+    "id": "F056",
+    "commitGroup": "category-filters",
+    "prdRefs": [
+      "R9"
+    ],
+    "implemented": false,
+    "description": "The all-boards ticket filter and the client portal ticket filter list a standard category once; non-standard categories are listed as today"
+  },
+  {
+    "id": "F057",
+    "commitGroup": "category-filters",
+    "prdRefs": [
+      "R9"
+    ],
+    "implemented": false,
+    "description": "A category filter value, include or exclude, that is a standard category matches that standard category on every board in scope, whichever board's copy the value holds"
+  },
+  {
+    "id": "F058",
+    "commitGroup": "category-filters",
+    "prdRefs": [
+      "R9"
+    ],
+    "implemented": false,
+    "description": "Loading a saved view or tab filter on a board translates a standard category of another board to this board's copy instead of dropping it"
+  },
+  {
+    "id": "F059",
+    "commitGroup": "category-filters",
+    "prdRefs": [
+      "R9"
+    ],
+    "implemented": false,
+    "description": "Reports and dashboards that group tickets by category group standard categories by the standard link"
+  },
+  {
+    "id": "F060",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "R4"
@@ -432,7 +540,7 @@
     "description": "MSP ticket create computes the ITIL priority only when the board has ITIL priorities, through resolveTicketPriorityFields"
   },
   {
-    "id": "F049",
+    "id": "F061",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "R4"
@@ -441,16 +549,16 @@
     "description": "Both MSP ticket update functions use resolveTicketPriorityFields; the four name-pattern lookups are removed"
   },
   {
-    "id": "F050",
+    "id": "F062",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "R4"
     ],
     "implemented": false,
-    "description": "A direct priority change on an ITIL ticket that has Impact and Urgency sets them to the diagonal pair for the new level"
+    "description": "A direct priority change on an ITIL ticket that has Impact and Urgency clears both, and the ticket shows Not assessed"
   },
   {
-    "id": "F051",
+    "id": "F063",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "R4"
@@ -459,7 +567,7 @@
     "description": "A write that supplies only one of Impact and Urgency is refused on interactive paths"
   },
   {
-    "id": "F052",
+    "id": "F064",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "R4"
@@ -468,7 +576,7 @@
     "description": "Service request provider, template instantiation, the recurring generator and batch duplicate resolve priority and Impact/Urgency through the shared function"
   },
   {
-    "id": "F053",
+    "id": "F065",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "Data Model and API"
@@ -477,7 +585,7 @@
     "description": "itil_priority_level is no longer accepted in the ticket schema or written; event payloads and list queries take the level from the priority row"
   },
   {
-    "id": "F054",
+    "id": "F066",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "UX / UI Notes"
@@ -486,7 +594,7 @@
     "description": "Ticket detail, the bento hero and quick add show the stored priority and Not assessed when an ITIL ticket has no Impact and Urgency"
   },
   {
-    "id": "F055",
+    "id": "F067",
     "commitGroup": "impact-urgency",
     "prdRefs": [
       "UX / UI Notes"
@@ -495,7 +603,7 @@
     "description": "New Impact/Urgency strings use translation keys in every locale"
   },
   {
-    "id": "F056",
+    "id": "F068",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -504,7 +612,7 @@
     "description": "TicketModel.createTicket takes a field policy and runs the priority and category rules inside the model, so every create that reaches it is covered"
   },
   {
-    "id": "F057",
+    "id": "F069",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -513,7 +621,7 @@
     "description": "Client portal ticket create refuses a priority that does not fit the board"
   },
   {
-    "id": "F058",
+    "id": "F070",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -522,7 +630,7 @@
     "description": "CSV import checks priority and category per row against the row's board and reports failures per row; its fallback priority is the board default"
   },
   {
-    "id": "F059",
+    "id": "F071",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -531,7 +639,7 @@
     "description": "Teams message action, Teams guest intake and manual telephony tickets take their priority from defaultPriorityForBoard"
   },
   {
-    "id": "F060",
+    "id": "F072",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -540,7 +648,7 @@
     "description": "Workflow assets.create_maintenance_ticket refuses a priority or category that does not fit the board"
   },
   {
-    "id": "F061",
+    "id": "F073",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -549,7 +657,7 @@
     "description": "RMM alert ticket creation resolves its priority with policy fallback and filters priorities by item type"
   },
   {
-    "id": "F062",
+    "id": "F074",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -558,7 +666,7 @@
     "description": "Huntress incident ticket creation resolves its priority with policy fallback and drops a category that is not the board's"
   },
   {
-    "id": "F063",
+    "id": "F075",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -567,7 +675,7 @@
     "description": "Telephony auto-ticket and contract renewal ticket resolve their priority with policy fallback"
   },
   {
-    "id": "F064",
+    "id": "F076",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -576,7 +684,7 @@
     "description": "Workflow tickets.create and inbound webhook create resolve priority with policy fallback and drop a category that is not the board's"
   },
   {
-    "id": "F065",
+    "id": "F077",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -585,7 +693,7 @@
     "description": "Service request provider falls back to the board default priority, filtered to ticket priorities"
   },
   {
-    "id": "F066",
+    "id": "F078",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -594,7 +702,7 @@
     "description": "Data-migration import resolves priority with policy fallback"
   },
   {
-    "id": "F067",
+    "id": "F079",
     "commitGroup": "writers-create",
     "prdRefs": [
       "R6"
@@ -603,7 +711,7 @@
     "description": "REST v1 create and create-from-asset check the category against the board"
   },
   {
-    "id": "F068",
+    "id": "F080",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -612,7 +720,7 @@
     "description": "prepareTicketFieldPatch in the shared module validates and normalises the priority, Impact, Urgency, category and subcategory of an update patch against the current ticket"
   },
   {
-    "id": "F069",
+    "id": "F081",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -621,7 +729,7 @@
     "description": "MSP updateTicket and updateTicketInTransaction call prepareTicketFieldPatch before writing"
   },
   {
-    "id": "F070",
+    "id": "F082",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -630,7 +738,7 @@
     "description": "REST v1 ticket update calls prepareTicketFieldPatch, including the subcategory-to-category check it lacks today"
   },
   {
-    "id": "F071",
+    "id": "F083",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -639,7 +747,7 @@
     "description": "TicketModel.updateTicket calls prepareTicketFieldPatch, covering workflow tickets.update_fields and inbound webhook update"
   },
   {
-    "id": "F072",
+    "id": "F084",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R6"
@@ -648,7 +756,7 @@
     "description": "Both Activities inline priority updates check the priority against the ticket's board"
   },
   {
-    "id": "F073",
+    "id": "F085",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R6"
@@ -657,7 +765,7 @@
     "description": "Bundle sync does not copy the master's priority onto a child whose board has the other priority family"
   },
   {
-    "id": "F074",
+    "id": "F086",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -666,7 +774,7 @@
     "description": "A board move requires a priority that fits the destination when the families differ, and clears Impact and Urgency when the destination has the tenant's own priorities"
   },
   {
-    "id": "F075",
+    "id": "F087",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R2"
@@ -675,7 +783,7 @@
     "description": "A board move between two ITIL boards maps the category and subcategory to the destination's copy of the same standard category; any other board move without a category in the patch clears them"
   },
   {
-    "id": "F076",
+    "id": "F088",
     "commitGroup": "writers-update",
     "prdRefs": [
       "R5"
@@ -684,7 +792,7 @@
     "description": "A ticket whose stored priority or category does not fit its board saves changes to title, status, assignee and description"
   },
   {
-    "id": "F077",
+    "id": "F089",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "R3"
@@ -693,7 +801,7 @@
     "description": "One client helper filters a priority list for a board; QuickAddTicket, TicketInfo, BentoHero, BoardsSettings, surveys TriggerForm and TicketImportDialog use it instead of their own copies"
   },
   {
-    "id": "F078",
+    "id": "F090",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -702,7 +810,7 @@
     "description": "Workflow designer priority options carry their family and are filtered by the selected board, in both copies of the picker"
   },
   {
-    "id": "F079",
+    "id": "F091",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -711,7 +819,7 @@
     "description": "Huntress settings list priorities that fit the selected board"
   },
   {
-    "id": "F080",
+    "id": "F092",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -720,7 +828,7 @@
     "description": "Co-managed ticket edit lists and accepts only priorities that fit the ticket's board"
   },
   {
-    "id": "F081",
+    "id": "F093",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -729,7 +837,7 @@
     "description": "Service request editor lists priorities that fit the selected board, for both board kinds"
   },
   {
-    "id": "F082",
+    "id": "F094",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -738,7 +846,7 @@
     "description": "Create ticket from asset lists priorities that fit the selected board"
   },
   {
-    "id": "F083",
+    "id": "F095",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -747,7 +855,7 @@
     "description": "Activities inline priority picker lists priorities that fit the ticket's board"
   },
   {
-    "id": "F084",
+    "id": "F096",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -756,7 +864,7 @@
     "description": "CSV import dialog maps priorities using each row's board, not the default board"
   },
   {
-    "id": "F085",
+    "id": "F097",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "R3"
@@ -765,7 +873,7 @@
     "description": "Inbound webhook mapping and RMM alert rule lookups return ticket priorities only; the webhook lookup filters by the mapped board"
   },
   {
-    "id": "F086",
+    "id": "F098",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "Data Model and API"
@@ -774,7 +882,7 @@
     "description": "GET /api/v1/tickets/priorities accepts board_id and returns itil_priority_level"
   },
   {
-    "id": "F087",
+    "id": "F099",
     "commitGroup": "priority-pickers",
     "prdRefs": [
       "UX / UI Notes"
@@ -783,7 +891,7 @@
     "description": "Mobile ticket detail lists priorities by the board's kind instead of the current priority's family"
   },
   {
-    "id": "F088",
+    "id": "F100",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -792,7 +900,7 @@
     "description": "Board create, update and delete logic is extracted from the server actions into plain functions taking a transaction, tenant and actor; the actions add only authentication"
   },
   {
-    "id": "F089",
+    "id": "F101",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -801,7 +909,7 @@
     "description": "REST BoardService create, update and delete call those functions"
   },
   {
-    "id": "F090",
+    "id": "F102",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -810,7 +918,7 @@
     "description": "Board create inserts the board, runs ITIL setup, then picks the default priority, then seeds statuses"
   },
   {
-    "id": "F091",
+    "id": "F103",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "R7"
@@ -819,7 +927,7 @@
     "description": "A supplied default_priority_id is checked against the board's priority family on create and update"
   },
   {
-    "id": "F092",
+    "id": "F104",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "R1"
@@ -828,7 +936,7 @@
     "description": "Creating a board with different category and priority kinds is refused on web and REST"
   },
   {
-    "id": "F093",
+    "id": "F105",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "R1"
@@ -837,7 +945,7 @@
     "description": "An update that changes either kind to a mixed combination is refused; an existing mixed board still saves other edits"
   },
   {
-    "id": "F094",
+    "id": "F106",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -846,7 +954,7 @@
     "description": "default_assigned_team_id is saved on board create"
   },
   {
-    "id": "F095",
+    "id": "F107",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -855,7 +963,7 @@
     "description": "Board create returns, and BOARD_CREATED carries, the row as it is after setup"
   },
   {
-    "id": "F096",
+    "id": "F108",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -864,7 +972,7 @@
     "description": "Reference-data board import and the onboarding board insert go through the shared create function"
   },
   {
-    "id": "F097",
+    "id": "F109",
     "commitGroup": "board-lifecycle",
     "prdRefs": [
       "Problem 4"
@@ -873,7 +981,7 @@
     "description": "REST board delete refuses with the same reasons as the web delete"
   },
   {
-    "id": "F098",
+    "id": "F110",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Users and Primary Flows"
@@ -882,7 +990,7 @@
     "description": "switchBoardType sets both kinds of a board to ITIL or to the tenant's own, behind the ticket_settings permission"
   },
   {
-    "id": "F099",
+    "id": "F111",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Users and Primary Flows"
@@ -891,7 +999,7 @@
     "description": "Switching to ITIL ensures the tenant's ITIL priorities, gives the board its standard categories and resets its default priority to a fitting one; categories already on the board stay"
   },
   {
-    "id": "F100",
+    "id": "F112",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Users and Primary Flows"
@@ -900,7 +1008,7 @@
     "description": "Switching to the tenant's own kind keeps the board's categories as ordinary editable categories and resets its default priority to a fitting one"
   },
   {
-    "id": "F101",
+    "id": "F113",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "D3"
@@ -909,16 +1017,16 @@
     "description": "A switch changes no ticket, inbound default, template, schedule or SLA assignment"
   },
   {
-    "id": "F102",
+    "id": "F114",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Users and Primary Flows"
     ],
     "implemented": false,
-    "description": "A pre-switch summary counts the open tickets, inbound defaults, templates and schedules on the board whose priority will not fit"
+    "description": "A pre-switch summary counts the open tickets, inbound defaults, templates and schedules on the board whose priority will not fit, and states the board's SLA after the switch: no policy, or a policy with no targets for the priorities the board will use"
   },
   {
-    "id": "F103",
+    "id": "F115",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Users and Primary Flows"
@@ -927,7 +1035,7 @@
     "description": "Switching to the tenant's own kind is refused with a message when the tenant has no ticket priorities of its own"
   },
   {
-    "id": "F104",
+    "id": "F116",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "UX / UI Notes"
@@ -936,7 +1044,7 @@
     "description": "Boards settings edit dialog has a Change board type action with a confirmation showing the summary; a legacy mixed board shows both kinds read-only"
   },
   {
-    "id": "F105",
+    "id": "F117",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "Data Model and API"
@@ -945,7 +1053,7 @@
     "description": "Board update no longer changes kinds on its own; a REST PUT with a changed kind runs the switch"
   },
   {
-    "id": "F106",
+    "id": "F118",
     "commitGroup": "board-type-switch",
     "prdRefs": [
       "UX / UI Notes"
@@ -954,7 +1062,7 @@
     "description": "New board-type strings use translation keys in every locale; new controls have kebab-case ids"
   },
   {
-    "id": "F107",
+    "id": "F119",
     "commitGroup": "sla",
     "prdRefs": [
       "R8"
@@ -963,7 +1071,7 @@
     "description": "registerSlaIntegration runs from initializeApp and is asserted registered at startup; the call in WorkspaceRouteLayout is removed"
   },
   {
-    "id": "F108",
+    "id": "F120",
     "commitGroup": "sla",
     "prdRefs": [
       "R8"
@@ -972,7 +1080,7 @@
     "description": "ITIL setup on a PSA tenant fails with an error when the SLA hook is not registered, instead of skipping"
   },
   {
-    "id": "F109",
+    "id": "F121",
     "commitGroup": "sla",
     "prdRefs": [
       "Data Model and API"
@@ -981,7 +1089,7 @@
     "description": "Migration adds sla_policies.is_itil_standard, sets it on the existing policy named ITIL Standard, and allows at most one per tenant"
   },
   {
-    "id": "F110",
+    "id": "F122",
     "commitGroup": "sla",
     "prdRefs": [
       "R8"
@@ -990,7 +1098,7 @@
     "description": "itilSlaService, the cleanup in ItilStandardsService and ensureSlaParity find the ITIL policy by the flag, not the name"
   },
   {
-    "id": "F111",
+    "id": "F123",
     "commitGroup": "sla",
     "prdRefs": [
       "R8"
@@ -999,7 +1107,7 @@
     "description": "Creating an ITIL board when the ITIL policy already exists adds targets for ITIL priorities that have none and leaves existing targets unchanged"
   },
   {
-    "id": "F112",
+    "id": "F124",
     "commitGroup": "sla",
     "prdRefs": [
       "R8"
@@ -1008,7 +1116,7 @@
     "description": "One module in shared holds the ITIL SLA default targets and thresholds; itilSlaService and product-upgrade-operations import it"
   },
   {
-    "id": "F113",
+    "id": "F125",
     "commitGroup": "sla",
     "prdRefs": [
       "D1"
@@ -1017,7 +1125,7 @@
     "description": "Only board creation assigns the ITIL policy; board update, the type switch and migrations never assign a policy"
   },
   {
-    "id": "F114",
+    "id": "F126",
     "commitGroup": "sla",
     "prdRefs": [
       "Problem 5"
@@ -1026,7 +1134,7 @@
     "description": "TICKET_SLA_STAGE events are built from the ticket's SLA start and resolution due time; a ticket without an SLA emits none; shared/lib/itil/slaTargets.ts is deleted"
   },
   {
-    "id": "F115",
+    "id": "F127",
     "commitGroup": "cleanup",
     "prdRefs": [
       "SCRATCHPAD dead code"
@@ -1035,7 +1143,7 @@
     "description": "server/src/lib/utils/itilUtils.ts and packages/tickets/src/lib/itilUtils.server.ts are deleted"
   },
   {
-    "id": "F116",
+    "id": "F128",
     "commitGroup": "cleanup",
     "prdRefs": [
       "SCRATCHPAD dead code"
@@ -1044,7 +1152,7 @@
     "description": "Unused exports are removed from packages/tickets itilUtils"
   },
   {
-    "id": "F117",
+    "id": "F129",
     "commitGroup": "cleanup",
     "prdRefs": [
       "SCRATCHPAD dead code"
@@ -1053,7 +1161,7 @@
     "description": "getAvailablePriorities, getAvailableCategories and the stray console.log are removed from ticketFieldOptionsActions"
   },
   {
-    "id": "F118",
+    "id": "F130",
     "commitGroup": "cleanup",
     "prdRefs": [
       "SCRATCHPAD dead code"
@@ -1062,7 +1170,7 @@
     "description": "The unused category lister in server/src/lib/models/ticketCategory.tsx and the unused raw ticket insert in shared/services/emailService.ts are removed after confirming no callers"
   },
   {
-    "id": "F119",
+    "id": "F131",
     "commitGroup": "cleanup",
     "prdRefs": [
       "Data Model and API"
@@ -1071,7 +1179,7 @@
     "description": "display_itil_impact and display_itil_urgency are removed from board schemas, types and writes, and dropped by migration"
   },
   {
-    "id": "F120",
+    "id": "F132",
     "commitGroup": "guard",
     "prdRefs": [
       "Acceptance Criteria"
@@ -1080,7 +1188,7 @@
     "description": "scripts/guard-ticket-board-field-rules.mjs fails on a direct read of priorities or categories, or a direct write of a ticket's priority, category or board, outside an allow-list; wired as an npm script and a CI step"
   },
   {
-    "id": "F121",
+    "id": "F133",
     "commitGroup": "guard",
     "prdRefs": [
       "Acceptance Criteria"
@@ -1089,7 +1197,7 @@
     "description": "Contract test asserts every writer module listed in the PRD imports the shared rules"
   },
   {
-    "id": "F122",
+    "id": "F134",
     "commitGroup": "docs",
     "prdRefs": [
       "Acceptance Criteria"
@@ -1098,7 +1206,7 @@
     "description": "docs/itil/itil-integration.md is rewritten to describe the rules, the data model and the board lifecycle as built"
   },
   {
-    "id": "F123",
+    "id": "F135",
     "commitGroup": "docs",
     "prdRefs": [
       "Acceptance Criteria"
@@ -1107,7 +1215,7 @@
     "description": "docs/itil/ITIL_Integration_Plan.md moves to docs/archive"
   },
   {
-    "id": "F124",
+    "id": "F136",
     "commitGroup": "docs",
     "prdRefs": [
       "Gotchas"
@@ -1116,7 +1224,7 @@
     "description": "scripts/reports/priority-board-mismatch.sql category sections compare the category's board with the ticket's board"
   },
   {
-    "id": "F125",
+    "id": "F137",
     "commitGroup": "docs",
     "prdRefs": [
       "Data Model and API"
