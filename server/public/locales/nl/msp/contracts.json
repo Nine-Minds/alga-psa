@@ -1038,7 +1038,8 @@
         "customRate": "Aangepast tarief",
         "effectiveDate": "Ingangsdatum",
         "endDate": "Einddatum",
-        "notes": "Notities"
+        "notes": "Notities",
+        "appliesTo": "Geldt voor"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Weet u zeker dat u dit prijsschema wilt verwijderen?"
@@ -1060,7 +1061,10 @@
       "values": {
         "defaultRate": "Standaardtarief",
         "ongoing": "Lopend",
-        "useDefaultRate": "Standaardtarief gebruiken"
+        "useDefaultRate": "Standaardtarief gebruiken",
+        "contractWide": "Alle vaste regels",
+        "contractWideEffect": "Alle vaste regels — elk van de {{count}} vaste regels factureert {{amount}}",
+        "unnamedLine": "Naamloze regel"
       }
     },
     "dialog": {
@@ -1091,7 +1095,13 @@
         "notesPlaceholder": "Voeg notities toe over deze prijswijziging (bijv. 'Jaarlijkse tariefverhoging')",
         "unit": "Eenheid",
         "useDefaultRate": "Standaardtarief gebruiken",
-        "useDuration": "Duur gebruiken"
+        "useDuration": "Duur gebruiken",
+        "appliesTo": "Geldt voor",
+        "appliesToPlaceholder": "Selecteer een contractregel",
+        "lineFee": "Bedrag per factureerperiode",
+        "lineFeeHelp": "Wat deze regel factureert in elke factureerperiode die het prijsschema dekt, in plaats van het gebruikelijke tarief.",
+        "lineFeeHelpMixed": "Vervangt het bundeltarief van deze regel in elke factureerperiode die het prijsschema dekt. Services met een prijs per eenheid houden hun eigen stukprijs.",
+        "lineFeeHelpContractWide": "Elke vaste regel van dit contract factureert dit bedrag in elke factureerperiode die het prijsschema dekt."
       },
       "title": {
         "addPricingSchedule": "Prijsschema toevoegen",
@@ -1104,7 +1114,21 @@
         "durationRequired": "Duurwaarde is vereist wanneer duur wordt gebruikt",
         "effectiveDateRequired": "Ingangsdatum is verplicht",
         "endDateAfterEffectiveDate": "Einddatum moet na de ingangsdatum liggen",
-        "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld"
+        "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld",
+        "contractLineRequired": "Kies de contractregel waarvoor dit prijsschema geldt"
+      },
+      "values": {
+        "contractWide": "Alle vaste regels (hele contract)",
+        "unnamedLine": "Naamloze regel"
+      },
+      "notices": {
+        "contractWide": "Hele contract: dit prijsschema geldt voor elke vaste regel van dit contract. Kies een regel om het alleen op die regel toe te passen.",
+        "contractWideEffect": "Hele contract: elk van de {{count}} vaste regels factureert {{amount}} per factureerperiode. Kies een regel om dit prijsschema alleen op die regel toe te passen.",
+        "unitPricedExcluded": "Regels die per eenheid factureren staan er niet bij: een prijsschema wijzigt nooit een prijs per eenheid. Wijzig in plaats daarvan de stukprijs op de regel."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Elke vaste regel van dit contract factureert per eenheid. Een prijsschema wijzigt nooit een prijs per eenheid — wijzig in plaats daarvan de stukprijs op de regel.",
+        "noEligibleLines": "Dit contract heeft geen regel met een vast tarief, dus een prijsschema heeft niets om opnieuw te beprijzen."
       }
     }
   },
@@ -2873,7 +2897,10 @@
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",
       "overlaps": "Deze planning overlapt met een bestaande prijsplanning",
       "wouldOverlap": "Deze planning zou overlappen met een bestaande prijsplanning",
-      "notFound": "Prijsplanning niet gevonden"
+      "notFound": "Prijsplanning niet gevonden",
+      "invalidDate": "Ingangsdatum en einddatum moeten kalenderdatums zijn (JJJJ-MM-DD)",
+      "lineNotEligible": "Prijsschema’s gelden voor een regel met een vast tarief van dit contract; kies een van de vaste regels",
+      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel."
     },
     "renewals": {
       "permissions": {

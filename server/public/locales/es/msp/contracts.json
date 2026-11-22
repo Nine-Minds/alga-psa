@@ -1038,7 +1038,8 @@
         "customRate": "Tarifa personalizada",
         "effectiveDate": "Fecha de entrada en vigor",
         "endDate": "Fecha de finalización",
-        "notes": "Notas"
+        "notes": "Notas",
+        "appliesTo": "Se aplica a"
       },
       "dialogs": {
         "confirmDeleteSchedule": "¿Está seguro de que desea eliminar este programa de precios?"
@@ -1060,7 +1061,10 @@
       "values": {
         "defaultRate": "Tarifa predeterminada",
         "ongoing": "En curso",
-        "useDefaultRate": "Usar tarifa predeterminada"
+        "useDefaultRate": "Usar tarifa predeterminada",
+        "contractWide": "Todas las líneas fijas",
+        "contractWideEffect": "Todas las líneas fijas: cada una de las {{count}} líneas fijas factura {{amount}}",
+        "unnamedLine": "Línea sin nombre"
       }
     },
     "dialog": {
@@ -1091,7 +1095,13 @@
         "notesPlaceholder": "Agregue notas sobre este cambio de precios (p. ej., 'Aumento de tarifa anual')",
         "unit": "Unidad",
         "useDefaultRate": "Usar tarifa predeterminada",
-        "useDuration": "Usar duración"
+        "useDuration": "Usar duración",
+        "appliesTo": "Se aplica a",
+        "appliesToPlaceholder": "Seleccione una línea de contrato",
+        "lineFee": "Tarifa por período de facturación",
+        "lineFeeHelp": "Lo que factura esta línea en cada período de facturación que cubre el programa, en lugar de su tarifa habitual.",
+        "lineFeeHelpMixed": "Reemplaza la tarifa del paquete de esta línea en cada período de facturación que cubre el programa. Los servicios con precio por unidad conservan su precio unitario.",
+        "lineFeeHelpContractWide": "Cada línea fija de este contrato factura este importe en cada período de facturación que cubre el programa."
       },
       "title": {
         "addPricingSchedule": "Agregar programa de precios",
@@ -1104,7 +1114,21 @@
         "durationRequired": "El valor de duración es obligatorio cuando se usa duración",
         "effectiveDateRequired": "La fecha de entrada en vigor es obligatoria",
         "endDateAfterEffectiveDate": "La fecha de finalización debe ser posterior a la fecha de entrada en vigor",
-        "endDateRequiredWhenEnabled": "La fecha de finalización es obligatoria cuando \"Tiene fecha de finalización\" está habilitado"
+        "endDateRequiredWhenEnabled": "La fecha de finalización es obligatoria cuando \"Tiene fecha de finalización\" está habilitado",
+        "contractLineRequired": "Elija la línea de contrato a la que se aplica este programa"
+      },
+      "values": {
+        "contractWide": "Todas las líneas fijas (todo el contrato)",
+        "unnamedLine": "Línea sin nombre"
+      },
+      "notices": {
+        "contractWide": "Todo el contrato: este programa se aplica a todas las líneas fijas de este contrato. Elija una línea para aplicarlo solo a esa línea.",
+        "contractWideEffect": "Todo el contrato: cada una de las {{count}} líneas fijas factura {{amount}} por período de facturación. Elija una línea para aplicar este programa solo a esa línea.",
+        "unitPricedExcluded": "Las líneas que facturan por unidad no se muestran: un programa de precios nunca cambia un precio por unidad. Cambie el precio unitario en la línea."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Todas las líneas fijas de este contrato facturan por unidad. Un programa de precios nunca cambia un precio por unidad: cambie el precio unitario en la línea.",
+        "noEligibleLines": "Este contrato no tiene ninguna línea de tarifa fija, por lo que un programa de precios no tiene nada que volver a tarifar."
       }
     }
   },
@@ -2873,7 +2897,10 @@
       "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",
       "overlaps": "Este calendario se solapa con un calendario de precios existente",
       "wouldOverlap": "Este calendario se solaparía con un calendario de precios existente",
-      "notFound": "No se encontró el calendario de precios"
+      "notFound": "No se encontró el calendario de precios",
+      "invalidDate": "La fecha de entrada en vigor y la fecha de finalización deben ser fechas de calendario (AAAA-MM-DD)",
+      "lineNotEligible": "Los programas de precios se aplican a una línea de tarifa fija de este contrato; elija una de sus líneas fijas",
+      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea."
     },
     "renewals": {
       "permissions": {

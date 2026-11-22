@@ -42,14 +42,34 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogContent: ({ children }: any) => <div>{children}</div>,
 }));
 
+// Interactive stand-ins: the date and line-scope assertions below have to pick a
+// value the way the user does. The date field speaks local calendar parts, like
+// the real picker's own Date output.
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: ({ value }: any) => (
-    <input readOnly value={value ? value.toISOString() : ''} aria-label="date-picker" />
+  DatePicker: ({ id, value, onChange }: any) => (
+    <input
+      id={id}
+      aria-label={id ?? 'date-picker'}
+      value={value
+        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+        : ''}
+      onChange={(e) => {
+        const [year, month, day] = e.target.value.split('-').map(Number);
+        onChange(new Date(year, month - 1, day));
+      }}
+    />
   ),
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, value }: any) => <input readOnly id={id} value={value} />,
+  default: ({ id, value, options, onValueChange, placeholder }: any) => (
+    <select id={id} aria-label={id} value={value ?? ''} onChange={(e) => onValueChange(e.target.value)}>
+      <option value="">{placeholder ?? ''}</option>
+      {(options ?? []).map((option: any) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
@@ -82,6 +102,7 @@ vi.mock('@alga-psa/ui/components/Skeleton', () => ({
 
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
+import type { PricingScheduleLineScope } from '@alga-psa/billing/actions/contractPricingScheduleActions';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -93,16 +114,29 @@ function schedule(overrides: Partial<IContractPricingSchedule> = {}): IContractP
     tenant: 'tenant-1',
     schedule_id: 'schedule-1',
     contract_id: 'contract-1',
-    effective_date: '2026-01-01T00:00:00.000Z',
+    contract_line_id: 'line-1',
+    effective_date: '2026-01-01',
     custom_rate: 12345,
     ...overrides,
   };
 }
 
+const fixedLine = (id: string, name: string, overrides: Partial<PricingScheduleLineScope> = {}): PricingScheduleLineScope => ({
+  contract_line_id: id,
+  contract_line_name: name,
+  has_bundle_fee: true,
+  has_unit_priced_members: false,
+  ...overrides,
+});
+
+const ONE_LINE = [fixedLine('line-1', 'Managed Services')];
+
 function renderDialog(props: {
-  schedule: IContractPricingSchedule;
+  schedule: IContractPricingSchedule | null;
   currencyCode?: string;
   ambientCurrency?: string;
+  eligibleLines?: PricingScheduleLineScope[];
+  unitPricedLineCount?: number;
 }) {
   const onClose = vi.fn();
   const onSave = vi.fn();
@@ -112,6 +146,8 @@ function renderDialog(props: {
         contractId="contract-1"
         schedule={props.schedule}
         currencyCode={props.currencyCode}
+        eligibleLines={props.eligibleLines ?? ONE_LINE}
+        unitPricedLineCount={props.unitPricedLineCount}
         onClose={onClose}
         onSave={onSave}
       />
@@ -123,6 +159,14 @@ function renderDialog(props: {
 
 function rateInput(): HTMLInputElement {
   return document.getElementById('custom-rate') as HTMLInputElement;
+}
+
+function dateInput(id: 'effective-date' | 'end-date'): HTMLInputElement {
+  return document.getElementById(id) as HTMLInputElement;
+}
+
+function linePicker(): HTMLSelectElement {
+  return document.getElementById('pricing-schedule-contract-line') as HTMLSelectElement;
 }
 
 function submitForm() {
@@ -200,4 +244,223 @@ describe('PricingScheduleDialog contract-currency custom rate', () => {
     expect(payload.custom_rate).toBeNull();
   });
 
+});
+
+// effective_date/end_date are DATE columns and a schedule applies to a whole
+// service period, so a day stored early reprices an extra period. The day
+// picked has to be the day sent, east and west of UTC alike.
+describe('PricingScheduleDialog calendar dates', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createPricingScheduleMock.mockResolvedValue(schedule());
+    updatePricingScheduleMock.mockResolvedValue(schedule());
+  });
+
+  afterEach(() => {
+    process.env.TZ = originalTz;
+    cleanup();
+  });
+
+  it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
+    'sends the picked effective date as a calendar date under TZ=%s',
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      const { onSave } = renderDialog({ schedule: null });
+
+      fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+      submitForm();
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      expect(createPricingScheduleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ effective_date: '2026-06-01', end_date: null })
+      );
+    }
+  );
+
+  it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
+    'sends the picked end date as a calendar date under TZ=%s',
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      const { onSave } = renderDialog({ schedule: null });
+
+      fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+      fireEvent.click(screen.getByLabelText('Has end date'));
+      fireEvent.change(dateInput('end-date'), { target: { value: '2026-12-31' } });
+      submitForm();
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      expect(createPricingScheduleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ effective_date: '2026-06-01', end_date: '2026-12-31' })
+      );
+    }
+  );
+
+  it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
+    'round-trips a stored calendar date through the edit form under TZ=%s',
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      const { onSave } = renderDialog({
+        schedule: schedule({ effective_date: '2026-06-01', end_date: '2026-12-31' }),
+      });
+
+      expect(dateInput('effective-date').value).toBe('2026-06-01');
+      expect(dateInput('end-date').value).toBe('2026-12-31');
+
+      submitForm();
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+        'schedule-1',
+        expect.objectContaining({ effective_date: '2026-06-01', end_date: '2026-12-31' })
+      );
+    }
+  );
+
+  it.each(['Europe/Berlin', 'Pacific/Auckland', 'America/Los_Angeles'])(
+    'round-trips a DATE column read back as a UTC-midnight Date under TZ=%s',
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      // What the pg driver + server-action payload hand back for a DATE column
+      // from a UTC server process.
+      const stored = new Date('2026-06-01T00:00:00.000Z') as unknown as string;
+      const { onSave } = renderDialog({ schedule: schedule({ effective_date: stored }) });
+
+      expect(dateInput('effective-date').value).toBe('2026-06-01');
+
+      submitForm();
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+        'schedule-1',
+        expect.objectContaining({ effective_date: '2026-06-01' })
+      );
+    }
+  );
+});
+
+describe('PricingScheduleDialog line scope', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createPricingScheduleMock.mockResolvedValue(schedule());
+    updatePricingScheduleMock.mockResolvedValue(schedule());
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('preselects the only eligible fixed line and scopes the new schedule to it', async () => {
+    const { onSave } = renderDialog({ schedule: null });
+
+    expect(linePicker().value).toBe('line-1');
+
+    fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(createPricingScheduleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ contract_line_id: 'line-1' })
+    );
+  });
+
+  it('requires a choice when several fixed lines are eligible', async () => {
+    renderDialog({
+      schedule: null,
+      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+    });
+
+    expect(linePicker().value).toBe('');
+
+    fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+    submitForm();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Choose the contract line this schedule applies to'
+    );
+    expect(createPricingScheduleMock).not.toHaveBeenCalled();
+
+    fireEvent.change(linePicker(), { target: { value: 'line-2' } });
+    submitForm();
+
+    await waitFor(() => expect(createPricingScheduleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ contract_line_id: 'line-2' })
+    ));
+  });
+
+  it('flags a stored contract-wide schedule with what it bills on each fixed line', () => {
+    renderDialog({
+      schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
+      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+    });
+
+    expect(
+      screen.getByText(/each of the 2 fixed lines bills \$900\.00 per billing period/)
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a contract-wide schedule contract-wide when the picker is untouched', async () => {
+    const { onSave } = renderDialog({
+      schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
+      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+    });
+
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ contract_line_id: null })
+    );
+  });
+
+  it('re-scopes a contract-wide schedule once a line is picked', async () => {
+    const { onSave } = renderDialog({
+      schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
+      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+    });
+
+    fireEvent.change(linePicker(), { target: { value: 'line-2' } });
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ contract_line_id: 'line-2' })
+    );
+  });
+
+  it('does not offer a unit-priced line and says where to change its price', () => {
+    renderDialog({ schedule: null, eligibleLines: [], unitPricedLineCount: 1 });
+
+    expect(screen.queryByLabelText('pricing-schedule-contract-line')).toBeNull();
+    expect(
+      screen.getByText(/Every fixed line on this contract bills per unit/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/change the unit price on the line instead/)).toBeInTheDocument();
+    expect(
+      (screen.getByText('Add Schedule').closest('button') as HTMLButtonElement)
+    ).toBeDisabled();
+  });
+
+  it('notes the unit-priced lines left out of the picker', () => {
+    renderDialog({ schedule: null, unitPricedLineCount: 2 });
+
+    expect(linePicker().value).toBe('line-1');
+    expect(
+      screen.getByText(/Lines that bill per unit are not listed/)
+    ).toBeInTheDocument();
+  });
+
+  it('says the schedule replaces the bundle fee only on a mixed line', () => {
+    renderDialog({
+      schedule: schedule({ contract_line_id: 'line-1' }),
+      eligibleLines: [fixedLine('line-1', 'Managed Services', { has_unit_priced_members: true })],
+    });
+
+    expect(
+      screen.getByText(/Replaces the bundle fee of this line/)
+    ).toBeInTheDocument();
+  });
 });

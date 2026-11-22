@@ -11,8 +11,10 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   createPricingSchedule,
-  updatePricingSchedule
+  updatePricingSchedule,
+  type PricingScheduleLineScope
 } from '@alga-psa/billing/actions/contractPricingScheduleActions';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -23,11 +25,22 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+/** Sentinel value for the contract-wide option; CustomSelect only speaks strings. */
+const CONTRACT_WIDE_VALUE = '__contract_wide__';
+
 interface PricingScheduleDialogProps {
   contractId: string;
   schedule?: IContractPricingSchedule | null;
   /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
   currencyCode?: string;
+  /**
+   * Fixed lines a schedule rate actually reprices. Unit-priced lines are not in
+   * here: the engine prices their members from their own unit rates, so a
+   * schedule would change nothing on them.
+   */
+  eligibleLines: PricingScheduleLineScope[];
+  /** Fixed lines left out because every member bills per unit. */
+  unitPricedLineCount?: number;
   onClose: () => void;
   onSave: () => void;
 }
@@ -36,18 +49,20 @@ export function PricingScheduleDialog({
   contractId,
   schedule,
   currencyCode,
+  eligibleLines,
+  unitPricedLineCount = 0,
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol, fractionDigits } = useCurrencyFormat();
+  const { symbol, fractionDigits, money } = useCurrencyFormat();
   const rateFractionDigits = fractionDigits(currencyCode);
   const rateMinorUnitFactor = 10 ** rateFractionDigits;
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
-    schedule?.effective_date ? new Date(schedule.effective_date) : undefined
+    toCalendarDisplayDate(schedule?.effective_date) ?? undefined
   );
   const [endDate, setEndDate] = useState<Date | undefined>(
-    schedule?.end_date ? new Date(schedule.end_date) : undefined
+    toCalendarDisplayDate(schedule?.end_date) ?? undefined
   );
   const [hasEndDate, setHasEndDate] = useState(!!schedule?.end_date);
   const [useDuration, setUseDuration] = useState(!!schedule?.duration_value);
@@ -72,13 +87,24 @@ export function PricingScheduleDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // An existing row with no line scope reprices every fixed line on the
+  // contract. It is kept exactly as stored unless the user picks a line here.
+  const isStoredContractWide = Boolean(schedule?.schedule_id) && !schedule?.contract_line_id;
+  const [contractLineId, setContractLineId] = useState<string | null>(() => {
+    if (schedule?.contract_line_id) return schedule.contract_line_id;
+    if (schedule?.schedule_id) return null;
+    return eligibleLines.length === 1 ? eligibleLines[0].contract_line_id : null;
+  });
+  const selectedLine = eligibleLines.find((line) => line.contract_line_id === contractLineId) ?? null;
+
   useEffect(() => {
     if (schedule) {
-      setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : undefined);
-      setEndDate(schedule.end_date ? new Date(schedule.end_date) : undefined);
+      setEffectiveDate(toCalendarDisplayDate(schedule.effective_date) ?? undefined);
+      setEndDate(toCalendarDisplayDate(schedule.end_date) ?? undefined);
       setHasEndDate(!!schedule.end_date);
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
+      setContractLineId(schedule.contract_line_id ?? null);
       userEditedRateRef.current = false;
     }
   }, [schedule]);
@@ -102,6 +128,15 @@ export function PricingScheduleDialog({
 
     if (!effectiveDate) {
       setError(t('pricingSchedules.dialog.validation.effectiveDateRequired', { defaultValue: 'Effective date is required' }));
+      return;
+    }
+
+    // A new schedule always names its line; only a row already stored
+    // contract-wide may stay that way.
+    if (!contractLineId && !isStoredContractWide) {
+      setError(t('pricingSchedules.dialog.validation.contractLineRequired', {
+        defaultValue: 'Choose the contract line this schedule applies to',
+      }));
       return;
     }
 
@@ -152,8 +187,12 @@ export function PricingScheduleDialog({
     try {
       const scheduleData = {
         contract_id: contractId,
-        effective_date: effectiveDate.toISOString(),
-        end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
+        contract_line_id: contractLineId,
+        // Calendar dates, never instants: effective_date/end_date are DATE
+        // columns, and an instant built from a local-midnight pick lands on the
+        // previous day east of UTC.
+        effective_date: toCalendarDateString(effectiveDate) as string,
+        end_date: !useDuration && hasEndDate && endDate ? toCalendarDateString(endDate) : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
         // Explicit null — undefined is dropped by Knex on update, silently keeping the old rate.
@@ -185,6 +224,27 @@ export function PricingScheduleDialog({
     }
   };
 
+  const lineOptions = [
+    // Offered only while editing a row that is already contract-wide: a new
+    // schedule must name its line.
+    ...(isStoredContractWide
+      ? [{
+        value: CONTRACT_WIDE_VALUE,
+        label: t('pricingSchedules.dialog.values.contractWide', { defaultValue: 'All fixed lines (contract-wide)' }),
+      }]
+      : []),
+    ...eligibleLines.map((line) => ({
+      value: line.contract_line_id,
+      label: line.contract_line_name
+        || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
+    })),
+  ];
+  const canSave = eligibleLines.length > 0 || isStoredContractWide;
+  const storedContractWideRate = isStoredContractWide
+    && schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
+    ? money(schedule.custom_rate, currencyCode)
+    : null;
+
   return (
     <Dialog
       isOpen={true}
@@ -208,7 +268,7 @@ export function PricingScheduleDialog({
             id="save-pricing-schedule-btn"
             type="button"
             onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
-            disabled={isSaving}
+            disabled={isSaving || !canSave}
           >
             {isSaving
               ? t('pricingSchedules.dialog.actions.saving', { defaultValue: 'Saving...' })
@@ -227,11 +287,62 @@ export function PricingScheduleDialog({
             </Alert>
           )}
 
+          {eligibleLines.length === 0 && !isStoredContractWide ? (
+            <Alert variant="warning">
+              <AlertDescription>
+                {unitPricedLineCount > 0
+                  ? t('pricingSchedules.dialog.empty.allLinesUnitPriced', {
+                    defaultValue: 'Every fixed line on this contract bills per unit. A pricing schedule never changes a per-unit price — change the unit price on the line instead.',
+                  })
+                  : t('pricingSchedules.dialog.empty.noEligibleLines', {
+                    defaultValue: 'This contract has no fixed-fee line, so a pricing schedule has nothing to reprice.',
+                  })}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div>
+              <Label htmlFor="pricing-schedule-contract-line">
+                {t('pricingSchedules.dialog.fields.appliesTo', { defaultValue: 'Applies to' })} *
+              </Label>
+              <CustomSelect
+                id="pricing-schedule-contract-line"
+                value={contractLineId ?? (isStoredContractWide ? CONTRACT_WIDE_VALUE : '')}
+                onValueChange={(value) => setContractLineId(value === CONTRACT_WIDE_VALUE ? null : value)}
+                options={lineOptions}
+                placeholder={t('pricingSchedules.dialog.fields.appliesToPlaceholder', {
+                  defaultValue: 'Select a contract line',
+                })}
+                className="mt-1 w-full"
+              />
+              {isStoredContractWide && !contractLineId && (
+                <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                  {storedContractWideRate && eligibleLines.length > 1
+                    ? t('pricingSchedules.dialog.notices.contractWideEffect', {
+                      count: eligibleLines.length,
+                      amount: storedContractWideRate,
+                      defaultValue: 'Contract-wide: each of the {{count}} fixed lines bills {{amount}} per billing period. Pick a line to apply this schedule to that line only.',
+                    })
+                    : t('pricingSchedules.dialog.notices.contractWide', {
+                      defaultValue: 'Contract-wide: this schedule applies to every fixed line on this contract. Pick a line to apply it to that line only.',
+                    })}
+                </p>
+              )}
+              {unitPricedLineCount > 0 && (
+                <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                  {t('pricingSchedules.dialog.notices.unitPricedExcluded', {
+                    defaultValue: 'Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead.',
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <Label htmlFor="effective-date">
               {t('pricingSchedules.dialog.fields.effectiveDate', { defaultValue: 'Effective Date' })} *
             </Label>
             <DatePicker
+              id="effective-date"
               value={effectiveDate}
               onChange={setEffectiveDate}
               className="mt-1 w-full"
@@ -318,6 +429,7 @@ export function PricingScheduleDialog({
                 <div>
                   <Label htmlFor="end-date">{t('pricingSchedules.dialog.fields.endDate', { defaultValue: 'End Date' })}</Label>
                   <DatePicker
+                    id="end-date"
                     value={endDate}
                     onChange={setEndDate}
                     className="mt-1 w-full"
@@ -344,9 +456,24 @@ export function PricingScheduleDialog({
           {!useDefaultRate && (
             <div>
               <Label htmlFor="custom-rate">
-                {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
+                {t('pricingSchedules.dialog.fields.lineFee', {
+                  defaultValue: 'Fee per billing period',
+                })} *
               </Label>
-              <div className="relative">
+              <p className="text-xs text-[rgb(var(--color-text-600))]">
+                {!contractLineId
+                  ? t('pricingSchedules.dialog.fields.lineFeeHelpContractWide', {
+                    defaultValue: 'Each fixed line on this contract bills this amount in every billing period the schedule covers.',
+                  })
+                  : selectedLine?.has_unit_priced_members
+                    ? t('pricingSchedules.dialog.fields.lineFeeHelpMixed', {
+                      defaultValue: 'Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price.',
+                    })
+                    : t('pricingSchedules.dialog.fields.lineFeeHelp', {
+                      defaultValue: 'What this line bills in every billing period the schedule covers, replacing its usual fee.',
+                    })}
+              </p>
+              <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   {symbol(currencyCode)}
                 </span>

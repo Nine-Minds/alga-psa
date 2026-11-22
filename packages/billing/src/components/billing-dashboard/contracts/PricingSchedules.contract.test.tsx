@@ -10,10 +10,12 @@ import '@testing-library/jest-dom';
 // Hoisted mocks
 // ──────────────────────────────────────────────────────────────────────────────
 const getPricingSchedulesByContractMock = vi.hoisted(() => vi.fn());
+const getPricingScheduleLineScopesMock = vi.hoisted(() => vi.fn());
 const deletePricingScheduleMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/billing/actions/contractPricingScheduleActions', () => ({
   getPricingSchedulesByContract: async (...args: unknown[]) => getPricingSchedulesByContractMock(...args),
+  getPricingScheduleLineScopes: async (...args: unknown[]) => getPricingScheduleLineScopesMock(...args),
   deletePricingSchedule: async (...args: unknown[]) => deletePricingScheduleMock(...args),
 }));
 
@@ -76,11 +78,20 @@ function schedule(overrides: Partial<IContractPricingSchedule> = {}): IContractP
     tenant: 'tenant-1',
     schedule_id: 'schedule-1',
     contract_id: 'contract-1',
-    effective_date: '2026-01-01T00:00:00.000Z',
+    contract_line_id: 'line-1',
+    effective_date: '2026-01-01',
     custom_rate: 12345,
     ...overrides,
   };
 }
+
+const fixedLine = (id: string, name: string, overrides: Record<string, unknown> = {}) => ({
+  contract_line_id: id,
+  contract_line_name: name,
+  has_bundle_fee: true,
+  has_unit_priced_members: false,
+  ...overrides,
+});
 
 function renderList(props: { currencyCode?: string } = {}) {
   const tree = () => (
@@ -94,6 +105,7 @@ function renderList(props: { currencyCode?: string } = {}) {
 describe('PricingSchedules contract-currency custom rate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getPricingScheduleLineScopesMock.mockResolvedValue([fixedLine('line-1', 'Managed Services')]);
   });
 
   afterEach(() => {
@@ -117,6 +129,50 @@ describe('PricingSchedules contract-currency custom rate', () => {
 
     expect((await screen.findAllByText('¥5,000')).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('¥50')).not.toBeInTheDocument();
+  });
+
+  it('names the line a scoped schedule applies to', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ contract_line_id: 'line-2' })]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', 'Managed Services'),
+      fixedLine('line-2', 'Backup'),
+    ]);
+
+    renderList();
+
+    expect((await screen.findAllByText('Backup')).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('flags a contract-wide schedule with what every fixed line bills', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([
+      schedule({ contract_line_id: null, custom_rate: 90000 }),
+    ]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', 'Managed Services'),
+      fixedLine('line-2', 'Backup'),
+    ]);
+
+    renderList();
+
+    expect(
+      (await screen.findAllByText('All fixed lines — each of the 2 fixed lines bills $900.00')).length
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not count a unit-priced line in the contract-wide flag', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([
+      schedule({ contract_line_id: null, custom_rate: 90000 }),
+    ]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', 'Managed Services'),
+      fixedLine('line-2', 'Seats', { has_bundle_fee: false, has_unit_priced_members: true }),
+    ]);
+
+    renderList();
+
+    // One bundle-fee line left: there is no "each of the N lines" multiplier to state.
+    expect((await screen.findAllByText('All fixed lines')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/each of the/)).not.toBeInTheDocument();
   });
 
 });

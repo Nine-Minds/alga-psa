@@ -1038,7 +1038,8 @@
         "customRate": "Taxa personalizada",
         "effectiveDate": "Data Efetiva",
         "endDate": "Data de término",
-        "notes": "Notas"
+        "notes": "Notas",
+        "appliesTo": "Aplica-se a"
       },
       "dialogs": {
         "confirmDeleteSchedule": "Tem certeza de que deseja excluir esta programação de preços?"
@@ -1060,7 +1061,10 @@
       "values": {
         "defaultRate": "Taxa padrão",
         "ongoing": "Em andamento",
-        "useDefaultRate": "Usar taxa padrão"
+        "useDefaultRate": "Usar taxa padrão",
+        "contractWide": "Todas as linhas fixas",
+        "contractWideEffect": "Todas as linhas fixas — cada uma das {{count}} linhas fixas cobra {{amount}}",
+        "unnamedLine": "Linha sem nome"
       }
     },
     "dialog": {
@@ -1091,7 +1095,13 @@
         "notesPlaceholder": "Adicione notas sobre esta alteração de preço (por exemplo, 'Aumento da taxa anual')",
         "unit": "Unidade",
         "useDefaultRate": "Usar taxa padrão",
-        "useDuration": "Duração de uso"
+        "useDuration": "Duração de uso",
+        "appliesTo": "Aplica-se a",
+        "appliesToPlaceholder": "Selecione uma linha de contrato",
+        "lineFee": "Valor por período de cobrança",
+        "lineFeeHelp": "O que esta linha cobra em cada período de cobrança abrangido pelo cronograma, em lugar da taxa habitual.",
+        "lineFeeHelpMixed": "Substitui a taxa do pacote desta linha em cada período de cobrança abrangido pelo cronograma. Os serviços com preço por unidade mantêm o seu preço unitário.",
+        "lineFeeHelpContractWide": "Cada linha fixa deste contrato cobra este valor em cada período de cobrança abrangido pelo cronograma."
       },
       "title": {
         "addPricingSchedule": "Adicionar tabela de preços",
@@ -1104,7 +1114,21 @@
         "durationRequired": "O valor da duração é obrigatório ao usar duração",
         "effectiveDateRequired": "A data de vigência é obrigatória",
         "endDateAfterEffectiveDate": "A data de término deve ser posterior à data de vigência",
-        "endDateRequiredWhenEnabled": "A data de término é obrigatória quando \"Tem data de término\" está ativado"
+        "endDateRequiredWhenEnabled": "A data de término é obrigatória quando \"Tem data de término\" está ativado",
+        "contractLineRequired": "Escolha a linha de contrato a que este cronograma se aplica"
+      },
+      "values": {
+        "contractWide": "Todas as linhas fixas (todo o contrato)",
+        "unnamedLine": "Linha sem nome"
+      },
+      "notices": {
+        "contractWide": "Todo o contrato: este cronograma aplica-se a todas as linhas fixas deste contrato. Escolha uma linha para aplicá-lo apenas a essa linha.",
+        "contractWideEffect": "Todo o contrato: cada uma das {{count}} linhas fixas cobra {{amount}} por período de cobrança. Escolha uma linha para aplicar este cronograma apenas a essa linha.",
+        "unitPricedExcluded": "As linhas que cobram por unidade não são listadas: um cronograma de preços nunca altera um preço por unidade. Altere o preço unitário na linha."
+      },
+      "empty": {
+        "allLinesUnitPriced": "Todas as linhas fixas deste contrato cobram por unidade. Um cronograma de preços nunca altera um preço por unidade — altere o preço unitário na linha.",
+        "noEligibleLines": "Este contrato não tem nenhuma linha de taxa fixa, por isso um cronograma de preços não tem nada para reprecificar."
       }
     }
   },
@@ -2873,7 +2897,10 @@
       "endAfterEffective": "A data de término deve ser posterior à data de vigência",
       "overlaps": "Esta agenda se sobrepõe a uma agenda de preços existente",
       "wouldOverlap": "Esta agenda se sobreporia a uma agenda de preços existente",
-      "notFound": "Agenda de preços não encontrada"
+      "notFound": "Agenda de preços não encontrada",
+      "invalidDate": "A data de vigência e a data de término devem ser datas de calendário (AAAA-MM-DD)",
+      "lineNotEligible": "Os cronogramas de preços aplicam-se a uma linha de taxa fixa deste contrato; escolha uma das suas linhas fixas",
+      "lineUnitPriced": "Esta linha cobra por unidade, por isso um cronograma de preços não alteraria o que ela cobra. Altere o preço unitário na linha."
     },
     "renewals": {
       "permissions": {
