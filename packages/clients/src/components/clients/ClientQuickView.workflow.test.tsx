@@ -100,7 +100,7 @@ vi.mock('@alga-psa/ui/components/EntityImageUpload', () => ({ default: () => nul
 vi.mock('@alga-psa/ui/components/PrintButton', () => ({ PrintButton: () => null }));
 vi.mock('@alga-psa/ui/components/Spinner', () => ({ default: () => <div role="status">Loading</div> }));
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({ usePageSaveShortcut: vi.fn(), usePanelSubmitShortcut: vi.fn() }));
-vi.mock('@alga-psa/ui/components/ModalityContext', () => ({ useInsideDrawer: () => true }));
+vi.mock('@alga-psa/ui/components/ModalityContext', () => ({ useInsideDrawer: () => true, ForceModalContext: ({ children }: any) => <>{children}</> }));
 vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({ ReflectionContainer: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: () => ({ automationIdProps: {}, updateMetadata: vi.fn() }) }));
 vi.mock('@alga-psa/tags/components', () => ({ TagManager: () => null }));

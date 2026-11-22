@@ -31,6 +31,7 @@ import {
   getProjectClientLocationsQuickView,
   updateProjectClientQuickView,
   updateProjectClientLocationQuickView,
+  mutateProjectClientLocationQuickView,
 } from '@alga-psa/projects/actions';
 
 export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegration }: {
@@ -203,6 +204,7 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
       updateClientQuickView: updateProjectClientQuickView,
       loadClientQuickViewLocations: getProjectClientLocationsQuickView,
       updateClientQuickViewLocation: updateProjectClientLocationQuickView,
+      mutateClientQuickViewLocation: mutateProjectClientLocationQuickView,
       renderQuickAddTicket,
       getTicketFormOptions,
       renderSurveySummaryCard,

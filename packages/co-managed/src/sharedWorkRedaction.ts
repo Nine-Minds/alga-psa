@@ -1,4 +1,4 @@
-import { CoManagedSharedWorkError } from './sharedWorkIdentity';
+import { CoManagedSharedWorkError } from './sharedWorkErrors';
 
 /** A redacted source also hides its derived value; nested and parent paths
  * hide the whole candidate rather than return partially identifying objects. */

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
-import type { IClientLocation, ClientLocationView } from '@alga-psa/types';
+import type { ClientLocationMutation, IClientLocation, ClientLocationView } from '@alga-psa/types';
 import { 
   getClientLocations, 
   createClientLocation, 
@@ -59,6 +59,7 @@ interface ClientLocationsProps {
   /** Quick-view callers must provide the authorized, field-masked loader. */
   loadLocations?: () => Promise<ClientLocationView[] | null>;
   /** Quick-view caller applies source-project and field-mask checks before a location update. */
+  mutateLocation?: (mutation: ClientLocationMutation) => Promise<void | ClientLocationActionError>;
   updateLocation?: (locationId: string, patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>) => Promise<void | ClientLocationActionError>;
 }
 
@@ -312,7 +313,7 @@ const initialFormData: LocationFormData = {
 
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-export default function ClientLocations({ clientId, isEditing, loadLocations: loadAuthorizedLocations, updateLocation: updateAuthorizedLocation }: ClientLocationsProps) {
+export default function ClientLocations({ clientId, isEditing, loadLocations: loadAuthorizedLocations, updateLocation: updateAuthorizedLocation, mutateLocation: mutateAuthorizedLocation }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<ClientLocationView[]>([]);
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
@@ -672,7 +673,10 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
           description: t('clients.locations.success.update', 'Location updated successfully'),
         });
       } else {
-        const result = await createClientLocation(clientId, locationData);
+        if (loadAuthorizedLocations && !mutateAuthorizedLocation) throw new Error('Secure client location actions are unavailable');
+        const result = mutateAuthorizedLocation
+          ? await mutateAuthorizedLocation({ kind: 'create', data: locationData })
+          : await createClientLocation(clientId, locationData);
         if (isClientLocationActionError(result)) {
           toast({
             title: t('status.error', 'Error'),
@@ -713,7 +717,10 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
     if (!locationToDelete) return;
 
     try {
-      const result = await deleteClientLocation(locationToDelete.location_id);
+      if (loadAuthorizedLocations && !mutateAuthorizedLocation) throw new Error('Secure client location actions are unavailable');
+      const result = mutateAuthorizedLocation
+        ? await mutateAuthorizedLocation({ kind: 'delete', locationId: locationToDelete.location_id })
+        : await deleteClientLocation(locationToDelete.location_id);
       if (isClientLocationActionError(result)) {
         toast({
           title: t('status.error', 'Error'),
@@ -742,7 +749,10 @@ export default function ClientLocations({ clientId, isEditing, loadLocations: lo
 
   const handleSetDefault = async (locationId: string) => {
     try {
-      const result = await setDefaultClientLocation(locationId);
+      if (loadAuthorizedLocations && !mutateAuthorizedLocation) throw new Error('Secure client location actions are unavailable');
+      const result = mutateAuthorizedLocation
+        ? await mutateAuthorizedLocation({ kind: 'setDefault', locationId })
+        : await setDefaultClientLocation(locationId);
       if (isClientLocationActionError(result)) {
         toast({
           title: t('status.error', 'Error'),

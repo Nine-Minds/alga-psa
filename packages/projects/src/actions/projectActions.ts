@@ -8,6 +8,8 @@ import type {
   IClient,
   IClientLocation,
   ClientLocationView,
+  ClientQuickViewAccess,
+  ClientLocationMutation,
   IClientWithLocation,
   IProject,
   IProjectPhase,
@@ -34,7 +36,7 @@ import { getClientById } from '@alga-psa/clients/actions/queryActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- retain the existing client mutation workflow behind this authorization and redaction boundary
 import { updateClient } from '@alga-psa/clients/actions/clientActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- preserve location write semantics after applying this drawer's source and field authorization
-import { updateClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
+import { createClientLocation, deleteClientLocation, setDefaultClientLocation, updateClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -69,63 +71,21 @@ import { loadProjectRowsByDecision, projectPickerProjection } from '../lib/proje
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
 import { isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
+import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/co-managed/clientFieldRedaction';
+import { createClientAccessDecider } from '@alga-psa/authorization/clientReadAuthorization';
 import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
-const CLIENT_QUICK_VIEW_FIELD_ALIASES: Record<string, string[]> = {
-  properties: ['url', 'properties.website'],
-  location_email: ['email'],
-  location_phone: ['phone', 'phone_no', 'fax'],
-  location_phone_extension: ['phone', 'phone_no', 'fax'],
-  location_country_code: ['country', 'country_code'],
-  location_address: [
-    'address', 'address_line1', 'address_line2', 'address_line3', 'city',
-    'state_province', 'postal_code', 'country', 'country_code', 'country_name', 'region_code',
-  ],
-  account_manager_full_name: ['account_manager_id'],
-  url: ['properties.website'],
-  logoUrl: ['logo', 'properties.logo', 'client_name'],
-  logoWideUrl: ['logo_wide_url', 'properties.logo', 'client_name'],
-};
 const CLIENT_QUICK_VIEW_READ_ONLY_FIELDS = new Set([
   'client_id', 'tenant', 'created_at', 'updated_at', 'account_manager_full_name',
   'logoUrl', 'logoWideUrl', 'location_email', 'location_phone', 'location_phone_extension',
-  'location_country_code', 'location_address',
+  'location_country_code', 'location_address', 'quickViewAccess',
 ]);
 
-function isClientQuickViewFieldHidden(redactedFields: readonly string[], field: string): boolean {
-  const aliases = CLIENT_QUICK_VIEW_FIELD_ALIASES[field] ?? [];
-  return isCoManagedReadFieldHidden(redactedFields, [
-    field,
-    `clients.${field}`,
-    ...aliases,
-    ...aliases.map((alias) => `clients.${alias}`),
-  ]);
-}
-
-const CLIENT_LOCATION_FIELD_SOURCES: Partial<Record<keyof IClientLocation, string>> = {
-  email: 'location_email',
-  phone: 'location_phone', phone_extension: 'location_phone',
-  fax: 'location_phone', fax_extension: 'location_phone',
-  address_line1: 'location_address', address_line2: 'location_address', address_line3: 'location_address',
-  city: 'location_address', state_province: 'location_address', postal_code: 'location_address',
-  country_code: 'location_address', country_name: 'location_address', region_code: 'location_address',
-};
 const CLIENT_LOCATION_READ_ONLY_FIELDS = new Set([
   'location_id', 'client_id', 'tenant', 'created_at', 'updated_at', 'redactedFields',
 ]);
-
-function isClientLocationFieldHidden(redactedFields: readonly string[], field: string): boolean {
-  return isClientQuickViewFieldHidden(redactedFields, CLIENT_LOCATION_FIELD_SOURCES[field as keyof IClientLocation] ?? field)
-    || isCoManagedReadFieldHidden(redactedFields, [field, `clients.${field}`, `client_locations.${field}`]);
-}
-
-function isClientLocationResourceHidden(redactedFields: readonly string[]): boolean {
-  return isCoManagedResourceHidden(redactedFields, ['client_locations'])
-    || isClientLocationFieldHidden(redactedFields, 'location_id')
-    || isClientLocationFieldHidden(redactedFields, 'client_id');
-}
 
 type ProjectScheduleAmountRow = {
     schedule_entry_id: string;
@@ -523,7 +483,25 @@ export const getProjectClientQuickView = withAuth(async (
     masked.logoUrl = null;
     masked.logoWideUrl = null;
   }
-  return masked as unknown as IClientWithLocation;
+  const [update, remove, createTicket] = await Promise.all([
+    hasPermission(user, 'client', 'update', knex),
+    hasPermission(user, 'client', 'delete', knex),
+    hasPermission(user, 'ticket', 'create', knex),
+  ]);
+  const recordCapabilities = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const decideUpdate = await createClientAccessDecider(trx, tenant, user as IUserWithRoles, 'update');
+    const decideDelete = await createClientAccessDecider(trx, tenant, user as IUserWithRoles, 'delete');
+    return { update: update && (await decideUpdate({ client_id: clientId })).allowed,
+      delete: remove && (await decideDelete({ client_id: clientId })).allowed };
+  });
+  const access: ClientQuickViewAccess = {
+    redactedFields: decision,
+    canUpdate: recordCapabilities.update,
+    canDelete: recordCapabilities.delete,
+    canManageLocations: recordCapabilities.update && !isClientLocationResourceHidden(decision),
+    canCreateTicket: createTicket && !isClientQuickViewFieldHidden(decision, 'client_name'),
+  };
+  return { ...masked, quickViewAccess: access } as unknown as IClientWithLocation;
 });
 
 /** Load drawer locations only after rechecking its client and optional project authorization. */
@@ -588,6 +566,8 @@ export const updateProjectClientLocationQuickView = withAuth(async (
       trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
     );
     if (!redactedFields) return null;
+    const canUpdate = await createClientAccessDecider(trx, tenant, user as IUserWithRoles, 'update');
+    if (!(await canUpdate({ client_id: clientId })).allowed) throw new Error('Permission denied: Cannot update clients');
     if (isClientLocationResourceHidden(redactedFields)) {
       throw new Error('Permission denied: Cannot read client locations');
     }
@@ -610,6 +590,51 @@ export const updateProjectClientLocationQuickView = withAuth(async (
     return result as ActionMessageError | ActionPermissionError;
   }
   return;
+});
+
+/** Location commands return no record; all subsequent reads use the masked loader. */
+export const mutateProjectClientLocationQuickView = withAuth(async (
+  user, { tenant }, clientId: string, mutation: ClientLocationMutation, sourceProjectId?: string,
+): Promise<void | ActionMessageError | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', knex)
+    || !await hasPermission(user, 'client', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update client locations');
+  }
+  if (sourceProjectId && !await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
+  const fields = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const redactions = await authorizeProjectClientQuickView(trx, tenant, user as IUserWithRoles, clientId, sourceProjectId);
+    if (!redactions) throw new Error('Client not found');
+    const decide = await createClientAccessDecider(trx, tenant, user as IUserWithRoles, 'update');
+    if (!(await decide({ client_id: clientId })).allowed || isClientLocationResourceHidden(redactions)) {
+      throw new Error('Permission denied: Cannot update client locations');
+    }
+    if (mutation.kind !== 'create') {
+      const row = await tenantDb(trx, tenant).table('client_locations')
+        .where({ client_id: clientId, location_id: mutation.locationId, is_active: true }).first('location_id');
+      if (!row) throw new Error('Location not found');
+    }
+    return redactions;
+  });
+  let result;
+  switch (mutation.kind) {
+    case 'create': {
+      const safeData = { ...mutation.data } as Record<string, unknown>;
+      for (const field of Object.keys(safeData)) {
+        if (CLIENT_LOCATION_READ_ONLY_FIELDS.has(field) || isClientLocationFieldHidden(fields, field)) delete safeData[field];
+      }
+      result = await createClientLocation(clientId, { ...safeData, client_id: clientId } as Parameters<typeof createClientLocation>[1]);
+      break;
+    }
+    case 'delete': result = await deleteClientLocation(mutation.locationId); break;
+    case 'setDefault':
+      if (isClientLocationFieldHidden(fields, 'is_default')) throw new Error('Permission denied: Cannot update default location');
+      result = await setDefaultClientLocation(mutation.locationId); break;
+    default: throw new Error('Invalid location operation');
+  }
+  if (isActionMessageError(result) || isActionPermissionError(result)) return result as ActionMessageError | ActionPermissionError;
 });
 
 /** Save only changed fields, keeping redacted database values server-side and returning a masked row. */
@@ -636,6 +661,8 @@ export const updateProjectClientQuickView = withAuth(async (
       trx, tenant, user as IUserWithRoles, clientId, sourceProjectId,
     );
     if (!redactedFields) return null;
+    const canUpdate = await createClientAccessDecider(trx, tenant, user as IUserWithRoles, 'update');
+    if (!(await canUpdate({ client_id: clientId })).allowed) throw new Error('Permission denied: Cannot update clients');
     const billingFields = await tenantScopedTable(trx, 'clients', tenant)
       .where({ client_id: clientId })
       .first<{ billing_contact_id?: string | null; billing_email?: string | null }>(

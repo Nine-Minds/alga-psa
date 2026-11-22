@@ -305,8 +305,6 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
   const { knex: db } = await createTenantKnex();
 
   try {
-    console.log('Updating client in database:', clientId, sanitizedUpdateData);
-
     const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
       const updateObject: any = {
@@ -375,10 +373,6 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }
         updateObject.client_since = clientSince;
       }
-
-      console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
-      console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
-
       const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
         .where({ client_id: clientId })
         .update(updateObject)
@@ -527,7 +521,6 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       });
     }
 
-    console.log('Updated client data:', updatedClientWithLogo);
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);

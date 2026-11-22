@@ -169,7 +169,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
 
   return (
     <ReflectionContainer id={`${id}-board`} data-automation-type={dataAutomationType} label="Board Picker">
-      <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Popover.Root open={isOpen} onOpenChange={setIsOpen} modal={modal}>
         <Popover.Trigger asChild>
           <Button
             variant="outline"

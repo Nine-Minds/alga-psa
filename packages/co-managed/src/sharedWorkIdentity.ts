@@ -4,6 +4,8 @@ import { tenantDb } from '@alga-psa/db';
 import { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider,
   resolveBundleNarrowingRulesForEvaluation, type AuthorizationRecord, type AuthorizationSubject, type ScopeConstraint } from '@alga-psa/authorization';
 import { hasCoManagedLocalPermission } from './localPermission';
+import { CoManagedSharedWorkError } from './sharedWorkErrors';
+export { CoManagedSharedWorkError } from './sharedWorkErrors';
 
 /** The only identity shape policy code accepts: always the authenticated home tenant. */
 export interface CoManagedHomeActor { tenant: string; userId: string }
@@ -29,10 +31,6 @@ function isMailCredential(actor: { tenant: string; userId: string }, sessionId?:
   return Boolean(scope && sessionId && scope.tenant === actor.tenant && scope.userId === actor.userId && scope.sessionId === sessionId);
 }
 
-export class CoManagedSharedWorkError extends Error {
-  readonly code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN';
-  constructor() { super('This shared resource is not available for the requested operation.'); this.name = 'CoManagedSharedWorkError'; }
-}
 
 /**
  * Worker adapters can load a separately compiled copy of this package, so two

@@ -10,9 +10,22 @@ export interface IClientSummary extends TenantEntity {
     contractLine?: IContractLine;
 }
 
+export interface ClientQuickViewAccess {
+  redactedFields: string[];
+  canUpdate: boolean;
+  canDelete: boolean;
+  canManageLocations: boolean;
+  canCreateTicket: boolean;
+}
+
+export type ClientLocationMutation =
+  | { kind: 'create'; data: Omit<IClientLocation, 'location_id' | 'tenant' | 'created_at' | 'updated_at'> }
+  | { kind: 'delete' | 'setDefault'; locationId: string };
+
 export interface IClient extends TenantEntity, ITaggable {
   /** Chip tags for the viewer (display rules); set by picker/list loaders, not stored. */
   displayTags?: IDisplayTag[];
+  quickViewAccess?: ClientQuickViewAccess;
   client_id: string;
   client_name: string;
   client_type?: 'company' | 'individual' | null;

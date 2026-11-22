@@ -21,6 +21,7 @@ import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
+import { isClientQuickViewFieldHidden } from '@alga-psa/co-managed/clientFieldRedaction';
 import { clientSinceInputValue } from '../../lib/clientSince';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
@@ -65,6 +66,7 @@ const SwitchDetailItem: React.FC<{
 };
 
 const TextDetailItem: React.FC<{
+  disabled?: boolean;
   label: string;
   value: string;
   onEdit: (value: string) => void;
@@ -73,7 +75,7 @@ const TextDetailItem: React.FC<{
   /** Structural error blocks; the warnings it also returns never do. */
   validateField?: (value: string) => FieldValidation;
   warnings?: string[];
-}> = ({ label, value, onEdit, automationId, validate, validateField, warnings: externalWarnings }) => {
+}> = ({ disabled, label, value, onEdit, automationId, validate, validateField, warnings: externalWarnings }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -118,6 +120,7 @@ const TextDetailItem: React.FC<{
       <Input
         id={automationId ? `${automationId}-input` : undefined}
         type="text"
+        disabled={disabled}
         value={localValue}
         onChange={(e) => {
           setLocalValue(e.target.value);
@@ -262,12 +265,13 @@ export function ClientDetailsTabContent({
   return (
     <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6">
+        <fieldset disabled={editedClient.quickViewAccess?.canUpdate === false} className="space-y-6 min-w-0">
           <TextDetailItem
             label={t('clientDetails.clientName', { defaultValue: 'Client name' })}
             value={editedClient.client_name}
             onEdit={(value) => onFieldChange('client_name', value)}
             automationId="client-name-field"
+            disabled={isClientQuickViewFieldHidden(editedClient.quickViewAccess?.redactedFields ?? [], 'client_name')}
             validateField={validateClientNameField}
             warnings={fieldWarnings?.client_name}
           />
@@ -592,6 +596,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.website || ''}
             onEdit={(value) => onFieldChange('properties.website', value)}
             automationId="website-field"
+            disabled={isClientQuickViewFieldHidden(editedClient.quickViewAccess?.redactedFields ?? [], 'properties.website')}
             validateField={validateWebsiteUrlField}
           />
 
@@ -600,6 +605,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.industry || ''}
             onEdit={(value) => onFieldChange('properties.industry', value)}
             automationId="industry-field"
+            disabled={isClientQuickViewFieldHidden(editedClient.quickViewAccess?.redactedFields ?? [], 'properties.industry')}
             validateField={validateIndustryField}
           />
 
@@ -608,6 +614,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.company_size || ''}
             onEdit={(value) => onFieldChange('properties.company_size', value)}
             automationId="company-size-field"
+            disabled={isClientQuickViewFieldHidden(editedClient.quickViewAccess?.redactedFields ?? [], 'properties.company_size')}
             validateField={validateCompanySizeField}
           />
 
@@ -616,6 +623,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.annual_revenue || ''}
             onEdit={(value) => onFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
+            disabled={isClientQuickViewFieldHidden(editedClient.quickViewAccess?.redactedFields ?? [], 'properties.annual_revenue')}
             validateField={validateAnnualRevenueField}
           />
 
@@ -670,7 +678,7 @@ export function ClientDetailsTabContent({
               useInlineInput={isInDrawer}
             />
           </div>
-        </div>
+        </fieldset>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -679,6 +687,7 @@ export function ClientDetailsTabContent({
             </Text>
             <Button
               id="locations-button"
+              disabled={editedClient.quickViewAccess?.canManageLocations === false}
               size="sm"
               variant="outline"
               onClick={onManageLocations}
@@ -709,7 +718,7 @@ export function ClientDetailsTabContent({
         <Button
           id="save-client-changes-btn"
           onClick={onSave}
-          disabled={isSaving}
+          disabled={isSaving || editedClient.quickViewAccess?.canUpdate === false}
         >
           {isSaving
             ? t('common.actions.saving', { defaultValue: 'Saving...' })
@@ -717,6 +726,7 @@ export function ClientDetailsTabContent({
         </Button>
         <Button
           id="add-ticket-btn"
+          disabled={editedClient.quickViewAccess?.canCreateTicket === false}
           onClick={onAddTicket}
           variant="default"
         >

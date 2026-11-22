@@ -22,6 +22,7 @@ import {
   getProjectClientLocationsQuickView,
   updateProjectClientQuickView,
   updateProjectClientLocationQuickView,
+  mutateProjectClientLocationQuickView,
 } from '@alga-psa/projects/actions';
 
 const renderNothing = () => null;
@@ -97,6 +98,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
       updateClientQuickView: updateProjectClientQuickView,
       loadClientQuickViewLocations: getProjectClientLocationsQuickView,
       updateClientQuickViewLocation: updateProjectClientLocationQuickView,
+      mutateClientQuickViewLocation: mutateProjectClientLocationQuickView,
       renderQuickAddTicket,
       getTicketFormOptions,
       renderSurveySummaryCard: () => null,

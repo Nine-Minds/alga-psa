@@ -61,6 +61,10 @@
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"
+    },
+    "./clientReadAuthorization": {
+      "types": "./src/clientReadAuthorization.ts",
+      "import": "./dist/clientReadAuthorization.js"
     }
   },
   "scripts": {

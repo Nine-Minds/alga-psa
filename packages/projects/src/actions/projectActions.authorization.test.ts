@@ -93,6 +93,9 @@ vi.mock('../lib/projectReadAuthorization', () => ({
   createProjectReadDecider: async () => async (project: any) => state.projectDecisions.get(project.project_id) ?? { allowed: false, redactedFields: [] },
   createClientReadDecider: async () => async (client: any) => state.clientDecisions.get(client.client_id) ?? { allowed: false, redactedFields: [] },
 }));
+vi.mock('@alga-psa/authorization/clientReadAuthorization', () => ({
+  createClientAccessDecider: async () => async (client: any) => state.clientDecisions.get(client.client_id) ?? { allowed: false, redactedFields: [] },
+}));
 vi.mock('@alga-psa/inventory/lib/staging', () => ({ countActiveStockClaims: vi.fn() }));
 
 import { getAllClientsForProjects, getProjectClientQuickView, getProjectClientLocationsQuickView, updateProjectClientLocationQuickView, updateProjectClientQuickView, getProjects, getProject, getProjectMetadata, getProjectDetails, getProjectsWithPhases, getProjectTreeData } from './projectActions';
@@ -176,6 +179,7 @@ describe('project action authorization boundaries', () => {
 
     await expect(getProjectClientQuickView('c1')).resolves.toEqual({
       client_id: 'c1', client_name: null, phone_no: null, location_email: null, logoUrl: null, logoWideUrl: null,
+      quickViewAccess: { redactedFields: ['fields.phone_no', 'fields.email', 'client_name'], canUpdate: true, canDelete: true, canManageLocations: true, canCreateTicket: false },
     });
     expect(state.permission).toHaveBeenCalledWith(state.user, 'client', 'read', expect.anything());
     expect(state.getQuickViewClient).toHaveBeenCalledWith('c1');

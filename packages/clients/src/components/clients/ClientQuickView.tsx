@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DeletionValidationResult, IClient, IClientLocation, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
+import type { ClientLocationMutation, DeletionValidationResult, IClient, IClientLocation, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
 import { findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
@@ -48,7 +48,7 @@ import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
-import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
+import { ForceModalContext, useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useRouter } from 'next/navigation';
@@ -73,7 +73,7 @@ function isClientActionError(value: unknown): value is ActionMessageError | Acti
 const CLIENT_QUICK_VIEW_NON_PATCH_FIELDS = new Set([
   'client_id', 'tenant', 'created_at', 'updated_at', 'account_manager_full_name',
   'logoUrl', 'logoWideUrl', 'location_email', 'location_phone', 'location_phone_extension',
-  'location_country_code', 'location_address',
+  'location_country_code', 'location_address', 'quickViewAccess',
 ]);
 
 function changedClientFields(saved: IClient, edited: IClient): Partial<Omit<IClient, 'account_manager_full_name'>> {
@@ -124,11 +124,13 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     updateClientQuickView,
     loadClientQuickViewLocations,
     updateClientQuickViewLocation,
+    mutateClientQuickViewLocation,
   } = useClientCrossFeature();
   const resolvedClientId = clientId ?? initialClient?.client_id;
   const [client, setClient] = useState<IClientWithLocation | IClient | null>(initialClient ?? null);
   const savedClientRef = useRef<IClient | null>(initialClient ?? null);
   const [editedClient, setEditedClient] = useState<IClient | null>(initialClient ?? null);
+  const access = editedClient?.quickViewAccess;
   const [loading, setLoading] = useState(!initialClient);
   const [error, setError] = useState<string | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
@@ -159,6 +161,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     }
     return updateClientQuickViewLocation(editedClient.client_id, locationId, patch, sourceProjectId);
   }, [editedClient?.client_id, sourceProjectId, updateClientQuickViewLocation]);
+  const mutateAuthorizedQuickViewLocation = useCallback((mutation: ClientLocationMutation) => {
+    if (!editedClient?.client_id || !mutateClientQuickViewLocation) {
+      throw new Error('Secure client location actions are unavailable');
+    }
+    return mutateClientQuickViewLocation(editedClient.client_id, mutation, sourceProjectId);
+  }, [editedClient?.client_id, mutateClientQuickViewLocation, sourceProjectId]);
   const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
@@ -598,7 +606,8 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   isSavingRef.current = isSaving;
 
   const handleSave = useCallback(async () => {
-    if (isSavingRef.current || !client?.client_id || !editedClientRef.current) return;
+    if (isSavingRef.current || !client?.client_id || !editedClientRef.current
+      || editedClientRef.current.quickViewAccess?.canUpdate === false) return;
     setHasAttemptedSubmit(true);
 
     const clientName = editedClientRef.current.client_name?.trim() || '';
@@ -1036,7 +1045,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         <div className="flex items-center space-x-3">
-          <EntityImageUpload
+          <fieldset disabled={access?.canUpdate === false}><EntityImageUpload
             entityType="client"
             entityId={editedClient.client_id}
             entityName={editedClient.client_name}
@@ -1051,7 +1060,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
               setEditedClient((prev) => prev ? { ...prev, logoUrl: newLogoUrl, logoWideUrl: newWideUrl ?? null } : prev);
             }}
             size="md"
-          />
+          /></fieldset>
         </div>
 
         <div className="flex-1 flex items-center justify-between">
@@ -1111,7 +1120,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
               </div>
             )}
             <PrintButton id={`${id}-print-button`} variant="outline" size="sm" />
-            <Button
+            {access?.canDelete !== false && <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
               variant="destructive"
@@ -1120,7 +1129,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
             >
               <Trash2 className="h-4 w-4 mr-2" />
               {t('common.actions.delete', { defaultValue: 'Delete' })}
-            </Button>
+            </Button>}
           </div>
         </div>
       </div>
@@ -1168,9 +1177,9 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 onAddClientNameAlias={handleAddClientNameAlias}
                 onRemoveClientNameAlias={handleRemoveClientNameAlias}
                 onTagsChange={setTags}
-                onManageLocations={() => setIsLocationsDialogOpen(true)}
+                onManageLocations={() => { if (access?.canManageLocations !== false) setIsLocationsDialogOpen(true); }}
                 onSave={handleSave}
-                onAddTicket={() => setIsQuickAddTicketOpen(true)}
+                onAddTicket={() => { if (access?.canCreateTicket !== false) setIsQuickAddTicketOpen(true); }}
                 renderSurveySummaryCard={renderSurveySummaryCard}
               />
             ),
@@ -1178,7 +1187,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
           defaultTab="details"
         />
 
-        {renderQuickAddTicket({
+        {access?.canCreateTicket !== false && isQuickAddTicketOpen && <ForceModalContext value={true}>{renderQuickAddTicket({
           id: `${id}-quick-add-ticket`,
           open: isQuickAddTicketOpen,
           onOpenChange: setIsQuickAddTicketOpen,
@@ -1187,10 +1196,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
             id: editedClient.client_id,
             name: editedClient.client_name,
           },
-        })}
+        })}</ForceModalContext>}
 
         <Dialog
-          isOpen={isLocationsDialogOpen}
+          isOpen={isLocationsDialogOpen && access?.canManageLocations !== false}
           onClose={() => {
             setIsLocationsDialogOpen(false);
             setLocationsRefreshKey((prev) => prev + 1);
@@ -1203,6 +1212,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
               isEditing={true}
               loadLocations={loadAuthorizedQuickViewLocations}
               updateLocation={updateAuthorizedQuickViewLocation}
+              mutateLocation={mutateAuthorizedQuickViewLocation}
             />
           </DialogContent>
         </Dialog>

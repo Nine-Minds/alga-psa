@@ -1,5 +1,5 @@
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { CoManagedSharedWorkError } from './sharedWorkIdentity';
+import { CoManagedSharedWorkError } from './sharedWorkErrors';
 
 /** Alias lists a reader's redactions are matched against, one per display name. Single source for the project list, task list and assigned-task queue. */
 /** The whole customer task resource; a reader who has either hidden may not read or write the task at all. */

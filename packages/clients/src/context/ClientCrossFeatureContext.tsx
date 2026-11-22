@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import type { IClient, IClientLocation, ClientLocationView, IClientWithLocation, ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
+import type { ClientLocationMutation, IClient, IClientLocation, ClientLocationView, IClientWithLocation, ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ClientSoftwareSummaryParams, ClientSoftwareSummaryResponse } from '@alga-psa/types';
 
@@ -184,6 +184,9 @@ export interface ClientCrossFeatureCallbacks {
     locationId: string,
     patch: Partial<Omit<IClientLocation, 'location_id' | 'tenant' | 'client_id' | 'created_at'>>,
     sourceProjectId?: string,
+  ) => Promise<void | ActionMessageError | ActionPermissionError>;
+  mutateClientQuickViewLocation?: (
+    clientId: string, mutation: ClientLocationMutation, sourceProjectId?: string,
   ) => Promise<void | ActionMessageError | ActionPermissionError>;
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;

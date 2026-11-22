@@ -153,6 +153,10 @@
     "./refusalAck": {
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
+    },
+    "./clientFieldRedaction": {
+      "types": "./src/clientFieldRedaction.ts",
+      "import": "./src/clientFieldRedaction.ts"
     }
   },
   "scripts": {

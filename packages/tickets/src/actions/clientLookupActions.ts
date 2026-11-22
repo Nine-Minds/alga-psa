@@ -4,7 +4,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
 import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
-import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
+import { getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
   getContactByContactNameId as getContactByContactNameIdModel,
   getAllActiveContacts as getAllActiveContactsModel,
@@ -17,6 +17,9 @@ import {
 } from '@alga-psa/shared/billingClients/billingProfiles';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
+import { createClientAccessDecider } from '@alga-psa/authorization/clientReadAuthorization';
+import { isClientQuickViewFieldHidden, isClientLocationFieldHidden, isClientLocationResourceHidden } from '@alga-psa/co-managed/clientFieldRedaction';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 // MSP-only lookups: these actions back internal ticket UIs and expose
@@ -37,7 +40,19 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getAllClientsModel(trx, tenant, includeInactive);
+    const query = tenantDb(trx, tenant).table('clients')
+      .select('client_id', 'client_name', 'client_type', 'is_inactive').orderBy('client_name');
+    if (!includeInactive) query.where({ is_inactive: false });
+    const clients = await query;
+    const decide = await createClientAccessDecider(trx, tenant, user);
+    const rows = await Promise.all(clients.map(async client => {
+      const decision = await decide(client);
+      if (!decision.allowed || isClientQuickViewFieldHidden(decision.redactedFields, 'client_id')
+        || isClientQuickViewFieldHidden(decision.redactedFields, 'client_name')) return null;
+      return Object.fromEntries(Object.entries(client).map(([field, value]) =>
+        [field, isClientQuickViewFieldHidden(decision.redactedFields, field) ? null : value]));
+    }));
+    return rows.filter(row => row !== null) as unknown as IClient[];
   });
 });
 
@@ -46,17 +61,22 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getClientByIdModel(trx, tenant, clientId);
+    const decide = await createClientAccessDecider(trx, tenant, user);
+    const decision = await decide({ client_id: clientId });
+    if (!decision.allowed || isClientQuickViewFieldHidden(decision.redactedFields, 'client_id')
+      || isClientQuickViewFieldHidden(decision.redactedFields, 'client_name')) return null;
+    const row = await getClientByIdModel(trx, tenant, clientId);
+    if (!row) return null;
+    const withLogo = { ...row, logoUrl: await getClientLogoUrl(clientId, tenant) };
+    return Object.fromEntries(Object.entries(withLogo).map(([field, value]) =>
+      [field, isClientQuickViewFieldHidden(decision.redactedFields, field) ? null : value])) as unknown as IClient;
   });
 
   if (!client) {
     return null;
   }
 
-  // Resolve the uploaded logo so the client drawer opened from the tickets list
-  // shows the real logo (matching the table), not just initials.
-  const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return { ...client, logoUrl };
+  return client;
 });
 
 export const getContactsByClient = withAuth(async (
@@ -122,6 +142,12 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return getClientLocationsModel(trx, tenant, clientId);
+    const decide = await createClientAccessDecider(trx, tenant, user);
+    const decision = await decide({ client_id: clientId });
+    if (!decision.allowed) throw new Error('Permission denied: cannot read client locations');
+    if (isClientLocationResourceHidden(decision.redactedFields)) return [];
+    const locations = await getClientLocationsModel(trx, tenant, clientId);
+    return locations.map(location => Object.fromEntries(Object.entries(location).map(([field, value]) =>
+      [field, isClientLocationFieldHidden(decision.redactedFields, field) ? null : value])) as unknown as IClientLocation);
   });
 });

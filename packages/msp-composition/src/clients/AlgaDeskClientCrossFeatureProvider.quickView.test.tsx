@@ -11,10 +11,11 @@ const quickViewActions = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/projects/actions', () => ({
-  getProjectClientQuickView: (...args: any[]) => quickViewActions.loadClient(...args),
-  updateProjectClientQuickView: (...args: any[]) => quickViewActions.updateClient(...args),
-  getProjectClientLocationsQuickView: (...args: any[]) => quickViewActions.loadLocations(...args),
-  updateProjectClientLocationQuickView: (...args: any[]) => quickViewActions.updateLocation(...args),
+  mutateProjectClientLocationQuickView: vi.fn(async () => undefined),
+  getProjectClientQuickView: (...args: Parameters<typeof quickViewActions.loadClient>) => quickViewActions.loadClient(...args),
+  updateProjectClientQuickView: (...args: Parameters<typeof quickViewActions.updateClient>) => quickViewActions.updateClient(...args),
+  getProjectClientLocationsQuickView: (...args: Parameters<typeof quickViewActions.loadLocations>) => quickViewActions.loadLocations(...args),
+  updateProjectClientLocationQuickView: (...args: Parameters<typeof quickViewActions.updateLocation>) => quickViewActions.updateLocation(...args),
 }));
 vi.mock('@alga-psa/billing/components/hour-blocks/HourBlocksSection', () => ({ default: () => null }));
 vi.mock('@alga-psa/tickets/components/QuickAddTicket', () => ({ QuickAddTicket: () => null }));
