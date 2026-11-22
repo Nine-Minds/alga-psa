@@ -3,6 +3,23 @@ import type { IQuote, IQuoteItem } from '@alga-psa/types';
 
 const fetchTenantPartyMock = vi.fn();
 
+// The engine boundary: pending optional rows' "if selected" tax comes from the
+// tax engine through this resolver. This double answers with the figures the
+// engine gives for the 6% fixture region (a row carrying no rate gets none); the
+// real engine (caps, brackets, composite rates) is exercised by the DB suites.
+const ENGINE_IF_SELECTED_TAX: Record<string, number> = { 'annual-opt': 300, 'monthly-opt': 240 };
+vi.mock('../../services/quoteCalculationService', () => ({
+  resolveItemTaxesIfIncluded: async (_knex: unknown, _tenant: string, _quote: unknown, items: Array<Record<string, any>>) =>
+    new Map(
+      items
+        .filter((item) => !item.is_discount)
+        .map((item) => {
+          const taxed = item.is_taxable !== false && Number(item.tax_rate ?? 0) > 0;
+          return [item.quote_item_id, { taxAmount: taxed ? (ENGINE_IF_SELECTED_TAX[item.quote_item_id] ?? 0) : 0, taxPercentage: Number(item.tax_rate ?? 0) }] as const;
+        }),
+    ),
+}));
+
 vi.mock('./tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: unknown[]) => fetchTenantPartyMock(...args),
 }));
@@ -50,7 +67,7 @@ import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
 import { renderTemplateAstHtmlDocument } from '../invoice-template-ast/server-render';
 import { getStandardQuoteTemplateAstByCode } from '../quote-template-ast/standardTemplates';
 import { summarizeQuoteTotals } from '../quoteTotals';
-import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
+import { calculateDraftNetTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
 
 const fakeKnex = {
   schema: {
@@ -1389,16 +1406,15 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
     });
     // The document view model (PDF).
     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
-    // The editor sidebar.
-    const draft = calculateDraftQuoteTotals(rows.map(toDraft));
+    // The editor's tax-free arithmetic; its tax and totals come from the engine
+    // through `calculateQuoteDraftTax` (proven against the DB in quoteTaxEngine).
+    const draft = calculateDraftNetTotals(rows.map(toDraft));
 
     expect(persisted.total_amount).toBe(expectedTotal);
     expect(viewModel.total_amount).toBe(expectedTotal);
-    expect(draft.total_amount).toBe(expectedTotal);
     expect(viewModel.subtotal).toBe(persisted.subtotal);
     expect(viewModel.tax).toBe(persisted.tax);
     expect(draft.subtotal).toBe(persisted.subtotal);
-    expect(draft.tax).toBe(persisted.tax);
 
     // Band totals add up to the same total.
     const bands = viewModel.groups_by_cadence ?? [];
@@ -1406,7 +1422,6 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
 
     // Pending add-ons agree too, and vanish entirely when nothing is pending.
     expect(viewModel.optional_total).toBe(expectedOptional);
-    expect(draft.optional_total).toBe(expectedOptional);
     expect((viewModel.groups_by_cadence_with_optionals ?? []).length > 0).toBe(expectedOptional > 0);
   });
 

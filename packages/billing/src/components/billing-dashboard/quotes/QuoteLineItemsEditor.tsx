@@ -27,15 +27,16 @@ import {
   type LocationSummary,
 } from '../locations/locationGrouping';
 import {
-  calculateDraftQuoteTotals,
+  calculateDraftNetTotals,
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
+  draftTaxRowKey,
   resolveDraftDiscountAmounts,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
-import { isTaxUnresolvedLine } from './QuoteTaxUnresolvedNote';
+import { isTaxUnresolvedLine, type DraftRowTaxById } from './QuoteTaxUnresolvedNote';
 
 interface InlineEditableValueProps {
   displayValue: string;
@@ -165,6 +166,8 @@ interface QuoteLineItemsEditorProps {
   items: DraftQuoteItem[];
   /** Tax region names by region code, for the "No tax rate for <region>" badge. */
   taxRegionNames?: Record<string, string>;
+  /** The engine's per-row tax for these items (see `useQuoteDraftTax`); drives the unresolved badge. */
+  rowTaxById?: DraftRowTaxById | null;
   currencyCode: string;
   disabled?: boolean;
   onChange: (items: DraftQuoteItem[]) => void;
@@ -282,6 +285,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
   currencyCode,
   taxRegionNames = {},
+  rowTaxById,
   disabled = false,
   onChange,
   locations = [],
@@ -626,11 +630,14 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 disabled={disabled}
                 onChange={(event) => updateItem(item.local_id, { is_taxable: event.target.checked })}
               />
-              {isTaxUnresolvedLine(item) ? (
+              {isTaxUnresolvedLine(item, rowTaxById) ? (
                 <Badge id={`quote-line-tax-unresolved-${item.local_id}`} variant="warning">
                   {t('quoteLineItems.taxUnresolved.badge', {
                     defaultValue: 'No tax rate for {{region}}',
-                    region: (item.tax_region && taxRegionNames[item.tax_region]) || item.tax_region || '',
+                    region: (() => {
+                      const region = rowTaxById?.[draftTaxRowKey(item)]?.taxRegion ?? item.tax_region ?? '';
+                      return (region && taxRegionNames[region]) || region;
+                    })(),
                   })}
                 </Badge>
               ) : null}
@@ -909,7 +916,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   };
 
   const renderLocationGroupSubtotal = (group: LocationGroupEntry<DraftQuoteItem>) => {
-    const totals = calculateDraftQuoteTotals(group.items);
+    const totals = calculateDraftNetTotals(group.items);
     return (
       <div className="flex flex-wrap items-center justify-end gap-6 border-t border-border bg-background/70 px-4 py-2 text-sm">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">

@@ -31,7 +31,8 @@ import { allocateIncludedQuoteDiscounts } from '../../../../billingClients/quote
 import { deriveServiceTaxTreatment } from '../../../../billingClients/serviceTaxTreatment';
 import { getEffectiveTaxSourceForClient } from '../../../../billingClients/taxSettings';
 import { calculateTaxForAmount } from '../../../../billingClients/taxEngine';
-import { findUnresolvedQuoteTaxBlocker, toQuoteTaxDate } from '../../../../billingClients/quoteTaxResolution';
+import { toQuoteTaxDate } from '../../../../billingClients/quoteTaxResolution';
+import { resolveQuoteConversionTax, type QuoteConversionTax } from '../../../../billingClients/quoteRowTax';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -342,6 +343,32 @@ async function recalculateQuoteFinancials(
       total_amount: subtotal - discountTotal + tax,
       updated_at: knexOrTrx.fn.now(),
     });
+}
+
+/**
+ * Refuse to bill a quote whose included one-time row has no tax rate, from a
+ * fresh engine resolution (never the persisted `tax_unresolved` flag). Read-only.
+ * The error carries the `NO_TAX_RATE` code and the same message invoice
+ * generation gives for a region with no rate.
+ */
+async function resolveQuoteConversionTaxOrRefuse(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quote: IQuote
+): Promise<QuoteConversionTax> {
+  const resolved = await resolveQuoteConversionTax(
+    knexOrTrx,
+    tenant,
+    quote as Parameters<typeof resolveQuoteConversionTax>[2],
+    (quote.quote_items ?? []) as unknown as Parameters<typeof resolveQuoteConversionTax>[3],
+  );
+  if (resolved.blocker) {
+    throw Object.assign(new Error(resolved.blocker.message), {
+      code: 'NO_TAX_RATE',
+      params: { region: resolved.blocker.region, date: resolved.blocker.date },
+    });
+  }
+  return resolved;
 }
 
 function normalizeQuoteItem(row: Record<string, unknown>): IQuoteItem {
@@ -1388,12 +1415,10 @@ async function convertQuoteToDraftInvoiceRecords(
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
 
-  // Same refusal as the billing conversion: an included one-time row with no
-  // tax rate would be refused by invoice generation, and its 0 is not a tax.
-  const taxBlocker = findUnresolvedQuoteTaxBlocker(quote.quote_items ?? [], quote.quote_date);
-  if (taxBlocker) {
-    throw new Error(taxBlocker.message);
-  }
+  // Same fresh engine resolution and refusal as the billing conversion (one
+  // shared resolver): decided from the engine now, never from the persisted
+  // `tax_unresolved` flag.
+  const { rowTaxes: freshRowTaxes } = await resolveQuoteConversionTaxOrRefuse(knexOrTrx, tenant, quote);
 
   const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
   if (oneTimeItems.length === 0) {
@@ -1454,7 +1479,14 @@ async function convertQuoteToDraftInvoiceRecords(
       ? -allocatedOneTimeAmountFor(discountShares, item.quote_item_id, oneTimeBaseIds)
       : Number(item.net_amount ?? (item.quantity * item.unit_price));
     // Pending-external charges carry no tax (matching calculateAndDistributeTax).
-    const taxAmount = item.is_discount || delegatesTax ? 0 : Number(item.tax_amount ?? 0);
+    // Same rule as the billing conversion: the quote's own tax, except a row it
+    // recorded as unresolved, whose stored 0 was never a tax.
+    const freshTax = !item.is_discount && item.tax_unresolved === true
+      ? freshRowTaxes.get(item.quote_item_id)
+      : undefined;
+    const taxAmount = item.is_discount || delegatesTax
+      ? 0
+      : (freshTax ? freshTax.taxAmountIfIncluded : Number(item.tax_amount ?? 0));
 
     return {
       tenant,
@@ -1470,7 +1502,7 @@ async function convertQuoteToDraftInvoiceRecords(
       net_amount: netAmount,
       tax_amount: taxAmount,
       tax_region: item.tax_region ?? null,
-      tax_rate: delegatesTax ? 0 : (item.tax_rate ?? 0),
+      tax_rate: delegatesTax ? 0 : (freshTax ? freshTax.taxRate : (item.tax_rate ?? 0)),
       total_price: netAmount + taxAmount,
       is_manual: true,
       is_taxable: item.is_discount ? false : (item.is_taxable ?? true),
@@ -1562,10 +1594,7 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
     throw new Error('Quote has already started conversion and cannot be converted to both again');
   }
 
-  const taxBlocker = findUnresolvedQuoteTaxBlocker(quote.quote_items ?? [], quote.quote_date);
-  if (taxBlocker) {
-    throw new Error(taxBlocker.message);
-  }
+  await resolveQuoteConversionTaxOrRefuse(knexOrTrx, tenant, quote);
 
   const recurringItems = getSelectedRecurringItems(quote.quote_items ?? []);
   const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);

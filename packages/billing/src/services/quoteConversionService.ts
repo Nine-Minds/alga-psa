@@ -19,7 +19,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 import { getEffectiveTaxSourceForClient } from '@alga-psa/shared/billingClients/taxSettings';
-import { findUnresolvedQuoteTaxBlocker } from '@alga-psa/shared/billingClients/quoteTaxResolution';
+import { resolveQuoteConversionTax, type ResolvedRowTax } from '@alga-psa/shared/billingClients/quoteRowTax';
 import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
@@ -1069,11 +1069,25 @@ function toIsoString(value: string | Date): string {
  * Refuse to bill a quote whose included one-time row has no tax rate: the
  * invoice engine would refuse the same line, and the quote's 0 is not a tax.
  */
-function assertNoUnresolvedQuoteTax(quote: IQuote): void {
-  const blocker = findUnresolvedQuoteTaxBlocker(quote.quote_items ?? [], quote.quote_date);
+async function resolveConversionTaxOrRefuse(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quote: IQuote
+): Promise<Map<string, ResolvedRowTax>> {
+  // Decided from a fresh engine resolution of the quote's rows, never from the
+  // persisted `tax_unresolved` flag: that flag is stale once a rate is added and
+  // absent on quotes saved before it existed. Read-only. Rows the quote
+  // recorded as unresolved take their invoice tax from this same pass.
+  const { rowTaxes, blocker } = await resolveQuoteConversionTax(
+    knexOrTrx,
+    tenant,
+    quote as Parameters<typeof resolveQuoteConversionTax>[2],
+    (quote.quote_items ?? []) as unknown as Parameters<typeof resolveQuoteConversionTax>[3],
+  );
   if (blocker) {
     throw new ManualInvoiceError('NO_TAX_RATE', blocker.message, { region: blocker.region, date: blocker.date });
   }
+  return rowTaxes;
 }
 
 async function convertQuoteToDraftInvoiceRecords(
@@ -1117,7 +1131,7 @@ async function convertQuoteToDraftInvoiceRecords(
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
 
-  assertNoUnresolvedQuoteTax(quote);
+  const freshRowTaxes = await resolveConversionTaxOrRefuse(knexOrTrx, tenant, quote);
 
   const quoteItemsForInvoice = quote.quote_items ?? [];
   const shares = resolveQuoteDiscountConversionShares(quoteItemsForInvoice);
@@ -1239,7 +1253,16 @@ async function convertQuoteToDraftInvoiceRecords(
     const isDiscount = source.is_discount === true;
     // An external-tax invoice carries no tax of its own: the accounting system
     // computes it and the import writes it back after export.
-    const taxAmount = isDiscount || taxIsExternal ? 0 : Number(source.tax_amount ?? 0);
+    // The invoice matches the accepted quote line for line, so it carries the
+    // quote's own tax. The one exception is a row the quote recorded as
+    // unresolved: its stored 0 was never a tax, so the engine's figure replaces
+    // it (the flag picks the amount here; it never decides whether to convert).
+    const freshTax = !isDiscount && source.tax_unresolved === true
+      ? freshRowTaxes.get(source.quote_item_id)
+      : undefined;
+    const taxAmount = isDiscount || taxIsExternal
+      ? 0
+      : (freshTax ? freshTax.taxAmountIfIncluded : Number(source.tax_amount ?? 0));
     const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
@@ -1258,7 +1281,7 @@ async function convertQuoteToDraftInvoiceRecords(
       net_amount: netAmount,
       tax_amount: taxAmount,
       tax_region: source.tax_region ?? null,
-      tax_rate: isDiscount || taxIsExternal ? 0 : (source.tax_rate ?? 0),
+      tax_rate: isDiscount || taxIsExternal ? 0 : (freshTax ? freshTax.taxRate : (source.tax_rate ?? 0)),
       total_price: netAmount + taxAmount,
       is_manual: true,
       is_taxable: isDiscount ? false : (source.is_taxable ?? true),
@@ -1389,7 +1412,7 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
   }
 
   // Checked before the contract is created so a refusal creates nothing.
-  assertNoUnresolvedQuoteTax(quote);
+  await resolveConversionTaxOrRefuse(knexOrTrx, tenant, quote);
 
   const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
   const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);

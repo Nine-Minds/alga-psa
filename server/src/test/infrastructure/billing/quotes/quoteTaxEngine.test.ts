@@ -1,7 +1,9 @@
 /**
  * One tax engine for quotes and invoices (alga-2026-0003321).
  *
- * DB-backed coverage for T002, T003, T005, T006, T008 and T009: the shared
+ * DB-backed coverage for T002, T003, T005, T006, T008 and T009, plus the repair
+ * round: the editor's totals come from the engine (T011), and conversion decides
+ * from a fresh engine resolution on the billing and workflow paths (T012): the shared
  * engine's unresolved result and TaxService's NO_TAX_RATE, read-only settings
  * resolution, quote recalculation agreeing with invoice tax (billing and
  * workflow-worker paths), the `tax_unresolved` flag, and conversion refusal.
@@ -30,12 +32,13 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 import { TestContext } from '../../../../../test-utils/testContext';
 import { ensureDefaultBillingProfile } from '../../../../../test-utils/billingProfileTestHelpers';
 import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
-import { recalculateQuoteFinancials } from '../../../../../../packages/billing/src/services/quoteCalculationService';
+import { recalculateQuoteFinancials, resolveQuoteDraftTax } from '../../../../../../packages/billing/src/services/quoteCalculationService';
+import { mapLoadedQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
 import { convertQuoteToDraftInvoice } from '../../../../../../packages/billing/src/services/quoteConversionService';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
 import { calculateTaxForAmount } from '../../../../../../shared/billingClients/taxEngine';
-import { Quote as WorkerQuote } from '../../../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal';
+import { Quote as WorkerQuote, convertQuoteToDraftInvoice as workerConvertQuoteToDraftInvoice } from '../../../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal';
 
 const {
   beforeAll: setupContext,
@@ -351,6 +354,154 @@ describe('One tax engine: quotes and invoices', () => {
         .update({ tax_unresolved: true });
       const result = await convertQuoteToDraftInvoice(db(), tenant(), quoteId);
       expect(result.invoice.invoice_id).toBeTruthy();
+    });
+  });
+
+  describe('T011: the editor totals come from the engine (QTX-CAP-1)', () => {
+    // Region QTX-CAP: 10%, capped at $25 per line. Lines $1,000 and $100.
+    // Rate x amount arithmetic gives Tax $110 / Total $1,210; the engine gives $35 / $1,135.
+    async function capQuote(extra: Array<Record<string, unknown>> = []) {
+      await addRegion('QTX-CAP', 'Cap region');
+      await addRate({ region_code: 'QTX-CAP', tax_percentage: 10, cap_amount: 2500 });
+      return createQuote([
+        { tax_region: 'QTX-CAP', unit_price: 100000, description: 'Managed service' },
+        { tax_region: 'QTX-CAP', unit_price: 10000, description: 'Add-on' },
+        ...extra,
+      ]);
+    }
+
+    const draftInput = async (quoteId: string, quoteIdForSource: string | null = quoteId) => {
+      const rows = await db()('quote_items').where({ tenant: tenant(), quote_id: quoteId }).orderBy('display_order');
+      return {
+        client_id: context.clientId,
+        quote_id: quoteIdForSource,
+        quote_date: QUOTE_DATE,
+        currency_code: 'USD',
+        items: rows.map((row: any) => ({
+          id: row.quote_item_id,
+          quantity: Number(row.quantity),
+          unit_price: Number(row.unit_price),
+          is_optional: row.is_optional,
+          is_selected: row.is_selected,
+          is_recurring: row.is_recurring,
+          is_taxable: row.is_taxable,
+          tax_region: row.tax_region,
+          tax_rate: 10, // stale rate a browser could multiply: the engine must ignore it
+        })),
+      };
+    };
+
+    it('server-action figures equal recalculateQuoteFinancials: Tax $35.00, Total $1,135.00', async () => {
+      const { quoteId, items } = await capQuote();
+      await recalculateQuoteFinancials(db(), tenant(), quoteId);
+      const stored = await db()('quotes').where({ tenant: tenant(), quote_id: quoteId }).first();
+      expect(Number(stored.tax)).toBe(3500);
+      expect(Number(stored.total_amount)).toBe(113500);
+
+      const draft = await resolveQuoteDraftTax(db(), tenant(), await draftInput(quoteId));
+      expect(draft.totals).toMatchObject({
+        subtotal: 110000, discount_total: 0, tax: 3500, total_amount: 113500,
+      });
+      expect(draft.totals.tax).toBe(Number(stored.tax));
+      expect(draft.totals.total_amount).toBe(Number(stored.total_amount));
+      expect(draft.rows[items[0].quote_item_id]).toMatchObject({ taxAmount: 2500, taxUnresolved: false });
+      expect(draft.rows[items[1].quote_item_id]).toMatchObject({ taxAmount: 1000, taxUnresolved: false });
+    });
+
+    it('also answers for an unsaved draft (no quote_id) before anything is stored', async () => {
+      const { quoteId } = await capQuote();
+      const draft = await resolveQuoteDraftTax(db(), tenant(), await draftInput(quoteId, null));
+      expect(draft.totals.tax).toBe(3500);
+      expect(draft.totals.total_amount).toBe(113500);
+    });
+
+    it('writes nothing', async () => {
+      const { quoteId } = await capQuote();
+      const snapshot = async () => ({
+        quote: await db()('quotes').where({ tenant: tenant(), quote_id: quoteId }).first(),
+        items: await db()('quote_items').where({ tenant: tenant(), quote_id: quoteId }).orderBy('display_order'),
+        settings: Number((await db()('client_tax_settings').where({ tenant: tenant() }).count('* as n').first())!.n),
+      });
+      const before = await snapshot();
+      await resolveQuoteDraftTax(db(), tenant(), await draftInput(quoteId));
+      expect(await snapshot()).toEqual(before);
+    });
+
+    it('"if selected" for a pending optional row is the engine figure, on the draft and in the document view model', async () => {
+      // $500 optional add-on: 10% is $50, capped to $25.
+      const { quoteId, items } = await capQuote([
+        { tax_region: 'QTX-CAP', unit_price: 50000, is_optional: true, is_selected: false, description: 'Optional add-on' },
+      ]);
+      await recalculateQuoteFinancials(db(), tenant(), quoteId);
+      const pendingId = items[2].quote_item_id;
+
+      const draft = await resolveQuoteDraftTax(db(), tenant(), await draftInput(quoteId));
+      expect(draft.rows[pendingId].taxAmount).toBe(2500);
+      expect(draft.totals).toMatchObject({
+        tax: 3500, total_amount: 113500, optional_subtotal: 50000, optional_tax: 2500, optional_total: 52500,
+      });
+
+      const loaded = await Quote.getById(db(), tenant(), quoteId);
+      const viewModel = await mapLoadedQuoteToViewModel(db(), tenant(), loaded as any);
+      expect(viewModel.tax).toBe(3500);
+      expect(viewModel.total_amount).toBe(113500);
+      expect(viewModel.optional_tax).toBe(draft.totals.optional_tax);
+      expect(viewModel.optional_total).toBe(draft.totals.optional_total);
+    });
+
+    it('a draft line in a region with no rate is unresolved, not a computed $0', async () => {
+      const { quoteId, items } = await capQuote([{ tax_region: 'QTX-NONE', unit_price: 20000 }]);
+      await addRegion('QTX-NONE', 'No rate region');
+      const draft = await resolveQuoteDraftTax(db(), tenant(), await draftInput(quoteId));
+      expect(draft.rows[items[2].quote_item_id]).toMatchObject({ taxAmount: 0, taxUnresolved: true, taxRegion: 'QTX-NONE' });
+      expect(draft.rows[items[0].quote_item_id].taxUnresolved).toBe(false);
+    });
+  });
+
+  describe.each([
+    ['billing conversion', (quoteId: string) => convertQuoteToDraftInvoice(db(), tenant(), quoteId), false],
+    ['workflow worker conversion', (quoteId: string) => workerConvertQuoteToDraftInvoice(db(), tenant(), quoteId), true],
+  ] as Array<[string, (quoteId: string) => Promise<any>, boolean]>)('T012: %s decides from a fresh engine resolution', (_name, convert) => {
+    const invoiceCount = async () => Number((await db()('invoices').where({ tenant: tenant() }).count('* as n').first())!.n);
+
+    it('(a) a stale tax_unresolved=true flag does not block once a rate exists, and the invoice carries engine tax', async () => {
+      await addRegion('QTX-NONE', 'Later rated region');
+      const { quoteId, items } = await createQuote([{ tax_region: 'QTX-NONE', unit_price: 10000 }], 'accepted');
+      await recalculateQuoteFinancials(db(), tenant(), quoteId);
+      expect((await readItem(items[0].quote_item_id)).tax_unresolved).toBe(true);
+
+      // A rate is added afterwards; nothing recalculates the quote, so the flag
+      // and the stored 0 tax are stale.
+      await addRate({ region_code: 'QTX-NONE', tax_percentage: 8 });
+      expect((await readItem(items[0].quote_item_id)).tax_unresolved).toBe(true);
+      const before = await invoiceCount();
+
+      const result = await convert(quoteId);
+      expect(await invoiceCount()).toBe(before + 1);
+      const invoiceId = result.invoice.invoice_id;
+      const charges = await db()('invoice_charges').where({ tenant: tenant(), invoice_id: invoiceId });
+      expect(charges).toHaveLength(1);
+      expect(Number(charges[0].net_amount)).toBe(10000);
+      expect(Number(charges[0].tax_amount)).toBe(800);
+      const invoice = await db()('invoices').where({ tenant: tenant(), invoice_id: invoiceId }).first();
+      expect(Number(invoice.tax)).toBe(800);
+      expect(Number(invoice.total_amount)).toBe(10800);
+    });
+
+    it('(b) a quote saved before the flag existed (flag false) in a rate-less region is refused with NO_TAX_RATE and no invoice', async () => {
+      await addRegion('QTX-NONE', 'No rate region');
+      // Saved before the deploy: the column took its default (false) and the row's tax is the stored 0.
+      const { quoteId, items } = await createQuote([{ tax_region: 'QTX-NONE', unit_price: 10000 }], 'accepted');
+      await db()('quote_items').where({ tenant: tenant(), quote_id: quoteId }).update({ tax_unresolved: false, tax_amount: 0 });
+      expect((await readItem(items[0].quote_item_id)).tax_unresolved).toBe(false);
+      const before = await invoiceCount();
+
+      await expect(convert(quoteId)).rejects.toMatchObject({
+        code: 'NO_TAX_RATE',
+        message: `No active tax rate(s) found for region QTX-NONE on date ${QUOTE_DATE}`,
+      });
+      expect(await invoiceCount()).toBe(before);
+      expect((await Quote.getById(db(), tenant(), quoteId))!.converted_invoice_id ?? null).toBeNull();
     });
   });
 });

@@ -1,10 +1,10 @@
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import type { IQuoteItem } from '@alga-psa/types';
+import type { QuoteDraftTaxItem } from '../../../services/quoteCalculationService';
 import { allocateQuoteDiscounts } from '../../../services/quoteDiscountAllocation';
 import { compareCadenceKeys, cadenceDefaultName, isRecurringCadenceKey, resolveCadenceKey } from '../../../lib/quoteItemCadence';
 import { isPendingOptional } from '../../../lib/quoteItemInclusion';
 import { buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from '../../../lib/quoteTotals';
-import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export type DraftQuoteItem = {
@@ -43,20 +43,18 @@ export type DraftQuoteItem = {
   is_taxable?: boolean;
   tax_region?: string | null;
   tax_rate?: number | null;
-  /** Server-set at the last recalculation: the taxable row's region had no active rate. */
-  tax_unresolved?: boolean;
   location_id?: string | null;
 };
 
-export interface DraftQuoteTotals {
+/**
+ * Tax-free arithmetic over the draft rows (amounts and discount allocation).
+ * Tax is never computed in the browser: every tax figure and every quote total
+ * comes from the server's tax engine (see `useQuoteDraftTax`).
+ */
+export interface DraftNetTotals {
   subtotal: number;
   discount_total: number;
-  tax: number;
-  total_amount: number;
-  /** Optional (if-selected) add-ons, excluded from the base figures above. */
   optional_subtotal: number;
-  optional_tax: number;
-  optional_total: number;
 }
 
 /** Stable client-side row key for a draft line item. */
@@ -98,7 +96,6 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     is_taxable: item.is_taxable ?? true,
     tax_region: item.tax_region ?? null,
     tax_rate: item.tax_rate ?? null,
-    tax_unresolved: item.tax_unresolved === true,
     location_id: item.location_id ?? null,
   };
 }
@@ -218,7 +215,34 @@ export function createDraftDiscountQuoteItem(input: {
   };
 }
 
-const draftBaseItemId = (item: DraftQuoteItem): string => item.quote_item_id ?? item.local_id;
+
+/** The row key the server echoes results under; matches the discount allocation's base id. */
+export const draftBaseItemId = (item: Pick<DraftQuoteItem, 'quote_item_id' | 'local_id'>): string =>
+  item.quote_item_id ?? item.local_id;
+
+export function toDraftTaxItem(item: DraftQuoteItem): QuoteDraftTaxItem {
+  return {
+    id: draftBaseItemId(item),
+    service_id: item.service_id ?? null,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    is_discount: item.is_discount ?? false,
+    discount_type: item.discount_type ?? null,
+    discount_percentage: item.discount_percentage ?? null,
+    applies_to_item_id: item.applies_to_item_id ?? null,
+    applies_to_service_id: item.applies_to_service_id ?? null,
+    is_optional: item.is_optional,
+    is_selected: item.is_selected,
+    is_recurring: item.is_recurring,
+    billing_frequency: item.billing_frequency ?? null,
+    is_taxable: item.is_taxable,
+    tax_region: item.tax_region ?? null,
+    tax_rate: item.tax_rate ?? null,
+    location_id: item.location_id ?? null,
+  };
+}
+
+export const draftTaxRowKey = draftBaseItemId;
 
 /**
  * Allocation inputs shared by the draft totals, the discount amount column and
@@ -231,28 +255,19 @@ function buildDraftAllocationInputs(items: DraftQuoteItem[]) {
   return buildQuoteDiscountAllocationInputs(items, draftBaseItemId);
 }
 
-export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTotals {
+export function calculateDraftNetTotals(items: DraftQuoteItem[]): DraftNetTotals {
   const { bases, discounts } = buildDraftAllocationInputs(items);
   const allocation = allocateQuoteDiscounts(bases, discounts);
-
-  // Draft rows carry the persisted rate, so the editor derives tax the same
-  // way the adapter does for pending add-ons (ceil to the cent).
-  // Tax follows the persisted recalculation: each included row is taxed on its
-  // amount minus the discount share it absorbed (discounts apply before tax).
-  const shareById = new Map<string, number>();
-  for (const result of allocation.discounts) {
-    for (const line of result.allocations) {
-      shareById.set(line.baseItemId, (shareById.get(line.baseItemId) ?? 0) + line.amount);
-    }
-  }
-  return summarizeQuoteTotals(items, {
+  const net = summarizeQuoteTotals(items, {
     amountOf: (item) => item.quantity * item.unit_price,
-    taxOf: (item) => hypotheticalTaxAmount({
-      ...item,
-      total_price: Math.max(0, item.quantity * item.unit_price - (shareById.get(draftBaseItemId(item)) ?? 0)),
-    }),
+    taxOf: () => 0,
     discountTotal: allocation.totalDiscount,
   });
+  return {
+    subtotal: net.subtotal,
+    discount_total: net.discount_total,
+    optional_subtotal: net.optional_subtotal,
+  };
 }
 
 /**

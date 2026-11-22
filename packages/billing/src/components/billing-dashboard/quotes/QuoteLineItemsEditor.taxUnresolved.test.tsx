@@ -43,18 +43,24 @@ const line = (overrides: Partial<DraftQuoteItem> = {}): DraftQuoteItem => ({
   is_recurring: false,
   is_taxable: true,
   tax_region: 'US-NY',
-  tax_unresolved: true,
   ...overrides,
 } as DraftQuoteItem);
 
 afterEach(cleanup);
 
-const renderEditor = (items: DraftQuoteItem[]) =>
+// The engine's latest resolution of the draft (what `useQuoteDraftTax` returns).
+const LINE_KEY = '11111111-1111-1111-1111-111111111111';
+const unresolvedRow = { taxAmount: 0, taxPercentage: 0, taxRegion: 'US-NY', taxUnresolved: true };
+const resolvedRow = { taxAmount: 800, taxPercentage: 8, taxRegion: 'US-NY', taxUnresolved: false };
+const rowTax = (row: typeof unresolvedRow, key = LINE_KEY) => ({ [key]: row });
+
+const renderEditor = (items: DraftQuoteItem[], rows = rowTax(unresolvedRow)) =>
   render(
     <QuoteLineItemsEditor
       items={items}
       currencyCode="USD"
       onChange={() => undefined}
+      rowTaxById={rows}
       taxRegionNames={{ 'US-NY': 'New York State' }}
     />,
   );
@@ -67,8 +73,12 @@ describe('QuoteLineItemsEditor unresolved tax', () => {
     expect(document.body.textContent).not.toContain('11111111-1111');
   });
 
+  it('ignores a stale persisted flag: only the engine result marks a line', () => {
+    renderEditor([({ ...line(), tax_unresolved: true } as DraftQuoteItem)], rowTax(resolvedRow));
+    expect(document.getElementById('quote-line-tax-unresolved-line-1')).toBeNull();
+  });
+
   it.each([
-    ['a resolved line', { tax_unresolved: false }],
     ['a non-taxable line', { is_taxable: false }],
     ['an unselected optional line', { is_optional: true, is_selected: false }],
   ])('shows no badge for %s', (_label, overrides) => {
@@ -79,13 +89,13 @@ describe('QuoteLineItemsEditor unresolved tax', () => {
 
 describe('QuoteTaxUnresolvedNote', () => {
   it('shows the note when any included line is unresolved', () => {
-    render(<QuoteTaxUnresolvedNote items={[line({ tax_unresolved: false, local_id: 'a' }), line()]} />);
+    render(<QuoteTaxUnresolvedNote items={[line({ local_id: 'a', quote_item_id: 'a' }), line()]} rowTaxById={{ a: resolvedRow, [LINE_KEY]: unresolvedRow }} />);
     expect(screen.getByText('Tax could not be calculated for some lines. Those lines show 0 tax.')).toBeTruthy();
   });
 
   it('shows nothing when every included line is resolved or only an unselected optional line is unresolved', () => {
     const { container } = render(
-      <QuoteTaxUnresolvedNote items={[line({ tax_unresolved: false }), line({ local_id: 'b', is_optional: true, is_selected: false })]} />,
+      <QuoteTaxUnresolvedNote items={[line(), line({ local_id: 'b', quote_item_id: 'b', is_optional: true, is_selected: false })]} rowTaxById={{ [LINE_KEY]: resolvedRow, b: unresolvedRow }} />,
     );
     expect(container.textContent).toBe('');
   });

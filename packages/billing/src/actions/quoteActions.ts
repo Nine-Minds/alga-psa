@@ -14,7 +14,7 @@ import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListIt
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
-import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { recalculateQuoteFinancials, resolveQuoteDraftTax, type QuoteDraftTaxInput, type QuoteDraftTaxResult } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
 import { renderResolvedQuoteEmail, resolveQuoteEmail, type QuoteTemplateName } from '../lib/quoteEmailRendering';
@@ -1021,6 +1021,27 @@ export const getQuote = withAuth(async (
   }
 
   return quote;
+});
+
+/**
+ * The editor's tax and totals for its draft rows, straight from the tax engine
+ * (caps, brackets, composite rates, region fallbacks, unresolved regions). The
+ * same resolution `recalculateQuoteFinancials` stores, so the editor shows what
+ * saving will store. Read-only: runs in a tenant-scoped connection and writes
+ * nothing, so it is safe to call on every (debounced) edit.
+ */
+export const calculateQuoteDraftTax = withAuth(async (
+  user,
+  { tenant },
+  input: QuoteDraftTaxInput
+): Promise<QuoteDraftTaxResult | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return resolveQuoteDraftTax(knex, tenant, input);
 });
 
 /**
