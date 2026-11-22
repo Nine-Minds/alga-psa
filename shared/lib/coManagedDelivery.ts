@@ -140,14 +140,18 @@ export interface CoManagedInboundCommentWriter {
    */
   acknowledgeRefusal(input: { tenant: string; token: string; to: string; ticketId: string; reason: string }): Promise<void>;
   requestSenderConfirmation(input: {
-    tenant: string; actor: InboundCommentActor; actorEmail: string; ticketId: string; relationshipId: string;
-    threadId: string | null; parentCommentId: string | null; audience: CommentAudience; replyToken: string;
+    tenant: string; actor: InboundCommentActor; actorEmail: string; ticketId: string; relationshipId?: string;
+    threadId?: string | null; parentCommentId?: string | null; audience?: CommentAudience; replyToken: string;
     providerId: string; providerMessageId: string; text: string;
+    target?: 'co-managed' | 'native';
+    nativeReply?: { replyToken: string; providerId: string; providerMessageId: string; emailData: EmailMessageDetails; content: string;
+      previewHtml: string; previewText: string; contentSha256: string; parentCommentId?: string | null };
   }): Promise<void>;
   /** Queue an unsigned client-contact reply for confirmation at the contact's registered mailbox. */
   requestContactSenderConfirmation?(input: {
     tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
     providerMessageId: string; emailData: EmailMessageDetails;
+    canonicalContent: { content: string; previewHtml: string; previewText: string; contentSha256: string };
   }): Promise<void>;
 }
 export const coManagedInboundCommentSeam = sharedWorkSeam<CoManagedInboundCommentWriter>('inbound-comment');

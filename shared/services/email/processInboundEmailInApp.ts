@@ -21,7 +21,7 @@ import {
 import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import {
   applyEmbeddedImageUrlMappingsToStoredBodies,
-  blocksFromEmailBody,
+  canonicalizeInboundReplyBody,
 } from './inboundEmbeddedImageUrlRewrite';
 import {
   buildInboundWatchListRecipients,
@@ -45,7 +45,6 @@ import {
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
 import { isInternalAttributionTrusted } from '../../lib/email/senderAuthVerification';
-import { inboundMessageSha256 } from '../../lib/email/inboundMessageDigest';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -87,6 +86,8 @@ export interface ProcessInboundEmailInAppOptions {
   collectDiagnostics?: boolean;
   /** Internal capability supplied only after the registered contact mailbox confirmed the exact message. */
   confirmedContact?: { contactId: string; email: string; contentSha256: string };
+  /** Internal capability supplied only after the registered internal mailbox confirmed this exact native reply. */
+  confirmedInternalActor?: { userId: string; email: string; providerMessageId: string; contentSha256: string };
   /**
    * Durable pipeline execution. When present, all ticket/comment/watch-list/
    * reopen writes execute inside the provided transaction with the injected
@@ -206,7 +207,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'co_managed_confirmation_requested';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'co_managed_confirmation_requested' | 'native_sender_confirmation_requested';
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -961,12 +962,12 @@ export async function processInboundEmailInApp(
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
   const internalSenderTrusted = isInternalAttributionTrusted(emailData.senderAuthentication);
   const contactSenderTrusted = emailData.senderAuthentication?.contact?.authorization === 'domain_only';
+  const providerMessageId = emailData.providerIdentity || emailData.id;
   const confirmedContactMatches = (contactId: string | null | undefined, email: string | null | undefined) => {
     if (!options.confirmedContact || !contactId || !email) return false;
-    const digest = inboundMessageSha256(emailData);
     return options.confirmedContact.contactId === contactId
       && options.confirmedContact.email.trim().toLowerCase() === email.trim().toLowerCase()
-      && options.confirmedContact.contentSha256 === digest;
+      && options.confirmedContact.contentSha256 === canonicalReply.sha256;
   };
   const contactAttributionEmail = senderEmail;
   const durableExecution = options.durableExecution ?? null;
@@ -1048,10 +1049,23 @@ export async function processInboundEmailInApp(
       error: parseError,
     });
   }
+  const canonicalReply = await canonicalizeInboundReplyBody({
+    html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
+    text: parsedEmail?.sanitizedText ?? emailData.body?.text,
+  });
+  const confirmedInternalActorMatches = (userId: string | null | undefined, email: string | null | undefined) => {
+    const approval = options.confirmedInternalActor;
+    return Boolean(approval && userId && email
+      && approval.userId === userId
+      && approval.email.trim().toLowerCase() === email.trim().toLowerCase()
+      && approval.providerMessageId === providerMessageId
+      && approval.contentSha256 === canonicalReply.sha256);
+  };
   const resolveSenderContact = async (context: {
     ticketId?: string;
     defaultClientId?: string | null;
     includeUntrustedContactCandidate?: boolean;
+    includeUntrustedInternalCandidate?: boolean;
   } = {}) => {
     if (!senderEmail) {
       return null;
@@ -1065,7 +1079,7 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (internalSenderTrusted) return matched;
+      if (internalSenderTrusted || (context.includeUntrustedInternalCandidate && matched.user_id)) return matched;
       // A list rewrite can select a contact candidate, but its headers do not
       // grant identity: internal actors require owner confirmation and contacts
       // require independent DKIM evidence or registered-mailbox confirmation.
@@ -1343,15 +1357,43 @@ export async function processInboundEmailInApp(
 
     const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
     const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-    const blocks = await blocksFromEmailBody({
-      html: parsedHtml,
-      text: parsedText,
-    });
-    const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId, includeUntrustedContactCandidate: true });
+    const blocks = canonicalReply.blocks;
+    const serializedBlocks = canonicalReply.serialized;
+    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId, includeUntrustedContactCandidate: true, includeUntrustedInternalCandidate: true });
     const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
     const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+
+    if (matchedSenderIsInternalUser && !internalSenderTrusted
+      && !confirmedInternalActorMatches(matchedSenderContact.user_id, matchedSenderContact.email)) {
+      if (params.matchedBy !== 'reply_token' || !conversationToken || classifyReplyToken(conversationToken) !== 'native') {
+        return withDiagnostics({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId: params.ticketId, matchedBy: params.matchedBy }, diagnostics);
+      }
+      const { requestInboundSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+      await requestInboundSenderConfirmation({
+        tenant: tenantId,
+        actor: { tenant: tenantId, userId: String(matchedSenderContact.user_id) },
+        actorEmail: String(matchedSenderContact.email),
+        ticketId: params.ticketId,
+        replyToken: String(conversationToken ?? ''),
+        providerId,
+        providerMessageId,
+        text: canonicalReply.text,
+        target: 'native',
+        nativeReply: {
+          replyToken: String(conversationToken ?? ''),
+          providerId,
+          providerMessageId,
+          emailData,
+          content: serializedBlocks,
+          previewHtml: canonicalReply.html,
+          previewText: canonicalReply.text,
+          contentSha256: canonicalReply.sha256,
+          parentCommentId: params.parentCommentId ?? null,
+        },
+      });
+      return withDiagnostics({ outcome: 'quarantined', reason: 'native_sender_confirmation_requested', ticketId: params.ticketId, matchedBy: params.matchedBy }, diagnostics);
+    }
 
     if (matchedSenderContact?.contact_id && !matchedSenderIsInternalUser
       && !contactSenderTrusted
@@ -1366,7 +1408,13 @@ export async function processInboundEmailInApp(
         await requestConfirmation({
           tenant: tenantId, contactId: matchedSenderContact.contact_id,
           contactEmail: String(matchedSenderContact.matched_email ?? matchedSenderContact.email ?? senderEmail),
-          ticketId: params.ticketId, providerId, providerMessageId: emailData.providerIdentity || emailData.id, emailData,
+          ticketId: params.ticketId, providerId, providerMessageId, emailData,
+          canonicalContent: {
+            content: serializedBlocks,
+            previewHtml: canonicalReply.html,
+            previewText: canonicalReply.text,
+            contentSha256: canonicalReply.sha256,
+          },
         });
       }
       return withDiagnostics({ outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId: params.ticketId, matchedBy: params.matchedBy }, diagnostics);
@@ -2245,11 +2293,8 @@ export async function processInboundEmailInApp(
 
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-  const blocks = await blocksFromEmailBody({
-    html: parsedHtml,
-    text: parsedText,
-  });
-  const serializedBlocks = JSON.stringify(blocks);
+  const blocks = canonicalReply.blocks;
+  const serializedBlocks = canonicalReply.serialized;
   const seededWatchList = mergeTicketWatchListRecipients(
     inboundWatchListRecipients,
     buildUnmatchedSenderWatchListRecipients(commentAuthorContactId ?? null)

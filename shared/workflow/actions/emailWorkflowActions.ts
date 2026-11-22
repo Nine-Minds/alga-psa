@@ -261,7 +261,7 @@ export async function findContactByEmail(
           'last_name',
           'email'
         )
-        .where({ user_type: 'internal' })
+        .where({ user_type: 'internal', is_inactive: false })
         .andWhereRaw('lower(email) = ?', [normalizedEmail])
         .orderBy('created_at', 'asc')
         .first();

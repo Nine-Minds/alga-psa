@@ -40,6 +40,9 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2'
 vi.mock('@alga-psa/shared/services/email/inboundEmailDurableStore', () => ({ getInboundDurableMode: () => 'off' }));
 vi.mock('@alga-psa/shared/services/email/inboundAuthPauseNotifier', () => ({ assertInboundAuthPauseNotifierRegistered: vi.fn() }));
 vi.mock('@alga-psa/shared/services/email/inboundAuthPauseEventNotifier', () => ({ registerInboundAuthPauseEventPublisher: vi.fn() }));
+vi.mock('../../../../shared/services/email/inboundReopenRateLimiter', () => ({
+  checkInboundReopenRateLimit: vi.fn(async () => ({ allowed: true, count: 1, limit: 3, windowSeconds: 3600 })),
+}));
 vi.mock('@alga-psa/shared/services/email/inboundEmailMetrics', () => ({ installInboundEmailMetricsSink: vi.fn() }));
 vi.mock('../../../../services/email-service/src/observability/registry', () => ({ createInboundEmailMetrics: () => ({ setLiveStateProvider: vi.fn() }) }));
 vi.mock('../../../../services/email-service/src/observability/promSink', () => ({ createPromSink: vi.fn() }));
@@ -321,8 +324,6 @@ describe('email-service boot registers co-managed inbound', () => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { approveInboundSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
     const { MicrosoftGraphAdapter } = await import('../../../../shared/services/email/providers/MicrosoftGraphAdapter');
-    const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
-    const { simpleParser } = await import('mailparser');
     const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
     const priorGraphUrl = process.env.MICROSOFT_GRAPH_BASE_URL;
     process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
@@ -448,8 +449,6 @@ describe('email-service boot registers co-managed inbound', () => {
   it.each(['microsoft', 'imap'] as const)('%s list-rewrite claims remain untrusted until registered contact confirmation', async (provider) => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
-    const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
-    const { simpleParser } = await import('mailparser');
     const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
     process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
     process.env.APP_BASE_URL = 'https://psa.example.test';
@@ -513,6 +512,86 @@ describe('email-service boot registers co-managed inbound', () => {
     }
   });
 
+  it('confirms a native internal reply through the production Gmail adapter, reopens its ticket, and denies replay', async () => {
+    const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { approveInboundSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+    const { GmailAdapter } = await import('../../../../shared/services/email/providers/GmailAdapter');
+    const priorSecret = process.env.NEXTAUTH_SECRET, priorOrigin = process.env.APP_BASE_URL;
+    process.env.NEXTAUTH_SECRET = 'confirmation-test-secret-0123456789-abcdef';
+    process.env.APP_BASE_URL = 'https://psa.example.test';
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({ TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } } as any);
+    const actorEmail = `native-owner-${MARK}@msp.example.test`;
+    const actorId = await createUser(db, ticketTenant, { email: actorEmail, first_name: 'Native', last_name: 'Owner' });
+    const roleId = uuidv4(), permissionId = uuidv4();
+    await db('roles').insert({ tenant: ticketTenant, role_id: roleId, role_name: `Native confirmation ${MARK}`, description: 'Integration test role', msp: true, client: false });
+    await db('permissions').insert({ tenant: ticketTenant, permission_id: permissionId, resource: 'ticket', action: 'update', msp: true, client: false });
+    await db('role_permissions').insert({ tenant: ticketTenant, role_id: roleId, permission_id: permissionId });
+    await db('user_roles').insert({ tenant: ticketTenant, user_id: actorId, role_id: roleId });
+    const originalBoard = await db('boards').where({ tenant: ticketTenant }).first('inbound_reply_reopen_enabled', 'inbound_reply_reopen_cutoff_hours', 'inbound_reply_reopen_status_id', 'inbound_reply_ai_ack_suppression_enabled');
+    const ticket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('status_id', 'board_id');
+    let closedStatus = await db('statuses').where({ tenant: ticketTenant, board_id: ticket.board_id, status_type: 'ticket', is_closed: true }).first('status_id');
+    if (!closedStatus?.status_id) {
+      const statusId = uuidv4();
+      await db('statuses').insert({ tenant: ticketTenant, status_id: statusId, board_id: ticket.board_id, name: `Closed ${MARK}`,
+        status_type: 'ticket', is_closed: true, is_default: false, order_number: 99, created_by: techId });
+      closedStatus = { status_id: statusId };
+    }
+    const reopenedStatus = ticket?.status_id;
+    if (!closedStatus?.status_id || !reopenedStatus) throw new Error('Test ticket requires closed and open statuses.');
+    await db('boards').where({ tenant: ticketTenant }).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 168,
+      inbound_reply_reopen_status_id: reopenedStatus, inbound_reply_ai_ack_suppression_enabled: false });
+    await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ status_id: closedStatus.status_id, is_closed: true, closed_at: new Date(Date.now() - 60_000) });
+    try {
+      const replyToken = `native:${uuidv4()}`, replyText = `authorized-native-reply-${MARK}`;
+      await db('email_reply_tokens').insert({ tenant: ticketTenant, token: replyToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: actorEmail });
+      const raw = Buffer.from([
+        `From: Native Owner <${actorEmail}>`, 'To: support@msp.example.test', 'Subject: Re: Shared ticket',
+        `Message-ID: <native-confirm-${MARK}@msp.example.test>`, 'Authentication-Results: mx.google.com; dkim=pass header.d=msp.example.test',
+        'Authentication-Results: attacker.invalid; dmarc=pass header.from=msp.example.test', `AuthSource: ${actorEmail}`, `AuthAs: ${actorEmail}`,
+        '', `${replyText}\n\n[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]`,
+      ].join('\r\n'));
+      const adapter = new GmailAdapter({ id: PROVIDER_ID, tenant: ticketTenant, name: 'Gmail fixture', provider_type: 'google', mailbox: 'support@msp.example.test', folder_to_monitor: 'INBOX', active: true, webhook_notification_url: '', connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any);
+      const headers = raw.toString().split('\r\n').filter(line => /^[^\s:]+:/.test(line)).map(line => {
+        const colon = line.indexOf(':'); return { name: line.slice(0, colon), value: line.slice(colon + 1).trim() };
+      });
+      (adapter as any).gmail = { users: { messages: { get: async () => ({ data: { id: `native-confirm-${MARK}`, labelIds: ['INBOX'], payload: { headers, body: { data: Buffer.from(`${replyText}\n\n[ALGA-REPLY-TOKEN ${replyToken} ticketId=${ticketId}]`).toString('base64') } } } }) } } };
+      (adapter as any).downloadMessageSource = async () => raw;
+      const message: any = await adapter.getMessageDetails(`native-confirm-${MARK}`);
+      expect(message.senderAuthentication?.author?.provenance).not.toBe('provider_attested_author');
+      expect(message.senderAuthentication?.contact?.authorization).toBe('untrusted');
+      const initial: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+      expect(initial).toMatchObject({ outcome: 'quarantined', reason: 'native_sender_confirmation_requested', ticketId });
+      expect(await sharedComments(replyText)).toHaveLength(0);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect((sendEmail.mock.calls[0] as any)[0].to).toBe(actorEmail);
+      const url = String((sendEmail.mock.calls[0] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+      const confirmationToken = new URL(url).searchParams.get('token')!;
+      expect(await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: techId, user_type: 'internal', email: 'other@msp.example.test' })).toBeNull();
+      expect(await sharedComments(replyText)).toHaveLength(0);
+      const approved = await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: actorId, user_type: 'internal', email: actorEmail });
+      expect(approved).toMatchObject({ ticketId });
+      const rows = await sharedComments(replyText);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ author_type: 'internal', user_id: actorId });
+      const reopened = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('status_id', 'is_closed');
+      expect(reopened).toMatchObject({ status_id: reopenedStatus, is_closed: false });
+      expect(await approveInboundSenderConfirmation(confirmationToken, { tenant: ticketTenant, user_id: actorId, user_type: 'internal', email: actorEmail })).toBeNull();
+      expect(await sharedComments(replyText)).toHaveLength(1);
+    } finally {
+      await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ status_id: ticket.status_id, is_closed: false, closed_at: null });
+      await db('statuses').where({ tenant: ticketTenant, board_id: ticket.board_id, name: `Closed ${MARK}` }).delete();
+      await db('boards').where({ tenant: ticketTenant }).update({ inbound_reply_reopen_enabled: originalBoard?.inbound_reply_reopen_enabled ?? false,
+        inbound_reply_reopen_cutoff_hours: originalBoard?.inbound_reply_reopen_cutoff_hours ?? 168,
+        inbound_reply_reopen_status_id: originalBoard?.inbound_reply_reopen_status_id ?? null,
+        inbound_reply_ai_ack_suppression_enabled: originalBoard?.inbound_reply_ai_ack_suppression_enabled ?? false });
+      resetWorkflowEmailProvider();
+      if (priorSecret === undefined) delete process.env.NEXTAUTH_SECRET; else process.env.NEXTAUTH_SECRET = priorSecret;
+      if (priorOrigin === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = priorOrigin;
+    }
+  }, 120_000);
+
   it('confirms an unsigned Microsoft reply from the registered requester contact before native admission and persistence', async () => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { approveInboundContactSenderConfirmation } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
@@ -521,10 +600,10 @@ describe('email-service boot registers co-managed inbound', () => {
     const sendEmail = vi.fn(async () => ({ success: true }));
     registerWorkflowEmailProvider({ TenantEmailService: { getInstance: () => ({ sendEmail }) }, StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } } as any);
     try {
-      const contactEmail = `rita-${MARK}@example.com`, contactText = `unsigned-contact-${MARK}`;
+      const contactEmail = `rita-${MARK}@example.com`, contactText = `visible-html-contact-${MARK}`, unseenPlainText = `unseen-plain-contact-${MARK}`;
       const nativeToken = `native:${uuidv4()}`;
       await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: contactEmail, metadata: null });
-      const message = { ...emailData(`<unsigned-contact-${MARK}@outlook.example.test>`, contactText, null, { provider: 'microsoft' }), from: { email: contactEmail, name: 'Rita Requester' }, body: { text: `${contactText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` } };
+      const message = { ...emailData(`<unsigned-contact-${MARK}@outlook.example.test>`, contactText, null, { provider: 'microsoft' }), from: { email: contactEmail, name: 'Rita Requester' }, body: { text: `${unseenPlainText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]`, html: `<p><strong>${contactText}</strong> <a href="https://example.com/status">Status</a></p><p>[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]</p>` } };
       const { coManagedInboundCommentSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
       const { registerCoManagedInboundCommentWriter } = await import('@alga-psa/co-managed/inboundCommentWriter');
       coManagedInboundCommentSeam.reset();
@@ -537,9 +616,24 @@ describe('email-service boot registers co-managed inbound', () => {
       const url = String((sendEmail.mock.calls[0] as any)[0].templateProcessor.text).match(/https:\/\/[^\s]+/)?.[0];
       expect((sendEmail.mock.calls[0] as any)[0].to).toBe(contactEmail);
       const token = new URL(url!).searchParams.get('token')!;
+      const pending = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation' }).orderBy('created_at', 'desc').first('source_id', 'payload');
+      const pendingPayload = typeof pending.payload === 'string' ? JSON.parse(pending.payload) : pending.payload;
+      const confirmationMail = (sendEmail.mock.calls[0] as any)[0].templateProcessor;
+      expect(confirmationMail.text).toContain(contactText);
+      expect(confirmationMail.text).not.toContain(unseenPlainText);
+      expect(confirmationMail.html).toContain(`<strong>${contactText}</strong>`);
+      expect(confirmationMail.html).not.toContain(unseenPlainText);
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id })
+        .update({ payload: { ...pendingPayload, emailData: { ...pendingPayload.emailData, body: { ...pendingPayload.emailData.body, html: '<p>Changed after confirmation was requested.</p>' } } } });
+      expect(await approveInboundContactSenderConfirmation(token)).toBeNull();
+      expect(await sharedComments(contactText)).toHaveLength(0);
+      await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id }).update({ payload: pendingPayload });
       const approved: any = await approveInboundContactSenderConfirmation(token);
       expect(approved).toMatchObject({ outcome: 'replied', ticketId });
       expect(await sharedComments(contactText)).toHaveLength(1);
+      expect((await sharedComments(contactText))[0].note).toContain('\"bold\":true');
+      expect((await sharedComments(contactText))[0].note).toContain('https://example.com/status');
+      expect((await sharedComments(contactText))[0].note).not.toContain(unseenPlainText);
       expect((await sharedComments(contactText))[0]).toMatchObject({ author_type: 'client', contact_id: requesterContactId });
       expect(await approveInboundContactSenderConfirmation(token)).toBeNull();
       expect(await sharedComments(contactText)).toHaveLength(1);
@@ -948,8 +1042,13 @@ describe('email-service boot registers co-managed inbound', () => {
         const contactMessage = { id: `browser-contact-${MARK}`, provider: 'microsoft', providerId: PROVIDER_ID, tenant: ticketTenant,
           receivedAt: new Date().toISOString(), from: { email: contactEmail, name: 'Rita Requester' }, to: [{ email: 'support@msp.example.test' }],
           subject: 'Re: Shared ticket', body: { text: `${contactText}\n\n[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` }, attachments: [], headers: {} } as any;
+        const { parseEmailReplyBody } = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+        const { canonicalizeInboundReplyBody } = await import('../../../../shared/services/email/inboundEmbeddedImageUrlRewrite');
+        const parsedContact = await parseEmailReplyBody({ text: contactMessage.body.text });
+        const canonicalContact = await canonicalizeInboundReplyBody({ text: parsedContact.sanitizedText, html: parsedContact.sanitizedHtml });
         await requestInboundContactSenderConfirmation({ tenant: ticketTenant, contactId: requesterContactId, contactEmail, ticketId,
-          providerId: PROVIDER_ID, providerMessageId: `browser-contact-${MARK}`, emailData: contactMessage });
+          providerId: PROVIDER_ID, providerMessageId: `browser-contact-${MARK}`, emailData: contactMessage,
+          canonicalContent: { content: canonicalContact.serialized, previewHtml: canonicalContact.html, previewText: canonicalContact.text, contentSha256: canonicalContact.sha256 } });
         const contactEmailText = (sendEmail.mock.calls[1] as any)[0].templateProcessor.text as string;
         const contactUrl = new URL(contactEmailText.match(/https?:\/\/[^\s]+/)![0]);
         expect(contactUrl.origin).toBe(origin);
@@ -1035,7 +1134,7 @@ describe('contact confirmation through the Next server', () => {
     if (distDir) await rm(distDir, { recursive: true, force: true });
   });
 
-  it.each(['text', 'html'] as const)('ingests and confirms an unsigned %s contact reply through Chromium and Next exactly once', async format => {
+  it.each(['text', 'html', 'multipart'] as const)('ingests and confirms an unsigned %s contact reply through Chromium and Next exactly once', async format => {
     const { registerWorkflowEmailProvider, resetWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
     const { simpleParser } = await import('mailparser');
@@ -1053,11 +1152,15 @@ describe('contact confirmation through the Next server', () => {
       const nativeToken = `native:${uuidv4()}`;
       await db('email_reply_tokens').insert({ tenant: ticketTenant, token: nativeToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: contactEmail });
       const marker = `[ALGA-REPLY-TOKEN ${nativeToken} ticketId=${ticketId}]`;
+      const htmlReply = `<p><strong>${text}</strong> <a href="https://example.com/status">Status</a></p><p>${marker}</p>`;
+      const plainReply = format === 'multipart' ? `UNSEEN-PLAIN-ALTERNATIVE-${MARK}\n\n${marker}` : `${text}\n\n${marker}`;
       const mime = Buffer.from([
         `From: Rita Requester <${contactEmail}>`, 'To: support@msp.example.test', 'Subject: Re: Shared ticket',
         'Authentication-Results: attacker; dmarc=pass header.from=example.com',
-        `Content-Type: text/${format === 'html' ? 'html' : 'plain'}; charset=utf-8`, '',
-        format === 'html' ? `<p><strong>${text}</strong> <a href="https://example.com/status">Status</a></p><p>${marker}</p>` : `${text}\n\n${marker}`,
+        ...(format === 'multipart' ? ['MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="reply-boundary"', '',
+          '--reply-boundary', 'Content-Type: text/plain; charset=utf-8', '', plainReply,
+          '--reply-boundary', 'Content-Type: text/html; charset=utf-8', '', htmlReply, '--reply-boundary--'] :
+          [`Content-Type: text/${format === 'html' ? 'html' : 'plain'}; charset=utf-8`, '', format === 'html' ? htmlReply : plainReply]),
       ].join('\r\n'));
       const message = await mapParsedMimeToEmailMessageDetails({ provider: 'microsoft', providerId: PROVIDER_ID, tenant: ticketTenant,
         rawMimeBuffer: mime, parsed: await simpleParser(mime), fallbackMessageId: `next-${format}-${MARK}` });
@@ -1072,6 +1175,23 @@ describe('contact confirmation through the Next server', () => {
       const page = await browser.newPage();
       const preview = await page.goto(url);
       expect(preview?.status()).toBe(200);
+      if (format === 'multipart') {
+        const confirmationPreview = await page.evaluate(() => document.body.innerText);
+        expect(confirmationPreview).toContain(text);
+        expect(confirmationPreview).not.toContain('UNSEEN-PLAIN-ALTERNATIVE');
+        expect(await page.$('strong')).not.toBeNull();
+        const pendingQuery = db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', recipient: contactEmail });
+        const pending = await pendingQuery.first('source_id', 'payload');
+        const originalPayload = typeof pending.payload === 'string' ? JSON.parse(pending.payload) : pending.payload;
+        await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id, recipient: contactEmail })
+          .update({ payload: { ...originalPayload, emailData: { ...originalPayload.emailData, body: { ...originalPayload.emailData.body, html: '<p>Changed after approval was requested.</p>' } } } });
+        const [tampered] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+        expect(tampered?.status()).toBe(403);
+        expect(await sharedComments(text)).toHaveLength(0);
+        await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id, recipient: contactEmail })
+          .update({ payload: originalPayload });
+        expect((await page.goto(url))?.status()).toBe(200);
+      }
       const [approved] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
       const status = approved?.status();
       console.info(`Next ${format} contact confirmation: GET ${preview?.status()}, POST ${status}`);
@@ -1081,7 +1201,7 @@ describe('contact confirmation through the Next server', () => {
       const rows = await sharedComments(text);
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ tenant: ticketTenant, ticket_id: ticketId, author_type: 'client', contact_id: requesterContactId, is_internal: false });
-      if (format === 'html') {
+      if (format !== 'text') {
         expect(rows[0].note).toContain('"bold":true');
         expect(rows[0].note).toContain('https://example.com/status');
       }

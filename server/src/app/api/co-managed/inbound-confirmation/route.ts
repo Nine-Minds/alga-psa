@@ -44,8 +44,8 @@ function isTrustedPublicOrigin(value: string | null, trustedOrigin: string | nul
 }
 const denied = () => new NextResponse('This confirmation is invalid, expired, or no longer available.', { status: 403, headers });
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
-const page = (token: string, message = 'Confirm this reply to add it to the co-managed ticket conversation.', replyText = '') =>
-  new NextResponse(`<!doctype html><html lang="en"><meta name="referrer" content="origin"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>${escapeHtml(message)}</p><p>Only confirm if you wrote this reply.</p><pre>${escapeHtml(replyText)}</pre><form method="post"><input type="hidden" name="token" value="${escapeHtml(token)}"><button type="submit">Confirm reply</button></form></main></html>`, {
+const page = (token: string, message = 'Confirm this reply to add it to the ticket conversation.', replyText = '', replyHtml?: string) =>
+  new NextResponse(`<!doctype html><html lang="en"><meta name="referrer" content="origin"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>${escapeHtml(message)}</p><p>Only confirm if you wrote this reply.</p>${replyHtml ? `<div>${replyHtml}</div>` : `<pre>${escapeHtml(replyText)}</pre>`}<form method="post"><input type="hidden" name="token" value="${escapeHtml(token)}"><button type="submit">Confirm reply</button></form></main></html>`, {
     headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' },
   });
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token') || '';
   const pending = await loadConfirmation(token);
   if (!pending) return denied();
-  if (pending.contact) return page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.emailData?.body?.text || ''));
+  if (pending.contact) return page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.canonicalContent?.previewText || ''), String(pending.payload.canonicalContent?.previewHtml || ''));
   const user = await getCurrentUser();
   if (!user) {
     const publicOrigin = trustedPublicOrigin();
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(`<!doctype html><html lang="en"><title>Confirm ticket reply</title><main><h1>Confirm ticket reply</h1><p>Sign in as the intended internal user to confirm this reply.</p><a href="${signIn.toString()}">Sign in</a></main></html>`, { headers: { ...headers, 'Content-Type': 'text/html; charset=utf-8' } });
   }
   return userMatches(user, pending)
-    ? page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.text || ''))
+    ? page(token, `Confirm reply for ticket ${String(pending.payload.ticketId)}.`, String(pending.payload.nativeReply?.previewText || pending.payload.text || ''), pending.payload.nativeReply?.previewHtml)
     : denied();
 }
 

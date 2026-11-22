@@ -17,7 +17,7 @@ vi.mock('@alga-psa/co-managed/inboundSenderConfirmation', () => ({
   approveInboundContactSenderConfirmation: mocks.approveContact,
   loadInboundContactConfirmation: vi.fn(async () => mocks.contactPending ? ({
     row: { recipient: 'rita@example.test' },
-    payload: { ticketId: 'ticket-contact', emailData: { body: { text: 'contact reply text' } } },
+    payload: { ticketId: 'ticket-contact', canonicalContent: { previewText: 'contact reply text', previewHtml: '<p>contact reply text</p>' } },
   }) : null),
 }));
 vi.mock('@alga-psa/db', () => ({

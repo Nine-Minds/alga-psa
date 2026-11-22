@@ -15,8 +15,11 @@
  * unresolved `cid:` that matches a mapping remains.
  */
 import type { TenantDb } from '@alga-psa/db';
+import { createHash } from 'node:crypto';
 
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
+import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
@@ -101,6 +104,29 @@ export async function blocksFromEmailBody(params: {
   }
 
   return blocksFallbackFromText('');
+}
+
+/**
+ * The canonical representation used for inbound reply previews, approval
+ * binding, and comment persistence. Keeping the converted blocks as the core
+ * value means multipart text/html alternatives cannot diverge between what a
+ * confirmer sees and what the ticket stores.
+ */
+export async function canonicalizeInboundReplyBody(params: {
+  html?: string;
+  text?: string;
+}): Promise<{ blocks: unknown[]; serialized: string; html: string; text: string; sha256: string }> {
+  const blocks = await blocksFromEmailBody(params);
+  const serialized = JSON.stringify(blocks);
+  const html = convertBlockNoteToHTML(blocks);
+  const text = htmlToVisibleText(html).trim();
+  return {
+    blocks,
+    serialized,
+    html,
+    text,
+    sha256: createHash('sha256').update(serialized, 'utf8').digest('hex'),
+  };
 }
 
 export type EmbeddedImageBodyTargetKind = 'comment' | 'ticket-description';

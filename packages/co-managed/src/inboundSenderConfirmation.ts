@@ -4,7 +4,7 @@ import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/regi
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { inboundMessageSha256 } from '@alga-psa/shared/lib/email/inboundMessageDigest';
 import { CO_MANAGED_LEDGER, claimDelivery } from '@alga-psa/shared/lib/deliveryLedger';
-import { coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, type InboundCommentActor, type InboundCommentWrite } from '@alga-psa/shared/lib/coManagedDelivery';
+import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, type InboundCommentActor, type InboundCommentWrite } from '@alga-psa/shared/lib/coManagedDelivery';
 
 const KIND = 'sender_confirmation';
 const CONTACT_KIND = 'sender_contact_confirmation';
@@ -12,7 +12,23 @@ const TTL_MS = 15 * 60 * 1000;
 export const INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS = 60_000;
 export const INBOUND_CONFIRMATION_SEND_LEASE_MS = 60_000;
 
-type ConfirmationPayload = InboundCommentWrite & {
+type ConfirmationPayload = {
+  tenant: string; ticketId: string; actor: InboundCommentActor; text: string;
+  relationshipId?: string; threadId?: string | null; parentCommentId?: string | null;
+  audience?: InboundCommentWrite['audience']; operationId?: string;
+  target?: 'co-managed' | 'native';
+  nativeReply?: {
+    replyToken: string;
+    providerId: string;
+    providerMessageId: string;
+    emailData: import('@alga-psa/shared/interfaces/inbound-email.interfaces').EmailMessageDetails;
+    content: string;
+    previewHtml: string;
+    previewText: string;
+    contentSha256: string;
+    messageSha256: string;
+    parentCommentId: string | null;
+  };
   actorEmail: string;
   replyToken: string;
   providerId: string;
@@ -28,7 +44,8 @@ type ConfirmationSendOutcome = 'sent' | 'failed' | 'skipped';
 type ContactConfirmationPayload = {
   tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
   providerMessageId: string; emailData: import('@alga-psa/shared/interfaces/inbound-email.interfaces').EmailMessageDetails;
-  contentSha256: string; expiresAt: string; state: 'pending' | 'redeeming' | 'approved' | 'expired'; redemptionId?: string;
+  contentSha256: string; messageSha256: string; canonicalContent: { content: string; previewHtml: string; previewText: string };
+  expiresAt: string; state: 'pending' | 'redeeming' | 'approved' | 'expired'; redemptionId?: string;
   deliveryAttemptId?: string;
 };
 
@@ -138,8 +155,9 @@ async function sendConfirmation(tenant: string, id: string, recipient: string, p
   if (!origin) return 'skipped';
   const url = new URL('/api/co-managed/inbound-confirmation', origin);
   url.searchParams.set('token', makeToken(tenant, id, payload.expiresAt));
-  const subject = 'Confirm your co-managed ticket reply';
-  const text = `A reply to a co-managed ticket was received using your email address. Sign in as ${recipient} and confirm it here within 15 minutes: ${url.toString()}\n\nIf you did not send this reply, ignore this message. No comment has been posted.`;
+  const subject = payload.target === 'native' ? 'Confirm your ticket reply' : 'Confirm your co-managed ticket reply';
+  const context = payload.target === 'native' ? 'a ticket' : 'a co-managed ticket';
+  const text = `A reply to ${context} was received using your email address. Sign in as ${recipient} and confirm it here within 15 minutes: ${url.toString()}\n\nIf you did not send this reply, ignore this message. No comment has been posted.`;
   const attemptId = await claimSenderConfirmation(tenant, id, recipient, payload);
   if (!attemptId) return 'skipped';
   try {
@@ -169,15 +187,25 @@ export async function requestInboundSenderConfirmation(input: {
   actor: InboundCommentActor;
   actorEmail: string;
   ticketId: string;
-  relationshipId: string;
-  threadId: string | null;
-  parentCommentId: string | null;
-  audience: InboundCommentWrite['audience'];
+  relationshipId?: string;
+  threadId?: string | null;
+  parentCommentId?: string | null;
+  audience?: InboundCommentWrite['audience'];
   replyToken: string;
   providerId: string;
   providerMessageId: string;
   text: string;
+  target?: 'co-managed' | 'native';
+  nativeReply?: Omit<NonNullable<ConfirmationPayload['nativeReply']>, 'parentCommentId' | 'messageSha256'> & { parentCommentId?: string | null };
 }): Promise<void> {
+  if (input.target === 'native' && (!input.nativeReply
+    || input.nativeReply.replyToken !== input.replyToken
+    || input.nativeReply.providerId !== input.providerId
+    || input.nativeReply.providerMessageId !== input.providerMessageId
+    || input.nativeReply.emailData.tenant !== input.tenant
+    || input.nativeReply.emailData.providerId !== input.providerId)) {
+    throw new Error('Native sender confirmation requires a tenant-bound reply token and provider message.');
+  }
   const id = sourceId(input.tenant, input.providerId, input.providerMessageId, input.actor);
   const db = await getAdminConnection();
   const recipient = input.actorEmail.trim().toLowerCase();
@@ -190,8 +218,16 @@ export async function requestInboundSenderConfirmation(input: {
     payload = {
       tenant: input.tenant, ticketId: input.ticketId, relationshipId: input.relationshipId,
       threadId: input.threadId, parentCommentId: input.parentCommentId, audience: input.audience,
-      actor: input.actor, operationId: coManagedInboundOperationId(input.tenant, input.ticketId, input.providerMessageId),
-      text: input.text, contentSha256: createHash('sha256').update(input.text, 'utf8').digest('hex'),
+      actor: input.actor, operationId: input.target === 'native' ? undefined : coManagedInboundOperationId(input.tenant, input.ticketId, input.providerMessageId),
+      target: input.target ?? 'co-managed',
+      nativeReply: input.nativeReply ? {
+        ...input.nativeReply,
+        parentCommentId: input.nativeReply.parentCommentId ?? null,
+        messageSha256: inboundMessageSha256(input.nativeReply.emailData),
+      } : undefined,
+      text: input.text, contentSha256: input.target === 'native' && input.nativeReply
+        ? input.nativeReply.contentSha256
+        : createHash('sha256').update(input.text, 'utf8').digest('hex'),
       actorEmail: recipient, replyToken: input.replyToken, providerId: input.providerId,
       providerMessageId: input.providerMessageId, expiresAt: new Date(Date.now() + TTL_MS).toISOString(), state: 'pending',
     };
@@ -212,6 +248,7 @@ export async function requestInboundSenderConfirmation(input: {
 export async function requestInboundContactSenderConfirmation(input: {
   tenant: string; contactId: string; contactEmail: string; ticketId: string; providerId: string;
   providerMessageId: string; emailData: import('@alga-psa/shared/interfaces/inbound-email.interfaces').EmailMessageDetails;
+  canonicalContent: { content: string; previewHtml: string; previewText: string; contentSha256: string };
 }): Promise<void> {
   const recipient = input.contactEmail.trim().toLowerCase();
   const digest = inboundMessageSha256(input.emailData);
@@ -223,7 +260,7 @@ export async function requestInboundContactSenderConfirmation(input: {
     .first('contact_name_id');
   if (!eligibleContact) throw new Error('Contact is no longer active; sender confirmation was not sent.');
   const payload: ContactConfirmationPayload = {
-    ...input, contactEmail: recipient, contentSha256: digest,
+    ...input, contactEmail: recipient, contentSha256: input.canonicalContent.contentSha256, messageSha256: digest,
     expiresAt: new Date(Date.now() + TTL_MS).toISOString(), state: 'pending',
   };
   await tenantDb(db, input.tenant).table('co_management_deliveries').insert({
@@ -234,7 +271,8 @@ export async function requestInboundContactSenderConfirmation(input: {
     .where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient }).first('payload');
   if (!row?.payload) throw new Error('Contact confirmation request was not persisted.');
   const stored: ContactConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-  if (stored.state !== 'pending' || stored.contentSha256 !== digest) return;
+  if (stored.state !== 'pending' || stored.contentSha256 !== input.canonicalContent.contentSha256
+    || stored.messageSha256 !== inboundMessageSha256(stored.emailData)) return;
   if (Date.parse(stored.expiresAt) <= Date.now()) {
     await tenantDb(db, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient })
       .update({ state: 'sent', payload: { ...stored, state: 'expired' }, updated_at: db.fn.now() });
@@ -247,7 +285,8 @@ export async function requestInboundContactSenderConfirmation(input: {
     if (!origin) return;
     const url = new URL('/api/co-managed/inbound-confirmation', origin);
     url.searchParams.set('token', makeToken(input.tenant, id, stored.expiresAt));
-    const text = `A reply to ticket ${input.ticketId} was received using your email address. Open this link and confirm only if you wrote it: ${url.toString()}\n\n${input.emailData.body?.text ?? ''}`;
+    const text = `A reply to ticket ${input.ticketId} was received using your email address. Open this link and confirm only if you wrote it: ${url.toString()}\n\n${input.canonicalContent.previewText}`;
+    const html = `<p>A reply to ticket ${input.ticketId} was received using your email address. Open this link and confirm only if you wrote it: <a href="${url.toString()}">confirm the reply</a>.</p><p>If you did not send this reply, ignore this message. No comment has been posted.</p><hr>${input.canonicalContent.previewHtml}`;
     const currentAttemptId = randomUUID();
     attemptId = currentAttemptId;
     const claimed = await db.transaction(async (trx) => {
@@ -263,7 +302,7 @@ export async function requestInboundContactSenderConfirmation(input: {
     if (!claimed) return;
     const result = await email.TenantEmailService.getInstance(input.tenant).sendEmail({
       mailClass: 'ticket', to: recipient, tenantId: input.tenant, entityType: 'ticket', entityId: input.ticketId,
-      templateProcessor: new email.StaticTemplateProcessor('Confirm your ticket reply', `<p>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;')}</p>`, text),
+      templateProcessor: new email.StaticTemplateProcessor('Confirm your ticket reply', html, text),
       headers: { ...AUTO_GENERATED_MAIL_HEADERS },
     });
     await tenantDb(db, input.tenant).table('co_management_deliveries').where({ tenant: input.tenant, delivery_kind: CONTACT_KIND, source_id: id, recipient, state: 'sending' })
@@ -297,7 +336,8 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
     || (pending.payload.emailData.providerIdentity || pending.payload.emailData.id) !== pending.payload.providerMessageId
     || sourceId(claims.tenant, pending.payload.providerId, pending.payload.providerMessageId,
       { tenant: claims.tenant, userId: pending.payload.contactId }) !== claims.sourceId
-    || inboundMessageSha256(pending.payload.emailData) !== pending.payload.contentSha256) return null;
+    || inboundMessageSha256(pending.payload.emailData) !== pending.payload.messageSha256
+    || createHash('sha256').update(pending.payload.canonicalContent.content, 'utf8').digest('hex') !== pending.payload.contentSha256) return null;
   const db = await getAdminConnection();
   // Hold a database transaction advisory lock across claim, native admission and
   // comment persistence. A stale retry waits for the original redemption and then
@@ -308,7 +348,8 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
       .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId }).first('payload', 'updated_at');
     const current: ContactConfirmationPayload = typeof row?.payload === 'string' ? JSON.parse(row.payload) : row?.payload;
     if (!current || !isInboundSenderConfirmationRedeemable(current.state, row.updated_at)
-      || current.contentSha256 !== pending.payload.contentSha256) return null;
+      || current.contentSha256 !== pending.payload.contentSha256
+      || current.messageSha256 !== pending.payload.messageSha256) return null;
     const contact = await tenantDb(trx, claims.tenant).table('contacts')
       .where({ contact_name_id: current.contactId })
       .where((query) => query.whereNot('is_inactive', true).orWhereNull('is_inactive'))
@@ -345,7 +386,8 @@ export async function deliverPendingSenderConfirmations(tenant: string, limit = 
       if (row.delivery_kind === CONTACT_KIND) {
         const payload: ContactConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
         await requestInboundContactSenderConfirmation({ tenant, contactId: payload.contactId, contactEmail: payload.contactEmail,
-          ticketId: payload.ticketId, providerId: payload.providerId, providerMessageId: payload.providerMessageId, emailData: payload.emailData });
+          ticketId: payload.ticketId, providerId: payload.providerId, providerMessageId: payload.providerMessageId, emailData: payload.emailData,
+          canonicalContent: { ...payload.canonicalContent, contentSha256: payload.contentSha256 } });
         const current = await tenantDb(db, tenant).table('co_management_deliveries')
           .where({ tenant, delivery_kind: CONTACT_KIND, source_id: row.source_id, recipient: row.recipient }).first('state');
         if (current?.state === 'sent') sent += 1; else if (current?.state === 'failed') failed += 1;
@@ -372,11 +414,14 @@ export async function approveInboundSenderConfirmation(token: string, user: {
     .first('recipient', 'payload', 'updated_at');
   if (!row?.payload) return null;
   const payload: ConfirmationPayload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+  const expectedContentSha256 = payload.target === 'native' && payload.nativeReply
+    ? payload.nativeReply.contentSha256
+    : createHash('sha256').update(payload.text, 'utf8').digest('hex');
   if (payload.expiresAt !== claims.expiresAt || !isInboundSenderConfirmationRedeemable(payload.state, row.updated_at)
     || Date.parse(payload.expiresAt) <= Date.now()
     || user.tenant !== payload.actor.tenant || user.user_id !== payload.actor.userId
     || user.email?.trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()
-    || createHash('sha256').update(payload.text, 'utf8').digest('hex') !== payload.contentSha256) return null;
+    || expectedContentSha256 !== payload.contentSha256) return null;
 
   // Claim redemption atomically so concurrent POSTs cannot both perform an
   // admission and comment write. A stale claim is recoverable after process
@@ -393,6 +438,60 @@ export async function approveInboundSenderConfirmation(token: string, user: {
 
   let completed = false;
   try {
+    if (payload.target === 'native') {
+      const native = payload.nativeReply;
+      if (!native || native.replyToken !== payload.replyToken || classifyReplyToken(payload.replyToken) !== 'native'
+        || native.providerId !== payload.providerId
+        || native.providerMessageId !== payload.providerMessageId
+        || native.emailData.tenant !== claims.tenant
+        || native.emailData.providerId !== native.providerId
+        || (native.emailData.providerIdentity || native.emailData.id) !== native.providerMessageId
+        || inboundMessageSha256(native.emailData) !== native.messageSha256
+        || createHash('sha256').update(native.content, 'utf8').digest('hex') !== native.contentSha256
+        || native.contentSha256 !== payload.contentSha256
+        || sourceId(claims.tenant, native.providerId, native.providerMessageId, payload.actor) !== claims.sourceId) return null;
+
+      const authorized = await db.transaction(async (trx) => {
+        const currentUser = await tenantDb(trx, claims.tenant).table('users')
+          .where({ user_id: payload.actor.userId, user_type: 'internal', is_inactive: false }).first();
+        if (!currentUser || String(currentUser.email ?? '').trim().toLowerCase() !== String(row.recipient).trim().toLowerCase()) return false;
+        const target = await tenantDb(trx, claims.tenant).table('email_reply_tokens')
+          .where({ token: payload.replyToken }).first('ticket_id', 'comment_id');
+        if (!target || target.ticket_id !== payload.ticketId
+          || (native.parentCommentId && target.comment_id !== native.parentCommentId)) return false;
+        const ticket = await tenantDb(trx, claims.tenant).table('tickets').where({ ticket_id: payload.ticketId }).first();
+        if (!ticket) return false;
+        const roles = await tenantDb(trx, claims.tenant).table('user_roles').where({ user_id: payload.actor.userId }).select('role_id');
+        const actor = { ...currentUser, tenant: claims.tenant, roles } as any;
+        const { hasPermission } = await import('@alga-psa/authorization/rbac');
+        if (!await hasPermission(actor, 'ticket', 'update', trx)) return false;
+        const { authorizeTicketRecordAccess } = await import('../../../packages/tickets/src/lib/ticketRecordAuthorization');
+        try {
+          await authorizeTicketRecordAccess({ trx, tenant: claims.tenant, user: actor, ticketId: payload.ticketId, action: 'update', ticketRow: ticket as any });
+        } catch (error) {
+          if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
+          throw error;
+        }
+        return true;
+      });
+      if (!authorized) return null;
+      const { processInboundEmailInApp } = await import('../../../shared/services/email/processInboundEmailInApp');
+      const result = await processInboundEmailInApp({ tenantId: claims.tenant, providerId: native.providerId, emailData: native.emailData }, {
+        confirmedInternalActor: {
+          userId: payload.actor.userId,
+          email: String(row.recipient),
+          providerMessageId: native.providerMessageId,
+          contentSha256: native.contentSha256,
+        },
+      });
+      if ((result.outcome !== 'replied' && result.outcome !== 'deduped') || result.ticketId !== payload.ticketId || !result.commentId) return null;
+      await tenantDb(db, claims.tenant).table('co_management_deliveries')
+        .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
+        .whereRaw("payload->>'redemptionId' = ?", [redemptionId])
+        .update({ payload: { ...payload, state: 'approved' }, updated_at: db.fn.now() });
+      completed = true;
+      return { ticketId: result.ticketId, commentId: result.commentId };
+    }
     const reply = await tenantDb(db, claims.tenant).table('email_reply_tokens')
       .where({ tenant: claims.tenant, token: payload.replyToken }).first('metadata');
     if (!reply) return null;
@@ -414,7 +513,7 @@ export async function approveInboundSenderConfirmation(token: string, user: {
       parentCommentId: admission.parentCommentId,
       audience: admission.audience,
       actor: admission.actor,
-      operationId: payload.operationId,
+      operationId: payload.operationId!,
       text: payload.text,
     });
     await tenantDb(db, claims.tenant).table('co_management_deliveries')
