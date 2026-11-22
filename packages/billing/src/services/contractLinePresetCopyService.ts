@@ -355,4 +355,3 @@ export async function copyPresetToContractLineInTransaction(
 
     return contractLineId;
 }
-

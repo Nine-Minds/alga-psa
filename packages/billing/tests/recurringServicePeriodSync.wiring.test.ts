@@ -24,6 +24,10 @@ describe('recurring service period sync wiring', () => {
       resolve(__dirname, '../src/actions/contractLinePresetActions.ts'),
       'utf8',
     );
+    const presetCopyServiceSource = readFileSync(
+      resolve(__dirname, '../src/services/contractLinePresetCopyService.ts'),
+      'utf8',
+    );
 
     expect(syncSource).toContain("import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSchedule';");
     expect(syncSource).toContain('regenerateClientCadenceServicePeriodsForScheduleChange');
@@ -46,7 +50,9 @@ describe('recurring service period sync wiring', () => {
     expect(billingClientsActionsSource).toContain("sourceRunPrefix: 'client_contract_assignment_update'");
 
     expect(presetActionsSource).toContain("import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';");
-    expect(presetActionsSource).toContain("sourceRunPrefix: 'contract_line_preset_copy'");
     expect(presetActionsSource).toContain("sourceRunPrefix: 'contract_line_custom_create'");
+
+    expect(presetCopyServiceSource).toContain("import { syncRecurringServicePeriodsForContractLine } from '../actions/recurringServicePeriodSync';");
+    expect(presetCopyServiceSource).toContain("sourceRunPrefix: 'contract_line_preset_copy'");
   });
 });
