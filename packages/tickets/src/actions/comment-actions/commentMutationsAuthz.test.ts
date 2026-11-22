@@ -233,6 +233,18 @@ describe('comment mutations: client principals need record access to the owning 
     expect(writes).toEqual([]);
   });
 
+  it('deleteComment: still checks ticket:delete for an orphaned comment', async () => {
+    ticketRow = null;
+    commentRow = { ...ownComment('ticket-1'), ticket_id: null };
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ permissionError: expect.any(String) });
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
   it('deleteComment: denies an author when an exact delete rule denies a ticket allowed by update rules', async () => {
     currentUser = mspUser;
     commentRow = mspOwnComment('ticket-1');
@@ -262,6 +274,8 @@ describe('comment mutations: client principals need record access to the owning 
     await deleteComment('c-1');
 
     expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
+    expect(hasPermissionMock).toHaveBeenCalledTimes(1);
+    expect(hasPermissionMock).toHaveBeenCalledWith(mspUser, 'ticket', 'delete', expect.anything());
     expect(commentDelete).toHaveBeenCalledTimes(1);
     expect(writes).toEqual([
       { table: 'comment_reactions', op: 'delete', value: undefined },

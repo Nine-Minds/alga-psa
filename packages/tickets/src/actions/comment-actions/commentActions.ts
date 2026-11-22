@@ -659,7 +659,11 @@ async function assertMayChangeComment(
   tenant: string,
   operation: 'update' | 'delete',
 ): Promise<void> {
-  if (!(await hasPermission(user as any, 'ticket', operation, trx))) {
+  // authorizeTicketRecordAccess performs the coarse delete permission check
+  // itself after its per-record decision. Keep update's coarse RBAC check here,
+  // where the record authorization kernel intentionally evaluates only the
+  // ticket-specific policy.
+  if ((operation === 'update' || !existing.ticket_id) && !(await hasPermission(user as any, 'ticket', operation, trx))) {
     throw new Error(`Permission denied: Cannot ${operation} comment`);
   }
   // Authorship alone does not preserve access after ticket permissions or
