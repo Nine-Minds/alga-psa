@@ -243,6 +243,53 @@ describe('nextAuth session expiry sliding', () => {
     return jwt!({ token, trigger: undefined } as any);
   }
 
+  async function buildFreshUserSession(user: Record<string, unknown>) {
+    const options = await getAuthOptions();
+    const token = await options.callbacks!.jwt!({ token: {}, user, trigger: 'signIn' } as any);
+    const session = await options.callbacks!.session!({ session: { user: {} }, token } as any);
+    return { token, session: session as { user: Record<string, unknown> } };
+  }
+
+  it('constructs a fresh internal session without client identity even when sign-in carries a linked contact', async () => {
+    const { token, session } = await buildFreshUserSession({
+      id: 'internal-linked-1',
+      email: 'internal@example.test',
+      name: 'Linked Internal',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      // Models the linked-contact DB field copied by credentials authorization.
+      contactId: 'linked-contact-1',
+    });
+
+    expect(token).toMatchObject({ id: 'internal-linked-1', tenant: 'tenant-1', user_type: 'internal' });
+    expect(token).not.toHaveProperty('contactId');
+    expect(token).not.toHaveProperty('clientId');
+    expect(session.user).toMatchObject({ id: 'internal-linked-1', tenant: 'tenant-1', user_type: 'internal' });
+    expect(session.user).not.toHaveProperty('contactId');
+    expect(session.user).not.toHaveProperty('clientId');
+  });
+
+  it('preserves both contact and client identity for a fresh client session', async () => {
+    const { token, session } = await buildFreshUserSession({
+      id: 'client-1',
+      email: 'client@example.test',
+      name: 'Portal Client',
+      tenant: 'tenant-1',
+      user_type: 'client',
+      clientId: 'client-account-1',
+      contactId: 'client-contact-1',
+    });
+
+    expect(token).toMatchObject({
+      id: 'client-1', tenant: 'tenant-1', user_type: 'client',
+      clientId: 'client-account-1', contactId: 'client-contact-1',
+    });
+    expect(session.user).toMatchObject({
+      id: 'client-1', tenant: 'tenant-1', user_type: 'client',
+      clientId: 'client-account-1', contactId: 'client-contact-1',
+    });
+  });
+
   it('slides expires_at on an active session whose last extend is stale', async () => {
     const before = Date.now();
     await runJwt({
@@ -291,6 +338,25 @@ describe('nextAuth session expiry sliding', () => {
 
     await expect(runJwt(token)).resolves.toBeNull();
     expect(getRejectionReasonMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('removes client-scoped identity from a refreshed internal session while retaining internal identity', async () => {
+    const token = {
+      id: 'internal-1',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      clientId: 'client-from-legacy-token',
+      contactId: 'linked-contact-1',
+      session_id: 'sess-1',
+      last_plan_check: Date.now(),
+      last_session_extend: Date.now(),
+    };
+
+    const refreshed = await runJwt(token);
+
+    expect(refreshed).toMatchObject({ id: 'internal-1', user_type: 'internal', tenant: 'tenant-1' });
+    expect(refreshed).not.toHaveProperty('clientId');
+    expect(refreshed).not.toHaveProperty('contactId');
   });
 
   // Returning null here deletes the session cookie, so a pool timeout on this
