@@ -8,8 +8,11 @@ import type {
   RelationshipRule,
 } from '../contracts';
 import { evaluateRelationshipRules } from '../relationships';
-import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE } from '../scope';
+import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE, intersectAuthorizationScopes } from '../scope';
+import { evaluateBuiltinRuleResolvers } from './builtinResolverEvaluation';
+import { builtinClosedFields } from '../builtinRuleResolvers';
 import { resolveVisibleContactIds } from '../../portal/visibility';
+import { admitMutation } from '../mutationAdmission';
 
 export type BuiltinRelationshipRulesResolver = (
   input: AuthorizationEvaluationInput
@@ -67,7 +70,25 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
     return rules.some((rule) => rule.template === 'same_client');
   }
 
+  /**
+   * Registered built-in rule resolvers (see builtinRuleResolvers.ts) are intersected with whatever this provider
+   * resolves for the subject: the default, static `relationshipRules`, or a caller-supplied
+   * `resolveRelationshipRules`. Composing here, after the base evaluation, makes them take effect in every
+   * kernel that builds this provider, and means they can only narrow. With none applying the base result is
+   * returned untouched.
+   */
   async evaluate(input: AuthorizationEvaluationInput): Promise<BuiltinAuthorizationResult> {
+    const base = await this.evaluateBaseRules(input);
+    const resolver = evaluateBuiltinRuleResolvers(input);
+    if (!resolver) return base;
+    return {
+      allowed: base.allowed && resolver.allowed,
+      scope: intersectAuthorizationScopes(base.scope, resolver.scope),
+      reasons: [...base.reasons, ...resolver.reasons],
+    };
+  }
+
+  private async evaluateBaseRules(input: AuthorizationEvaluationInput): Promise<BuiltinAuthorizationResult> {
     const rules = this.resolveRules(input);
 
     if (!input.record) {
@@ -174,6 +195,8 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
   }
 
   async authorizeMutation(input: AuthorizationEvaluationInput): Promise<MutationGuardResult> {
+    // The one principal-level write gate (a lapsed seat technician); throws its own refusal.
+    await admitMutation(input);
     for (const guard of this.mutationGuards) {
       const result = await guard(input);
       if (!result.allowed) {
@@ -195,7 +218,7 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
   }
 
   async resolveFieldRedactions(input: AuthorizationEvaluationInput): Promise<FieldRedactionResult> {
-    const fields = (await this.fieldRedactionResolver?.(input)) ?? [];
+    const fields = [...new Set([...((await this.fieldRedactionResolver?.(input)) ?? []), ...builtinClosedFields(input)])];
 
     return {
       fields,

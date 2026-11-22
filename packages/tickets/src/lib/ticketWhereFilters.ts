@@ -8,25 +8,95 @@ import { ticketWhereClauses } from './ticketWhere';
  */
 export type WhereTagMode = 'in' | 'not_in';
 
-export interface WhereTagFilterDescriptor {
+/**
+ * Where the control gets its options. The two shapes are the only kinds of `where` filter so far,
+ * and each one decides which toolbar control the dashboard renders for the row — which is the point
+ * of keeping it in the table rather than in the component.
+ */
+export type WhereFilterOptionsSource =
+  | { tags: 'contact' | 'client' }
+  | { locations: 'ticket' | 'contact' }
+  /** Clients, found by server-side search (never a loaded list) and named by an id lookup. */
+  | { clients: 'search' };
+
+/** Where in the toolbar the control sits: the primary row (after Board) or the secondary row. */
+export type WhereFilterPlacement = 'primary' | 'secondary';
+
+export interface WhereFilterDescriptor {
   /** Path in the ticket query schema. */
-  path: 'contact.tags' | 'client.tags';
-  /** Which tag definitions the control offers. */
-  taggedType: 'contact' | 'client';
+  path: 'contact.tags' | 'client.tags' | 'location_id' | 'contact.locations' | 'client.id';
+  options: WhereFilterOptionsSource;
   labelKey: string;
   defaultLabel: string;
+  placement: WhereFilterPlacement;
+  /** Chip text for a selected id whose name does not resolve. Rows without one fall back to the id. */
+  unknownValue?: { labelKey: string; defaultLabel: string };
 }
 
-export const WHERE_TAG_FILTERS: readonly WhereTagFilterDescriptor[] = [
-  { path: 'contact.tags', taggedType: 'contact', labelKey: 'filters.requesterTags', defaultLabel: 'Requester tags' },
-  { path: 'client.tags', taggedType: 'client', labelKey: 'filters.clientTags', defaultLabel: 'Client tags' },
+export const WHERE_FILTERS: readonly WhereFilterDescriptor[] = [
+  { path: 'contact.tags', options: { tags: 'contact' }, labelKey: 'filters.requesterTags', defaultLabel: 'Requester tags', placement: 'secondary' },
+  { path: 'client.tags', options: { tags: 'client' }, labelKey: 'filters.clientTags', defaultLabel: 'Client tags', placement: 'secondary' },
+  { path: 'location_id', options: { locations: 'ticket' }, labelKey: 'filters.location', defaultLabel: 'Location', placement: 'secondary' },
+  { path: 'contact.locations', options: { locations: 'contact' }, labelKey: 'filters.requesterLocation', defaultLabel: 'Requester location', placement: 'secondary' },
+  {
+    path: 'client.id',
+    options: { clients: 'search' },
+    labelKey: 'fields.client',
+    defaultLabel: 'Client',
+    placement: 'primary',
+    unknownValue: { labelKey: 'filters.unknownClient', defaultLabel: 'Unknown client' },
+  },
 ];
+
+/** The rows for one toolbar row, in table order. */
+export const whereFiltersFor = (placement: WhereFilterPlacement): readonly WhereFilterDescriptor[] =>
+  WHERE_FILTERS.filter((descriptor) => descriptor.placement === placement);
+
+/** The tag rows, with the `taggedType` the tag control reads. Unchanged in content and order. */
+export type WhereTagFilterDescriptor = WhereFilterDescriptor & {
+  path: 'contact.tags' | 'client.tags';
+  taggedType: 'contact' | 'client';
+};
+
+export const WHERE_TAG_FILTERS: readonly WhereTagFilterDescriptor[] = WHERE_FILTERS
+  .filter((descriptor): descriptor is WhereFilterDescriptor & { options: { tags: 'contact' | 'client' } } =>
+    'tags' in descriptor.options)
+  .map((descriptor) => ({ ...descriptor, taggedType: descriptor.options.tags } as WhereTagFilterDescriptor));
+
+/** The location rows, with the side of the join the control offers options from. */
+export type WhereLocationFilterDescriptor = WhereFilterDescriptor & {
+  path: 'location_id' | 'contact.locations';
+  locationOf: 'ticket' | 'contact';
+};
+
+export const WHERE_LOCATION_FILTERS: readonly WhereLocationFilterDescriptor[] = WHERE_FILTERS
+  .filter((descriptor): descriptor is WhereFilterDescriptor & { options: { locations: 'ticket' | 'contact' } } =>
+    'locations' in descriptor.options)
+  .map((descriptor) => ({ ...descriptor, locationOf: descriptor.options.locations } as WhereLocationFilterDescriptor));
+
+/** The client row (path `client.id`), with the options source the toolbar control reads. */
+export const WHERE_CLIENT_FILTER = WHERE_FILTERS.find((descriptor) => descriptor.path === 'client.id')!;
+
+export interface WhereLocationOption {
+  location_id: string;
+  location_name: string;
+  /** Prefixed to the label when the list spans clients, so two "Head office" rows are tellable apart. */
+  client_name?: string | null;
+}
+
+/** How one location reads in a filter control: "Client · Location" when the list spans clients. */
+export function locationFilterLabel(option: WhereLocationOption): string {
+  return option.client_name ? `${option.client_name} · ${option.location_name}` : option.location_name;
+}
 
 export interface WhereTagSelection {
   mode: WhereTagMode;
-  /** Tag definition ids. */
+  /** Tag definition ids, or location ids — whichever the path's value column holds. */
   ids: string[];
 }
+
+/** Reads as the general thing it has always been; the tag-named alias stays for existing callers. */
+export type WhereSelection = WhereTagSelection;
 
 const isTagClause = (clause: PredicateClause, path: string): boolean =>
   clause.path === path && (clause.operator === 'in' || clause.operator === 'not_in');
@@ -56,6 +126,20 @@ export function setWhereTagSelection(
   return next.length > 0 ? { join: 'and', clauses: next } : undefined;
 }
 
+/**
+ * The one client a row narrows the list to: "Any of" exactly one client. Contact and location
+ * options are scoped to that client; any other selection leaves them tenant-wide.
+ */
+export function getSingleClientScope(where: PredicateGroup | undefined): string | null {
+  const selection = getWhereTagSelection(where, 'client.id');
+  return selection && selection.mode === 'in' && selection.ids.length === 1 ? selection.ids[0] : null;
+}
+
+/** Flips Any of / None of and keeps the ids. */
+export function flipWhereMode(selection: WhereTagSelection): WhereTagSelection {
+  return { mode: selection.mode === 'in' ? 'not_in' : 'in', ids: selection.ids };
+}
+
 export interface WhereFilterChip {
   key: string;
   path: string;
@@ -67,21 +151,26 @@ export interface WhereFilterChip {
 }
 
 /**
- * One chip per selected tag id for each tag descriptor. `tagLabel` resolves an id to the tag's text;
- * an id with no known definition falls back to the id so the chip can still be cleared.
+ * One chip per selected value for each descriptor in the table. `valueLabel` resolves an id to its
+ * text (a tag's text, a location's name); an unresolved id shows the descriptor's `unknownValue`
+ * label (a client row never shows its id) or, for rows without one, the id itself, so the chip can
+ * still be cleared. `unknownLabel` translates the descriptor's fallback.
  */
-export function whereTagFilterChips(
+export function whereFilterChips(
   where: PredicateGroup | undefined,
-  tagLabel: (descriptor: WhereTagFilterDescriptor, tagId: string) => string | undefined,
-  labelFor: (descriptor: WhereTagFilterDescriptor) => string,
+  valueLabel: (descriptor: WhereFilterDescriptor, valueId: string) => string | undefined,
+  labelFor: (descriptor: WhereFilterDescriptor) => string,
+  descriptors: readonly WhereFilterDescriptor[] = WHERE_FILTERS,
+  unknownLabel: (descriptor: WhereFilterDescriptor) => string | undefined = (descriptor) =>
+    descriptor.unknownValue?.defaultLabel,
 ): WhereFilterChip[] {
   const chips: WhereFilterChip[] = [];
-  for (const descriptor of WHERE_TAG_FILTERS) {
+  for (const descriptor of descriptors) {
     const selection = getWhereTagSelection(where, descriptor.path);
     if (!selection) continue;
     const label = labelFor(descriptor);
     for (const tagId of selection.ids) {
-      const text = tagLabel(descriptor, tagId) ?? tagId;
+      const text = valueLabel(descriptor, tagId) ?? unknownLabel(descriptor) ?? tagId;
       chips.push({
         key: `where:${descriptor.path}:${selection.mode}:${tagId}`,
         path: descriptor.path,
@@ -98,3 +187,24 @@ export function whereTagFilterChips(
   }
   return chips;
 }
+
+/**
+ * The tag-only chip list, kept so existing callers read unchanged. It is the general function over
+ * the tag rows, so the two tag descriptors behave exactly as they did before the generalisation.
+ */
+export function whereTagFilterChips(
+  where: PredicateGroup | undefined,
+  tagLabel: (descriptor: WhereTagFilterDescriptor, tagId: string) => string | undefined,
+  labelFor: (descriptor: WhereTagFilterDescriptor) => string,
+): WhereFilterChip[] {
+  return whereFilterChips(
+    where,
+    (descriptor, valueId) => tagLabel(descriptor as WhereTagFilterDescriptor, valueId),
+    (descriptor) => labelFor(descriptor as WhereTagFilterDescriptor),
+    WHERE_TAG_FILTERS,
+  );
+}
+
+/** Reads as the general thing it has always been; the tag-named aliases stay for existing callers. */
+export const getWhereSelection = getWhereTagSelection;
+export const setWhereSelection = setWhereTagSelection;

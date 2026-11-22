@@ -604,14 +604,15 @@ export class ApiFinancialController extends ApiBaseController {
   // ============================================================================
 
   /**
-   * POST /api/v1/financial/bulk/invoices - Bulk invoice operations
+   * POST /api/v1/financial/bulk/invoices - Bulk finalize or cancel operations.
+   * Bulk send is unsupported until canonical recipient delivery is implemented.
    */
   bulkInvoiceOperations() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         const apiRequest = await this.authenticate(req);
         
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           await this.checkPermission(apiRequest, 'update');
 
           const body = await apiRequest.json();

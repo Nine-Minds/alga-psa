@@ -145,6 +145,16 @@ describe('sla activities', () => {
     expect(result).toBe('2024-01-01T10:00:00.000Z');
   });
 
+  it('calculateNextWakeTime preserves fractional business minutes and pause time', async () => {
+    const result = await calculateNextWakeTime({
+      currentTime: '2024-01-01T09:00:00.000Z',
+      targetMinutes: 1.4,
+      schedule: { ...scheduleWeekdays, is_24x7: true, entries: [] },
+      pauseMinutes: 0.1,
+    });
+    expect(result).toBe('2024-01-01T09:01:30.000Z');
+  });
+
   it('calculateNextWakeTime handles timezone correctly for America/New_York', async () => {
     const result = await calculateNextWakeTime({
       currentTime: '2024-01-01T14:00:00.000Z',

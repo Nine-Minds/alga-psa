@@ -94,6 +94,9 @@ const ADAPTER = 'quickbooks_online';
 function makeFakeLedger() {
   const ledger: any = {
     findByExternalId: vi.fn(async () => null),
+    // No payment here was ever unlinked, so the applier's "reversed in AlgaPSA
+    // only" guard finds nothing and the change lands as usual.
+    findTombstonedByExternalId: vi.fn(async () => []),
     findByAlgaId: vi.fn(async () => undefined),
     findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Filter } from 'lucide-react';
 
 import type { SurveyFilterOptions } from '@alga-psa/surveys/actions/survey-actions/surveyResponseFilterActions';
@@ -8,7 +8,6 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import type { IClient } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type ResponseFilterState = {
@@ -67,21 +66,6 @@ export default function ResponseFilters({ options, initialFilters, onApply, onRe
     onReset?.();
   };
 
-  const clientsForPicker = useMemo<IClient[]>(
-    () =>
-      options.clients.map(
-        (client) =>
-          ({
-            client_id: client.client_id,
-            client_name: client.client_name,
-            client_type: client.client_type,
-            is_inactive: client.is_inactive,
-            logoUrl: client.logoUrl,
-          } as unknown as IClient)
-      ),
-    [options.clients]
-  );
-
   return (
     <div className="flex flex-wrap items-end gap-4">
       <div className={`${FIELD_CLASS} max-w-xs`}>
@@ -112,7 +96,6 @@ export default function ResponseFilters({ options, initialFilters, onApply, onRe
         </span>
         <ClientPicker
           id="survey-response-client-picker"
-          clients={clientsForPicker}
           selectedClientId={clientId === '__ALL__' ? null : clientId}
           onSelect={(selected) => setClientId(selected ?? '__ALL__')}
           filterState={clientFilterState}

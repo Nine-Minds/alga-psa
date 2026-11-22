@@ -22,6 +22,7 @@
     "start": "node dist/cli.js"
   },
   "dependencies": {
+    "@alga-psa/emulator-google-calendar": "*",
     "@alga-psa/emulator-host": "*",
     "@alga-psa/emulator-huntress": "*",
     "@alga-psa/emulator-levelio": "*",

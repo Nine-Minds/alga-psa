@@ -1,0 +1,71 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration (serviceRequestPortalHistory.integration.test.ts): seed a submission with an attachment and audit rows for created, execution_failed (details.error_summary set), mapping_applied, mapping_field_applied, mapping_field_failed and an unknown legacy operation. getClientServiceRequestSubmissionDetail returns exactly [created, execution_failed]; each event has only audit_id/operation/actor_name/timestamp; the detail has no workflow_execution_id, execution_error_summary, definition_id, definition_version_id or definition_version_number keys; the attachment has no file_id. getServiceRequestSubmissionDetailForDefinition for the same submission still returns all six events with details.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit (myRequestDetail.page.test.tsx): a failed submission with one named and one unnamed attachment renders the translated 'Failed' badge, the file name and the translated 'Attachment' label, and the translated history labels; rendered text contains no 'Execution status', 'Version', 'Workflow', 'File ID', raw enum or attachment UUID.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit (myRequestDetail.page.test.tsx): a submission whose snapshot has no fields renders its payload as label/value rows (dt = key, dd = value) and no <pre> element.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit ([definitionId]/page.test.tsx): with initialValues containing a static default for a text field and a context-default UUID under a non-field key, the page renders no 'Initial Values' heading, no version text and no UUID in visible text, while the text field input is prefilled with its default.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F016"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit (portalDetail toPortalFormView): an advanced-provider detail with executionConfig, formBehaviorConfig rules and version ids maps to an object whose keys are exactly title/description/icon/formSchema/initialValues/visibilityRules, with parsed rules; a basic-provider detail maps to visibilityRules [].",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit (dashboard.visibility.test.ts harness): a failed service_request_submissions row carrying an error message yields a service_request activity with status 'failed' and description '', and the service request select does not request execution_error_summary.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "i18n gates: node scripts/validate-translations.cjs passes after regenerating pseudo-locales; serviceRequestsI18n.integration.test.ts asserts submissionDetail.unnamedAttachment resolves in en and de and no longer references detail.noInitialValues.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020"
+    ]
+  }
+]

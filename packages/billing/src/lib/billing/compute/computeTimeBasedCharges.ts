@@ -14,6 +14,7 @@ import type {
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import { blockNoteToPlainText } from "@alga-psa/formatting/blocknoteUtils";
+import { formatCurrencyWithSymbol } from "@alga-psa/core/formatters";
 
 /**
  * Time-entry charge math extracted from BillingEngine.calculateTimeBasedCharges.
@@ -190,11 +191,8 @@ export interface TimeBasedChargeComputeResult {
 }
 
 function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
   // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+  return formatCurrencyWithSymbol(cents / 100, "en-US", currencyCode || "USD");
 }
 
 function formatHours(hours: number): string {

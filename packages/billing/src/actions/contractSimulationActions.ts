@@ -17,6 +17,7 @@ import {
   blockedSimulationResult,
   isContractSimulationRefusalError,
   simulationRefusalToDiagnostic,
+  isLicensedUserType,
 } from "@alga-psa/types";
 import { createTenantKnex } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth/withAuth";
@@ -32,15 +33,19 @@ function isEnterpriseBuild(): boolean {
 }
 
 /**
- * Single access guard for every simulator action: billing:read first, then the
- * tenant's tier (the simulator is a Pro feature). Must run before the EE module
- * loads or any database access. Throws TierAccessError, which is deliberately
- * raised outside the refusalAware/runAware wrappers so it reaches the caller.
+ * Single access guard for every simulator action: require an internal user,
+ * then billing:read, then the tenant's tier (the simulator is a Pro feature).
+ * Must run before the EE module loads or any database access. Throws
+ * TierAccessError outside the refusalAware/runAware wrappers so it reaches the
+ * caller.
  */
 async function assertContractSimulatorAccess(
   user: Parameters<typeof hasPermission>[0],
   tenant: string,
 ): Promise<void> {
+  if (!isLicensedUserType(user.user_type)) {
+    throw new Error("Permission denied: Contract simulator is for internal users");
+  }
   if (!(await hasPermission(user, "billing", "read"))) {
     throw new Error("Permission denied: Cannot read billing");
   }
@@ -263,25 +268,5 @@ export const getContractSimulationReplayAssumptions = withAuth(
     return refusalAware("replay assumptions", () =>
       ee.loadReplayAssumptions(knex, tenant, scenario, startDate, endDateExclusive),
     );
-  },
-);
-
-/**
- * Lightweight client list for the template simulator's client-context picker.
- * Lives in billing so the picker does not need a cross-feature import of
- * @alga-psa/clients.
- */
-export const listContractSimulationClients = withAuth(
-  async (
-    user,
-    { tenant },
-  ): Promise<Array<{ client_id: string; client_name: string }>> => {
-    await assertContractSimulatorAccess(user, tenant);
-
-    const { knex } = await createTenantKnex();
-    return knex("clients")
-      .where({ tenant, is_inactive: false })
-      .orderBy("client_name", "asc")
-      .select("client_id", "client_name");
   },
 );

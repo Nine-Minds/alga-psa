@@ -76,6 +76,20 @@ Once a company is connected, a setup wizard walks you through matching your
 AlgaPSA clients to QuickBooks customers, reviewing invoice history, and going
 live.
 
+After the initial wizard, you can continue to manage client-to-customer links
+from the **Customer Mappings** panel on the settings page. Two row actions are
+available for each mapped client:
+
+- **Re-link** — retargets the mapping to a different QuickBooks customer. The
+  underlying `external_entity_id` is moved to the new customer, so all future
+  exports and payments flow to the correct account. An audit entry records the
+  before and after customer.
+- **Unlink** — removes the mapping entirely, returning the client to an
+  unmapped state. Use this when a client was linked to the wrong customer and
+  you need to start over rather than immediately selecting a replacement. After
+  unlinking, the client surfaces in the wizard as unmatched with suggested
+  candidates, ready to be re-mapped.
+
 ## Register your own Intuit app
 
 Do this when you self-host and have not configured a deployment-wide app, or
@@ -147,14 +161,25 @@ The mapping card appears once a company is connected, with three tabs. Each one
 loads its QuickBooks side live from the connected company, so you pick from real
 records:
 
-- **Items / Services** — your AlgaPSA services to QuickBooks items. An exported
-  invoice line carries the item you choose here.
+- **Items / Services** — your AlgaPSA services and discounts to QuickBooks
+  items. An exported invoice line carries the item you choose here. Multiple
+  AlgaPSA services can share the same QuickBooks item — for example, several
+  support-tier services can all map to a single "Managed Services" item in
+  QuickBooks. Clients, invoices, payments, tax codes, and payment terms remain
+  exclusive to one QuickBooks record each.
 - **Tax Codes** — your AlgaPSA tax regions to QuickBooks tax codes.
 - **Payment Terms** — your AlgaPSA payment terms to QuickBooks terms.
 
 Mappings are scoped to the connected company and stored in
 `tenant_external_entity_mappings`. Add, edit, and delete them from the row menu
 in each tab.
+
+When importing QuickBooks items through the reconciliation wizard's **Products &
+Services** step, any QBO item that already has more than one AlgaPSA service
+mapped to it is skipped with a visible reason. The skip is by design: importing
+such an item would require choosing which service owns the catalog record, a
+decision AlgaPSA leaves to the MSP. All other items in the same import batch
+still proceed normally.
 
 ## Read the tax code list
 
@@ -317,10 +342,29 @@ tax amounts back from QuickBooks report CSVs onto the matching invoices.
 
 ## Permissions
 
-Viewing the connection status and mappings requires `billing_settings` read.
-Saving Intuit app credentials, connecting or disconnecting a company, changing
-the Automated Sales Tax toggle, and creating, editing, or deleting mappings all
-require `billing_settings` update.
+QuickBooks access is gated by the seeded `accounting_integrations` resource,
+which splits accounting work into separate capabilities instead of a single
+read/update pair. The same capability model applies to the screens in AlgaPSA
+and to every QuickBooks REST endpoint under `/api/v1/integrations/quickbooks`,
+so an API key acting as a user can call exactly the endpoints that user could
+use in the UI.
+
+| Capability | What it allows | Default roles |
+| --- | --- | --- |
+| `accounting_integrations:catalog_read` | View connection status, sync health, mappings, and remote QuickBooks catalogs (customers, accounts, items, tax codes, terms). | Admin, Finance |
+| `accounting_integrations:connections_manage` | Save Intuit app credentials, connect or disconnect a company, choose the default company, change the Automated Sales Tax toggle, and manage health and diagnostics settings. | Admin |
+| `accounting_integrations:mappings_manage` | Create, edit, and delete mappings. | Admin, Finance |
+| `accounting_integrations:exports_execute` | Create and run exports and sync cycles, and import QuickBooks tax amounts. | Admin, Finance |
+| `accounting_integrations:remote_mutate` | Perform destructive or money-moving operations in the connected QuickBooks company. | Admin |
+
+Holding `catalog_read` alone does not allow disconnecting the company. Custom
+roles need each capability explicitly. A REST call without the required
+capability returns `403` with a message of the form
+`Permission denied: Cannot <capability> accounting integrations`. Earlier
+releases checked an unseeded `quickbooks` resource on the REST endpoints, which
+denied every call even for Admin and Finance; integrations that worked around
+that by granting a custom `quickbooks` permission should switch to the
+`accounting_integrations` capabilities above.
 
 ## Related topics
 

@@ -479,6 +479,10 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
       .first<any>();
     expect(replyToken).toBeTruthy();
     expect(replyToken.comment_id).toBe(agentCommentId);
+    const replyTokenExpiry = new Date(replyToken.expires_at).getTime();
+    expect(Number.isFinite(replyTokenExpiry)).toBe(true);
+    expect(replyTokenExpiry).toBeGreaterThan(Date.now());
+    expect(replyTokenExpiry).toBeLessThanOrEqual(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // ...and the send is logged with the on-wire RFC id (async best-effort write).
     const sendLog = await waitFor(

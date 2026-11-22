@@ -203,6 +203,7 @@
       "exclude": "Exclude",
       "excluded": "Excluded",
       "fallbackTitle": "Quote {{id}}",
+      "unnumberedTitle": "Quote",
       "include": "Include",
       "included": "Included",
       "lineItems": "Line Items",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Terms & Conditions",
       "total": "Total",
       "validUntil": "Valid Until"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Quote accepted",
+        "body": "Thank you. Your acceptance has been recorded and we have been notified."
+      },
+      "rejected": {
+        "title": "Quote rejected",
+        "body": "Your response has been recorded and we have been notified."
+      },
+      "already": {
+        "title": "This quote has already been answered",
+        "accepted": "This quote was accepted on {{date}}.",
+        "rejected": "This quote was rejected on {{date}}."
+      },
+      "changed": {
+        "title": "This quote has changed",
+        "body": "This quote has changed since you opened it. Please contact us."
+      },
+      "optionalItems": "Optional items",
+      "optionalHint": "Choose the optional items you want. Your choices are sent when you accept.",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total",
+      "fullName": "Full name",
+      "titleOptional": "Title (optional)",
+      "agreementVersion": "Agreement version {{version}}",
+      "accept": "Accept quote",
+      "reject": "Reject quote",
+      "submitting": "Submitting...",
+      "rejectTitle": "Reject quote",
+      "rejectHint": "Tell us what needs to change. We may revise and resend the quote.",
+      "rejectConfirm": "Reject",
+      "cancel": "Cancel",
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "nameRequired": "Please type your full name.",
+        "agreementRequired": "Please confirm the agreement to accept this quote.",
+        "agreementOutdated": "The agreement wording has been updated. Please reload this page and try again.",
+        "commentRequired": "Please add a short comment before rejecting this quote.",
+        "tooLong": "One of your entries is too long.",
+        "reload": "Please reload this page and try again."
+      }
+    },
+    "public": {
+      "metaTitle": "Quote review",
+      "notice": {
+        "accepted": "This quote has been accepted. It is shown here for your records.",
+        "declined": "This quote has been declined. It is shown here for your records.",
+        "converted": "This quote has been accepted and is being fulfilled. It is shown here for your records.",
+        "readOnly": "This is a read-only view of your quote."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "This link isn't available",
+          "body": "The link may be mistyped or may no longer be active."
+        },
+        "expired": {
+          "title": "This link has expired",
+          "body": "For security, quote links stop working after a while."
+        },
+        "superseded": {
+          "title": "This quote has been replaced",
+          "body": "A newer version has been sent. Please use the link in the latest email."
+        },
+        "decided": {
+          "title": "This quote has already been decided",
+          "body": "A response has already been recorded, so it can no longer be opened from this link."
+        },
+        "help": "Need help? Reply to the email you received this link in.",
+        "signIn": "Sign in to the client portal",
+        "signInHint": "Already have a client portal account?"
+      }
     }
   },
   "quoteForm": {

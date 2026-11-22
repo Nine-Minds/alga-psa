@@ -243,18 +243,29 @@ describe('CM L3c project scope access and search', () => {
     expect((await searchAll(w, 'wombatreed')).total).toBe(0);
   });
 
-  it('D: a redacted tasks.description nulls the body and stops body-only matches, keeping the task row', async () => {
+  it.each([
+    'tasks.description', 'project_tasks.description', 'fields.tasks.description',
+    'tasks.*.description', 'project_tasks.*.description', '*.description',
+  ])('D: redacted %s hides body-only matches while preserving title searches', async redaction => {
     const { w, taskId } = await redactionWorld('marmotvale', 'pangolinash');
     // Hits have no `body` field: the body is exposed only through `snippet` (ts_headline over the indexed body, undefined when empty).
     // Sanity: unredacted, the snippet carries the description, so the undefined assertion below is meaningful.
     const open = await searchAll(w, 'pangolinash');
     expect(open.hits.find(h => h.id === taskId)?.snippet).toContain('pangolinash');
 
-    await setRelationshipRedactions(w, ['tasks.description']);
+    await setRelationshipRedactions(w, [redaction]);
     const hit = (await searchAll(w, 'Redaction')).hits.find(h => h.id === taskId);
     expect(hit).toBeDefined();
-    expect(hit?.title).toBe('Project task');
+    // Description-only policy must not redact the sibling task_name field.
+    expect(hit?.title).toBe('Plain marmotvale chore');
     expect(hit?.snippet).toBeUndefined();
+    const byTitle = await searchAll(w, 'marmotvale');
+    expect(byTitle.hits.map(h => h.id)).toEqual([taskId]);
+    expect(byTitle.hits[0]).toMatchObject({ title: 'Plain marmotvale chore', snippet: undefined });
+    expect(byTitle.typeahead.map(h => h.id)).toEqual([taskId]);
+    expect(byTitle.typeahead[0].title).toBe('Plain marmotvale chore');
+    expect(byTitle.byType).toEqual({ project_task: 1 });
+    expect(byTitle.total).toBe(1);
     const byBody = await searchAll(w, 'pangolinash');
     expect(byBody.hits.map(h => h.id)).not.toContain(taskId);
     expect(byBody.typeahead.map(h => h.id)).not.toContain(taskId);

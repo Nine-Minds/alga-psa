@@ -42,6 +42,7 @@ const h = vi.hoisted(() => {
     for (const key of Object.keys(dbState)) delete dbState[key];
     for (const table of [
       'assets', 'asset_type_registry', 'asset_history', 'asset_relationships', 'asset_associations',
+      'asset_group_contacts', 'asset_documents',
       'team_members', 'users', 'user_roles', 'clients', 'workstation_assets', 'network_device_assets',
       'server_assets', 'mobile_device_assets', 'printer_assets', 'asset_maintenance_history',
       'asset_maintenance_schedules', 'asset_maintenance_notifications', 'asset_groups', 'asset_group_members',
@@ -64,14 +65,27 @@ const h = vi.hoisted(() => {
 
   class QB {
     private readonly table: string;
-    private countMode = false;
-    private rowLimit?: number;
-    private rowOffset = 0;
     private objWheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; vals: any[] }> = [];
+    private groupColumns: string[] = [];
+    private countExpression: string | null = null;
+    private rowLimit: number | undefined;
+    private rowOffset = 0;
 
     constructor(tableSpec: string) {
       this.table = tableSpec.split(' as ')[0];
+    }
+
+    clone() {
+      const query = new QB(this.table);
+      query.objWheres = this.objWheres.map((where) => ({ ...where }));
+      query.inWheres = this.inWheres.map(({ col, vals }) => ({ col, vals: [...vals] }));
+      query.nullWheres = this.nullWheres.map((where) => ({ ...where }));
+      query.groupColumns = [...this.groupColumns];
+      query.countExpression = this.countExpression;
+      query.rowLimit = this.rowLimit;
+      query.rowOffset = this.rowOffset;
+      return query;
     }
 
     private get rows(): Row[] {
@@ -96,17 +110,15 @@ const h = vi.hoisted(() => {
     whereIn(col: string, vals: any[]) { this.inWheres.push({ col: stripPrefix(col), vals }); return this; }
     select(..._cols: any[]) { return this; }
     modify(callback: (query: any) => void) { callback(this); return this; }
-    count() { this.countMode = true; return this; }
-    sum() { return this; }
-    groupBy() { return this; }
-    limit(value: number) { this.rowLimit = value; return this; }
-    offset(value: number) { this.rowOffset = value; return this; }
     private nullWheres: Array<{ col: string; isNull: boolean }> = [];
     whereNull(col: string) { this.nullWheres.push({ col: stripPrefix(col), isNull: true }); return this; }
     whereNotNull(col: string) { this.nullWheres.push({ col: stripPrefix(col), isNull: false }); return this; }
     join(_table: any, _fn: any) { return this; }
     leftJoin(_table: any, _fn: any) { return this; }
     orderBy() { return this; }
+    groupBy(...columns: string[]) { this.groupColumns.push(...columns.map(stripPrefix)); return this; }
+    limit(value: number) { this.rowLimit = value; return this; }
+    offset(value: number) { this.rowOffset = value; return this; }
 
     private filtered(): Row[] {
       let rows = [...this.rows];
@@ -123,10 +135,38 @@ const h = vi.hoisted(() => {
     }
 
     private detached(): Row[] {
-      return this.filtered().map((row) => ({ ...row }));
+      let rows = this.filtered();
+      if (this.countExpression) {
+        const [expression, alias = 'count'] = this.countExpression.split(' as ');
+        const groups = new Map<string, Row[]>();
+        if (this.groupColumns.length === 0) groups.set('all', rows);
+        else for (const row of rows) {
+          const key = JSON.stringify(this.groupColumns.map((column) => row[column]));
+          const group = groups.get(key) ?? [];
+          group.push(row);
+          groups.set(key, group);
+        }
+        rows = [...groups.values()].map((group) => ({
+          ...Object.fromEntries(this.groupColumns.map((column) => [column, group[0][column]])),
+          [alias]: String(group.filter((row) => expression === '*' || row[stripPrefix(expression)] != null).length),
+        }));
+      }
+      return rows.slice(this.rowOffset, this.rowLimit === undefined ? undefined : this.rowOffset + this.rowLimit)
+        .map((row) => ({ ...row }));
     }
 
-    first() { return Promise.resolve(this.countMode ? { count: String(this.filtered().length) } : this.detached()[0]); }
+    first() { return Promise.resolve(this.detached()[0]); }
+    count(expression: string) {
+      this.countExpression = expression;
+      return this;
+    }
+    sum(expression: string) {
+      const key = expression.split(' as ')[1] ?? 'sum';
+      const value = this.filtered().reduce((total, row) => total + Number(row[expression.split(' as ')[0]] || 0), 0);
+      const result: any = Promise.resolve([{ [key]: String(value) }]);
+      result.first = () => Promise.resolve({ [key]: String(value) });
+      return result;
+    }
 
     insert(data: Row | Row[]) {
       const incoming = (Array.isArray(data) ? data : [data]).map((row) => {
@@ -208,7 +248,12 @@ const h = vi.hoisted(() => {
     roles: [{ role_id: 'role-1' }],
   };
 
-  return { TENANT, dbState, knexMock, mockUser, readDecisions, resetDb };
+  return {
+    TENANT, dbState, knexMock, mockUser, readDecisions, resetDb,
+    privateGroupSummary: null as Row | null,
+    authorizedGroupSummary: vi.fn(async (..._args: unknown[]) => null),
+    authorizedGroupSummaries: vi.fn(async (..._args: unknown[]) => new Map()),
+  };
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -249,13 +294,19 @@ vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
   computeAssetWarrantyExpiring: vi.fn(() => null),
 }));
 
-vi.mock('@alga-psa/authorization/kernel', () => ({
+vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
+  // The real restriction predicate: whether the list must authorize each record (closed bundles included).
+  bundleRulesRestrict: (await importOriginal<typeof import('@alga-psa/authorization/kernel')>()).bundleRulesRestrict,
+  builtinResolversRestrict: () => false,
   BuiltinAuthorizationKernelProvider: class {},
   BundleAuthorizationKernelProvider: class {
     constructor(_opts: unknown) {}
   },
   RequestLocalAuthorizationCache: class {},
-  createAuthorizationKernel: () => ({ authorizeResource: async (input: any) => h.readDecisions[input.resource.id] ?? { allowed: true, redactedFields: [] } }),
+  createAuthorizationKernel: () => ({
+    authorizeResource: async (input: any) => h.readDecisions[input.resource.id] ?? { allowed: true, redactedFields: [] },
+    authorizeMutation: async () => ({ allowed: true }),
+  }),
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
@@ -263,16 +314,24 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 }));
 
 vi.mock('@alga-psa/authorization/pagination', () => ({
-  buildAuthorizationAwarePage: async (input: any) => {
-    const result = await input.fetchPage(1, Math.max(input.limit, input.scanLimit ?? 100));
+  buildAuthorizationAwarePage: async ({ page, limit, scanLimit, fetchPage, authorizeRecord }: any) => {
+    const result = await fetchPage(1, Math.max(limit, scanLimit ?? 100));
     const data = [];
-    for (const row of result.data) if (await input.authorizeRecord(row)) data.push(row);
-    return { data: data.slice(0, input.limit), total: data.length };
+    for (const record of result.data) if (await authorizeRecord(record)) data.push(record);
+    return { data: data.slice(0, limit), total: data.length };
   },
 }));
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
+vi.mock('../lib/assetGroups', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
+  getAssetGroupSummary: async () => h.privateGroupSummary,
+  getAssetGroupSummariesForAssets: async (_trx: unknown, _tenant: string, assetIds: string[]) =>
+    new Map(assetIds.filter((assetId) => h.privateGroupSummary).map((assetId) => [assetId, h.privateGroupSummary])),
+  getAuthorizedAssetGroupSummary: (...args: unknown[]) => h.authorizedGroupSummary(...args),
+  getAuthorizedAssetGroupSummariesForAssets: (...args: unknown[]) => h.authorizedGroupSummaries(...args),
+}));
 
-import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, getAssetHistory, getAssetMaintenanceReport, listAssets, listEntityAssets, updateAsset } from './assetActions';
+import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, getAssetHistory, getAssetMaintenanceReport, listAssets, listEntityAssets, updateAsset, updateAssetRecord } from './assetActions';
 import { buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 
 function seedAsset(overrides: Row = {}): Row {
@@ -385,7 +444,10 @@ function workstationFormPayload() {
 
 beforeEach(() => {
   h.resetDb();
+  h.privateGroupSummary = null;
   vi.clearAllMocks();
+  h.authorizedGroupSummary.mockResolvedValue(null);
+  h.authorizedGroupSummaries.mockResolvedValue(new Map());
 });
 
 describe('getAsset returns the normalised Asset (alga0002283 root cause)', () => {
@@ -409,6 +471,91 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
 
     expect(asset.network_device.power_draw_watts).toBe(0);
     expect(typeof asset.network_device.power_draw_watts).toBe('number');
+  });
+
+  it('keeps an authorized asset visible when its group summary is denied', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const asset = (await getAsset(ASSET_ID)) as any;
+
+    expect(asset.asset_id).toBe(ASSET_ID);
+    expect(asset.group).toBeNull();
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+  });
+
+  it('keeps the asset detail bundle visible while suppressing a denied group summary', async () => {
+    seedAsset({ asset_type: 'unknown' });
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    const result = (await getAssetDetailBundle(ASSET_ID)) as any;
+
+    expect(result.asset.asset_id).toBe(ASSET_ID);
+    expect(result.asset.group).toBeNull();
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+  });
+
+  it('keeps listed assets visible while suppressing denied batch group summaries', async () => {
+    seedAsset();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const result = (await listAssets({ page: 1, limit: 10 } as any)) as any;
+
+    expect(result.assets.map((asset: any) => asset.asset_id)).toContain(ASSET_ID);
+    expect(result.assets.find((asset: any) => asset.asset_id === ASSET_ID).group).toBeNull();
+    expect(h.authorizedGroupSummaries).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, [ASSET_ID]);
+  });
+
+  it('T113: lists authorized group summaries alongside assets whose groups are denied', async () => {
+    const otherAssetId = 'e0000000-0000-4000-8000-00000000000e';
+    seedAsset();
+    seedAsset({ asset_id: otherAssetId, asset_tag: 'NET-002', name: 'Other switch' });
+    const allowedSummary = {
+      group_id: 'b0000000-0000-4000-8000-00000000000b',
+      name: 'Allowed group',
+      kind: 'bundle',
+      member_count: 2,
+      user_count: 0,
+    };
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    h.authorizedGroupSummaries.mockResolvedValue(new Map([[ASSET_ID, allowedSummary]]));
+
+    const result = (await listAssets({ page: 1, limit: 10 } as any)) as any;
+
+    expect(result.assets).toHaveLength(2);
+    expect(result.assets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ asset_id: ASSET_ID, group: allowedSummary }),
+      expect.objectContaining({ asset_id: otherAssetId, group: null }),
+    ]));
+    expect(JSON.stringify(result)).not.toContain('Forbidden group');
+  });
+
+  it.each([
+    { filter: { asset_type: 'network_device' }, expectedIds: [ASSET_ID, 'denied-group-asset'] },
+    { filter: { asset_types: ['network_device', 'workstation'] }, expectedIds: [ASSET_ID, 'denied-group-asset', 'workstation-asset'] },
+  ])('keeps group visibility and type facets independent of the selected types: $filter', async ({ filter, expectedIds }) => {
+    seedAsset();
+    seedAsset({ asset_id: 'denied-group-asset' });
+    seedAsset({ asset_id: 'workstation-asset', asset_type: 'workstation' });
+    seedAsset({ asset_id: 'server-asset', asset_type: 'server' });
+    seedAsset({ asset_id: 'inactive-asset', status: 'inactive' });
+    seedAsset({ asset_id: 'foreign-asset', tenant: 'another-tenant' });
+    const allowedSummary = { group_id: 'allowed-group', name: 'Allowed group', member_count: 2 };
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    h.authorizedGroupSummaries.mockResolvedValue(new Map([[ASSET_ID, allowedSummary]]));
+
+    const result = await listAssets({ page: 1, limit: 10, status: 'active', ...filter });
+
+    expect(result).toMatchObject({
+      total: expectedIds.length,
+      asset_type_counts: { network_device: 2, workstation: 1, server: 1 },
+    });
+    expect('assets' in result && result.assets.map((asset) => asset.asset_id).sort()).toEqual([...expectedIds].sort());
+    expect('assets' in result && result.assets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ asset_id: ASSET_ID, group: allowedSummary }),
+      expect.objectContaining({ asset_id: 'denied-group-asset', group: null }),
+    ]));
+    expect(JSON.stringify(result)).not.toContain('Forbidden group');
   });
 });
 
@@ -443,7 +590,7 @@ describe('asset read redaction boundaries', () => {
     expect(bundle.maintenanceReport.asset_name).toBeUndefined();
     expect(bundle.history[0].changes).toEqual({});
     h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
-    await expect(getAssetDetailBundle(ASSET_ID)).rejects.toThrow(/Permission denied/);
+    expect(await getAssetDetailBundle(ASSET_ID)).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
   });
 
   it('applies each allowed entity asset decision after assembling aliases and extensions', async () => {
@@ -849,6 +996,58 @@ describe('updateAsset protects unreadable fields at the mutation boundary', () =
 });
 
 describe('updateAsset: warranty-only edits (alga0002283)', () => {
+  it('keeps the trusted sessionless update core usable without caller authorization', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    const trustedSummary = {
+      group_id: 'e0000000-0000-4000-8000-00000000000e',
+      name: 'Trusted summary',
+      kind: 'bundle',
+      member_count: 2,
+      user_count: 0,
+    };
+    h.privateGroupSummary = trustedSummary;
+
+    const result = await updateAssetRecord(
+      h.knexMock,
+      TENANT,
+      'system-actor',
+      ASSET_ID,
+      networkDeviceFormPayload(),
+      { suppressRevalidate: true },
+    );
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toEqual(trustedSummary);
+    expect(h.authorizedGroupSummary).not.toHaveBeenCalled();
+  });
+
+  it('keeps an asset update successful and omits a denied group summary from the response', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const result = (await updateAsset(ASSET_ID, networkDeviceFormPayload())) as any;
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toBeNull();
+    expect(JSON.stringify(result)).not.toContain('secret-group');
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+    expect(h.authorizedGroupSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves an authorized group summary in the update response', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    const allowedSummary = { group_id: 'e0000000-0000-4000-8000-00000000000e', name: 'Allowed group', kind: 'bundle', member_count: 2, user_count: 0 };
+    h.authorizedGroupSummary.mockResolvedValue(allowedSummary as any);
+
+    const result = (await updateAsset(ASSET_ID, networkDeviceFormPayload())) as any;
+
+    expect(result.asset_id).toBe(ASSET_ID);
+    expect(result.group).toEqual(allowedSummary);
+  });
+
   it('succeeds for a network device with blank (null) numerics and keeps them null', async () => {
     seedAsset();
     seedNetworkDevice();

@@ -47,6 +47,31 @@ export function getTenantFromRequest(request) {
   }
 }
 
+export function validateDocumentRoomToken(roomName, token) {
+  const parsedRoom = parseDocumentRoom(roomName);
+  if (!parsedRoom) throw new Error('Invalid document room');
+  if (!token) throw new Error('Document validation failed: missing token');
+
+  let claims;
+  try {
+    claims = jwt.verify(token, getHocuspocusJwtSecret(), {
+      algorithms: ['HS256'], audience: 'document-room', issuer: 'alga-psa',
+    });
+  } catch (error) {
+    throw new Error(`Document validation failed: ${error instanceof Error ? error.message : 'invalid token'}`);
+  }
+  if (claims?.scope !== 'document-room' || claims.tenantId !== parsedRoom.tenantId ||
+      claims.documentId !== parsedRoom.documentId || typeof claims.userId !== 'string' || !claims.userId) {
+    throw new Error('Document validation failed: room or token scope mismatch');
+  }
+  return {
+    status: 'ok',
+    tenantId: claims.tenantId,
+    documentId: claims.documentId,
+    userId: claims.userId,
+  };
+}
+
 /**
  * The single room gate. Synchronous for every room type except the legacy
  * `notifications:` room, whose session check is asynchronous; callers await it.
@@ -60,6 +85,26 @@ export function validateDocumentRoomAccess(roomName, request, options) {
   }
   if (roomName?.startsWith('notification-signals:')) {
     return validateNotificationSignalRoom(roomName, request, options);
+  }
+  if (roomName?.startsWith('tenant:') && roomName.endsWith(':ticket-changes')) {
+    const parts = roomName.split(':');
+    if (parts.length !== 3 || !UUID.test(parts[1])) throw new Error('Invalid ticket change room');
+    // Hocuspocus sends provider tokens in an authentication protocol message;
+    // they are not part of the WebSocket upgrade URL.
+    const token = options?.token;
+    if (!token) throw new Error('Ticket change validation failed: missing token');
+    let claims;
+    try {
+      claims = jwt.verify(token, getHocuspocusJwtSecret(), { algorithms: ['HS256'], audience: TICKET_CHANGES, ignoreExpiration: true });
+    } catch (error) { throw new Error(`Ticket change validation failed: ${error instanceof Error ? error.message : 'invalid token'}`); }
+    const now = Math.floor((options?.now ?? Date.now()) / 1000);
+    if (claims?.scope !== TICKET_CHANGES || claims.tenantId !== parts[1] || typeof claims.userId !== 'string' || !UUID.test(claims.userId) ||
+      typeof claims.sessionId !== 'string' || !UUID.test(claims.sessionId) || !Number.isSafeInteger(claims.exp) ||
+      !Number.isSafeInteger(claims.iat) || claims.exp <= claims.iat || claims.exp - claims.iat > MAX_SIGNAL_TTL_SECONDS ||
+      claims.iat > now + SIGNAL_CLOCK_TOLERANCE_SECONDS || claims.exp < now - SIGNAL_CLOCK_TOLERANCE_SECONDS) {
+      throw new Error('Ticket change validation failed: room or token scope mismatch');
+    }
+    return { status: 'ok', tenantId: parts[1], userId: claims.userId, sessionId: claims.sessionId, expiresAt: claims.exp * 1000 };
   }
 
   const parsedTicketRoom = parseTicketRoom(roomName);
@@ -96,6 +141,10 @@ export function validateDocumentRoomAccess(roomName, request, options) {
       throw new Error('Ticket validation failed: room ticket mismatch');
     }
 
+    if (typeof claims.userId !== 'string' || !claims.userId) {
+      throw new Error('Ticket validation failed: missing user');
+    }
+
     return {
       status: 'ok',
       tenantId: parsedTicketRoom.tenantId,
@@ -118,15 +167,23 @@ export function validateDocumentRoomAccess(roomName, request, options) {
     throw new Error('Tenant validation failed: room tenant mismatch');
   }
 
+  const token = options?.credential || getRequestToken(request);
+  // Hocuspocus invokes onConnect on the initial socket message before its
+  // required authentication message. This only validates URL tenancy; the
+  // subsequent onAuthenticate hook must validate the signed room credential.
+  if (!token && options?.allowPendingAuthentication) {
+    return { status: 'pending-authentication', tenantId: parsedRoom.tenantId };
+  }
+  const claims = validateDocumentRoomToken(roomName, token);
   return {
-    status: 'ok',
-    tenantId: tenantFromRequest,
-    documentId: parsedRoom.documentId,
+    ...claims,
+    credential: token,
   };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NOTIFICATION_SIGNALS = 'notification-signals';
+const TICKET_CHANGES = 'ticket-changes';
 /** Lifetime ceiling, measured from the claims only (exp - iat). */
 export const MAX_SIGNAL_TTL_SECONDS = 300;
 /** Leeway for the two comparisons that cross a clock boundary (iat, exp). */

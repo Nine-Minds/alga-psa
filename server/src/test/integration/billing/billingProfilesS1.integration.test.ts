@@ -22,14 +22,24 @@ const assignmentMigration = require(
 // rollback runs migrations down in reverse order, so this test has to as well
 // — otherwise it would be asserting that S1 can be dropped out from under its
 // own dependants, which no rollback ever does.
+//
+// The list must name every migration that adds schema to, or hanging off,
+// client_billing_profiles: dropping the table takes that schema with it, and
+// re-running only S1 brings back a table without it. The suite shares one
+// test_database and later files reuse it, so a missed entry corrupts the
+// schema for every file that runs after this one. T008 compares the whole
+// public schema before and after the round trip, so a missing entry fails here.
 const dependentMigrationsNewestFirst = [
   '20261030110500_add_co_managed_work_reference_billing_profile.cjs',
   '20261009125000_add_asset_billing_profile.cjs',
   '20260923100000_create_billing_profile_contacts.cjs',
+  '20260922120000_add_billing_profile_payment_method.cjs',
   '20260818060000_add_billing_profile_to_payments_and_ar.cjs',
   '20260818050000_add_billing_profile_to_cycles_and_invoices.cjs',
   '20260818040000_add_billing_profile_bill_to_and_tax.cjs',
   '20260818030000_create_portal_user_billing_profile_access.cjs',
+  '20260818000000_add_contract_line_attribution_reasons.cjs',
+  '20260817000000_enforce_client_billing_profile_default_guard.cjs',
 ].map((file) => require(path.join(MIGRATION_DIR, file)));
 
 // Column matrix for F006–F012 (the assignment columns S1 adds).
@@ -45,6 +55,35 @@ const ASSIGNMENT_COLUMNS: Array<[string, string]> = [
 ];
 
 let db: Knex;
+
+/**
+ * Every column, constraint, index, trigger and function in the public schema,
+ * one line each. Ordinal positions are left out: a re-added column lands at
+ * the end of its table, which no query depends on.
+ */
+async function publicSchemaFingerprint(): Promise<string[]> {
+  const { rows } = await db.raw(`
+    SELECT 'column ' || table_name || '.' || column_name || ' ' || udt_name
+           || ' null=' || is_nullable || ' default=' || coalesce(column_default, '') AS line
+      FROM information_schema.columns WHERE table_schema = 'public'
+    UNION ALL
+    SELECT 'constraint ' || c.conrelid::regclass::text || '.' || c.conname || ' ' || pg_get_constraintdef(c.oid)
+      FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+     WHERE n.nspname = 'public' AND c.conrelid <> 0
+    UNION ALL
+    SELECT 'index ' || indexdef FROM pg_indexes WHERE schemaname = 'public'
+    UNION ALL
+    SELECT 'trigger ' || pg_get_triggerdef(t.oid)
+      FROM pg_trigger t JOIN pg_class r ON r.oid = t.tgrelid JOIN pg_namespace n ON n.oid = r.relnamespace
+     WHERE n.nspname = 'public' AND NOT t.tgisinternal
+    UNION ALL
+    SELECT 'function ' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ') ' || md5(p.prosrc)
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+  `);
+  return rows.map((row: { line: string }) => row.line).sort();
+}
+
 const tenantsToCleanup = new Set<string>();
 
 function table(tenantId: string, name: string) {
@@ -210,6 +249,7 @@ describe('billing profiles S1 — schema + default-profile backfill (T006–T009
       await expect(db.schema.hasColumn(tbl, col)).resolves.toBe(true);
     }
     await expect(db.schema.hasTable('client_billing_profiles')).resolves.toBe(true);
+    const schemaBefore = await publicSchemaFingerprint();
 
     for (const migration of dependentMigrationsNewestFirst) {
       await migration.down(db);
@@ -241,6 +281,17 @@ describe('billing profiles S1 — schema + default-profile backfill (T006–T009
     for (const [tbl, col] of ASSIGNMENT_COLUMNS) {
       await expect(db.schema.hasColumn(tbl, col)).resolves.toBe(true);
     }
+
+    // The round trip restores the schema exactly. Anything only in `missing`
+    // was dropped with client_billing_profiles by a migration that the
+    // rollback list above does not name.
+    const schemaAfter = await publicSchemaFingerprint();
+    const afterSet = new Set(schemaAfter);
+    const beforeSet = new Set(schemaBefore);
+    expect({
+      missing: schemaBefore.filter((line) => !afterSet.has(line)),
+      unexpected: schemaAfter.filter((line) => !beforeSet.has(line)),
+    }).toEqual({ missing: [], unexpected: [] });
   }, HOOK_TIMEOUT);
 
   it('T009: client_billing_profiles is tenant-scoped and registered for deletion in tenant teardown', async () => {

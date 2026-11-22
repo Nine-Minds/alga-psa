@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getEligibleContractLinesForUI } from 'server/src/lib/utils/contractLineDisambiguation';
 import { getEligibleContractLines as billingEligibility } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { getEligibleContractLines as schedulingEligibility } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
@@ -8,6 +9,8 @@ import { getEligibleContractLines as schedulingEligibility } from '@alga-psa/sch
 // separate DB/E2E suites; these assertions exercise the real UI projection.
 vi.mock('server/src/lib/db', () => ({ createTenantKnex: vi.fn() }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: vi.fn() }));
+// The permission guard has its own DB suite (coManagedSeatCommercialLookups); here it admits the caller.
+vi.mock('@alga-psa/auth/lib/commercialAccess', () => ({ assertCommercialReadPermission: vi.fn(async () => undefined) }));
 const line = (overrides: Record<string, unknown> = {}) => ({
   client_contract_line_id: 'line-1', contract_line_name: 'Support hours',
   contract_line_type: 'Hourly', contract_name: 'Managed services',
@@ -39,6 +42,7 @@ describe('Contract line choices returned to the UI', () => {
       if (table === 'client_contracts') return query;
       throw new Error(`Unexpected table: ${table}`);
     });
+    vi.mocked(getCurrentUser).mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1', user_type: 'internal' } as never);
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: database, tenant: 'tenant-1' } as never);
   });
   afterEach(() => vi.restoreAllMocks());

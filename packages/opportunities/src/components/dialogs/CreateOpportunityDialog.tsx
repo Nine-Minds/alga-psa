@@ -9,6 +9,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientLifecycleStatus, IClient, OpportunityType } from '@alga-psa/types';
 import { SUGGESTED_NEXT_ACTIONS } from '../../lib/suggestedNextActions';
@@ -65,7 +66,6 @@ export interface CreateOpportunityInput {
 export function CreateOpportunityDialog({
   isOpen,
   onClose,
-  clients = [],
   defaultClientId,
   lockedClient,
   defaults,
@@ -74,7 +74,6 @@ export function CreateOpportunityDialog({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  clients?: IClient[];
   defaultClientId?: string | null;
   /** When creating from a client's own screen the client is fixed — no picker. */
   lockedClient?: { client_id: string; client_name: string; lifecycle_status?: ClientLifecycleStatus | null };
@@ -110,10 +109,26 @@ export function CreateOpportunityDialog({
   const defaultNextAction = t(suggested.key, suggested.fallback);
   const effectiveNextAction = nextAction ?? defaultNextAction;
 
+  // The picker searches on the server, so the picked client's lifecycle is read by id through the shell's
+  // searcher (a client created from this dialog already carries it).
+  const { searchClients } = useClientPickerSearch();
+  const [pickedLifecycle, setPickedLifecycle] = useState<{ clientId: string; status: ClientLifecycleStatus | null } | null>(null);
+  useEffect(() => {
+    if (lockedClient || !clientId || pickedLifecycle?.clientId === clientId) return;
+    let cancelled = false;
+    searchClients?.({ ids: [clientId], status: 'all' })
+      .then(({ clients }) => {
+        const status = (clients.find((client) => client.client_id === clientId)?.lifecycle_status ?? null) as ClientLifecycleStatus | null;
+        if (!cancelled) setPickedLifecycle({ clientId, status });
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [clientId, lockedClient, pickedLifecycle, searchClients]);
+
   const selectedLifecycle = useMemo<ClientLifecycleStatus | null | undefined>(() => {
     if (lockedClient) return lockedClient.lifecycle_status;
-    return clients.find((client) => client.client_id === clientId)?.lifecycle_status;
-  }, [clientId, clients, lockedClient]);
+    return pickedLifecycle?.clientId === clientId ? pickedLifecycle.status : undefined;
+  }, [clientId, pickedLifecycle, lockedClient]);
 
   // The system already knows whether they are a client; don't make the user say it again.
   useEffect(() => {
@@ -218,7 +233,6 @@ export function CreateOpportunityDialog({
             </Label>
             <ClientPicker
               id="opportunity-create-client"
-              clients={clients}
               selectedClientId={clientId}
               onSelect={setClientId}
               filterState={filterState}
@@ -231,6 +245,7 @@ export function CreateOpportunityDialog({
               open: clientCreatorOpen,
               onOpenChange: setClientCreatorOpen,
               onCreated: (client) => {
+                setPickedLifecycle({ clientId: client.client_id, status: client.lifecycle_status ?? null });
                 setClientId(client.client_id);
                 setClientCreatorOpen(false);
               },

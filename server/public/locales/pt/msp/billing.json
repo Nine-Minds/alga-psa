@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Carregando visualização do modelo...",
     "errorPrefix": "Erro:",
-    "empty": "Selecione uma fatura e um modelo para visualizar."
+    "empty": "Selecione uma fatura e um modelo para visualizar.",
+    "frameTitle": "Pré-visualização da fatura"
   },
   "templateDesigner": {
     "propertyEditor": {

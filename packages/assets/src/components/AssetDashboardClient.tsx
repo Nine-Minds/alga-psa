@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
@@ -35,17 +36,20 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetGroup, AssetGroupKind, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { Asset, AssetGroup, AssetGroupKind, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClientLocation, IContact } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { assetActionErrorMessage, isAssetActionError, unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getClientByIdForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { addAssetsToGroup, createAssetGroup, listAssetGroups } from '../actions/assetGroupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { toast } from 'react-hot-toast';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
+import Link from 'next/link';
+import LabelFirstAssetIntake from './LabelFirstAssetIntake';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -166,6 +170,8 @@ const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobi
 const ASSETS_PRINT_PAGE_SIZE = 5000;
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
+  // What the server's seat authority closes for this user: those controls are left out, not disabled.
+  const { canCreate, canUpdate, canDelete } = useAssetSurfaceControls();
   const { t } = useTranslation('msp/assets');
   const clientDrawer = useClientDrawer();
   const assetTypeEntries = useAssetTypeRegistry();
@@ -201,6 +207,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [totalAssets, setTotalAssets] = useState(initialAssets.total);
+  const [assetTypeCounts, setAssetTypeCounts] = useState(initialAssets.asset_type_counts);
   const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
   const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
@@ -217,10 +224,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const { statuses: assetStatuses } = useAssetStatusRegistry();
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [clientsLoading, setClientsLoading] = useState(false);
   const [agentStatusFilters, setAgentStatusFilters] = useState<string[]>([]);
   const [rmmManagedFilter, setRmmManagedFilter] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>(() => [...DEFAULT_VISIBLE_ASSET_COLUMNS]);
@@ -242,6 +247,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   // C4: '' = any. Ownership and "in MSP custody" are server-side listAssets params.
   const [ownershipFilter, setOwnershipFilter] = useState<'' | 'client' | 'msp'>('');
   const [inCustodyFilter, setInCustodyFilter] = useState<'' | 'yes' | 'no'>('');
+  // Site audits: one select over two server params — the last verdict, or
+  // "nothing has looked at this device in 90 days".
+  const [auditFilter, setAuditFilter] = useState<'' | 'present' | 'missing' | 'never' | 'stale90'>('');
   const [confirmBulkWorkspace, setConfirmBulkWorkspace] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -307,23 +315,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return () => {
       // No cleanup needed
     };
-  }, []);
-
-  useEffect(() => {
-    const fetchClients = async () => {
-      setClientsLoading(true);
-      try {
-        const clientData = await getAllClientsForAssets(true);
-        setClients(clientData);
-      } catch (error) {
-        console.error('Error fetching clients for asset filters:', error);
-        setClients([]);
-      } finally {
-        setClientsLoading(false);
-      }
-    };
-
-    void fetchClients();
   }, []);
 
   useEffect(() => {
@@ -441,29 +432,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     );
   }, [maintenanceSummaries]);
 
-  const clientNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    clients.forEach((client) => {
-      map.set(client.client_id, client.client_name);
-    });
-    assets.forEach((asset) => {
-      if (asset.client_id && asset.client?.client_name && !map.has(asset.client_id)) {
-        map.set(asset.client_id, asset.client.client_name);
-      }
-    });
-    return map;
-  }, [assets, clients]);
-
-  const clientLogoById = useMemo(() => {
-    const map = new Map<string, string | null>();
-    clients.forEach((client) => {
-      map.set(client.client_id, client.logoUrl ?? null);
-    });
-    return map;
-  }, [clients]);
-
-
-
   const filteredCount = totalAssets;
   const hasActiveFilters = Boolean(
     searchTerm ||
@@ -473,7 +441,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     agentStatusFilters.length > 0 ||
     rmmManagedFilter.length > 0 ||
     ownershipFilter !== '' ||
-    inCustodyFilter !== ''
+    inCustodyFilter !== '' ||
+    auditFilter !== ''
   );
 
   const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
@@ -548,13 +517,15 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return {
       search: debouncedSearchTerm || undefined,
       status: statusFilters.length > 0 ? statusFilters[0] : undefined,
-      asset_type: typeFilters.length > 0 ? typeFilters[0] : undefined,
+      asset_types: typeFilters.length > 0 ? typeFilters : undefined,
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
       group_id: groupFilter || undefined,
       ownership: ownershipFilter || undefined,
       in_custody: inCustodyFilter === '' ? undefined : inCustodyFilter === 'yes',
+      last_audit_result: auditFilter === '' || auditFilter === 'stale90' ? undefined : auditFilter,
+      not_audited_days: auditFilter === 'stale90' ? 90 : undefined,
       // Patch/OS state lives on the per-type extension row.
       include_extension_data: true,
       sort_by: sortBy,
@@ -563,6 +534,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     };
   }, [
     agentStatusFilters,
+    auditFilter,
     clientFilters,
     debouncedSearchTerm,
     groupFilter,
@@ -607,11 +579,12 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       rmmManaged: rmmManagedFilter,
       ownership: ownershipFilter,
       inCustody: inCustodyFilter,
+      audit: auditFilter,
       pageSize,
       sortBy,
       sortDirection,
     });
-  }, [agentStatusFilters, clientFilters, debouncedSearchTerm, inCustodyFilter, ownershipFilter, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
+  }, [agentStatusFilters, auditFilter, clientFilters, debouncedSearchTerm, inCustodyFilter, ownershipFilter, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
 
   useEffect(() => {
     const queryChanged = assetsQueryKey !== lastAssetsQueryKeyRef.current;
@@ -640,6 +613,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
         setAssets(response.assets);
         setTotalAssets(response.total);
+        setAssetTypeCounts(response.asset_type_counts);
       } catch (error) {
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -684,6 +658,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setRmmManagedFilter([]);
     setOwnershipFilter('');
     setInCustodyFilter('');
+    setAuditFilter('');
   };
 
   const bulkLocationOptions = useMemo<SelectOption[]>(() => (
@@ -1215,7 +1190,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       title: t('assetDashboardClient.table.client', { defaultValue: 'Client' }),
       render: (_: unknown, record: Asset) => {
         const name = record.client?.client_name || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' });
-        const logoUrl = record.client_id ? (clientLogoById.get(record.client_id) ?? null) : null;
+        const logoUrl = record.client_id ? (record.client?.client_logo_url ?? null) : null;
         if (record.client_id && clientDrawer) {
           return (
             <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl}>
@@ -1306,16 +1281,18 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             >
               {t('assetDashboardClient.actions.viewDetails', { defaultValue: 'View details' })}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              id={`edit-asset-${record.asset_id}`}
-              onSelect={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.assign(`/msp/assets/${record.asset_id}/edit`);
-                }
-              }}
-            >
-              {t('assetDashboardClient.actions.editAsset', { defaultValue: 'Edit asset' })}
-            </DropdownMenuItem>
+            {canUpdate && (
+              <DropdownMenuItem
+                id={`edit-asset-${record.asset_id}`}
+                onSelect={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.assign(`/msp/assets/${record.asset_id}/edit`);
+                  }
+                }}
+              >
+                {t('assetDashboardClient.actions.editAsset', { defaultValue: 'Edit asset' })}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               id={`create-ticket-${record.asset_id}`}
@@ -1337,7 +1314,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     renderAssetDetails,
     openAssetRecordPage,
     clientDrawer,
-    clientLogoById,
     getAssetStatusLabel,
     getAssetTypeLabel,
     assetStatuses,
@@ -1378,11 +1354,16 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     allColumnIds,
   ]);
 
+  const { searchClients } = useClientPickerSearch();
+  const [verifiedClientIds, setVerifiedClientIds] = useState<ReadonlySet<string> | undefined>(undefined);
+  const [savedViewClientsChecked, setSavedViewClientsChecked] = useState(false);
+  const checkedClientIdsRef = useRef<Set<string>>(new Set());
+
   const assetListViewAdapter = useMemo(() => createAssetListViewAdapter({
     defaultPageSize: 10,
     defaultColumns: assetColumnsToView(DEFAULT_VISIBLE_ASSET_COLUMNS, allColumnIds),
-    knownClientIds: clients.length > 0 ? new Set(clients.map((client) => client.client_id)) : undefined,
-  }), [allColumnIds, clients]);
+    knownClientIds: verifiedClientIds,
+  }), [allColumnIds, verifiedClientIds]);
 
   const handleListViewApply = useCallback((next: AssetListLiveState) => {
     // A view replaces the whole filter set; search text is not part of it.
@@ -1409,7 +1390,75 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     adapter: assetListViewAdapter,
     live: listViewLive,
     onApply: handleListViewApply,
+    // Hold off applying a view until the client ids it references are checked.
+    ready: savedViewClientsChecked,
   });
+
+  // Saved views reference clients by id. Validate only those ids (by id, on the
+  // server) instead of loading the tenant's whole client table, so a view that
+  // points at a deleted client still drops that filter.
+  useEffect(() => {
+    if (listViews.isLoading) return;
+    const referenced = new Set<string>();
+    listViews.views.forEach((view) => {
+      (view.settings.filters?.clientIds ?? []).forEach((id) => referenced.add(id));
+    });
+    const unchecked = Array.from(referenced).filter((id) => !checkedClientIdsRef.current.has(id));
+    if (unchecked.length === 0) {
+      setSavedViewClientsChecked(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      let existing: string[] | null = null;
+      try {
+        if (searchClients) {
+          // searchClientsForPicker caps an `ids` lookup at 100 per call.
+          existing = [];
+          for (let i = 0; i < unchecked.length; i += 100) {
+            const { clients } = await searchClients({ ids: unchecked.slice(i, i + 100) });
+            existing.push(...clients.map((client) => client.client_id));
+          }
+        }
+      } catch (error) {
+        console.error('Error validating client ids referenced by saved views:', error);
+        existing = null;
+      }
+      if (cancelled) return;
+      // A failed check cannot validate, which must keep the reference, not drop it.
+      const keep = existing ?? unchecked;
+      unchecked.forEach((id) => checkedClientIdsRef.current.add(id));
+      setVerifiedClientIds((prev) => new Set([...(prev ?? []), ...keep]));
+      setSavedViewClientsChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [listViews.isLoading, listViews.views, searchClients]);
+
+  // Names for the active client filter pills, looked up by id.
+  const [clientFilterLabels, setClientFilterLabels] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const missing = clientFilters.filter((id) => clientFilterLabels[id] === undefined);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    missing.forEach((id) => {
+      void (async () => {
+        try {
+          const client = await getClientByIdForAssets(id);
+          // Keyed by id, so an out-of-order response can only fill its own pill.
+          if (!cancelled && client?.client_name) {
+            setClientFilterLabels((prev) => ({ ...prev, [id]: client.client_name }));
+          }
+        } catch (error) {
+          console.error('Error fetching client for filter pill:', error);
+        }
+      })();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientFilters, clientFilterLabels]);
 
   const printColumns = useMemo(() => (
     createPrintColumnsFromColumnDefinitions(Object.values(columnLibrary), {
@@ -1425,7 +1474,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           ? getAgentStatusLabel(asset.agent_status ?? 'unknown')
           : t('common.states.none', { defaultValue: 'None' }),
         client_name: (asset) => asset.client?.client_name
-          || clientNameById.get(asset.client_id)
           || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
         contact_name: (asset) => asset.contact_name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
         group: (asset) => asset.group?.name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
@@ -1434,7 +1482,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
       },
     })
-  ), [clientNameById, columnLibrary, getAgentStatusLabel, getAssetStatusLabel, getAssetTypeLabel, renderAssetDetails, t]);
+  ), [columnLibrary, getAgentStatusLabel, getAssetStatusLabel, getAssetTypeLabel, renderAssetDetails, t]);
   const {
     selectedColumnKeys: selectedAssetPrintColumnKeys,
     selectedColumns: selectedAssetPrintColumns,
@@ -1499,7 +1547,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <RefreshCw className="h-4 w-4" />
                 {t('assetDashboardClient.actions.refreshData', { defaultValue: 'Refresh data' })}
               </Button>
-              <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
+              {canCreate && <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />}
+              {canCreate && (
+                <Button asChild id="full-add-asset-button" variant="outline">
+                  <Link href="/msp/assets/new">{t('assetDashboardClient.actions.fullAdd', { defaultValue: 'Full add' })}</Link>
+                </Button>
+              )}
+              {canCreate && <LabelFirstAssetIntake />}
             </div>
           </div>
 
@@ -1523,7 +1577,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0 && ownershipFilter === '' && inCustodyFilter === ''}
+                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0 && ownershipFilter === '' && inCustodyFilter === '' && auditFilter === ''}
                   >
                   {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
                   </Button>
@@ -1589,6 +1643,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     { value: 'no', label: t('assetDashboardClient.filters.custody.notInCustody', { defaultValue: 'Not in MSP custody' }) },
                   ]}
                   className="min-w-[160px]"
+                />
+                <CustomSelect
+                  id="audit-filter-select"
+                  value={auditFilter}
+                  onValueChange={(value) => setAuditFilter(value as '' | 'present' | 'missing' | 'never' | 'stale90')}
+                  options={[
+                    { value: '', label: t('assetDashboardClient.filters.audit.any', { defaultValue: 'Any audit result' }) },
+                    { value: 'present', label: t('assetDashboardClient.filters.audit.present', { defaultValue: 'Last audit: present' }) },
+                    { value: 'missing', label: t('assetDashboardClient.filters.audit.missing', { defaultValue: 'Last audit: missing' }) },
+                    { value: 'never', label: t('assetDashboardClient.filters.audit.never', { defaultValue: 'Never audited' }) },
+                    { value: 'stale90', label: t('assetDashboardClient.filters.audit.stale', { defaultValue: 'Not audited in 90 days' }) },
+                  ]}
+                  className="min-w-[180px]"
                 />
 
                 <DropdownMenu>
@@ -1678,16 +1745,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 <div className="flex items-center gap-1 border-l border-gray-200 pl-2 ml-1">
                   <ClientPicker
                     id="asset-client-filter"
-                    clients={clients}
                     selectedClientId={clientFilters[0] ?? null}
                     onSelect={(clientId) => setClientFilters(clientId ? [clientId] : [])}
                     filterState={clientFilterState}
                     onFilterStateChange={setClientFilterState}
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
-                    placeholder={clientsLoading
-                      ? t('assetDashboardClient.filters.client.loading', { defaultValue: 'Loading clients…' })
-                      : t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' })}
+                    placeholder={t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' })}
                     fitContent
                     triggerVariant="ghost"
                     triggerSize="sm"
@@ -1753,7 +1817,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   </Badge>
                 ))}
                 {clientFilters.map((clientId) => {
-                  const label = clientNameById.get(clientId) ?? t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' });
+                  const label = clientFilterLabels[clientId] ?? t('assetDashboardClient.filters.client.placeholder', { defaultValue: 'Client' });
                   return (
                     <Badge key={`client-pill-${clientId}`} variant="outline" className="flex items-center gap-2">
                       {t('assetDashboardClient.activeFilters.client', {
@@ -1851,7 +1915,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
             <AssetTypeBreakdownCard
               getTypeLabel={getAssetTypeLabel}
-              refreshToken={refreshCounter}
+              counts={assetTypeCounts}
               activeTypes={typeFilters}
               onSelectType={(slug) => toggleFilterValue(typeFilters, slug, setTypeFilters)}
             />
@@ -2209,13 +2273,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           count: selectedAssetIds.length,
         })}
         actions={[
-          {
+          ...(canUpdate ? [{
             id: 'status',
             label: t('assetDashboardClient.bulk.actionBar.setStatus', { defaultValue: 'Set status' }),
             icon: <CircleDot className="h-4 w-4" />,
             onClick: () => setIsBulkStatusOpen(true),
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'location',
             label: t('assetDashboardClient.bulk.actionBar.setLocation', { defaultValue: 'Set location' }),
             icon: <MapPin className="h-4 w-4" />,
@@ -2223,21 +2287,21 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               setBulkLocationMode(canBulkAssignSavedLocation ? 'saved' : 'custom');
               setIsBulkLocationOpen(true);
             },
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'assign',
             label: t('assetDashboardClient.bulk.actionBar.assignContact', { defaultValue: 'Assign to contact' }),
             icon: <UserPlus className="h-4 w-4" />,
             disabled: !singleClientSelectionId,
             onClick: () => setIsBulkAssignOpen(true),
-          },
-          {
+          }] : []),
+          ...(canUpdate ? [{
             id: 'group',
             label: t('assetDashboardClient.bulk.actionBar.addToGroup', { defaultValue: 'Add to group' }),
             icon: <Boxes className="h-4 w-4" />,
             disabled: !singleClientSelectionId,
             onClick: () => setIsBulkGroupOpen(true),
-          },
+          }] : []),
           {
             id: 'print-labels',
             label: t('assetDashboardClient.bulk.actionBar.printLabels', { defaultValue: 'Print labels' }),
@@ -2251,13 +2315,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               : undefined,
             onClick: () => setIsPrintLabelsOpen(true),
           },
-          {
+          ...(canDelete ? [{
             id: 'delete',
             label: t('assetDashboardClient.bulk.actionBar.delete', { defaultValue: 'Delete' }),
             icon: <Trash2 className="h-4 w-4" />,
             onClick: () => setIsBulkDeleteOpen(true),
             destructive: true,
-          },
+          }] : []),
         ]}
         onClear={() => setSelectedAssetIds([])}
         clearLabel={t('assetDashboardClient.bulk.actionBar.clear', { defaultValue: 'Clear' })}

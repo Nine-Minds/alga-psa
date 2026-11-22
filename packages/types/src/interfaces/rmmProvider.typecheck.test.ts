@@ -33,4 +33,12 @@ describe('RmmProvider', () => {
     const asset: Partial<Asset> = { rmm_provider: provider };
     expect(asset.rmm_provider).toBe('huntress');
   });
+
+  it('accepts unifi', () => {
+    const provider: RmmProvider = 'unifi';
+    expect(provider).toBe('unifi');
+
+    const asset: Partial<Asset> = { rmm_provider: provider };
+    expect(asset.rmm_provider).toBe('unifi');
+  });
 });
