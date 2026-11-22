@@ -6,6 +6,7 @@ export * from './errorHandling';
 export * from './staleActionState';
 export * from './cookies';
 export * from './clipboard';
+export * from './plainLeftClick';
 export * from './i18n/client';
 export * from './i18n/config';
 export * from './i18n/interpolateFallback';

@@ -12,18 +12,40 @@ vi.mock('@alga-psa/storage/StorageService', () => {
   };
 });
 
-vi.mock('../lib/documentPermissions', () => ({
+vi.mock('@alga-psa/documents/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/documents/lib/documentPermissions')>()),
+  // Target policy is exercised by documentAssociationCrossClient.integration.test.ts.
+  areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
+
+vi.mock('@shared/lib/documentProductReadScope', () => ({
   applyDocumentProductReadScope: vi.fn(),
+}));
+vi.mock('../lib/documentPermissions', () => ({
   canReadDocument: vi.fn(async () => true),
   canReadTicketDocuments: vi.fn(async () => true),
   canUploadDocument: vi.fn(async () => true),
 }));
-
-vi.mock('@shared/lib/documentAuthorization', () => ({
-  authorizeAndRedactDocuments: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
+vi.mock('../../../../packages/documents/src/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../packages/documents/src/lib/documentPermissions')>()),
+  areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
 }));
 
-vi.mock('../lib/meetingDocumentAdmission', () => ({
+vi.mock('@shared/lib/documentAuthorization', () => ({
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
+  authorizeAndRedactDocumentsForAction: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => documents,
+}));
+
+// The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
+const isDocumentAssociationCreateAllowedMock = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  isDocumentAssociationCreateAllowed: isDocumentAssociationCreateAllowedMock,
+}));
+
+vi.mock('@shared/lib/meetingDocumentAdmission', () => ({
   admitMeetingDocumentsForBrowser: async (_trx: unknown, _tenant: string, _user: unknown, documents: unknown[]) => ({ documents }),
 }));
 
@@ -93,8 +115,8 @@ vi.mock('uuid', () => ({
   v4: vi.fn(),
 }));
 
-vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: vi.fn(),
+vi.mock('@alga-psa/documents/lib/documentPreviewJob', () => ({
+  scheduleDocumentPreviews: vi.fn(async () => true),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -113,7 +135,7 @@ import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { v4 as uuidv4 } from 'uuid';
-import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { scheduleDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewJob';
 import * as documentActions from '@alga-psa/documents/actions/documentActions';
 
 const cast = vi.mocked;
@@ -128,7 +150,7 @@ describe('uploadDocument', () => {
   const hasPermissionMock = cast(hasPermission);
   const documentAssociationCreateMock = cast(DocumentAssociation.create);
   const uuidMock = cast(uuidv4);
-  const generateDocumentPreviewsMock = cast(generateDocumentPreviews);
+  const scheduleDocumentPreviewsMock = cast(scheduleDocumentPreviews);
 
   let knexStub: ReturnType<typeof createKnexStub>;
 
@@ -140,17 +162,13 @@ describe('uploadDocument', () => {
     withTransactionMock.mockImplementation(async (_knex: Knex, callback) => callback(knexStub.trx));
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-123' });
     hasPermissionMock.mockResolvedValue(true);
+    isDocumentAssociationCreateAllowedMock.mockResolvedValue(true);
     documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' } as any);
     validateFileUploadMock.mockResolvedValue(undefined);
     uploadFileMock.mockResolvedValue({
       file_id: 'file-123',
       storage_path: '/docs/file-123',
     } as any);
-    generateDocumentPreviewsMock.mockResolvedValue({
-      thumbnail_file_id: 'thumb-123',
-      preview_file_id: 'preview-456',
-      preview_generated_at: new Date('2024-01-01T00:00:00.000Z'),
-    });
     getDocumentTypeIdSpy.mockResolvedValue({
       typeId: 'type-xyz',
       isShared: false,
@@ -200,21 +218,28 @@ describe('uploadDocument', () => {
       }),
     );
 
-    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: insertedDocument.document_id }),
-      expect.any(Buffer),
-    );
+    // Previews are scheduled (not generated) after commit; the request never writes preview columns.
+    expect(scheduleDocumentPreviewsMock).toHaveBeenCalledWith('tenant-123', insertedDocument.document_id, 'user-1');
+    expect(knexStub.updateArgs).toEqual([]);
+  });
 
-    await flushMicrotasks();
+  it('asks the create gate about the ticket it associates with, and writes nothing when it is refused', async () => {
+    isDocumentAssociationCreateAllowedMock.mockResolvedValue(false);
+    const formData = new FormData();
+    formData.set('file', new File([Buffer.from('hello world')], 'example.png', { type: 'image/png' }));
 
-    expect(knexStub.whereArgs).toEqual([{ document_id: insertedDocument.document_id, tenant: 'tenant-123' }]);
-    expect(knexStub.updateArgs).toEqual([
+    const result = await documentActions.uploadDocument(formData, { userId: 'user-1', ticketId: 'ticket-out-of-scope' });
+
+    expect(isDocumentAssociationCreateAllowedMock).toHaveBeenCalledWith(
+      knexStub.trx,
       expect.objectContaining({
-        thumbnail_file_id: 'thumb-123',
-        preview_file_id: 'preview-456',
-        preview_generated_at: new Date('2024-01-01T00:00:00.000Z'),
+        tenant: 'tenant-123',
+        targets: [{ entityType: 'ticket', entityId: 'ticket-out-of-scope' }],
       }),
-    ]);
+    );
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Cannot associate documents') });
+    expect(knexStub.inserts).toHaveLength(0);
+    expect(documentAssociationCreateMock).not.toHaveBeenCalled();
   });
 
   it('keeps the existing thumbnail reference when updateDocument receives a client supplied reference', async () => {
@@ -222,6 +247,7 @@ describe('uploadDocument', () => {
       tenant: 'tenant-123',
       document_id: 'doc-existing',
       document_name: 'Before',
+      content: null,
       thumbnail_file_id: 'trusted-thumbnail',
       created_by: 'user-1',
       is_client_visible: false,
@@ -345,7 +371,7 @@ describe('uploadDocument', () => {
       userId: 'user-1',
     })).rejects.toThrow('invalid file');
     expect(uploadFileMock).not.toHaveBeenCalled();
-    expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
+    expect(scheduleDocumentPreviewsMock).not.toHaveBeenCalled();
   });
 });
 
@@ -443,9 +469,10 @@ function createKnexStub() {
     };
 
     const builder: any = {
-      insert: vi.fn(async (records: any | any[]) => {
+      insert: vi.fn((records: any | any[]) => {
         const rows = Array.isArray(records) ? records : [records];
         folderRows.push(...rows);
+        return { onConflict: () => ({ ignore: async () => undefined }) };
       }),
       where: vi.fn((column: any, value?: any) => {
         if (typeof column === 'object' && column !== null) {

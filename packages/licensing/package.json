@@ -2,6 +2,7 @@
   "name": "@alga-psa/licensing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -16,6 +17,11 @@
       "import": "./src/lifecycle.ts",
       "require": "./src/lifecycle.ts"
     },
+    "./entitlement-operational": {
+      "types": "./src/entitlement-operational.ts",
+      "import": "./src/entitlement-operational.ts",
+      "require": "./src/entitlement-operational.ts"
+    },
     "./lifecycle-error": {
       "types": "./src/lifecycle-error.ts",
       "import": "./src/lifecycle-error.ts",
@@ -25,6 +31,16 @@
       "types": "./src/co-managed-write-admission.ts",
       "import": "./src/co-managed-write-admission.ts",
       "require": "./src/co-managed-write-admission.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
+    "./co-managed-seat-write-admission": {
+      "types": "./src/co-managed-seat-write-admission.ts",
+      "import": "./src/co-managed-seat-write-admission.ts",
+      "require": "./src/co-managed-seat-write-admission.ts"
     },
     "./actions": {
       "types": "./src/actions/index.ts",
@@ -42,7 +58,8 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

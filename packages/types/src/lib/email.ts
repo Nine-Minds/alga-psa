@@ -239,7 +239,6 @@ export interface TicketFieldOptions {
   statuses: Array<{ id: string; name: string; is_default?: boolean; board_id?: string; board_name?: string; is_closed?: boolean }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
-  clients: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string; username: string }>;
   locations: Array<{ id: string; name: string; client_id: string }>;
 }

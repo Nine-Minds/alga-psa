@@ -2,7 +2,7 @@
 
 import { randomBytes, createHmac } from "node:crypto";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
-import { authenticateUser } from "@alga-psa/auth/actions/auth";
+import { authenticateUserForAuth } from "@alga-psa/auth/lib/authenticateUserForAuth";
 import {
   MSP_SSO_RESOLUTION_COOKIE,
   MSP_SSO_RESOLUTION_TTL_SECONDS,
@@ -221,7 +221,8 @@ export async function authorizeSsoLinkingAction(
       ? session.user.tenant
       : undefined;
 
-  const authenticatedUser = await authenticateUser(
+  // TOTP verification needs the server-only credentials, never the public action response.
+  const authenticatedUser = await authenticateUserForAuth(
     session.user.email,
     password,
     session.user.user_type,

@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Auswahl aufheben",
       "downloadPdf": "PDF herunterladen",
       "sendEmail": "E-Mail senden",
-      "unfinalize": "Abschließen aufheben"
+      "unfinalize": "Abschließen aufheben",
+      "recordPayment": "Zahlung erfassen",
+      "viewPayments": "Zahlungen"
     },
     "status": {
       "finalized": "Finalisiert"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Grund für die Stornierung...",
       "cancel": "Abbrechen",
       "confirm": "Rechnung stornieren",
-      "voiding": "Wird storniert…"
+      "voiding": "Wird storniert…",
+      "algaOnly": "Nur in AlgaPSA stornieren (Verknüpfung mit {{provider}} aufheben)",
+      "algaOnlyWarning": "Das Dokument in {{provider}} bleibt unverändert und diese Rechnung wird davon entkoppelt, sodass AlgaPSA und {{provider}} dabei voneinander abweichen."
     },
     "history": {
       "title": "Verlauf",
@@ -907,6 +911,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "keine"
+    },
+    "syncFeedback": {
+      "synced": "Rechnung mit {{provider}} synchronisiert.",
+      "failed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}}",
+      "failedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Prüfen Sie die Liste der fehlgeschlagenen Vorgänge auf der Seite der Buchhaltungsintegration.",
+      "skipped": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet: {{reason}}",
+      "skippedNoReason": "Die Rechnung wurde übersprungen und nicht an {{provider}} gesendet.",
+      "pending": "Die Rechnung steht zur Synchronisierung mit {{provider}} an; sie wurde noch nicht verarbeitet.",
+      "unknown": "Es konnte nicht ermittelt werden, ob die Rechnung mit {{provider}} synchronisiert wurde.",
+      "notRun": "{{provider}}-Synchronisierung wurde nicht ausgeführt: {{reason}}",
+      "notRunNoReason": "{{provider}}-Synchronisierung wurde nicht ausgeführt.",
+      "error": "Synchronisierung fehlgeschlagen: {{error}}",
+      "refusedNotFound": "Rechnung nicht gefunden.",
+      "refusedPaid": "Bezahlte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "refusedCancelled": "Stornierte Rechnungen werden nicht mit {{provider}} synchronisiert.",
+      "cycleFailed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}} Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht.",
+      "cycleFailedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht."
     }
   },
   "templateEditor": {
@@ -1146,7 +1167,9 @@
       "send_one": "Senden Sie eine {{count}}-E-Mail",
       "send_other": "Senden Sie {{count}}-E-Mails",
       "sending_one": "{{count}}-Rechnung wird gesendet...",
-      "sending_other": "{{count}}-Rechnungen werden gesendet..."
+      "sending_other": "{{count}}-Rechnungen werden gesendet...",
+      "schedule": "Planen",
+      "scheduling": "Wird geplant..."
     },
     "toasts": {
       "noValidRecipients": "Keine gültigen Empfänger gefunden",
@@ -1154,11 +1177,13 @@
       "sentSuccess_other": "{{count}}-Rechnungen erfolgreich gesendet",
       "sentFailure_one": "{{count}}-Rechnung konnte nicht gesendet werden",
       "sentFailure_other": "{{count}}-Rechnungen konnten nicht gesendet werden",
-      "sentPartial": "{{successCount}} gesendet, {{failureCount}} fehlgeschlagen"
+      "sentPartial": "{{successCount}} gesendet, {{failureCount}} fehlgeschlagen",
+      "scheduled": "Rechnungs-E-Mail geplant"
     },
     "errors": {
       "loadRecipients": "Empfängerinformationen konnten nicht geladen werden",
-      "sendFailed": "E-Mails konnten nicht gesendet werden"
+      "sendFailed": "E-Mails konnten nicht gesendet werden",
+      "scheduleFailed": "Rechnungs-E-Mail konnte nicht geplant werden"
     }
   },
   "generateTab": {
@@ -1768,7 +1793,9 @@
           "actual": "100 %",
           "label": "Vorschau-Zoom",
           "fitWithScale": "Einpassen ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Seite {{page}} von {{total}}",
+        "frameTitle": "Rechnungsvorschau"
       },
       "tabs": {
         "design": "Entwurf",
@@ -1864,6 +1891,10 @@
       "spacer": {
         "label": "Abstandshalter",
         "description": "Leerraum zur Layout-Anpassung."
+      },
+      "page-break": {
+        "label": "Seitenumbruch",
+        "description": "Beginnt den nächsten Block auf einer neuen Seite."
       },
       "container": {
         "label": "Box-Container",
@@ -2187,6 +2218,17 @@
               "label": "Farbe"
             }
           }
+        },
+        "pagination": {
+          "title": "Seitenumbrüche",
+          "fields": {
+            "breakBefore": {
+              "label": "Auf neuer Seite beginnen"
+            },
+            "breakInside": {
+              "label": "Auf einer Seite zusammenhalten"
+            }
+          }
         }
       }
     },
@@ -2300,6 +2342,8 @@
       "signatureLabel": "Unterschrift",
       "attachmentsLabel": "Anhänge",
       "spacerLabel": "Abstandshalter",
+      "pageBreakLabel": "Seitenumbruch",
+      "pageBreakBefore": "Beginnt auf einer neuen Seite",
       "companyLogo": "Firmenlogo",
       "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
       "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
@@ -2782,29 +2826,24 @@
     "editor": {
       "titles": {
         "create": "Neues Layout für {{type}}",
-        "edit": "Layout für {{type}} bearbeiten"
-      },
-      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
-      "errorTitle": "Layout-Editor für {{type}}",
-      "sections": {
-        "details": "Layoutdetails"
+        "edit": "Layout bearbeiten: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Erstellt {{time}}",
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
-        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
+        "notSaved": "Noch nicht gespeichert",
+        "savedAt": "Gespeichert {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
       },
       "actions": {
-        "back": "Zurück zu den Layouts",
+        "back": "Zurück zu {{type}}-Layouts",
+        "labelSettings": "Etiketteneinstellungen",
         "save": "Layout speichern"
-      },
-      "labels": {
-        "created": "Erstellt: {{date}}",
-        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
       },
       "preview": {
         "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
@@ -2839,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
+      "invoiceFinalize": "Berechtigung verweigert: Finalisierungsberechtigung für Rechnungen erforderlich",
       "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
       "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
       "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden",
-      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich"
+      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich",
+      "invoiceSend": "Zugriff verweigert: Berechtigung zum Senden von Rechnungen erforderlich"
     },
     "invoice": {
       "notFound": "Rechnung nicht gefunden",
@@ -2894,6 +2935,36 @@
       "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}.",
       "evaluationFailed": "Datenbindung der Vorlage fehlgeschlagen: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Zugriff verweigert: Zum Erfassen von Rechnungszahlungen ist die Berechtigung für Rechnungszahlungen erforderlich.",
+      "invoiceNotFound": "Rechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "amountPositive": "Geben Sie einen Zahlungsbetrag größer als null ein.",
+      "methodRequired": "Wählen Sie eine Zahlungsart aus.",
+      "invalidDate": "Geben Sie ein gültiges Zahlungsdatum ein.",
+      "noBalanceDue": "Für diese Rechnung ist kein Betrag mehr offen.",
+      "statusNotPayable": "Für eine Rechnung mit dem Status {{status}} kann keine Zahlung erfasst werden.",
+      "overpaymentNotConfirmed": "Diese Zahlung ist höher als der offene Betrag. Bestätigen Sie die Überzahlung, um sie zu erfassen.",
+      "recordFailed": "Die Zahlung konnte nicht erfasst werden. Bitte versuchen Sie es erneut."
+    },
+    "void": {
+      "paymentsRecorded": "Machen Sie die Zahlungen rückgängig, bevor Sie stornieren.",
+      "paymentsRecordedManual": "Stornieren Sie die in AlgaPSA erfassten Zahlungen ({{sources}}), bevor Sie diese Rechnung stornieren.",
+      "paymentsRecordedIntegration": "Für diese Rechnung gibt es Zahlungen aus Ihrem Buchhaltungssystem ({{sources}}). Löschen oder bearbeiten Sie sie dort – die nächste Synchronisierung storniert sie dann hier – oder stornieren Sie sie nur in AlgaPSA.",
+      "paymentsRecordedGateway": "Für diese Rechnung gibt es Zahlungen über einen Zahlungsanbieter ({{sources}}). Erstatten Sie sie dort, bevor Sie stornieren.",
+      "paymentsRecordedMixed": "Machen Sie die Zahlungen zu dieser Rechnung ({{sources}}) rückgängig, bevor Sie sie stornieren.",
+      "creditNoteCreditApplied": "Für diese Gutschrift wurde bereits Guthaben verwendet. Heben Sie die Guthabenverwendung auf, bevor Sie stornieren."
+    },
+    "reversePayment": {
+      "permissionDenied": "Zugriff verweigert: Zum Stornieren von Rechnungszahlungen ist die Berechtigung für Rechnungszahlungen erforderlich.",
+      "reasonRequired": "Zum Stornieren einer Zahlung ist ein Grund erforderlich.",
+      "paymentNotFound": "Zahlung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notReversible": "Diese Zahlung kann nicht storniert werden.",
+      "alreadyReversed": "Diese Zahlung wurde bereits storniert.",
+      "gatewayRefundRequired": "Diese Zahlung wurde über einen Zahlungsanbieter abgewickelt ({{method}}). Erstatten Sie sie stattdessen dort.",
+      "integrationOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie in {{provider}}; die nächste Synchronisierung storniert sie dann hier.",
+      "remoteMutateRequired": "Zugriff verweigert: Zum Stornieren einer synchronisierten Zahlung nur in AlgaPSA ist die Berechtigung für Remote-Änderungen der Buchhaltung erforderlich.",
+      "reverseFailed": "Die Zahlung konnte nicht storniert werden. Bitte versuchen Sie es erneut."
     }
   },
   "periodTotal": {
@@ -2916,6 +2987,74 @@
     "blocked": {
       "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",
       "exporting": "Ein Buchhaltungsexport für diese Rechnung wird vorbereitet. Warten Sie, bis er abgeschlossen ist, bevor Sie die Rechnung ändern."
+    }
+  },
+  "recordPayment": {
+    "title": "Zahlung erfassen",
+    "titleForInvoice": "Zahlung erfassen — {{invoiceNumber}}",
+    "loading": "Rechnungssaldo wird geladen...",
+    "summary": {
+      "balanceDue": "Offener Betrag",
+      "alreadyPaid": "Bereits bezahlt"
+    },
+    "fields": {
+      "amount": "Betrag",
+      "paymentDate": "Zahlungsdatum",
+      "method": "Zahlungsart",
+      "reference": "Referenz",
+      "notes": "Notizen"
+    },
+    "placeholders": {
+      "reference": "Scheck- oder Transaktionsnummer"
+    },
+    "methods": {
+      "manual": "Manuell",
+      "check": "Scheck",
+      "bank_transfer": "Banküberweisung",
+      "cash": "Bargeld",
+      "other": "Sonstiges"
+    },
+    "overpayment": {
+      "warning": "Diese Zahlung liegt {{excess}} über dem offenen Betrag von {{balanceDue}}.",
+      "confirm": "Überzahlung trotzdem erfassen"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "record": "Zahlung erfassen"
+    },
+    "toasts": {
+      "recorded": "Zahlung erfasst"
+    }
+  },
+  "invoicePayments": {
+    "title": "Zahlungen",
+    "titleForInvoice": "Zahlungen — {{invoiceNumber}}",
+    "loading": "Zahlungen werden geladen...",
+    "empty": "Für diese Rechnung wurden keine Zahlungen erfasst.",
+    "sources": {
+      "manual": "In AlgaPSA erfasst",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Zahlungsanbieter"
+    },
+    "fields": {
+      "reason": "Grund"
+    },
+    "actions": {
+      "reverse": "Zahlung stornieren",
+      "confirmReverse": "Zahlung stornieren",
+      "algaOnly": "Nur in AlgaPSA stornieren",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "notes": {
+      "gatewayRefund": "Über einen Zahlungsanbieter abgewickelt ({{method}}): Erstatten Sie die Zahlung stattdessen dort.",
+      "alreadyReversed": "Bereits storniert.",
+      "providerOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie dort; die nächste Synchronisierung storniert sie dann hier.",
+      "algaOnlyWarning": "AlgaPSA und {{provider}} weichen bei dieser Zahlung voneinander ab: Der Datensatz in {{provider}} bleibt unverändert und die Zahlung wird hier entkoppelt."
+    },
+    "toasts": {
+      "reversed": "Zahlung storniert"
     }
   }
 }

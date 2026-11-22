@@ -1,8 +1,9 @@
-import type {
-  ITicketListFilters,
-  ListViewAdapter,
-  ListViewSanitizeResult,
-  ListViewSettings,
+import {
+  TICKET_ASSIGNEE_ME,
+  type ITicketListFilters,
+  type ListViewAdapter,
+  type ListViewSanitizeResult,
+  type ListViewSettings,
 } from '@alga-psa/types';
 import {
   DroppedReferenceCollector,
@@ -186,7 +187,7 @@ export function sanitizeTicketListView(
     categoryIds: collector.keepList('categoryIds', filters.categoryIds, known.categoryIds, CATEGORY_SENTINELS),
     excludeCategoryIds: collector.keepList('excludeCategoryIds', filters.excludeCategoryIds, known.categoryIds, CATEGORY_SENTINELS),
     clientId: collector.keepScalar('clientId', filters.clientId, known.clientIds),
-    assignedToIds: collector.keepList('assignedToIds', filters.assignedToIds, known.userIds),
+    assignedToIds: collector.keepList('assignedToIds', filters.assignedToIds, known.userIds, [TICKET_ASSIGNEE_ME]),
     assignedTeamIds: collector.keepList('assignedTeamIds', filters.assignedTeamIds, known.teamIds),
     tags: collector.keepList('tags', filters.tags, known.tags),
     where: undefined,

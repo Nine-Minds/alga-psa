@@ -139,5 +139,5 @@ async function startServices() {
   }
 }
 
-// Start all services
-startServices();
+// Start all services; hosts and tests can await the complete boot lifecycle.
+export const startup = startServices();

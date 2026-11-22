@@ -10,6 +10,8 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  assetClosedFields: () => [],
+  assetColumnsOpenTo: async () => null,
   resolveAuthorizationSubjectForUser: vi.fn(async () => ({
     tenant: 'tenant-1', userId: 'user-1', userType: 'internal',
   })),

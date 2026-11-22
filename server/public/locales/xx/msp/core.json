@@ -113,7 +113,8 @@
     "signOut": "⟦Şīɠƞ ȯŭŧ⟧",
     "coManaged": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ⟧",
     "coManagedArchive": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ȧřƈħīṽḗ⟧",
-    "coManagedAdministration": "⟦Ȧƈƈḗşş & ȧḓḿīƞīşŧřȧŧīȯƞ⟧"
+    "coManagedAdministration": "⟦Ȧƈƈḗşş & ȧḓḿīƞīşŧřȧŧīȯƞ⟧",
+    "assetsAudits": "⟦Şīŧḗ ȧŭḓīŧş⟧"
   },
   "marketing": {
     "dialogs": {
@@ -593,6 +594,7 @@
       "descriptionPlaceholder": "⟦Īƞƈŀŭḓḗ ẇħȧŧ ẏȯŭ ḗẋƥḗƈŧḗḓ, ẇħȧŧ ħȧƥƥḗƞḗḓ, ȧƞḓ ȧƞẏ ƈŀīḗƞŧ ȯř īƞṽȯīƈḗ īƞṽȯŀṽḗḓ.⟧",
       "replyTo": "⟦Řḗƥŀīḗş ɠȯ ŧȯ {{email}}⟧",
       "success": "⟦Şḗƞŧ ŧȯ Ƞīƞḗ Ḿīƞḓş şŭƥƥȯřŧ. Řḗƥŀīḗş ɠȯ ŧȯ {{email}}.⟧",
+      "successWithTicket": "⟦Şḗƞŧ ŧȯ Ƞīƞḗ Ḿīƞḓş şŭƥƥȯřŧ ȧş ŧīƈķḗŧ {{ticketNumber}}. Řḗƥŀīḗş ɠȯ ŧȯ {{email}}.⟧",
       "submit": "⟦Şḗƞḓ ŧȯ Ƞīƞḗ Ḿīƞḓş⟧",
       "sending": "⟦Şḗƞḓīƞɠ…⟧",
       "cancel": "⟦Ƈȧƞƈḗŀ⟧",

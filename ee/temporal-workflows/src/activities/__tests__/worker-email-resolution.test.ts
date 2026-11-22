@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 import { EmailNotificationService, getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
 import { TenantEmailOutboundAdapter } from '@alga-psa/email';
 
@@ -12,6 +13,14 @@ vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
 }));
 
 describe('worker outbound email resolution', () => {
+  it('resolves provider identity helpers from the shared core package source', () => {
+    const connection = { host: 'smtp.example.test', port: 587, username: 'alerts@example.test' };
+    expect(connectionFingerprint(connection, 'smtp')).toBe(connectionFingerprint({ ...connection }, 'smtp'));
+    expect(connectionFingerprint(connection, 'smtp')).not.toBe(
+      connectionFingerprint({ ...connection, host: 'other.example.test' }, 'smtp'),
+    );
+  });
+
   it('resolves the real notification service and sends through the board-aware adapter', async () => {
     const service = getEmailNotificationService();
     expect(service).toBeInstanceOf(EmailNotificationService);

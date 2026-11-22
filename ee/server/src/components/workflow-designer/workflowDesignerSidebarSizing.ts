@@ -1,44 +1,32 @@
-export const DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = 420;
-export const MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = 360;
-export const MAX_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = 760;
+/**
+ * The workflow designer's inspector width: the shared implementation, bound to this
+ * designer's storage namespace.
+ */
+import {
+  DEFAULT_DESIGNER_SIDEBAR_WIDTH,
+  MAX_DESIGNER_SIDEBAR_WIDTH,
+  MIN_DESIGNER_SIDEBAR_WIDTH,
+  WIDE_DESIGNER_SIDEBAR_WIDTH,
+  clampDesignerSidebarWidth,
+  getDesignerSidebarWidthFromDrag,
+  readStoredDesignerSidebarWidth,
+  storeDesignerSidebarWidth,
+  toggleDesignerSidebarWidth,
+} from '@alga-psa/ui/components/designer';
 
-export const clampWorkflowDesignerSidebarWidth = (width: number): number =>
-  Math.min(
-    MAX_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
-    Math.max(MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH, Math.round(width))
-  );
+const NAMESPACE = 'workflowDesigner';
 
-export const getWorkflowDesignerSidebarWidthFromDrag = (
-  startWidth: number,
-  startClientX: number,
-  currentClientX: number
-): number => {
-  const delta = startClientX - currentClientX;
-  return clampWorkflowDesignerSidebarWidth(startWidth + delta);
-};
+export const DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = DEFAULT_DESIGNER_SIDEBAR_WIDTH;
+export const MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = MIN_DESIGNER_SIDEBAR_WIDTH;
+export const MAX_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = MAX_DESIGNER_SIDEBAR_WIDTH;
+export const WIDE_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = WIDE_DESIGNER_SIDEBAR_WIDTH;
 
-/** A roomy width for long field lists and expressions; double-clicking the resize edge toggles it. */
-export const WIDE_WORKFLOW_DESIGNER_SIDEBAR_WIDTH = 600;
+export const clampWorkflowDesignerSidebarWidth = clampDesignerSidebarWidth;
+export const getWorkflowDesignerSidebarWidthFromDrag = getDesignerSidebarWidthFromDrag;
+export const toggleWorkflowDesignerSidebarWidth = toggleDesignerSidebarWidth;
 
-export const toggleWorkflowDesignerSidebarWidth = (width: number): number =>
-  width >= WIDE_WORKFLOW_DESIGNER_SIDEBAR_WIDTH ? DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH : WIDE_WORKFLOW_DESIGNER_SIDEBAR_WIDTH;
+export const readStoredWorkflowDesignerSidebarWidth = (): number =>
+  readStoredDesignerSidebarWidth(NAMESPACE);
 
-const SIDEBAR_WIDTH_STORAGE_KEY = 'alga.workflowDesigner.sidebarWidth';
-
-/** The width this browser last left the panel at (a per-viewer convenience; storage may be unavailable). */
-export const readStoredWorkflowDesignerSidebarWidth = (): number => {
-  try {
-    const stored = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
-    return Number.isFinite(stored) && stored > 0 ? clampWorkflowDesignerSidebarWidth(stored) : DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH;
-  } catch {
-    return DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH;
-  }
-};
-
-export const storeWorkflowDesignerSidebarWidth = (width: number): void => {
-  try {
-    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clampWorkflowDesignerSidebarWidth(width)));
-  } catch {
-    // Storage unavailable (private window, blocked site data): the width just isn't remembered.
-  }
-};
+export const storeWorkflowDesignerSidebarWidth = (width: number): void =>
+  storeDesignerSidebarWidth(NAMESPACE, width);

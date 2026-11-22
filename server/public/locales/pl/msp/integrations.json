@@ -1231,11 +1231,25 @@
           "viewDetails": "Zobacz szczegóły"
         },
         "details": {
+          "contactsFailed_few": "{{count}} kontakty zakończyły się błędem",
+          "contactsFailed_many": "{{count}} kontaktów zakończyło się błędem",
+          "contactsFailed_one": "{{count}} kontakt zakończył się błędem",
+          "contactsFailed_other": "{{count}} kontaktów zakończyło się błędem",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "i {{count}} więcej",
           "noResults": "Nie zarejestrowano wyników tenantów.",
+          "noticeHeading": "Uwagi",
+          "stages": {
+            "create": "tworzenie",
+            "link": "łączenie",
+            "match": "dopasowanie"
+          },
           "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
+          "summaryFailed": "Kontakty z błędami: {{count}}",
           "summarySkipped": "Pominięte wyniki inicjowania obsługi: {{count}}",
           "tenantHeader": "Organizacja {{tenant}} · {{status}}",
-          "unknownTenant": "nieznany"
+          "unknownTenant": "nieznany",
+          "userUnknown": "nieznany użytkownik"
         },
         "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
         "errors": {
@@ -2263,7 +2277,41 @@
         "outstandingItemsReconnect": "We wszystkich połączonych organizacjach. Te elementy są zachowywane do czasu ponownego połączenia z Xero.",
         "refreshTokenValidUntilProvider": "Autoryzacja {{provider}} ważna do {{date}}. Tokeny są odnawiane automatycznie.",
         "syncSucceeded": "Synchronizacja zakończona",
-        "syncStopped": "Synchronizacja zatrzymana"
+        "syncStopped": "Synchronizacja zatrzymana",
+        "erroredOpsDialogTitle": "Operacje synchronizacji z {{provider}} zakończone błędem",
+        "erroredOpsDialogDescription": "Operacje, które nie powiodły się lub zostały pominięte po wielokrotnych próbach.",
+        "erroredOpsOpen": "Wyświetl operacje z błędami",
+        "erroredOpsColItem": "Pozycja",
+        "erroredOpsColOperation": "Operacja",
+        "erroredOpsColError": "Błąd",
+        "erroredOpsColWhen": "Data",
+        "erroredOpsColBatch": "Partia eksportu",
+        "erroredOpsLoading": "Ładowanie operacji z błędami…",
+        "erroredOpsEmpty": "Brak operacji z błędami.",
+        "erroredOpsLoadError": "Nie udało się załadować operacji z błędami.",
+        "erroredOpsNoError": "Nie zapisano szczegółów błędu.",
+        "erroredOpsBatchLink": "Wyświetl partię {{batch}}",
+        "erroredOpsClose": "Zamknij",
+        "erroredOpsDeleted": {
+          "invoice": "Usunięta faktura",
+          "credit_memo": "Usunięta faktura korygująca",
+          "vendor_bill": "Usunięta faktura od dostawcy",
+          "payment": "Usunięta płatność",
+          "credit_application": "Usunięte zastosowanie środków",
+          "other": "Niedostępna pozycja"
+        },
+        "erroredOpsItem": {
+          "payment": "Płatność do {{invoice}}",
+          "creditApplication": "Środki zastosowane do {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Eksport faktury",
+          "export_credit_memo": "Eksport faktury korygującej",
+          "export_vendor_bill": "Eksport faktury od dostawcy",
+          "apply_credit": "Zastosowanie środków",
+          "record_payment": "Rejestracja płatności",
+          "void_invoice": "Unieważnienie faktury"
+        }
       },
       "itemImport": {
         "description": "Zaimportuj produkty i usługi z QuickBooks do katalogu usług Alga dla połączonej firmy QuickBooks. QuickBooks pozostanie źródłem danych referencyjnych dla nazw, stawek, kodów SKU, opisów i kosztów; metoda rozliczania, jednostka miary i typ usługi są ustawiane tutaj i od tej pory zarządzane przez Alga. Ten krok jest opcjonalny — można go pominąć przyciskiem Dalej.",

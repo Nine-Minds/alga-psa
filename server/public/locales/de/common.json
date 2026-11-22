@@ -56,7 +56,6 @@
     "manageLicense": "Lizenz verwalten",
     "ariaLabel": "Lizenzstatus",
     "dismiss": "Schließen",
-
     "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "subscriptionLapsed": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis {{date}} aktiv. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "paymentFailedEndedEndingNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "updatePaymentMethod": "Zahlungsmethode aktualisieren",
-"licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
     "licenseExpiresIn_many": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
     "trialDaysRemaining_few": "Pro-Testphase aktiv — noch {{count}} Tage.",
     "trialDaysRemaining_many": "Pro-Testphase aktiv — noch {{count}} Tage.",
     "trialExpiresIn_few": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
     "trialExpiresIn_many": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten."
-
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -140,6 +138,7 @@
     "completing": "Abschließen...",
     "more": "Mehr",
     "closeDialog": "Dialog schließen",
+    "insertField": "Feld einfügen",
     "clearSearch": "Suche löschen"
   },
   "upgradePrompt": {
@@ -239,7 +238,8 @@
       "textTooLong": "Tag-Text zu lang (maximal 50 Zeichen)",
       "textInvalidCharacters": "Der Tag-Text enthält ungültige Zeichen",
       "backgroundColorInvalid": "Ungültiges Format der Hintergrundfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FF0000)",
-      "textColorInvalid": "Ungültiges Format der Textfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FFFFFF)"
+      "textColorInvalid": "Ungültiges Format der Textfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FFFFFF)",
+      "creationRestricted": "Sie können nur bereits vorhandene Tags anwenden."
     }
   },
   "time": {
@@ -756,6 +756,7 @@
       "pending": "Ausstehend",
       "error": "Dokument konnte nicht hochgeladen werden",
       "fileError": "Datei konnte nicht hochgeladen werden",
+      "fileTooLarge": "Diese Datei ist {{size}} groß. Das aktuelle Limit beträgt {{limit}} pro Datei.",
       "associatedEntityTypeLabel": "Verknüpfen mit",
       "noAssociation": "Keine Verknüpfung",
       "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus.",
@@ -767,7 +768,16 @@
       "emptyDropMessage": "Es wurden keine Dateien empfangen. Speichern Sie den Anhang oder die E-Mail auf Ihrem Computer und ziehen Sie die gespeicherte Datei hierher oder verwenden Sie „Dateien durchsuchen“.",
       "uploadInProgress": "Ein Upload läuft bereits. Warten Sie, bis er abgeschlossen ist, bevor Sie weitere Dateien hinzufügen.",
       "refreshFailed": "Ihre Dateien wurden hochgeladen, aber die Dokumentliste konnte nicht aktualisiert werden. Laden Sie die Seite neu, um sie zu sehen.",
-      "clearResults": "Ergebnisse löschen"
+      "clearResults": "Ergebnisse löschen",
+      "typeNotAllowed": "Dieser Dateityp ist nicht zulässig. Wählen Sie eine andere Datei.",
+      "permissionDenied": "Sie haben keine Berechtigung, hier Dokumente hochzuladen.",
+      "networkFailed": "Die Verbindung wurde unterbrochen und der Upload konnte nicht fortgesetzt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "sessionGone": "Dieser Upload ist abgelaufen, bevor er abgeschlossen war. Starten Sie ihn erneut.",
+      "cancelled": "Abgebrochen",
+      "cancelUpload": "Upload abbrechen",
+      "tryAgain": "Erneut versuchen",
+      "progress": "{{committed}} von {{total}}",
+      "progressLabel": "Upload-Fortschritt für {{name}}"
     },
     "folders": {
       "root": "Stammordner",
@@ -1449,6 +1459,7 @@
   },
   "pickers": {
     "addNewClient": "Neuen Kunden hinzufügen",
+    "clientsSelectedCount": "{{count}} Kunden",
     "addNewContact": "Neuen Kontakt hinzufügen",
     "loadingUsers": "Benutzer werden geladen...",
     "errorLoadingUsers": "Fehler beim Laden der Benutzer",
@@ -1674,6 +1685,7 @@
       "printing": "Wird vorbereitet…",
       "print": "Drucken",
       "reason": "Grund",
+      "sizeMismatch": "Dieses Layout ist kleiner als das Etikett, für das diese Vorlage ausgelegt ist. Drucken Sie stattdessen in der Originalgröße der Vorlage.",
       "skipFailures": "Diese überspringen und den Rest drucken",
       "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
       "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
@@ -1684,6 +1696,9 @@
       "useTemplate": "{{template}} verwenden",
       "copiesPerAsset": "Exemplare pro Asset",
       "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
+    },
+    "layout": {
+      "template-preferred": "Vorlagengröße verwenden"
     }
   },
   "deleteEntity": {
@@ -1857,6 +1872,9 @@
       },
       "newTag": {
         "placeholder": "Neues Tag"
+      },
+      "existingTag": {
+        "placeholder": "Vorhandener Tag"
       }
     },
     "actions": {
@@ -2286,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "{{count}} weitere Tags: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Fokusmodus",
+      "exit": "Fokusmodus beenden"
+    }
   }
 }

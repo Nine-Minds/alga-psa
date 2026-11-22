@@ -27,23 +27,27 @@
  * describe the row itself.
  */
 import { tagSet } from '@alga-psa/predicates/sql';
-import type { Attribute, ComputedAttribute, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
+import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, PredicateValue, QuerySchema, SqlFragment } from '@alga-psa/predicates';
 import { ticketSlaBreachedSql } from './ticketSlaSql';
 
-type Resolver = (alias: string, value: unknown, nowIso: string, operator: PredicateOperator) => SqlFragment;
+type Resolver = (alias: string, value: PredicateValue | undefined, nowIso: string, operator: PredicateOperator) => SqlFragment;
 
-const scalar = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value);
-const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const scalar = (value: PredicateValue | undefined): PredicateLiteral => {
+  const result = Array.isArray(value) ? value[0] : value;
+  if (result === undefined) throw new Error('Computed ticket predicate requires a scalar value');
+  return result;
+};
+const list = (value: PredicateValue | undefined): PredicateLiteral[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
 
 const COMPUTED_RESOLVERS = (() => {
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
   // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
-  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: unknown): SqlFragment => {
+  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateValue | undefined): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
       : { sql: `(${expression.sql}) IS NOT NULL`, bindings: expression.bindings };
-    if ((operator === 'equals' || operator === 'not_equals') && value === null) {
+    if ((operator === 'equals' || operator === 'not_equals') && scalar(value) === null) {
       const present = compare(expression, type, 'is_not_empty', undefined);
       return operator === 'equals' ? { sql: `NOT (${present.sql})`, bindings: present.bindings } : present;
     }
@@ -52,10 +56,10 @@ const COMPUTED_RESOLVERS = (() => {
       return values.length ? { sql: `COALESCE((${expression.sql}) IN (${values.map(() => '?').join(', ')}), FALSE)`, bindings: [...expression.bindings, ...values] } : { sql: 'FALSE', bindings: [] };
     }
     if (operator === 'equals' || operator === 'not_equals') return {
-      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, value],
+      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, scalar(value)],
     };
     if (operator === 'contains' || operator === 'starts_with' || operator === 'ends_with') {
-      const escaped = String(value).replace(/[\\%_]/g, (character) => `\\${character}`);
+      const escaped = String(scalar(value)).replace(/[\\%_]/g, (character) => `\\${character}`);
       const pattern = operator === 'contains' ? `%${escaped}%` : operator === 'starts_with' ? `${escaped}%` : `%${escaped}`;
       return { sql: `COALESCE((${expression.sql}) LIKE ? ESCAPE '\\', FALSE)`, bindings: [...expression.bindings, pattern] };
     }
@@ -181,6 +185,31 @@ const COMPUTED_RESOLVERS = (() => {
       ],
     };
   },
+
+  /**
+   * `seat_responsibility equals client_it|msp`: who is responsible for a ticket of a client in a live
+   * co-managed seat arrangement (`co_managed_seat_ticket_work`, see seatTicketWork). A ticket with no
+   * work row is the MSP's. A work row written under an earlier arrangement does not count: under the
+   * client's current arrangement the ticket starts with the MSP. A ticket whose client has no live
+   * arrangement has no responsibility, so it matches neither value.
+   */
+  seat_responsibility: (alias, value) => {
+    const live = `EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+        AND __sa.client_id = ?? AND __sa.state = 'active'`;
+    const clientIt = `EXISTS (SELECT 1 FROM co_managed_seat_ticket_work AS __sw WHERE __sw.tenant = ??
+        AND __sw.ticket_id = ?? AND __sw.responsibility = 'client_it'
+        AND EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+          AND __sa.arrangement_id = __sw.arrangement_id AND __sa.client_id = ?? AND __sa.state = 'active'))`;
+    const itBindings = [`${alias}.tenant`, `${alias}.ticket_id`, `${alias}.tenant`, `${alias}.client_id`];
+    switch (scalar(value)) {
+      case 'client_it':
+        return { sql: clientIt, bindings: itBindings };
+      case 'msp':
+        return { sql: `${live}) AND NOT ${clientIt}`, bindings: [`${alias}.tenant`, `${alias}.client_id`, ...itBindings] };
+      default:
+        return { sql: 'FALSE', bindings: [] };
+    }
+  },
   } satisfies Record<string, Resolver>;
 })();
 
@@ -198,6 +227,7 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   category: { type: 'uuid', operators: ['in', 'not_in'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
+  seat_responsibility: { type: 'string', operators: ['equals'] },
 };
 
 export const TICKET_COMPUTED_ATTRIBUTES = Object.keys(COMPUTED_RESOLVERS) as TicketComputedAttributeName[];
@@ -249,6 +279,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       category: computed('category', nowIso),
       sla_state: computed('sla_state', nowIso),
       involves_user: computed('involves_user', nowIso),
+      seat_responsibility: computed('seat_responsibility', nowIso),
     },
     relations: {
       client: {
@@ -257,7 +288,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         local: 'client_id',
         foreign: 'client_id',
         attributes: {
-          id: uuidColumn('client_id', ['equals', 'in']),
+          id: uuidColumn('client_id', ['equals', 'in', 'not_in']),
           tags: tagSet({ taggedType: 'client', local: 'client_id' }),
         },
       },

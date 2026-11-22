@@ -14,6 +14,7 @@
     "communityEditionDescription": "Self-hosted Community Edition has unlimited users with no license restrictions or additional costs."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Unlimited",
     "metaTitle": "Purchase Success",
     "scheduledTitle": "Change Scheduled Successfully!",
     "updatedTitle": "Update Successful!",
@@ -395,9 +396,175 @@
   },
   "errors": {
     "notSignedIn": "Unauthorized. Sign in to manage licensing.",
-    "accountManagementRead": "Permission denied: account_management read required"
+    "accountManagementRead": "Permission denied: account_management read required",
+    "accountManagementUpdate": "Permission denied: account_management update required"
   },
   "coManaged": {
+    "trial": {
+      "title": "15-day co-managed Seat trial",
+      "description": "Invite one client technician to work on the boards you choose. The 15 days start at their first sign-in. Access requires an active base subscription or base trial.",
+      "terms": "A paid seat costs {{amount}} per month. The trial ends without a charge unless you confirm paid capacity.",
+      "status": {
+        "active": "Active",
+        "pending": "Waiting for first sign-in",
+        "base_paused": "Base subscription paused",
+        "expired": "Trial expired",
+        "paid": "Using a paid seat",
+        "ended": "Trial ended",
+        "checkout_pending": "Awaiting payment"
+      },
+      "purchaseAwaitingVerification": "Purchase awaiting verification",
+      "conversionFailed": "The seat conversion did not complete. Review available paid capacity or try checkout again.",
+      "deadline": "Seat trial ends {{date}}.",
+      "baseUntil": "Current base access ends {{date}}.",
+      "openSetup": "Open client Seat setup",
+      "invite": "Invite technician for 15 days",
+      "resend": "Resend invitation",
+      "replace": "Replace technician",
+      "cancelInvitation": "Cancel invitation",
+      "restoreBase": "Restore base access in Account",
+      "resumePurchase": "Resume purchase",
+      "cancelConversion": "Cancel seat conversion",
+      "spareSeatTerms": "Use one available paid seat now. Your recurring pool total stays the same.",
+      "confirmSpareSeat": "Confirm use of one paid seat",
+      "keepSeat": "Keep this seat",
+      "refresh": "Refresh trial",
+      "returnToTrial": "Return to client Seat trial",
+      "notice": {
+        "invitationSaved": "Invitation saved. Retry delivery below.",
+        "deliveryFailed": "Delivery failed. You can retry.",
+        "replacementSent": "Replacement invitation sent.",
+        "replacementSaved": "Replacement saved. Retry delivery."
+      },
+      "error": {
+        "boardChoicesFailed": "Board choices could not be loaded.",
+        "actionFailed": "Could not complete this action. Refresh the trial and try again.",
+        "paymentFailed": "Payment could not be completed. Review the trial status."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "This workspace has no co-managed pool. Add co-managed seats to use this.",
+        "lapsed": "The co-managed pool has lapsed. Restore it before adding seats.",
+        "capacity": "The pool has no seats left. Add seats to the pool or free some from another client.",
+        "clientInactive": "Reactivate this client before enabling co-managed IT.",
+        "clientNotFound": "This client is no longer available.",
+        "hasArrangement": "This client already has co-managed IT. Refresh to see it."
+      },
+      "error": {
+        "operationConflict": "This request was already sent with different details. Refresh and start again.",
+        "invalidSeats": "Enter a whole number of seats, at least 1.",
+        "invalidInvitation": "Choose a contact to invite.",
+        "contactNotFound": "This contact is no longer available. Choose another contact.",
+        "contactWrongClient": "This contact belongs to a different client. Choose one of this client's contacts.",
+        "contactInactive": "This contact is inactive. Reactivate the contact first.",
+        "contactNoEmail": "This contact has no email address. Add one to the contact first.",
+        "contactHasSeat": "This contact already holds a seat or a pending invitation.",
+        "emailInUse": "This email already belongs to a user account. Use a different address.",
+        "emailInvited": "This email already has a pending invitation.",
+        "seatLimit": "Every seat is in use. Add seats, or withdraw an invitation, first.",
+        "poolLimit": "The pool does not have that many seats available.",
+        "allocationConflict": "The seats changed while you were editing. Refresh and try again.",
+        "board": "A selected board is no longer available. Refresh and choose again.",
+        "project": "A selected project is no longer available. Refresh and choose again.",
+        "handoffUser": "The selected person is no longer available. Choose someone else.",
+        "notPending": "This technician already accepted, so the invitation cannot be changed.",
+        "arrangementGone": "This seat arrangement is no longer active. Refresh to see its state.",
+        "generic": "That did not work. Refresh and try again.",
+        "load": "Could not load the choices. Refresh and try again.",
+        "submit": "The request may not have finished. Try again; it will not be applied twice."
+      },
+      "purchase": {
+        "checking": "Checking the pool…",
+        "review": "The pool has too few seats. Review the purchase to allocate {{count}} seats.",
+        "waiting": "Waiting for the purchase to complete. {{count}} seats will be allocated as soon as the pool has them.",
+        "stalled": "The new seats have not appeared yet. Check again shortly; you will not be charged twice.",
+        "failed": "Payment did not go through. Retry the same purchase to allocate {{count}} seats.",
+        "check": "Check again",
+        "cancel": "Cancel",
+        "error": "The pool could not be checked. Refresh and try again; nothing is charged twice."
+      },
+      "saved": "Saved.",
+      "boards": {
+        "title": "Board scope",
+        "hint": "Technicians work tickets of this client on the boards ticked here. With none ticked they see no tickets.",
+        "save": "Save board scope",
+        "none": "There are no boards to choose from.",
+        "canCreate": "Can create tickets"
+      },
+      "projects": {
+        "title": "Shared projects",
+        "hint": "Projects of this client that its technicians can open.",
+        "none": "This client has no projects to share.",
+        "save": "Save shared projects"
+      },
+      "handoff": {
+        "title": "Handoff defaults",
+        "assignee": "Assign tickets handed to you to",
+        "nobody": "Leave unassigned",
+        "save": "Save handoff defaults"
+      },
+      "client": {
+        "seatArrangement": "Seat arrangement",
+        "summary": "Seat arrangement: {{used}} of {{count}} seats used"
+      },
+      "technicians": {
+        "sent": "Invitation sent.",
+        "notSent": "The seat is held, but the email did not send. Resend it.",
+        "name": "Name",
+        "email": "Email",
+        "status": "Status",
+        "active": "Active",
+        "expired": "Invitation expired",
+        "invited": "Invited",
+        "resend": "Resend",
+        "withdraw": "Withdraw",
+        "title": "Technicians",
+        "none": "No technicians yet.",
+        "invite": "Invite technician",
+        "withdrawTitle": "Withdraw invitation",
+        "withdrawMessage": "Withdraw the invitation for {{email}}? The seat goes back to this arrangement.",
+        "withdrawn": "Invitation withdrawn."
+      },
+      "panel": {
+        "title": "Seat arrangement",
+        "usage": "{{used}} of {{count}} seats used",
+        "allocation": "Seats allocated",
+        "changeSeats": "Change seats"
+      },
+      "access": {
+        "title": "Access and handoff"
+      },
+      "setup": {
+        "seats": "Number of seats",
+        "boards": "Boards in scope",
+        "boardsHint": "Technicians see tickets of their company on these boards only.",
+        "technician": "First technician",
+        "technicianHint": "Choose one of this client's contacts. They are invited by email.",
+        "submit": "Enable seats",
+        "title": "Seat arrangement"
+      },
+      "contact": {
+        "label": "Technician",
+        "placeholder": "Choose a contact",
+        "addedNoEmail": "{{name}} was added but has no email address, so they cannot be invited yet.",
+        "addedUnavailable": "{{name}} was added but cannot be invited.",
+        "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
+      },
+      "chooser": {
+        "seat": "Seat",
+        "seatHint": "The client's technicians work in your PSA, limited to their company.",
+        "workspace": "Workspace",
+        "workspaceHint": "The client's IT team gets its own service desk and escalates to you.",
+        "description": "Choose how this client's IT team works with you.",
+        "shape": "Co-managed shape",
+        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated."
+      },
+      "states": {
+        "active": "Active",
+        "ended": "Ended"
+      }
+    },
     "portableExport": {
       "title": "Export workspace",
       "description": "Download an encrypted, portable archive of your workspace records and files.",
@@ -474,6 +641,10 @@
     },
     "loading": "Loading customer seat capacity…",
     "overview": {
+      "shape": "Shape",
+      "state": "State",
+      "seatsUsed": "Seats used",
+      "seatsAllocated": "Seats allocated",
       "actions": "Actions",
       "client": "Client",
       "empty": "No co-managed clients match this search.",
@@ -567,6 +738,8 @@
     "proRequired": "A Pro PSA subscription is required to sponsor customer workspaces.",
     "loadError": "Could not load customer seat capacity. Please try again.",
     "purchaseError": "Could not complete the seat purchase. You can resume it safely.",
+    "termsChanged": "The price changed after you reviewed it. Review the updated terms before confirming.",
+    "offerUnavailable": "New seat purchases are temporarily unavailable. Nothing was charged.",
     "checkoutExpired": "This checkout expired. Start a new purchase to continue.",
     "grace": "Renew your license or resolve the capacity shortfall before {{date}} to keep customer workspaces writable.",
     "readOnly": "The grace period ended on {{date}}. Restore licensed capacity to resume customer workspace changes.",
@@ -574,7 +747,19 @@
     "checkoutUnavailable": "Embedded checkout is unavailable. Retry after the payment setup is repaired.",
     "pendingCapacity_one": "A purchase of {{count}} seat is pending.",
     "pendingCapacity_other": "A purchase of {{count}} seats is pending.",
+    "buySeats": "Buy co-managed seats",
+    "awaitingVerification_one": "Your purchase of {{count}} seat is awaiting payment verification. The seat appears here once the payment is confirmed.",
+    "awaitingVerification_other": "Your purchase of {{count}} seats is awaiting payment verification. The seats appear here once the payment is confirmed.",
+    "refreshStatus": "Refresh status",
+    "purchaseOnly": {
+      "intro": "Buy a pool of co-managed seats here. After purchase, allocate seats to clients from each client record."
+    },
     "previewError": "Could not price this change. Refresh and try again.",
+    "billingCustomerUnlinked": "We could not verify a Stripe billing account for this workspace. Contact support to have it linked.",
+    "proSubscriptionRequired": "Co-managed seats require a current Pro subscription. Check your subscription in Account Management.",
+    "offerPaused": "New seat purchases are paused. Contact your account manager for an update.",
+    "offerMisconfigured": "The co-managed seat offer is not configured correctly. Contact support for help.",
+    "offerTemporarilyUnavailable": "Pricing is temporarily unavailable. Please try again shortly.",
     "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
     "purchaseProviderUnconfigured": "The payment provider is not configured.",
     "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment.",

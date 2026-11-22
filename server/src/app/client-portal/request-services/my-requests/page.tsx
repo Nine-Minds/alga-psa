@@ -57,6 +57,7 @@ export default async function MyServiceRequestsPage() {
             noTicket: t('myRequests.noTicket', 'No ticket'),
             details: t('myRequests.columns.details'),
             view: t('myRequests.view'),
+            viewTicket: t('ticketReference.viewTicket'),
             unknownDate: t('myRequests.unknownDate'),
             statuses: {
               pending: t('myRequests.statuses.pending'),

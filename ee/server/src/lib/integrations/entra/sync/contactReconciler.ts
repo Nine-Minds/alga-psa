@@ -107,10 +107,18 @@ async function detectContactFieldChanges(
   const existingPhones = await tenantDb(trx, tenantId).table('contact_phone_numbers')
     .where({ contact_name_id: contactNameId })
     .orderBy('display_order')
-    .select(['phone_number', 'canonical_type']);
+    .select(['phone_number', 'canonical_type', 'extension']);
 
-  const describe = (rows: Array<{ phone_number?: unknown; canonical_type?: unknown }>): string =>
-    JSON.stringify(rows.map((row) => [String(row.phone_number ?? ''), String(row.canonical_type ?? '')]));
+  const describe = (
+    rows: Array<{ phone_number?: unknown; canonical_type?: unknown; extension?: unknown }>
+  ): string =>
+    JSON.stringify(
+      rows.map((row) => [
+        String(row.phone_number ?? ''),
+        String(row.canonical_type ?? ''),
+        String(row.extension ?? ''),
+      ])
+    );
 
   return describe(existingPhones) !== describe(phoneNumbers);
 }

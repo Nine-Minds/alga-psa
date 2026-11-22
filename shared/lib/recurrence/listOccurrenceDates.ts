@@ -118,3 +118,28 @@ export function listOccurrenceDates(
     .between(new Date(fromMs), new Date(toMs), true)
     .map((occurrence) => utcMsToDateString(occurrence.getTime()));
 }
+
+/** Latest instant rrule iterates to; open-ended searches stop on their count long before it. */
+const RRULE_LAST_DATE = new Date(Date.UTC(9999, 11, 31));
+
+/**
+ * The first `count` nominal rule dates on or after `from` (inclusive), in order. Fewer are returned
+ * only when the rule ends first. Unlike a fixed window this finds the next dates however rare the
+ * rule is, so "the next N occurrences" never depends on guessing a horizon.
+ *
+ * `afterCount` is counted from `startDate`, as in {@link listOccurrenceDates}.
+ */
+export function listNextOccurrenceDates(
+  rule: RecurrenceRule,
+  startDate: string,
+  options: { from: string; count: number }
+): string[] {
+  if (options.count <= 0) return [];
+  const parsed = recurrenceRuleSchema.parse(rule);
+  const fromMs = Math.max(dateStringToUtcMs(options.from), dateStringToUtcMs(startDate));
+
+  const rrule = new RRule(buildRRuleOptions(parsed, startDate) as RRuleOptions);
+  return rrule
+    .between(new Date(fromMs), RRULE_LAST_DATE, true, (_date, acceptedSoFar) => acceptedSoFar < options.count)
+    .map((occurrence) => utcMsToDateString(occurrence.getTime()));
+}

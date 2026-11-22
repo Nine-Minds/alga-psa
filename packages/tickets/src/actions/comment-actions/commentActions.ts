@@ -2,7 +2,8 @@
 // TODO: Comment model method signature changes
 'use server'
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
-import { assertNativeEditKeepsAudience } from '@alga-psa/shared/lib/commentAudience';
+import { attachThreadAudiencesOnSeatTicket } from './commentAudienceRead';
+import { assertNativeEditKeepsAudience, resolveCommentWriteAuthor } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -186,6 +187,10 @@ async function loadThreadVisibility(
   return new Map(rows.map((r) => [r.thread_id, { is_internal: r.is_internal }]));
 }
 
+/** Internal readers are filtered by comment audience in the read itself; client readers keep their projection. */
+const internalReader = <U extends { user_id: string; user_type?: string }>(user: U): U | undefined =>
+  user.user_type === 'internal' ? user : undefined;
+
 async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
   // The kernel's rbacEvaluator is a stub, so ticket:read is checked here for everyone.
   if (!(await hasPermission(user, 'ticket', 'read'))) {
@@ -206,7 +211,10 @@ export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeCommentRead(user, trx, tenant!, ticketId);
-      const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
+      const readComments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReader(user));
+      const comments = user.user_type === 'internal'
+        ? await attachThreadAudiencesOnSeatTicket(trx, tenant!, ticketId, readComments)
+        : readComments;
       const threads = isMspPrincipalUserType(user.user_type)
         ? undefined
         : await loadThreadVisibility(trx, tenant!, comments);
@@ -226,7 +234,7 @@ export const findCommentById = withAuth(async (user, { tenant }, commentId: stri
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const comment = await Comment.get(trx, tenant!, commentId);
+      const comment = await Comment.get(trx, tenant!, commentId, internalReader(user));
       if (!comment?.ticket_id) {
         throw commentReadNotFound();
       }
@@ -373,7 +381,10 @@ export const createComment = withAuth(async (
         };
       }
 
-      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert);
+      // A seat technician reaches this action from the ticket screen: decide the write for their
+      // organization so Private and the legacy internal note are refused (COMMENT_AUDIENCE_INVALID).
+      const audienceAuthor = await resolveCommentWriteAuthor(trx, commentTenant!, user);
+      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert, undefined, audienceAuthor);
       const commentId = insertedComment.comment_id!;
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 

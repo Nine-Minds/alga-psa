@@ -457,6 +457,7 @@
         "contactMissingEmail": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
         "userExistsForContact": "A user account already exists for this contact. Use password reset instead of sending an invitation.",
+        "portalUserAlreadyExists": "This email address already belongs to another user account in this organization.",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",
@@ -653,12 +654,43 @@
     "actions": {
       "openMenu": "Open menu",
       "quickView": "Quick View",
-      "addNewContact": "Add contact"
+      "addNewContact": "Add contact",
+      "selectAll": "Select all contacts",
+      "selectContact": "Select {{name}}",
+      "inviteSelected": "Invite to portal ({{selected}})",
+      "inviteAllEligible": "Invite all eligible"
     },
     "errors": {
       "loadFailed": "Failed to load contacts.",
       "loadingTitle": "Error loading contacts",
       "retryFailed": "Failed to load contacts. Please try again."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Invite contacts to the client portal",
+    "description": "Bulk client portal invitation confirmation with eligibility preview and per-contact results",
+    "loading": "Checking who can be invited...",
+    "inviteCount": "{{total}} contacts will be invited to the client portal.",
+    "skipCount": "{{total}} will be skipped:",
+    "visibilityNote": "Each invitation grants the access the contact already has: {{grouped}} are scoped to a portal visibility group, {{full}} get full access to their client's portal data.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "already has portal access",
+      "missingEmail": "no usable email address",
+      "sharedMailbox": "shared mailbox"
+    },
+    "actions": {
+      "send": "Send {{total}} invitations",
+      "sending": "Sending..."
+    },
+    "results": {
+      "summary": "Sent {{sent}}, skipped {{skipped}}, failed {{failed}}.",
+      "sent": "Sent",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
+    "errors": {
+      "loadFailed": "Could not work out who can be invited. Please try again.",
+      "sendFailed": "Could not send the invitations. Please try again."
     }
   },
   "contactsLayout": {

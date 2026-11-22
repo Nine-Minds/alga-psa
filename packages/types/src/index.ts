@@ -8,6 +8,7 @@
 // Asset interface (consumed by the Temporal worker's ninjaone sync; surfaced
 // here so it can be imported from @alga-psa/types instead of a server @/ alias).
 export type { Asset } from './interfaces/asset.interfaces';
+export { EXTENSION_TABLE_BY_ASSET_TYPE } from './lib/assetExtensions';
 
 // Job status/metadata types (surfaced here so vertical packages don't import
 // @alga-psa/jobs — see interfaces/job.ts).
@@ -33,6 +34,7 @@ export * from './lib/companySync';
 export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/userResponse';
+export * from './lib/authenticatedUser';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';
@@ -257,3 +259,5 @@ export interface IEventPublisher {
     assignedByUserId?: string;
   }): Promise<void>;
 }
+
+export * from './lib/userResponse';

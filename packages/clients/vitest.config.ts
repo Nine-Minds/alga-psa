@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import path from 'node:path';
@@ -6,6 +7,7 @@ export default defineConfig({
   plugins: [tsconfigPaths({ ignoreConfigErrors: true })],
   resolve: {
     alias: [
+      serverOnlyAlias,
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/product-extension-actions$/,

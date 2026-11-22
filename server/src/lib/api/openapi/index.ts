@@ -9,6 +9,8 @@ import { registerBillingRoutes } from './routes/billing';
 import { registerBoardRoutes } from './routes/boards';
 import { registerChatRoutes } from './routes/chat';
 import { registerClientContactRoutes } from './routes/clientsContacts';
+import { registerClientBillingProfileRoutes } from './routes/clientsBillingProfiles';
+import { registerPortalInvitationRoutes } from './routes/portalInvitations';
 import { registerContractLineRoutes } from './routes/contractLines';
 import { registerDocumentRoutes } from './routes/documents';
 import { registerEmailRoutes } from './routes/email';
@@ -63,6 +65,8 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerBillingRoutes(registry);
   registerChatRoutes(registry);
   registerClientContactRoutes(registry);
+  registerClientBillingProfileRoutes(registry);
+  registerPortalInvitationRoutes(registry);
   registerContractLineRoutes(registry);
   registerDocumentRoutes(registry);
   registerEmailRoutes(registry);

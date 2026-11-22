@@ -20,7 +20,7 @@ import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import ProjectModel from '../../models/project';
-import { createProjectReadAuthorizer } from '../projectReadAuthorization';
+import { createProjectActionDecider, type ProjectReadDecision } from '../projectReadAuthorization';
 import { collaborationActive, resolveTaskCommentCollaboration, type TaskCommentCollaboration } from './taskCommentCollaboration';
 
 export type TaskCommentAction = 'read' | 'create' | 'update' | 'delete' | 'react';
@@ -32,6 +32,8 @@ export type TaskCommentBatchTarget = { taskIds: string[] } | { taskCommentIds: s
 export type TaskCommentAccessRow = { taskId: string; projectId: string };
 export type TaskCommentAccessContext = TaskCommentAccessRow & {
   trx: Knex.Transaction;
+  /** A built-in rule resolver governs the caller (a seat technician); read from the project decision, at no cost. */
+  governed: boolean;
   /** user_id is null for collaborator- and contact-authored rows. */
   comment?: { task_comment_id: string; task_id: string; user_id: string | null };
   /** Present only for an active co-managed workspace (see taskCommentCollaboration.ts). */
@@ -79,29 +81,46 @@ async function resolveComments(trx: Knex.Transaction, tenant: string, commentIds
     .select('task_comment_id', 'task_id', 'user_id') as CommentRow[];
 }
 
+/**
+ * The coarse permission. Returns true when the caller lacks it but holds `project_task:update` for an action that
+ * `update` can stand in for (a seat technician holds update, not create or delete): the caller must then be a
+ * subject the kernel governs, which the record-level decision establishes (`requireGovernedStandIn`).
+ */
 async function assertCoarse(
   trx: Knex.Transaction,
   user: IUserWithRoles,
   action: TaskCommentAction,
   permissionAction = COARSE_PERMISSION[action],
-): Promise<void> {
-  if (!(await hasPermission(user, 'project_task', permissionAction, trx))) {
-    throw new Error(`Permission denied: Cannot ${permissionAction} project_task`);
+): Promise<boolean> {
+  if (await hasPermission(user, 'project_task', permissionAction, trx)) return false;
+  if ((permissionAction === 'create' || permissionAction === 'delete') && await hasPermission(user, 'project_task', 'update', trx)) {
+    return true;
   }
+  throw new Error(`Permission denied: Cannot ${permissionAction} project_task`);
+}
+
+function requireGovernedStandIn(standIn: boolean, governed: boolean, action: TaskCommentAction): void {
+  if (standIn && !governed) throw new Error(`Permission denied: Cannot ${COARSE_PERMISSION[action]} project_task`);
 }
 
 /** Per-project record decisions, memoised for the request. */
-function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRoles, recordAction: 'read' | 'update') {
-  const decisions = new Map<string, Promise<boolean>>();
-  let authorizer: ReturnType<typeof createProjectReadAuthorizer> | null = null;
-  return (projectId: string): Promise<boolean> => {
+function projectDecider(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  recordAction: 'read' | 'update',
+  apiKeyId?: string | null
+) {
+  const decisions = new Map<string, Promise<ProjectReadDecision>>();
+  let decider: ReturnType<typeof createProjectActionDecider> | null = null;
+  return (projectId: string): Promise<ProjectReadDecision> => {
     let decision = decisions.get(projectId);
     if (!decision) {
       decision = (async () => {
         const project = await ProjectModel.getById(trx, tenant, projectId);
-        if (!project) return false;
-        authorizer ??= createProjectReadAuthorizer(trx, tenant, user, recordAction);
-        return (await authorizer)(project);
+        if (!project) return { allowed: false, redactedFields: [], governed: false };
+        decider ??= createProjectActionDecider(trx, tenant, user, recordAction, apiKeyId);
+        return (await decider)(project);
       })();
       decisions.set(projectId, decision);
     }
@@ -116,9 +135,10 @@ export async function withTaskCommentAccess<T>(
   target: TaskCommentTarget,
   action: TaskCommentAction,
   work: (ctx: TaskCommentAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    await assertCoarse(trx, user, action);
+    const standIn = await assertCoarse(trx, user, action);
 
     const byComment = 'taskCommentId' in target;
     const notFound = byComment ? NOT_FOUND.comment : NOT_FOUND.task;
@@ -137,9 +157,16 @@ export async function withTaskCommentAccess<T>(
     const [task] = await resolveTasks(trx, tenant, [taskId]);
     if (!task) throw new Error(notFound);
 
-    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read');
-    if (!(await decide(task.project_id))) throw new Error(notFound);
+    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read', apiKeyId);
+    const decision = await decide(task.project_id);
+    if (!decision.allowed) throw new Error(notFound);
+    requireGovernedStandIn(standIn, decision.governed, action);
 
+    // A seat technician (governed) edits and deletes their own comments only, whatever project_task:update would
+    // otherwise let an MSP principal do to someone else's.
+    if (comment && (action === 'update' || action === 'delete') && comment.user_id !== user.user_id && decision.governed) {
+      throw new Error(`You can only ${action === 'update' ? 'edit' : 'delete'} your own comments`);
+    }
     if (comment && (action === 'update' || action === 'delete') && comment.user_id !== user.user_id) {
       // Someone else's comment: only an MSP principal with project-task update authority. Client users
       // are limited to their own comments whatever their RBAC grants. The record-level update decision
@@ -151,7 +178,7 @@ export async function withTaskCommentAccess<T>(
 
     // Co-managed workspaces only: null (and no statement issued) for every other tenant.
     const collaboration = await resolveTaskCommentCollaboration(db, trx, tenant, user, [taskId], writes || action === 'react' ? 'update' : 'read');
-    const result = await work({ trx, taskId, projectId: task.project_id, ...(comment ? { comment } : {}), ...(collaboration ? { collaboration } : {}) });
+    const result = await work({ trx, taskId, projectId: task.project_id, governed: decision.governed, ...(comment ? { comment } : {}), ...(collaboration ? { collaboration } : {}) });
     await collaboration?.assertCurrent();
     return result;
   });
@@ -165,10 +192,12 @@ export async function withTaskCommentBatchReadAccess<T>(
   target: TaskCommentBatchTarget,
   action: 'read',
   work: (ctx: TaskCommentBatchAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await assertCoarse(trx, user, action);
-    const decide = projectDecider(trx, tenant, user, 'read');
+    const decideRead = projectDecider(trx, tenant, user, 'read', apiKeyId);
+    const decide = async (projectId: string): Promise<boolean> => (await decideRead(projectId)).allowed;
 
     let allowed: string[];
     if ('taskIds' in target) {

@@ -308,6 +308,36 @@
       "expiresPrefix": "Expires:",
       "revoke": "Revoke",
       "revoking": "Revoking..."
+    },
+    "seatTechnicians": {
+      "title": "Seat technicians",
+      "description": "People who work in your PSA through a client's co-managed seat. They do not count toward your licensed users.",
+      "clientUnavailable": "Client not available",
+      "effectiveAccess": "Effective access",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "client": "Client",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "active": "Active",
+        "invited": "Invitation pending"
+      },
+      "dialog": {
+        "title": "Effective access for {{name}}",
+        "help": "Choose a ticket to see whether this seat technician can read it, and why.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Select a ticket...",
+        "checking": "Checking access...",
+        "allowed": "{{name}} can read this ticket.",
+        "denied": "{{name}} cannot read this ticket.",
+        "noReasons": "No further detail was reported.",
+        "error": "Could not check access. Try again.",
+        "close": "Close",
+        "unavailable": "Effective access cannot be checked for this ticket in this edition or setup."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Email template variable reference",
       "panelTitle": "Template variables",
+      "mspOnly": "MSP only",
+      "clientSafeHelp": "Sent to clients. MSP-only variables are not available.",
       "inferredContract": "Not currently sent. This contract is inferred from the template.",
       "empty": "No matching variables.",
       "example": "Example:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "General",
           "defaultClient": "Default client for orphaned records",
-          "defaultClientHelp": "Contacts and assets whose organization cannot be resolved are attached to this client."
+          "defaultClientHelp": "Contacts and assets whose organization cannot be resolved are attached to this client.",
+          "clearDefaultClient": "Clear"
         },
         "saved": "Configuration saved. Run preflight to validate it against the staged records.",
         "saving": "Saving…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Preparing preview…",
         "linking": "Linking accounts…",
         "unlinking": "Unlinking accounts…",
-        "bulkLabel": "Bulk SSO actions {{location}}"
+        "bulkLabel": "Bulk SSO actions {{location}}",
+        "disabledSelectUsers": "Select at least one user first."
       },
       "table": {
         "email": "Email",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Missing required user role field: {{field}}.",
       "nameRequired": "Role name is required.",
       "builtInRename": "Built-in roles cannot be renamed.",
-      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal.",
+      "lastMspAdmin": "A tenant must keep at least one active MSP Admin user.",
+      "lastRole": "A user must keep at least one role. Assign another role first, then remove this one."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
@@ -4209,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Sign-in policy",
-    "description": "Control how staff and client portal users may sign in with a password. These rules are enforced on the server.",
+    "description": "Control how staff and client portal users may sign in, with a password or single sign-on. These rules are enforced on the server.",
     "requireSso": {
       "title": "Require single sign-on for MSP staff",
       "body": "Internal users must sign in with Google, Microsoft or your Keycloak provider. Password sign-in and password reset are blocked, except for the break-glass administrators below.",
@@ -4241,10 +4277,21 @@
         "not_found": "The user no longer exists."
       }
     },
+    "clientPortalSso": {
+      "title": "Client portal sign-in options",
+      "body": "Choose which single sign-on providers appear on your client portal sign-in page. Only providers that can sign in for your organization are listed. Password sign-in is not affected.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "No single sign-on providers are configured for your organization. Set one up in the single sign-on settings to offer it on the client portal."
+    },
     "guard": {
       "sso_provider_required": "Configure at least one single sign-on provider before requiring single sign-on.",
       "break_glass_required": "Select at least one break-glass administrator before requiring single sign-on.",
-      "break_glass_invalid_user": "Break-glass users must be active administrators with two-factor authentication enabled."
+      "break_glass_invalid_user": "Break-glass users must be active administrators with two-factor authentication enabled.",
+      "client_portal_sso_provider_invalid": "Choose only supported single sign-on providers."
     },
     "errors": {
       "load": "Unable to load the sign-in policy.",
@@ -4578,7 +4625,6 @@
       "title": "Asset numbering",
       "description": "One tenant-wide sequence is formatted with each client’s prefix. Previewing and printing do not allocate numbers. Abandoned issued numbers leave gaps and are never reused.",
       "clientPrefixes": "Client prefixes",
-      "noPrefix": "No prefix",
       "prefixSaved": "Client prefix saved",
       "uniquenessEnabled": "Asset tag uniqueness is active",
       "legacyAudit": "Legacy tag audit",
@@ -4592,7 +4638,25 @@
       "continuationReview": "Legacy review scanned {{scanned}} stored tags; {{numeric}} have numeric suffixes. The highest suffix is {{maximum}}; review a starting value of {{next}}. This is an advisory only. Enter and save the approved continuation value above; no sequence value is consumed by this review.",
       "continuationExamples": "Examples: {{examples}}",
       "blankTag": "(blank tag)",
-      "normalizedTag": "Normalized: {{tag}}"
+      "normalizedTag": "Normalized: {{tag}}",
+      "loadFailed": "Could not load asset numbering settings",
+      "readOnly": "You can view asset numbering. Changing it requires permission to update system settings.",
+      "columns": {
+        "client": "Client",
+        "prefix": "Prefix"
+      },
+      "addPrefix": "Add prefix",
+      "addPrefixTitle": "Add client prefix",
+      "editPrefixTitle": "Edit client prefix",
+      "prefixHelp": "Up to 10 letters, digits, or hyphens.",
+      "edit": "Edit",
+      "remove": "Remove",
+      "removeTitle": "Remove prefix?",
+      "removeMessage": "Remove the prefix for {{client}}? New asset numbers for this client will have no prefix. Existing tags are not changed.",
+      "prefixRemoved": "Client prefix removed",
+      "noPrefixes": "No client prefixes yet.",
+      "openMenu": "Open menu",
+      "inactive": "Inactive"
     }
   }
 }

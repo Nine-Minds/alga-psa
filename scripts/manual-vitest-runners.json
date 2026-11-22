@@ -1,5 +1,23 @@
 [
   {
+    "runner": "private-imap-ingestion-review",
+    "cwd": "server",
+    "cli": "node_modules/vitest/vitest.mjs",
+    "config": "vitest.config.ts",
+    "filters": [
+      "src/test/manual/imapPrivateTargetPersistedIngestion.integration.test.ts"
+    ],
+    "env": {
+      "RUN_PRIVATE_IMAP_INGESTION_TEST": "1"
+    },
+    "owner": "Email maintainers",
+    "runtime": "Manual persisted-ingestion review with the dedicated GreenMail fixture, Docker bridge relay, local secrets, and isolated PostgreSQL/Redis",
+    "mandatory": false,
+    "reason": "This opt-in harness requires fixed workstation fixture addresses and credentials that CI does not provision. Collection registers its case without running the body or opening sockets. Authorization, issuer binding, destination validation, and listener behavior remain mandatory in their integration and unit suites.",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/4267",
+    "expires": "2027-02-08"
+  },
+  {
     "runner": "legacy-email-review",
     "cwd": "server",
     "cli": "node_modules/vitest/vitest.mjs",

@@ -47,7 +47,17 @@
     "seeLess": "See less",
     "addTask": "Add task",
     "openProject": "Open project",
-    "otherPhase": "Other tasks"
+    "otherPhase": "Other tasks",
+    "tasks": "Tasks",
+    "searchTasks": "Search tasks",
+    "searchTasksAccessibility": "Search tasks by name, description or assignee",
+    "allStatuses": "All statuses",
+    "anyAssignee": "Anyone",
+    "assignedToMe": "Me",
+    "matchCount_one": "{{count}} task matches",
+    "matchCount_other": "{{count}} tasks match",
+    "clearFilters": "Clear",
+    "noMatches": "No tasks match these filters."
   },
   "task": {
     "create": {

@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Permiso denegado: la gestión de claves de API está reservada a los usuarios internos",
+      "notAvailableForAccount": "Las claves de API no están disponibles para esta cuenta.",
       "configInternalOnly": "Permiso denegado: la configuración de claves de API está reservada a los usuarios internos",
       "invalidExpiration": "Elija una fecha de caducidad válida para esta clave de API.",
       "notFound": "Clave de API no encontrada.",

@@ -30,6 +30,7 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   });
   builder.andWhere = vi.fn().mockImplementation(() => builder);
   builder.whereNull = vi.fn().mockImplementation(() => builder);
+  builder.whereRaw = vi.fn().mockImplementation(() => builder);
   builder.whereIn = vi.fn().mockImplementation(() => builder);
   builder.orderBy = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);

@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
@@ -22,6 +23,7 @@ import {
   getContactReportCount,
   getClientPortalVisibilityBoardsByClient,
   getClientPortalVisibilityGroupById,
+  getClientPortalVisibilityGroupAssignmentForContact,
   getClientPortalVisibilityGroupsForContact,
   assignClientPortalVisibilityGroupToContact,
   createClientPortalVisibilityGroupForContact,
@@ -60,6 +62,7 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
   USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
+  PORTAL_USER_ALREADY_EXISTS: 'contactPortalTab.toast.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
   NO_DEFAULT_LOCATION: 'contactPortalTab.toast.errors.noDefaultLocation',
   NO_LOCATION_EMAIL: 'contactPortalTab.toast.errors.noLocationEmail',
@@ -111,7 +114,7 @@ interface UserRole {
 }
 
 export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
-  const { t } = useTranslation('msp/contacts');
+  const { t } = useTranslation(['msp/contacts', 'msp/settings']);
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -201,9 +204,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
 
-      const [groupRows, boardRows] = await Promise.all([
+      const [groupRows, boardRows, assignment] = await Promise.all([
         getClientPortalVisibilityGroupsForContact(contact.contact_name_id),
         getClientPortalVisibilityBoardsByClient(contact.contact_name_id),
+        getClientPortalVisibilityGroupAssignmentForContact(contact.contact_name_id),
       ]);
 
       if (isReturnedActionError(groupRows)) {
@@ -219,7 +223,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         setVisibilityBoards(boardRows || []);
       }
-      setSelectedVisibilityGroupId(contact.portal_visibility_group_id || null);
+      // The `contact` prop never changes after the page renders, so re-reading the
+      // assignment is what keeps the dropdown from snapping back to a stale group.
+      if (isReturnedActionError(assignment)) {
+        showReturnedActionError(assignment);
+      } else {
+        setSelectedVisibilityGroupId(assignment?.group_id ?? null);
+      }
 
       // Load invitation history
       await loadInvitationHistory();
@@ -838,21 +848,44 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   {/* Display current roles */}
                   <div className="space-y-2">
                     {userRoles.length > 0 ? (
-                      userRoles.map((role) => (
-                        <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span className="text-sm">{role.role_name}</span>
+                      userRoles.map((role) => {
+                        // The server refuses to leave a user with no role; don't offer it.
+                        const isOnlyRole = userRoles.length === 1;
+                        const removeButton = (
                           <Button
                             id="remove-permission-button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemoveRole(role.role_id)}
+                            onClick={(e) => {
+                              if (isOnlyRole) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
+                              }
+                              handleRemoveRole(role.role_id);
+                            }}
                             disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
-                            className="text-red-500 hover:text-red-600"
+                            aria-disabled={isOnlyRole || undefined}
+                            className={`text-red-500 hover:text-red-600${isOnlyRole ? ' cursor-not-allowed opacity-50' : ''}`}
                           >
                             {t('common.actions.remove', { defaultValue: 'Remove' })}
                           </Button>
-                        </div>
-                      ))
+                        );
+                        return (
+                          <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-sm">{role.role_name}</span>
+                            {isOnlyRole
+                              ? (
+                                <Tooltip content={t('msp/settings:errors.roles.lastRole', {
+                                  defaultValue: 'A user must keep at least one role. Assign another role first, then remove this one.'
+                                })}>
+                                  {removeButton}
+                                </Tooltip>
+                              )
+                              : removeButton}
+                          </div>
+                        );
+                      })
                     ) : (
                       <p className="text-sm text-muted-foreground">{t('contactPortalTab.roles.none', { defaultValue: 'No roles assigned' })}</p>
                     )}

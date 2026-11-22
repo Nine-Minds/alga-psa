@@ -4,6 +4,12 @@ import type { TemplateAst } from '@alga-psa/types';
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   createTenantKnex: vi.fn(),
+  // BillingEngine -> @alga-psa/inventory/lib -> @alga-psa/assets/actions pulls in
+  // AssetAuditService, which extends BaseService at module scope; the barrel this
+  // test imports evaluates that whole chain even though it never calls into it.
+  BaseService: class {},
+  withTransaction: vi.fn(async (_knex: unknown, work: (trx: unknown) => Promise<unknown>) => work(undefined)),
+  tenantDb: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
@@ -143,10 +149,10 @@ describe('PDFGenerationService print settings', () => {
         format: 'Legal',
         printBackground: true,
         margin: {
-          top: '0mm',
-          right: '0mm',
-          bottom: '0mm',
-          left: '0mm',
+          top: '18mm',
+          right: '18mm',
+          bottom: '18mm',
+          left: '18mm',
         },
       });
     } finally {
@@ -201,10 +207,10 @@ describe('PDFGenerationService print settings', () => {
         format: 'Letter',
         printBackground: true,
         margin: {
-          top: '0mm',
-          right: '0mm',
-          bottom: '0mm',
-          left: '0mm',
+          top: '16mm',
+          right: '16mm',
+          bottom: '16mm',
+          left: '16mm',
         },
       });
     } finally {

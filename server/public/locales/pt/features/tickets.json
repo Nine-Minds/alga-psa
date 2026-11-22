@@ -214,12 +214,15 @@
   "resetFilters": "Reiniciar",
   "filters": {
     "allStatuses": "Todos os status",
+    "allClients": "Todos os clientes",
+    "unknownClient": "Cliente desconhecido",
     "allOpen": "Todos os tickets abertos",
     "allClosed": "Todos os tickets fechados",
     "allPriorities": "Todas as prioridades",
     "search": "Pesquisar tickets e comentários...",
     "button": "Filtros",
     "unassigned": "Não atribuído",
+    "me": "Eu",
     "category": "Filtrar por categoria",
     "removeFilterChip": "Remover filtro: {{label}}",
     "assignee": "Responsável",
@@ -253,6 +256,8 @@
     "clientTags": "Tags do cliente",
     "tagModeAny": "Qualquer um de",
     "tagModeNone": "Nenhum de",
+    "matchMode": "Correspondência",
+    "excludingLabel": "Excluindo {{label}}",
     "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados.",
     "clearFilters": "Limpar filtros",
     "location": "Localização",
@@ -594,6 +599,7 @@
       "requester": "Solicitante",
       "sharedIt": "TI compartilhada",
       "organizationPrivate": "Privado da organização",
+      "private": "Privado",
       "placeholder": "Quem pode ver isto?",
       "required": "Escolha quem pode ver este comentário antes de publicá-lo."
     },
@@ -786,6 +792,13 @@
     "boardTabs": {
       "all": "Todos os tickets"
     },
+    "seatViews": {
+      "clientIt": "TI do cliente",
+      "msp": "Com o MSP",
+      "unassigned": "Não atribuídos",
+      "all": "Todos",
+      "empty": "Nenhum ticket em «{{view}}» no momento."
+    },
     "boardHeader": {
       "open": "Abertos",
       "overdue": "Atrasados",
@@ -814,7 +827,12 @@
     "exportSelectedTooltip_few": "Exportar tickets selecionados {{count}} para CSV",
     "exportSelectedTooltip_many": "Exportar tickets selecionados {{count}} para CSV",
     "selectAllMatching_few": "Selecione todos os tickets {{count}} que correspondem aos seus filtros",
-    "selectAllMatching_many": "Selecione todos os tickets {{count}} que correspondem aos seus filtros"
+    "selectAllMatching_many": "Selecione todos os tickets {{count}} que correspondem aos seus filtros",
+    "responsibility": {
+      "column": "Responsável",
+      "all": "Todas as responsabilidades",
+      "filter": "Responsabilidade"
+    }
   },
   "bulk": {
     "bundleTickets": "Pacote de tickets",
@@ -1083,7 +1101,20 @@
     "moveConfirm_few": "Mover tickets {{count}}",
     "moveConfirm_many": "Mover tickets {{count}}",
     "moveSuccess_few": "Tickets {{count}} movidos",
-    "moveSuccess_many": "Tickets {{count}} movidos"
+    "moveSuccess_many": "Tickets {{count}} movidos",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "O estado atual deste ticket não está carregado. Abra a sua página da lista e tente novamente.",
+      "partialFailure": "Não foi possível passar alguns tickets",
+      "failure": "Falha ao passar os tickets selecionados",
+      "failedItemsHeading": "Não foi possível passar os seguintes tickets:",
+      "success_one": "{{count}} ticket passado",
+      "success_other": "{{count}} tickets passados",
+      "promptToClientIt_one": "A TI do cliente passa a ser responsável por este ticket. A nota é partilhada com os técnicos do cliente. Um ticket que não possa ser passado fica como está.",
+      "promptToClientIt_other": "A TI do cliente passa a ser responsável por cada um destes {{count}} tickets. A nota é partilhada com os técnicos do cliente. Um ticket que não possa ser passado fica como está.",
+      "promptToMsp_one": "O MSP passa a ser responsável por este ticket. A nota é partilhada com o MSP. Um ticket que não possa ser passado fica como está.",
+      "promptToMsp_other": "O MSP passa a ser responsável por cada um destes {{count}} tickets. A nota é partilhada com o MSP. Um ticket que não possa ser passado fica como está."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ticket de adição rápida",
@@ -1271,6 +1302,7 @@
     "keepEditing": "Continue editando",
     "statusRequiresSelection": "Selecione um status para o novo quadro antes de salvar.",
     "notAssigned": "Não atribuído",
+    "clientItGroup": "TI do cliente",
     "additionalAgentsTooltip": "Agentes Adicionais:",
     "loading": "Carregando...",
     "tagsCannotBeManaged": "As tags não podem ser gerenciadas",
@@ -1913,6 +1945,23 @@
     },
     "comment": {
       "audienceRequired": "Escolha quem pode ver este comentário antes de publicá-lo."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Escreva uma nota partilhada para a TI do cliente antes de passar este ticket.",
+      "ticketNotFound": "Este ticket já não está disponível.",
+      "noArrangement": "O cliente deste ticket já não tem um acordo de lugares em cogestão.",
+      "operationConflict": "Esta passagem foi iniciada com outros dados. Tente novamente.",
+      "changed": "Este ticket foi passado ou reatribuído. Atualize o ticket antes de tentar novamente.",
+      "alreadyResponsible": "A TI do cliente já é responsável por este ticket. Atualize o ticket para ver o estado atual.",
+      "actorNotAllowed": "Não pode passar este ticket para a TI do cliente.",
+      "boardOutOfScope": "O quadro deste ticket não está partilhado com a TI do cliente, por isso não pode ser passado.",
+      "technicianNotAvailable": "O técnico selecionado já não está disponível para este cliente. Escolha outro ou deixe o ticket por atribuir.",
+      "unavailable": "A passagem de tickets para a TI do cliente não está disponível.",
+      "invalidHandoffToMsp": "Escreva uma nota partilhada para o MSP antes de passar este ticket.",
+      "alreadyResponsibleMsp": "O MSP já é responsável por este ticket. Atualize o ticket para ver o estado atual.",
+      "actorNotAllowedMsp": "Não pode passar este ticket ao MSP.",
+      "unavailableMsp": "Passar tickets ao MSP não está disponível.",
+      "unexpected": "Não foi possível passar este ticket. Atualize a lista para ver o estado e tente novamente."
     }
   },
   "ticketSection": {
@@ -2100,6 +2149,18 @@
   "integration": {
     "loadTicketFailed": "Falha ao carregar o ticket",
     "noUserSession": "Nenhuma sessão de usuário encontrada"
+  },
+  "seatEffort": {
+    "title": "Esforço",
+    "clientIt": "TI do cliente",
+    "msp": "MSP",
+    "combined": "Combinado",
+    "yours": "Seu tempo",
+    "columns": {
+      "date": "Data",
+      "duration": "Duração",
+      "notes": "Notas"
+    }
   },
   "bento": {
     "hero": {
@@ -2388,7 +2449,9 @@
       "builtInGroup": "Sistemas integrados",
       "customGroup": "Sistemas personalizados",
       "urlPreview": "Abre:",
-      "urlPreviewIncomplete": "Preencha os campos acima para visualizar o link."
+      "urlPreviewIncomplete": "Preencha os campos acima para visualizar o link.",
+      "title": "Título",
+      "titlePlaceholder": "Opcional, p. ex., o nome do artigo"
     },
     "errors": {
       "ticketNotFound": "Ticket não encontrado",
@@ -2456,6 +2519,7 @@
       "addHelp": "Escolha um cliente para adicioná-lo. A caixa de diálogo permanece aberta para você adicionar mais.",
       "alreadyAdded": "Já adicionado",
       "pickerPlaceholder": "Selecione um cliente para adicionar",
+      "unnamedClient": "Cliente",
       "addedHeading": "Adicionados nesta caixa de diálogo",
       "columns": {
         "client": "Cliente",
@@ -2800,7 +2864,8 @@
       "details": "Modelo",
       "ticket": "Ticket",
       "checklist": "Lista de verificação",
-      "customFields": "Campos personalizados"
+      "customFields": "Campos personalizados",
+      "links": "Links de documentação"
     },
     "fields": {
       "name": "Nome do modelo",
@@ -2855,13 +2920,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
       "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
-      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."
+      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro.",
+      "duplicateLink": "Este modelo já tem esse link de documentação."
     },
     "usage": {
       "schedules": "Usado por {{count}} agendamentos",
       "paused": "pausado",
       "tickets": "{{count}} tickets criados a partir deste modelo",
       "scheduleThis": "Agendar este modelo…"
+    },
+    "links": {
+      "help": "Copiados como referências para cada ticket criado a partir deste modelo. Alterações posteriores no modelo não alteram os tickets existentes.",
+      "empty": "Nenhum link de documentação.",
+      "add": "Adicionar link",
+      "remove": "Remover link",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "dialogTitle": "Adicionar link de documentação",
+      "pickFromHudu": "Escolher do Hudu",
+      "huduPickerTitle": "Escolher um artigo do Hudu",
+      "huduSearch": "Pesquisar artigos do Hudu...",
+      "huduLoading": "Carregando artigos do Hudu...",
+      "huduDisconnected": "O Hudu não está conectado. Você ainda pode adicionar um link informando os detalhes dele.",
+      "huduError": "Não foi possível acessar o Hudu. Tente novamente mais tarde.",
+      "huduEmpty": "Nenhum artigo do Hudu encontrado.",
+      "huduSelect": "Selecionar",
+      "huduPrev": "Anterior",
+      "huduNext": "Próximo"
     }
   },
   "enums": {
@@ -3008,6 +3093,24 @@
       "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
       "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
+  },
+  "live": {
+    "updatedOne": "1 chamado atualizado",
+    "updatedMany": "{{count}} chamados atualizados",
+    "newOne": "1 novo chamado",
+    "newMany": "{{count}} novos chamados",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 novo chamado e 1 chamado atualizado",
+        "manyUpdated": "1 novo chamado e {{updatedCount}} chamados atualizados"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} novos chamados e 1 chamado atualizado",
+        "manyUpdated": "{{newCount}} novos chamados e {{updatedCount}} chamados atualizados"
+      }
+    },
+    "updatedBadge": "Atualizado",
+    "boardActivity": "Nova atividade neste quadro"
   },
   "batchDuplicate": {
     "title": "Duplicar #{{number}} para contatos",
@@ -3269,5 +3372,21 @@
   "statusChange": {
     "title": "Atualizar status do ticket",
     "message": "Tem certeza de que deseja alterar o status de \"{{from}}\" para \"{{to}}\"?"
+  },
+  "seatResponsibility": {
+    "clientIt": "TI do cliente",
+    "msp": "MSP",
+    "label": "Responsável",
+    "chipTitle": "Quem é responsável por este ticket",
+    "handToClientIt": "Passar para a TI do cliente",
+    "handedToClientIt": "Passado para a TI do cliente",
+    "handing": "Passando…",
+    "handPrompt": "A TI do cliente passa a ser responsável por este ticket e os seus temporizadores de SLA ficam em pausa até ele voltar. A nota é partilhada com os técnicos do cliente.",
+    "noteLabel": "Nota partilhada para a TI do cliente",
+    "technicianLabel": "Técnico (opcional)",
+    "technicianPlaceholder": "Qualquer técnico deste cliente",
+    "technicianNone": "Deixar o responsável atribuído como está",
+    "handToMsp": "Passar ao MSP",
+    "noteLabelMsp": "Nota partilhada para o MSP"
   }
 }

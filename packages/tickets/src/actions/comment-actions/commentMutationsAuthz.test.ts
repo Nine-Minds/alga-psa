@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createComment, updateComment, deleteComment, cancelScheduledComment, rescheduleScheduledComment } from './commentActions';
+import { summarizeTicketActivityHistory } from '../../lib/ticketChangeCounts';
 import { toggleCommentReaction, getCommentsReactionsBatch } from './commentReactionActions';
 import * as ticketAuthz from '../../lib/ticketRecordAuthorization';
 import { cancelScheduledJob, scheduleJobAt } from '@alga-psa/core';
@@ -14,7 +15,7 @@ import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments
 let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let commentRow: Record<string, unknown> | null;
-let writes: Array<{ table: string; op: string }>;
+let writes: Array<{ table: string; op: string; value?: any }>;
 // Rows returned by multi-row (awaited) queries, keyed by table. Unset => [].
 let listRows: Record<string, any[]> = {};
 
@@ -24,6 +25,7 @@ const withTransactionMock = vi.fn();
 const commentUpdate = vi.fn();
 const commentDelete = vi.fn();
 const commentInsert = vi.fn();
+const activityWrites: any[] = [];
 let commentAuthorType = 'client';
 let parentThreadRow: Record<string, unknown> | null = null;
 let bundleRules: any[] = [];
@@ -35,6 +37,13 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
 vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/shared/lib/ticketActivity', () => ({
+  TICKET_ACTIVITY_ACTOR: { USER: 'USER' },
+  TICKET_ACTIVITY_ENTITY: { COMMENT: 'COMMENT' },
+  TICKET_ACTIVITY_EVENT: { COMMENT_UPDATED: 'TICKET_COMMENT_UPDATED' },
+  TICKET_ACTIVITY_SOURCE: { UI: 'UI' },
+  writeTicketActivity: vi.fn(async (_trx: unknown, entry: any) => { activityWrites.push(entry); }),
+}));
 
 function makeBuilder(table: string) {
   const builder: any = new Proxy(function () {}, {
@@ -44,8 +53,8 @@ function makeBuilder(table: string) {
         return async () => (table === 'tickets' ? ticketRow ?? undefined : table === 'comments' ? commentRow ?? undefined : table === 'comments as parent' ? parentThreadRow ?? undefined : undefined);
       }
       if (prop === 'insert' || prop === 'update' || prop === 'del' || prop === 'delete') {
-        return () => {
-          writes.push({ table, op: prop });
+        return (value?: any) => {
+          writes.push({ table, op: prop, value });
           return Promise.resolve([]);
         };
       }
@@ -132,6 +141,7 @@ const mspOwnComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, us
 describe('comment mutations: client principals need record access to the owning ticket', () => {
   beforeEach(() => {
     writes = [];
+    activityWrites.length = 0;
     listRows = {};
     vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mockClear();
     commentInsert.mockReset().mockResolvedValue('new-comment-id');
@@ -254,10 +264,27 @@ describe('comment mutations: client principals need record access to the owning 
     expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
     expect(commentDelete).toHaveBeenCalledTimes(1);
     expect(writes).toEqual([
-      { table: 'comment_reactions', op: 'delete' },
-      { table: 'email_reply_tokens', op: 'update' },
+      { table: 'comment_reactions', op: 'delete', value: undefined },
+      { table: 'email_reply_tokens', op: 'update', value: { comment_id: null } },
       { table: 'comments', op: 'delete' },
     ]);
+  });
+
+  it('keeps an own comment edit out of external recovery activity', async () => {
+    currentUser = { user_id: 'editor-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    commentRow = { ...ownComment('ticket-1'), user_id: 'editor-1' };
+    ticketRow = ownTicket;
+    commentUpdate.mockResolvedValue({ ...commentRow, note: 'edited by viewer' });
+    await updateComment('c-1', { note: 'edited by viewer' });
+
+    const audit = activityWrites[0];
+    expect(audit).toMatchObject({ actor: { userId: 'editor-1' }, ticketId: 'ticket-1' });
+    const history = summarizeTicketActivityHistory({
+      entries: [{ actorUserId: audit.actor.userId, occurredAt: new Date().toISOString() }],
+      currentUserId: 'editor-1',
+      listSince: 0,
+    });
+    expect(history.listActivityActors).toEqual([]);
   });
 
   it('deleteComment: rejects a client deleting their own comment on a ticket they cannot see', async () => {
@@ -274,8 +301,8 @@ describe('comment mutations: client principals need record access to the owning 
     await deleteComment('c-1');
 
     expect(writes).toEqual([
-      { table: 'comment_reactions', op: 'delete' },
-      { table: 'email_reply_tokens', op: 'update' },
+      { table: 'comment_reactions', op: 'delete', value: undefined },
+      { table: 'email_reply_tokens', op: 'update', value: { comment_id: null } },
       { table: 'comments', op: 'delete' },
     ]);
   });
@@ -603,7 +630,16 @@ describe('scheduled comment management: real ticket authorization plus authorshi
 
     await expect(cancelScheduledComment('scheduled-1')).resolves.toBeUndefined();
 
-    expect(writes).toContainEqual({ table: 'comments', op: 'update' });
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'comments',
+      op: 'update',
+      value: expect.objectContaining({
+        publish_state: 'canceled',
+        schedule_job_id: null,
+        deleted_at: expect.any(Date),
+        updated_at: expect.any(Date),
+      }),
+    }));
     expect(vi.mocked(withdrawCommentAttachments)).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'scheduled-1');
     expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
   });
@@ -616,7 +652,16 @@ describe('scheduled comment management: real ticket authorization plus authorshi
 
     expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
     expect(vi.mocked(scheduleJobAt)).toHaveBeenCalledTimes(1);
-    expect(writes).toContainEqual({ table: 'comments', op: 'update' });
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'comments',
+      op: 'update',
+      value: expect.objectContaining({
+        schedule_job_id: expect.any(String),
+        scheduled_publish_at: '2030-01-02T00:00:00.000Z',
+        scheduled_publish_tz: 'UTC',
+        updated_at: expect.any(Date),
+      }),
+    }));
   });
 
   it.each([

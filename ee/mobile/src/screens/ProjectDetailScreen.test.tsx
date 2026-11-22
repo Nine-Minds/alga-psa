@@ -41,7 +41,7 @@ vi.mock("../ui/ThemeContext", async () => {
   return { useTheme: () => lightTheme };
 });
 vi.mock("../auth/AuthContext", () => ({ useAuth: () => mocks.authValue }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
   useCapabilities: () => ({ features: { projects: true }, loaded: true }),
   useDontNotifyCustomerDefault: () => false,
 }));
@@ -209,6 +209,53 @@ describe("ProjectDetailScreen", () => {
     await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-row-t-3").props.onPress());
 
     expect(mocks.navigate).toHaveBeenCalledWith("ProjectTaskDetail", { taskId: "t-3" });
+  });
+
+  it("T130 search narrows the list to matching tasks, including completed ones", async () => {
+    const renderer = await renderScreen();
+    const input = renderer.root.find(
+      (n) => n.props?.accessibilityLabel === "Search tasks by name, description or assignee" && typeof n.props?.onChangeText === "function",
+    );
+    await act(async () => input.props.onChangeText("plan"));
+    const rows = renderer.root.findAll((n) => typeof n.props?.testID === "string" && n.props.testID.startsWith("project-task-row-"));
+    expect([...new Set(rows.map((n) => n.props.testID))]).toEqual(["project-task-row-t-2"]);
+    expect(renderer.root.findAll((n) => n.props?.testID === "project-phase-ph-1-show-completed")).toHaveLength(0);
+    expect(renderer.root.find((n) => n.props?.testID === "project-task-match-count")).toBeTruthy();
+  });
+
+  it("T131 status chips filter tasks and clear restores the full list", async () => {
+    const renderer = await renderScreen();
+    // findAll returns the composite and host node for each row; keep one per id.
+    const rowIds = () => [
+      ...new Set(
+        renderer.root
+          .findAll((n) => typeof n.props?.testID === "string" && n.props.testID.startsWith("project-task-row-"))
+          .map((n) => n.props.testID.replace("project-task-row-", "") as string),
+      ),
+    ];
+    expect(rowIds()).not.toContain("t-1"); // completed tasks start hidden
+
+    await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-status-m-done").props.onPress());
+    expect(rowIds()).toEqual(["t-1", "t-2"]);
+    const chipSelected = (id: string) =>
+      renderer.root.findAll((n) => n.props?.testID === id && n.props?.accessibilityState !== undefined)[0]?.props
+        .accessibilityState;
+    expect(chipSelected("project-task-status-m-done")).toEqual({ selected: true });
+
+    await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-filters-clear").props.onPress());
+    expect(rowIds()).not.toContain("t-1");
+    expect(rowIds()).toContain("t-3");
+    expect(chipSelected("project-task-status-all")).toEqual({ selected: true });
+  });
+
+  it("T132 shows the no-match state instead of empty phases", async () => {
+    const renderer = await renderScreen();
+    const input = renderer.root.find(
+      (n) => n.props?.accessibilityLabel === "Search tasks by name, description or assignee" && typeof n.props?.onChangeText === "function",
+    );
+    await act(async () => input.props.onChangeText("zzz-nothing"));
+    expect(texts(renderer)).toContain("No tasks match these filters.");
+    expect(renderer.root.findAll((n) => n.props?.testID === "project-phase-ph-1-progress")).toHaveLength(0);
   });
 
   it("T026 shows the no-phases state for a project without phases", async () => {

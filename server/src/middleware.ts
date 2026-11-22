@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
+import { bodySizeGuardResponse } from './middleware/bodySizeGuard';
+import { principalApiSurfaceResponse } from './middleware/principalApiSurface';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
@@ -271,6 +273,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // IMAP maintenance routes authenticate the browser session in-handler and
+  // require ticket_settings:update. Header presence is never API-key auth.
+  '/api/email/imap/resync',
+  '/api/email/imap/reconnect',
   // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
   // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
   // Exact match only, so nothing else under /api/co-management is exempted by this entry.
@@ -304,6 +310,10 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
+    // Resumable document uploads: create, chunk (PUT), offset (HEAD/GET), complete, abort. Each handler
+    // authenticates the session or API key itself and scopes the upload to tenant and uploader.
+    // Exactly these shapes; nothing deeper under /api/documents/uploads is exempted.
+    /^\/api\/documents\/uploads(?:\/[^/]+(?:\/complete)?)?$/.test(pathname) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
@@ -442,6 +452,10 @@ function maybeWarnForwardedHostRewrite(
 }
 
 const _middleware = auth(async (request) => {
+  // Next truncates (silently) a body past proxyClientMaxBodySize; refuse it loudly instead.
+  const tooLarge = bodySizeGuardResponse(request);
+  if (tooLarge) return tooLarge;
+
   const pathname = request.nextUrl.pathname;
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);
@@ -477,6 +491,9 @@ const _middleware = auth(async (request) => {
     }
     return corsPreflightResponse(origin);
   }
+
+  const principalApiRefusal = principalApiSurfaceResponse(request);
+  if (principalApiRefusal) return applyCorsHeaders(principalApiRefusal, origin);
 
   // Dev-only guard: prevent noisy stack traces from stale Server Action IDs after refactors/restarts.
   // If the browser is running an older bundle, it can keep POSTing an action id that no longer exists.

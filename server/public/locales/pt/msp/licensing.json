@@ -14,6 +14,7 @@
     "communityEditionDescription": "A Community Edition auto-hospedada oferece usuários ilimitados, sem restrições de licença ou custos adicionais."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Ilimitadas",
     "metaTitle": "Sucesso de compra",
     "scheduledTitle": "Alteração agendada com sucesso!",
     "updatedTitle": "Atualização bem-sucedida!",
@@ -395,9 +396,175 @@
   },
   "errors": {
     "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
-    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
+    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas",
+    "accountManagementUpdate": "Permissão negada: é necessária permissão de atualização do gerenciamento de contas"
   },
   "coManaged": {
+    "trial": {
+      "title": "Teste de 15 dias de um lugar cogerido",
+      "description": "Convide um técnico do cliente para trabalhar nos quadros que escolher. Os 15 dias começam quando o técnico inicia sessão pela primeira vez. O acesso requer uma subscrição base ou um período de teste do plano base ativo.",
+      "terms": "Um lugar pago custa {{amount}} por mês. O teste termina sem cobrança, a menos que confirme a utilização de capacidade paga.",
+      "status": {
+        "active": "Ativo",
+        "pending": "A aguardar o primeiro início de sessão",
+        "base_paused": "Subscrição base em pausa",
+        "expired": "Teste expirado",
+        "paid": "Lugar pago em utilização",
+        "ended": "Teste terminado",
+        "checkout_pending": "A aguardar pagamento"
+      },
+      "purchaseAwaitingVerification": "Compra a aguardar verificação",
+      "conversionFailed": "A mudança para um lugar pago não foi concluída. Consulte a capacidade paga disponível ou tente efetuar a compra novamente.",
+      "deadline": "O teste do lugar termina em {{date}}.",
+      "baseUntil": "O acesso base atual termina em {{date}}.",
+      "openSetup": "Abrir a configuração do lugar do cliente",
+      "invite": "Convidar técnico por 15 dias",
+      "resend": "Reenviar convite",
+      "replace": "Substituir técnico",
+      "cancelInvitation": "Cancelar convite",
+      "restoreBase": "Restaurar o acesso base em Conta",
+      "resumePurchase": "Retomar compra",
+      "cancelConversion": "Cancelar a mudança para um lugar pago",
+      "spareSeatTerms": "Utilize agora um lugar pago disponível. O total de lugares do grupo mantém-se.",
+      "confirmSpareSeat": "Confirmar a utilização de um lugar pago",
+      "keepSeat": "Manter este lugar",
+      "refresh": "Atualizar o estado do teste",
+      "returnToTrial": "Voltar ao teste do lugar do cliente",
+      "notice": {
+        "invitationSaved": "Convite guardado. Tente enviá-lo novamente abaixo.",
+        "deliveryFailed": "O envio falhou. Pode tentar novamente.",
+        "replacementSent": "Convite enviado ao técnico substituto.",
+        "replacementSaved": "Técnico substituto guardado. Tente enviar novamente o convite."
+      },
+      "error": {
+        "boardChoicesFailed": "Não foi possível carregar os quadros disponíveis.",
+        "actionFailed": "Não foi possível concluir esta ação. Atualize o estado do teste e tente novamente.",
+        "paymentFailed": "Não foi possível concluir o pagamento. Verifique o estado do teste."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Este espaço de trabalho não tem um conjunto cogerido. Adicione lugares cogeridos para usar esta função.",
+        "lapsed": "O conjunto cogerido expirou. Restaure-o antes de adicionar lugares.",
+        "capacity": "O conjunto não tem lugares livres. Adicione lugares ao conjunto ou libere alguns de outro cliente.",
+        "clientInactive": "Reative este cliente antes de ativar a TI cogerida.",
+        "clientNotFound": "Este cliente já não está disponível.",
+        "hasArrangement": "Este cliente já tem TI cogerida. Atualize para vê-la."
+      },
+      "error": {
+        "operationConflict": "Esta solicitação já foi enviada com detalhes diferentes. Atualize e comece novamente.",
+        "invalidSeats": "Informe um número inteiro de lugares, no mínimo 1.",
+        "invalidInvitation": "Escolha um contato para convidar.",
+        "contactNotFound": "Este contato não está mais disponível. Escolha outro contato.",
+        "contactWrongClient": "Este contato pertence a outro cliente. Escolha um contato deste cliente.",
+        "contactInactive": "Este contato está inativo. Reative-o primeiro.",
+        "contactNoEmail": "Este contato não tem e-mail. Adicione um ao contato primeiro.",
+        "contactHasSeat": "Este contato já ocupa uma vaga ou tem um convite pendente.",
+        "emailInUse": "Este e-mail já pertence a uma conta de usuário. Use outro endereço.",
+        "emailInvited": "Este e-mail já tem um convite pendente.",
+        "seatLimit": "Todos os lugares estão em uso. Adicione lugares ou retire um convite primeiro.",
+        "poolLimit": "O conjunto não tem tantos lugares disponíveis.",
+        "allocationConflict": "Os lugares mudaram durante a edição. Atualize e tente novamente.",
+        "board": "Um quadro selecionado já não está disponível. Atualize e escolha novamente.",
+        "project": "Um projeto selecionado já não está disponível. Atualize e escolha novamente.",
+        "handoffUser": "A pessoa selecionada já não está disponível. Escolha outra pessoa.",
+        "notPending": "Este técnico já aceitou, por isso o convite não pode ser alterado.",
+        "arrangementGone": "Este acordo de lugares já não está ativo. Atualize para ver o estado.",
+        "generic": "Não funcionou. Atualize e tente novamente.",
+        "load": "Não foi possível carregar as opções. Atualize e tente novamente.",
+        "submit": "A solicitação pode não ter sido concluída. Tente novamente; ela não será aplicada duas vezes."
+      },
+      "purchase": {
+        "checking": "A verificar o conjunto…",
+        "review": "O conjunto tem poucos lugares. Reveja a compra para atribuir {{count}} lugares.",
+        "waiting": "A aguardar a conclusão da compra. Os {{count}} lugares serão atribuídos assim que o conjunto os tiver.",
+        "stalled": "Os novos lugares ainda não apareceram. Verifique novamente em breve; não será cobrado duas vezes.",
+        "failed": "O pagamento não foi concluído. Tente a mesma compra novamente para atribuir {{count}} lugares.",
+        "check": "Verificar novamente",
+        "cancel": "Cancelar",
+        "error": "Não foi possível verificar o conjunto. Atualize e tente novamente; nada é cobrado duas vezes."
+      },
+      "saved": "Salvo.",
+      "boards": {
+        "title": "Âmbito dos quadros",
+        "hint": "Os técnicos trabalham os tickets deste cliente nos quadros marcados aqui. Sem nenhum marcado, não veem tickets.",
+        "save": "Salvar âmbito dos quadros",
+        "none": "Não há quadros para escolher.",
+        "canCreate": "Pode criar tickets"
+      },
+      "projects": {
+        "title": "Projetos compartilhados",
+        "hint": "Projetos deste cliente que os seus técnicos podem abrir.",
+        "none": "Este cliente não tem projetos para compartilhar.",
+        "save": "Salvar projetos compartilhados"
+      },
+      "handoff": {
+        "title": "Padrões de transferência",
+        "assignee": "Atribuir os tickets transferidos para você a",
+        "nobody": "Deixar sem atribuição",
+        "save": "Salvar padrões de transferência"
+      },
+      "client": {
+        "seatArrangement": "Acordo de lugares",
+        "summary": "Acordo de lugares: {{used}} de {{count}} lugares em uso"
+      },
+      "technicians": {
+        "sent": "Convite enviado.",
+        "notSent": "O lugar está reservado, mas o e-mail não foi enviado. Reenvie-o.",
+        "name": "Nome",
+        "email": "E-mail",
+        "status": "Estado",
+        "active": "Ativo",
+        "expired": "Convite expirado",
+        "invited": "Convidado",
+        "resend": "Reenviar",
+        "withdraw": "Retirar",
+        "title": "Técnicos",
+        "none": "Ainda não há técnicos.",
+        "invite": "Convidar técnico",
+        "withdrawTitle": "Retirar convite",
+        "withdrawMessage": "Retirar o convite de {{email}}? O lugar volta para este acordo.",
+        "withdrawn": "Convite retirado."
+      },
+      "panel": {
+        "title": "Acordo de lugares",
+        "usage": "{{used}} de {{count}} lugares em uso",
+        "allocation": "Lugares atribuídos",
+        "changeSeats": "Alterar lugares"
+      },
+      "access": {
+        "title": "Acesso e transferência"
+      },
+      "setup": {
+        "seats": "Número de lugares",
+        "boards": "Quadros no âmbito",
+        "boardsHint": "Os técnicos veem os tickets da sua empresa apenas nestes quadros.",
+        "technician": "Primeiro técnico",
+        "technicianHint": "Escolha um contato deste cliente. Ele é convidado por e-mail.",
+        "submit": "Ativar lugares",
+        "title": "Acordo de lugares"
+      },
+      "contact": {
+        "label": "Técnico",
+        "placeholder": "Escolha um contato",
+        "addedNoEmail": "{{name}} foi adicionado, mas não tem e-mail, então ainda não pode ser convidado.",
+        "addedUnavailable": "{{name}} foi adicionado, mas não pode ser convidado.",
+        "unavailable": "Não listados por estarem inativos, sem e-mail ou já com vaga ou convite: {{count}}."
+      },
+      "chooser": {
+        "seat": "Lugar",
+        "seatHint": "Os técnicos do cliente trabalham no seu PSA, limitados à sua empresa.",
+        "workspace": "Espaço de trabalho",
+        "workspaceHint": "A equipe de TI do cliente tem o seu próprio service desk e escala para você.",
+        "description": "Escolha como a equipe de TI deste cliente trabalha com você.",
+        "shape": "Modelo cogerido",
+        "pool": "{{available}} de {{purchased}} lugares disponíveis. {{allocated}} atribuídos."
+      },
+      "states": {
+        "active": "Ativo",
+        "ended": "Encerrado"
+      }
+    },
     "portableExport": {
       "title": "Exportar espaço de trabalho",
       "description": "Baixe um arquivo portátil e criptografado com os registros e arquivos do seu espaço de trabalho.",
@@ -474,6 +641,10 @@
     },
     "loading": "Carregando a capacidade de assentos de cliente…",
     "overview": {
+      "shape": "Modelo",
+      "state": "Estado",
+      "seatsUsed": "Lugares em uso",
+      "seatsAllocated": "Lugares atribuídos",
       "actions": "Ações",
       "client": "Cliente",
       "empty": "Nenhum cliente cogerido corresponde a esta pesquisa.",
@@ -567,6 +738,8 @@
     "proRequired": "É necessária uma subscrição PSA Pro para patrocinar espaços de trabalho de clientes.",
     "loadError": "Não foi possível carregar a capacidade de postos de clientes. Tente novamente.",
     "purchaseError": "Não foi possível concluir a compra de postos. Pode retomá-la em segurança.",
+    "termsChanged": "O preço mudou depois de ter revisto a compra. Reveja as condições atualizadas antes de confirmar.",
+    "offerUnavailable": "A compra de novos lugares está temporariamente indisponível. Não foi cobrado nenhum valor.",
     "checkoutExpired": "Este pagamento expirou. Inicie uma nova compra para continuar.",
     "grace": "Renove a sua licença ou resolva a falta de capacidade antes de {{date}} para manter os espaços de trabalho de clientes editáveis.",
     "readOnly": "O período de tolerância terminou em {{date}}. Restabeleça a capacidade licenciada para retomar as alterações nos espaços de trabalho de clientes.",
@@ -574,7 +747,19 @@
     "checkoutUnavailable": "O pagamento incorporado não está disponível. Tente novamente após reparar a configuração de pagamento.",
     "pendingCapacity_one": "Existe uma compra de {{count}} posto pendente.",
     "pendingCapacity_other": "Existe uma compra de {{count}} postos pendente.",
+    "buySeats": "Comprar lugares de cogestão",
+    "awaitingVerification_one": "A sua compra de {{count}} lugar aguarda a verificação do pagamento. O lugar aparecerá aqui quando o pagamento for confirmado.",
+    "awaitingVerification_other": "A sua compra de {{count}} lugares aguarda a verificação do pagamento. Os lugares aparecerão aqui quando o pagamento for confirmado.",
+    "refreshStatus": "Atualizar estado",
+    "purchaseOnly": {
+      "intro": "Compre aqui um conjunto de lugares de cogestão. Após a compra, atribua lugares aos clientes a partir de cada ficha de cliente."
+    },
     "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
+    "billingCustomerUnlinked": "Não foi possível verificar uma conta de faturamento do Stripe para este espaço de trabalho. Entre em contato com o suporte para vinculá-la.",
+    "proSubscriptionRequired": "As vagas cogerenciadas exigem uma assinatura Pro vigente. Verifique sua assinatura em Gerenciamento de contas.",
+    "offerPaused": "A compra de novos lugares está pausada. Contacte o gestor da conta para obter informações.",
+    "offerMisconfigured": "A oferta de lugares co-geridos não está configurada corretamente. Contacte o suporte.",
+    "offerTemporarilyUnavailable": "A consulta de preços está temporariamente indisponível. Tente novamente em breve.",
     "purchaseNeedsAdmin": "Um administrador da conta tem de adicionar capacidade cogerida.",
     "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",
     "purchaseUnavailable": "A compra de cogestão alojada não está disponível nesta implementação.",

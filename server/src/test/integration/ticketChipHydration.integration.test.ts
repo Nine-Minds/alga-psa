@@ -39,9 +39,10 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth')>()),
   withAuth: (action: any) => (...args: any[]) =>
     action(authMocks.user, { tenant: authMocks.tenant }, ...args),
-  hasPermission: (...args: any[]) => authMocks.hasPermission(...args),
+  ...(await import('../../../test-utils/rbacStandIn')).rbacStandIn((...args: any[]) => authMocks.hasPermission(...args)),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => authMocks.hasPermission(...args) }));
+vi.mock('@alga-psa/auth/rbac', async () =>
+  (await import('../../../test-utils/rbacStandIn')).rbacStandIn((...args: any[]) => authMocks.hasPermission(...args)));
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue(null),
   getUserAvatarUrl: vi.fn().mockResolvedValue(null),

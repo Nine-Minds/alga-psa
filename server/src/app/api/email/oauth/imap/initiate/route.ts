@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,8 +13,17 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { knex, tenant } = await createTenantKnex();
+    if (tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
     await assertTenantProductAccess({
       tenantId: user.tenant,
+      userId: user.user_id,
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });
@@ -24,7 +34,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const provider = await db.table('email_providers')
       .where({ id: providerId, provider_type: 'imap' })

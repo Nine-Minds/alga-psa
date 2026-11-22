@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { downloadFileMock, generateDocumentPreviewsMock, canReadCommentAttachmentMock, externalFiles } = vi.hoisted(() => ({
+const { downloadFileMock, generatePreviewsForDocumentMock, canReadCommentAttachmentMock, externalFiles } = vi.hoisted(() => ({
   downloadFileMock: vi.fn(),
-  generateDocumentPreviewsMock: vi.fn(),
+  generatePreviewsForDocumentMock: vi.fn(),
   canReadCommentAttachmentMock: vi.fn(),
   externalFiles: [] as Array<{ tenant: string; file_id: string; is_deleted: boolean; metadata: Record<string, unknown> }>,
 }));
@@ -14,7 +14,7 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
 }));
 
 vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
-  generateDocumentPreviews: (...args: unknown[]) => generateDocumentPreviewsMock(...args),
+  generatePreviewsForDocument: (...args: unknown[]) => generatePreviewsForDocumentMock(...args),
 }));
 
 vi.mock('@shared/lib/ticketCommentAttachments', async () => {
@@ -96,58 +96,40 @@ describe('TicketService.downloadTicketDocumentVariant', () => {
     expect(result).toMatchObject({ fileId: 'thumb-1', mimeType: 'image/jpeg' });
     expect(result.buffer.toString()).toBe('bytes:thumb-1');
     expect(downloadFileMock).toHaveBeenCalledTimes(1);
-    expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
+    expect(generatePreviewsForDocumentMock).not.toHaveBeenCalled();
     expect(updates).toEqual([]);
   });
 
-  it('generates and persists previews on first request for an image uploaded without them', async () => {
+  it('generates previews from storage on first request for an image uploaded without them', async () => {
     const { service, updates } = setup({
       document_id: 'doc-1', file_id: 'file-1', mime_type: 'image/png', created_by: 'user-1',
       thumbnail_file_id: null, preview_file_id: null, preview_generated_at: null,
     });
-    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
-      externalFiles.push(
-        { tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: document.document_id } },
-        { tenant: 'tenant-1', file_id: 'preview-new', is_deleted: false, metadata: { context: 'document_preview', source_document_id: document.document_id } },
-      );
-      return { thumbnail_file_id: 'thumb-new', preview_file_id: 'preview-new', preview_generated_at: new Date() };
+    // The generator reads storage itself and persists the document columns.
+    generatePreviewsForDocumentMock.mockResolvedValue({
+      thumbnail_file_id: 'thumb-new', preview_file_id: 'preview-new', preview_generated_at: new Date(),
     });
 
     const result = await service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'preview', context);
 
-    expect(downloadFileMock).toHaveBeenNthCalledWith(1, 'file-1');
-    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: 'doc-1' }),
-      Buffer.from('bytes:file-1'),
-    );
-    expect(updates).toEqual([
-      expect.objectContaining({ thumbnail_file_id: 'thumb-new', preview_file_id: 'preview-new' }),
-    ]);
-    expect(downloadFileMock).toHaveBeenNthCalledWith(2, 'preview-new');
+    expect(generatePreviewsForDocumentMock).toHaveBeenCalledWith('doc-1');
+    expect(downloadFileMock).not.toHaveBeenCalledWith('file-1'); // the original is never loaded here
+    expect(updates).toEqual([]);
+    expect(downloadFileMock).toHaveBeenCalledWith('preview-new');
     expect(result.fileId).toBe('preview-new');
   });
 
-  it.each([
-    ['wrong tenant', (documentId: string) => ({ tenant: 'tenant-2', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: documentId } })],
-    ['wrong source document', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_thumbnail', source_document_id: 'another-document' } })],
-    ['wrong derivative role', (documentId: string) => ({ tenant: 'tenant-1', file_id: 'thumb-new', is_deleted: false, metadata: { context: 'document_preview', source_document_id: documentId } })],
-  ])('does not persist or serve generated thumbnails with %s provenance', async (_caseName, makeRecord) => {
-    const { service, updates } = setup({
+  it('returns not found when on-demand generation fails', async () => {
+    const { service } = setup({
       document_id: 'doc-1', file_id: 'file-1', mime_type: 'image/png', created_by: 'user-1',
       thumbnail_file_id: null, preview_file_id: null, preview_generated_at: null,
     });
-    generateDocumentPreviewsMock.mockImplementation(async (document: { document_id: string }) => {
-      externalFiles.push(makeRecord(document.document_id));
-      return { thumbnail_file_id: 'thumb-new', preview_file_id: null, preview_generated_at: new Date() };
-    });
+    generatePreviewsForDocumentMock.mockRejectedValue(new Error('sharp missing'));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await expect(service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'thumbnail', context))
       .rejects.toThrow('Document thumbnail not available');
-
-    expect(updates).toEqual([]);
-    expect(downloadFileMock).toHaveBeenCalledTimes(1);
-    expect(downloadFileMock).toHaveBeenCalledWith('file-1');
-    expect(downloadFileMock).not.toHaveBeenCalledWith('thumb-new');
+    expect(downloadFileMock).not.toHaveBeenCalled();
   });
 
   it('returns not found for document types that have no previews', async () => {
@@ -158,7 +140,7 @@ describe('TicketService.downloadTicketDocumentVariant', () => {
 
     await expect(service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'thumbnail', context))
       .rejects.toThrow('Document thumbnail not available');
-    expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
+    expect(generatePreviewsForDocumentMock).not.toHaveBeenCalled();
     expect(downloadFileMock).not.toHaveBeenCalled();
   });
 
@@ -170,7 +152,7 @@ describe('TicketService.downloadTicketDocumentVariant', () => {
 
     await expect(service.downloadTicketDocumentVariant(ticketId, 'doc-1', 'thumbnail', context))
       .rejects.toThrow('Document thumbnail not available');
-    expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
+    expect(generatePreviewsForDocumentMock).not.toHaveBeenCalled();
   });
 
   it('hides documents the caller may not read', async () => {

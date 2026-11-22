@@ -396,7 +396,9 @@ describe('service request workflow execution providers', () => {
       fixture.clientId,
       result.submissionId
     );
-    expect(clientDetail?.workflow_execution_id).toBe(result.workflowExecutionId);
+    // The client DTO deliberately carries no internal workflow reference.
+    expect(clientDetail).not.toBeNull();
+    expect(clientDetail).not.toHaveProperty('workflow_execution_id');
 
     const adminDetail = await getServiceRequestSubmissionDetailForDefinition(
       db,

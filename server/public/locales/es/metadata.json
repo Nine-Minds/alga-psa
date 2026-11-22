@@ -239,6 +239,9 @@
       "title": "Solicitudes de servicio",
       "detail": {
         "fallbackTitle": "Solicitud de servicio"
+      },
+      "formBuilder": {
+        "title": "Editor de formularios"
       }
     },
     "surveys": {
@@ -374,6 +377,10 @@
       "title": "Activos",
       "custody": {
         "title": "Equipos en custodia"
+      },
+      "audits": {
+        "title": "Auditorías de sitios",
+        "detailTitle": "Auditoría de sitio"
       }
     },
     "chat": {

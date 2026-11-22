@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition auto-hébergée permet un nombre illimité d’utilisateurs, sans restriction de licence ni coût supplémentaire."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Illimité",
     "metaTitle": "Achat réussi",
     "scheduledTitle": "Changement planifié avec succès !",
     "updatedTitle": "Mise à jour réussie !",
@@ -395,9 +396,175 @@
   },
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
-    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
+    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise",
+    "accountManagementUpdate": "Autorisation refusée : autorisation de mise à jour sur la gestion des comptes requise"
   },
   "coManaged": {
+    "trial": {
+      "title": "Essai de 15 jours pour un poste cogéré",
+      "description": "Invitez un technicien du client à travailler sur les tableaux de votre choix. Les 15 jours commencent à sa première connexion. Un abonnement de base ou un essai de l’offre de base doit être actif pour permettre l’accès.",
+      "terms": "Un poste payant coûte {{amount}} par mois. L’essai se termine sans frais, sauf si vous confirmez l’utilisation d’un poste payant.",
+      "status": {
+        "active": "Actif",
+        "pending": "En attente de la première connexion",
+        "base_paused": "Abonnement de base suspendu",
+        "expired": "Essai expiré",
+        "paid": "Poste payant en cours d’utilisation",
+        "ended": "Essai terminé",
+        "checkout_pending": "En attente de paiement"
+      },
+      "purchaseAwaitingVerification": "Achat en attente de vérification",
+      "conversionFailed": "Le passage à un poste payant n’a pas abouti. Vérifiez les postes payants disponibles ou réessayez le paiement.",
+      "deadline": "L’essai du poste se termine le {{date}}.",
+      "baseUntil": "L’accès de base actuel se termine le {{date}}.",
+      "openSetup": "Ouvrir la configuration du poste client",
+      "invite": "Inviter le technicien pour 15 jours",
+      "resend": "Renvoyer l’invitation",
+      "replace": "Remplacer le technicien",
+      "cancelInvitation": "Annuler l’invitation",
+      "restoreBase": "Rétablir l’accès de base dans Compte",
+      "resumePurchase": "Reprendre l’achat",
+      "cancelConversion": "Annuler le passage à un poste payant",
+      "spareSeatTerms": "Utilisez maintenant un poste payant disponible. Le nombre total de postes dans le groupe reste le même.",
+      "confirmSpareSeat": "Confirmer l’utilisation d’un poste payant",
+      "keepSeat": "Conserver ce poste",
+      "refresh": "Actualiser l’essai",
+      "returnToTrial": "Revenir à l’essai du poste client",
+      "notice": {
+        "invitationSaved": "Invitation enregistrée. Réessayez l’envoi ci-dessous.",
+        "deliveryFailed": "L’envoi a échoué. Vous pouvez réessayer.",
+        "replacementSent": "Invitation envoyée au technicien remplaçant.",
+        "replacementSaved": "Technicien remplaçant enregistré. Réessayez d’envoyer l’invitation."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossible de charger les tableaux disponibles.",
+        "actionFailed": "Impossible de terminer cette action. Actualisez l’essai et réessayez.",
+        "paymentFailed": "Le paiement n’a pas abouti. Vérifiez l’état de l’essai."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Cet espace de travail n’a pas de pool cogéré. Ajoutez des postes cogérés pour l’utiliser.",
+        "lapsed": "Le pool cogéré a expiré. Rétablissez-le avant d’ajouter des postes.",
+        "capacity": "Le pool n’a plus de postes disponibles. Ajoutez des postes au pool ou libérez-en chez un autre client.",
+        "clientInactive": "Réactivez ce client avant d’activer l’informatique cogérée.",
+        "clientNotFound": "Ce client n’est plus disponible.",
+        "hasArrangement": "Ce client dispose déjà de l’informatique cogérée. Actualisez pour la voir."
+      },
+      "error": {
+        "operationConflict": "Cette demande a déjà été envoyée avec des informations différentes. Actualisez et recommencez.",
+        "invalidSeats": "Saisissez un nombre entier de postes, au moins 1.",
+        "invalidInvitation": "Choisissez un contact à inviter.",
+        "contactNotFound": "Ce contact n'est plus disponible. Choisissez un autre contact.",
+        "contactWrongClient": "Ce contact appartient à un autre client. Choisissez un contact de ce client.",
+        "contactInactive": "Ce contact est inactif. Réactivez-le d'abord.",
+        "contactNoEmail": "Ce contact n'a pas d'adresse e-mail. Ajoutez-en une au contact d'abord.",
+        "contactHasSeat": "Ce contact occupe déjà un poste ou a une invitation en attente.",
+        "emailInUse": "Cette adresse e-mail appartient déjà à un compte utilisateur. Utilisez une autre adresse.",
+        "emailInvited": "Cette adresse e-mail a déjà une invitation en attente.",
+        "seatLimit": "Tous les postes sont utilisés. Ajoutez des postes ou retirez d’abord une invitation.",
+        "poolLimit": "Le pool ne compte pas autant de postes disponibles.",
+        "allocationConflict": "Les postes ont changé pendant votre modification. Actualisez et réessayez.",
+        "board": "Un tableau sélectionné n’est plus disponible. Actualisez et choisissez à nouveau.",
+        "project": "Un projet sélectionné n’est plus disponible. Actualisez et choisissez à nouveau.",
+        "handoffUser": "La personne sélectionnée n’est plus disponible. Choisissez quelqu’un d’autre.",
+        "notPending": "Ce technicien a déjà accepté ; l’invitation ne peut plus être modifiée.",
+        "arrangementGone": "Cet accord de postes n’est plus actif. Actualisez pour voir son état.",
+        "generic": "Cela n’a pas fonctionné. Actualisez et réessayez.",
+        "load": "Impossible de charger les choix. Actualisez et réessayez.",
+        "submit": "La demande n’a peut-être pas abouti. Réessayez ; elle ne sera pas appliquée deux fois."
+      },
+      "purchase": {
+        "checking": "Vérification du pool…",
+        "review": "Le pool compte trop peu de places. Examinez l'achat pour attribuer {{count}} places.",
+        "waiting": "En attente de la fin de l'achat. Les {{count}} places seront attribuées dès que le pool les aura.",
+        "stalled": "Les nouvelles places ne sont pas encore apparues. Vérifiez à nouveau sous peu ; vous ne serez pas facturé deux fois.",
+        "failed": "Le paiement n'a pas abouti. Relancez le même achat pour attribuer {{count}} places.",
+        "check": "Vérifier à nouveau",
+        "cancel": "Annuler",
+        "error": "Impossible de vérifier le pool. Actualisez et réessayez ; rien n'est facturé deux fois."
+      },
+      "saved": "Enregistré.",
+      "boards": {
+        "title": "Périmètre des tableaux",
+        "hint": "Les techniciens traitent les tickets de ce client sur les tableaux cochés ici. Si aucun n’est coché, ils ne voient aucun ticket.",
+        "save": "Enregistrer le périmètre des tableaux",
+        "none": "Aucun tableau à choisir.",
+        "canCreate": "Peut créer des tickets"
+      },
+      "projects": {
+        "title": "Projets partagés",
+        "hint": "Projets de ce client que ses techniciens peuvent ouvrir.",
+        "none": "Ce client n’a aucun projet à partager.",
+        "save": "Enregistrer les projets partagés"
+      },
+      "handoff": {
+        "title": "Valeurs par défaut du transfert",
+        "assignee": "Assigner les tickets qui vous sont transférés à",
+        "nobody": "Laisser non assigné",
+        "save": "Enregistrer les valeurs par défaut du transfert"
+      },
+      "client": {
+        "seatArrangement": "Accord de postes",
+        "summary": "Accord de postes : {{used}} sur {{count}} postes utilisés"
+      },
+      "technicians": {
+        "sent": "Invitation envoyée.",
+        "notSent": "Le poste est réservé, mais l’e-mail n’a pas été envoyé. Renvoyez-le.",
+        "name": "Nom",
+        "email": "E-mail",
+        "status": "Statut",
+        "active": "Actif",
+        "expired": "Invitation expirée",
+        "invited": "Invité",
+        "resend": "Renvoyer",
+        "withdraw": "Retirer",
+        "title": "Techniciens",
+        "none": "Aucun technicien pour l’instant.",
+        "invite": "Inviter un technicien",
+        "withdrawTitle": "Retirer l’invitation",
+        "withdrawMessage": "Retirer l’invitation de {{email}} ? Le poste revient à cet accord.",
+        "withdrawn": "Invitation retirée."
+      },
+      "panel": {
+        "title": "Accord de postes",
+        "usage": "{{used}} sur {{count}} postes utilisés",
+        "allocation": "Postes alloués",
+        "changeSeats": "Modifier les postes"
+      },
+      "access": {
+        "title": "Accès et transfert"
+      },
+      "setup": {
+        "seats": "Nombre de postes",
+        "boards": "Tableaux dans le périmètre",
+        "boardsHint": "Les techniciens ne voient les tickets de leur entreprise que sur ces tableaux.",
+        "technician": "Premier technicien",
+        "technicianHint": "Choisissez un contact de ce client. Il est invité par e-mail.",
+        "submit": "Activer les postes",
+        "title": "Accord de postes"
+      },
+      "contact": {
+        "label": "Technicien",
+        "placeholder": "Choisir un contact",
+        "addedNoEmail": "{{name}} a été ajouté mais n'a pas d'adresse e-mail ; il ne peut pas encore être invité.",
+        "addedUnavailable": "{{name}} a été ajouté mais ne peut pas être invité.",
+        "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
+      },
+      "chooser": {
+        "seat": "Poste",
+        "seatHint": "Les techniciens du client travaillent dans votre PSA, limités à leur entreprise.",
+        "workspace": "Espace de travail",
+        "workspaceHint": "L’équipe informatique du client dispose de son propre centre de services et escalade vers vous.",
+        "description": "Choisissez comment l’équipe informatique de ce client travaille avec vous.",
+        "shape": "Modèle cogéré",
+        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués."
+      },
+      "states": {
+        "active": "Actif",
+        "ended": "Terminé"
+      }
+    },
     "portableExport": {
       "title": "Exporter l’espace de travail",
       "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
@@ -474,6 +641,10 @@
     },
     "loading": "Chargement de la capacité en postes client…",
     "overview": {
+      "shape": "Modèle",
+      "state": "État",
+      "seatsUsed": "Postes utilisés",
+      "seatsAllocated": "Postes alloués",
       "actions": "Actions",
       "client": "Client",
       "empty": "Aucun client cogéré ne correspond à cette recherche.",
@@ -567,6 +738,8 @@
     "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
     "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
     "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
+    "termsChanged": "Le prix a changé depuis votre vérification. Vérifiez les nouvelles conditions avant de confirmer.",
+    "offerUnavailable": "L’achat de nouvelles places est temporairement indisponible. Aucun montant n’a été débité.",
     "checkoutExpired": "Ce paiement a expiré. Lancez un nouvel achat pour continuer.",
     "grace": "Renouvelez votre licence ou résolvez le déficit de capacité avant le {{date}} pour que les espaces de travail clients restent modifiables.",
     "readOnly": "La période de grâce s'est terminée le {{date}}. Rétablissez la capacité sous licence pour reprendre les modifications des espaces de travail clients.",
@@ -574,7 +747,19 @@
     "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
     "pendingCapacity_one": "Un achat de {{count}} poste est en attente.",
     "pendingCapacity_other": "Un achat de {{count}} postes est en attente.",
+    "buySeats": "Acheter des places en cogestion",
+    "awaitingVerification_one": "Votre achat de {{count}} place est en attente de vérification du paiement. La place apparaîtra ici une fois le paiement confirmé.",
+    "awaitingVerification_other": "Votre achat de {{count}} places est en attente de vérification du paiement. Les places apparaîtront ici une fois le paiement confirmé.",
+    "refreshStatus": "Actualiser l'état",
+    "purchaseOnly": {
+      "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
+    },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "billingCustomerUnlinked": "Impossible de vérifier un compte de facturation Stripe pour cet espace de travail. Contactez l’assistance pour le faire associer.",
+    "proSubscriptionRequired": "Les sièges cogérés nécessitent un abonnement Pro en cours. Vérifiez votre abonnement dans la gestion du compte.",
+    "offerPaused": "Les nouveaux achats de sièges sont suspendus. Contactez votre gestionnaire de compte pour en savoir plus.",
+    "offerMisconfigured": "L’offre de sièges co-gérés est mal configurée. Contactez le support.",
+    "offerTemporarilyUnavailable": "Le service de tarification est temporairement indisponible. Veuillez réessayer sous peu.",
     "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
     "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
     "purchaseUnavailable": "L'achat de cogestion hébergée n'est pas disponible dans ce déploiement.",

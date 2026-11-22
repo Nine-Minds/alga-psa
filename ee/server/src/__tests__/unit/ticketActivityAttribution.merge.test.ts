@@ -29,7 +29,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity/writeTicketActivity';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_ENTITY, TICKET_ACTIVITY_EVENT, TICKET_ACTIVITY_SOURCE } from '@alga-psa/shared/lib/ticketActivity/types';
 
-const trx = { isTransaction: true } as Knex.Transaction;
+const trx = { isTransaction: true, raw: vi.fn().mockResolvedValue(undefined) } as unknown as Knex.Transaction;
 const write = (actor: Parameters<typeof writeTicketActivity>[1]['actor']) => writeTicketActivity(trx, {
   tenant: 'tenant-1',
   ticketId: 'ticket-1',

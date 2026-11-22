@@ -27,9 +27,7 @@ const canonicalHandlerSource = read('packages/jobs/src/lib/handlers/telephonyCan
 
 describe('Telephony job wiring', () => {
   it('T036: the Temporal worker forwards the call notification back to the server', () => {
-    expect(jobActivitiesSource).toContain(
-      "registerJobHandlerForActivities(\n    'process-telephony-call-notification',\n    forwardJobToServer('process-telephony-call-notification'),\n  );",
-    );
+    expect(jobActivitiesSource).toMatch(/registerForwardedJobHandler\(\s*'process-telephony-call-notification'\s*\)/);
   });
 
   it('T036: the server registers both telephony job handlers', () => {
@@ -40,9 +38,7 @@ describe('Telephony job wiring', () => {
   });
 
   it('T084: the Temporal worker forwards the canonical-call job to the server', () => {
-    expect(jobActivitiesSource).toContain(
-      "registerJobHandlerForActivities(\n    'process-telephony-canonical-call',\n    forwardJobToServer('process-telephony-canonical-call'),\n  );",
-    );
+    expect(jobActivitiesSource).toMatch(/registerForwardedJobHandler\(\s*'process-telephony-canonical-call'\s*\)/);
   });
 
   it('T084: the canonical-call handler is registered EE-only with maxAttempts 3', () => {
@@ -106,9 +102,7 @@ describe('Telephony job wiring', () => {
 
   it('T226: the 3CX server-side jobs are forwarded by the worker and registered on the server', () => {
     for (const jobName of ['process-threecx-call-event', 'process-threecx-chat', 'sync-threecx-phonebook-contact']) {
-      expect(jobActivitiesSource).toContain(
-        `registerJobHandlerForActivities(\n    '${jobName}',\n    forwardJobToServer('${jobName}'),\n  );`,
-      );
+      expect(jobActivitiesSource).toMatch(new RegExp(`registerForwardedJobHandler\\(\\s*'${jobName}'\\s*\\)`));
     }
     expect(registerHandlersSource).toContain('name: THREECX_CALL_EVENT_JOB,');
     expect(registerHandlersSource).toContain('await processThreecxCallEvent(data);');

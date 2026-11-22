@@ -1,5 +1,6 @@
 'use server';
 
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
@@ -12,6 +13,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import { getAuthorizedDocumentById } from './documentActions';
+import { isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import { permissionError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   documentActionErrorFrom,
@@ -99,6 +101,13 @@ export const createBlockDocument = withAuth(async (
       if (input.entityId && input.entityType === 'asset') {
         const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, input.entityId);
         if (assetAuthorization) return assetAuthorization;
+      }
+      if (input.entityId && input.entityType && !await isDocumentAssociationCreateAllowed(trx, {
+        tenant,
+        user,
+        targets: [{ entityType: input.entityType, entityId: input.entityId }],
+      })) {
+        return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
       }
       const documentId = uuidv4();
 
@@ -242,6 +251,9 @@ export const getBlockContent = withAuth(async (user, { tenant }, documentId: str
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
       }
+      if (isDocumentFieldRedacted(authorizedDocument, 'content')) {
+        return null;
+      }
 
       return tenantScopedTable(trx, 'document_block_content', tenant)
         .where({ document_id: documentId })
@@ -284,6 +296,9 @@ export const updateBlockContent = withAuth(async (
       if (!document) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
+      if (isDocumentFieldRedacted(document, 'content')) {
+        return permissionError('Permission denied: Cannot update redacted document content', 'documents:errors.permissions.update');
+      }
 
       // Check if block content exists
       const existingContent = await tenantScopedTable(trx, 'document_block_content', tenant)
@@ -309,7 +324,7 @@ export const updateBlockContent = withAuth(async (
           .where({ document_id: documentId })
           .update({
             updated_at: trx.fn.now(),
-            edited_by: input.user_id
+            edited_by: user.user_id
           });
 
         // Invalidate the preview cache for this document
@@ -344,7 +359,7 @@ export const updateBlockContent = withAuth(async (
     // Get user details for event
     const dbUser = await tenantScopedTable(knex, 'users', tenant)
       .select('first_name', 'last_name')
-      .where({ user_id: input.user_id })
+      .where({ user_id: user.user_id })
       .first();
 
     const authorName = dbUser ? `${dbUser.first_name} ${dbUser.last_name}` : 'Unknown User';
@@ -358,7 +373,7 @@ export const updateBlockContent = withAuth(async (
         tenantId: tenant,
         documentId: documentId,
         documentName: result.document.document_name,
-        userId: input.user_id,
+        userId: user.user_id,
         content: newContent
       };
 
@@ -382,7 +397,7 @@ export const updateBlockContent = withAuth(async (
     await publishDocumentUpdatedSearchEvent(
       tenant,
       documentId,
-      input.user_id,
+      user.user_id,
       ['content'],
       'updateBlockContent',
     );

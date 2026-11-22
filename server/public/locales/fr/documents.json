@@ -29,6 +29,7 @@
     "invoiceTitle": "FACTURE",
     "issueDate": "Date d'émission",
     "locationSubtotal": "Sous-total du site",
+    "unassignedLocation": "Ensemble du devis",
     "monthly": "Mensuel",
     "monthlyItems": "Articles mensuels",
     "monthlyTotal": "Total mensuel",
@@ -179,6 +180,7 @@
     "upload": {
       "fileRequired": "Choisissez un fichier avant de le téléverser.",
       "typeNotAllowed": "Ce type de fichier n’est pas autorisé.",
+      "contentMismatch": "Le contenu de ce fichier ne correspond pas à son type de fichier ; il n’a donc pas été téléversé. Vérifiez que vous avez choisi le bon fichier.",
       "sessionRequired": "Votre session est requise pour téléverser des documents. Veuillez vous reconnecter."
     }
   },

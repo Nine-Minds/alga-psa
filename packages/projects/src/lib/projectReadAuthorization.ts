@@ -11,154 +11,25 @@
  */
 
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
 import type { IProject, IUserWithRoles } from '@alga-psa/types';
-import ProjectModel from '../models/project';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationRecord,
-  type AuthorizationSubject,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+  createProjectReadAuthorizer,
+  toProjectAuthorizationRecord,
+  type ProjectAuthorizationFields,
+} from '@alga-psa/authorization/projectReadAuthorization';
+import ProjectModel from '../models/project';
 
-function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
-  table: string,
-  tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
-}
-
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(conn, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(conn, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    tenantScopedTable(conn, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
-
-export type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
-
-function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): AuthorizationRecord {
-  const assignedUserIds =
-    typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-
-  return {
-    id: project.project_id ?? null,
-    ownerUserId: project.assigned_to ?? null,
-    assignedUserIds,
-    clientId: project.client_id ?? null,
-  };
-}
-
-export interface ProjectReadDecision {
-  allowed: boolean;
-  /** Fields the reader may not see for this project (co-managed redactions); empty when nothing is hidden. */
-  redactedFields: string[];
-}
-
-/**
- * The record-level project read decision for one user, reusable across many projects in one request
- * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
- * that renders or forwards project data can mask it. A row without a project id is not allowed.
- */
-export async function createProjectReadDecider(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
-): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
-  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-
-  return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
-    const projectId = project.project_id;
-    if (!projectId) {
-      return { allowed: false, redactedFields: [] };
-    }
-
-    const decision = await authorizationKernel.authorizeResource({
-      subject,
-      resource: { type: 'project', action, id: projectId },
-      record: toProjectAuthorizationRecord(project),
-      requestCache,
-      knex: conn,
-    });
-
-    return { allowed: decision.allowed, redactedFields: [...(decision.redactedFields ?? [])] };
-  };
-}
-
-/**
- * The boolean form of `createProjectReadDecider`, for callers that only need allow/deny.
- * Returns false for a row without a project id.
- */
-export async function createProjectReadAuthorizer(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles,
-  action: 'read' | 'update' = 'read'
-): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
-  const decide = await createProjectReadDecider(conn, tenant, user, action);
-  return async (project) => (await decide(project)).allowed;
-}
+export {
+  createProjectActionDecider,
+  createProjectReadAuthorizer,
+  createProjectReadDecider,
+  toProjectAuthorizationRecord,
+  type ProjectAuthorizationAction,
+  type ProjectAuthorizationFields,
+  type ProjectReadDecision,
+} from '@alga-psa/authorization/projectReadAuthorization';
 
 /**
  * Loads the project and throws unless the caller may read that record.
@@ -168,17 +39,33 @@ export async function assertProjectReadAllowed(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  projectId: string
+  projectId: string,
+  apiKeyId?: string | null
 ): Promise<IProject> {
   const project = await ProjectModel.getById(conn, tenant, projectId);
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const authorize = await createProjectReadAuthorizer(conn, tenant, user);
+  const authorize = await createProjectReadAuthorizer(conn, tenant, user, 'read', apiKeyId);
   if (!(await authorize(project))) {
     throw new Error('Permission denied: Cannot read project');
   }
 
   return project;
+}
+
+/** The create gate for MSP project creation: the candidate project's client (and assignee) are judged by the read rules. */
+export async function assertProjectCreateAllowed(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: SubjectUserInput,
+  candidate: ProjectAuthorizationFields,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user,
+    resourceType: 'project',
+    record: toProjectAuthorizationRecord({ ...candidate, project_id: null }),
+  }, 'project');
 }

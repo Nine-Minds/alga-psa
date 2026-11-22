@@ -12,6 +12,7 @@ const {
   providerMock,
   createYjsProviderMock,
   getBlockContentMock,
+  getDocumentRoomTokenMock,
   prosemirrorJSONToYXmlFragmentMock,
 } = vi.hoisted(() => {
   const awarenessMock = {
@@ -27,12 +28,16 @@ const {
       on: vi.fn(),
       off: vi.fn(),
       destroy: vi.fn(),
+      setConfiguration: vi.fn(),
+      connect: vi.fn(async () => undefined),
+      disconnect: vi.fn(),
       status: 'connected',
       synced: true,
       hasUnsyncedChanges: false,
     },
     createYjsProviderMock: vi.fn(),
     getBlockContentMock: vi.fn(async () => null),
+    getDocumentRoomTokenMock: vi.fn(),
     prosemirrorJSONToYXmlFragmentMock: vi.fn(),
   };
 });
@@ -78,6 +83,10 @@ vi.mock('@alga-psa/documents/actions/documentBlockContentActions', () => ({
   getBlockContent: (...args: unknown[]) => getBlockContentMock(...args),
 }));
 
+vi.mock('@alga-psa/documents/actions/collaborativeEditingActions', () => ({
+  getDocumentRoomToken: (...args: unknown[]) => getDocumentRoomTokenMock(...args),
+}));
+
 let CollaborativeEditor: typeof import('@alga-psa/documents/components/CollaborativeEditor').CollaborativeEditor;
 const emitProviderEvent = (event: string, payload?: any) => {
   const listeners = providerListeners.get(event);
@@ -88,6 +97,8 @@ const emitProviderEvent = (event: string, payload?: any) => {
 describe('CollaborativeEditor', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    getDocumentRoomTokenMock.mockResolvedValue({ token: 'signed-room-token', expiresAt: Date.now() + 900_000 });
+    getBlockContentMock.mockResolvedValue(null);
     ydoc = new Y.Doc();
     providerListeners = new Map();
     awarenessStates = new Map();
@@ -111,6 +122,33 @@ describe('CollaborativeEditor', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('waits for a server credential before connecting', async () => {
+    let issueCredential!: (credential: { token: string; expiresAt: number }) => void;
+    getDocumentRoomTokenMock.mockImplementationOnce(() => new Promise(resolve => { issueCredential = resolve; }));
+    render(<CollaborativeEditor documentId="doc-1" tenantId="tenant-1" userId="user-1" userName="Editor One" />);
+
+    expect(getDocumentRoomTokenMock).toHaveBeenCalledWith('doc-1');
+    expect(providerMock.connect).not.toHaveBeenCalled();
+    await act(async () => {
+      issueCredential({ token: 'server-credential', expiresAt: Date.now() + 900_000 });
+    });
+
+    expect(providerMock.setConfiguration).toHaveBeenCalledWith({ token: 'server-credential' });
+    expect(providerMock.connect).toHaveBeenCalledTimes(1);
+    expect(providerMock.setConfiguration.mock.invocationCallOrder.at(-1))
+      .toBeLessThan(providerMock.connect.mock.invocationCallOrder[0]);
+  });
+
+  it('stays disconnected when the server denies room credentials', async () => {
+    getDocumentRoomTokenMock.mockResolvedValueOnce({ permissionError: 'Permission denied', message: 'Permission denied' });
+    const { getByText } = render(<CollaborativeEditor documentId="doc-1" tenantId="tenant-1" userId="user-1" userName="Editor One" />);
+
+    await waitFor(() => expect(getByText('Disconnected')).toBeTruthy());
+    expect(providerMock.connect).not.toHaveBeenCalled();
+    expect(providerMock.disconnect).toHaveBeenCalledTimes(1);
+    expect(getDocumentRoomTokenMock).toHaveBeenCalledTimes(1);
   });
 
   it('initializes TipTap with collaboration extensions', () => {
@@ -150,6 +188,7 @@ describe('CollaborativeEditor', () => {
         tenantId: 'tenant-99',
         userId: 'user-88',
       },
+      connect: false,
     });
   });
 

@@ -10,7 +10,12 @@ const mocks = vi.hoisted(() => ({
     sender_id: 'sender-billing', tenant: 'tenant-test', email_address: 'accounts@billing-profile.test',
     display_name: 'Accounts', verification_status: 'verified',
   },
-  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  createTenantKnex: vi.fn(async () => ({ knex: {
+    // TenantEmailService now binds legacy provider credentials under a row
+    // lock, so this behavioral SMTP fixture must provide the same transaction
+    // boundary as the production Knex connection.
+    transaction: async (callback: (trx: {}) => unknown) => callback({}),
+  } })),
   generateAndStore: vi.fn(async ({ invoiceId }: { invoiceId: string }) => ({ file_id: `file-${invoiceId}` })),
   downloadFile: vi.fn(async () => ({ buffer: Buffer.from('%PDF-test') })),
   getPaymentService: vi.fn(async () => ({
@@ -28,7 +33,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => (await mocks.createTenantKnex()).knex),
   isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => ({
     tenantJoin: () => undefined,
@@ -38,6 +43,8 @@ vi.mock('@alga-psa/db', () => ({
         whereNull: () => query,
         tenantJoin: () => query,
         select: () => query,
+        forUpdate: () => query,
+        update: async () => 1,
         then: (resolve: (value: any) => unknown) => Promise.resolve(
           tableName === 'email_sender_addresses' ? [mocks.sender]
             : tableName === 'email_sender_routes' ? [{ tenant: 'tenant-test', route_type: 'mail_class', mail_class: 'billing', sender_id: mocks.sender.sender_id }]

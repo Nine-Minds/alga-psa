@@ -6,6 +6,27 @@ const mocks = vi.hoisted(() => ({
   resolveDateFormatCountry: vi.fn(),
   getTenantThemeByTenantId: vi.fn(),
   readDontNotifyCustomerDefault: vi.fn(async () => false),
+  loadProductPrincipal: vi.fn(async () => ({ rawProductCode: 'psa', surfaceKind: null as string | null })),
+  resolveAuthorizationSubject: vi.fn(),
+  clientRow: { client_name: 'Acme Co' } as Record<string, unknown> | undefined,
+}));
+
+vi.mock('@shared/services/productPrincipal', () => ({
+  loadProductPrincipal: mocks.loadProductPrincipal,
+}));
+
+vi.mock('@alga-psa/authorization/subject', () => ({
+  resolveAuthorizationSubject: mocks.resolveAuthorizationSubject,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal() as Record<string, unknown>),
+  tenantDb: () => ({
+    table: () => {
+      const builder: any = { where: () => builder, first: async () => mocks.clientRow };
+      return builder;
+    },
+  }),
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -50,7 +71,7 @@ const context = {
   db,
 };
 
-const CRM_ALL = { clientsCreate: true, clientsUpdate: true, contactsCreate: true, contactsUpdate: true };
+const CRM_ALL = { clientsCreate: true, clientsUpdate: true, contactsCreate: true, contactsUpdate: true, operationalOnly: false };
 const ASSETS_ALL = { assets: true, assetAudit: true };
 
 const customTokens = (overrides: Record<string, string> = {}) => ({
@@ -66,6 +87,64 @@ describe('MobileCapabilitiesService', () => {
     mocks.hasPermission.mockResolvedValue(true);
     mocks.resolveDateFormatCountry.mockResolvedValue(null);
     mocks.getTenantThemeByTenantId.mockResolvedValue({ pairId: 'alga' });
+    mocks.loadProductPrincipal.mockResolvedValue({ rawProductCode: 'psa', surfaceKind: null });
+    mocks.clientRow = { client_name: 'Acme Co' };
+  });
+
+  describe('a co-managed seat technician', () => {
+    const seatFacts = {
+      'co-managed-seat': {
+        assignments: [{ arrangement_id: 'a1', state: 'active' }],
+        arrangements: [{ arrangement_id: 'a1', client_id: 'client-9', state: 'active' }],
+        boards: [{ arrangement_id: 'a1', board_id: 'board-1', can_create: true }, { arrangement_id: 'a1', board_id: 'board-2', can_create: false }],
+        projects: [],
+      },
+    };
+
+    beforeEach(() => {
+      mocks.loadProductPrincipal.mockResolvedValue({ rawProductCode: 'psa', surfaceKind: 'co_managed_seat' });
+      mocks.resolveAuthorizationSubject.mockResolvedValue({ tenant: 'tenant-1', userId: 'user-1', resolverFacts: seatFacts });
+    });
+
+    it('gets the operational surface only, whatever RBAC grants', async () => {
+      const result = await new MobileCapabilitiesService().getMyCapabilities(context);
+
+      expect(result.features).toEqual({
+        inventory: false,
+        opportunities: false,
+        opportunitiesCreate: false,
+        projects: true,
+        assets: true,
+        assetAudit: false,
+        clientsCreate: false,
+        clientsUpdate: false,
+        contactsCreate: false,
+        contactsUpdate: false,
+        dontNotifyCustomerDefault: false,
+        operationalOnly: true,
+      });
+    });
+
+    it('is told its own client and the boards it may open tickets on', async () => {
+      const result = await new MobileCapabilitiesService().getMyCapabilities(context);
+
+      expect(result.operationalScope).toEqual({
+        client: { clientId: 'client-9', clientName: 'Acme Co' },
+        creatableBoardIds: ['board-1'],
+      });
+    });
+
+    it('gets no client when its seat is not live', async () => {
+      mocks.resolveAuthorizationSubject.mockResolvedValue({
+        tenant: 'tenant-1', userId: 'user-1',
+        resolverFacts: { 'co-managed-seat': { ...seatFacts['co-managed-seat'], assignments: [{ arrangement_id: 'a1', state: 'revoked' }] } },
+      });
+
+      const result = await new MobileCapabilitiesService().getMyCapabilities(context);
+
+      expect(result.features.operationalOnly).toBe(true);
+      expect(result.operationalScope).toEqual({ client: null, creatableBoardIds: [] });
+    });
   });
 
   it('T050 enables inventory and opportunities for a PSA user with both read permissions', async () => {
