@@ -18,6 +18,7 @@ import path from 'node:path';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import puppeteer from 'puppeteer';
+import { simpleParser } from 'mailparser';
 import { NextRequest } from 'next/server';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '@alga-psa/emulator-msgraph';
@@ -78,6 +79,7 @@ const aliceEmail = `alice-${MARK}@customer-it.example.test`;
 let ticketTenant: string, customerTenant: string, aliceId: string, techId: string, ticketId: string;
 let relationshipId: string, threadId: string, parentCommentId: string, token: string, requesterContactId: string;
 let processInbound: typeof import('../../../../shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
+let mapParsedMimeToEmailMessageDetails: typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor').mapParsedMimeToEmailMessageDetails;
 
 const ALIGNED_AUTH = 'mx.google.com; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
 
@@ -242,6 +244,7 @@ afterAll(async () => {
 describe('email-service boot registers co-managed inbound', () => {
   beforeAll(async () => {
     processInbound = (await import('../../../../shared/services/email/processInboundEmailInApp')).processInboundEmailInApp;
+    ({ mapParsedMimeToEmailMessageDetails } = await vi.importActual<typeof import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor')>('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor'));
   }, 120_000);
 
   it.each(['google', 'microsoft', 'imap', 'imap-unsigned', 'imap-forwarded'] as const)('%s asks the registered mailbox owner to confirm, then writes exactly one authorized reply', async (deliveryMode) => {
@@ -677,6 +680,64 @@ describe('email-service boot registers co-managed inbound', () => {
       expect(await approveInboundSenderConfirmation(recoveryConfirmationToken, actor)).toMatchObject({ ticketId });
       expect(await sharedComments(recoveryText)).toHaveLength(1);
       expect(await approveInboundSenderConfirmation(recoveryConfirmationToken, actor)).toBeNull();
+
+      // Different messages take different locks. Run enough authorized replies
+      // to occupy the entire configured admin pool if those locks use it.
+      const parallelCount = Number(process.env.DB_POOL_MAX || 5);
+      const parallelReplies: Array<{ token: string; text: string }> = [];
+      for (let index = 0; index < parallelCount; index += 1) {
+        const parallelToken = `native:${uuidv4()}`;
+        const parallelText = `authorized-native-parallel-${index}-${MARK}`;
+        const parallelId = `native-parallel-${index}-${MARK}`;
+        await db('email_reply_tokens').insert({ tenant: ticketTenant, token: parallelToken, ticket_id: ticketId, entity_type: 'ticket', recipient_email: actorEmail });
+        const parallelPlain = recoveryPlain.replaceAll(recoveryText, parallelText).replaceAll(recoveryToken, parallelToken);
+        const parallelHtml = recoveryHtml.replaceAll(recoveryText, parallelText).replaceAll(recoveryToken, parallelToken);
+        const parallelRaw = Buffer.from(recoveryRaw.toString().replaceAll(recoveryText, parallelText)
+          .replaceAll(recoveryToken, parallelToken).replaceAll(recoveryMessageId, parallelId));
+        const parallelHeaders = recoveryHeaders.map(header => ({ ...header, value: header.value.replaceAll(recoveryMessageId, parallelId) }));
+        (adapter as any).gmail.users.messages.get = async () => ({ data: { id: parallelId, labelIds: ['INBOX'], payload: { headers: parallelHeaders, parts: [
+          { mimeType: 'text/plain', body: { data: Buffer.from(parallelPlain).toString('base64') } },
+          { mimeType: 'text/html', body: { data: Buffer.from(parallelHtml).toString('base64') } },
+        ] } } });
+        (adapter as any).downloadMessageSource = async () => parallelRaw;
+        const parallelMessage = await adapter.getMessageDetails(parallelId);
+        expect(await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: parallelMessage }))
+          .toMatchObject({ outcome: 'quarantined', reason: 'native_sender_confirmation_requested' });
+        const lastMail = sendEmail.mock.calls.at(-1) as any;
+        const parallelUrl = String(lastMail[0].templateProcessor.text).match(/https:\/\/[^\s]+/)![0];
+        parallelReplies.push({ token: new URL(parallelUrl).searchParams.get('token')!, text: parallelText });
+      }
+      let atWrite = 0;
+      let allAtWrite!: () => void, releaseWrites!: () => void;
+      const ready = new Promise<void>(resolve => { allAtWrite = resolve; });
+      const writeGate = new Promise<void>(resolve => { releaseWrites = resolve; });
+      const concurrentWrites = vi.spyOn(actions, 'createCommentFromEmail').mockImplementation(async (...args) => {
+        if (++atWrite === parallelCount) allAtWrite();
+        await writeGate;
+        return originalWrite(...args);
+      });
+      const approvals = Promise.all(parallelReplies.map(reply => approveInboundSenderConfirmation(reply.token, actor)));
+      let readyTimeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([ready, new Promise<never>((_, reject) => {
+          readyTimeout = setTimeout(() => reject(new Error('Distinct confirmations exhausted the admin pool before persistence.')), 8_000);
+        })]);
+      } finally {
+        if (readyTimeout) clearTimeout(readyTimeout);
+        releaseWrites();
+        concurrentWrites.mockRestore();
+      }
+      let writeTimeout: ReturnType<typeof setTimeout> | undefined;
+      const parallelResults = await Promise.race([approvals, new Promise<never>((_, reject) => {
+        writeTimeout = setTimeout(() => reject(new Error('Distinct confirmations could not persist at pool capacity.')), 8_000);
+      })]).finally(() => { if (writeTimeout) clearTimeout(writeTimeout); });
+      expect(parallelResults).toHaveLength(parallelCount);
+      for (const reply of parallelReplies) {
+        const comments = await sharedComments(reply.text);
+        expect(comments).toHaveLength(1);
+        expect(comments[0]).toMatchObject({ author_type: 'internal', user_id: actorId });
+        expect(await approveInboundSenderConfirmation(reply.token, actor)).toBeNull();
+      }
     } finally {
       await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ status_id: ticket.status_id, is_closed: false, closed_at: null });
       await db('statuses').where({ tenant: ticketTenant, board_id: ticket.board_id, name: `Closed ${MARK}` }).delete();

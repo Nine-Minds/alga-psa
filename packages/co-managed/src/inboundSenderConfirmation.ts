@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { getAdminConnection, tenantDb } from '@alga-psa/db';
+import { getAdminConnection, tenantDb, withAdvisoryLock } from '@alga-psa/db';
 import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { inboundMessageSha256 } from '@alga-psa/shared/lib/email/inboundMessageDigest';
@@ -339,62 +339,48 @@ export async function approveInboundContactSenderConfirmation(token: string): Pr
     || inboundMessageSha256(pending.payload.emailData) !== pending.payload.messageSha256
     || createHash('sha256').update(pending.payload.canonicalContent.content, 'utf8').digest('hex') !== pending.payload.contentSha256) return null;
   const db = await getAdminConnection();
-  // Hold a database transaction advisory lock across claim, native admission and
-  // comment persistence. A stale retry waits for the original redemption and then
-  // observes its durable comment via processInboundEmailInApp's message dedupe.
-  return db.transaction(async (trx) => {
-    await trx.raw('select pg_advisory_xact_lock(hashtext(?))', [`inbound-contact-confirmation:${claims.tenant}:${claims.sourceId}`]);
-    const row = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
-      .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId }).first('payload', 'updated_at');
-    const current: ContactConfirmationPayload = typeof row?.payload === 'string' ? JSON.parse(row.payload) : row?.payload;
-    if (!current || !isInboundSenderConfirmationRedeemable(current.state, row.updated_at)
-      || current.contentSha256 !== pending.payload.contentSha256
-      || current.messageSha256 !== pending.payload.messageSha256) return null;
-    const contact = await tenantDb(trx, claims.tenant).table('contacts')
-      .where({ contact_name_id: current.contactId })
-      .where((query) => query.whereNot('is_inactive', true).orWhereNull('is_inactive'))
-      .first('contact_name_id');
-    if (!contact) return null;
-    const redemptionId = randomUUID();
-    const claimed = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
-      .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
-      .where((q) => q.whereRaw("payload->>'state' = 'pending'").orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'").andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
-      .update({ payload: { ...current, state: 'redeeming', redemptionId }, updated_at: trx.fn.now() });
-    if (!claimed) return null;
-    const process = await import('../../../shared/services/email/processInboundEmailInApp');
-    const result = await process.processInboundEmailInApp({ tenantId: claims.tenant, providerId: current.providerId, emailData: current.emailData }, {
-      confirmedContact: { contactId: current.contactId, email: current.contactEmail, contentSha256: current.contentSha256 },
+  // Commit the short claim before native admission. The independent lock
+  // serializes retries across persistence without occupying a work connection.
+  return withAdvisoryLock(db, `inbound-contact-confirmation:${claims.tenant}:${claims.sourceId}`, async () => {
+    const claimed = await db.transaction(async (trx) => {
+      const row = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
+        .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId }).first('payload', 'updated_at');
+      const current: ContactConfirmationPayload = typeof row?.payload === 'string' ? JSON.parse(row.payload) : row?.payload;
+      if (!current || !isInboundSenderConfirmationRedeemable(current.state, row.updated_at)
+        || current.contentSha256 !== pending.payload.contentSha256
+        || current.messageSha256 !== pending.payload.messageSha256) return null;
+      const contact = await tenantDb(trx, claims.tenant).table('contacts')
+        .where({ contact_name_id: current.contactId })
+        .where((query) => query.whereNot('is_inactive', true).orWhereNull('is_inactive'))
+        .first('contact_name_id');
+      if (!contact) return null;
+      const redemptionId = randomUUID();
+      const updated = await tenantDb(trx, claims.tenant).table('co_management_deliveries')
+        .where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+        .where((q) => q.whereRaw("payload->>'state' = 'pending'").orWhere((stale) => stale.whereRaw("payload->>'state' = 'redeeming'").andWhere('updated_at', '<', new Date(Date.now() - INBOUND_CONFIRMATION_REDEMPTION_LEASE_MS))))
+        .update({ payload: { ...current, state: 'redeeming', redemptionId }, updated_at: trx.fn.now() });
+      return updated ? { current, redemptionId } : null;
     });
-    if (!['replied', 'deduped'].includes((result as any).outcome) || (result as any).ticketId !== current.ticketId) return null;
-    await tenantDb(trx, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
-      .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...current, state: 'approved' }, updated_at: trx.fn.now() });
-    return result;
-  });
-}
-
-async function withNativeSenderConfirmationLock<T>(db: any, tenant: string, id: string, work: () => Promise<T>): Promise<T> {
-  // Never wait on an advisory lock while holding a pool connection. At a small
-  // pool size, a blocked waiter can take the connection the current lock holder
-  // needs to finish. Failed try-lock attempts roll back before backing off.
-  const lockKey = `inbound-native-confirmation:${tenant}:${id}`;
-  const waitDeadline = Date.now() + 120_000;
-  let retryDelayMs = 25;
-  while (true) {
-    const lockTransaction = await db.transaction();
+    if (!claimed) return null;
+    const { current, redemptionId } = claimed;
+    let completed = false;
     try {
-      const result = await lockTransaction.raw('select pg_try_advisory_xact_lock(hashtext(?)) as locked', [lockKey]);
-      if (Boolean(result.rows?.[0]?.locked)) return await work();
+      const process = await import('../../../shared/services/email/processInboundEmailInApp');
+      const result = await process.processInboundEmailInApp({ tenantId: claims.tenant, providerId: current.providerId, emailData: current.emailData }, {
+        confirmedContact: { contactId: current.contactId, email: current.contactEmail, contentSha256: current.contentSha256 },
+      });
+      if (!['replied', 'deduped'].includes((result as any).outcome) || (result as any).ticketId !== current.ticketId) return null;
+      await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+        .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...current, state: 'approved' }, updated_at: db.fn.now() });
+      completed = true;
+      return result;
     } finally {
-      // The transaction-scoped lock is released here on both the acquired and
-      // unsuccessful paths. The unsuccessful path therefore never sleeps
-      // while retaining an admin-pool connection.
-      await lockTransaction.rollback();
+      if (!completed) {
+        await tenantDb(db, claims.tenant).table('co_management_deliveries').where({ tenant: claims.tenant, delivery_kind: CONTACT_KIND, source_id: claims.sourceId })
+          .whereRaw("payload->>'redemptionId' = ?", [redemptionId]).update({ payload: { ...current, state: 'pending' }, updated_at: db.fn.now() });
+      }
     }
-
-    if (Date.now() >= waitDeadline) throw new Error('Timed out waiting for native sender confirmation redemption lock.');
-    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    retryDelayMs = Math.min(retryDelayMs * 2, 500);
-  }
+  });
 }
 
 async function redeemNativeSenderConfirmation(
@@ -402,7 +388,7 @@ async function redeemNativeSenderConfirmation(
   claims: { tenant: string; sourceId: string; expiresAt: string },
   user: { tenant?: string; user_id?: string; user_type?: string; email?: string | null },
 ): Promise<{ ticketId: string; commentId: string } | null> {
-  return withNativeSenderConfirmationLock(db, claims.tenant, claims.sourceId, async () => {
+  return withAdvisoryLock(db, `inbound-native-confirmation:${claims.tenant}:${claims.sourceId}`, async () => {
     const row = await tenantDb(db, claims.tenant).table('co_management_deliveries')
       .where({ tenant: claims.tenant, delivery_kind: KIND, source_id: claims.sourceId })
       .first('recipient', 'payload', 'updated_at');

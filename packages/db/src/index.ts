@@ -15,6 +15,7 @@ export { default as Knex } from './lib/knex-turbopack';
 
 // Admin Connection
 export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
+export { withAdvisoryLock } from './lib/advisoryLock';
 
 // Tenant Connection
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly, withSavepoint } from './lib/tenant';
