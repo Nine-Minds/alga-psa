@@ -92,6 +92,7 @@ services:
       # validation in the server must see the config the worker routes with.
       WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
       # NinjaOne Integration Configuration
       # These can be set via environment variables OR via secrets files (mounted at /run/secrets/)
       # The secret provider will check filesystem secrets first (if SECRET_READ_CHAIN includes 'filesystem')
@@ -410,6 +411,7 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
       STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     volumes:
       # email-service writes inbound attachments and the original .eml here
@@ -470,6 +472,7 @@ services:
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://server:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
       COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://server:3000/api/internal/collab/persist}
+      TICKET_LIST_CHANGE_AUTHORIZATION_URL: ${TICKET_LIST_CHANGE_AUTHORIZATION_URL:-http://server:3000/api/internal/tickets/live-change}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
     secrets:
       - postgres_password

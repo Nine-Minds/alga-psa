@@ -291,7 +291,9 @@ describe('Documents list refresh after drawer save', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(updateDocument).toHaveBeenCalledWith('doc-1', expect.objectContaining({ document_name: 'Renamed' })));
+    await waitFor(() => expect(updateDocument).toHaveBeenCalledExactlyOnceWith('doc-1', { document_name: 'Renamed' }));
+    expect(vi.mocked(syncCollabSnapshot).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(updateDocument).mock.invocationCallOrder[0]);
     await waitFor(() => expect(getDocumentsByEntity).toHaveBeenCalled());
   });
 

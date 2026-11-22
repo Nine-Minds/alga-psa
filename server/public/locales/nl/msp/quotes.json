@@ -333,6 +333,16 @@
       "addLocation": "+ Locatie toevoegen",
       "fromTemplate": "+ Uit sjabloon"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Deze locatie verwijderen?",
+        "message": "Deze locatie heeft nog {{count}} regel(s). Kies wat ermee gebeurt.",
+        "moveOption": "Deze items verplaatsen naar {{location}}",
+        "ungroupOption": "Deze regels behouden en niet meer groeperen op locatie",
+        "deleteOption": "Deze items verwijderen",
+        "confirm": "Locatie verwijderen"
+      }
+    },
     "clientFacing": {
       "title": "Klantgerichte tekst",
       "subtitle": "Verschijnt op de pdf, onder de totalen.",
@@ -588,10 +598,13 @@
       "groupHeading": "Locatie {{index}}",
       "pickerPlaceholder": "Een locatie kiezen",
       "unassigned": "Items zonder locatie staan hier tot er een is gekozen.",
+      "quoteWide": "Hele offerte",
+      "quoteWideHint": "Kortingen gelden voor de hele offerte en zijn dus niet aan een locatie gekoppeld.",
       "removeGroup": "Locatie verwijderen",
       "subtotal": "Subtotaal locatie",
       "addLocationButton": "+ Locatie toevoegen",
       "needMoreLocations": "Deze klant heeft maar één actieve locatie. Voeg in klantinstellingen een tweede locatie toe voor offertes met meerdere locaties.",
+      "allLocationsInUse": "Elke actieve locatie van deze klant heeft al een groep op deze offerte.",
       "emptyGroup": "Nog geen items voor deze locatie."
     }
   },
@@ -783,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Terug naar Lay-outs",
+      "back": "Terug naar offerte-indelingen",
       "rerun": "Opnieuw uitvoeren",
       "saveLayout": "Lay-out opslaan"
     },
@@ -792,8 +805,6 @@
       "copyOf": "Kopie van {{name}}",
       "standardTemplate": "Standaard sjabloon"
     },
-    "title": "Offerte-indelingseditor",
-    "description": "Ontwerp de offerte-indeling met behulp van de visuele editor en bekijk een voorbeeld met voorbeeldgegevens.",
     "errors": {
       "exportAst": "Kan sjabloon AST niet exporteren vanuit de visuele werkruimte: {{message}}",
       "load": "Kan de offertesjablooneditor niet laden",
@@ -806,16 +817,13 @@
       "quoteDetailLoad": "Laden van offertedetails is mislukt."
     },
     "fields": {
-      "layoutDetails": "Indelingsdetails",
+      "created": "Gemaakt {{time}}",
+      "notSaved": "Nog niet opgeslagen",
+      "savedAt": "Opgeslagen {{time}}",
       "templateName": "Sjabloonnaam",
       "version": "Versie"
     },
-    "footer": {
-      "created": "Gemaakt:",
-      "lastUpdated": "Laatst bijgewerkt:"
-    },
     "headings": {
-      "editLayout": "Offerte-indeling bewerken",
       "newLayout": "Nieuwe offerte-indeling"
     },
     "placeholders": {
@@ -837,7 +845,14 @@
       "noQuotesFound": "Geen offertes gevonden.",
       "selectQuote": "Offerte kiezen",
       "selectQuoteHint": "Kies een offerte voor een gegevensgebonden voorvertoning.",
-      "loadingQuoteDetails": "Offertedetails worden geladen…"
+      "loadingQuoteDetails": "Offertedetails worden geladen…",
+      "frameTitle": "Offertevoorbeeld",
+      "zoom": {
+        "fit": "Passend",
+        "actual": "100%",
+        "label": "Voorbeeldzoom",
+        "fitWithScale": "Passend ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Renderen",
@@ -852,6 +867,9 @@
       "preview": "Voorbeeld",
       "transforms": "Transformeert",
       "visual": "Visueel"
+    },
+    "titles": {
+      "edit": "Lay-out bewerken: {{name}}"
     }
   },
   "templatesPage": {

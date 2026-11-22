@@ -57,6 +57,7 @@ export default defineConfig({
       'src/activities/__tests__/comment-recovery-forwarding.test.ts',
       'src/activities/__tests__/migration-apply-forwarding.test.ts',
       'src/activities/__tests__/customer-tracking-activities.test.ts',
+      'src/activities/__tests__/entra-sync-record-tenant-result.test.ts',
       'src/activities/__tests__/email-activities-portal-status.test.ts',
       'src/activities/__tests__/portal-user-operations.test.ts',
       'src/activities/__tests__/email-activities-simple.test.ts',

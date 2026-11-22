@@ -1152,7 +1152,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/priorities',
     summary: 'List ticket priorities',
-    description: 'Returns the tenant ticket priorities (item_type=ticket), ordered by name.',
+    description: 'Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     responses: ticketStdResponses({ code: 200, description: 'Ticket priorities.' }, false),
     extensions: ticketExt('read'), edition: 'both',

@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Zgłoszenie przesłane",
-    "requestIdLabel": "ID zgłoszenia: ",
-    "ticketIdLabel": "ID zgłoszenia: ",
     "unableToSubmit": "Nie można przesłać zgłoszenia",
     "formTitle": "Formularz zgłoszenia",
     "noFields": "Nie skonfigurowano żadnych pól.",
@@ -20,6 +18,18 @@
     "optionLabel": "Opcja {{index}}",
     "submit": "Prześlij zgłoszenie",
     "requiredField": "To pole jest wymagane.",
+    "validation": {
+      "type": "Ta odpowiedź nie ma oczekiwanej postaci.",
+      "pattern": "Ta odpowiedź nie ma oczekiwanej postaci.",
+      "minLength": "Użyj co najmniej {{minLength}} znaków.",
+      "maxLength": "Użyj najwyżej {{maxLength}} znaków.",
+      "min": "Wpisz {{min}} lub więcej.",
+      "max": "Wpisz {{max}} lub mniej.",
+      "minDate": "Wybierz {{minDate}} lub później.",
+      "maxDate": "Wybierz {{maxDate}} lub wcześniej.",
+      "minSelected": "Wybierz co najmniej {{minSelected}}.",
+      "maxSelected": "Wybierz najwyżej {{maxSelected}}."
+    },
     "unsupportedField": "To pytanie jest niedostępne."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Powrót do Moich zgłoszeń",
-    "requestIdLabel": "ID zgłoszenia:",
     "statusSection": "Status",
     "submittedAt": "Przesłano: {{date}}",
-    "ticketLabel": "Zgłoszenie:",
     "submittedAnswersTitle": "Przesłane odpowiedzi",
     "noResponse": "Brak odpowiedzi",
     "attachmentsTitle": "Załączniki",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Twoje zgłoszenia"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, przesłano {{date}}"
+  },
+  "ticketReference": {
+    "label": "Zgłoszenie",
+    "viewTicket": "Zobacz zgłoszenie"
   }
 }

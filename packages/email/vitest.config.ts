@@ -1,6 +1,7 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   plugins: [
@@ -15,6 +16,8 @@ export default defineConfig({
       NODE_ENV: 'test',
     },
     include: ['src/**/*.test.{ts,tsx}'],
+    // Infrastructure-backed suites execute in scripts/run-workspace-db-tests.mjs.
+    exclude: [...configDefaults.exclude, '**/*.db.test.?(c|m)[jt]s?(x)'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },
@@ -23,7 +26,7 @@ export default defineConfig({
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },

@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Anfrage eingereicht",
-    "requestIdLabel": "Anfrage-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Anfrage kann nicht eingereicht werden",
     "formTitle": "Anfrageformular",
     "noFields": "Keine Felder konfiguriert.",
@@ -20,6 +18,18 @@
     "optionLabel": "Option {{index}}",
     "submit": "Anfrage einreichen",
     "requiredField": "Dieses Feld ist erforderlich.",
+    "validation": {
+      "type": "Diese Antwort hat nicht die erwartete Form.",
+      "pattern": "Diese Antwort hat nicht die erwartete Form.",
+      "minLength": "Mindestens {{minLength}} Zeichen verwenden.",
+      "maxLength": "Höchstens {{maxLength}} Zeichen verwenden.",
+      "min": "Mindestens {{min}} eingeben.",
+      "max": "Höchstens {{max}} eingeben.",
+      "minDate": "{{minDate}} oder später wählen.",
+      "maxDate": "{{maxDate}} oder früher wählen.",
+      "minSelected": "Mindestens {{minSelected}} auswählen.",
+      "maxSelected": "Höchstens {{maxSelected}} auswählen."
+    },
     "unsupportedField": "Diese Frage ist nicht verfügbar."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Zurück zu Meine Anfragen",
-    "requestIdLabel": "Anfrage-ID:",
     "statusSection": "Status",
     "submittedAt": "Eingereicht: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Eingereichte Antworten",
     "noResponse": "Keine Antwort",
     "attachmentsTitle": "Anhänge",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Ihre Anfragen"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, eingereicht am {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket anzeigen"
   }
 }

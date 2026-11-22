@@ -435,7 +435,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
 
   useEffect(() => {
-    if (!columnSizingStorageKey || typeof window === 'undefined') {
+    if (!columnSizingStorageKey || typeof window === 'undefined' || !window.localStorage?.getItem) {
       setColumnSizing({});
       setHasLoadedColumnSizing(true);
       return;
@@ -457,7 +457,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   }, [columnIds, columnSizingStorageKey]);
 
   useEffect(() => {
-    if (!hasLoadedColumnSizing || !columnSizingStorageKey || typeof window === 'undefined') return;
+    if (!hasLoadedColumnSizing || !columnSizingStorageKey || typeof window === 'undefined' || !window.localStorage?.setItem) return;
 
     window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
   }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);

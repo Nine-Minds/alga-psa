@@ -12,15 +12,16 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const webhook = await captureSamplePayload(id);
+    const webhook = await runWithApiKeyOrSession(request, () => captureSamplePayload(id));
     if (isServerActionErrorResult(webhook)) {
       return createServerActionErrorResponse(webhook);
     }
@@ -30,10 +31,10 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const webhook = await clearSamplePayload(id);
+    const webhook = await runWithApiKeyOrSession(request, () => clearSamplePayload(id));
     if (isServerActionErrorResult(webhook)) {
       return createServerActionErrorResponse(webhook);
     }

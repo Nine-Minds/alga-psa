@@ -1225,11 +1225,23 @@
           "viewDetails": "Voir les détails"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contact en échec",
+          "contactsFailed_other": "{{count}} contacts en échec",
+          "failureEntry": "{{user}} ({{stage}}) : {{message}}",
+          "moreFailures": "et {{count}} de plus",
           "noResults": "Aucun résultat de tenant enregistré.",
+          "noticeHeading": "Remarques",
+          "stages": {
+            "create": "création",
+            "link": "liaison",
+            "match": "correspondance"
+          },
           "stats": "créés {{created}}, liés {{linked}}, mis à jour {{updated}}, ambigus {{ambiguous}}, désactivés {{inactivated}}",
+          "summaryFailed": "Contacts en échec : {{count}}",
           "summarySkipped": "Résultats de provisionnement ignorés : {{count}}",
           "tenantHeader": "Locataire {{tenant}} · {{status}}",
-          "unknownTenant": "inconnu"
+          "unknownTenant": "inconnu",
+          "userUnknown": "utilisateur inconnu"
         },
         "empty": "Aucune exécution de synchronisation trouvée pour le moment.",
         "errors": {

@@ -8,9 +8,8 @@ import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategor
 const controller = new ApiCategoryController();
 
 export async function GET(request: Request, { params }: { params: Promise<{ boardId: string }> }) {
-  const req = request as any;
-  req.params = params;
-  return controller.getCategoryTree()(req);
+  const { boardId } = await params;
+  return controller.getCategoryTree(boardId)(request as any);
 }
 
 export const runtime = 'nodejs';

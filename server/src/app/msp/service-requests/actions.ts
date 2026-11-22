@@ -5,6 +5,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
+import type { FieldLookupEntity } from '@alga-psa/ui/form-fields';
 import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import {
   isActionMessageError,
@@ -16,14 +17,19 @@ import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,
   createBlankServiceRequestDefinition,
+  deleteServiceRequestDefinitionFromManagement,
+  type ServiceRequestDefinitionDeleteResult,
   createServiceRequestDefinitionFromTemplate,
   duplicateServiceRequestDefinition,
   type BasicFormFieldType,
-  type BasicFormLookupEntity,
+
   listServiceRequestDefinitionsForManagement,
   listServiceRequestTemplateOptions,
   removeBasicFormFieldFromDefinitionDraft,
   reorderBasicFormFieldsInDefinitionDraft,
+  replaceBasicFormSchemaForDefinitionDraft,
+  type BasicFormField,
+  type BasicFormSettings,
   unarchiveServiceRequestDefinitionFromManagement,
   getServiceRequestDefinitionEditorData,
   publishServiceRequestDefinitionWithValidation,
@@ -374,6 +380,29 @@ export const addServiceRequestFormFieldAction = withAuth(async (
   });
 });
 
+/**
+ * The form builder's one save: the whole schema at once. Every edit on the canvas is local
+ * until this runs, so arranging a form is no longer one server round trip per keystroke.
+ */
+export const replaceServiceRequestFormSchemaAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  fields: BasicFormField[],
+  settings?: BasicFormSettings
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return replaceBasicFormSchemaForDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    fields,
+    settings,
+    updatedBy: getActorId(user),
+  });
+});
+
 export const updateServiceRequestFormFieldAction = withAuth(async (
   user,
   { tenant },
@@ -386,7 +415,7 @@ export const updateServiceRequestFormFieldAction = withAuth(async (
     defaultValue?: string | boolean | null;
     options?: Array<{ label: string; value: string }>;
     /** Entity only: the scope is derived server-side from the entity and cannot be set by the caller. */
-    lookup?: { entity: BasicFormLookupEntity };
+    lookup?: { entity: FieldLookupEntity };
   }
 ): Promise<ServiceRequestDefinitionManagementRow> => {
   const { knex } = await createTenantKnex();
@@ -638,6 +667,20 @@ export const archiveServiceRequestDefinitionAction = withAuth(async (
   } catch (error) {
     return mapServiceRequestDefinitionError(error);
   }
+});
+
+export const deleteServiceRequestDefinitionAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestDefinitionDeleteResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'delete', knex);
+  const result = await deleteServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+  if (result.deleted) {
+    revalidatePath('/msp/service-requests');
+  }
+  return result;
 });
 
 export const unarchiveServiceRequestDefinitionAction = withAuth(async (

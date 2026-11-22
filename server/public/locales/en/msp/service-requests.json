@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicate",
       "archive": "Archive",
-      "unarchive": "Unarchive"
+      "unarchive": "Unarchive",
+      "delete": "Delete"
     },
     "lifecycleLabels": {
       "published": "Published",
@@ -87,12 +88,23 @@
         "unchecked": "Unchecked"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload",
+        "short-text": "Short text",
+        "long-text": "Long text",
+        "select": "Dropdown",
+        "checkbox": "Checkbox",
+        "date": "Date",
+        "file-upload": "File upload",
+        "number": "Number",
+        "email": "Email address",
+        "phone": "Phone number",
+        "url": "Web address",
+        "radio": "Choose one",
+        "multi-select": "Choose several",
+        "date-time": "Date and time",
+        "section": "Section",
+        "text": "Instructions",
+        "callout": "Highlighted note",
+        "divider": "Divider",
         "lookup": "Lookup"
       },
       "visibility": {
@@ -125,19 +137,12 @@
         "advancedJson": "Advanced (JSON)",
         "advancedJsonHelp": "The full saved configuration, including context defaults. Visibility rules are easier to change with “Show when…” on each field. Unsaved edits here are discarded if a rule is changed there."
       },
-      "lookup": {
-        "entity": "Look up",
-        "entities": {
-          "contact": "Contact",
-          "user": "MSP user"
-        },
-        "scope": "Options come from",
-        "scopes": {
-          "requester-client": "Requester's client",
-          "tenant": "Entire workspace"
-        }
-      },
-      "unsupportedType": "Unsupported field type \"{{type}}\". Remove this field and add it again before publishing."
+      "openBuilder": "Open form builder",
+      "summary": "{{questions}} questions · {{required}} required",
+      "requiredChip": "Required",
+      "datePlaceholder": "Pick a date",
+      "showFields": "Show the questions",
+      "hideFields": "Hide the questions"
     },
     "execution": {
       "title": "Execution",
@@ -437,7 +442,8 @@
         "applyFailed": "Failed to apply answer mapping",
         "applied": "Answer mapping applied"
       }
-    }
+    },
+    "delete": "Delete"
   },
   "icons": {
     "file-text": "General Request",
@@ -480,7 +486,8 @@
       "workflowConfigurationUpdated": "Workflow configuration updated",
       "formBehaviorConfigUpdated": "Form behavior config updated",
       "visibilityConfigUpdated": "Visibility config updated",
-      "audienceUpdated": "Audience updated"
+      "audienceUpdated": "Audience updated",
+      "definitionDeleted": "Service request form deleted"
     },
     "error": {
       "loadFailed": "Failed to load service requests",
@@ -504,7 +511,363 @@
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
-      "audienceSaveFailed": "Failed to update audience"
+      "audienceSaveFailed": "Failed to update audience",
+      "deleteFailed": "Failed to delete service request form"
     }
+  },
+  "designer": {
+    "palette": {
+      "searchPlaceholder": "Search",
+      "showPalette": "Show palette",
+      "hidePalette": "Hide palette",
+      "dragHint": "Drop on the form to add",
+      "noMatches": {
+        "title": "No matches for “{{query}}”",
+        "tipWords": "Try a shorter or different word, such as “date”, “choice”, or “file”.",
+        "tipVerb": "Search by what the question asks for: name, date, amount, file.",
+        "tipBrowse": "Clear the search to browse every group.",
+        "clear": "Clear search"
+      },
+      "categories": {
+        "text": "Text",
+        "choices": "Choices",
+        "datesAndNumbers": "Dates and numbers",
+        "files": "Files",
+        "layout": "Layout",
+        "data": "Data"
+      }
+    },
+    "saveStatus": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "atTime": "at {{time}}",
+      "notSavedYet": "Not saved yet",
+      "unsaved": "Unsaved changes",
+      "savedAgo": "Saved · {{ago}}",
+      "saved": "Saved"
+    }
+  },
+  "formBuilder": {
+    "leftPane": {
+      "label": "Add elements or browse the outline",
+      "add": "Add",
+      "outline": "Outline",
+      "insertionHint": "The next element lands at the marked spot."
+    },
+    "toolbar": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "mode": "Editing mode",
+      "edit": "Edit",
+      "tryIt": "Try it",
+      "desktopWidth": "Desktop width",
+      "phoneWidth": "Phone width",
+      "formSettings": "Form settings",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "canvas": {
+      "renameHint": "Click to rename",
+      "insertHere": "Add an element here",
+      "insertAtEnd": "Add an element at the end",
+      "dragHandle": "Drag to reorder",
+      "ruleChip": "{{count}} visibility rule(s)",
+      "validationChip": "The answer is checked",
+      "datePlaceholder": "Pick a date",
+      "emptyHint": "Nothing here yet. Add your first question from the Add tab on the left.",
+      "showTemplates": "Show templates",
+      "unsupportedField": "This question is not available."
+    },
+    "outline": {
+      "empty": "Nothing on the form yet.",
+      "halfWidthPair": "Shares a row",
+      "requiredChip": "People must answer this",
+      "ruleChip": "Only shown sometimes"
+    },
+    "gallery": {
+      "title": "Start from a template",
+      "subtitle": "Pick a starting point, then change anything on it."
+    },
+    "messages": {
+      "saveFailed": "Failed to save the form.",
+      "notFound": "This service request no longer exists.",
+      "loadFailedTitle": "The form builder could not open",
+      "loading": "Opening the form builder…",
+      "published": "Published. Clients see the new version.",
+      "publishBlocked": "Fix what the definition page reports, then publish.",
+      "publishFailed": "Failed to publish this service request.",
+      "restoreBackup": "Unsaved changes from your last visit were kept in this browser.",
+      "restoreBackupApply": "Restore them",
+      "restoreBackupDismiss": "Discard"
+    },
+    "types": {
+      "short-text": {
+        "description": "One line of text"
+      },
+      "long-text": {
+        "description": "A paragraph or more"
+      },
+      "email": {
+        "description": "Checked as an email address"
+      },
+      "phone": {
+        "description": "Checked as a phone number"
+      },
+      "url": {
+        "description": "Checked as a link"
+      },
+      "select": {
+        "description": "One answer from a list"
+      },
+      "radio": {
+        "description": "One answer, all shown"
+      },
+      "multi-select": {
+        "description": "Any number of answers"
+      },
+      "checkbox": {
+        "description": "A yes or no answer"
+      },
+      "number": {
+        "description": "A number, with limits"
+      },
+      "date": {
+        "description": "A single day"
+      },
+      "date-time": {
+        "description": "A day and a time"
+      },
+      "file-upload": {
+        "description": "An attachment"
+      },
+      "section": {
+        "description": "Groups the questions under it"
+      },
+      "text": {
+        "description": "A paragraph of guidance"
+      },
+      "callout": {
+        "description": "A note that stands out"
+      },
+      "divider": {
+        "description": "A line between elements"
+      },
+      "lookup": {
+        "description": "A person chosen from a list of records"
+      }
+    },
+    "inspector": {
+      "resize": "Resize the panel",
+      "nothingSelected": "Select an element on the form to change it.",
+      "basics": "Basics",
+      "label": "Question",
+      "sectionTitle": "Section heading",
+      "calloutTitle": "Note heading",
+      "helpText": "Hint under the question",
+      "bodyText": "Text",
+      "calloutTone": "How it looks",
+      "calloutTones": {
+        "info": "Good to know",
+        "warning": "Worth a warning",
+        "success": "Good news"
+      },
+      "sectionCollapsible": "People can fold this section away",
+      "answerKey": "Answer key (used in reports and rules)",
+      "asking": "Asking",
+      "required": "People must answer this",
+      "placeholder": "Faint example text",
+      "width": "Width",
+      "widthFull": "Full",
+      "widthHalf": "Half",
+      "choices": "The choices",
+      "choicesHelp": "One row per answer people can pick.",
+      "choiceLabel": "Choice {{index}}",
+      "newChoice": "Choice {{index}}",
+      "removeChoice": "Remove this choice",
+      "addChoice": "Add a choice",
+      "checkTheAnswer": "Check the answer",
+      "checkHelp": {
+        "default": "Leave a box empty to skip that check.",
+        "number": "Numbers outside this range are refused.",
+        "date": "Dates outside this range are refused."
+      },
+      "rules": {
+        "default": {
+          "minLength": "Shortest answer (characters)",
+          "maxLength": "Longest answer (characters)",
+          "pattern": "Must match this pattern",
+          "min": "Smallest number",
+          "max": "Largest number",
+          "minDate": "Earliest date",
+          "maxDate": "Latest date",
+          "minSelected": "Fewest choices to pick",
+          "maxSelected": "Most choices to pick"
+        }
+      },
+      "customMessage": "What to say when it fails",
+      "customMessagePlaceholder": "Leave empty for the standard wording",
+      "onlyShowWhen": "Only show this when…",
+      "onlyShowWhenHelp": "Without a rule it is always shown.",
+      "onlyShowWhenSectionHelp": "Hiding a section hides the questions in it too.",
+      "visibilityNeedsEarlierField": "Add a question above this one to base a rule on.",
+      "visibilityAlways": "Always shown.",
+      "visibilityWhen": "When",
+      "visibilityIs": "is",
+      "visibilityValue": "this answer",
+      "visibilityOperators": {
+        "equals": "exactly",
+        "not-equals": "anything but",
+        "is-true": "ticked",
+        "is-false": "not ticked",
+        "has-value": "answered",
+        "is-empty": "left blank"
+      },
+      "addVisibilityRule": "Add a condition",
+      "formSettings": {
+        "title": "The whole form",
+        "description": "How the form looks and what happens after it is sent.",
+        "width": "Form width",
+        "widthNarrow": "Narrow",
+        "widthBoxed": "Comfortable reading width",
+        "widthWide": "Wide",
+        "widthFull": "The full page",
+        "submitLabel": "Send button wording",
+        "submitLabelPlaceholder": "Submit request",
+        "successMessage": "What to say after it is sent",
+        "successMessagePlaceholder": "Thanks — we have your request and will be in touch."
+      },
+      "startWithThisAnswer": "Start with this answer",
+      "startWithThisAnswerHelp": "The form opens with this filled in. People can change it.",
+      "noDefaultAnswer": "No answer to start with",
+      "clearDefaultAnswer": "Start with nothing",
+      "defaultNotAnOption": "This answer is not one of the choices above.",
+      "defaultFailsRules": "This answer does not pass the checks set below.",
+      "legacyRuleOutsideBuilder": "This element also has a rule set outside the builder, which keeps applying.",
+      "renameBreaksTemplates": "The ticket subject or description still refers to \"{{key}}\". Update it on the request page.",
+      "renameKeyEmpty": "An answer key cannot be blank. The previous key is still in use.",
+      "renameKeyTaken": "Another question already uses the answer key \"{{key}}\". The previous key is still in use.",
+      "lookup": {
+        "title": "Lookup",
+        "help": "The choices are the people on record, worked out for each requester when the form opens.",
+        "entity": "Look up",
+        "entities": {
+          "contact": "Contact",
+          "user": "MSP user"
+        },
+        "scope": "Options come from",
+        "scopes": {
+          "requester-client": "Requester's client",
+          "tenant": "Entire workspace"
+        }
+      },
+      "unsupportedType": "Unsupported field type \"{{type}}\". Remove this field and add it again before publishing."
+    },
+    "tryIt": {
+      "banner": "Answers on this screen go nowhere. Rules and checks behave exactly as they will for a client.",
+      "check": "Check the answers",
+      "reset": "Start over",
+      "allGood": "Every answer passes.",
+      "required": "This question needs an answer.",
+      "invalid": "This answer is not in the expected form.",
+      "validation": {
+        "type": "This answer is not in the expected form.",
+        "pattern": "This answer is not in the expected form.",
+        "minLength": "Use at least {{minLength}} characters.",
+        "maxLength": "Use {{maxLength}} characters or fewer.",
+        "min": "Enter {{min}} or more.",
+        "max": "Enter {{max}} or less.",
+        "minDate": "Pick {{minDate}} or later.",
+        "maxDate": "Pick {{maxDate}} or earlier.",
+        "minSelected": "Pick at least {{minSelected}}.",
+        "maxSelected": "Pick {{maxSelected}} at most."
+      }
+    },
+    "templates": {
+      "newEmployee": {
+        "name": "New employee onboarding",
+        "description": "Who is joining, when, and what they need on day one.",
+        "callout": {
+          "label": "Give us five working days",
+          "help": "Accounts and hardware take a few days to arrange, so tell us as early as you can."
+        },
+        "section": {
+          "employee": "Employee",
+          "employeeHelp": "Who's joining and when they start.",
+          "hardware": "Hardware"
+        },
+        "fullName": "Full name",
+        "startDate": "Start date",
+        "department": "Department",
+        "departments": {
+          "engineering": "Engineering",
+          "sales": "Sales",
+          "operations": "Operations",
+          "finance": "Finance",
+          "customerSuccess": "Customer Success"
+        },
+        "needsLaptop": "Needs a laptop?",
+        "needsLaptopHelp": "We'll set it up before the start date.",
+        "laptopModel": "Laptop model",
+        "peripherals": "Peripherals",
+        "peripheralOptions": {
+          "monitor": "External monitor",
+          "dock": "Dock",
+          "headset": "Headset",
+          "keyboard": "Keyboard and mouse"
+        },
+        "policy": "Signed equipment policy (PDF)",
+        "laptops": {
+          "macbookAir": "MacBook Air 13\"",
+          "latitude": "Dell Latitude 5450",
+          "thinkpad": "Lenovo ThinkPad T14"
+        }
+      },
+      "access": {
+        "name": "Access request",
+        "description": "New, changed or removed access to a system.",
+        "callout": {
+          "label": "Your manager will be asked to approve",
+          "help": "Access changes need a sign-off before we action them."
+        },
+        "section": "What access is needed",
+        "requestedFor": "Requested for",
+        "system": "Application or system",
+        "requestType": "Request type",
+        "requestTypes": {
+          "new": "New access",
+          "change": "Change existing access",
+          "remove": "Remove access"
+        },
+        "neededBy": "Needed by",
+        "justification": "Business justification"
+      },
+      "repair": {
+        "name": "Hardware repair",
+        "description": "A device that needs fixing or replacing.",
+        "section": {
+          "device": "The device",
+          "problem": "What's wrong"
+        },
+        "assetTag": "Asset tag or serial number",
+        "deviceType": "Device type",
+        "deviceTypes": {
+          "laptop": "Laptop",
+          "desktop": "Desktop",
+          "monitor": "Monitor",
+          "phone": "Phone",
+          "other": "Other"
+        },
+        "symptoms": "Describe the problem",
+        "stillUsable": "The device still works well enough to use",
+        "photo": "Photo of the problem"
+      },
+      "blank": {
+        "name": "Start blank",
+        "description": "An empty form you build one question at a time."
+      }
+    }
+  },
+  "deleteDialog": {
+    "confirmation": "\"{{name}}\" and all of its versions will be permanently removed. This cannot be undone."
   }
 }

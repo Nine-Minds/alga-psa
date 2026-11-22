@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { recordTicketAssigneeChange, tenantDb } from '@alga-psa/db';
-import { releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
+import { lockCoManagedSponsorPool, releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { CoManagedSeatArrangementError } from './seatArrangement';
 import { returnCoManagedSeatArrangementTicketsToMsp } from './seatTicketHandoff';
 
@@ -70,7 +70,7 @@ export async function endCoManagedSeatArrangement(
   return db.transaction(async (trx) => {
     const sponsor = tenantDb(trx, input.sponsorTenant);
     // The pool lock, before any other row.
-    await sponsor.table('co_managed_entitlements').forUpdate().first('tenant');
+    await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     const arrangement = await sponsor.table('co_managed_seat_arrangements')
       .where('arrangement_id', input.arrangementId).first('allocation_id', 'client_id');
     if (!arrangement) throw new CoManagedSeatArrangementError('ARRANGEMENT_NOT_FOUND');
@@ -172,7 +172,7 @@ export async function previewCoManagedSeatArrangementEnd(
   const live = () => sponsor.table('co_managed_seat_assignments').where('arrangement_id', input.arrangementId);
   const client = await sponsor.table('clients').where('client_id', arrangement.client_id).first('client_name');
   const allocation = await sponsor.table('co_managed_allocations')
-    .where({ allocation_id: arrangement.allocation_id, allocation_kind: 'seat' }).whereNot('state', 'released').first('seats');
+    .where({ allocation_id: arrangement.allocation_id, allocation_kind: 'seat', funding_source: 'paid' }).whereNot('state', 'released').first('seats');
   return {
     arrangementId: input.arrangementId,
     clientName: client?.client_name ?? null,

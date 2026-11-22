@@ -4,8 +4,9 @@ import {
   resolveStaticDefaultValues,
   validateBasicFormSchema,
 } from '../../lib/service-requests/basicFormBuilder';
+import { isUnsupportedFieldType } from '@alga-psa/ui/form-fields';
 import { renderServiceRequestTemplate } from '../../lib/service-requests/ticketTextTemplate';
-import { buildTicketDescription } from '../../lib/service-requests/providers/builtins/ticketOnlyExecutionProvider';
+import { buildTicketDescription, buildTicketTitle } from '../../lib/service-requests/providers/builtins/ticketOnlyExecutionProvider';
 import { getSubmissionFieldDisplay } from '../../app/client-portal/request-services/submissionFieldPresentation';
 import { validateSubmissionAgainstPublishedSchema } from '../../lib/service-requests/submissionService';
 
@@ -31,6 +32,17 @@ describe('unknown field types', () => {
 
   it('a missing type is rejected too, not defaulted', () => {
     expect(validateBasicFormSchema({ fields: [{ key: 'a', label: 'A' }] }).isValid).toBe(false);
+  });
+
+  it('re-saving a draft does not rewrite an unknown type', () => {
+    const once = normalizeBasicFormSchema({ fields: [{ key: 'a', type: 'rating', label: 'Rating' }] });
+    expect(normalizeBasicFormSchema(once).fields[0].type).toBe('rating');
+  });
+
+  it('the registry says which types are unsupported; a missing type is not one', () => {
+    expect(isUnsupportedFieldType('rating')).toBe(true);
+    expect(isUnsupportedFieldType('lookup')).toBe(false);
+    expect(isUnsupportedFieldType(undefined)).toBe(false);
   });
 
   it('static defaults skip an unknown type rather than treating it as text', () => {
@@ -92,26 +104,48 @@ describe('lookup answers render as labels, never ids', () => {
   const format = { locale: 'en', yes: 'Yes', no: 'No' };
   const id = '3f7c0000-0000-4000-8000-000000000001';
 
-  it('template placeholder uses the label snapshot, falling back to the id only if the entity is gone', () => {
+  it('template placeholder uses the label snapshot, and never the id when the entity is gone', () => {
     expect(
-      renderServiceRequestTemplate('{{manager}}', { formSchema: schema, payload: { manager: id }, format, lookupLabels: { manager: 'Jane Doe' } })
+      renderServiceRequestTemplate('{{manager}}', {
+        formSchema: schema,
+        payload: { manager: id },
+        format: { ...format, referenceLabels: { manager: 'Jane Doe' } },
+      })
     ).toBe('Jane Doe');
-    expect(renderServiceRequestTemplate('{{manager}}', { formSchema: schema, payload: { manager: id }, format })).toBe(id);
+    const unresolved = renderServiceRequestTemplate('{{manager}}', {
+      formSchema: schema,
+      payload: { manager: id },
+      format,
+    });
+    expect(unresolved).not.toContain(id);
   });
 
   it('ticket description row uses the label', () => {
     const description = buildTicketDescription(
-      { formSchema: schema, payload: { manager: id }, format, lookupLabels: { manager: 'Jane Doe' } },
+      { formSchema: schema, payload: { manager: id }, format: { ...format, referenceLabels: { manager: 'Jane Doe' } } },
       {}
     );
     expect(description).toContain('Jane Doe');
     expect(description).not.toContain(id);
   });
 
+  it('a lookup id is never the ticket subject fallback', () => {
+    const title = buildTicketTitle(
+      { formSchema: schema, payload: { manager: id }, format: { ...format, referenceLabels: { manager: 'Jane Doe' } } },
+      'abcdef12-0000-4000-8000-000000000000',
+      {}
+    );
+    expect(title).not.toContain(id);
+  });
+
   it('submission detail shows the label, or a placeholder when it no longer resolves', () => {
     const field = schema.fields[0];
-    const show = (labels: Record<string, string>) =>
-      getSubmissionFieldDisplay(field, schema.fields, { manager: id }, [], { labels, unavailableText: '(gone)' });
+    const show = (referenceLabels: Record<string, string>) =>
+      getSubmissionFieldDisplay(field, schema.fields, { manager: id }, [], {
+        ...format,
+        referenceLabels,
+        unresolved: '(gone)',
+      });
     expect(show({ manager: 'Jane Doe' })).toEqual({ kind: 'text', text: 'Jane Doe' });
     expect(show({})).toEqual({ kind: 'text', text: '(gone)' });
   });

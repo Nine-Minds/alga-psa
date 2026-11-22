@@ -333,6 +333,16 @@
       "addLocation": "+ Dodaj lokalizację",
       "fromTemplate": "+ Z szablonu"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Usunąć tę lokalizację?",
+        "message": "Ta lokalizacja ma jeszcze {{count}} pozycji. Wybierz, co z nimi zrobić.",
+        "moveOption": "Przenieś te pozycje do {{location}}",
+        "ungroupOption": "Zachowaj te pozycje i zakończ grupowanie według lokalizacji",
+        "deleteOption": "Usuń te pozycje",
+        "confirm": "Usuń lokalizację"
+      }
+    },
     "clientFacing": {
       "title": "Tekst widoczny dla klienta",
       "subtitle": "Pojawia się na PDF, pod sumami.",
@@ -588,10 +598,13 @@
       "groupHeading": "Lokalizacja {{index}}",
       "pickerPlaceholder": "Wybierz lokalizację",
       "unassigned": "Pozycje bez lokalizacji są tu wymienione, dopóki nie zostanie wybrana.",
+      "quoteWide": "Cała oferta",
+      "quoteWideHint": "Rabaty obowiązują w całej ofercie, więc nie są powiązane z lokalizacją.",
       "removeGroup": "Usuń lokalizację",
       "subtotal": "Suma częściowa lokalizacji",
       "addLocationButton": "+ Dodaj lokalizację",
       "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć oferty wielolokalizacyjne.",
+      "allLocationsInUse": "Każda aktywna lokalizacja tego klienta ma już grupę w tej ofercie.",
       "emptyGroup": "Brak pozycji dla tej lokalizacji."
     }
   },
@@ -783,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Powrót do układów",
+      "back": "Powrót do układów ofert",
       "rerun": "Ponowne odtworzenie",
       "saveLayout": "Zapisz układ"
     },
@@ -792,8 +805,6 @@
       "copyOf": "Kopia {{name}}",
       "standardTemplate": "Standardowy szablon"
     },
-    "title": "Edytor układu wyceny",
-    "description": "Zaprojektuj układ oferty za pomocą edytora wizualnego, a następnie wyświetl podgląd z przykładowymi danymi.",
     "errors": {
       "exportAst": "Nie udało się wyeksportować szablonu AST z wizualnego obszaru roboczego: {{message}}",
       "load": "Nie udało się załadować edytora szablonów ofert",
@@ -806,16 +817,13 @@
       "quoteDetailLoad": "Nie udało się załadować szczegółów wyceny."
     },
     "fields": {
-      "layoutDetails": "Szczegóły układu",
+      "created": "Utworzono {{time}}",
+      "notSaved": "Jeszcze nie zapisano",
+      "savedAt": "Zapisano {{time}}",
       "templateName": "Nazwa szablonu",
       "version": "Wersja"
     },
-    "footer": {
-      "created": "Stworzony:",
-      "lastUpdated": "Ostatnia aktualizacja:"
-    },
     "headings": {
-      "editLayout": "Edytuj układ oferty",
       "newLayout": "Nowy układ wyceny"
     },
     "placeholders": {
@@ -837,7 +845,14 @@
       "noQuotesFound": "Brak wycen.",
       "selectQuote": "Wybierz wycenę",
       "selectQuoteHint": "Wybierz wycenę, aby zobaczyć podgląd z danymi.",
-      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…"
+      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
+      "frameTitle": "Podgląd oferty",
+      "zoom": {
+        "fit": "Dopasuj",
+        "actual": "100%",
+        "label": "Powiększenie podglądu",
+        "fitWithScale": "Dopasuj ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Renderowanie",
@@ -852,6 +867,9 @@
       "preview": "Zapowiedź",
       "transforms": "Transformuje",
       "visual": "Wizualny"
+    },
+    "titles": {
+      "edit": "Edytuj układ: {{name}}"
     }
   },
   "templatesPage": {

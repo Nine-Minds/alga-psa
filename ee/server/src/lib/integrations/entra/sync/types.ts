@@ -52,3 +52,37 @@ export function normalizeEntraSyncUser(
     raw: input.raw && typeof input.raw === 'object' ? input.raw : {},
   };
 }
+
+export type EntraSyncUserIssueStage = 'match' | 'link' | 'create';
+
+/** Maximum number of per-user issues persisted on one tenant result row. */
+export const ENTRA_SYNC_USER_ISSUE_LIMIT = 100;
+
+// LEVERAGE: pattern entra-user-issue-shape — same issue DTO declared in server sync/types.ts, temporal types/entra-sync.ts and integrations entraActions.ts; no shared package spans the workflow sandbox, server and UI
+export interface EntraSyncUserIssue {
+  /** 'failure': the user was not (fully) synced. 'notice': synced, but a field value was changed or left out. */
+  severity: 'failure' | 'notice';
+  stage: EntraSyncUserIssueStage;
+  entraObjectId: string;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  /** Set when the contact write succeeded before the failure, or for notices on a synced contact. */
+  contactNameId?: string | null;
+  /** For notices: which field the notice is about. Only 'phone_numbers' today. */
+  field?: 'phone_numbers';
+  message: string;
+}
+
+/**
+ * Caps a mixed issue list without letting notices hide failures: all failures
+ * first (up to the limit), then notices fill the remaining slots. User order is
+ * preserved within each group.
+ */
+export function capEntraSyncUserIssues(
+  issues: EntraSyncUserIssue[],
+  limit: number = ENTRA_SYNC_USER_ISSUE_LIMIT
+): EntraSyncUserIssue[] {
+  const failures = issues.filter((issue) => issue.severity === 'failure').slice(0, limit);
+  const notices = issues.filter((issue) => issue.severity !== 'failure').slice(0, limit - failures.length);
+  return [...failures, ...notices];
+}

@@ -51,6 +51,8 @@ export const TICKET_EMAIL_VARIABLE_AUDIENCE: Readonly<
   "ticket.closedBy": "client",
   "ticket.scheduledCloseDate": "client",
   "ticket.changes": "client",
+  // The same changes as structured items; the stock templates iterate these.
+  "ticket.changeItems": "client",
   // The client rendering carries the latest client-visible resolution only.
   "ticket.resolution": "client",
 
@@ -88,12 +90,13 @@ export const TICKET_EMAIL_VARIABLE_AUDIENCE: Readonly<
   "comment.rawContent": "client",
   "comment.isInternal": "client",
 
-  // Ticket detail variables arriving with PR 3957.
+  // Ticket detail variables arriving with PR 3957. Everyone admitted to the
+  // ticket sees the same detail blocks on the close email.
   "ticket.assets": "client", // the client's own devices
   "ticket.remainingBlockHours": "client", // the client's own balance
-  "ticket.totalTimeBillable": "msp", // undecided; MSP-only until it is
-  "ticket.totalTimeWorked": "msp", // includes non-billable time
-  "ticket.timeEntries": "msp", // technician names, non-billable time
+  "ticket.totalTimeBillable": "client", // Client's own billable time
+  "ticket.totalTimeWorked": "client", // includes non-billable time
+  "ticket.timeEntries": "client", // technician names, non-billable time, Time Entries are meant to be client facing as "work history reports" for time base billed customers
   "ticket.materials": "msp", // rates and billed state
   "ticket.materialsTotal": "msp",
 };

@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 function read(relativePath: string): string {
@@ -23,6 +24,19 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 }
 
 describe('SendInvoiceEmailDialog i18n wiring contract', () => {
+  it('English locale resolves every translation used by the dialog at runtime', () => {
+    const output = execFileSync(
+      'node',
+      [
+        path.resolve(__dirname, '../../../scripts/find-missing-i18n-keys.cjs'),
+        path.resolve(__dirname, '../src/components/billing-dashboard/invoicing/SendInvoiceEmailDialog.tsx'),
+      ],
+      { encoding: 'utf8' },
+    );
+
+    expect(output).toContain('No missing English keys detected.');
+  });
+
   it('T033: dialog title, loading state, summary counts, recipients heading, and send/cancel states resolve through msp/invoicing', () => {
     const source = read('../src/components/billing-dashboard/invoicing/SendInvoiceEmailDialog.tsx');
     const en = readJson<Record<string, unknown>>(

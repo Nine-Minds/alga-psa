@@ -29,10 +29,17 @@ function buildMockKnex(opts: {
   standardTemplate?: Record<string, any> | null;
   tenantAssignment?: Record<string, any> | null;
 }) {
+  // Every standard-template lookup is recorded so a test can prove which
+  // layout code was asked for, not just which one came back.
+  const standardLookups: any[] = [];
+
   const knex: any = (table: string) => {
     const chain: any = {};
     chain.select = vi.fn(() => chain);
-    chain.where = vi.fn(() => chain);
+    chain.where = vi.fn((clause: any) => {
+      if (table === 'standard_quote_document_templates') standardLookups.push(clause);
+      return chain;
+    });
     chain.whereNull = vi.fn(() => chain);
     chain.first = vi.fn(async () => {
       if (table === 'quote_document_templates') return opts.customTemplate ?? null;
@@ -43,8 +50,14 @@ function buildMockKnex(opts: {
     return chain;
   };
 
+  knex.standardLookups = standardLookups;
   return knex;
 }
+
+const requestedStandardCodes = (knex: any): string[] =>
+  (knex.standardLookups as any[])
+    .map((clause) => clause?.standard_quote_document_template_code)
+    .filter((code: unknown): code is string => typeof code === 'string');
 
 describe('quote-template-ast – templateSelection', () => {
   beforeEach(() => {
@@ -136,6 +149,111 @@ describe('quote-template-ast – templateSelection', () => {
     // Should NOT call getById since we passed the object directly
     expect(getByIdMock).not.toHaveBeenCalled();
     expect(result.source).toBe('standard-fallback');
+  });
+
+  // alga-2026-0002902 / PR review: the grouped-by-location standard layout is
+  // only ever used when someone picks it — per quote or as the tenant
+  // assignment. How many locations the items span never selects a layout.
+  describe('by-location layout is explicit-selection only (alga-2026-0002902)', () => {
+    const multiLocationItems = [
+      { quote_item_id: 'i-1', location_id: 'loc-1' },
+      { quote_item_id: 'i-2', location_id: 'loc-2' },
+    ];
+
+    it('T902d: honours a per-quote pick of the by-location standard', async () => {
+      const quote = {
+        quote_id: 'q-by-location',
+        template_id: 'tmpl-standard-by-location',
+        quote_items: multiLocationItems,
+      } as any;
+      const knex = buildMockKnex({
+        standardTemplate: {
+          templateAst: SAMPLE_AST,
+          standard_quote_document_template_code: 'standard-quote-by-location',
+        },
+      });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('quote');
+      expect(result.templateId).toBe('tmpl-standard-by-location');
+      expect(result.standardCode).toBe('standard-quote-by-location');
+    });
+
+    it('T902e: honours a tenant assignment of the by-location standard', async () => {
+      const quote = { quote_id: 'q-by-location', template_id: null, quote_items: multiLocationItems } as any;
+      const knex = buildMockKnex({
+        standardTemplate: { templateAst: SAMPLE_AST },
+        tenantAssignment: {
+          template_source: 'standard',
+          standard_quote_document_template_code: 'standard-quote-by-location',
+          quote_document_template_id: null,
+        },
+      });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('tenant-default');
+      expect(result.standardCode).toBe('standard-quote-by-location');
+      expect(requestedStandardCodes(knex)).toContain('standard-quote-by-location');
+    });
+
+    it('T902f: keeps the flat default for a multi-location quote picked per quote', async () => {
+      const quote = {
+        quote_id: 'q-multi',
+        template_id: 'tmpl-standard-default',
+        quote_items: multiLocationItems,
+      } as any;
+      const knex = buildMockKnex({
+        standardTemplate: {
+          templateAst: SAMPLE_AST,
+          standard_quote_document_template_code: 'standard-quote-default',
+        },
+      });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('quote');
+      expect(result.standardCode).toBe('standard-quote-default');
+      expect(requestedStandardCodes(knex)).not.toContain('standard-quote-by-location');
+      expect(getStandardMock).not.toHaveBeenCalledWith('standard-quote-by-location');
+    });
+
+    it('T902g: keeps the flat default for a multi-location quote on the tenant default', async () => {
+      const quote = { quote_id: 'q-multi', template_id: null, quote_items: multiLocationItems } as any;
+      const knex = buildMockKnex({
+        standardTemplate: { templateAst: SAMPLE_AST },
+        tenantAssignment: {
+          template_source: 'standard',
+          standard_quote_document_template_code: 'standard-quote-default',
+          quote_document_template_id: null,
+        },
+      });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('tenant-default');
+      expect(result.standardCode).toBe('standard-quote-default');
+      expect(requestedStandardCodes(knex)).not.toContain('standard-quote-by-location');
+    });
+
+    it('T902h: keeps the flat default for a multi-location quote with no assignment', async () => {
+      const quote = { quote_id: 'q-multi', template_id: null, quote_items: multiLocationItems } as any;
+      const knex = buildMockKnex({ tenantAssignment: null });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('standard-fallback');
+      expect(result.standardCode).toBe('standard-quote-default');
+      expect(requestedStandardCodes(knex)).not.toContain('standard-quote-by-location');
+      expect(getStandardMock).toHaveBeenCalledWith('standard-quote-default');
+      expect(getStandardMock).not.toHaveBeenCalledWith('standard-quote-by-location');
+    });
+
+    it('T902i: leaves a custom template untouched for a multi-location quote', async () => {
+      const quote = { quote_id: 'q-multi', template_id: 'tmpl-custom', quote_items: multiLocationItems } as any;
+      const knex = buildMockKnex({ customTemplate: { templateAst: SAMPLE_AST } });
+
+      const result = await resolveQuoteTemplateAst(knex, TENANT, quote);
+      expect(result.source).toBe('quote');
+      expect(result.templateId).toBe('tmpl-custom');
+      expect(result.standardCode).toBeUndefined();
+    });
   });
 
   it('T277: returns a clone, not the original AST reference', async () => {

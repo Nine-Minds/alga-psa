@@ -2965,8 +2965,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {isLoadingBoardStatuses ? (
                   <p className="text-sm text-muted-foreground">{t('ticketing.boards.fields.ticketStatuses.loading')}</p>
                 ) : formData.ticket_statuses.map((status, index) => (
-                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] md:items-center">
-                    <div>
+                  <div key={status.temp_id} className="flex flex-col gap-3 rounded-md border border-gray-200 p-3 md:flex-row md:flex-wrap md:items-center">
+                    <div className="md:flex-1 md:min-w-[14rem]">
                       <Label htmlFor={`inline-ticket-status-name-${index}`}>{t('ticketing.boards.fields.ticketStatuses.statusName')}</Label>
                       <Input
                         id={`inline-ticket-status-name-${index}`}
@@ -3003,11 +3003,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         onCheckedChange={(checked) => updateManagedTicketStatus(status.temp_id, { portal_selectable: checked })}
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 md:ml-auto">
                       <Button
                         id={`move-inline-ticket-status-up-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'up')}
                         disabled={index === 0}
                       >
@@ -3017,6 +3018,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         id={`move-inline-ticket-status-down-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'down')}
                         disabled={index === formData.ticket_statuses.length - 1}
                       >
@@ -3026,6 +3028,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         id={`remove-inline-ticket-status-${index}`}
                         type="button"
                         variant="ghost"
+                        size="sm"
                         onClick={() => removeManagedTicketStatus(status.temp_id)}
                         disabled={formData.ticket_statuses.length === 1}
                       >

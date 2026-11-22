@@ -1527,6 +1527,36 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Pre-rendered HTML fragment listing the field changes applied when closing (rendered raw via triple-stache in HTML, and as plain text in the text body)",
             "example": "<ul style=\"margin:0;padding:0;list-style:none;\">...</ul>",
+            "availability": "available-unused",
+            "notes": "Superseded in stock templates by {{#each project.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+          },
+          {
+            "path": "project.changeItems",
+            "type": "array",
+            "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+            "example": "[{ label: 'Status', oldValue: 'In Progress', newValue: 'Completed' }]",
+            "availability": "used",
+            "notes": "Iterated with {{#each project.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc."
+          },
+          {
+            "path": "project.changeItems.label",
+            "type": "string",
+            "description": "Display name of the changed field.",
+            "example": "Status",
+            "availability": "used"
+          },
+          {
+            "path": "project.changeItems.oldValue",
+            "type": "string",
+            "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+            "example": "In Progress",
+            "availability": "used"
+          },
+          {
+            "path": "project.changeItems.newValue",
+            "type": "string",
+            "description": "The field's new value, resolved to a display name.",
+            "example": "Completed",
             "availability": "used"
           },
           {
@@ -1841,6 +1871,36 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Pre-rendered HTML fragment listing the field changes (old vs new values); rendered raw via triple-stache in HTML and as plain text in the text body",
             "example": "<ul style=\"margin:0;padding:0;list-style:none;\">...</ul>",
+            "availability": "available-unused",
+            "notes": "Superseded in stock templates by {{#each project.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+          },
+          {
+            "path": "project.changeItems",
+            "type": "array",
+            "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+            "example": "[{ label: 'Status', oldValue: 'Planning', newValue: 'In Progress' }]",
+            "availability": "used",
+            "notes": "Iterated with {{#each project.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc."
+          },
+          {
+            "path": "project.changeItems.label",
+            "type": "string",
+            "description": "Display name of the changed field.",
+            "example": "Status",
+            "availability": "used"
+          },
+          {
+            "path": "project.changeItems.oldValue",
+            "type": "string",
+            "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+            "example": "Planning",
+            "availability": "used"
+          },
+          {
+            "path": "project.changeItems.newValue",
+            "type": "string",
+            "description": "The field's new value, resolved to a display name.",
+            "example": "In Progress",
             "availability": "used"
           },
           {
@@ -2943,6 +3003,195 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Subcategory; template uses categoryDetails instead.",
             "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets",
+            "type": "array",
+            "description": "Linked assets. Iterate to choose columns; values are plain data, not HTML.",
+            "example": "[{ assetTag: 'AST-0042', name: 'Office Printer', assetType: 'Printer', manufacturer: 'Brother', model: 'HL-L6200DW', serialNumber: 'SN-0042', status: 'active', location: 'Front office', relationship: 'affected' }]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].assetTag",
+            "type": "string",
+            "description": "Linked asset assetTag.",
+            "example": "AST-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].name",
+            "type": "string",
+            "description": "Linked asset name.",
+            "example": "Office Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].assetType",
+            "type": "string",
+            "description": "Linked asset assetType.",
+            "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].manufacturer",
+            "type": "string",
+            "description": "Linked asset manufacturer.",
+            "example": "Brother",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].model",
+            "type": "string",
+            "description": "Linked asset model.",
+            "example": "HL-L6200DW",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].serialNumber",
+            "type": "string",
+            "description": "Linked asset serialNumber.",
+            "example": "SN-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].status",
+            "type": "string",
+            "description": "Linked asset status.",
+            "example": "active",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].location",
+            "type": "string",
+            "description": "Linked asset location.",
+            "example": "Front office",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].relationship",
+            "type": "string",
+            "description": "Linked asset relationship.",
+            "example": "affected",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials",
+            "type": "array",
+            "description": "Material rows with quantity, currency-formatted rate and amount, and billed state.",
+            "example": "[{ name: 'Toner cartridge', description: 'Replacement toner', quantity: 2, rate: '45.00', amount: '90.00', currencyCode: 'XXX', billed: true }]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].name",
+            "type": "string",
+            "description": "Material name.",
+            "example": "Toner cartridge",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].description",
+            "type": "string",
+            "description": "Material description.",
+            "example": "Replacement toner",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].quantity",
+            "type": "number",
+            "description": "Material quantity.",
+            "example": "2",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].rate",
+            "type": "string",
+            "description": "Material rate.",
+            "example": "45.00",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].amount",
+            "type": "string",
+            "description": "Material amount.",
+            "example": "90.00",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].currencyCode",
+            "type": "string",
+            "description": "Material currencyCode.",
+            "example": "XXX",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materials[].billed",
+            "type": "boolean",
+            "description": "Material billed.",
+            "example": "true",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materialsTotal",
+            "type": "string",
+            "description": "Material totals, kept separate by currency when necessary.",
+            "example": "90.00",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries",
+            "type": "array",
+            "description": "Individual time entries, oldest first. Date, technician, worked and billable can be laid out as an editable table.",
+            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr, 30 min', billable: '1 hr' }]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].date",
+            "type": "string",
+            "description": "Time entry date.",
+            "example": "06/10/2025",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].technician",
+            "type": "string",
+            "description": "Time entry technician.",
+            "example": "Jane Smith",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].worked",
+            "type": "string",
+            "description": "Time entry worked.",
+            "example": "1 hr, 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].billable",
+            "type": "string",
+            "description": "Time entry billable.",
+            "example": "1 hr",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeWorked",
+            "type": "string",
+            "description": "Total recorded worked duration, including non-billable time.",
+            "example": "3 hr, 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeBillable",
+            "type": "string",
+            "description": "Total recorded billable duration, whether invoiced or not.",
+            "example": "2 hr, 15 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.remainingBlockHours",
+            "type": "string",
+            "description": "Live available prepaid hour-block balance for the client at send time.",
+            "example": "12 hr, 45 min",
             "availability": "available-unused"
           }
         ]
@@ -4292,6 +4541,50 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Rendered HTML list of field changes (old→new, grouped by updater/timestamp) shown in the 'Changes Made' box (rendered via {{{ }}}).",
             "example": "<ul><li>Priority: Medium → High</li></ul>",
+            "availability": "available-unused",
+            "notes": "Superseded in stock templates by {{#each ticket.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+          },
+          {
+            "path": "ticket.changeItems",
+            "type": "array",
+            "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+            "example": "[{ label: 'Priority', oldValue: 'Medium', newValue: 'High', updatedBy: '', updatedAt: '' }]",
+            "availability": "used",
+            "notes": "Iterated with {{#each ticket.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc. Bundled updates are flattened into one list: the first item of each update carries updatedBy/updatedAt."
+          },
+          {
+            "path": "ticket.changeItems.label",
+            "type": "string",
+            "description": "Display name of the changed field.",
+            "example": "Priority",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.oldValue",
+            "type": "string",
+            "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+            "example": "Medium",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.newValue",
+            "type": "string",
+            "description": "The field's new value, resolved to a display name.",
+            "example": "High",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.updatedBy",
+            "type": "string",
+            "description": "Bundled updates only: who made this update, set on the first item of each update and empty on the rest. Wrap a heading in {{#if this.updatedBy}}.",
+            "example": "Dana Whitfield",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.updatedAt",
+            "type": "string",
+            "description": "Bundled updates only: when that update was made, in the tenant's time zone and locale; set on the same item as updatedBy.",
+            "example": "Nov 17, 2026, 03:04 PM EST",
             "availability": "used"
           },
           {
@@ -4417,6 +4710,50 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Rendered HTML list of field changes shown in the 'What Changed' box (rendered via {{{ }}}).",
             "example": "<ul><li>Status: New → In Progress</li></ul>",
+            "availability": "available-unused",
+            "notes": "Superseded in stock templates by {{#each ticket.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+          },
+          {
+            "path": "ticket.changeItems",
+            "type": "array",
+            "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+            "example": "[{ label: 'Status', oldValue: 'New', newValue: 'In Progress', updatedBy: '', updatedAt: '' }]",
+            "availability": "used",
+            "notes": "Iterated with {{#each ticket.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc. Bundled updates are flattened into one list: the first item of each update carries updatedBy/updatedAt."
+          },
+          {
+            "path": "ticket.changeItems.label",
+            "type": "string",
+            "description": "Display name of the changed field.",
+            "example": "Status",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.oldValue",
+            "type": "string",
+            "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+            "example": "New",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.newValue",
+            "type": "string",
+            "description": "The field's new value, resolved to a display name.",
+            "example": "In Progress",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.updatedBy",
+            "type": "string",
+            "description": "Bundled updates only: who made this update, set on the first item of each update and empty on the rest. Wrap a heading in {{#if this.updatedBy}}.",
+            "example": "Dana Whitfield",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.changeItems.updatedAt",
+            "type": "string",
+            "description": "Bundled updates only: when that update was made, in the tenant's time zone and locale; set on the same item as updatedBy.",
+            "example": "Nov 17, 2026, 03:04 PM EST",
             "availability": "used"
           },
           {
@@ -4924,6 +5261,132 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Subcategory; template uses categoryDetails instead.",
             "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets",
+            "type": "array",
+            "description": "Linked assets. Iterate to choose columns; values are plain data, not HTML.",
+            "example": "[{ assetTag: 'AST-0042', name: 'Office Printer', assetType: 'Printer', manufacturer: 'Brother', model: 'HL-L6200DW', serialNumber: 'SN-0042', status: 'active', location: 'Front office', relationship: 'affected' }]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].assetTag",
+            "type": "string",
+            "description": "Linked asset assetTag.",
+            "example": "AST-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].name",
+            "type": "string",
+            "description": "Linked asset name.",
+            "example": "Office Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].assetType",
+            "type": "string",
+            "description": "Linked asset assetType.",
+            "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].manufacturer",
+            "type": "string",
+            "description": "Linked asset manufacturer.",
+            "example": "Brother",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].model",
+            "type": "string",
+            "description": "Linked asset model.",
+            "example": "HL-L6200DW",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].serialNumber",
+            "type": "string",
+            "description": "Linked asset serialNumber.",
+            "example": "SN-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].status",
+            "type": "string",
+            "description": "Linked asset status.",
+            "example": "active",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].location",
+            "type": "string",
+            "description": "Linked asset location.",
+            "example": "Front office",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].relationship",
+            "type": "string",
+            "description": "Linked asset relationship.",
+            "example": "affected",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries",
+            "type": "array",
+            "description": "Individual time entries, oldest first. Date, technician, worked and billable can be laid out as an editable table.",
+            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr, 30 min', billable: '1 hr' }]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].date",
+            "type": "string",
+            "description": "Time entry date.",
+            "example": "06/10/2025",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].technician",
+            "type": "string",
+            "description": "Time entry technician.",
+            "example": "Jane Smith",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].worked",
+            "type": "string",
+            "description": "Time entry worked.",
+            "example": "1 hr, 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeEntries[].billable",
+            "type": "string",
+            "description": "Time entry billable.",
+            "example": "1 hr",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeWorked",
+            "type": "string",
+            "description": "Total recorded worked duration, including non-billable time.",
+            "example": "3 hr, 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeBillable",
+            "type": "string",
+            "description": "Total recorded billable duration, whether invoiced or not.",
+            "example": "2 hr, 15 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.remainingBlockHours",
+            "type": "string",
+            "description": "Live available prepaid hour-block balance for the client at send time.",
+            "example": "12 hr, 45 min",
             "availability": "available-unused"
           }
         ]

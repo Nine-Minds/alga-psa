@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Solicitação enviada",
-    "requestIdLabel": "ID da solicitação:",
-    "ticketIdLabel": "ID do ticket:",
     "unableToSubmit": "Não foi possível enviar a solicitação",
     "formTitle": "Formulário de solicitação",
     "noFields": "Nenhum campo configurado.",
@@ -20,6 +18,18 @@
     "optionLabel": "Opção {{index}}",
     "submit": "Enviar solicitação",
     "requiredField": "Este campo é obrigatório.",
+    "validation": {
+      "type": "Esta resposta não tem o formato esperado.",
+      "pattern": "Esta resposta não tem o formato esperado.",
+      "minLength": "Use pelo menos {{minLength}} caracteres.",
+      "maxLength": "Use {{maxLength}} caracteres ou menos.",
+      "min": "Informe {{min}} ou mais.",
+      "max": "Informe {{max}} ou menos.",
+      "minDate": "Escolha {{minDate}} ou depois.",
+      "maxDate": "Escolha {{maxDate}} ou antes.",
+      "minSelected": "Escolha pelo menos {{minSelected}}.",
+      "maxSelected": "Escolha no máximo {{maxSelected}}."
+    },
     "unsupportedField": "Esta pergunta não está disponível."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Voltar para Meus Pedidos",
-    "requestIdLabel": "ID da solicitação:",
     "statusSection": "Status",
     "submittedAt": "Enviado: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Respostas enviadas",
     "noResponse": "Sem resposta",
     "attachmentsTitle": "Anexos",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Suas solicitações"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, enviada em {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ver ticket"
   }
 }

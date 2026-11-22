@@ -276,13 +276,9 @@ describeDb('seat technicians and portal users: commercial lookups and client bil
     const seatOne: any = await ticketLookups.getClientById(clientId);
     expect(seatOne?.client_name).toBe('S13 client');
     expect(leaked(seatOne)).toEqual([]);
-    const seatAll: any[] = await ticketLookups.getAllClients();
-    expect(seatAll.map(c => c.client_id)).toContain(clientId);
-    for (const row of seatAll) expect(leaked(row)).toEqual([]);
 
     as('admin');
     expect(await ticketLookups.getClientById(clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly', billing_email: 'ap@s13.example' });
-    expect((await ticketLookups.getAllClients()).find(c => c.client_id === clientId)).toMatchObject({ payment_terms: 'net_45', billing_cycle: 'weekly' });
   });
 
   it('the REST client reads project by the API caller: the acting user and any principal it acts through must both hold billing', async () => {

@@ -69,6 +69,8 @@ export type BoardListItem = {
   board_name: string;
   is_default?: boolean;
   default_assigned_to?: string | null;
+  /** 'itil' boards take ITIL priorities only; any other board its custom ones. */
+  priority_type?: string | null;
 };
 
 export function listBoards(

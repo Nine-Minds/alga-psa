@@ -14,6 +14,7 @@
     "communityEditionDescription": "Samodzielnie hostowana Community Edition oferuje nieograniczoną liczbę użytkowników bez ograniczeń licencyjnych ani dodatkowych kosztów."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Bez limitu",
     "metaTitle": "Zakup zakończony",
     "scheduledTitle": "Zmiana została zaplanowana pomyślnie!",
     "updatedTitle": "Aktualizacja zakończona pomyślnie!",
@@ -395,9 +396,52 @@
   },
   "errors": {
     "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
-    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
+    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami",
+    "accountManagementUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji zarządzania kontami"
   },
   "coManaged": {
+    "trial": {
+      "title": "15-dniowy okres próbny współzarządzanego stanowiska",
+      "description": "Zaproś technika klienta do pracy na wybranych tablicach. Okres 15 dni zaczyna się przy pierwszym logowaniu technika. Dostęp wymaga aktywnej subskrypcji podstawowej lub aktywnego okresu próbnego planu podstawowego.",
+      "terms": "Płatne stanowisko kosztuje {{amount}} miesięcznie. Okres próbny kończy się bez opłat, chyba że potwierdzisz użycie płatnego stanowiska.",
+      "status": {
+        "active": "Aktywny",
+        "pending": "Oczekiwanie na pierwsze logowanie",
+        "base_paused": "Subskrypcja podstawowa wstrzymana",
+        "expired": "Okres próbny wygasł",
+        "paid": "Płatne stanowisko w użyciu",
+        "ended": "Okres próbny zakończony",
+        "checkout_pending": "Oczekiwanie na płatność"
+      },
+      "purchaseAwaitingVerification": "Zakup oczekuje na weryfikację",
+      "conversionFailed": "Nie udało się przejść na płatne stanowisko. Sprawdź dostępne płatne stanowiska lub ponów zakup.",
+      "deadline": "Okres próbny stanowiska kończy się {{date}}.",
+      "baseUntil": "Obecny dostęp podstawowy kończy się {{date}}.",
+      "openSetup": "Otwórz konfigurację stanowiska klienta",
+      "invite": "Zaproś technika na 15 dni",
+      "resend": "Wyślij zaproszenie ponownie",
+      "replace": "Zastąp technika",
+      "cancelInvitation": "Anuluj zaproszenie",
+      "restoreBase": "Przywróć dostęp podstawowy w sekcji Konto",
+      "resumePurchase": "Wznów zakup",
+      "cancelConversion": "Anuluj przejście na płatne stanowisko",
+      "spareSeatTerms": "Użyj jednego z dostępnych płatnych stanowisk. Łączna liczba stanowisk w puli pozostanie bez zmian.",
+      "confirmSpareSeat": "Potwierdź użycie jednego płatnego stanowiska",
+      "keepSeat": "Zachowaj to stanowisko",
+      "refresh": "Odśwież stan okresu próbnego",
+      "returnToTrial": "Wróć do okresu próbnego stanowiska klienta",
+      "notice": {
+        "invitationSaved": "Zapisano zaproszenie. Ponów wysyłkę poniżej.",
+        "deliveryFailed": "Nie udało się wysłać zaproszenia. Możesz spróbować ponownie.",
+        "replacementSent": "Wysłano zaproszenie do nowego technika.",
+        "replacementSaved": "Zapisano nowego technika. Ponów wysyłkę zaproszenia."
+      },
+      "error": {
+        "boardChoicesFailed": "Nie udało się wczytać dostępnych tablic.",
+        "actionFailed": "Nie udało się wykonać tej czynności. Odśwież stan okresu próbnego i spróbuj ponownie.",
+        "paymentFailed": "Nie udało się dokończyć płatności. Sprawdź stan okresu próbnego."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Ten obszar roboczy nie ma puli współzarządzania. Dodaj stanowiska współzarządzania, aby z tego korzystać.",
@@ -694,6 +738,8 @@
     "proRequired": "Do sponsorowania przestrzeni roboczych klientów wymagana jest subskrypcja PSA Pro.",
     "loadError": "Nie udało się wczytać pojemności stanowisk klientów. Spróbuj ponownie.",
     "purchaseError": "Nie udało się dokończyć zakupu stanowisk. Możesz go bezpiecznie wznowić.",
+    "termsChanged": "Cena zmieniła się od czasu sprawdzenia zakupu. Sprawdź zaktualizowane warunki przed potwierdzeniem.",
+    "offerUnavailable": "Zakup nowych stanowisk jest tymczasowo niedostępny. Nie pobrano opłaty.",
     "checkoutExpired": "Ta płatność wygasła. Rozpocznij nowy zakup, aby kontynuować.",
     "grace": "Odnów licencję lub usuń niedobór pojemności przed {{date}}, aby przestrzenie robocze klientów pozostały edytowalne.",
     "readOnly": "Okres karencji zakończył się {{date}}. Przywróć licencjonowaną pojemność, aby wznowić zmiany w przestrzeniach roboczych klientów.",
@@ -701,7 +747,21 @@
     "checkoutUnavailable": "Wbudowana płatność jest niedostępna. Spróbuj ponownie po naprawie konfiguracji płatności.",
     "pendingCapacity_one": "Zakup {{count}} stanowiska oczekuje na realizację.",
     "pendingCapacity_other": "Zakup {{count}} stanowisk oczekuje na realizację.",
+    "buySeats": "Kup miejsca współzarządzania",
+    "awaitingVerification_one": "Zakup {{count}} miejsca oczekuje na weryfikację płatności. Miejsce pojawi się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_other": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_few": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_many": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "refreshStatus": "Odśwież status",
+    "purchaseOnly": {
+      "intro": "Kup tutaj pulę miejsc współzarządzania. Po zakupie przydziel miejsca klientom z karty każdego klienta."
+    },
     "previewError": "Nie udało się wycenić tej zmiany. Odśwież i spróbuj ponownie.",
+    "billingCustomerUnlinked": "Nie udało się zweryfikować konta rozliczeniowego Stripe dla tego obszaru roboczego. Skontaktuj się z pomocą techniczną, aby powiązać konto.",
+    "proSubscriptionRequired": "Stanowiska współzarządzane wymagają aktualnej subskrypcji Pro. Sprawdź subskrypcję w sekcji zarządzania kontem.",
+    "offerPaused": "Zakup nowych stanowisk jest wstrzymany. Skontaktuj się z opiekunem konta, aby uzyskać informacje.",
+    "offerMisconfigured": "Oferta stanowisk co-managed jest nieprawidłowo skonfigurowana. Skontaktuj się z pomocą techniczną.",
+    "offerTemporarilyUnavailable": "Wycena jest tymczasowo niedostępna. Spróbuj ponownie za chwilę.",
     "purchaseNeedsAdmin": "Administrator konta musi dodać pojemność współzarządzania.",
     "purchaseProviderUnconfigured": "Dostawca płatności nie jest skonfigurowany.",
     "purchaseUnavailable": "Zakup hostowanego współzarządzania nie jest dostępny w tym wdrożeniu.",

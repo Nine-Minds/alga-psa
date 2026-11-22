@@ -91,12 +91,6 @@ export interface AuthorizationBundleDraftEditorPayload {
   }>;
   availableTemplates: string[];
   availableConstraints: string[];
-  availableClients: Array<{
-    client_id: string;
-    client_name: string;
-    is_inactive: boolean;
-    client_type: 'company' | 'individual' | null;
-  }>;
   availableBoards: Array<{
     board_id: string;
     board_name: string;
@@ -426,7 +420,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
-    const [rules, publishedRules, availableClients, availableBoards] = await Promise.all([
+    // Clients are not listed here: the editor picks them by server search and names the selected ones by id.
+    const [rules, publishedRules, availableBoards] = await Promise.all([
       listBundleRulesForRevision(knex, {
         tenant,
         revisionId: draftRevisionId,
@@ -437,16 +432,6 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
             revisionId: bundle.published_revision_id,
           })
         : Promise.resolve([]),
-      tenantScopedTable(knex, tenant, 'clients')
-        .orderBy('client_name', 'asc')
-        .select<
-          Array<{
-            client_id: string;
-            client_name: string;
-            is_inactive: boolean | null;
-            client_type: 'company' | 'individual' | null;
-          }>
-        >('client_id', 'client_name', 'is_inactive', 'client_type'),
       tenantScopedTable(knex, tenant, 'boards')
         .orderBy('board_name', 'asc')
         .select<Array<{ board_id: string; board_name: string; is_inactive: boolean | null }>>(
@@ -524,10 +509,6 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       })),
       availableTemplates: [...AUTHORIZATION_TEMPLATE_CATALOG],
       availableConstraints: [...AUTHORIZATION_CONSTRAINT_CATALOG],
-      availableClients: availableClients.map((client) => ({
-        ...client,
-        is_inactive: client.is_inactive === true,
-      })),
       availableBoards: availableBoards.map((board) => ({
         ...board,
         is_inactive: board.is_inactive === true,

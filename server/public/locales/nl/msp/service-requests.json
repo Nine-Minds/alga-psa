@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Dupliceren",
       "archive": "Archiveren",
-      "unarchive": "Dearchiveren"
+      "unarchive": "Dearchiveren",
+      "delete": "Verwijderen"
     },
     "lifecycleLabels": {
       "published": "Gepubliceerd",
@@ -87,12 +88,23 @@
         "unchecked": "Niet aangevinkt"
       },
       "types": {
-        "short-text": "short-text",
-        "long-text": "long-text",
-        "select": "select",
-        "checkbox": "checkbox",
-        "date": "date",
-        "file-upload": "file-upload",
+        "short-text": "Korte tekst",
+        "long-text": "Lange tekst",
+        "select": "Keuzelijst",
+        "checkbox": "Selectievakje",
+        "date": "Datum",
+        "file-upload": "Bestand uploaden",
+        "number": "Getal",
+        "email": "E-mailadres",
+        "phone": "Telefoonnummer",
+        "url": "Webadres",
+        "radio": "Eén keuze",
+        "multi-select": "Meerdere keuzes",
+        "date-time": "Datum en tijd",
+        "section": "Sectie",
+        "text": "Toelichting",
+        "callout": "Uitgelichte notitie",
+        "divider": "Scheidingslijn",
         "lookup": "Opzoeken"
       },
       "visibility": {
@@ -125,19 +137,12 @@
         "advancedJson": "Geavanceerd (JSON)",
         "advancedJsonHelp": "De volledige opgeslagen configuratie, inclusief contextstandaarden. Zichtbaarheidsregels wijzigt u makkelijker met „Tonen wanneer…” bij elk veld. Niet-opgeslagen wijzigingen hier worden verworpen als daar een regel wordt gewijzigd."
       },
-      "lookup": {
-        "entity": "Opzoeken van",
-        "entities": {
-          "contact": "Contactpersoon",
-          "user": "MSP-gebruiker"
-        },
-        "scope": "Opties komen van",
-        "scopes": {
-          "requester-client": "Klant van de aanvrager",
-          "tenant": "Hele werkruimte"
-        }
-      },
-      "unsupportedType": "Niet-ondersteund veldtype \"{{type}}\". Verwijder dit veld en voeg het opnieuw toe voordat u publiceert."
+      "openBuilder": "Formulierbouwer openen",
+      "summary": "{{questions}} vragen · {{required}} verplicht",
+      "requiredChip": "Verplicht",
+      "datePlaceholder": "Kies een datum",
+      "showFields": "Toon de vragen",
+      "hideFields": "Verberg de vragen"
     },
     "execution": {
       "title": "Uitvoering",
@@ -437,7 +442,8 @@
         "applyFailed": "Antwoordtoewijzing toepassen mislukt",
         "applied": "Antwoordtoewijzing toegepast"
       }
-    }
+    },
+    "delete": "Verwijderen"
   },
   "icons": {
     "file-text": "Algemene aanvraag",
@@ -480,7 +486,8 @@
       "workflowConfigurationUpdated": "Workflowconfiguratie bijgewerkt",
       "formBehaviorConfigUpdated": "Configuratie formuliergedrag bijgewerkt",
       "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt",
-      "audienceUpdated": "Doelgroep bijgewerkt"
+      "audienceUpdated": "Doelgroep bijgewerkt",
+      "definitionDeleted": "Serviceaanvraagformulier verwijderd"
     },
     "error": {
       "loadFailed": "Serviceaanvragen konden niet worden geladen",
@@ -504,7 +511,363 @@
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
-      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt",
+      "deleteFailed": "Serviceaanvraagformulier verwijderen mislukt"
     }
+  },
+  "designer": {
+    "palette": {
+      "searchPlaceholder": "Zoeken",
+      "showPalette": "Palet tonen",
+      "hidePalette": "Palet verbergen",
+      "dragHint": "Neerzetten op het formulier om toe te voegen",
+      "noMatches": {
+        "title": "Geen resultaten voor “{{query}}”",
+        "tipWords": "Probeer een korter of ander woord, zoals “datum”, “keuze” of “bestand”.",
+        "tipVerb": "Zoek op wat de vraag opvraagt: naam, datum, bedrag, bestand.",
+        "tipBrowse": "Wis de zoekopdracht om alle groepen te bekijken.",
+        "clear": "Zoekopdracht wissen"
+      },
+      "categories": {
+        "text": "Tekst",
+        "choices": "Keuzes",
+        "datesAndNumbers": "Datums en getallen",
+        "files": "Bestanden",
+        "layout": "Indeling",
+        "data": "Gegevens"
+      }
+    },
+    "saveStatus": {
+      "justNow": "zojuist",
+      "minutesAgo": "{{count}} min geleden",
+      "atTime": "om {{time}}",
+      "notSavedYet": "Nog niet opgeslagen",
+      "unsaved": "Niet-opgeslagen wijzigingen",
+      "savedAgo": "Opgeslagen · {{ago}}",
+      "saved": "Opgeslagen"
+    }
+  },
+  "formBuilder": {
+    "leftPane": {
+      "label": "Elementen toevoegen of het overzicht bekijken",
+      "add": "Toevoegen",
+      "outline": "Overzicht",
+      "insertionHint": "Het volgende element komt op de gemarkeerde plek."
+    },
+    "toolbar": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw",
+      "mode": "Bewerkingsmodus",
+      "edit": "Bewerken",
+      "tryIt": "Uitproberen",
+      "desktopWidth": "Desktopbreedte",
+      "phoneWidth": "Telefoonbreedte",
+      "formSettings": "Formulierinstellingen",
+      "duplicate": "Dupliceren",
+      "delete": "Verwijderen"
+    },
+    "canvas": {
+      "renameHint": "Klik om te hernoemen",
+      "insertHere": "Hier een element toevoegen",
+      "insertAtEnd": "Een element aan het eind toevoegen",
+      "dragHandle": "Sleep om te herschikken",
+      "ruleChip": "{{count}} zichtbaarheidsregel(s)",
+      "validationChip": "Het antwoord wordt gecontroleerd",
+      "datePlaceholder": "Kies een datum",
+      "emptyHint": "Hier staat nog niets. Voeg de eerste vraag toe via het tabblad Toevoegen links.",
+      "showTemplates": "Sjablonen tonen",
+      "unsupportedField": "Deze vraag is niet beschikbaar."
+    },
+    "outline": {
+      "empty": "Nog niets op het formulier.",
+      "halfWidthPair": "Deelt een rij",
+      "requiredChip": "Dit moet worden beantwoord",
+      "ruleChip": "Wordt soms getoond"
+    },
+    "gallery": {
+      "title": "Begin met een sjabloon",
+      "subtitle": "Kies een startpunt en pas er daarna alles aan."
+    },
+    "messages": {
+      "saveFailed": "Het formulier kon niet worden opgeslagen.",
+      "notFound": "Deze serviceaanvraag bestaat niet meer.",
+      "loadFailedTitle": "De formulierbouwer kon niet worden geopend",
+      "loading": "Formulierbouwer wordt geopend…",
+      "published": "Gepubliceerd. Klanten zien de nieuwe versie.",
+      "publishBlocked": "Los op wat de definitiepagina meldt en publiceer daarna.",
+      "publishFailed": "Deze serviceaanvraag kon niet worden gepubliceerd.",
+      "restoreBackup": "Niet-opgeslagen wijzigingen van uw vorige bezoek zijn in deze browser bewaard.",
+      "restoreBackupApply": "Herstellen",
+      "restoreBackupDismiss": "Weggooien"
+    },
+    "types": {
+      "short-text": {
+        "description": "Eén regel tekst"
+      },
+      "long-text": {
+        "description": "Een alinea of meer"
+      },
+      "email": {
+        "description": "Gecontroleerd als e-mailadres"
+      },
+      "phone": {
+        "description": "Gecontroleerd als telefoonnummer"
+      },
+      "url": {
+        "description": "Gecontroleerd als link"
+      },
+      "select": {
+        "description": "Eén antwoord uit een lijst"
+      },
+      "radio": {
+        "description": "Eén antwoord, alle zichtbaar"
+      },
+      "multi-select": {
+        "description": "Een willekeurig aantal antwoorden"
+      },
+      "checkbox": {
+        "description": "Een ja-of-nee-antwoord"
+      },
+      "number": {
+        "description": "Een getal, met grenzen"
+      },
+      "date": {
+        "description": "Eén dag"
+      },
+      "date-time": {
+        "description": "Een dag en een tijd"
+      },
+      "file-upload": {
+        "description": "Een bijlage"
+      },
+      "section": {
+        "description": "Groepeert de vragen eronder"
+      },
+      "text": {
+        "description": "Een alinea met uitleg"
+      },
+      "callout": {
+        "description": "Een opvallende notitie"
+      },
+      "divider": {
+        "description": "Een lijn tussen elementen"
+      },
+      "lookup": {
+        "description": "Een persoon gekozen uit een lijst met records"
+      }
+    },
+    "inspector": {
+      "resize": "Paneelbreedte aanpassen",
+      "nothingSelected": "Selecteer een element op het formulier om het te wijzigen.",
+      "basics": "Basis",
+      "label": "Vraag",
+      "sectionTitle": "Sectiekop",
+      "calloutTitle": "Kop van de notitie",
+      "helpText": "Tip onder de vraag",
+      "bodyText": "Tekst",
+      "calloutTone": "Weergave",
+      "calloutTones": {
+        "info": "Goed om te weten",
+        "warning": "Let op",
+        "success": "Goed nieuws"
+      },
+      "sectionCollapsible": "Deze sectie kan worden ingeklapt",
+      "answerKey": "Antwoordsleutel (gebruikt in rapporten en regels)",
+      "asking": "De vraag",
+      "required": "Dit moet worden beantwoord",
+      "placeholder": "Lichte voorbeeldtekst",
+      "width": "Breedte",
+      "widthFull": "Volledig",
+      "widthHalf": "Halve",
+      "choices": "De keuzes",
+      "choicesHelp": "Eén rij per antwoord dat gekozen kan worden.",
+      "choiceLabel": "Keuze {{index}}",
+      "newChoice": "Keuze {{index}}",
+      "removeChoice": "Deze keuze verwijderen",
+      "addChoice": "Een keuze toevoegen",
+      "checkTheAnswer": "Het antwoord controleren",
+      "checkHelp": {
+        "default": "Laat een veld leeg om die controle over te slaan.",
+        "number": "Getallen buiten dit bereik worden geweigerd.",
+        "date": "Datums buiten dit bereik worden geweigerd."
+      },
+      "rules": {
+        "default": {
+          "minLength": "Kortste antwoord (tekens)",
+          "maxLength": "Langste antwoord (tekens)",
+          "pattern": "Moet aan dit patroon voldoen",
+          "min": "Kleinste getal",
+          "max": "Grootste getal",
+          "minDate": "Vroegste datum",
+          "maxDate": "Laatste datum",
+          "minSelected": "Minimaal aantal keuzes",
+          "maxSelected": "Maximaal aantal keuzes"
+        }
+      },
+      "customMessage": "Wat te tonen als het misgaat",
+      "customMessagePlaceholder": "Laat leeg voor de standaardtekst",
+      "onlyShowWhen": "Alleen tonen wanneer…",
+      "onlyShowWhenHelp": "Zonder regel wordt het altijd getoond.",
+      "onlyShowWhenSectionHelp": "Een sectie verbergen verbergt ook de vragen erin.",
+      "visibilityNeedsEarlierField": "Voeg hierboven een vraag toe om een regel op te baseren.",
+      "visibilityAlways": "Wordt altijd getoond.",
+      "visibilityWhen": "Wanneer",
+      "visibilityIs": "is",
+      "visibilityValue": "dit antwoord",
+      "visibilityOperators": {
+        "equals": "precies",
+        "not-equals": "alles behalve",
+        "is-true": "aangevinkt",
+        "is-false": "niet aangevinkt",
+        "has-value": "beantwoord",
+        "is-empty": "leeg gelaten"
+      },
+      "addVisibilityRule": "Een voorwaarde toevoegen",
+      "formSettings": {
+        "title": "Het hele formulier",
+        "description": "Hoe het formulier eruitziet en wat er na verzending gebeurt.",
+        "width": "Formulierbreedte",
+        "widthNarrow": "Smal",
+        "widthBoxed": "Prettige leesbreedte",
+        "widthWide": "Breed",
+        "widthFull": "De hele pagina",
+        "submitLabel": "Tekst op de verzendknop",
+        "submitLabelPlaceholder": "Aanvraag versturen",
+        "successMessage": "Wat te tonen na verzending",
+        "successMessagePlaceholder": "Bedankt — de aanvraag is ontvangen en wij nemen contact op."
+      },
+      "startWithThisAnswer": "Begin met dit antwoord",
+      "startWithThisAnswerHelp": "Het formulier opent met dit ingevuld. Het kan worden gewijzigd.",
+      "noDefaultAnswer": "Geen antwoord om mee te beginnen",
+      "clearDefaultAnswer": "Leeg beginnen",
+      "defaultNotAnOption": "Dit antwoord staat niet bij de keuzes hierboven.",
+      "defaultFailsRules": "Dit antwoord komt niet door de controles hieronder.",
+      "legacyRuleOutsideBuilder": "Dit element heeft ook een regel buiten de bouwer, die blijft gelden.",
+      "renameBreaksTemplates": "Het ticketonderwerp of de omschrijving verwijst nog naar ‘{{key}}’. Werk dat bij op de aanvraagpagina.",
+      "renameKeyEmpty": "Een antwoordsleutel mag niet leeg zijn. De vorige sleutel blijft in gebruik.",
+      "renameKeyTaken": "Een andere vraag gebruikt de antwoordsleutel ‘{{key}}’ al. De vorige sleutel blijft in gebruik.",
+      "lookup": {
+        "title": "Opzoeken",
+        "help": "De keuzes zijn de geregistreerde personen en worden voor elke aanvrager bepaald wanneer het formulier opent.",
+        "entity": "Opzoeken van",
+        "entities": {
+          "contact": "Contactpersoon",
+          "user": "MSP-gebruiker"
+        },
+        "scope": "Opties komen van",
+        "scopes": {
+          "requester-client": "Klant van de aanvrager",
+          "tenant": "Hele werkruimte"
+        }
+      },
+      "unsupportedType": "Niet-ondersteund veldtype \"{{type}}\". Verwijder dit veld en voeg het opnieuw toe voordat u publiceert."
+    },
+    "tryIt": {
+      "banner": "Antwoorden op dit scherm worden nergens bewaard. Regels en controles werken precies zoals bij een klant.",
+      "check": "Antwoorden controleren",
+      "reset": "Opnieuw beginnen",
+      "allGood": "Alle antwoorden zijn in orde.",
+      "required": "Deze vraag heeft een antwoord nodig.",
+      "invalid": "Dit antwoord heeft niet de verwachte vorm.",
+      "validation": {
+        "type": "Dit antwoord heeft niet de verwachte vorm.",
+        "pattern": "Dit antwoord heeft niet de verwachte vorm.",
+        "minLength": "Gebruik ten minste {{minLength}} tekens.",
+        "maxLength": "Gebruik {{maxLength}} tekens of minder.",
+        "min": "Voer {{min}} of meer in.",
+        "max": "Voer {{max}} of minder in.",
+        "minDate": "Kies {{minDate}} of later.",
+        "maxDate": "Kies {{maxDate}} of eerder.",
+        "minSelected": "Kies er ten minste {{minSelected}}.",
+        "maxSelected": "Kies er hoogstens {{maxSelected}}."
+      }
+    },
+    "templates": {
+      "newEmployee": {
+        "name": "Onboarding van een nieuwe medewerker",
+        "description": "Wie er begint, wanneer en wat er op dag één nodig is.",
+        "callout": {
+          "label": "Geef ons vijf werkdagen",
+          "help": "Accounts en apparatuur kosten een paar dagen, laat het zo vroeg mogelijk weten."
+        },
+        "section": {
+          "employee": "Medewerker",
+          "employeeHelp": "Wie er komt en wanneer die begint.",
+          "hardware": "Apparatuur"
+        },
+        "fullName": "Volledige naam",
+        "startDate": "Startdatum",
+        "department": "Afdeling",
+        "departments": {
+          "engineering": "Techniek",
+          "sales": "Verkoop",
+          "operations": "Bedrijfsvoering",
+          "finance": "Financiën",
+          "customerSuccess": "Klantsucces"
+        },
+        "needsLaptop": "Is er een laptop nodig?",
+        "needsLaptopHelp": "Wij richten die voor de startdatum in.",
+        "laptopModel": "Laptopmodel",
+        "peripherals": "Randapparatuur",
+        "peripheralOptions": {
+          "monitor": "Externe monitor",
+          "dock": "Dockingstation",
+          "headset": "Koptelefoon met microfoon",
+          "keyboard": "Toetsenbord en muis"
+        },
+        "policy": "Ondertekend apparatuurbeleid (PDF)",
+        "laptops": {
+          "macbookAir": "MacBook Air 13\"",
+          "latitude": "Dell Latitude 5450",
+          "thinkpad": "Lenovo ThinkPad T14"
+        }
+      },
+      "access": {
+        "name": "Toegangsaanvraag",
+        "description": "Nieuwe, gewijzigde of ingetrokken toegang tot een systeem.",
+        "callout": {
+          "label": "De leidinggevende wordt om goedkeuring gevraagd",
+          "help": "Wijzigingen in toegang hebben goedkeuring nodig voordat wij ze doorvoeren."
+        },
+        "section": "Welke toegang er nodig is",
+        "requestedFor": "Aangevraagd voor",
+        "system": "Toepassing of systeem",
+        "requestType": "Soort aanvraag",
+        "requestTypes": {
+          "new": "Nieuwe toegang",
+          "change": "Bestaande toegang wijzigen",
+          "remove": "Toegang intrekken"
+        },
+        "neededBy": "Nodig vóór",
+        "justification": "Zakelijke onderbouwing"
+      },
+      "repair": {
+        "name": "Reparatie van apparatuur",
+        "description": "Een apparaat dat gerepareerd of vervangen moet worden.",
+        "section": {
+          "device": "Het apparaat",
+          "problem": "Wat er mis is"
+        },
+        "assetTag": "Inventarisnummer of serienummer",
+        "deviceType": "Soort apparaat",
+        "deviceTypes": {
+          "laptop": "Laptop",
+          "desktop": "Vaste computer",
+          "monitor": "Beeldscherm",
+          "phone": "Telefoon",
+          "other": "Anders"
+        },
+        "symptoms": "Beschrijf het probleem",
+        "stillUsable": "Het apparaat is nog bruikbaar",
+        "photo": "Foto van het probleem"
+      },
+      "blank": {
+        "name": "Leeg beginnen",
+        "description": "Een leeg formulier dat vraag voor vraag wordt opgebouwd."
+      }
+    }
+  },
+  "deleteDialog": {
+    "confirmation": "‘{{name}}’ en alle bijbehorende versies worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt."
   }
 }

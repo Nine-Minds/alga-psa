@@ -5,6 +5,7 @@ import {
   CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS,
   type ClientVisibleSubmissionAuditOperation,
 } from './submissionAudit';
+import { normalizeBasicFormSchema } from './formSchema';
 
 export interface ServiceRequestSubmissionHistoryDetail {
   tenant: string;
@@ -46,6 +47,8 @@ export interface ServiceRequestClientSubmissionDetail {
   submitted_payload: Record<string, unknown>;
   execution_status: 'pending' | 'succeeded' | 'failed';
   created_ticket_id: string | null;
+  /** Display number of the linked ticket (joined from tickets table). */
+  ticket_number: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
   /** Live display labels for lookup answers, keyed by field key; the payload itself holds ids. */
@@ -370,6 +373,41 @@ export async function listClientServiceRequestSubmissions(
   return rows as unknown as ServiceRequestClientSubmissionListRow[];
 }
 
+/**
+ * The confirmation wording the form's author typed into the builder's form settings, read
+ * from the version the client actually submitted — so a published snapshot keeps saying what
+ * it said when it was published. Client-scoped: another client's submission resolves to null.
+ */
+export async function getClientServiceRequestSubmissionSuccessMessage(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  submissionId: string
+): Promise<string | null> {
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_request_submissions as submission');
+  db.tenantJoin(
+    query,
+    'service_request_definition_versions as version',
+    'version.version_id',
+    'submission.definition_version_id',
+    { rootTenantColumn: 'submission.tenant' }
+  );
+  const row = (await query
+    .where({
+      'submission.client_id': clientId,
+      'submission.submission_id': submissionId,
+    })
+    .first('version.form_schema_snapshot')) as { form_schema_snapshot: unknown } | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  // One normalizer decides what the settings are, so the builder and the portal agree.
+  return normalizeBasicFormSchema(row.form_schema_snapshot).settings?.successMessage ?? null;
+}
+
 // LEVERAGE: friction portal-dto-by-spread — client portal queries build DTOs as `{ ...row }` over a select list shared in spirit with admin queries, so the portal relies on JSX discipline to hide internals; a per-entity portal projection layer is the candidate if tickets/projects show the same shape.
 export async function getClientServiceRequestSubmissionDetail(
   knex: Knex,
@@ -380,6 +418,10 @@ export async function getClientServiceRequestSubmissionDetail(
   const db = tenantDb(knex, tenant);
   const query = db.table('service_request_submissions as submission');
   db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
+    rootTenantColumn: 'submission.tenant',
+  });
+  db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
+    type: 'left',
     rootTenantColumn: 'submission.tenant',
   });
   const row = await query
@@ -394,6 +436,7 @@ export async function getClientServiceRequestSubmissionDetail(
       'submission.contact_id',
       'submission.execution_status',
       'submission.created_ticket_id',
+      'ticket.ticket_number',
       'submission.created_at as submitted_at',
       'version.form_schema_snapshot'
     );

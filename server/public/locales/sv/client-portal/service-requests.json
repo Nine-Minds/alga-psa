@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Förfrågan har skickats in",
-    "requestIdLabel": "Förfrågnings-ID: ",
-    "ticketIdLabel": "Ärende-ID: ",
     "unableToSubmit": "Det gick inte att skicka in förfrågan",
     "formTitle": "Förfrågningsformulär",
     "noFields": "Inga fält har konfigurerats.",
@@ -20,6 +18,18 @@
     "optionLabel": "Alternativ {{index}}",
     "submit": "Skicka in förfrågan",
     "requiredField": "Det här fältet är obligatoriskt.",
+    "validation": {
+      "type": "Det här svaret har inte förväntad form.",
+      "pattern": "Det här svaret har inte förväntad form.",
+      "minLength": "Använd minst {{minLength}} tecken.",
+      "maxLength": "Använd högst {{maxLength}} tecken.",
+      "min": "Ange {{min}} eller mer.",
+      "max": "Ange {{max}} eller mindre.",
+      "minDate": "Välj {{minDate}} eller senare.",
+      "maxDate": "Välj {{maxDate}} eller tidigare.",
+      "minSelected": "Välj minst {{minSelected}}.",
+      "maxSelected": "Välj högst {{maxSelected}}."
+    },
     "unsupportedField": "Den här frågan är inte tillgänglig."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Tillbaka till mina förfrågningar",
-    "requestIdLabel": "Förfrågnings-ID:",
     "statusSection": "Status",
     "submittedAt": "Inskickad: {{date}}",
-    "ticketLabel": "Ärende:",
     "submittedAnswersTitle": "Inskickade svar",
     "noResponse": "Inget svar",
     "attachmentsTitle": "Bilagor",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Dina förfrågningar"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, skickad {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ärende",
+    "viewTicket": "Visa ärende"
   }
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@alga-psa/ui/components/Label";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { resolveBrandLogoForPreview, type BrandLogoPreviewUrls } from "@alga-psa/email/branding";
-import { getSampleDataForPreview } from "../../lib/templateSampleData";
+import { getSampleDataForPreview, replaceTemplateSampleVariables } from "../../lib/templateSampleData";
 import {
   annotateHtmlSource,
   parseSourceRange,
@@ -27,33 +27,7 @@ export function replaceTemplateVariables(
   content: string,
   data: Record<string, string>
 ): string {
-  // Expand {{#each path}}...{{/each}} blocks once for preview, qualifying
-  // {{this.*}} references (including {{#if this.*}}) against the block's path
-  // so the registry's per-item examples (e.g. credits.items.creditId) resolve.
-  let result = content.replace(
-    /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match, path, blockContent: string) =>
-      blockContent.replace(
-        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
-        (_inner, open, ifTag, key, close) => `${open}${ifTag ?? ''}${path}.${key}${close}`
-      )
-  );
-
-  // Then, process {{#if condition}}...{{/if}} blocks.
-  // For preview, show the block content (with variables replaced) since sample data is available.
-  result = result.replace(
-    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent) => blockContent
-  );
-
-  // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
-  // In the iframe preview we render HTML either way, so we treat both forms the same.
-  result = result.replace(/\{{2,3}([^{}]+)\}{2,3}/g, (match, key) => {
-    const trimmedKey = key.trim();
-    return trimmedKey in data ? data[trimmedKey] : match;
-  });
-
-  return result;
+  return replaceTemplateSampleVariables(content, data);
 }
 
 /**

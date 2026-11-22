@@ -322,7 +322,7 @@ describe('Quotes i18n wiring contract', () => {
     expect(listSource).not.toContain('QuoteSendRecipientsField');
   });
 
-  it('T009: QuoteDocumentTemplateEditor uses msp/quotes translation keys for editor chrome, preview pipeline, and footer metadata', () => {
+  it('T009: QuoteDocumentTemplateEditor uses msp/quotes translation keys for its header row, preview pipeline, and saved status', () => {
     const source = read('../../src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/quotes.json',
@@ -332,12 +332,15 @@ describe('Quotes i18n wiring contract', () => {
     expect(source).toMatch(/const \{ t(?:, \w+)* \} = useTranslation\('msp\/quotes'\);/);
 
     const keyChecks = [
-      'templateEditor.title',
       'templateEditor.headings.newLayout',
-      'templateEditor.actions.backToLayouts',
+      'templateEditor.titles.edit',
+      'templateEditor.actions.back',
       'templateEditor.actions.saveLayout',
-      'templateEditor.fields.layoutDetails',
       'templateEditor.fields.templateName',
+      'templateEditor.fields.version',
+      'templateEditor.fields.savedAt',
+      'templateEditor.fields.notSaved',
+      'templateEditor.fields.created',
       'templateEditor.tabs.visual',
       'templateEditor.tabs.preview',
       'templateEditor.preview.sampleScenario',
@@ -345,7 +348,6 @@ describe('Quotes i18n wiring contract', () => {
       'templateEditor.pipeline.shape',
       'templateEditor.actions.rerun',
       'templateEditor.codeReadonly',
-      'templateEditor.footer.created',
       'templateEditor.errors.saveFailed',
     ];
 
@@ -379,8 +381,8 @@ describe('Quotes i18n wiring contract', () => {
       />Select a sample scenario to generate an authoritative preview\.</,
       />Shaping and rendering preview\.\.\.</,
       />Code view is generated from the Visual workspace and is read-only\.</,
-      />Created:</,
-      />Last Updated:</,
+      />Saved </,
+      />Not saved yet</,
     ];
 
     for (const pattern of residualPatterns) {

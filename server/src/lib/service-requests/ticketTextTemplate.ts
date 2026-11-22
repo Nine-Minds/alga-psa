@@ -9,7 +9,9 @@
  * they render empty so a submission still creates its ticket. The renderer never throws.
  */
 
-import { formatCalendarDate, listTokens } from '@alga-psa/tickets/lib/titleTokens';
+import { listTokens } from '@alga-psa/tickets/lib/titleTokens';
+import { describeFormAnswer } from './formSchema';
+import { isInputFieldType } from '@alga-psa/ui/form-fields';
 
 export interface ServiceRequestTemplateField {
   key: string;
@@ -22,6 +24,9 @@ export interface ServiceRequestTemplateFormat {
   locale: string;
   yes: string;
   no: string;
+  /** Display labels for lookup answers by field key; the stored answer is an id and is never shown. */
+  referenceLabels?: Record<string, string>;
+  unresolved?: string;
 }
 
 interface SchemaField extends ServiceRequestTemplateField {
@@ -48,7 +53,8 @@ function readSchemaFields(formSchema: unknown): SchemaField[] {
       : [];
     result.push({
       key: field.key,
-      type: typeof field.type === 'string' ? field.type : 'short-text',
+      // A missing type stays missing; describeFormAnswer falls back to the raw answer for it.
+      type: typeof field.type === 'string' ? field.type : '',
       label: typeof field.label === 'string' && field.label.trim() ? field.label : field.key,
       options,
     });
@@ -56,10 +62,14 @@ function readSchemaFields(formSchema: unknown): SchemaField[] {
   return result;
 }
 
-/** Fields an author can reference as a placeholder: every field except file-upload, in form order. */
+/**
+ * Fields an author can reference as a placeholder, in form order: every answer-carrying
+ * element except file-upload. A display block (section, text, callout, divider) has a key but
+ * no answer, so it can never stand in for one.
+ */
 export function getServiceRequestTemplateFields(formSchema: unknown): ServiceRequestTemplateField[] {
   return readSchemaFields(formSchema)
-    .filter((field) => field.type !== 'file-upload')
+    .filter((field) => isInputFieldType(field.type) && field.type !== 'file-upload')
     .map(({ key, label, type }) => ({ key, label, type }));
 }
 
@@ -69,45 +79,11 @@ export function findUnknownServiceRequestTemplateTokens(template: string, formSc
   return listTokens(template ?? '').filter((token) => !known.has(token));
 }
 
-/**
- * Resolved display labels for lookup answers, keyed by field key (see lookupFields.resolveLookupLabels).
- * A lookup answer is an entity id; it renders as its label, and only falls back to the id if the
- * entity no longer resolves.
- */
-export type ServiceRequestLookupLabels = Record<string, string>;
-
-function formatAnswer(
-  field: SchemaField | undefined,
-  value: unknown,
-  format: ServiceRequestTemplateFormat,
-  lookupLabels?: ServiceRequestLookupLabels
-): string {
+function formatAnswer(field: SchemaField | undefined, value: unknown, format: ServiceRequestTemplateFormat): string {
   if (value === null || value === undefined) return '';
-  if (!field) return String(value);
-
-  switch (field.type) {
-    case 'checkbox':
-      return value === true || value === 'true' || value === 'on' || value === '1' ? format.yes : format.no;
-    case 'select': {
-      const raw = String(value);
-      return field.options.find((option) => option.value === raw)?.label ?? raw.trim();
-    }
-    // LEVERAGE: pattern service-request-answer-display — third site resolving per-type answer display (with describeAnswer and getSubmissionFieldDisplay); each now needs its own lookup branch.
-    case 'lookup': {
-      const raw = String(value).trim();
-      return lookupLabels?.[field.key] ?? raw;
-    }
-    case 'date': {
-      const raw = String(value).trim();
-      try {
-        return formatCalendarDate(raw, format.locale, { dateStyle: 'long' });
-      } catch {
-        return raw;
-      }
-    }
-    default:
-      return typeof value === 'object' ? '' : String(value).trim();
-  }
+  // One answer-display function for the subject, the description and the portal detail page,
+  // so every registry type renders the same way in all three.
+  return describeFormAnswer(field, value, format);
 }
 
 export function renderServiceRequestTemplate(
@@ -116,7 +92,6 @@ export function renderServiceRequestTemplate(
     formSchema?: unknown;
     payload: Record<string, unknown>;
     format: ServiceRequestTemplateFormat;
-    lookupLabels?: ServiceRequestLookupLabels;
   }
 ): string {
   try {
@@ -127,7 +102,7 @@ export function renderServiceRequestTemplate(
       if (field?.type === 'file-upload') return '';
       if (!Object.prototype.hasOwnProperty.call(payload, token)) return '';
       // A payload key with no schema field (older callers, no schema) renders as its raw string.
-      return formatAnswer(field, payload[token], context.format, context.lookupLabels);
+      return formatAnswer(field, payload[token], context.format);
     });
   } catch {
     return '';

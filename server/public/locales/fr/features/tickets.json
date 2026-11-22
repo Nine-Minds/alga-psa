@@ -214,12 +214,15 @@
   "resetFilters": "Réinitialiser",
   "filters": {
     "allStatuses": "Tous les statuts",
+    "allClients": "Tous les clients",
+    "unknownClient": "Client inconnu",
     "allOpen": "Tous les tickets ouverts",
     "allClosed": "Tous les tickets fermés",
     "allPriorities": "Toutes les priorités",
     "search": "Rechercher des tickets et commentaires...",
     "button": "Filtres",
     "unassigned": "Non attribué",
+    "me": "Moi",
     "category": "Filtrer par catégorie",
     "removeFilterChip": "Supprimer le filtre : {{label}}",
     "assignee": "Destinataire",
@@ -253,6 +256,8 @@
     "clientTags": "Étiquettes du client",
     "tagModeAny": "Au moins une parmi",
     "tagModeNone": "Aucune parmi",
+    "matchMode": "Correspondance",
+    "excludingLabel": "Hors {{label}}",
     "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés.",
     "clearFilters": "Effacer les filtres",
     "location": "Site",
@@ -2513,6 +2518,7 @@
       "addHelp": "Sélectionnez un client pour l'ajouter. La fenêtre reste ouverte pour que vous puissiez en ajouter d'autres.",
       "alreadyAdded": "Déjà ajouté",
       "pickerPlaceholder": "Sélectionner un client à ajouter",
+      "unnamedClient": "Client",
       "addedHeading": "Ajoutés dans cette fenêtre",
       "columns": {
         "client": "Client",
@@ -3086,6 +3092,24 @@
       "notAvailable": "Cette réponse prédéfinie n'est pas disponible pour ce ticket.",
       "notATeamMember": "Vous ne pouvez gérer que les réponses des équipes dont vous êtes membre."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket mis à jour",
+    "updatedMany": "{{count}} tickets mis à jour",
+    "newOne": "1 nouveau ticket",
+    "newMany": "{{count}} nouveaux tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nouveau ticket et 1 ticket mis à jour",
+        "manyUpdated": "1 nouveau ticket et {{updatedCount}} tickets mis à jour"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nouveaux tickets et 1 ticket mis à jour",
+        "manyUpdated": "{{newCount}} nouveaux tickets et {{updatedCount}} tickets mis à jour"
+      }
+    },
+    "updatedBadge": "Mis à jour",
+    "boardActivity": "Nouvelle activité sur ce tableau"
   },
   "batchDuplicate": {
     "title": "Dupliquer #{{number}} pour des contacts",

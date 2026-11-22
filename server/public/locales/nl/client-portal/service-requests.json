@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Aanvraag ingediend",
-    "requestIdLabel": "Aanvraag-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Aanvraag kan niet worden ingediend",
     "formTitle": "Aanvraagformulier",
     "noFields": "Geen velden geconfigureerd.",
@@ -20,6 +18,18 @@
     "optionLabel": "Optie {{index}}",
     "submit": "Aanvraag indienen",
     "requiredField": "Dit veld is verplicht.",
+    "validation": {
+      "type": "Dit antwoord heeft niet de verwachte vorm.",
+      "pattern": "Dit antwoord heeft niet de verwachte vorm.",
+      "minLength": "Gebruik ten minste {{minLength}} tekens.",
+      "maxLength": "Gebruik {{maxLength}} tekens of minder.",
+      "min": "Voer {{min}} of meer in.",
+      "max": "Voer {{max}} of minder in.",
+      "minDate": "Kies {{minDate}} of later.",
+      "maxDate": "Kies {{maxDate}} of eerder.",
+      "minSelected": "Kies er ten minste {{minSelected}}.",
+      "maxSelected": "Kies er hoogstens {{maxSelected}}."
+    },
     "unsupportedField": "Deze vraag is niet beschikbaar."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Terug naar Mijn aanvragen",
-    "requestIdLabel": "Aanvraag-ID:",
     "statusSection": "Status",
     "submittedAt": "Ingediend: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Ingediende antwoorden",
     "noResponse": "Geen antwoord",
     "attachmentsTitle": "Bijlagen",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Uw verzoeken"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, ingediend op {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket bekijken"
   }
 }

@@ -67,6 +67,7 @@ services:
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
     volumes:
       # Persist user-uploaded documents and generated files
       - files_data:/data/files
@@ -329,6 +330,7 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST: ${EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST:-}
       STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     volumes:
       # email-service writes inbound attachments and the original .eml here
@@ -388,6 +390,7 @@ services:
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://host.docker.internal:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
       COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://host.docker.internal:3000/api/internal/collab/persist}
+      TICKET_LIST_CHANGE_AUTHORIZATION_URL: ${TICKET_LIST_CHANGE_AUTHORIZATION_URL:-http://host.docker.internal:3000/api/internal/tickets/live-change}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
     secrets:
       - postgres_password

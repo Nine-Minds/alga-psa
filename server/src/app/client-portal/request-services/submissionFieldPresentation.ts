@@ -1,3 +1,10 @@
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
+import {
+  describeFormAnswer,
+  isFormAnswerMissing,
+  type FormAnswerDisplayFormat,
+} from '../../../lib/service-requests/formSchema';
+
 interface SubmissionFieldOption {
   label?: string;
   value?: string;
@@ -21,30 +28,34 @@ export interface SubmissionFieldDisplay {
   attachments?: SubmissionAttachmentSnapshot[];
 }
 
-function isMissingValue(value: unknown): boolean {
-  return value === null || value === undefined || value === '';
-}
-
-function isCheckedValue(value: unknown): boolean {
-  return value === true || value === 'true' || value === 'on' || value === '1';
-}
-
 function getFileUploadFields(fields: SubmissionFieldSnapshot[]): SubmissionFieldSnapshot[] {
   return fields.filter(
     (field) => field?.type === 'file-upload' && typeof field?.key === 'string'
   );
 }
 
-// LEVERAGE: pattern service-request-answer-display — ticketOnlyExecutionProvider.ts describeAnswer resolves the same display values for the ticket description.
+/**
+ * What one answer looks like on the portal's submission detail page. The display value itself
+ * comes from `describeFormAnswer`, the same function the ticket subject and the ticket
+ * description read, so a new field type reads back identically in all three.
+ *
+ * `format` carries the reader's language — a checkbox reads "Ja" for a German client, as it
+ * already does on the ticket the request created — and is required for that reason.
+ */
 export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],
   payload: Record<string, unknown>,
   attachments: SubmissionAttachmentSnapshot[],
-  lookup: { labels: Record<string, string>; unavailableText: string } = { labels: {}, unavailableText: '' }
+  format: FormAnswerDisplayFormat
 ): SubmissionFieldDisplay {
   const key = typeof field?.key === 'string' ? field.key : null;
   if (!key) {
+    return { kind: 'missing' };
+  }
+
+  // A display block carries no answer; it has nothing to read back.
+  if (getFieldElementKind(field.type) === 'display') {
     return { kind: 'missing' };
   }
 
@@ -74,40 +85,10 @@ export function getSubmissionFieldDisplay(
   }
 
   const value = payload[key];
-  if (isMissingValue(value)) {
+  // A checkbox always has an answer; every other type is missing when the registry says so.
+  if (field.type !== 'checkbox' && isFormAnswerMissing(field, value)) {
     return { kind: 'missing' };
   }
 
-  // A lookup answer is an entity id: show its resolved label, never the id.
-  if (field.type === 'lookup') {
-    return { kind: 'text', text: lookup.labels[key] ?? lookup.unavailableText };
-  }
-
-  if (field.type === 'select' && Array.isArray(field.options)) {
-    const selectedValue = String(value);
-    const selectedOption = field.options.find((option) => option?.value === selectedValue);
-    return {
-      kind: 'text',
-      text: selectedOption?.label ?? selectedValue,
-    };
-  }
-
-  if (field.type === 'checkbox') {
-    return {
-      kind: 'text',
-      text: isCheckedValue(value) ? 'Yes' : 'No',
-    };
-  }
-
-  if (typeof value === 'object') {
-    return {
-      kind: 'text',
-      text: JSON.stringify(value),
-    };
-  }
-
-  return {
-    kind: 'text',
-    text: String(value),
-  };
+  return { kind: 'text', text: describeFormAnswer(field, value, format) };
 }

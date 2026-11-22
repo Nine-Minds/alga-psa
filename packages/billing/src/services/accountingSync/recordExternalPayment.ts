@@ -17,14 +17,17 @@ import { buildExternalPaymentRecordedPayload } from '../../lib/paymentRecordedEv
  *
  * Note: invoice_payments is created by the CE migration
  * (server/migrations/20260722120000); EE installs may predate it via the EE
- * migration (ee/server/migrations/20251203120000). Manual payments/refunds
- * flow through the CE InvoiceService REST paths; automated ingestion callers
- * (Stripe, QBO sync, the alternative-payments webhook) are each EE-gated at
- * their entry points.
+ * migration (ee/server/migrations/20251203120000). The MSP's manual "Record
+ * payment" action lands here too (actions/invoicePaymentActions.ts); the CE
+ * InvoiceService REST paths still carry manual refunds. Automated ingestion
+ * callers (Stripe, QBO sync, the alternative-payments webhook) are each
+ * EE-gated at their entry points.
  */
 
 import { computeBalanceDue } from '../../lib/balanceDue';
+import { loadReversedPaymentIds, reversalReferenceFor } from '../../lib/payments/paymentSources';
 export { computeBalanceDue };
+export { reversalReferenceFor };
 export type { InvoiceBalanceInputs } from '../../lib/balanceDue';
 
 export interface ExternalPaymentInput {
@@ -33,7 +36,12 @@ export interface ExternalPaymentInput {
   amount: number;
   /** Payment provider identifier, stored as invoice_payments.payment_method (e.g. 'stripe', 'quickbooks') */
   provider: string;
-  referenceNumber: string;
+  /**
+   * Provider-side reference stored on the payment row. Optional only for
+   * manually entered payments (cash has no reference); every ingestion caller
+   * supplies one, and `dedupeByReference` is meaningless without it.
+   */
+  referenceNumber?: string;
   currency?: string;
   paymentDate?: Date;
   notes?: string;
@@ -62,6 +70,12 @@ export interface ExternalPaymentInput {
   source?: PaymentRecordedSource;
   /** Provider-side id (e.g. Stripe PaymentIntent) surfaced as gatewayTransactionId on the event. */
   gatewayTransactionId?: string;
+  /**
+   * The user who recorded the payment, when a person did (the MSP's manual
+   * "Record payment" action). Carried on PAYMENT_RECORDED as USER attribution;
+   * omitted for provider/sync ingestion, which stays SYSTEM.
+   */
+  actorUserId?: string;
 }
 
 export interface ExternalPaymentResult {
@@ -193,10 +207,17 @@ async function publishPaymentRecorded(
         currency: recorded.currency,
         method: input.provider,
         gatewayTransactionId: input.gatewayTransactionId ?? input.referenceNumber,
+        receivedByUserId: input.actorUserId,
         // Omitted source stays omitted: consumers default-deny.
         source: input.source,
       }),
-      ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
+      ctx: {
+        tenantId,
+        occurredAt,
+        actor: input.actorUserId
+          ? { actorType: 'USER', actorUserId: input.actorUserId }
+          : { actorType: 'SYSTEM' },
+      },
       idempotencyKey: `payment_recorded:${recorded.paymentId}`,
     });
   } catch (error) {
@@ -236,6 +257,9 @@ export async function recordExternalPayment(
     };
   }
 
+  // A manually entered cash payment can legitimately have no reference.
+  const referenceNumber = input.referenceNumber?.trim() ?? '';
+
   const { paymentId, newStatus, totalPaid, alreadyRecorded } = await knex.transaction(async (trx) => {
     // Row lock so concurrent providers can't race the status computation.
     await tenantDb(trx, tenantId).table('invoices')
@@ -246,7 +270,7 @@ export async function recordExternalPayment(
     const payments = tenantDb(trx, tenantId).table('invoice_payments');
     const existing = input.dedupeByReference
       ? await tenantDb(trx, tenantId).table('invoice_payments')
-        .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: input.referenceNumber })
+        .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: referenceNumber })
         .first<{ payment_id: string }>()
       : undefined;
     if (existing) {
@@ -261,7 +285,7 @@ export async function recordExternalPayment(
         amount: input.amount,
         payment_method: input.provider,
         payment_date: input.paymentDate ?? new Date(),
-        reference_number: input.referenceNumber,
+        reference_number: referenceNumber || null,
         notes: input.notes ?? null
       })
       .returning('payment_id');
@@ -279,10 +303,13 @@ export async function recordExternalPayment(
       amount: input.amount,
       type: 'payment',
       description:
-        input.transactionDescription ?? `Payment received via ${input.provider} - ${input.referenceNumber}`,
+        input.transactionDescription
+        ?? (referenceNumber
+          ? `Payment received via ${input.provider} - ${referenceNumber}`
+          : `Payment received via ${input.provider}`),
       metadata: {
         payment_provider: input.provider,
-        reference_number: input.referenceNumber,
+        reference_number: referenceNumber || null,
         currency: paymentCurrency,
         ...(input.transactionMetadata ?? {})
       }
@@ -303,12 +330,16 @@ export async function recordExternalPayment(
 
   // Fire-and-forget: push the payment to QBO on the next sync cycle.
   // Must never throw — a producer failure must not fail the payment action.
+  // The push applier refuses an op with a blank reference, so a manually
+  // entered payment with none (cash) falls back to the Alga payment id: the
+  // provider record still carries a reference that leads back here, instead of
+  // the op retrying its way to 'skipped' and counting as a sync error.
   void enqueueExternalPaymentPush(knex, tenantId, {
     invoiceId: input.invoiceId,
     paymentId,
     amountCents: input.amount,
     provider: input.provider,
-    referenceNumber: input.referenceNumber
+    referenceNumber: referenceNumber || paymentId
   });
 
   // Every balance mutation is reconciled immediately, not just terminal ones.
@@ -331,7 +362,7 @@ export async function recordExternalPayment(
     invoiceId: input.invoiceId,
     newStatus,
     balanceDue,
-    settledReference: input.referenceNumber,
+    settledReference: referenceNumber || undefined,
     settledExternalId: input.externalLinkId,
   });
 
@@ -354,13 +385,21 @@ export interface ExternalPaymentReversalInput {
   notes?: string;
   transactionMetadata?: Record<string, unknown>;
   transactionDescription?: string;
+  /**
+   * The invoice_payments row this reversal offsets. Set by the user-facing
+   * "Reverse payment" action: it links the two rows and makes the reversal
+   * idempotent under concurrency (a second attempt returns alreadyRecorded
+   * instead of zeroing the invoice twice).
+   */
+  reversedPaymentRowId?: string;
 }
 
 /**
  * Reverse a previously recorded external payment (edited or deleted in the
- * external system). Mirrors the refund pattern: an offsetting negative
- * invoice_payments row (audit trail preserved), a payment_reversal
- * transaction, and a status recompute.
+ * external system, or reversed by the MSP in AlgaPSA). Mirrors the refund
+ * pattern: an offsetting negative invoice_payments row (audit trail
+ * preserved), a payment_reversal transaction, and a status recompute. The
+ * single copy of that logic — every reversal path lands here.
  */
 export async function reverseExternalPayment(
   knex: Knex,
@@ -372,11 +411,38 @@ export async function reverseExternalPayment(
     return { success: false, paymentRecorded: false, error: `Invoice not found: ${input.invoiceId}` };
   }
 
-  const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
+  const { paymentId, newStatus, totalPaid, alreadyRecorded } = await knex.transaction(async (trx) => {
     await tenantDb(trx, tenantId).table('invoices')
       .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
+
+    // Under the invoice lock, so two reversals of the same payment row queue
+    // and the loser sees that it is already spent rather than crediting the
+    // invoice twice. Deliberately the shared reading of "already reversed":
+    // the accounting sync keys its reversal rows on the EXTERNAL payment, so
+    // the marker reference alone would not recognize its work as a reversal of
+    // this row.
+    if (input.reversedPaymentRowId) {
+      const reversed = await loadReversedPaymentIds(trx, tenantId, input.invoiceId);
+      if (reversed.has(input.reversedPaymentRowId)) {
+        const existing = await tenantDb(trx, tenantId).table('invoice_payments')
+          .where({
+            invoice_id: input.invoiceId,
+            reference_number: reversalReferenceFor(input.reversedPaymentRowId)
+          })
+          .first<{ payment_id: string } | undefined>();
+        const paid = await sumPayments(trx, tenantId, input.invoiceId);
+        return {
+          // Absent when the sync wrote the reversal: its row is keyed on the
+          // external payment, and the caller refuses on alreadyRecorded anyway.
+          paymentId: existing?.payment_id,
+          newStatus: invoice.status,
+          totalPaid: paid,
+          alreadyRecorded: true
+        };
+      }
+    }
 
     const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
       .insert({
@@ -390,7 +456,10 @@ export async function reverseExternalPayment(
         payment_date: new Date(),
         reference_number: input.referenceNumber,
         notes: input.notes ?? null,
-        status: 'reversed'
+        status: 'reversed',
+        ...(input.reversedPaymentRowId
+          ? { metadata: { reversed_payment_id: input.reversedPaymentRowId } }
+          : {})
       })
       .returning('payment_id');
 
@@ -407,19 +476,26 @@ export async function reverseExternalPayment(
       metadata: {
         payment_provider: input.provider,
         reference_number: input.referenceNumber,
+        ...(input.reversedPaymentRowId ? { reversed_payment_id: input.reversedPaymentRowId } : {}),
         ...(input.transactionMetadata ?? {})
       }
     });
 
-    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid };
+    return {
+      paymentId: payment.payment_id as string,
+      newStatus: status,
+      totalPaid: paid,
+      alreadyRecorded: false
+    };
   });
 
   return {
     success: true,
-    paymentRecorded: true,
+    paymentRecorded: !alreadyRecorded,
     paymentId,
     newStatus,
     totalPaid,
-    clientId: invoice.client_id
+    clientId: invoice.client_id,
+    ...(alreadyRecorded ? { alreadyRecorded: true } : {})
   };
 }

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { principalKindOfApiKey } from '@alga-psa/types';
 import type { AuthorizationSubject } from '../kernel/contracts';
 import {
   builtinPrincipalKindResolvers,
@@ -62,12 +63,35 @@ export async function resolvePrincipalKind(
   return principalKindOfSubject({ tenant: input.tenant, userId: input.userId, resolverFacts } as AuthorizationSubject);
 }
 
-/** Whether the user may hold API credentials: issue, authenticate with, or reach REST and MCP. */
+/** The key a credential check is about: its purpose, and its plaintext when one is being authenticated. */
+export interface ApiCredentialInput {
+  purpose?: string | null;
+  /** Absent at issuance (the key does not exist yet). */
+  plaintext?: string;
+}
+
+/**
+ * Whether a principal of `kind` may hold the credential. A kind that refuses API credentials still admits the
+ * purposes it names, and only as a key carrying its prefix: the edge holds such a key to the kind's API surface.
+ */
+export function principalKindAdmitsCredential(
+  kind: BuiltinResolverPrincipalKind | null,
+  credential?: ApiCredentialInput,
+): boolean {
+  if (!kind || kind.apiCredentials !== 'refused') return true;
+  if (!credential?.purpose || !kind.credentialPurposes?.includes(credential.purpose)) return false;
+  return credential.plaintext === undefined || principalKindOfApiKey(credential.plaintext) === kind.kind;
+}
+
+/**
+ * Whether the user may hold API credentials: issue, authenticate with, or reach REST and MCP. Without a
+ * `credential`, the answer is for a general credential, which a refusing kind never holds.
+ */
 export async function mayHoldApiCredentials(
   knex: Knex | Knex.Transaction,
-  input: PrincipalKindInput & { member?: unknown },
+  input: PrincipalKindInput & { member?: unknown; credential?: ApiCredentialInput },
 ): Promise<boolean> {
-  return (await resolvePrincipalKind(knex, input))?.apiCredentials !== 'refused';
+  return principalKindAdmitsCredential(await resolvePrincipalKind(knex, input), input.credential);
 }
 
 /**

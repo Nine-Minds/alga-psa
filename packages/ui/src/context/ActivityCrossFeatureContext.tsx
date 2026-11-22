@@ -98,7 +98,6 @@ export interface ActivityCrossFeatureCallbacks {
   updateBlockContent: (documentId: string, data: any) => Promise<any>;
   getProjects: () => Promise<any>;
   getProjectsWithPhases: () => Promise<any>;
-  getAllClients: (includeInactive?: boolean) => Promise<any>;
   getAllContacts: (status?: 'active' | 'inactive' | 'all', sortBy?: string, sortDirection?: 'asc' | 'desc') => Promise<any>;
 
   // Workflow tasks are an EE-only activity source. These members are absent in CE and

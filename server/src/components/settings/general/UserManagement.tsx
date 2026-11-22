@@ -11,7 +11,8 @@ import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { addUser } from '@alga-psa/users/actions/user-actions/userActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
@@ -72,7 +73,6 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole, isLicensedUserType, isClientUserType } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -81,8 +81,8 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
-import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
+import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
+import type { LicenseUsage } from '@alga-psa/licensing/server';
 import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -130,7 +130,6 @@ const UserManagement = (): React.JSX.Element => {
   };
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
@@ -239,7 +238,6 @@ const UserManagement = (): React.JSX.Element => {
       fetchPendingInvitations();
     }
     if (portalType === 'client') {
-      fetchClients();
       fetchContacts();
     }
   }, [portalType]);
@@ -443,18 +441,7 @@ const UserManagement = (): React.JSX.Element => {
     }
   };
 
-  const fetchClients = async (): Promise<void> => {
-    try {
-      const fetchedClients = await getAllClients();
-      setClients(fetchedClients);
-    } catch (err) {
-      console.error('Error fetching clients:', err);
-      setError(t('users.messages.error.fetchClients'));
-    }
-  };
-
-  
-const fetchContacts = async (): Promise<void> => {
+  const fetchContacts = async (): Promise<void> => {
     try {
       const invitationMode = portalType === 'client' && !newUser.password;
       if (invitationMode) {
@@ -816,7 +803,7 @@ const fetchContacts = async (): Promise<void> => {
                 </label>
                 <ClientPicker
                   id="new-user-client-picker"
-                  clients={clients}
+                  searchClients={searchClientsForPicker}
                   selectedClientId={newUser.clientId || null}
                   onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
                   filterState={clientFilterState}
@@ -925,7 +912,6 @@ const fetchContacts = async (): Promise<void> => {
                     setContactValidationError(null);
                     setIsQuickAddContactOpen(false);
                   }}
-                  clients={clients}
                   selectedClientId={newUser.clientId || undefined}
                 />
               </div>
@@ -1238,7 +1224,7 @@ const fetchContacts = async (): Promise<void> => {
                   <div>
                     <ClientPicker
                       id="user-management-client-filter"
-                      clients={clients}
+                      searchClients={searchClientsForPicker}
                       selectedClientId={selectedClientId}
                       onSelect={(clientId) => setSelectedClientId(clientId)}
                       filterState={clientFilterState}

@@ -8,22 +8,21 @@
  * and every answer must resolve inside the field's own option set for this requester.
  *
  * Adding an entity (asset, location) is a new entry in `LOOKUP_ADAPTERS` plus its scope/filter rows in
- * basicFormBuilder.ts; no new branches in the validator, resolver, renderer or ticket text.
+ * `LOOKUP_ENTITY_SCOPES` / `LOOKUP_ENTITY_FILTER_KEYS` (`@alga-psa/ui/form-fields`); no new branches in the validator, resolver, renderer or ticket text.
  */
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type {
-  BasicFormFieldLookup,
-  BasicFormLookupEntity,
-  BasicFormLookupScope,
-} from './basicFormBuilder';
+  FieldLookupDescriptor as BasicFormFieldLookup,
+  FieldLookupEntity as BasicFormLookupEntity,
+  FieldLookupOption,
+  FieldLookupScope as BasicFormLookupScope,
+} from '@alga-psa/ui/form-fields';
+import { LOOKUP_ENTITY_FILTER_KEYS } from '@alga-psa/ui/form-fields';
 
-export interface LookupOption {
-  id: string;
-  label: string;
-  secondaryLabel?: string;
-}
+/** The registry's option shape (`@alga-psa/ui/form-fields`): what the portal's picker is given. */
+export type LookupOption = FieldLookupOption;
 
 /** What the server knows about who is submitting. `clientId` is session-derived, never client input. */
 export interface LookupRequester {
@@ -65,8 +64,13 @@ const contactAdapter: LookupAdapter = {
     if (query.ids) {
       builder.whereIn('contact_name_id', query.ids);
     }
-    if (query.filters) {
-      builder.where(query.filters);
+    // Publish validation already refuses other keys; this is the second lock, so a column name
+    // can never reach the query from a stored descriptor that skipped it.
+    const allowedFilters = Object.entries(query.filters ?? {}).filter(([column]) =>
+      LOOKUP_ENTITY_FILTER_KEYS.contact.includes(column)
+    );
+    if (allowedFilters.length > 0) {
+      builder.where(Object.fromEntries(allowedFilters));
     }
     const rows = (await builder
       .orderBy('full_name', 'asc')
@@ -185,28 +189,40 @@ export async function resolveLookupOptionsForFields(
   return result;
 }
 
+export interface InvalidLookupAnswer {
+  fieldKey: string;
+  label: string;
+  message: string;
+}
+
 /**
- * Returns user-facing errors (naming the field by label) for every visible lookup answer that is not
- * inside that field's own option set. Hidden lookups are neither required nor validated; emptiness is
- * the required-field check's job, so an empty answer passes here.
+ * Every visible lookup answer that is not inside that field's own option set, by field. Hidden
+ * lookups are neither required nor validated; emptiness is the required-field check's job, so an
+ * empty answer passes here.
  */
-export async function validateLookupAnswers(
+export async function findInvalidLookupAnswers(
   knex: Knex | Knex.Transaction,
   tenant: string,
   fields: unknown,
   payload: Record<string, unknown>,
   requester: LookupRequester,
   visibleFieldKeys: ReadonlySet<string> | readonly string[]
-): Promise<string[]> {
+): Promise<InvalidLookupAnswer[]> {
   const visible = visibleFieldKeys instanceof Set ? visibleFieldKeys : new Set(visibleFieldKeys);
-  const errors: string[] = [];
+  const invalid: InvalidLookupAnswer[] = [];
+  const refuse = (field: ResolvedLookupField) =>
+    invalid.push({
+      fieldKey: field.key,
+      label: field.label,
+      message: `Invalid selection for "${field.label}"`,
+    });
 
   for (const field of listLookupFields(fields)) {
     if (!visible.has(field.key)) continue;
     const answer = payload[field.key];
     if (answer === undefined || answer === null || answer === '') continue;
     if (typeof answer !== 'string' || !UUID_PATTERN.test(answer)) {
-      errors.push(`Invalid selection for "${field.label}"`);
+      refuse(field);
       continue;
     }
     const matches = await LOOKUP_ADAPTERS[field.lookup.entity].load(
@@ -217,10 +233,24 @@ export async function validateLookupAnswers(
       { ids: [answer], filters: field.lookup.filters }
     );
     if (!matches.some((option) => option.id === answer)) {
-      errors.push(`Invalid selection for "${field.label}"`);
+      refuse(field);
     }
   }
-  return errors;
+  return invalid;
+}
+
+/** User-facing errors (naming the field by label) for `findInvalidLookupAnswers`. */
+export async function validateLookupAnswers(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  fields: unknown,
+  payload: Record<string, unknown>,
+  requester: LookupRequester,
+  visibleFieldKeys: ReadonlySet<string> | readonly string[]
+): Promise<string[]> {
+  return (await findInvalidLookupAnswers(knex, tenant, fields, payload, requester, visibleFieldKeys)).map(
+    (entry) => entry.message
+  );
 }
 
 /**

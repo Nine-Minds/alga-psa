@@ -1,3 +1,4 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 import type { ProjectTaskActivity } from "../api/activities";
 import type { InventorySegment } from "../features/inventory/segments";
@@ -18,7 +19,7 @@ export type RootStackParamList = {
         qaScenario?: TicketRichTextQaScenario;
       }
     | undefined;
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<DrawerParamList> | undefined;
   TicketDetail: {
     ticketId: string;
     qaScenario?: TicketRichTextQaScenario;
@@ -66,7 +67,7 @@ export type TicketsStackParamList = {
 
 export type DrawerParamList = {
   HomeTab: undefined;
-  TicketsTab: { screen?: "TicketsList"; params?: TicketsStackParamList["TicketsList"] } | undefined;
+  TicketsTab: NavigatorScreenParams<TicketsStackParamList> | undefined;
   ProjectsTab: undefined;
   UserActivitiesTab: undefined;
   ScheduleTab: undefined;

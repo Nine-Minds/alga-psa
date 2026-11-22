@@ -61,6 +61,14 @@ vi.mock('../invoice-designer/DesignerShell', () => ({
   DesignerShell: () => <div data-testid="designer-shell-mock">Designer Shell</div>,
 }));
 
+// The preview is the printed pages, drawn server-side and shown in an iframe. jsdom has no iframe
+// document to lay out, so the frame is stubbed and the HTML it was handed is asserted instead.
+vi.mock('../invoice-designer/preview/PreviewSheetFrame', () => ({
+  PreviewSheetFrame: (props: { html: string }) => (
+    <div data-automation-id="preview-sheet-frame-mock">{props.html}</div>
+  ),
+}));
+
 const installLocalStorageMock = () => {
   const backing = new Map<string, string>();
   const storageMock: Storage = {
@@ -186,6 +194,8 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
         status: 'success',
         html: `<div>${invoiceData?.invoiceNumber ?? 'N/A'}</div>`,
         css: '',
+        // The preview surface renders the paginated document the action returns.
+        documentHtml: `<html><body><div>${invoiceData?.invoiceNumber ?? 'N/A'}</div></body></html>`,
       },
       verification: {
         status: 'pass',

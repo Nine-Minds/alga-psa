@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Richiesta inviata",
-    "requestIdLabel": "ID richiesta: ",
-    "ticketIdLabel": "ID ticket: ",
     "unableToSubmit": "Impossibile inviare la richiesta",
     "formTitle": "Modulo della richiesta",
     "noFields": "Nessun campo configurato.",
@@ -20,6 +18,18 @@
     "optionLabel": "Opzione {{index}}",
     "submit": "Invia richiesta",
     "requiredField": "Questo campo è obbligatorio.",
+    "validation": {
+      "type": "Questa risposta non ha il formato previsto.",
+      "pattern": "Questa risposta non ha il formato previsto.",
+      "minLength": "Usa almeno {{minLength}} caratteri.",
+      "maxLength": "Usa al massimo {{maxLength}} caratteri.",
+      "min": "Inserisci {{min}} o più.",
+      "max": "Inserisci {{max}} o meno.",
+      "minDate": "Scegli {{minDate}} o una data successiva.",
+      "maxDate": "Scegli {{maxDate}} o una data precedente.",
+      "minSelected": "Scegline almeno {{minSelected}}.",
+      "maxSelected": "Scegline al massimo {{maxSelected}}."
+    },
     "unsupportedField": "Questa domanda non è disponibile."
   },
   "myRequests": {
@@ -44,10 +54,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Torna a Le mie richieste",
-    "requestIdLabel": "ID richiesta:",
     "statusSection": "Stato",
     "submittedAt": "Inviata: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Risposte inviate",
     "noResponse": "Nessuna risposta",
     "attachmentsTitle": "Allegati",
@@ -73,5 +81,12 @@
   },
   "myRequestsAll": {
     "title": "Le tue richieste"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, inviata il {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Visualizza ticket"
   }
 }

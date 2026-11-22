@@ -1442,6 +1442,8 @@
       "client": "Kundenkontext",
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
+      "pickClient": "Kunden auswählen",
+      "specificClient": "Ein bestimmter Kunde",
       "title": "Vorlagensimulation"
     },
     "pricing": {
