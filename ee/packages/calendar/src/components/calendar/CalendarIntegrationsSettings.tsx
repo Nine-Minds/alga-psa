@@ -11,7 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { GoogleCalendarProviderForm } from './GoogleCalendarProviderForm';
-import { MicrosoftCalendarProviderForm } from './MicrosoftCalendarProviderForm';
+import { MicrosoftCalendarProviderForm, type GetMicrosoftAdminConsentUrl } from './MicrosoftCalendarProviderForm';
 import { getCalendarProviders, deleteCalendarProvider, syncCalendarProvider } from '../../actions';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
@@ -26,7 +26,12 @@ type SyncFeedbackMap = Record<string, { variant: 'success' | 'error'; message: s
 
 type ProviderType = 'google' | 'microsoft';
 
-export function CalendarIntegrationsSettings() {
+export interface CalendarIntegrationsSettingsProps {
+  /** Host-supplied admin-consent link action; the link is hidden when omitted. */
+  getMicrosoftAdminConsentUrl?: GetMicrosoftAdminConsentUrl;
+}
+
+export function CalendarIntegrationsSettings({ getMicrosoftAdminConsentUrl }: CalendarIntegrationsSettingsProps = {}) {
   const tenant = useTenant();
   const { toast } = useToast();
   const { t } = useTranslation('msp/calendar');
@@ -528,6 +533,7 @@ export function CalendarIntegrationsSettings() {
           {providerType === 'microsoft' && (
             <MicrosoftCalendarProviderForm
               tenant={tenant}
+              getAdminConsentUrl={getMicrosoftAdminConsentUrl}
               onSuccess={handleFormSuccess}
               onCancel={closeAddDialog}
             />
@@ -555,6 +561,7 @@ export function CalendarIntegrationsSettings() {
           {selectedProvider && providerType === 'microsoft' && (
             <MicrosoftCalendarProviderForm
               tenant={tenant}
+              getAdminConsentUrl={getMicrosoftAdminConsentUrl}
               provider={selectedProvider}
               onSuccess={handleFormSuccess}
               onCancel={closeEditDialog}

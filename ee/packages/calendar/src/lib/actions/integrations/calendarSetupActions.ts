@@ -8,11 +8,11 @@ import {
   type MicrosoftConsumerProfileReasonCode,
 } from '../../microsoftConsumerProfileResolution';
 import {
+  getMicrosoftPlatformClientId,
   isMicrosoftPlatformAppOffered,
   isMicrosoftPlatformClientId,
   reconcileMicrosoftPlatformAppProfile,
-} from '@alga-psa/integrations/lib/microsoftPlatformApp';
-import { getMicrosoftPlatformClientId } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
+} from '@alga-psa/shared/services/email/microsoftPlatformApp';
 import { resolveCalendarRedirectUri } from '../../utils/calendar/redirectUri';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';

@@ -10,13 +10,21 @@ import {
   normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
 } from '../actions/integrations/microsoftShared';
+import {
+  loadPlatformMicrosoftEmailConfig,
+  normalizeMicrosoftTenantId as normalizeTenantId,
+} from '@alga-psa/shared/services/email/microsoftPlatformApp';
+
+// The platform-credential lookups moved down to shared (see microsoftPlatformApp.ts).
+export {
+  getMicrosoftPlatformClientId,
+  getMicrosoftPlatformCredentialAvailability,
+  type MicrosoftPlatformCredentialAvailability,
+} from '@alga-psa/shared/services/email/microsoftPlatformApp';
 
 const LEGACY_MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const LEGACY_MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const LEGACY_MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
-const HOSTED_MICROSOFT_CLIENT_ID_SECRET = 'MICROSOFT_CLIENT_ID';
-const HOSTED_MICROSOFT_CLIENT_SECRET_SECRET = 'MICROSOFT_CLIENT_SECRET';
-const HOSTED_MICROSOFT_TENANT_ID_SECRET = 'MICROSOFT_TENANT_ID';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
 
 interface MicrosoftProfileRow {
@@ -63,13 +71,6 @@ type ResolverStatus = 'ready' | 'not_configured' | 'pending_admin_consent' | 'in
 export type MicrosoftCredentialSource = 'binding' | 'app';
 export type MicrosoftCredentialPreference = 'tenant' | 'platform';
 
-export interface MicrosoftPlatformCredentialAvailability {
-  ready: boolean;
-  clientIdConfigured: boolean;
-  clientSecretConfigured: boolean;
-  tenantIdConfigured: boolean;
-}
-
 export interface MicrosoftConsumerProfileResolution {
   status: ResolverStatus;
   tenantId: string;
@@ -82,10 +83,6 @@ export interface MicrosoftConsumerProfileResolution {
   microsoftTenantId?: string;
   credentialSource?: MicrosoftCredentialSource;
   message?: string;
-}
-
-function normalizeTenantId(value?: string | null): string {
-  return (value || '').trim() || 'common';
 }
 
 function normalizeDisplayNameKey(value: string): string {
@@ -127,56 +124,6 @@ async function getLegacyMicrosoftConfig(
     clientSecret: (clientSecret || '').trim(),
     tenantId: normalizeTenantId(tenantId),
   };
-}
-
-async function loadPlatformMicrosoftEmailConfig(
-  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
-): Promise<{
-  clientId: string;
-  clientSecret: string;
-  microsoftTenantId: string;
-  tenantIdConfigured: boolean;
-}> {
-  const [appClientId, appClientSecret, appTenantId] = await Promise.all([
-    secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_ID_SECRET),
-    secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_SECRET_SECRET),
-    secretProvider.getAppSecret(HOSTED_MICROSOFT_TENANT_ID_SECRET),
-  ]);
-
-  const rawTenantId = (appTenantId || process.env.MICROSOFT_TENANT_ID || '').trim();
-
-  return {
-    clientId: (appClientId || process.env.MICROSOFT_CLIENT_ID || '').trim(),
-    clientSecret: (appClientSecret || process.env.MICROSOFT_CLIENT_SECRET || '').trim(),
-    microsoftTenantId: normalizeTenantId(rawTenantId),
-    tenantIdConfigured: Boolean(rawTenantId),
-  };
-}
-
-export async function getMicrosoftPlatformCredentialAvailability(): Promise<MicrosoftPlatformCredentialAvailability> {
-  const secretProvider = await getSecretProviderInstance();
-  const config = await loadPlatformMicrosoftEmailConfig(secretProvider);
-
-  const clientIdConfigured = isConfigured(config.clientId);
-  const clientSecretConfigured = isConfigured(config.clientSecret);
-
-  return {
-    ready: clientIdConfigured && clientSecretConfigured,
-    clientIdConfigured,
-    clientSecretConfigured,
-    tenantIdConfigured: config.tenantIdConfigured,
-  };
-}
-
-/**
- * Client id of the AlgaPSA-supplied Microsoft application, or null when the
- * platform credentials are not configured. A profile whose client id equals this
- * is "the platform profile" (see `microsoftPlatformApp.ts`).
- */
-export async function getMicrosoftPlatformClientId(): Promise<string | null> {
-  const secretProvider = await getSecretProviderInstance();
-  const config = await loadPlatformMicrosoftEmailConfig(secretProvider);
-  return isConfigured(config.clientId) && isConfigured(config.clientSecret) ? config.clientId : null;
 }
 
 async function resolveHostedMicrosoftEmailConfig(

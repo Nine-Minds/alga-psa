@@ -70,7 +70,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 import { configureMicrosoftEmailPlatformApplication } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
 import { recordMicrosoftEmailAdminConsentFromState } from '@alga-psa/integrations/lib/microsoftEmailAdminConsent';
-import { reconcileMicrosoftPlatformAppProfile } from '@alga-psa/integrations/lib/microsoftPlatformApp';
+import { reconcileMicrosoftPlatformAppProfile } from '@alga-psa/shared/services/email/microsoftPlatformApp';
 import { getMicrosoftCalendarSetupStatus } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarSetupActions';
 
 let testDb: Knex;

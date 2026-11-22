@@ -30,7 +30,6 @@ import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
-import { getMicrosoftEmailAdminConsentUrl } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
 // Deep link to the Microsoft app registration section of the Providers page.
 const MICROSOFT_PROVIDERS_SETTINGS_URL = '/msp/settings?tab=integrations&category=providers&provider=microsoft';
 
@@ -43,18 +42,29 @@ const microsoftCalendarProviderSchema = z.object({
 
 type MicrosoftCalendarProviderFormData = z.infer<typeof microsoftCalendarProviderSchema>;
 
+/**
+ * Supplied by the host (integrations owns consent-URL state signing and the
+ * consent-profile lookup). When absent the "Approve calendar access" link is hidden.
+ */
+export type GetMicrosoftAdminConsentUrl = (input: {
+  profileId: string;
+  tenantHint?: string;
+}) => Promise<{ success: boolean; error?: string; url?: string }>;
+
 interface MicrosoftCalendarProviderFormProps {
   tenant: string | null | undefined;
   provider?: CalendarProviderConfig;
   onSuccess?: () => void;
   onCancel?: () => void;
+  getAdminConsentUrl?: GetMicrosoftAdminConsentUrl;
 }
 
 export function MicrosoftCalendarProviderForm({ 
   tenant, 
   provider,
   onSuccess,
-  onCancel 
+  onCancel,
+  getAdminConsentUrl,
 }: MicrosoftCalendarProviderFormProps) {
   const [oauthStatus, setOAuthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthError, setOAuthError] = useState<string | null>(null);
@@ -179,8 +189,8 @@ export function MicrosoftCalendarProviderForm({
 
   const openPlatformAdminConsent = async () => {
     setConsentLinkError(null);
-    if (!setupProfileId) return;
-    const result = await getMicrosoftEmailAdminConsentUrl({ profileId: setupProfileId });
+    if (!setupProfileId || !getAdminConsentUrl) return;
+    const result = await getAdminConsentUrl({ profileId: setupProfileId });
     if (!result.success || !result.url) {
       setConsentLinkError(result.error || t('calendar.providers.microsoft.adminConsentPending.linkFailed', { defaultValue: 'Could not create the Microsoft approval link.' }));
       return;
@@ -413,7 +423,7 @@ export function MicrosoftCalendarProviderForm({
                             defaultValue: 'A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.',
                           })}
                     </div>
-                    {canManageProviderSettings && providerSetupSource === 'platform' && setupProfileId && (
+                    {canManageProviderSettings && providerSetupSource === 'platform' && setupProfileId && getAdminConsentUrl && (
                       <Button
                         id="microsoft-calendar-admin-consent-approve"
                         type="button"

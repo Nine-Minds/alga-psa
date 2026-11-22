@@ -63,8 +63,16 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: (name: any) => hoisted.builder(name) }),
 }));
 vi.mock('@alga-psa/licensing', () => ({ isSelfHostLicensing: async () => hoisted.state.selfHosted }));
-vi.mock('./microsoftConsumerProfileResolution', () => ({
-  getMicrosoftPlatformClientId: async () => hoisted.state.platformClientId,
+// The platform client id now lives in shared and is read from the app secrets.
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getAppSecret: async (name: string) => {
+      if (!hoisted.state.platformClientId) return null;
+      if (name === 'MICROSOFT_CLIENT_ID') return hoisted.state.platformClientId;
+      if (name === 'MICROSOFT_CLIENT_SECRET') return 'platform-secret';
+      return null;
+    },
+  }),
 }));
 
 import { writeMicrosoftEmailAdminConsent } from './microsoftEmailAdminConsent';
@@ -72,7 +80,7 @@ import {
   getMicrosoftPlatformAppServedConsumers,
   isMicrosoftPlatformAppOffered,
   reconcileMicrosoftPlatformAppProfile,
-} from './microsoftPlatformApp';
+} from '@alga-psa/shared/services/email/microsoftPlatformApp';
 
 const TENANT = 'tenant-1';
 
@@ -97,6 +105,8 @@ describe('supplied Microsoft app served consumers', () => {
     hoisted.state.platformClientId = 'platform-client';
     hoisted.state.tables.microsoft_profiles = [];
     hoisted.state.tables.microsoft_profile_consumer_bindings = [];
+    delete process.env.MICROSOFT_CLIENT_ID;
+    delete process.env.MICROSOFT_CLIENT_SECRET;
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
   });

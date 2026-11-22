@@ -18,13 +18,11 @@ vi.mock('@alga-psa/ee-calendar/actions', () => ({
 vi.mock('@alga-psa/ee-calendar/lib/actions/integrations/calendarSetupActions', () => ({
   getMicrosoftCalendarSetupStatus: vi.fn(),
 }));
-vi.mock('@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions', () => ({
-  getMicrosoftEmailAdminConsentUrl: vi.fn(),
-}));
+// The host (integrations) injects the consent-link action as a prop.
+const getMicrosoftEmailAdminConsentUrl = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({ useToast: () => ({ toast }) }));
 
-import { getMicrosoftEmailAdminConsentUrl } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
 import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import { getMicrosoftCalendarSetupStatus } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarSetupActions';
 
@@ -183,10 +181,10 @@ describe('MicrosoftCalendarProviderForm', () => {
 
   it('T010: admin-approval error shows the message and the consent link to a user who can manage provider settings', async () => {
     setStatus({ ready: true, state: 'ready', source: 'platform', profileId: 'p1', canManageProviderSettings: true });
-    vi.mocked(getMicrosoftEmailAdminConsentUrl).mockResolvedValue({ success: true, url: 'https://login.microsoftonline.com/x/adminconsent' } as any);
+    getMicrosoftEmailAdminConsentUrl.mockResolvedValue({ success: true, url: 'https://login.microsoftonline.com/x/adminconsent' } as any);
     const open = vi.fn().mockReturnValue({ focus: vi.fn() });
     Object.defineProperty(window, 'open', { configurable: true, value: open });
-    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" getAdminConsentUrl={getMicrosoftEmailAdminConsentUrl} />);
     await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
     consentFailure();
 
@@ -198,7 +196,7 @@ describe('MicrosoftCalendarProviderForm', () => {
 
   it('T010: a user without provider settings permission sees the message but no consent link', async () => {
     setStatus({ ready: true, state: 'ready', source: 'platform', profileId: 'p1', canManageProviderSettings: false });
-    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" getAdminConsentUrl={getMicrosoftEmailAdminConsentUrl} />);
     await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
     consentFailure();
 
@@ -206,5 +204,15 @@ describe('MicrosoftCalendarProviderForm', () => {
     expect(document.getElementById('microsoft-calendar-admin-consent-approve')).toBeNull();
     expect(document.getElementById('microsoft-calendar-admin-consent-providers-link')).toBeNull();
     expect(getMicrosoftEmailAdminConsentUrl).not.toHaveBeenCalled();
+  });
+
+  it('hides the consent link, without crashing, when the host supplies no consent action', async () => {
+    setStatus({ ready: true, state: 'ready', source: 'platform', profileId: 'p1', canManageProviderSettings: true });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
+    consentFailure();
+
+    await waitFor(() => expect(screen.getByText(/administrator for your organization must approve calendar access/)).toBeInTheDocument());
+    expect(document.getElementById('microsoft-calendar-admin-consent-approve')).toBeNull();
   });
 });
