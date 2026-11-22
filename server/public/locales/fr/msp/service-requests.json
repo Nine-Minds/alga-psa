@@ -178,7 +178,7 @@
         "help": {
           "whatItIs": "Ce panneau enregistre la visibilité des champs et les valeurs préremplies au format JSON. « Afficher quand… » sur chaque champ est la méthode habituelle pour configurer la visibilité. Utilisez ce panneau pour les modifications en masse et pour contextDefaults, qui n’ont pas d’autre éditeur.",
           "ruleShapeTitle": "Règles de visibilité",
-          "ruleShape": "Chaque entrée de visibilityRules possède ces propriétés. value n’est nécessaire que pour equals et does not equal.",
+          "ruleShape": "Chaque entrée de visibilityRules possède ces propriétés. value n’est nécessaire que pour les opérateurs equals et not-equals.",
           "ruleAll": "Toutes les conditions d’un champ doivent être remplies. Les conditions sont combinées uniquement avec AND.",
           "ruleNone": "Un champ sans condition est toujours affiché.",
           "ruleSource": "source est une clé de champ, ou l’une de context.requesterUserId, context.clientId et context.contactId.",

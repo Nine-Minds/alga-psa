@@ -178,7 +178,7 @@
         "help": {
           "whatItIs": "Dieses Panel speichert die Sichtbarkeit von Feldern und vorausgefüllte Werte als JSON. „Anzeigen, wenn…“ bei jedem Feld ist der normale Weg, die Sichtbarkeit einzurichten. Verwenden Sie dieses Panel für Massenänderungen und für contextDefaults, für die es keinen anderen Editor gibt.",
           "ruleShapeTitle": "Sichtbarkeitsregeln",
-          "ruleShape": "Jeder Eintrag in visibilityRules hat diese Eigenschaften. value wird nur für equals und does not equal benötigt.",
+          "ruleShape": "Jeder Eintrag in visibilityRules hat diese Eigenschaften. value wird nur für die Operatoren equals und not-equals benötigt.",
           "ruleAll": "Jede Bedingung eines Felds muss erfüllt sein. Bedingungen werden ausschließlich mit UND verknüpft.",
           "ruleNone": "Ein Feld ohne Bedingung wird immer angezeigt.",
           "ruleSource": "source ist ein Feldschlüssel oder einer von context.requesterUserId, context.clientId und context.contactId.",

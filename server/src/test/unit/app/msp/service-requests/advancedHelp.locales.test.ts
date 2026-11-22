@@ -57,4 +57,13 @@ describe('service-requests locale keys for the visibility help', () => {
       }
     }
   });
+
+  it('ruleShape names the operator tokens, not the display label', () => {
+    expect(get(load('en'), 'editor.execution.advanced.help.ruleShape')).toContain('not-equals');
+    for (const locale of ['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv']) {
+      const text = get(load(locale), 'editor.execution.advanced.help.ruleShape');
+      expect(text, locale).toContain('not-equals');
+      expect(text, locale).not.toContain('does not equal');
+    }
+  });
 });

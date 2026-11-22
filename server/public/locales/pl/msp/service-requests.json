@@ -178,7 +178,7 @@
         "help": {
           "whatItIs": "Ten panel zapisuje widoczność pól i wstępnie wypełnione wartości w formacie JSON. „Pokaż, gdy…” przy każdym polu to standardowy sposób konfigurowania widoczności. Użyj tego panelu do zbiorczych zmian oraz do contextDefaults, które nie mają innego edytora.",
           "ruleShapeTitle": "Reguły widoczności",
-          "ruleShape": "Każdy wpis w visibilityRules ma te właściwości. value jest potrzebne tylko dla equals i does not equal.",
+          "ruleShape": "Każdy wpis w visibilityRules ma te właściwości. value jest potrzebne tylko dla operatorów equals i not-equals.",
           "ruleAll": "Wszystkie warunki pola muszą być spełnione. Warunki łączy się wyłącznie operatorem AND.",
           "ruleNone": "Pole bez warunku jest zawsze widoczne.",
           "ruleSource": "source to klucz pola albo jedna z wartości context.requesterUserId, context.clientId i context.contactId.",

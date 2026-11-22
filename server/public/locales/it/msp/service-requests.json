@@ -178,7 +178,7 @@
         "help": {
           "whatItIs": "Questo pannello salva la visibilità dei campi e i valori precompilati in formato JSON. «Mostra quando…» su ogni campo è il modo normale per configurare la visibilità. Usa questo pannello per modifiche in blocco e per contextDefaults, che non hanno altri editor.",
           "ruleShapeTitle": "Regole di visibilità",
-          "ruleShape": "Ogni voce di visibilityRules ha queste proprietà. value serve solo per equals e does not equal.",
+          "ruleShape": "Ogni voce di visibilityRules ha queste proprietà. value serve solo per gli operatori equals e not-equals.",
           "ruleAll": "Tutte le condizioni di un campo devono essere soddisfatte. Le condizioni sono combinate solo con AND.",
           "ruleNone": "Un campo senza condizioni è sempre visibile.",
           "ruleSource": "source è una chiave di campo, oppure uno tra context.requesterUserId, context.clientId e context.contactId.",

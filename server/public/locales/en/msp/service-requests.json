@@ -178,7 +178,7 @@
         "help": {
           "whatItIs": "This panel stores field visibility and prefilled values as JSON. “Show when…” on each field is the normal way to set up visibility. Use this panel for bulk edits and for contextDefaults, which have no other editor.",
           "ruleShapeTitle": "Visibility rules",
-          "ruleShape": "Each entry in visibilityRules has these properties. value is only needed for equals and does not equal.",
+          "ruleShape": "Each entry in visibilityRules has these properties. value is only needed for equals and not-equals operators.",
           "ruleAll": "Every condition on a field must pass. Conditions are combined with AND only.",
           "ruleNone": "A field with no condition is always shown.",
           "ruleSource": "source is a field key, or one of context.requesterUserId, context.clientId and context.contactId.",
