@@ -467,8 +467,20 @@ export async function resolveTicketPriorityFields(
     };
   }
 
-  const impact = normaliseLevel(supplied(input, 'itilImpact') ? input.itilImpact : input.current?.itil_impact);
-  const urgency = normaliseLevel(supplied(input, 'itilUrgency') ? input.itilUrgency : input.current?.itil_urgency);
+  const priorityChanged =
+    suppliedPriority && (input.priorityId ?? null) !== (input.current?.priority_id ?? null);
+  const suppliedAssessment = supplied(input, 'itilImpact') || supplied(input, 'itilUrgency');
+  // D5: a write that only moves the priority is a direct priority change. The stored assessment is
+  // not fed back into the matrix — it is cleared below — otherwise the ticket would snap back to
+  // the priority the old Impact × Urgency pair computes.
+  const directPriorityChange = priorityChanged && !suppliedAssessment;
+
+  const impact = directPriorityChange
+    ? null
+    : normaliseLevel(supplied(input, 'itilImpact') ? input.itilImpact : input.current?.itil_impact);
+  const urgency = directPriorityChange
+    ? null
+    : normaliseLevel(supplied(input, 'itilUrgency') ? input.itilUrgency : input.current?.itil_urgency);
 
   if (impact !== null && urgency !== null) {
     const matrixPriorityId = await resolveItilPriorityId(conn, tenant, impact, urgency);
@@ -523,8 +535,6 @@ export async function resolveTicketPriorityFields(
   const resolved = await resolvePlainPriority(conn, tenant, board, candidatePriorityId, input.policy);
   const storedImpact = normaliseLevel(input.current?.itil_impact);
   const storedUrgency = normaliseLevel(input.current?.itil_urgency);
-  const priorityChanged =
-    suppliedPriority && (input.priorityId ?? null) !== (input.current?.priority_id ?? null);
   const keepAssessment = !priorityChanged && resolved.problems.length === 0;
   return {
     ...resolved,
