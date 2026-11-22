@@ -39,6 +39,14 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   getSession: async () => null,
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+// LEVERAGE: pattern test-rbac-forwarding — auth and authorization fixtures must share one permission policy.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: async (...args: Parameters<typeof import('@alga-psa/authorization/rbac').hasPermission>) => {
+    const { hasPermission } = await import('@alga-psa/auth');
+    return hasPermission(args[0] as import('@alga-psa/types').IUser, args[1], args[2], args[3]);
+  },
+}));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   ...(await importOriginal<any>()),

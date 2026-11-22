@@ -1,7 +1,9 @@
 import type { IUser } from '@alga-psa/types';
+import type { Knex } from 'knex';
 import { checkMultiplePermissions } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { canAccessAttachmentTicket, canWriteAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 
 export { applyDocumentProductReadScope } from '@shared/lib/documentProductReadScope';
 
@@ -55,11 +57,40 @@ export interface DocumentUploadTarget {
   parentDocumentId?: string;
 }
 
+export function getDocumentUploadTargets(target: DocumentUploadTarget): Array<{ entityType: string; entityId: string }> {
+  const targets = [
+    { entityType: 'ticket', entityId: target.ticketId },
+    { entityType: 'client', entityId: target.clientId },
+    { entityType: 'contact', entityId: target.contactNameId },
+    { entityType: 'asset', entityId: target.assetId },
+    { entityType: 'project_task', entityId: target.projectTaskId },
+    { entityType: 'contract', entityId: target.contractId },
+    { entityType: 'opportunity', entityId: target.opportunityId },
+    { entityType: 'document', entityId: target.parentDocumentId },
+  ];
+  return targets.filter((target): target is { entityType: string; entityId: string } => Boolean(target.entityId));
+}
+
+export async function areDocumentUploadTargetsAuthorized(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  target: DocumentUploadTarget,
+): Promise<boolean> {
+  for (const { entityType, entityId } of getDocumentUploadTargets(target)) {
+    if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entityType, entityId, 'update')) return false;
+  }
+  return true;
+}
+
 export async function canUploadDocument(user: IUser, target: DocumentUploadTarget): Promise<boolean> {
   const grants = await ticketDocumentGrants(user, 'create');
-  if (grants.general) return true;
-  if (!grants.scoped || !target.ticketId || target.clientId || target.contactNameId || target.assetId ||
-      target.projectTaskId || target.contractId || target.opportunityId || target.parentDocumentId) return false;
   const { knex } = await createTenantKnex(user.tenant);
-  return canWriteAttachmentTicket(knex, user.tenant, user.user_id, target.ticketId);
+  const targets = getDocumentUploadTargets(target);
+  if (!grants.general && (!grants.scoped || !target.ticketId ||
+    targets.some(({ entityType }) => entityType !== 'ticket'))) return false;
+  if (targets.length === 0) return grants.general;
+
+  if (target.parentDocumentId && !grants.general) return false;
+  return knex.transaction((trx) => areDocumentUploadTargetsAuthorized(trx, user.tenant, user, target));
 }

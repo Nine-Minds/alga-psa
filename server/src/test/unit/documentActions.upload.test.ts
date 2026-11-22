@@ -12,12 +12,24 @@ vi.mock('@alga-psa/storage/StorageService', () => {
   };
 });
 
+vi.mock('@alga-psa/documents/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/documents/lib/documentPermissions')>()),
+  // Target policy is exercised by documentAssociationCrossClient.integration.test.ts.
+  areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
+
 vi.mock('@shared/lib/documentProductReadScope', () => ({
   applyDocumentProductReadScope: vi.fn(),
 }));
 vi.mock('../lib/documentPermissions', () => ({
   canReadDocument: vi.fn(async () => true),
   canReadTicketDocuments: vi.fn(async () => true),
+  canUploadDocument: vi.fn(async () => true),
+}));
+vi.mock('../../../../packages/documents/src/lib/documentPermissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../packages/documents/src/lib/documentPermissions')>()),
+  areDocumentUploadTargetsAuthorized: vi.fn(async () => true),
   canUploadDocument: vi.fn(async () => true),
 }));
 
@@ -457,9 +469,10 @@ function createKnexStub() {
     };
 
     const builder: any = {
-      insert: vi.fn(async (records: any | any[]) => {
+      insert: vi.fn((records: any | any[]) => {
         const rows = Array.isArray(records) ? records : [records];
         folderRows.push(...rows);
+        return { onConflict: () => ({ ignore: async () => undefined }) };
       }),
       where: vi.fn((column: any, value?: any) => {
         if (typeof column === 'object' && column !== null) {

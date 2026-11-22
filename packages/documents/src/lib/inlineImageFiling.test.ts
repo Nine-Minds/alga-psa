@@ -28,9 +28,18 @@ const makeQuery = (table: string, tenant: string) => {
         )
       );
     },
-    async insert(values: FolderRow[]) {
-      rows.push(...values);
-      return values.length;
+    insert(values: FolderRow[]) {
+      return {
+        onConflict: () => ({
+          ignore: async () => {
+            const inserted = values.filter((value) => !rows.some((row) =>
+              row.tenant === value.tenant && row.folder_path === value.folder_path &&
+              row.entity_id === value.entity_id && row.entity_type === value.entity_type));
+            rows.push(...inserted);
+            return inserted.length;
+          },
+        }),
+      };
     },
   };
   return query;
