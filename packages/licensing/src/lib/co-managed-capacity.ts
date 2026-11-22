@@ -31,12 +31,15 @@ export async function readCoManagedPoolCapacity(
   sponsor: string,
   purchased: number,
 ): Promise<CoManagedPoolCapacity> {
-  const rows: Array<{ allocation_kind: CoManagedAllocationKind; used: string | number | null }> =
+  const rows: Array<{ allocation_kind: CoManagedAllocationKind; funding_source: string; used: string | number | null }> =
     await tenantDb(trx, sponsor).table('co_managed_allocations')
-      .whereNot('state', 'released').groupBy('allocation_kind')
-      .select('allocation_kind').sum('seats as used');
+      .whereNot('state', 'released').groupBy('allocation_kind', 'funding_source')
+      .select('allocation_kind', 'funding_source').sum('seats as used');
   const byKind: Record<CoManagedAllocationKind, number> = { workspace: 0, seat: 0 };
-  for (const row of rows) byKind[row.allocation_kind] += Number(row.used ?? 0);
+  for (const row of rows) {
+    const seats = Number(row.used ?? 0);
+    if (row.funding_source !== 'seat_trial') byKind[row.allocation_kind] += seats;
+  }
   const allocated = byKind.workspace + byKind.seat;
   return { purchased, allocated, available: Math.max(0, purchased - allocated), byKind };
 }

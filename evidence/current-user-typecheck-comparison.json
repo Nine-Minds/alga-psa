@@ -1,0 +1,26 @@
+{
+  "parentRevision": "0deaba00674e661b5e951c4c21ada66fec8f5010",
+  "implementationRevision": "a004ad4bc203d6cef15ac722221a829262fe659e",
+  "typescriptVersion": "5.9.3",
+  "currentCommand": "NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck --workspace=server",
+  "parentCommand": "NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck --workspace=server -- --listFiles",
+  "currentExitCode": 2,
+  "parentExitCode": 2,
+  "dependencySetup": "Reused installed third-party packages; 105 workspace links remapped to the parent checkout. Tracked parent files unchanged.",
+  "diagnosticHeadersIdentical": true,
+  "diagnosticDetails": "Identical after normalizing the display order of the Value | QueryBuilder<any, any> union.",
+  "diagnostics": [
+    "../packages/billing/src/actions/profitabilityReportActions.ts(367,29): error TS2769: No overload matches this call.",
+    "../packages/billing/src/actions/profitabilityReportActions.ts(690,29): error TS2769: No overload matches this call.",
+    "../packages/billing/src/actions/profitabilityReportActions.ts(845,29): error TS2769: No overload matches this call.",
+    "../packages/billing/src/actions/profitabilityReportActions.ts(926,29): error TS2769: No overload matches this call.",
+    "../packages/billing/src/actions/profitabilityReportActions.ts(1013,29): error TS2769: No overload matches this call.",
+    "../packages/billing/src/actions/profitabilityReportActions.ts(1087,29): error TS2769: No overload matches this call.",
+    "../shared/lib/ticketChecklists/applyTemplates.ts(168,52): error TS2769: No overload matches this call."
+  ],
+  "parentListedFileCount": 15564,
+  "parentLocalSourceFileCount": 8193,
+  "parentUserQueryActionIncluded": true,
+  "currentWorktreeSourceFilesInParentRun": [],
+  "parentSourceListSha256": "f7f51a64aaa25b9b0b6b109e19a4c8bbbc948df1b65ede4e3d861a5d7462050a"
+}

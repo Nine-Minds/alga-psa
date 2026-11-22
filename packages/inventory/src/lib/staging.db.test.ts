@@ -469,6 +469,19 @@ describe('T004 SO fulfillment never poaches a project claim', () => {
 });
 
 describe('T005 install, undo and delete', () => {
+  it('does not publish a low-stock signal from an install rolled back with its outer test transaction', async () => {
+    const other = await makeLocation('Reserve warehouse');
+    const svc = await makeProduct({ onHand: 1 });
+    await trx()('product_inventory_settings').where({ tenant: TENANT, service_id: svc }).update({ reorder_point: 5 });
+    await recordStockMovement(trx(), TENANT, { movement_type: 'receipt', service_id: svc, quantity: 6, to_location_id: other, unit_cost: 500 });
+    const { projectId } = await makeProject();
+    const [line] = await reserve(projectId, svc, 4, { location_id: other });
+    await stageLines(db(), TENANT, [line.staging_line_id], USER);
+    const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
+    expect(result.ok).toBe(true);
+    expect(testState.inventoryEvents).toHaveLength(0);
+  });
+
   it('low-stock signal after install names the claimed-from location, not the product default', async () => {
     const other = await withCommittedFixture(async () => {
       const other = await makeLocation('Reserve warehouse');
@@ -515,6 +528,17 @@ describe('T005 install, undo and delete', () => {
     const [again] = await installLines(db(), TENANT, [line.staging_line_id], USER);
     expect(again.ok).toBe(false);
     expect(await count('stock_movements', { service_id: svc, movement_type: 'consume' })).toBe(1);
+  });
+
+  it('serialized: delivers within the transaction but defers its asset link past this rolled-back test', async () => {
+    const svc = await makeProduct({ onHand: 2, serialized: true, createsAsset: true });
+    const { projectId } = await makeProject();
+    const [line] = await reserve(projectId, svc, 1);
+    const [result] = await installLines(db(), TENANT, [line.staging_line_id], USER);
+    expect(result.ok).toBe(true);
+    const unit = await trx()('stock_units').where({ tenant: TENANT, unit_id: line.unit_id }).first();
+    expect(unit).toMatchObject({ status: 'delivered', client_id: CLIENT, allocated_staging_line_id: null, location_id: null, asset_id: null });
+    expect(testState.assetLinks).toHaveLength(0);
   });
 
   it('serialized: delivers the claimed unit to the client and hands the asset link over after the material', async () => {

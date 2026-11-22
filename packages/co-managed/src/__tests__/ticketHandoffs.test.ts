@@ -121,6 +121,16 @@ describe('transitions', () => {
     expect(store.rows('co_management_ticket_handoffs')[1]).toMatchObject({ actor_tenant: C, actor_user_id: CUSER });
   });
 
+  it('does not persist a user UUID as the handoff display-name fallback', async () => {
+    const user = store.rows('users').find(row => row.user_id === CUSER)!;
+    delete user.first_name; delete user.last_name;
+    user.username = CUSER;
+
+    await escalateCoManagedTicket(db, customer, resource, req(0));
+
+    expect(store.rows('co_management_ticket_handoffs')[0].actor_name).toBe('Unknown user');
+  });
+
   it('revokes the grant, and does so while the licence is paused', async () => {
     await escalateCoManagedTicket(db, customer, resource, req(0));
     gate.paused = true;

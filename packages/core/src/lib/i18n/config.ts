@@ -229,7 +229,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   // These routes can open ticket details, including the shared SLA badge.
-  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents'],
+  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'msp/licensing', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents'],
   // msp/dashboard carries the shared "Good morning" greeting used by the queue.
   '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard', 'features/documents'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents'],
@@ -255,7 +255,6 @@ export const ROUTE_NAMESPACES = {
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing', 'msp/settings'],
-  // Departure and the MSP archive; the rest of the co-managed screens keep their defaultValue fallbacks.
   '/msp/co-managed': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
   '/msp/co-management': ['common', 'msp/core', 'msp/licensing', 'msp/co-managed-lifecycle'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing', 'msp/settings'],

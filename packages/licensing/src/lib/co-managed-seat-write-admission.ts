@@ -24,14 +24,13 @@ const TERMINATED: CoManagedOperationalState = { state: 'terminated', canWrite: f
  * Throws `CoManagedLifecycleError` when `userId` is a seat technician whose allocation has lapsed
  * past grace, or whose arrangement ended. Returns for anyone else.
  *
- * `FORCE_CAPABILITIES=co-managed-seat:off` admits every write, like the workspace kill switch.
+ * `FORCE_CAPABILITIES=co-managed-seat:off` bypasses ordinary pool lapse checks. Existing pilot deadlines still apply.
  */
 export async function assertCoManagedSeatTechnicianWrite(
   db: Knex | Knex.Transaction, tenant: string, userId: string,
 ): Promise<void> {
   if (!tenant || !userId) return;
   const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed-seat');
-  if (forced === 'off' || forced === 'malformed') return;
   const sponsor = tenantDb(db, tenant);
   // Non-revoked only: this is the `co_managed_one_live_seat_assignment (tenant, user_id)` index. A user
   // whose seats are all revoked is not a seat technician (S9 admits them as the MSP's own user), so
@@ -41,6 +40,10 @@ export async function assertCoManagedSeatTechnicianWrite(
   if (!live) return;
   const arrangement = await sponsor.table('co_managed_seat_arrangements')
     .where('arrangement_id', live.arrangement_id).first('state', 'allocation_id');
+  if (forced === 'off' || forced === 'malformed') {
+    if (!arrangement || !await sponsor.table('co_managed_allocations')
+      .where({ allocation_id: arrangement.allocation_id, funding_source: 'seat_trial' }).first('allocation_id')) return;
+  }
   if (!arrangement || arrangement.state !== 'active') throw new CoManagedLifecycleError(TERMINATED);
   const lifecycle = await readCoManagedSeatAllocationStateLockFree(db, tenant, arrangement.allocation_id);
   if (!lifecycle.canWrite) throw new CoManagedLifecycleError(lifecycle);

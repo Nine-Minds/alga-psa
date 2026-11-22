@@ -34,6 +34,12 @@ vi.mock('../lib/invoice-template-ast/server-render', () => ({
   renderTemplateAstHtmlDocument: (...args: any[]) => renderTemplateAstHtmlDocument(...args),
 }));
 
+// The preview draws the document as the pages it prints as; that pass needs a real browser, and these
+// tests are about the model handed to the renderer, not about pagination (see previewPagination.pdf.test).
+vi.mock('../lib/invoice-template-ast/previewPagination.server', () => ({
+  paginateDocumentPreviewHtml: vi.fn(async (html: string) => ({ html, pageCount: 1 })),
+}));
+
 const templateAst = { kind: 'invoice-template-ast', version: 1, layout: { id: 'root', type: 'document', children: [] } } as unknown as TemplateAst;
 
 const previewedModel = () => evaluateTemplateAst.mock.calls.at(-1)?.[1] as Record<string, any>;

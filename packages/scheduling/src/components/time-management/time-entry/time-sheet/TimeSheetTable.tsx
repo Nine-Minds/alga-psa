@@ -20,7 +20,7 @@ interface TimeSheetTableProps {
     groupedTimeEntries: Record<string, ITimeEntryWithWorkItemString[]>;
     isEditable: boolean;
     isLoading?: boolean;
-    onDeleteWorkItem: (workItemId: string) => Promise<void>;
+    onDeleteWorkItem: (workItemId: string, workItemType: string) => Promise<void>;
     onCellClick: (params: TimeEntrySelectionRequest) => void;
     onAddEntryForCell: (params: TimeEntrySelectionRequest) => void;
     onAddWorkItem: (date?: string) => void;
@@ -90,6 +90,7 @@ export function TimeSheetTable({
 }: TimeSheetTableProps): React.JSX.Element {
     const { t } = useTranslation('msp/time-entry');
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
+    const [selectedWorkItemTypeToDelete, setSelectedWorkItemTypeToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
 
     // Container ref for measuring available width
@@ -279,8 +280,11 @@ export function TimeSheetTable({
                     id="timesheet-table-delete-work-item-confirmation"
                     isOpen={true}
                     onConfirm={async () => {
-                        await onDeleteWorkItem(selectedWorkItemToDelete);
+                        if (selectedWorkItemTypeToDelete) {
+                            await onDeleteWorkItem(selectedWorkItemToDelete, selectedWorkItemTypeToDelete);
+                        }
                         setSelectedWorkItemToDelete(null);
+                        setSelectedWorkItemTypeToDelete(null);
                     }}
                     onClose={() => setSelectedWorkItemToDelete(null)}
                     title={t('timeSheetTable.deleteWorkItem.title', { defaultValue: 'Delete Work Item' })}
@@ -463,6 +467,7 @@ export function TimeSheetTable({
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedWorkItemToDelete(workItem.work_item_id);
+                                                    setSelectedWorkItemTypeToDelete(workItem.type);
                                                 }}
                                             >
                                                 <Trash className="h-4 w-4 text-gray-400 hover:text-red-500" />

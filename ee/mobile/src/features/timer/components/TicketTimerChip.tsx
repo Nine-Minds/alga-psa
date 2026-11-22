@@ -6,6 +6,7 @@ import type { WorkItemType } from "../../../api/timeEntries";
 import { useTheme } from "../../../ui/ThemeContext";
 import { useTimer, useTimerElapsedMs } from "../TimerContext";
 import { formatElapsedClock } from "../timerLogic";
+import { useOperationalOnly } from "../../../capabilities/CapabilitiesContext";
 import { ServicePickerModal } from "./ServicePickerModal";
 
 function TimerChip({
@@ -69,15 +70,22 @@ export function TicketTimerChip({ ticketId }: { ticketId: string }) {
  * Start/stop the shared timer against any work item. `preferredService` wins
  * over the remembered default so a task's own service is what gets timed.
  */
-export function WorkItemTimerChip({
-  workItemId,
-  workItemType,
-  preferredService = null,
-}: {
+export function WorkItemTimerChip(props: WorkItemTimerChipProps) {
+  // The stopwatch logs commercial time; an operational-only session (a seat technician) has none.
+  return useOperationalOnly() ? null : <WorkItemTimerChipInner {...props} />;
+}
+
+type WorkItemTimerChipProps = {
   workItemId: string;
   workItemType: WorkItemType;
   preferredService?: { service_id: string; service_name: string } | null;
-}) {
+};
+
+function WorkItemTimerChipInner({
+  workItemId,
+  workItemType,
+  preferredService = null,
+}: WorkItemTimerChipProps) {
   const { t } = useTranslation("timeEntries");
   const timer = useTimer();
   const elapsedMs = useTimerElapsedMs();

@@ -1,0 +1,87 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration (server/src/test/integration/ticketListFilterMatrix.integration.test.ts): add a fixture ticket with no client and matrix rows with explicit ids and totals, individual and bundled: `client.id in [c1,c2]`; `client.id not_in [c1]` (keeps the no-client ticket; bundled hides M because CH1 is c1); legacy `clientId: c1` still matches as before; `clientId: c1` plus a `client.id in [c2]` row returns the c2 set (row wins)",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F011"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration guard (same matrix): a client-portal user scoped to c1 with `client.id not_in [c1]` gets an empty list, and with `client.id in [c1,c2]` gets only c1 tickets",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit (packages/list-views ticketFilterMigration.test.ts): v2 { clientId } -> v3 where `client.id in [id]` with clientId removed; existing client.id not_in clause wins and clientId is dropped; v3 input unchanged; non-string clientId passes through without throwing; migrateTicketDefaultView upgrades a default-view document to schemaVersion 3 with the row",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: URL round trip — the container parser, parseReturnFilters and the server page fold `?clientId=X` into the client row; encoding a not_in row and parsing it back yields the same where; the URL writers never emit clientId",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit (ticketListViewAdapter): capture a live state with a `client.id not_in` row, apply it to a fresh live state, and differs() reports clean; a stored v2 named view with clientId, migrated through migrateListViewSettings, applies as an Any-of row and is not dirty against the URL-folded live state",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit (shared/lib/ticketChecklists rulePredicates test): checklistWhereForOwner turns `client.id not_in [owner]` into a FALSE group, still throws for a foreign id, and TICKET_PREDICATE_FIELDS Client operators are exactly equals/in so a not_in rule is not editable",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit (ticketWhereFilters.test.ts): the Client row's selection get/set, mode flip keeps ids, whereFilterChips renders `Client = name` / `Client ≠ name` per id, clearing one chip leaves the rest, and an unresolved id renders the Unknown client label rather than the id",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F015"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Component (AsyncClientPicker multi): ticking two rows emits both ids with the popover still open, selected rows show checks, the trigger shows the single name then the count summary, and selected ids not on the loaded page are hydrated by one ids lookup",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit (contactFilterUpdateForClientChange): contact kept when its client is allowed by an in row, cleared when not listed; cleared when listed in a not_in row; kept when the row is removed",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F019"
+    ]
+  }
+]

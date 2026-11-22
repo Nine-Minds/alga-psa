@@ -5,6 +5,7 @@ namespace: msp
 nameOverride: ""
 fullnameOverride: ""
 host: "localhost"
+publicWebhookBaseUrl: "" # Optional public origin for provider callback URLs.
 
 bootstrap:
   mode: recover
@@ -148,6 +149,11 @@ temporal:
 # validates event.wait publishability against the same config the worker
 # routes with.
 correlationPathsJson: ""
+
+# Exact deployment-owned IMAP hosts/IPs allowed to resolve privately. Empty
+# keeps private IMAP destinations denied.
+imap:
+  privateTargetAllowlist: ""
 
 # Development Pod Configuration
 devPod:

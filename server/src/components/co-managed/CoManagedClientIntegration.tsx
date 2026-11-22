@@ -10,6 +10,8 @@ import CoManagedClientView from './CoManagedClientView';
 import { getCoManagedSeatClientState } from '@/lib/actions/coManagedSeatActions';
 import CoManagedSeatClientView, { type CoManagedSeatClientState } from './CoManagedSeatClientView';
 import CoManagedSeatSummary from './CoManagedSeatSummary';
+import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSeatTrialRecovery';
+import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedShapeChooser from './CoManagedShapeChooser';
 
 type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
@@ -31,6 +33,14 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [seatState, setSeatState] = useState<CoManagedSeatClientState | null>(null);
   const seatGeneration = useRef(0);
+  const [recoveryClient, setRecoveryClient] = useState<string>();
+  useEffect(() => {
+    let current = true;
+    if (!seatOpen) void hasSeatTrialRecoveryAction(clientId).then(open => {
+      if (current) setRecoveryClient(open ? clientId : undefined);
+    }).catch(() => { if (current) setRecoveryClient(undefined); });
+    return () => { current = false; };
+  }, [clientId, seatOpen]);
   const [view, setView] = useState<View | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [selectedRelationshipId, setSelectedRelationshipId] = useState<string | null>(relationshipId ?? null);
@@ -128,7 +138,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const workspaceReady = admitted && status === 'ready' && view !== null;
   // Seat state may not be there yet or may be unreadable; then the client renders as it always has.
   const seat = seatOpen ? seatState : null;
-  if (!workspaceReady && !seat) return <>{children(null)}</>;
+
 
   const enable = seat?.enable ?? null;
   const chooser = enable ? (workspace: React.ReactNode) => (
@@ -136,6 +146,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
       onEnabled={reloadAll} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
   ) : null;
 
+  const trial = <CoManagedSeatTrial key={clientId} clientId={clientId} onChanged={reloadAll} />;
   const tabLabel = t('coManaged.client.tab', { defaultValue: 'Co-managed IT' });
   const tabBase = {
     id: 'co-managed',
@@ -144,14 +155,16 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     onDiscardUnsavedChanges: () => { dirtyRef.current = false; setResetKey((key) => key + 1); },
   };
   if (!workspaceReady || !view) {
-    if (!seat) return <>{children(null)}</>;
+    if (!seat) return <>{children(recoveryClient === clientId
+      ? { summary: null, tab: { ...tabBase, content: trial } } : null)}</>;
     // Seat-only: the workspace side is not open for this tenant, so the tab is the seat panel or chooser.
     const slots: ClientCoManagedSlots = {
       summary: <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />,
-      tab: { ...tabBase, content: (
+      tab: { ...tabBase, content: (<>
+        {trial}
         <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll}>
           {chooser?.(null)}
-        </CoManagedSeatClientView>) },
+        </CoManagedSeatClientView></>) },
     };
     return <>{children(slots)}</>;
   }
@@ -163,7 +176,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
         selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
     tab: {
       ...tabBase,
-      content: seat?.panel ? (
+      content: <>{trial}{seat?.panel ? (
         <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} />
       ) : (
         <CoManagedClientView
@@ -178,7 +191,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
           onDirtyChange={(dirty) => { dirtyRef.current = dirty; }}
           renderSetup={chooser ?? undefined}
         />
-      ),
+      )}</>,
     },
   };
   return <>{children(slots)}</>;

@@ -4,25 +4,7 @@ import { getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import { ForbiddenError } from '@/lib/api/middleware/apiMiddleware';
 import { enforceMobileOttIssueLimit } from '@/lib/security/mobileAuthRateLimiting';
-
-function validateRedirectUri(raw: string): URL | null {
-  try {
-    const url = new URL(raw);
-    const scheme = url.protocol.replace(':', '').toLowerCase();
-
-    const allowedSchemes = new Set(['alga', 'exp', 'https']);
-    if (!allowedSchemes.has(scheme)) return null;
-
-    const looksLikeAuthCallback =
-      (url.host === 'auth' && url.pathname === '/callback') || url.pathname.endsWith('/auth/callback');
-
-    if (!looksLikeAuthCallback) return null;
-
-    return url;
-  } catch {
-    return null;
-  }
-}
+import { validateMobileRedirectUri } from '@/lib/mobileAuth/redirectUri';
 
 function getClientIp(req: NextRequest): string | null {
   const forwarded = req.headers.get('x-forwarded-for');
@@ -43,7 +25,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return redirectToAppPath('/auth/signin', { status: 302 });
   }
 
-  const redirectUrl = validateRedirectUri(redirectParam);
+  const redirectUrl = validateMobileRedirectUri(redirectParam, 'callback');
   if (!redirectUrl) {
     return redirectToAppPath('/auth/signin?error=invalid_redirect', { status: 302 });
   }

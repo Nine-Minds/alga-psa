@@ -147,7 +147,8 @@
       "viewDetails": "Zobacz szczegóły",
       "editAsset": "Edytuj zasób",
       "createTicket": "Utwórz zgłoszenie",
-      "refreshData": "Odśwież dane"
+      "refreshData": "Odśwież dane",
+      "fullAdd": "Pełne dodawanie"
     },
     "table": {
       "name": "Nazwa",
@@ -2478,6 +2479,7 @@
   },
   "scanLookup": {
     "title": "Skanuj etykietę zasobu",
+    "help": "Zeskanuj wydrukowaną etykietę czytnikiem kodów kreskowych lub wpisz ją dokładnie tak, jak została wydrukowana. Otworzy się odpowiedni rekord przyjęcia.",
     "input": "Zeskanuj lub wpisz etykietę",
     "loading": "Wyszukiwanie…",
     "find": "Znajdź zasób",
@@ -2492,13 +2494,14 @@
   },
   "labelFirstIntake": {
     "start": "Przyjęcie z etykietą wstępną",
-    "title": "Rozpocznij przyjęcie z etykietą wstępną",
     "help": "Utwórz trwały rekord zasobu z minimalnymi danymi, a następnie wydrukuj dwie kopie jego etykiety. Zeskanuj później dowolną kopię, aby uzupełnić ten sam rekord.",
     "client": "Klient",
     "clientRequired": "Wybierz klienta, aby kontynuować.",
     "createFailed": "Nie udało się utworzyć rekordu przyjęcia.",
     "name": "Krótki opis (opcjonalnie)",
     "creating": "Tworzenie…",
-    "createPrint": "Utwórz i wydrukuj parę"
+    "createPrint": "Utwórz i wydrukuj parę",
+    "modePrint": "Wydrukuj nowe etykiety",
+    "modeResume": "Wznów z etykiety"
   }
 }

@@ -112,6 +112,21 @@ describe('product surface registry', () => {
     expect(getApiMetadataProducts(streamPath)).toEqual([]);
   });
 
+  it.each([
+    'offers/resolve',
+    'offers/classify',
+    'operator',
+    'portal-purchases',
+    'portal-purchases/purchase-1/reconcile',
+  ])('keeps billing-catalog/%s within the PSA product boundary and out of API discovery', (endpoint) => {
+    const route = `/api/v1/billing-catalog/${endpoint}`;
+
+    expect(resolveProductApiBehavior('psa', route)).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', route)).toBe('denied');
+    expect(resolveProductApiBehavior('co_managed', route)).toBe('denied');
+    expect(getApiMetadataProducts(route)).toEqual([]);
+  });
+
   it('lets every product mint the realtime notification token without publishing it as a v1 API', () => {
     // The MSP header renders NotificationBell for every product, so each one
     // must reach /api/notifications/live-token.

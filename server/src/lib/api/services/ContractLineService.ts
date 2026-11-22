@@ -32,6 +32,10 @@ import {
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
 import {
+  ContractLineSourceNotFoundError,
+  ContractTemplateLineNotFoundError,
+} from '@alga-psa/billing/repositories/contractLineRepository';
+import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
@@ -1711,9 +1715,23 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<IContractLineMapping> {
     await this.validateContractExists(contractId, context, trx);
-    await this.getExistingPlan(contractLineId, context, trx);
 
-    return repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
+    try {
+      return await repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
+    } catch (error) {
+      if (error instanceof ContractLineSourceNotFoundError) {
+        throw new NotFoundError('Contract Line not found');
+      }
+      if (error instanceof ContractTemplateLineNotFoundError) {
+        // A template line can exist independently of any live line. Check the
+        // live table only when cloning found no template source.
+        await this.getExistingPlan(contractLineId, context, trx);
+        throw new ValidationError(
+          `Only contract-template lines can be cloned onto a contract through this endpoint. Contract line ${contractLineId} is not a contract-template line.`
+        );
+      }
+      throw error;
+    }
   }
 
   /**

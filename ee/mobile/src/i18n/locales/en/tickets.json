@@ -634,5 +634,11 @@
       "notes": "Notes",
       "noNotes": "No notes"
     }
+  },
+  "split": {
+    "empty": "Select a ticket",
+    "emptyHint": "Its details open here, next to the list.",
+    "openFullScreen": "Open full screen",
+    "closeDetail": "Close ticket details"
   }
 }

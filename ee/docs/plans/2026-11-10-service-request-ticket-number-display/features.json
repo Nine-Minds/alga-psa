@@ -1,0 +1,80 @@
+[
+  {
+    "id": "F001",
+    "description": "submitRequestServiceDefinitionAction success redirect is /client-portal/request-services?submitted=<submission_id> with no ticketId param (external redirectUrl and error paths unchanged)",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "submissionHistory.ts: listClientServiceRequestSubmissions keeps returning ticket.ticket_number via its tenant-joined left join (no separate summary query builder)",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F003",
+    "description": "No per-submission summary query: the banner row comes from the client-scoped list (superseded; see FR9)",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F004",
+    "description": "getClientServiceRequestSubmissionDetail left-joins tickets (tenantJoin, rootTenantColumn submission.tenant) and returns ticket_number; ServiceRequestClientSubmissionDetail gains ticket_number: string | null",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F005",
+    "description": "No new server action for the banner (a new unchecked portal action would grow the permission-coverage pinned list); superseded by F008",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F006",
+    "description": "Add ServiceRequestTicketLink component in client-portal/request-services: '#<ticket_number>' link to /client-portal/tickets/<id>; 'View ticket' link fallback when number is null but id present; renders nothing without a ticket; hook-free so it works in server and client components",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "FR7", "FR11"]
+  },
+  {
+    "id": "F007",
+    "description": "MyRequestsTable ticket column renders through ServiceRequestTicketLink (output unchanged)",
+    "implemented": true,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F008",
+    "description": "Catalog page (request-services/page.tsx) stops reading the ticketId search param and resolves submitted by finding it in the caller's own submissions already loaded via listMyRecentServiceRequestsAction (only when submitted is present)",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F009",
+    "description": "Catalog success banner renders only when the summary resolves; body shows '<request name>, submitted <date>' (server-formatted via formatDate + getServerLocale + getDateFormatPreference) and, when a ticket exists, 'Ticket #<number>' via ServiceRequestTicketLink; no GUID text, no font-mono",
+    "implemented": true,
+    "prdRefs": ["FR3", "FR4"]
+  },
+  {
+    "id": "F010",
+    "description": "Remove the unreachable success banner and submitted/ticketId searchParams from [definitionId]/page.tsx; keep the error banner; delete the now-obsolete banner case in [definitionId]/page.test.tsx",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F011",
+    "description": "Detail page my-requests/[submissionId]/page.tsx: remove the 'Request ID: <submission_id>' paragraph under the h1",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F012",
+    "description": "Detail page status-section ticket line renders 'Ticket' + ServiceRequestTicketLink using ticket_number (no other detail-page lines touched; sibling card owns the rest)",
+    "implemented": true,
+    "prdRefs": ["FR7", "Rollout / Migration"]
+  },
+  {
+    "id": "F013",
+    "description": "Locales: remove detail.requestIdLabel, detail.ticketIdLabel, submissionDetail.requestIdLabel, submissionDetail.ticketLabel; add submittedBanner.summary, ticketReference.label, ticketReference.viewTicket in en + de/es/fr/it/nl/pl/pt/sv; regenerate xx/yy with node scripts/generate-pseudo-locales.cjs; validate-translations passes",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  }
+]

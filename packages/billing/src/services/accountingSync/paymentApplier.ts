@@ -340,6 +340,45 @@ export async function applyExternalPaymentChange(
     return;
   }
 
+  // Reversed in AlgaPSA only: the mapping was tombstoned deliberately, so the
+  // live lookup above finds nothing and this payment would otherwise land all
+  // over again on the next cycle — exactly the money the operator reversed.
+  // Skip it and file the disagreement rather than silently re-applying it.
+  if (!existing) {
+    const unlinked = await deps.ledger.findTombstonedByExternalId(
+      PAYMENT_MAPPING_ENTITY_TYPE,
+      change.externalId,
+      deps.targetRealm
+    );
+    const locallyReversed = unlinked.find((row) => row.metadata?.locally_reversed);
+    if (locallyReversed) {
+      deps.stats.paymentsSkipped += 1;
+      const result = await deps.exceptions.createOrUpdate({
+        type: 'accounting_sync_unmapped_payment',
+        entityType: 'external_payment',
+        entityId: change.externalId,
+        title: `${providerLabel} payment was reversed in AlgaPSA only`,
+        context: {
+          external_payment_id: change.externalId,
+          reference: changeReference(change),
+          reason: 'locally_reversed',
+          alga_payment_id: locallyReversed.alga_entity_id,
+          locally_reversed_at: locallyReversed.metadata?.locally_reversed_at ?? null,
+          locally_reversed_by: locallyReversed.metadata?.locally_reversed_by ?? null,
+          realm: deps.targetRealm
+        }
+      });
+      if (result.created) {
+        deps.stats.exceptionsCreated += 1;
+      }
+      logger.info('[accountingSync] Skipped a payment reversed in AlgaPSA only', {
+        tenantId: deps.tenantId,
+        externalPaymentId: change.externalId
+      });
+      return;
+    }
+  }
+
   const { allocations, unmappedExternalIds } = await resolveAllocations(deps, change);
 
   if (unmappedExternalIds.length > 0) {

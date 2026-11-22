@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.19",
+  "version": "1.6.20",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -65,6 +65,10 @@
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"
+    },
+    "./providerConnectionIdentity": {
+      "import": "./dist/lib/providerConnectionIdentity.js",
+      "types": "./src/lib/providerConnectionIdentity.ts"
     },
     "./events": {
       "import": "./dist/lib/events/index.js",

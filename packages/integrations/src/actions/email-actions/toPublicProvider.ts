@@ -75,6 +75,13 @@ export function toPublicGoogleConfig(c: GoogleEmailProviderConfig): PublicGoogle
 }
 
 export function toPublicImapConfig(c: ImapEmailProviderConfig): PublicImapConfig {
+  const oauthAuthorizationStatus = c.oauth_reauthorization_required || (
+    c.oauth_credentials_token_url != null && c.oauth_credentials_token_url !== c.oauth_token_url
+  )
+    ? 'reauthorization_required'
+    : c.oauth_credentials_token_url === c.oauth_token_url && Boolean(c.access_token || c.refresh_token)
+      ? 'connected'
+      : 'not_connected';
   return {
     email_provider_id: c.email_provider_id,
     tenant: c.tenant,
@@ -91,6 +98,8 @@ export function toPublicImapConfig(c: ImapEmailProviderConfig): PublicImapConfig
     oauth_token_url: c.oauth_token_url,
     oauth_client_id: c.oauth_client_id,
     oauth_scopes: c.oauth_scopes,
+    oauth_reauthorization_required: c.oauth_reauthorization_required,
+    oauth_authorization_status: c.oauth_authorization_status ?? oauthAuthorizationStatus,
     token_expires_at: c.token_expires_at,
     uid_validity: c.uid_validity,
     last_uid: c.last_uid,

@@ -8,8 +8,11 @@ vi.mock('redis', () => ({
 }));
 
 describe('TicketUpdatesExtension', () => {
+  const relaySecret = 'ticket-update-test-secret';
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.HOCUSPOCUS_JWT_SECRET = relaySecret;
   });
 
   function createSubscriberHarness() {
@@ -34,30 +37,122 @@ describe('TicketUpdatesExtension', () => {
     return { handlers, pSubscribeMock, subscriber };
   }
 
-  it('T018: Redis publishes are bridged into the matching ticket room as stateless broadcasts', async () => {
-    const { pSubscribeMock } = createSubscriberHarness();
-    const broadcastStateless = vi.fn();
-    const instance = {
-      documents: new Map([
-        ['ticket:tenant-1:ticket-1', { broadcastStateless }],
-      ]),
+  function ticketRoom(tenantId: string, ticketId: string, userIds: string[]) {
+    const recipients = userIds.map(userId => ({
+      context: { ticketAccess: { tenantId, ticketId, userId } },
+      sendStateless: vi.fn(),
+      close: vi.fn(),
+    }));
+    const connections = new Set(recipients);
+    for (const connection of connections) {
+      connection.close.mockImplementation(() => connections.delete(connection));
+    }
+    const document = {
+      getConnections: () => [...connections],
+      hasConnection: (connection: typeof recipients[number]) => connections.has(connection),
+      broadcastStateless: vi.fn(),
     };
+    return { document, instance: { documents: new Map([[`ticket:${tenantId}:${ticketId}`, document]]) } };
+  }
+
+  const ticketUpdate = JSON.stringify({
+    updatedFields: ['status_id'],
+    updatedBy: { userId: 'user-1', displayName: 'Pat Agent' },
+    updatedAt: '2026-05-07T12:00:00.000Z',
+  });
+  const ticketChannel = 'alga-psa:ticket-updates:tenant-1:ticket-1';
+
+  function relayTicketReader(init: RequestInit) {
+    const token = new Headers(init.headers).get('x-api-key');
+    const claims = jwt.verify(token!, relaySecret, { algorithms: ['HS256'], audience: 'ticket-live-access' }) as jwt.JwtPayload;
+    return claims.ticketReader;
+  }
+
+  it('T018: Redis publishes reach authorized local connections in the matching ticket room', async () => {
+    const { pSubscribeMock } = createSubscriberHarness();
+    const { document, instance } = ticketRoom('tenant-1', 'ticket-1', ['reader']);
 
     const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
     const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:' });
     await extension.onConfigure({ instance });
 
-    expect(pSubscribeMock).toHaveBeenCalledWith('alga-psa:ticket-updates:*', expect.any(Function));
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(relayTicketReader(init)).toEqual({ tenantId: 'tenant-1', userId: 'reader', ticketId: 'ticket-1' });
+      return new Response(null, { status: 204 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(pSubscribeMock).toHaveBeenCalledWith('alga-psa:ticket-updates:*', expect.any(Function));
+      const callback = pSubscribeMock.mock.calls[0][1];
+      await callback(ticketUpdate, ticketChannel);
 
-    const callback = pSubscribeMock.mock.calls[0][1];
-    const payload = {
-      updatedFields: ['status_id'],
-      updatedBy: { userId: 'user-1', displayName: 'Pat Agent' },
-      updatedAt: '2026-05-07T12:00:00.000Z',
-    };
-    await callback(JSON.stringify(payload), 'alga-psa:ticket-updates:tenant-1:ticket-1');
+      expect(fetchMock).toHaveBeenCalledWith('http://server:3000/api/internal/tickets/live-change',
+        expect.objectContaining({ method: 'HEAD' }));
+      expect(document.getConnections()[0].sendStateless).toHaveBeenCalledWith(ticketUpdate);
+      expect(document.broadcastStateless).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      await extension.onDestroy();
+    }
+  });
 
-    expect(broadcastStateless).toHaveBeenCalledWith(JSON.stringify(payload));
+  it.each([
+    { deniedGrant: 'trial expiration', statusAfterChange: 403 },
+    { deniedGrant: 'base-subscription lapse', statusAfterChange: 403 },
+  ])('stops an open ticket connection on $deniedGrant', async ({ statusAfterChange }) => {
+    const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
+    const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:' });
+    const { document, instance } = ticketRoom('tenant-1', 'ticket-1', ['trial-technician', 'staff', 'paid-technician']);
+    extension.instance = instance;
+    const [trial, staff, paid] = document.getConnections();
+    let trialStatus = 204;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      const { userId } = relayTicketReader(init);
+      return new Response(null, { status: userId === 'trial-technician' ? trialStatus : 204 });
+    }));
+    try {
+      await extension.handlePatternMessage(ticketUpdate, ticketChannel);
+      expect(trial.sendStateless).toHaveBeenCalledWith(ticketUpdate);
+
+      trialStatus = statusAfterChange;
+      const nextUpdate = JSON.stringify({ ...JSON.parse(ticketUpdate), updatedFields: ['priority_id'] });
+      await extension.handlePatternMessage(nextUpdate, ticketChannel);
+      expect(trial.sendStateless).toHaveBeenCalledTimes(1);
+      expect(trial.close).toHaveBeenCalledOnce();
+      for (const admitted of [staff, paid]) {
+        expect(admitted.sendStateless.mock.calls).toEqual([[ticketUpdate], [nextUpdate]]);
+        expect(admitted.close).not.toHaveBeenCalled();
+      }
+      expect(document.broadcastStateless).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('rechecks idle ticket rooms and closes only connections with an explicit denial', async () => {
+    createSubscriberHarness();
+    const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
+    const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:' });
+    const { document, instance } = ticketRoom('tenant-1', 'ticket-1', ['trial-technician']);
+    const [trial] = document.getConnections();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await extension.onConfigure({ instance });
+      await extension.handlePatternMessage(ticketUpdate, ticketChannel);
+      expect(trial.sendStateless).not.toHaveBeenCalled();
+      expect(trial.close).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(trial.close).toHaveBeenCalledOnce();
+      expect(trial.sendStateless).not.toHaveBeenCalled();
+    } finally {
+      await extension.onDestroy();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it('T019: publishes for rooms without active clients are a no-op', async () => {
@@ -187,14 +282,18 @@ describe('TicketUpdatesExtension', () => {
     expect(connection.sendStateless).toHaveBeenCalledTimes(1);
     expect(document.broadcastStateless).not.toHaveBeenCalled();
   });
-  it('uses the installed Hocuspocus authentication message for authorized ticket room readiness', async () => {
+  it.each(['ticket-list', 'ticket-detail'] as const)('carries the signed principal into the installed Hocuspocus %s connection', async roomKind => {
     process.env.HOCUSPOCUS_JWT_SECRET = 'ticket-change-test-secret';
     const tenantId = '11111111-1111-4111-8111-111111111111';
     const userId = '22222222-2222-4222-8222-222222222222';
     const sessionId = '33333333-3333-4333-8333-333333333333';
     const now = Math.floor(Date.now() / 1000);
-    const token = jwt.sign({ scope: 'ticket-changes', tenantId, userId, sessionId, iat: now, exp: now + 300 },
-      process.env.HOCUSPOCUS_JWT_SECRET, { algorithm: 'HS256', audience: 'ticket-changes' });
+    const ticketId = '44444444-4444-4444-8444-444444444444';
+    const isDetail = roomKind === 'ticket-detail';
+    const token = isDetail
+      ? jwt.sign({ tenantId, userId, ticketId, iat: now, exp: now + 300 }, process.env.HOCUSPOCUS_JWT_SECRET)
+      : jwt.sign({ scope: 'ticket-changes', tenantId, userId, sessionId, iat: now, exp: now + 300 },
+        process.env.HOCUSPOCUS_JWT_SECRET, { algorithm: 'HS256', audience: 'ticket-changes' });
     const { Hocuspocus } = await import('../../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js');
     const { HocuspocusProvider } = await import('@hocuspocus/provider');
     const { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } = await import('../../../../../hocuspocus/ticketChangeConnectionContext.js');
@@ -206,8 +305,11 @@ describe('TicketUpdatesExtension', () => {
     };
     const server = new Hocuspocus({ onAuthenticate: authenticate, onConnect: resolveDocumentConnectionContext, quiet: true });
     await server.listen(0);
-    const room = `tenant:${tenantId}:ticket-changes`;
-    const makeProvider = (authToken: string) => new HocuspocusProvider({ url: server.webSocketURL, name: room, token: authToken, preserveConnection: false });
+    const room = isDetail ? `ticket:${tenantId}:${ticketId}` : `tenant:${tenantId}:ticket-changes`;
+    const makeProvider = (authToken: string) => new HocuspocusProvider({
+      url: server.webSocketURL, name: room, token: authToken, preserveConnection: false,
+      ...(isDetail ? { parameters: { token: authToken } } : {}),
+    });
     const waitFor = (provider: InstanceType<typeof HocuspocusProvider>, event: string) => new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${event}`)), 3000);
       provider.on(event, () => { clearTimeout(timeout); resolve(); });
@@ -215,14 +317,20 @@ describe('TicketUpdatesExtension', () => {
     const accepted = makeProvider(token);
     try {
       await waitFor(accepted, 'authenticated');
-      expect(server.documents.get(room)?.connections.size).toBe(1);
-      expect(authenticatedContext?.ticketChangesAccess).toMatchObject({ tenantId, userId });
+      const document = server.documents.get(room);
+      expect(document?.connections.size).toBe(1);
+      const key = isDetail ? 'ticketAccess' : 'ticketChangesAccess';
+      const principal = isDetail ? { tenantId, userId, ticketId } : { tenantId, userId, sessionId };
+      expect(authenticatedContext?.[key]).toMatchObject(principal);
+      expect(document?.getConnections()[0]?.context?.[key]).toMatchObject(principal);
 
-      const rejected = makeProvider('invalid');
-      try {
-        await waitFor(rejected, 'authenticationFailed');
-        expect(server.documents.get(room)?.connections.size).toBe(1);
-      } finally { rejected.destroy(); }
+      if (!isDetail) {
+        const rejected = makeProvider('invalid');
+        try {
+          await waitFor(rejected, 'authenticationFailed');
+          expect(document?.connections.size).toBe(1);
+        } finally { rejected.destroy(); }
+      }
 
     } finally {
       accepted.destroy();

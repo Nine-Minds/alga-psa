@@ -554,7 +554,8 @@
         "success": {
           "one": "1 quadro importado com sucesso.",
           "other": "Quadros {{count}} importados com sucesso."
-        }
+        },
+        "empty": "Todos os quadros padrão já foram importados."
       },
       "table": {
         "headers": {
@@ -584,7 +585,8 @@
           "placeholder": "Selecione um quadro para categorias importadas",
           "help": "Todas as categorias importadas serão atribuídas a este quadro"
         },
-        "parentAutoSelectTitle": "A categoria pai será selecionada automaticamente"
+        "parentAutoSelectTitle": "A categoria pai será selecionada automaticamente",
+        "empty": "Este quadro já tem todas as categorias padrão."
       },
       "errors": {
         "missingParents": "Não é possível importar subcategorias sem suas categorias principais. Selecione também: {{parents}}",
@@ -702,7 +704,8 @@
         "success": {
           "one": "1 status importado com sucesso.",
           "other": "Status {{count}} importados com sucesso."
-        }
+        },
+        "empty": "Este quadro já tem todos os status padrão."
       },
       "table": {
         "headers": {
@@ -771,7 +774,8 @@
         "success": {
           "one": "1 prioridade importada com sucesso.",
           "other": "Prioridades {{count}} importadas com sucesso."
-        }
+        },
+        "empty": "Todas as prioridades padrão já foram importadas."
       },
       "table": {
         "headers": {
@@ -797,6 +801,9 @@
       },
       "table": {
         "actions": "Ações"
+      },
+      "import": {
+        "loading": "Carregando itens disponíveis..."
       }
     },
     "header": {

@@ -16,6 +16,8 @@ import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,
   createBlankServiceRequestDefinition,
+  deleteServiceRequestDefinitionFromManagement,
+  type ServiceRequestDefinitionDeleteResult,
   createServiceRequestDefinitionFromTemplate,
   duplicateServiceRequestDefinition,
   type BasicFormFieldType,
@@ -23,6 +25,9 @@ import {
   listServiceRequestTemplateOptions,
   removeBasicFormFieldFromDefinitionDraft,
   reorderBasicFormFieldsInDefinitionDraft,
+  replaceBasicFormSchemaForDefinitionDraft,
+  type BasicFormField,
+  type BasicFormSettings,
   unarchiveServiceRequestDefinitionFromManagement,
   getServiceRequestDefinitionEditorData,
   publishServiceRequestDefinitionWithValidation,
@@ -373,6 +378,29 @@ export const addServiceRequestFormFieldAction = withAuth(async (
   });
 });
 
+/**
+ * The form builder's one save: the whole schema at once. Every edit on the canvas is local
+ * until this runs, so arranging a form is no longer one server round trip per keystroke.
+ */
+export const replaceServiceRequestFormSchemaAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  fields: BasicFormField[],
+  settings?: BasicFormSettings
+): Promise<ServiceRequestDefinitionManagementRow> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return replaceBasicFormSchemaForDefinitionDraft({
+    knex,
+    tenant,
+    definitionId,
+    fields,
+    settings,
+    updatedBy: getActorId(user),
+  });
+});
+
 export const updateServiceRequestFormFieldAction = withAuth(async (
   user,
   { tenant },
@@ -635,6 +663,20 @@ export const archiveServiceRequestDefinitionAction = withAuth(async (
   } catch (error) {
     return mapServiceRequestDefinitionError(error);
   }
+});
+
+export const deleteServiceRequestDefinitionAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestDefinitionDeleteResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'delete', knex);
+  const result = await deleteServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+  if (result.deleted) {
+    revalidatePath('/msp/service-requests');
+  }
+  return result;
 });
 
 export const unarchiveServiceRequestDefinitionAction = withAuth(async (

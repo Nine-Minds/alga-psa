@@ -47,6 +47,31 @@ export function getTenantFromRequest(request) {
   }
 }
 
+export function validateDocumentRoomToken(roomName, token) {
+  const parsedRoom = parseDocumentRoom(roomName);
+  if (!parsedRoom) throw new Error('Invalid document room');
+  if (!token) throw new Error('Document validation failed: missing token');
+
+  let claims;
+  try {
+    claims = jwt.verify(token, getHocuspocusJwtSecret(), {
+      algorithms: ['HS256'], audience: 'document-room', issuer: 'alga-psa',
+    });
+  } catch (error) {
+    throw new Error(`Document validation failed: ${error instanceof Error ? error.message : 'invalid token'}`);
+  }
+  if (claims?.scope !== 'document-room' || claims.tenantId !== parsedRoom.tenantId ||
+      claims.documentId !== parsedRoom.documentId || typeof claims.userId !== 'string' || !claims.userId) {
+    throw new Error('Document validation failed: room or token scope mismatch');
+  }
+  return {
+    status: 'ok',
+    tenantId: claims.tenantId,
+    documentId: claims.documentId,
+    userId: claims.userId,
+  };
+}
+
 /**
  * The single room gate. Synchronous for every room type except the legacy
  * `notifications:` room, whose session check is asynchronous; callers await it.
@@ -116,6 +141,10 @@ export function validateDocumentRoomAccess(roomName, request, options) {
       throw new Error('Ticket validation failed: room ticket mismatch');
     }
 
+    if (typeof claims.userId !== 'string' || !claims.userId) {
+      throw new Error('Ticket validation failed: missing user');
+    }
+
     return {
       status: 'ok',
       tenantId: parsedTicketRoom.tenantId,
@@ -138,10 +167,17 @@ export function validateDocumentRoomAccess(roomName, request, options) {
     throw new Error('Tenant validation failed: room tenant mismatch');
   }
 
+  const token = options?.credential || getRequestToken(request);
+  // Hocuspocus invokes onConnect on the initial socket message before its
+  // required authentication message. This only validates URL tenancy; the
+  // subsequent onAuthenticate hook must validate the signed room credential.
+  if (!token && options?.allowPendingAuthentication) {
+    return { status: 'pending-authentication', tenantId: parsedRoom.tenantId };
+  }
+  const claims = validateDocumentRoomToken(roomName, token);
   return {
-    status: 'ok',
-    tenantId: tenantFromRequest,
-    documentId: parsedRoom.documentId,
+    ...claims,
+    credential: token,
   };
 }
 

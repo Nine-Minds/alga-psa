@@ -15,7 +15,7 @@ import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickVie
 import { Button } from '@alga-psa/ui/components/Button';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
-import { getClientById, getAllClients } from '@alga-psa/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { deleteInteraction } from '@alga-psa/clients/actions';
 import { getInteractionCallArtifacts, type InteractionCallArtifact } from '@alga-psa/clients/actions';
@@ -206,11 +206,9 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       try {
         const contact = await getContactByContactNameId(interaction.contact_name_id);
         if (contact) {
-          const clients = await getAllClients();
           openDrawer(
             <ContactDetailsView 
               initialContact={contact} 
-              clients={clients}
               isInDrawer={true}
             />
           );
