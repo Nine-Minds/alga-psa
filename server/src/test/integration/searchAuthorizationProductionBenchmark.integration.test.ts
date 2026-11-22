@@ -903,6 +903,48 @@ describe('production search authorization PostgreSQL benchmark', () => {
         associationsByDocument.set(association.document_id, linked);
       }
 
+      // Guard the planner regression itself as well as SQL statement counts:
+      // the scoped visibility subquery must scan associations once per query,
+      // not once per matching candidate as the former correlated anti-join did.
+      const visibilityQueries: Array<{ sql: string; bindings: unknown[] }> = [];
+      const captureVisibilityQuery = (query: { sql: string; bindings?: unknown[] }) => {
+        if (/^\s*(?:select|with)\b/i.test(query.sql) && /document_associations/i.test(query.sql)) {
+          visibilityQueries.push({ sql: query.sql, bindings: query.bindings ?? [] });
+        }
+      };
+      db.on('query', captureVisibilityQuery);
+      try {
+        await runAuthorizedSearchCandidates({
+          knex: db, tenant: ctx.tenantId, user: portalUser, query: 'large',
+          requestedTypes: ['document'] as any, pageSize: 5, includeSnippets: false,
+          searchIndex: SEARCH_INDEX,
+        });
+      } finally {
+        db.removeListener('query', captureVisibilityQuery);
+      }
+      expect(visibilityQueries.length).toBeGreaterThan(0);
+      const associationPlanEvidence: Array<{ query: string; loops: number; rows: number }> = [];
+      for (const [index, query] of visibilityQueries.entries()) {
+        const knexSql = query.sql.replace(/\$\d+/g, '?');
+        const explained = await db.raw(`EXPLAIN (ANALYZE, FORMAT JSON) ${knexSql}`, query.bindings);
+        const root = explained.rows[0]['QUERY PLAN'][0].Plan as Record<string, unknown>;
+        const pending = [root];
+        while (pending.length) {
+          const node = pending.pop()!;
+          if (node['Relation Name'] === 'document_associations') {
+            associationPlanEvidence.push({
+              query: `portal visibility query ${index + 1}`,
+              loops: Number(node['Actual Loops']),
+              rows: Number(node['Actual Rows']),
+            });
+          }
+          if (Array.isArray(node.Plans)) pending.push(...node.Plans as Record<string, unknown>[]);
+        }
+      }
+      expect(associationPlanEvidence.length).toBe(visibilityQueries.length);
+      expect(associationPlanEvidence.every(({ loops }) => loops === 1), JSON.stringify(associationPlanEvidence)).toBe(true);
+      console.log(JSON.stringify({ document_visibility_plan_evidence: associationPlanEvidence }));
+
       expect(canCompileSearchVisibility('document')).toBe(true);
       const scenarios: Array<{ size: typeof sizes[number]; query: string }> = [
         { size: 150, query: 'small' },
