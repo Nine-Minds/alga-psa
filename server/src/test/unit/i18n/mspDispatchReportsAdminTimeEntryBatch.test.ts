@@ -128,6 +128,8 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'msp/core',
       'features/tickets',
       'msp/service-requests',
+      // The submit-on-behalf page renders the shared request form, whose validation wording lives here.
+      'client-portal/service-requests',
       'features/documents',
     ]);
     expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/settings', 'msp/time-entry', 'features/tickets', 'features/documents']);

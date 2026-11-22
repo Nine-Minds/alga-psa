@@ -18,8 +18,10 @@ vi.mock('@alga-psa/ui/hooks', () => ({
   useCapability: (cap: string) => ({ enabled: cap === 'co-managed' && state.served, admitted: state.served && state.admitted, resolved: true }),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
-vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
-  getCurrentUserPermissions: () => Promise.resolve(state.permissions),
+// The sidebar resolves exactly the keys its menu gates on; the user holds `state.permissions`.
+vi.mock('@/lib/auth/currentUserGrants', () => ({
+  resolveCurrentUserGrants: (keys: readonly string[]) =>
+    Promise.resolve(state.permissions.filter((key) => keys.includes(key))),
 }));
 vi.mock('@enterprise/components/co-managed/useCoManagedPurchaseNavigation', () => ({
   useCoManagedPurchaseNavigation: () => state.purchase
