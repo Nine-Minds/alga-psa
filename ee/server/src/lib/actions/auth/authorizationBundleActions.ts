@@ -25,14 +25,32 @@ import {
   deleteBundleRule,
   createAuthorizationBundle,
   ensureDraftBundleRevision,
+  ensurePublishedBundleRule,
   listBundleRulesForRevision,
   listAuthorizationBundles,
   publishBundleRevision,
+  readPublishedBundleBaselines,
+  resolveBundleNarrowingRulesForEvaluation,
   setBundleAssignmentStatus,
+  setBundleRevisionBaseline,
+  normalizeBundleBaseline,
+  type BundleBaseline,
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
 import { STARTER_AUTHORIZATION_BUNDLES } from '@alga-psa/authorization/bundles/starterBundles';
-import { AUTHORIZATION_TEMPLATE_CATALOG, AUTHORIZATION_CONSTRAINT_CATALOG } from '@alga-psa/authorization/bundles/catalog';
+import {
+  AUTHORIZATION_TEMPLATE_CATALOG,
+  AUTHORIZATION_CONSTRAINT_CATALOG,
+  BUNDLE_RULE_RESOURCE_TYPES,
+} from '@alga-psa/authorization/bundles/catalog';
+import {
+  computeClosedBundleDenialPreview,
+  type ClosedBundleDenialPreview,
+} from '@alga-psa/authorization/bundles/closedBundlePreview';
+import { explainDenialReasons, type DenialExplanation } from '@alga-psa/authorization/bundles/denialExplanations';
+import { readUserClientPortfolio } from '@alga-psa/authorization/portfolios/service';
+import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/simulationTickets';
+import { loadSubjectResolverFacts } from '@alga-psa/authorization/subject/resolver';
 
 export interface AuthorizationBundleLibraryEntry {
   bundleId: string;
@@ -42,6 +60,8 @@ export interface AuthorizationBundleLibraryEntry {
   isSystem: boolean;
   status: 'active' | 'archived';
   publishedRevisionId: string | null;
+  /** The published revision's baseline: 'closed' bundles deny what they do not name. 'open' when unpublished. */
+  baseline: BundleBaseline;
   assignmentCount: number;
   updatedAt: string;
 }
@@ -54,6 +74,9 @@ export interface AuthorizationBundleDraftEditorPayload {
     publishedRevisionId: string | null;
   };
   draftRevisionId: string;
+  /** The draft's baseline, and what publishing it as closed would deny. */
+  draftBaseline: BundleBaseline;
+  closedDenialPreview: ClosedBundleDenialPreview;
   rules: Array<{
     ruleId: string;
     resourceType: string;
@@ -68,12 +91,6 @@ export interface AuthorizationBundleDraftEditorPayload {
   }>;
   availableTemplates: string[];
   availableConstraints: string[];
-  availableClients: Array<{
-    client_id: string;
-    client_name: string;
-    is_inactive: boolean;
-    client_type: 'company' | 'individual' | null;
-  }>;
   availableBoards: Array<{
     board_id: string;
     board_name: string;
@@ -104,6 +121,8 @@ export interface AuthorizationSimulationOption {
 export interface AuthorizationSimulationDecision {
   allowed: boolean;
   reasonCodes: string[];
+  /** Plain-language explanations (i18n keys) for the denial reasons the kernel emitted. Empty when allowed. */
+  explanations: DenialExplanation[];
 }
 
 export interface AuthorizationBundleSimulationPayload {
@@ -123,8 +142,11 @@ export type AuthorizationBundleSimulationActionResult =
       error: AuthorizationBundleSimulationValidationError;
     };
 
-const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'approve']);
-const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
+const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'create', 'update', 'delete', 'approve']);
+/** Every catalog type can be simulated; only some can load a stored record (see SIMULATION_RECORD_LOADERS). */
+const SUPPORTED_SIMULATION_RESOURCE_TYPES: ReadonlySet<string> = new Set(BUNDLE_RULE_RESOURCE_TYPES);
+const MUTATION_SIMULATION_ACTIONS = new Set(['create', 'update', 'delete']);
+const SIMULATION_RECORD_LOADER_TYPES: ReadonlySet<string> = new Set([
   'ticket',
   'document',
   'time_entry',
@@ -135,6 +157,17 @@ const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
 
 function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder {
   return tenantDb(knexOrTrx, tenant).table(table);
+}
+
+async function readRevisionBaseline(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  revisionId: string
+): Promise<BundleBaseline> {
+  const row = await tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
+    .where({ revision_id: revisionId })
+    .first<{ baseline: string | null }>('baseline');
+  return normalizeBundleBaseline(row?.baseline);
 }
 
 function normalizeRuleIdList(value: unknown): string[] {
@@ -206,11 +239,31 @@ export const listAuthorizationBundlesAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    return listAuthorizationBundles(knex, {
+    const bundles = await listAuthorizationBundles(knex, {
       tenant,
       search: input?.search,
       includeArchived: input?.includeArchived,
     });
+    const baselines = await readPublishedBundleBaselines(knex, {
+      tenant,
+      revisionIds: bundles.map((bundle) => bundle.publishedRevisionId).filter((id): id is string => Boolean(id)),
+    });
+    return bundles.map((bundle) => ({
+      ...bundle,
+      baseline: bundle.publishedRevisionId ? (baselines.get(bundle.publishedRevisionId) ?? 'open') : 'open',
+    }));
+  }
+);
+
+/**
+ * Every resource type in the kernel catalog, in display order. The policy screen renders these and no others;
+ * a type registered with the kernel appears there without a UI change.
+ */
+export const listAuthorizationResourceTypesAction = withAuth(
+  async (user): Promise<string[]> => {
+    await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
+    await assertSecuritySettingsPermission(user, 'read');
+    return [...BUNDLE_RULE_RESOURCE_TYPES];
   }
 );
 
@@ -225,9 +278,22 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
       for (const starter of STARTER_AUTHORIZATION_BUNDLES) {
         const existing = await tenantScopedTable(trx, tenant, 'authorization_bundles')
           .where('bundle_key', starter.key)
-          .first('bundle_id');
+          .first<{ bundle_id: string; status: 'active' | 'archived' }>('bundle_id', 'status');
 
         if (existing) {
+          if (starter.key === 'restricted-asset-operator' && existing.status === 'active') {
+            const deleteRule = starter.rules.find((rule) => rule.resourceType === 'asset' && rule.action === 'delete');
+            if (deleteRule) {
+              await ensurePublishedBundleRule(trx, {
+                tenant,
+                bundleId: existing.bundle_id,
+                ...deleteRule,
+                constraintKey: deleteRule.constraintKey ?? null,
+                config: deleteRule.config ?? {},
+                actorUserId: user.user_id,
+              });
+            }
+          }
           continue;
         }
 
@@ -240,7 +306,8 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
           actorUserId: user.user_id,
         });
 
-        for (const [index, rule] of starter.rules.entries()) {
+        const starterRules = starter.rules;
+        for (const [index, rule] of starterRules.entries()) {
           await upsertBundleRule(trx, {
             tenant,
             bundleId: created.bundleId,
@@ -260,6 +327,7 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
           bundleId: created.bundleId,
           revisionId: created.revisionId,
           actorUserId: user.user_id,
+          baseline: starter.baseline ?? 'open',
         });
       }
     });
@@ -352,7 +420,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
-    const [rules, publishedRules, availableClients, availableBoards] = await Promise.all([
+    // Clients are not listed here: the editor picks them by server search and names the selected ones by id.
+    const [rules, publishedRules, availableBoards] = await Promise.all([
       listBundleRulesForRevision(knex, {
         tenant,
         revisionId: draftRevisionId,
@@ -363,16 +432,6 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
             revisionId: bundle.published_revision_id,
           })
         : Promise.resolve([]),
-      tenantScopedTable(knex, tenant, 'clients')
-        .orderBy('client_name', 'asc')
-        .select<
-          Array<{
-            client_id: string;
-            client_name: string;
-            is_inactive: boolean | null;
-            client_type: 'company' | 'individual' | null;
-          }>
-        >('client_id', 'client_name', 'is_inactive', 'client_type'),
       tenantScopedTable(knex, tenant, 'boards')
         .orderBy('board_name', 'asc')
         .select<Array<{ board_id: string; board_name: string; is_inactive: boolean | null }>>(
@@ -381,6 +440,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
           'is_inactive'
         ),
     ]);
+
+    const draftBaseline = await readRevisionBaseline(knex, tenant, draftRevisionId);
 
     const fingerprint = (rule: {
       resourceType: string;
@@ -428,6 +489,8 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
         publishedRevisionId: bundle.published_revision_id,
       },
       draftRevisionId,
+      draftBaseline,
+      closedDenialPreview: computeClosedBundleDenialPreview(rules),
       rules: rules.map((rule) => ({
         ...rule,
         selectedClientIds: [
@@ -446,10 +509,6 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       })),
       availableTemplates: [...AUTHORIZATION_TEMPLATE_CATALOG],
       availableConstraints: [...AUTHORIZATION_CONSTRAINT_CATALOG],
-      availableClients: availableClients.map((client) => ({
-        ...client,
-        is_inactive: client.is_inactive === true,
-      })),
       availableBoards: availableBoards.map((board) => ({
         ...board,
         is_inactive: board.is_inactive === true,
@@ -710,7 +769,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
   async (
     user,
     { tenant },
-    input: { resourceType: string }
+    input: { resourceType: string; /** Tickets only: matches the ticket number or title. */ search?: string }
   ): Promise<AuthorizationSimulationOption[]> => {
     await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
@@ -718,11 +777,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     const { knex } = await createTenantKnex();
 
     if (input.resourceType === 'ticket') {
-      const rows = await tenantScopedTable(knex, tenant, 'tickets')
-        .orderBy('updated_at', 'desc')
-        .limit(50)
-        .select<{ ticket_id: string; title: string | null }[]>('ticket_id', 'title');
-      return rows.map((row) => ({ id: row.ticket_id, label: row.title || row.ticket_id }));
+      return listSimulationTicketOptions(knex, tenant, input.search);
     }
 
     if (input.resourceType === 'document') {
@@ -765,15 +820,29 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
       return rows.map((row) => ({ id: row.quote_id, label: row.quote_number || row.quote_id }));
     }
 
+    // Catalog types with no stored-record loader are simulated with a synthetic record.
+    if (SUPPORTED_SIMULATION_RESOURCE_TYPES.has(input.resourceType)) {
+      return [];
+    }
+
     throw new Error(`Unsupported simulation resource type: ${input.resourceType}`);
   }
 );
 
+/**
+ * The kernel's view of one revision's rules. Each rule carries its bundle, revision and the revision's baseline:
+ * the closed baseline is derived from the rules (closedBundlesNotNaming), so a rule without them makes a closed
+ * revision evaluate as open.
+ */
 function normalizeBundleRules(
-  rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>
+  rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>,
+  source: { bundleId: string; revisionId: string; baseline: BundleBaseline }
 ): BundleNarrowingRule[] {
   return rules.map((rule) => ({
     id: rule.ruleId,
+    bundleId: source.bundleId,
+    revisionId: source.revisionId,
+    baseline: source.baseline,
     resource: rule.resourceType,
     action: rule.action,
     templateKey: rule.templateKey as RelationshipTemplateKey,
@@ -864,13 +933,14 @@ async function loadSimulationRecord(
 
 function getSimulationModeValidationError(input: {
   resourceType: string;
+  hasRecord: boolean;
   action: string;
   principalUserType: 'internal' | 'client';
 }): AuthorizationBundleSimulationValidationError | null {
   if (!SUPPORTED_SIMULATION_ACTIONS.has(input.action)) {
     return {
       code: 'unsupported_simulation_action',
-      message: 'The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.',
+      message: 'The simulator supports only Read, Create, Update, Delete and Approve checks. Choose one of those actions and try again.',
     };
   }
 
@@ -878,6 +948,13 @@ function getSimulationModeValidationError(input: {
     return {
       code: 'unsupported_simulation_resource_type',
       message: 'This record type is not available in the simulator yet. Choose a supported record type and try again.',
+    };
+  }
+
+  if (!input.hasRecord && !SIMULATION_RECORD_LOADER_TYPES.has(input.resourceType)) {
+    return {
+      code: 'synthetic_record_required',
+      message: 'This record type has no stored records to pick in the simulator. Use a synthetic record scenario and try again.',
     };
   }
 
@@ -931,7 +1008,11 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     user,
     { tenant },
     input: {
-      bundleId: string;
+      /**
+       * The bundle to compare draft against published. Omitted, the decision is the product's own for the
+       * principal (roles, built-in resolvers and the principal's assigned published bundles) and `draft` equals `published`.
+       */
+      bundleId?: string;
       principalUserId: string;
       resourceType: string;
       action: string;
@@ -944,7 +1025,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       };
     }
   ): Promise<AuthorizationBundleSimulationActionResult> => {
-    await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
+    if (input.bundleId) await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
@@ -965,6 +1046,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
 
     const validationError = getSimulationModeValidationError({
       resourceType: input.resourceType,
+      hasRecord: Boolean(input.syntheticRecord || input.resourceId),
       action: input.action,
       principalUserType: principal.user_type,
     });
@@ -974,38 +1056,43 @@ export const runAuthorizationBundleSimulationAction = withAuth(
 
     const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
-    const [roleRows, teamRows, managedRows, bundle] = await Promise.all([
+    const [portfolioClientIds, roleRows, teamRows, managedRows, resolverFacts, bundle] = await Promise.all([
+      readUserClientPortfolio(knex, { tenant, userId: principal.user_id }),
       tenantScopedTable(knex, tenant, 'user_roles').where('user_id', principal.user_id).select<{ role_id: string }[]>('role_id'),
       tenantScopedTable(knex, tenant, 'team_members').where('user_id', principal.user_id).select<{ team_id: string }[]>('team_id'),
       tenantScopedTable(knex, tenant, 'users').where('reports_to', principal.user_id).select<{ user_id: string }[]>('user_id'),
-      tenantScopedTable(knex, tenant, 'authorization_bundles')
-        .where('bundle_id', input.bundleId)
-        .first<{ published_revision_id: string | null }>('published_revision_id'),
+      // Built-in resolver principals (a co-managed seat technician) are decided from their facts, as in the product.
+      loadSubjectResolverFacts(knex, { tenant, userId: principal.user_id }),
+      input.bundleId
+        ? tenantScopedTable(knex, tenant, 'authorization_bundles')
+            .where('bundle_id', input.bundleId)
+            .first<{ published_revision_id: string | null }>('published_revision_id')
+        : Promise.resolve(null),
     ]);
 
-    if (!bundle) {
+    if (input.bundleId && !bundle) {
       throw new Error('Bundle not found in tenant scope.');
     }
 
-    const draftRevisionId = canWrite
+    const draftRevisionId = !input.bundleId || !bundle ? null : canWrite
       ? (
           await ensureDraftBundleRevision(knex, {
             tenant,
-            bundleId: input.bundleId,
+            bundleId: input.bundleId!,
             actorUserId: user.user_id,
           })
         ).revisionId
       : (
           await tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
             .where({
-              bundle_id: input.bundleId,
+              bundle_id: input.bundleId!,
               lifecycle_state: 'draft',
             })
             .orderBy('revision_number', 'desc')
             .first<{ revision_id: string }>('revision_id')
-        )?.revision_id ?? bundle.published_revision_id;
+        )?.revision_id ?? bundle!.published_revision_id;
 
-    if (!draftRevisionId) {
+    if (input.bundleId && !draftRevisionId) {
       throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
@@ -1019,20 +1106,16 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         }
       : await loadSimulationRecord(knex, tenant, input.resourceType, input.resourceId || '');
 
-    const draftRules = normalizeBundleRules(
-      await listBundleRulesForRevision(knex, {
-        tenant,
-        revisionId: draftRevisionId,
-      })
-    );
-    const publishedRules = bundle.published_revision_id
-      ? normalizeBundleRules(
-          await listBundleRulesForRevision(knex, {
-            tenant,
-            revisionId: bundle.published_revision_id,
-          })
-        )
-      : [];
+    // Each revision is simulated with its own baseline, so a closed draft denies what it does not name before
+    // it is published, and the published side shows what users get today.
+    const loadRevisionRules = async (revisionId: string) =>
+      normalizeBundleRules(await listBundleRulesForRevision(knex, { tenant, revisionId }), {
+        bundleId: input.bundleId!,
+        revisionId,
+        baseline: await readRevisionBaseline(knex, tenant, revisionId),
+      });
+    const draftRules = draftRevisionId ? await loadRevisionRules(draftRevisionId) : [];
+    const publishedRules = bundle?.published_revision_id ? await loadRevisionRules(bundle.published_revision_id) : [];
 
     const createKernelWithRules = (rules: BundleNarrowingRule[]) =>
       createAuthorizationKernelWithDefaultRbac({
@@ -1082,6 +1165,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       });
 
     const evaluationInput = {
+      // LEVERAGE: pattern authorization-subject-resolution — the bundle simulator still hand-builds the subject (roles, teams, managed users) and reads the portfolio itself; the shared resolver (packages/authorization/src/subject) builds this subject, but it resolves the real caller's bundles, which the simulator must override.
       subject: {
         tenant,
         userId: principal.user_id,
@@ -1090,7 +1174,9 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         teamIds: teamRows.map((row) => row.team_id),
         clientId: principal.client_id,
         managedUserIds: managedRows.map((row) => row.user_id),
-        portfolioClientIds: [],
+        // The stored portfolio, so a client_portfolio rule decides here as it does in the product.
+        portfolioClientIds,
+        ...(resolverFacts ? { resolverFacts } : {}),
       },
       resource: {
         type: input.resourceType,
@@ -1110,6 +1196,8 @@ export const runAuthorizationBundleSimulationAction = withAuth(
 
     const evaluateDecision = async (rules: BundleNarrowingRule[]) => {
       const kernel = createKernelWithRules(rules);
+      // create, update and delete are mutations: the kernel adds the create-candidate check and the
+      // read-required check on those paths, which is what the denial explanations describe.
       const decision =
         input.action === 'approve'
           ? await kernel.authorizeMutation({
@@ -1120,7 +1208,9 @@ export const runAuthorizationBundleSimulationAction = withAuth(
                 allowSelfApproval,
               },
             })
-          : await kernel.authorizeResource(evaluationInput);
+          : MUTATION_SIMULATION_ACTIONS.has(input.action)
+            ? await kernel.authorizeMutation(evaluationInput)
+            : await kernel.authorizeResource(evaluationInput);
 
       return applySimulationInvariantNarrowing({
         resourceType: input.resourceType,
@@ -1132,9 +1222,15 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       });
     };
 
+    // No bundle named: the decision is the product's, so the rules are the principal's own published
+    // assignments (direct, role, team), resolved by the same function the product's evaluations use.
+    const assignedRules = input.bundleId
+      ? null
+      : await resolveBundleNarrowingRulesForEvaluation(knex, evaluationInput as never);
+
     const [draftDecision, publishedDecision] = await Promise.all([
-      evaluateDecision(draftRules),
-      evaluateDecision(publishedRules),
+      evaluateDecision(assignedRules ?? draftRules),
+      evaluateDecision(assignedRules ?? publishedRules),
     ]);
 
     return {
@@ -1143,13 +1239,38 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         draft: {
           allowed: draftDecision.allowed,
           reasonCodes: draftDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
+          explanations: draftDecision.allowed ? [] : explainDenialReasons(draftDecision.reasons),
         },
         published: {
           allowed: publishedDecision.allowed,
           reasonCodes: publishedDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
+          explanations: publishedDecision.allowed ? [] : explainDenialReasons(publishedDecision.reasons),
         },
       },
     };
+  }
+);
+
+export const setAuthorizationBundleDraftBaselineAction = withAuth(
+  async (user, { tenant }, input: { bundleId: string; baseline: BundleBaseline }): Promise<void> => {
+    await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
+    await assertSecuritySettingsPermission(user, 'write');
+
+    const { knex } = await createTenantKnex();
+    await knex.transaction(async (trx) => {
+      const draft = await ensureDraftBundleRevision(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        actorUserId: user.user_id,
+      });
+      await setBundleRevisionBaseline(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        revisionId: draft.revisionId,
+        baseline: input.baseline,
+        actorUserId: user.user_id,
+      });
+    });
   }
 );
 

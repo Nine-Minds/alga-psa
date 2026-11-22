@@ -75,6 +75,8 @@ function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     andWhere: vi.fn((arg: unknown) => {
@@ -100,6 +102,13 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (table: string) => conn(table).where({ tenant }),
   }),
+}));
+
+// The sender-organization lookup is a database read of its own (covered against the real schema by
+// the seat technician journey test). Here every internal sender is ordinary MSP staff.
+vi.mock('../../../lib/notificationAudience', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/notificationAudience')>()),
+  resolveInboundReplyAudience: vi.fn(async () => ({ seat: false })),
 }));
 
 vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({

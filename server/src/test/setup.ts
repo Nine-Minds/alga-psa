@@ -140,7 +140,7 @@ if (typeof document !== 'undefined') {
 //    restored when the file finishes, so a module-scope setter can't leak its
 //    edition into every later file in the shared fork.
 // Guarded vars: EDITION flips Temporal-vs-PgBoss and CE/EE dispatch; the
-// base-URL trio feeds getEmailWebhookBaseUrl and friends (a leaked
+// base URLs feed getEmailWebhookBaseUrl and friends (a leaked
 // localhost NEXTAUTH_URL makes webhook probes silently enter polling mode);
 // the MICROSOFT_*_BASE_URL overrides swap Graph or the OAuth authority for an emulator —
 // no test file sets those, but server/knexfile.cjs opens with
@@ -155,6 +155,7 @@ const GUARDED_ENV_VARS = [
   'EDITION',
   'NEXT_PUBLIC_EDITION',
   'APPLICATION_URL',
+  'PUBLIC_WEBHOOK_BASE_URL',
   'NEXTAUTH_URL',
   'NEXT_PUBLIC_BASE_URL',
   'MICROSOFT_LOGIN_BASE_URL',

@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { compileResourceReadAuthorizationSql, type AuthorizationSubject, type BundleNarrowingRule } from '@alga-psa/authorization';
+import { compileResourceReadAuthorizationSql, matchRulesForAction, type AuthorizationSubject, type BundleNarrowingRule } from '@alga-psa/authorization';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 
 /** The compiler sees only home-policy projections. Shared work has no MSP
@@ -14,7 +14,9 @@ export function applyCoManagedQueuePolicy(query: Knex.QueryBuilder, subject: Aut
   if (!result.supported) throw new CoManagedSharedWorkError();
   const columns: Record<string, string | undefined> = { client_id: 'q.auth_client', board_id: boardAvailable ? 'q.auth_board' : undefined,
     owner_user_id: ownerAvailable ? 'q.auth_owner' : undefined, assigned_to: 'q.auth_assigned' };
-  for (const rule of rules) for (const constraint of rule.constraints ?? []) {
+  // `rules` is the subject's full assigned rule set: the compiler derives closed bundles from it, so a closed
+  // bundle that does not name this resource/action denies. Only the matching rules contribute constraints.
+  for (const rule of matchRulesForAction(rules, resourceType, action)) for (const constraint of rule.constraints ?? []) {
     const column = columns[constraint.field];
     if (!column) { query.whereRaw('false'); continue; }
     // The shared command's absent local queue/assignee is undefined, not null.

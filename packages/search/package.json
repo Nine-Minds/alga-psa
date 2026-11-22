@@ -41,6 +41,11 @@
       "import": "./dist/upsert.mjs",
       "require": "./dist/upsert.js"
     },
+    "./clientScope": {
+      "types": "./src/clientScope.ts",
+      "import": "./dist/clientScope.mjs",
+      "require": "./dist/clientScope.js"
+    },
     "./indexers": {
       "types": "./src/indexers/index.ts",
       "import": "./dist/indexers/index.mjs",
@@ -73,7 +78,8 @@
     "@alga-psa/types": "*",
     "knex": "^3.1.0",
     "zod": "^4.6.7",
-    "@alga-psa/co-managed": "*"
+    "@alga-psa/co-managed": "*",
+    "@alga-psa/authorization": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

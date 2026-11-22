@@ -94,9 +94,17 @@ export async function applyExternalDocumentChange(
 
     // The void needs a human (payments recorded, consumed credit, used hour
     // blocks...): flag the mapping and file the exception with the reason.
+    // The stable code is what is recorded and matched on; the sentence (which
+    // names the payment sources) rides along as the hint for the operator.
+    const blockedReason = outcome.reasonCode ?? outcome.reason;
     await deps.ledger.update(mapping.id, {
       syncStatus: MAPPING_SYNC_STATUS.externalVoided,
-      metadata: { ...metadata, external_deleted_at: observedAt, local_void_blocked_reason: outcome.reason }
+      metadata: {
+        ...metadata,
+        external_deleted_at: observedAt,
+        local_void_blocked_reason: blockedReason,
+        local_void_blocked_message: outcome.reason
+      }
     });
     deps.stats.driftFound += 1;
 
@@ -109,7 +117,7 @@ export async function applyExternalDocumentChange(
         alga_invoice_id: mapping.alga_entity_id,
         external_invoice_id: change.externalId,
         drift_kind: 'external_voided',
-        local_void_blocked_reason: outcome.reason,
+        local_void_blocked_reason: blockedReason,
         resolution_hint: `${outcome.reason} Then void the invoice in Alga.`,
         alga_snapshot: {
           total: metadata.exported_total ?? null,

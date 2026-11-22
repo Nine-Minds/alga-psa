@@ -18,6 +18,7 @@ import {
   executeClientMerge,
   previewClientMerge as previewClientMergeInternal,
   type ClientMergeInput,
+  type ContactLocationAssignment,
   type ClientMergePreview,
   type ClientMergeResult,
   type ExternalMappingRemapChoice,
@@ -79,7 +80,12 @@ async function assertCanMerge(user: any): Promise<void> {
 export const previewClientMerge = withAuth(async (
   user,
   { tenant },
-  input: { sourceClientId: string; targetClientId: string },
+  input: {
+    sourceClientId: string;
+    targetClientId: string;
+    /** Chosen location sets, so the dry run applies the engine's own guard to them. */
+    contactLocationAssignments?: ContactLocationAssignment[];
+  },
 ): Promise<ClientMergePreview | ClientMergeActionError> => {
   try {
     await assertCanMerge(user);

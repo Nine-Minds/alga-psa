@@ -6,14 +6,37 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { buildTicketTeamAssignedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import {
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
 } from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
+
+async function authorizeTeamAssignment(
+  user: Parameters<typeof authorizeTicketRecordAccessConcealed>[0]['user'],
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  operation: 'assign' | 'remove'
+): Promise<void> {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    throw new Error(`Permission denied: Cannot ${operation} team on ticket`);
+  }
+  if (!await hasPermission(user, 'ticket', 'update', trx)) {
+    throw new Error(`Permission denied: Cannot ${operation} team on ticket`);
+  }
+
+  await authorizeTicketRecordAccessConcealed({
+    trx,
+    tenant,
+    user,
+    ticketId,
+    action: 'update',
+  });
+}
 
 export type TeamAssignmentNotificationOptions = {
   suppressContactNotifications?: boolean;
@@ -36,17 +59,7 @@ export const assignTeamToTicket = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const assignedTo = await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'ticket', 'update', trx)) {
-        throw new Error('Permission denied: Cannot assign team to ticket');
-      }
-
-      await authorizeTicketRecordAccess({
-        trx,
-        tenant,
-        user: user as IUserWithRoles,
-        ticketId,
-        action: 'update',
-      });
+      await authorizeTeamAssignment(user, trx, tenant, ticketId, 'assign');
 
       return await assignTeamToTicketCore(trx, tenant, user.user_id, ticketId, teamId);
     });
@@ -85,17 +98,7 @@ export const removeTeamFromTicket = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'ticket', 'update', trx)) {
-        throw new Error('Permission denied: Cannot remove team from ticket');
-      }
-
-      await authorizeTicketRecordAccess({
-        trx,
-        tenant,
-        user: user as IUserWithRoles,
-        ticketId,
-        action: 'update',
-      });
+      await authorizeTeamAssignment(user, trx, tenant, ticketId, 'remove');
 
       await removeTeamFromTicketCore(trx, tenant, user.user_id, ticketId, options);
     });

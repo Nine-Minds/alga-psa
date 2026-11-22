@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import {
+  assertSafeImapOauthTokenEndpoint,
+  getImapOauthSecretNames,
+} from '@alga-psa/shared/services/email/imapOutboundTarget';
+import { getImapOauthAuthorizationCredentials } from '@alga-psa/shared/services/email/imapOauthToken';
 import axios from 'axios';
+import https from 'node:https';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { knex, tenant } = await createTenantKnex();
+    if (tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
+
     const url = request.nextUrl;
     const code = url.searchParams.get('code');
     const stateParam = url.searchParams.get('state');
@@ -20,8 +41,11 @@ export async function GET(request: NextRequest) {
     if (!state || !validateState(state)) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
+    if (state.tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
     await assertTenantProductAccess({
-      tenantId: state.tenant,
+      tenantId: user.tenant,
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });
@@ -30,10 +54,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing providerId' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (tenant !== state.tenant) {
-      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-    }
     const db = tenantDb(knex, tenant);
 
     const provider = await db.table('email_providers')
@@ -56,8 +76,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
 
+    let tokenTarget: Awaited<ReturnType<typeof assertSafeImapOauthTokenEndpoint>>;
+    try {
+      tokenTarget = await assertSafeImapOauthTokenEndpoint(imapConfig.oauth_token_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth token endpoint is not an allowed target' }, { status: 400 });
+    }
+
     const secretProvider = await getSecretProviderInstance();
-    const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
+    const { clientSecret, refreshToken: existingRefreshToken } = await getImapOauthAuthorizationCredentials({
+      ...imapConfig,
+      id: state.providerId,
+      tenant,
+    });
 
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -71,7 +102,10 @@ export async function GET(request: NextRequest) {
     let tokenResponse;
     try {
       tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        maxRedirects: 0,
+        proxy: false,
+        httpsAgent: new https.Agent({ lookup: tokenTarget.lookup as any }),
       });
     } catch (tokenError) {
       console.warn('IMAP OAuth token exchange failed:', tokenError);
@@ -82,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     const accessToken = tokenResponse.data.access_token;
-    const refreshToken = tokenResponse.data.refresh_token;
+    const refreshToken = tokenResponse.data.refresh_token || existingRefreshToken;
     const expiresIn = Number(tokenResponse.data.expires_in || 3600);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
@@ -92,9 +126,23 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!refreshToken) {
+      return NextResponse.json(
+        { error: 'IMAP OAuth did not return a refresh token. Reauthorize the mailbox with offline access.' },
+        { status: 400 }
+      );
+    }
 
+    const boundSecretNames = getImapOauthSecretNames({
+      id: state.providerId,
+      oauth_token_url: imapConfig.oauth_token_url,
+      oauth_credentials_secret_version: 1,
+    });
+    if (clientSecret) {
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.clientSecret, clientSecret);
+    }
     if (refreshToken) {
-      await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
+      await secretProvider.setTenantSecret(tenant, boundSecretNames.refreshToken, refreshToken);
     }
 
     await db.table('imap_email_provider_config')
@@ -103,6 +151,9 @@ export async function GET(request: NextRequest) {
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
+        oauth_credentials_token_url: imapConfig.oauth_token_url,
+        oauth_credentials_secret_version: 1,
+        oauth_reauthorization_required: false,
         updated_at: knex.fn.now(),
       });
 

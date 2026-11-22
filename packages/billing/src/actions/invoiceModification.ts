@@ -18,6 +18,7 @@ import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenish
 import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '../lib/invoiceDeletionErrors';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType, type ManualPartialPeriodMetadata } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import { capAppliesToInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -77,6 +78,7 @@ import {
   type ManualInvoiceErrorCode,
   type ManualInvoiceFailure,
 } from '../errors/manualInvoiceErrors';
+import { INVOICE_ACTION_CAPABILITY } from './invoiceActionCapabilities';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -665,11 +667,12 @@ async function hasLinkedRecurringServicePeriodsForInvoice(
 }
 
 async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
-  trx: Knex | Knex.Transaction,
+  trx: Knex.Transaction,
   tenant: string,
   invoiceId: string,
   releasedAt: string,
 ) {
+  await lockTenantBilling(trx, tenant);
   return tenantScopedTable(trx, tenant, 'recurring_service_periods')
     .where({
       tenant,
@@ -1090,8 +1093,8 @@ export const finalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<FinalizeInvoiceActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.finalizeInvoice)) {
+    return permissionError('Permission denied: invoice finalize required', 'msp/invoicing:errors.permissions.invoiceFinalize');
   }
   const { knex } = await createTenantKnex();
   let warnings: FinalizeWarning[] = [];
@@ -1611,7 +1614,7 @@ export const unfinalizeInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'update')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.unfinalizeInvoice)) {
     return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const { knex } = await createTenantKnex();
@@ -3033,7 +3036,7 @@ export const hardDeleteInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'delete')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.hardDeleteInvoice)) {
     return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
   }
   const { knex } = await createTenantKnex();
@@ -3063,7 +3066,7 @@ export const deleteDraftInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'delete')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.deleteDraftInvoice)) {
     return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
   }
   const { knex } = await createTenantKnex();

@@ -12,6 +12,7 @@ import type { Knex } from 'knex';
 
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithTenant } from '@alga-psa/db';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 /** A 1x1 PNG. Real bytes: the logo path sniffs the format and base64-inlines it. */
 export const LOGO_PNG = Buffer.from(
@@ -121,18 +122,19 @@ async function insertAsset(
   tag: string,
   serial: string | null
 ): Promise<string> {
-  const asset_id = randomUUID();
-  await db('assets').insert({
-    tenant,
-    asset_id,
-    asset_tag: tag,
-    name: `Asset ${tag}`,
-    status: 'active',
-    asset_type: 'workstation',
-    client_id: clientId,
-    serial_number: serial,
+  return db.transaction(async (trx) => {
+    const identity = await prepareAssetIdentity(trx, { tenant, clientId, assetTag: tag });
+    await trx('assets').insert({
+      tenant,
+      ...identity,
+      name: `Asset ${tag}`,
+      status: 'active',
+      asset_type: 'workstation',
+      client_id: clientId,
+      serial_number: serial,
+    });
+    return identity.asset_id;
   });
-  return asset_id;
 }
 
 async function link(db: Knex, tenant: string, assetId: string, ticketId: string, by: string) {

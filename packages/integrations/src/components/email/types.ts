@@ -94,6 +94,14 @@ export interface ImapEmailProviderConfig {
   max_emails_per_sync: number;
   oauth_authorize_url?: string | null;
   oauth_token_url?: string | null;
+  /** Issuer currently authorized to use the stored OAuth credentials. */
+  oauth_credentials_token_url?: string | null;
+  /** 0 reads legacy secret keys; 1 reads endpoint-scoped secret keys only. */
+  oauth_credentials_secret_version?: number;
+  /** UI state, independent of the active credential issuer binding. */
+  oauth_reauthorization_required?: boolean;
+  /** Safe UI state; never contains credential material. */
+  oauth_authorization_status?: 'connected' | 'not_connected' | 'reauthorization_required';
   oauth_client_id?: string | null;
   oauth_client_secret?: string | null;
   oauth_scopes?: string | null;

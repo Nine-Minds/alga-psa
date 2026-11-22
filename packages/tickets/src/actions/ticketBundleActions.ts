@@ -5,7 +5,8 @@ import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
-import type { IUser } from '@alga-psa/types';
+import type { IUser, IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { withAuth } from '@alga-psa/auth';
 import { publishBundleAfterCommitPublication } from '../lib/ticketBundlePublication';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
@@ -275,7 +276,7 @@ export const bundleTicketsAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot select a child ticket as the master.',
       masterIsChildKey: 'features/tickets:errors.bundle.childAsMaster',
@@ -345,7 +346,7 @@ export const addChildrenToBundleAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
       masterIsChildKey: 'features/tickets:errors.bundle.childrenOnBundledChild',
@@ -394,7 +395,14 @@ export const getBundleMasterClosedContextAction = withAuth(async (
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view tickets');
     }
-    const context = await getBundleMasterClosedContext(trx, tenant, data.masterTicketId);
+    // The open-children count shown to the reader covers only children they may read.
+    const readable = await createTicketReadScope(trx, tenant, user as IUserWithRoles);
+    const context = await getBundleMasterClosedContext(
+      trx,
+      tenant,
+      data.masterTicketId,
+      readable.narrowed ? (query) => readable.apply(query, 'tickets') : undefined
+    );
     if (!context) {
       return actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound');
     }
@@ -567,7 +575,7 @@ export const updateBundleSettingsAction = withAuth(async (
       source: TICKET_ACTIVITY_SOURCE.UI,
       occurredAt,
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       if (result.code === 'settings_not_found') throw new Error('Bundle settings not found');
       return bundleAttachFailureToActionError(result);
     }

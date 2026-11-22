@@ -69,14 +69,13 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
-// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
-// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
-// fails whenever the suite runs outside summer time.
-const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
-function assertTz(zone: string, expectedOffsetMinutes: number) {
+function assertTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
-  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // DST offsets belong to the scenario instant, not the date the suite runs.
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
+  expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 async function seedBase() {
@@ -127,18 +126,21 @@ describe.runIf(enabled)('hour-block expiration date persists the selected calend
     await db.destroy();
   });
 
-  it('grantHourBlock: selected 2026-08-31 in Europe/Berlin round-trips to the DB byte-for-byte', async () => {
-    assertTz('Europe/Berlin', -120);
+  it.each([
+    { zone: 'Europe/Berlin', selectedDate: '2026-08-31', offset: -120, midnightUtc: '2026-08-30T22:00:00.000Z' },
+    { zone: 'Europe/Berlin', selectedDate: '2026-01-31', offset: -60, midnightUtc: '2026-01-30T23:00:00.000Z' },
+    { zone: 'Pacific/Kiritimati', selectedDate: '2026-08-31', offset: -840, midnightUtc: '2026-08-30T10:00:00.000Z' },
+  ])('grantHourBlock: selected $selectedDate in $zone round-trips to the DB byte-for-byte', async ({ zone, selectedDate, offset, midnightUtc }) => {
+    assertTz(zone, offset, `${selectedDate}T12:00:00.000Z`);
     const { clientId, serviceId } = await seedBase();
-    const blockId = uuidv4();
 
     try {
-      // The picker in Berlin yields a local-midnight Date; the dialog sends it
+      // The picker yields a local-midnight Date; the dialog sends it
       // through the REAL client helper before calling the action.
-      const picked = pickerLocalMidnightFor('2026-08-31');
-      expect(picked.toISOString()).toBe('2026-08-30T22:00:00.000Z');
+      const picked = pickerLocalMidnightFor(selectedDate);
+      expect(picked.toISOString()).toBe(midnightUtc);
       const sent = toCalendarDateString(picked);
-      expect(sent).toBe('2026-08-31');
+      expect(sent).toBe(selectedDate);
 
       const { grantHourBlock } = await import('../src/actions/hourBlockActions');
       const result = await grantHourBlock({
@@ -157,47 +159,16 @@ describe.runIf(enabled)('hour-block expiration date persists the selected calend
 
       const row = await db('hour_blocks').where({ tenant, block_id: createdBlockId }).first();
       expect(row).toBeTruthy();
-      expect(toCalendarDateString(row.expiration_date)).toBe('2026-08-31');
+      expect(toCalendarDateString(row.expiration_date)).toBe(selectedDate);
       const raw = await db.raw('SELECT expiration_date::text AS d FROM hour_blocks WHERE tenant = ? AND block_id = ?', [tenant, createdBlockId]);
-      expect(raw.rows[0].d).toBe('2026-08-31');
-    } finally {
-      await cleanup();
-    }
-  });
-
-  it('grantHourBlock: selected 2026-08-31 in Pacific/Kiritimati (UTC+14) round-trips to the DB byte-for-byte', async () => {
-    assertTz('Pacific/Kiritimati', -840);
-    const { clientId, serviceId } = await seedBase();
-
-    try {
-      const picked = pickerLocalMidnightFor('2026-08-31');
-      expect(picked.toISOString()).toBe('2026-08-30T10:00:00.000Z');
-      const sent = toCalendarDateString(picked);
-      expect(sent).toBe('2026-08-31');
-
-      const { grantHourBlock } = await import('../src/actions/hourBlockActions');
-      const result = await grantHourBlock({
-        clientId,
-        serviceId,
-        hours: 10,
-        hourlyRate: 10000,
-        expirationDate: sent,
-        scopeServiceIds: [],
-        reason: 'tz regression grant kiritimati',
-      });
-
-      const createdBlockId = (result as { block_id: string }).block_id;
-      const row = await db('hour_blocks').where({ tenant, block_id: createdBlockId }).first();
-      expect(toCalendarDateString(row.expiration_date)).toBe('2026-08-31');
-      const raw = await db.raw('SELECT expiration_date::text AS d FROM hour_blocks WHERE tenant = ? AND block_id = ?', [tenant, createdBlockId]);
-      expect(raw.rows[0].d).toBe('2026-08-31');
+      expect(raw.rows[0].d).toBe(selectedDate);
     } finally {
       await cleanup();
     }
   });
 
   it('updateHourBlockExpiration: new date persists and the audit metadata records previous/new calendar dates', async () => {
-    assertTz('Europe/Berlin', -120);
+    assertTz('Europe/Berlin', -120, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase();
     const blockId = uuidv4();
 
@@ -229,7 +200,7 @@ describe.runIf(enabled)('hour-block expiration date persists the selected calend
   });
 
   it('listHourBlocks/getHourBlockDetail map a stored DATE back to the same calendar string', async () => {
-    assertTz('Europe/Berlin', -120);
+    assertTz('Europe/Berlin', -120, '2026-08-31T22:00:00.000Z');
     const { clientId, serviceId } = await seedBase();
     const blockId = uuidv4();
 

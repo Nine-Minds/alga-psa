@@ -3,6 +3,18 @@
 Card: `643ed6e3-de5e-48a4-9239-1255c6bcb257` · finding from the smoke test of `a6294c24`
 (PR #4021) · severity **high** · category **authz** · PSA ticket `alga-2026-0003022`
 
+> **Status: implemented upstream, not by this document's card.**
+> The runtime fix landed in `main` through PR #4119 (`feature/security-authz-in-updateticketintransaction`,
+> merge commit `52a31b847f`, commit `76058203dd`, merged 2026-11-08). The shipped design differs from
+> this spec in two places: the auto-close exemption is an explicit
+> `authorizationContext === AUTO_CLOSE_TICKET_AUTHORIZATION` argument rather than
+> `options.systemActor`, and every public option bag is validated against an allow-list
+> (`assertAllowedTicketUpdateOptions`) so a caller cannot smuggle that exemption through.
+> The record authorizer itself now lives in `packages/authorization/src/ticketRecordAuthorization.ts`
+> (re-exported from `packages/tickets/src/lib/ticketRecordAuthorization.ts`) and evaluates
+> `proposed` placement for resolver-governed subjects. This document is kept as the design
+> record for the finding; it is not a description of unmerged work.
+
 ## 1. The finding, restated at the mechanism
 
 A ticket write from the MSP ticket screen checks **tenant-wide RBAC only**:

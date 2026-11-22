@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { duplicateTemplate } from '@alga-psa/projects/actions/projectTemplateActions';
 import { isTemplateActionError, templateErrorResponse } from '../../templateRouteErrors';
 
@@ -7,7 +8,7 @@ export async function POST(
   { params }: { params: { templateId: string } }
 ) {
   try {
-    const newTemplateId = await duplicateTemplate(params.templateId);
+    const newTemplateId = await runWithApiKeyOrSession(request, () => duplicateTemplate(params.templateId));
     if (isTemplateActionError(newTemplateId)) {
       return templateErrorResponse(newTemplateId, 'Failed to duplicate template');
     }

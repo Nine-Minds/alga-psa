@@ -78,7 +78,8 @@
       "poScopeDiffers": "La portée du bon de commande diffère",
       "currencyDiffers": "La devise diffère",
       "taxTreatmentDiffers": "Le traitement fiscal diffère",
-      "exportShapeDiffers": "La forme des exportations diffère"
+      "exportShapeDiffers": "La forme des exportations diffère",
+      "billingProfileDiffers": "Le profil de facturation diffère"
     },
     "executionRows": {
       "labels": {
@@ -396,6 +397,7 @@
       "helpText": "Laissez vide pour aucune expiration ou pour utiliser la période d'expiration par défaut"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
       "selectClient": "Veuillez sélectionner un client",
       "invoiceNumberUnique": "Ce numéro de facture est déjà utilisé.",
       "noTaxRateConfigured": "Aucun taux de taxe configuré pour la région.",
@@ -420,6 +422,7 @@
       "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
       "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
+      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement.",
       "RECURRING_PERIODS_NOT_MATERIALIZED": "Les périodes de service de cette fenêtre de facturation n'ont pas encore été générées. Utilisez Tout corriger sur la page des factures automatiques, ou régénérez-les dans Facturation > Périodes de service, puis relancez l'aperçu.",
       "NO_ACTIVE_CONTRACT_LINES": "Aucune ligne de contrat n'est active pour cette période de facturation. Vérifiez les dates de début et de fin du contrat et que le contrat est actif.",
@@ -429,9 +432,7 @@
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
       "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
-      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
       "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
       "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
@@ -457,6 +458,9 @@
       "increase": "Augmentation",
       "decrease": "Diminution (crédit)",
       "units": "Unités",
+      "source": "Sélectionner un service facturé",
+      "effectiveDate": "Date d’effet",
+      "sourceRate": "Tarif {{rate}}",
       "unitPrice": "Prix unitaire",
       "coveredDays": "Jours couverts",
       "fullPeriodDays": "Jours de la période complète",
@@ -467,14 +471,11 @@
       "addCharge": "Ajouter des frais",
       "creditDescription": "Crédit : {{proration}}",
       "errors": {
+        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté.",
         "units": "Les unités doivent être supérieures à zéro.",
         "unitPrice": "Le prix unitaire doit être un nombre.",
-        "invalid": "Saisissez une période partielle valide.",
-        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté."
+        "invalid": "Saisissez une période partielle valide."
       },
-      "source": "Sélectionner un service facturé",
-      "effectiveDate": "Date d’effet",
-      "sourceRate": "Tarif {{rate}}",
       "permanentChangeNudge": "S’agit-il d’un changement permanent ? Enregistrez-le plutôt dans le contrat.",
       "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?",
       "invoiceDescription": {
@@ -604,7 +605,9 @@
       "unfinalizeSelected": "Annuler la sélection",
       "downloadPdf": "Télécharger le PDF",
       "sendEmail": "Envoyer un e-mail",
-      "unfinalize": "Définaliser"
+      "unfinalize": "Définaliser",
+      "recordPayment": "Enregistrer un paiement",
+      "viewPayments": "Paiements"
     },
     "status": {
       "finalized": "Finalisée"
@@ -892,7 +895,9 @@
       "reasonPlaceholder": "Motif de l'annulation...",
       "cancel": "Annuler",
       "confirm": "Annuler la facture",
-      "voiding": "Annulation…"
+      "voiding": "Annulation…",
+      "algaOnly": "Annuler uniquement dans AlgaPSA (dissocier de {{provider}})",
+      "algaOnlyWarning": "Le document {{provider}} reste inchangé et cette facture en est dissociée : AlgaPSA et {{provider}} divergeront à son sujet."
     },
     "history": {
       "title": "Historique",
@@ -906,6 +911,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "aucun"
+    },
+    "syncFeedback": {
+      "synced": "Facture synchronisée avec {{provider}}.",
+      "failed": "Échec de la synchronisation avec {{provider}} : {{reason}}",
+      "failedNoReason": "Échec de la synchronisation avec {{provider}}. Consultez la liste des opérations en erreur sur la page de l’intégration comptable.",
+      "skipped": "La facture a été ignorée et n’a pas été envoyée à {{provider}} : {{reason}}",
+      "skippedNoReason": "La facture a été ignorée et n’a pas été envoyée à {{provider}}.",
+      "pending": "La facture est en file d’attente pour la synchronisation avec {{provider}} ; elle n’a pas encore été traitée.",
+      "unknown": "Impossible de déterminer si la facture a été synchronisée avec {{provider}}.",
+      "notRun": "La synchronisation avec {{provider}} n’a pas été exécutée : {{reason}}",
+      "notRunNoReason": "La synchronisation avec {{provider}} n’a pas été exécutée.",
+      "error": "Échec de la synchronisation : {{error}}",
+      "refusedNotFound": "Facture introuvable.",
+      "refusedPaid": "Les factures payées ne sont pas synchronisées avec {{provider}}.",
+      "refusedCancelled": "Les factures annulées ne sont pas synchronisées avec {{provider}}.",
+      "cycleFailed": "Échec de la synchronisation avec {{provider}} : {{reason}} La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation.",
+      "cycleFailedNoReason": "Échec de la synchronisation avec {{provider}}. La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation."
     }
   },
   "templateEditor": {
@@ -1483,14 +1505,244 @@
       "barcodeCode128": "Code 128",
       "barcodeValue": "Valeur",
       "barcodeHintWorkTag": "Du texte, ou un champ tel que {{example}} (le lien vers l’enregistrement). Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
-      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible."
+      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
+      "binding": {
+        "noFieldSelected": "Aucun champ sélectionné",
+        "customHint": "Saisissez un chemin de liaison personnalisé si le champ souhaité ne figure pas dans la liste.",
+        "useFieldPicker": "Utiliser le sélecteur de champs",
+        "current": "Actuel",
+        "unbound": "Sans liaison",
+        "searchFields": "Rechercher des champs…",
+        "noMatches": "Aucun champ correspondant.",
+        "useCustomPath": "Utiliser un chemin personnalisé"
+      },
+      "customCssPreserved": "Valeur CSS personnalisée conservée jusqu’à modification :",
+      "pickField": "Sélectionner : {{field}}"
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
       "selectedNone": "Aucun",
       "clickBlockHint": "Cliquez sur un bloc du canevas",
       "orUse": "ou utilisez",
-      "plusInLeftPanelHint": "+ dans le panneau gauche"
+      "plusInLeftPanelHint": "+ dans le panneau gauche",
+      "sectionAlreadyFitted": "La section est déjà ajustée.",
+      "unbound": "Sans liaison",
+      "layoutMode": {
+        "flex": {
+          "label": "Empiler",
+          "tooltip": "Empiler (Flex)"
+        },
+        "grid": {
+          "label": "Grille",
+          "tooltip": "Mise en page en grille"
+        }
+      },
+      "direction": {
+        "column": {
+          "label": "Vertical",
+          "tooltip": "Disposition verticale"
+        },
+        "row": {
+          "label": "Horizontal",
+          "tooltip": "Disposition horizontale"
+        }
+      },
+      "alignItems": {
+        "stretch": {
+          "label": "Étirer",
+          "tooltip": "Étirer les éléments enfants"
+        },
+        "start": {
+          "label": "Début",
+          "tooltip": "Aligner au début"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Aligner au centre"
+        },
+        "end": {
+          "label": "Fin",
+          "tooltip": "Aligner à la fin"
+        }
+      },
+      "justify": {
+        "start": {
+          "label": "Début",
+          "tooltip": "Regrouper au début"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Regrouper au centre"
+        },
+        "end": {
+          "label": "Fin",
+          "tooltip": "Regrouper à la fin"
+        },
+        "between": {
+          "label": "Espacement",
+          "tooltip": "Répartir avec un espace entre les éléments"
+        },
+        "around": {
+          "label": "Autour",
+          "tooltip": "Répartir avec un espace autour des éléments"
+        },
+        "evenly": {
+          "label": "Uniforme",
+          "tooltip": "Répartir avec un espacement uniforme"
+        }
+      },
+      "mediaHorizontal": {
+        "left": {
+          "label": "Gauche",
+          "tooltip": "Aligner l’image à gauche"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Centrer l’image horizontalement"
+        },
+        "right": {
+          "label": "Droite",
+          "tooltip": "Aligner l’image à droite"
+        }
+      },
+      "mediaVertical": {
+        "top": {
+          "label": "Haut",
+          "tooltip": "Aligner l’image en haut"
+        },
+        "center": {
+          "label": "Centre",
+          "tooltip": "Centrer l’image verticalement"
+        },
+        "bottom": {
+          "label": "Bas",
+          "tooltip": "Aligner l’image en bas"
+        }
+      },
+      "objectFit": {
+        "contain": {
+          "label": "Contenir",
+          "tooltip": "Redimensionner pour tenir dans le cadre"
+        },
+        "cover": {
+          "label": "Couvrir",
+          "tooltip": "Remplir le cadre et rogner ce qui dépasse"
+        },
+        "fill": {
+          "label": "Remplir",
+          "tooltip": "Étirer pour remplir le cadre"
+        },
+        "none": {
+          "label": "Aucun",
+          "tooltip": "Conserver la taille d’origine de l’image"
+        },
+        "scaleDown": {
+          "label": "Réduire",
+          "tooltip": "Conserver la taille d’origine, sauf si une réduction est nécessaire"
+        }
+      },
+      "widthMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "Laisser le conteneur décider (s’étire dans un empilement vertical)"
+        },
+        "fill": {
+          "label": "Remplir",
+          "tooltip": "Occuper toute la largeur du conteneur"
+        },
+        "fit": {
+          "label": "Ajuster",
+          "tooltip": "Réduire pour s’ajuster au contenu"
+        },
+        "fixed": {
+          "label": "Fixe",
+          "tooltip": "Utiliser la largeur exacte saisie ci-dessous"
+        }
+      },
+      "heightMode": {
+        "auto": {
+          "label": "Auto",
+          "tooltip": "S’agrandir avec le contenu"
+        },
+        "fixed": {
+          "label": "Fixe",
+          "tooltip": "Utiliser la hauteur exacte saisie ci-dessous"
+        }
+      },
+      "flexPreset": {
+        "natural": {
+          "label": "Naturel",
+          "description": "Utiliser la taille du contenu de l’élément, tout en autorisant sa réduction si l’espace manque."
+        },
+        "fill": {
+          "label": "Remplir",
+          "description": "Occuper l’espace restant tout en conservant la taille préférée de l’élément."
+        },
+        "share": {
+          "label": "Partager",
+          "description": "Partager équitablement l’espace disponible avec les autres éléments utilisant ce mode."
+        },
+        "fixed": {
+          "label": "Fixe",
+          "description": "Conserver la taille de l’élément et empêcher sa réduction par flexbox."
+        }
+      },
+      "groups": {
+        "layout": "Mise en page",
+        "direction": "Direction",
+        "alignItems": "Aligner les éléments",
+        "justifyContent": "Justifier le contenu",
+        "objectFit": "Ajustement de l’image",
+        "horizontalAlign": "Alignement horizontal",
+        "verticalAlign": "Alignement vertical",
+        "columns": "Colonnes"
+      },
+      "columnsAria": "Colonnes : {{preset}}",
+      "axis": {
+        "width": "Largeur",
+        "height": "Hauteur",
+        "widthLower": "largeur",
+        "heightLower": "hauteur"
+      },
+      "flexItemHint": "Dans cet empilement {{direction}}, ces paramètres déterminent comment l’élément partage la {{axis}} avec les autres éléments du même niveau.",
+      "flexBehavior": "Comportement selon l’axe {{axis}}",
+      "flexBehaviorAria": "Comportement selon l’axe {{axis}} : {{preset}}",
+      "flexCustomNotice": "Cet élément utilise des valeurs flex personnalisées. Choisissez un préréglage pour simplifier sa configuration ou ajustez les valeurs avancées ci-dessous.",
+      "advancedFlexValues": "Valeurs flex avancées",
+      "flexGrow": "Occuper l’espace supplémentaire",
+      "flexShrink": "Autoriser la réduction",
+      "flexBasis": "Taille préférée selon l’axe {{axis}}",
+      "displayFormat": {
+        "singleLine": {
+          "label": "Une seule ligne",
+          "description": "Regrouper l’adresse sur une seule ligne."
+        },
+        "multiline": {
+          "label": "Plusieurs lignes",
+          "description": "Répartir l’adresse sur plusieurs lignes."
+        },
+        "raw": {
+          "label": "Brut",
+          "description": "Utiliser la valeur enregistrée telle quelle."
+        },
+        "onlyDataField": "Ce réglage s’applique uniquement aux nœuds « Champ de données ».",
+        "aria": "Format d’affichage : {{format}}"
+      },
+      "attachments": {
+        "defaultLabel": "Pièce jointe",
+        "title": "Titre",
+        "items": "Éléments",
+        "add": "Ajouter",
+        "empty": "Aucune pièce jointe définie."
+      },
+      "media": {
+        "altText": "Texte alternatif",
+        "aspectRatio": "Rapport largeur/hauteur",
+        "fitParentSection": "Ajuster la section parente au média",
+        "reflowsPrefix": "Réorganise",
+        "reflowsSuffix": "pour supprimer les espaces vides superflus.",
+        "notInSection": "Ce bloc média ne se trouve pas dans une section."
+      }
     },
     "pageSetup": {
       "title": "Mise en page",
@@ -1537,7 +1789,9 @@
           "actual": "100 %",
           "label": "Zoom de l'aperçu",
           "fitWithScale": "Ajuster ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Page {{page}} sur {{total}}",
+        "frameTitle": "Aperçu de la facture"
       },
       "tabs": {
         "design": "Conception",
@@ -1633,6 +1887,10 @@
       "spacer": {
         "label": "Espaceur",
         "description": "Espace vide pour ajuster la mise en page."
+      },
+      "page-break": {
+        "label": "Saut de page",
+        "description": "Commence le bloc suivant sur une nouvelle page."
       },
       "container": {
         "label": "Conteneur",
@@ -1956,6 +2214,17 @@
               "label": "Couleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Pagination",
+          "fields": {
+            "breakBefore": {
+              "label": "Commencer sur une nouvelle page"
+            },
+            "breakInside": {
+              "label": "Garder groupé sur une seule page"
+            }
+          }
         }
       }
     },
@@ -1982,15 +2251,19 @@
       },
       "invoice_subtotal": {
         "label": "Sous-total",
-        "description": "Sous-total de la facture avant taxes et remises."
+        "description": "Sous-total de la facture après remises et avoirs, avant taxes."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Sous-total avant remises",
+        "description": "Sous-total de la facture avant remises et avoirs, et avant taxes."
+      },
+      "invoice_discountTotal": {
+        "label": "Remises",
+        "description": "Total des lignes de remise et d'avoir, affiché sous forme de montant positif."
       },
       "invoice_tax": {
         "label": "Taxe",
         "description": "Montant de la taxe de la facture."
-      },
-      "invoice_discount": {
-        "label": "Remise",
-        "description": "Montant de la remise."
       },
       "invoice_total": {
         "label": "Total",
@@ -2065,6 +2338,8 @@
       "signatureLabel": "Signature",
       "attachmentsLabel": "Pièces jointes",
       "spacerLabel": "Espaceur",
+      "pageBreakLabel": "Saut de page",
+      "pageBreakBefore": "Commence sur une nouvelle page",
       "companyLogo": "Logo de l'entreprise",
       "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
       "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",
@@ -2101,7 +2376,23 @@
       "cannotInsert": "Impossible d'ajouter {{block}} ici.",
       "insertedOnPage": "{{block}} ajouté à la page.",
       "insertedInto": "{{block}} ajouté à {{parent}}.",
-      "fieldRebound": "{{name}} affiche désormais {{path}}."
+      "fieldRebound": "{{name}} affiche désormais {{path}}.",
+      "dropIncompatibleComponent": "La zone de dépôt n’est pas compatible avec ce composant.",
+      "dropIncompatible": "La zone de dépôt n’est pas compatible.",
+      "dropIncompatiblePreset": "La zone de dépôt n’est pas compatible avec ce préréglage.",
+      "dropOnCanvas": "Déposez ce composant sur le canevas pour l’ajouter.",
+      "addComponentFailed": "Impossible d’ajouter ce composant dans le contexte actuel.",
+      "presetUnavailable": "La définition du préréglage n’est pas disponible.",
+      "presetPlacementUnresolved": "Impossible de déterminer où placer ce préréglage.",
+      "addPresetFailed": "Impossible d’ajouter ce préréglage dans le contexte actuel.",
+      "inserted": "Insertion de {{value}} effectuée.",
+      "insertedWithDiagnostic": "Insertion de {{value}} effectuée. {{diagnostic}}",
+      "selectTextBlock": "Sélectionnez un bloc de texte, puis cliquez dans un champ de texte pour insérer des variables.",
+      "focusTextField": "Cliquez dans un champ de texte de l’inspecteur pour insérer cette variable.",
+      "selectSectionToFit": "Sélectionnez une section à ajuster.",
+      "sectionNoChildren": "La section ne contient aucun élément enfant à ajuster.",
+      "sectionFitted": "La section a été ajustée au contenu.",
+      "sectionFittedFixed": "La section est passée en mode de taille fixe et a été ajustée au contenu."
     },
     "translation": {
       "translatedAs": "Libellé standard « {{name}} », traduit pour chaque destinataire",
@@ -2129,6 +2420,26 @@
     "resize": {
       "handleHint": "Faites glisser pour redimensionner · double-cliquez pour ajuster au contenu",
       "autoValue": "Automatique ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Désactivé",
+      "quantities": "Quantités uniquement",
+      "quantitiesAndPrices": "Quantités et prix",
+      "custom": "Personnalisé",
+      "showChange": "Afficher la variation par rapport à la période précédente (+N / −N)",
+      "pricesNote": "Les prix des composants sont inclus dans les données de facture de ce modèle, y compris pour les clients.",
+      "quantitiesNote": "Ce modèle n’expose pas les prix des composants aux clients.",
+      "blankOnBundle": "Vide sur la ligne du forfait",
+      "componentCells": "Cellules des lignes de composants",
+      "cellClear": "— Vide —",
+      "field": {
+        "name": "Nom du service",
+        "quantity": "Quantité",
+        "period": "Période de service",
+        "pricingBasis": "Base de tarification",
+        "unitPrice": "Prix unitaire",
+        "total": "Montant"
+      }
     }
   },
   "projectBilling": {
@@ -2452,7 +2763,8 @@
       "moveDown": "Déplacer {{row}} vers le bas",
       "remove": "Retirer {{row}}",
       "label": "Libellé",
-      "emphasize": "Mettre en évidence (style du total général)"
+      "emphasize": "Mettre en évidence (style du total général)",
+      "hideWhenZero": "Masquer si zéro"
     }
   },
   "draftInvoiceDetails": {
@@ -2510,29 +2822,24 @@
     "editor": {
       "titles": {
         "create": "Nouvelle mise en page pour {{type}}",
-        "edit": "Modifier la mise en page pour {{type}}"
-      },
-      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
-      "errorTitle": "Éditeur de mise en page pour {{type}}",
-      "sections": {
-        "details": "Détails de la mise en page"
+        "edit": "Modifier la mise en page : {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Créé {{time}}",
         "labelClass": "Classe d'étiquette",
         "labelFields": "Champs affichés sur l'étiquette",
-        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés.",
+        "notSaved": "Pas encore enregistré",
+        "savedAt": "Enregistré {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"
       },
       "actions": {
-        "back": "Retour aux mises en page",
+        "back": "Retour aux présentations de {{type}}",
+        "labelSettings": "Réglages d’étiquette",
         "save": "Enregistrer la mise en page"
-      },
-      "labels": {
-        "created": "Créée : {{date}}",
-        "lastUpdated": "Dernière mise à jour : {{date}}"
       },
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
@@ -2567,6 +2874,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceFinalize": "Autorisation refusée : autorisation de finalisation des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
       "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",
@@ -2622,6 +2930,36 @@
       "missingField": "Un champ obligatoire du modèle de facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}.",
       "evaluationFailed": "Échec de la liaison des données du modèle : {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Accès refusé : l'enregistrement des paiements de factures nécessite l'autorisation de paiement de facture.",
+      "invoiceNotFound": "Facture introuvable. Elle a peut-être été modifiée ou supprimée. Veuillez actualiser la page et réessayer.",
+      "amountPositive": "Saisissez un montant de paiement supérieur à zéro.",
+      "methodRequired": "Choisissez un mode de paiement.",
+      "invalidDate": "Saisissez une date de paiement valide.",
+      "noBalanceDue": "Cette facture n'a plus de solde dû.",
+      "statusNotPayable": "Impossible d’enregistrer un paiement pour une facture au statut : {{status}}.",
+      "overpaymentNotConfirmed": "Ce paiement dépasse le solde dû. Confirmez le trop-perçu pour l'enregistrer.",
+      "recordFailed": "Échec de l'enregistrement du paiement. Veuillez réessayer."
+    },
+    "void": {
+      "paymentsRecorded": "Annulez les paiements avant d’annuler la facture.",
+      "paymentsRecordedManual": "Annulez les paiements enregistrés dans AlgaPSA ({{sources}}) avant d’annuler cette facture.",
+      "paymentsRecordedIntegration": "Cette facture comporte des paiements provenant de votre système comptable ({{sources}}). Supprimez-les ou modifiez-les là-bas et la prochaine synchronisation les annulera ici, ou annulez-les uniquement dans AlgaPSA.",
+      "paymentsRecordedGateway": "Cette facture comporte des paiements encaissés via un prestataire de paiement ({{sources}}). Remboursez-les là-bas avant d’annuler la facture.",
+      "paymentsRecordedMixed": "Annulez les paiements de cette facture ({{sources}}) avant de l’annuler.",
+      "creditNoteCreditApplied": "Cet avoir comporte du crédit appliqué. Annulez l’application du crédit avant d’annuler l’avoir."
+    },
+    "reversePayment": {
+      "permissionDenied": "Accès refusé : l’annulation des paiements de factures nécessite l’autorisation de paiement de facture.",
+      "reasonRequired": "Un motif est requis pour annuler un paiement.",
+      "paymentNotFound": "Paiement introuvable. Il a peut-être été modifié ou supprimé. Veuillez actualiser la page et réessayer.",
+      "notReversible": "Ce paiement ne peut pas être annulé.",
+      "alreadyReversed": "Ce paiement a déjà été annulé.",
+      "gatewayRefundRequired": "Ce paiement a été encaissé via un prestataire de paiement ({{method}}). Remboursez-le plutôt là-bas.",
+      "integrationOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le dans {{provider}} et la prochaine synchronisation l’annulera ici.",
+      "remoteMutateRequired": "Accès refusé : annuler un paiement synchronisé uniquement dans AlgaPSA nécessite l’autorisation de modification distante de la comptabilité.",
+      "reverseFailed": "Échec de l’annulation du paiement. Veuillez réessayer."
     }
   },
   "periodTotal": {
@@ -2644,6 +2982,74 @@
     "blocked": {
       "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",
       "exporting": "Un export comptable de cette facture est en cours de préparation. Attendez qu’il soit terminé avant de modifier la facture."
+    }
+  },
+  "recordPayment": {
+    "title": "Enregistrer un paiement",
+    "titleForInvoice": "Enregistrer un paiement — {{invoiceNumber}}",
+    "loading": "Chargement du solde de la facture...",
+    "summary": {
+      "balanceDue": "Solde dû",
+      "alreadyPaid": "Déjà payé"
+    },
+    "fields": {
+      "amount": "Montant",
+      "paymentDate": "Date de paiement",
+      "method": "Mode de paiement",
+      "reference": "Référence",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "reference": "Numéro de chèque ou de transaction"
+    },
+    "methods": {
+      "manual": "Manuel",
+      "check": "Chèque",
+      "bank_transfer": "Virement bancaire",
+      "cash": "Espèces",
+      "other": "Autre"
+    },
+    "overpayment": {
+      "warning": "Ce paiement dépasse de {{excess}} le solde dû de {{balanceDue}}.",
+      "confirm": "Enregistrer quand même ce trop-perçu"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "record": "Enregistrer le paiement"
+    },
+    "toasts": {
+      "recorded": "Paiement enregistré"
+    }
+  },
+  "invoicePayments": {
+    "title": "Paiements",
+    "titleForInvoice": "Paiements — {{invoiceNumber}}",
+    "loading": "Chargement des paiements...",
+    "empty": "Aucun paiement n’a été enregistré pour cette facture.",
+    "sources": {
+      "manual": "Enregistré dans AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Prestataire de paiement"
+    },
+    "fields": {
+      "reason": "Motif"
+    },
+    "actions": {
+      "reverse": "Annuler le paiement",
+      "confirmReverse": "Annuler le paiement",
+      "algaOnly": "Annuler uniquement dans AlgaPSA",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "notes": {
+      "gatewayRefund": "Encaissé via un prestataire de paiement ({{method}}) : remboursez-le plutôt là-bas.",
+      "alreadyReversed": "Déjà annulé.",
+      "providerOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le là-bas et la prochaine synchronisation l’annulera ici.",
+      "algaOnlyWarning": "AlgaPSA et {{provider}} divergeront sur ce paiement : l’enregistrement dans {{provider}} reste inchangé et le paiement est dissocié ici."
+    },
+    "toasts": {
+      "reversed": "Paiement annulé"
     }
   }
 }

@@ -273,6 +273,45 @@ describe('Ticket bundling integration', () => {
     await db?.destroy().catch(() => undefined);
   });
 
+  it('getConsolidatedTicketData returns only the ticket client, never the tenant client list', async () => {
+    const tag = uuidv4().slice(0, 6);
+    const ticketClientName = `Only Client ${tag}`;
+    const ticketClientId = await createClient(db, tenantId, ticketClientName);
+    const otherClients: Array<{ id: string; name: string }> = [];
+    for (let i = 0; i < 4; i += 1) {
+      const name = `Unrelated Client ${tag} ${i}`;
+      otherClients.push({ id: await createClient(db, tenantId, name), name });
+    }
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      ticketNumber: `CLN-${tag}`,
+      title: 'Client list probe',
+      clientId: ticketClientId,
+      contactId: null as any,
+      statusId: statusOpenId,
+      priorityId,
+      boardId,
+    });
+
+    const data = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(ticketId)
+    );
+
+    expect(data).not.toHaveProperty('clients');
+    expect(data.client?.client_id).toBe(ticketClientId);
+    expect(data.client?.client_name).toBe(ticketClientName);
+
+    // None of the other seeded clients may appear anywhere in the payload.
+    const payload = JSON.stringify(data);
+    for (const other of otherClients) {
+      expect(payload).not.toContain(other.id);
+      expect(payload).not.toContain(other.name);
+    }
+  });
+
   it('enforces permissions for bundle operations', async () => {
     const clientA = await createClient(db, tenantId, `Perm Client ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `perm-${uuidv4().slice(0, 6)}@example.com`);
@@ -484,7 +523,7 @@ describe('Ticket bundling integration', () => {
     expect(childAfter?.priority_id).toBe(nextPriorityId);
 
     const childWorkflowUpdateResult = await runWithTenant(tenantId, async () => {
-      return updateTicketWithCache(childId, { status_id: statusOpenId }, internalUser as any);
+      return updateTicketWithCache(childId, { status_id: statusOpenId });
     });
     expect(childWorkflowUpdateResult).toMatchObject({
       actionError: 'This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.',
@@ -553,7 +592,7 @@ describe('Ticket bundling integration', () => {
 
     // The child renderer resolves the agent, not Unknown User.
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const resolvedChildAuthor = resolveCommentAuthor(mirrored, {
       userMap: childData.userMap,
@@ -653,7 +692,7 @@ describe('Ticket bundling integration', () => {
     expect(mirrored?.author_type).toBe('internal');
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     // The contact id is carried onto the child; when the user record is not
     // resolvable it is the contact map that renders the author.
@@ -736,7 +775,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const childComments = childData.comments as any[];
     const mirrored = childComments.find((comment) => comment.comment_id === mirroredCommentId);
@@ -798,7 +837,7 @@ describe('Ticket bundling integration', () => {
     );
 
     const resolutionData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(resolutionChildId, internalUser as any)
+      getConsolidatedTicketData(resolutionChildId)
     );
     const resolutionMirror = (resolutionData.comments as any[]).find((comment) => comment.is_system_generated);
     expect(resolutionMirror).toBeTruthy();
@@ -1245,7 +1284,6 @@ describe('Ticket bundling integration', () => {
         updateTicketWithCache(
           childId,
           { status_id: statusClosedId, assigned_to: internalUser.user_id, priority_id: other.priority_id },
-          internalUser as any,
         )
       );
       expect(result).not.toMatchObject({ actionError: expect.anything() });
@@ -1258,7 +1296,7 @@ describe('Ticket bundling integration', () => {
     it('sync_updates child is rejected with the lock message (server action)', async () => {
       const { childId } = await setup('sync_updates');
       const result = await runWithTenant(tenantId, () =>
-        updateTicketWithCache(childId, { assigned_to: internalUser.user_id }, internalUser as any)
+        updateTicketWithCache(childId, { assigned_to: internalUser.user_id })
       );
       expect(result).toMatchObject({
         actionError: 'This ticket is bundled; workflow fields are locked (assigned_to). Update the master ticket instead.',
@@ -1269,7 +1307,7 @@ describe('Ticket bundling integration', () => {
       const { scopedDb, childId } = await setup(mode);
       const service = new TicketService();
       await runWithTenant(tenantId, async () => {
-        await service.update(childId, { status_id: statusClosedId, assigned_to: internalUser.user_id }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
+        await service.update(childId, { status_id: statusClosedId, assigned_to: internalUser.user_id }, { tenant: tenantId, userId: internalUser.user_id });
       });
       const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
       expect(child?.status_id).toBe(statusClosedId);
@@ -1280,7 +1318,7 @@ describe('Ticket bundling integration', () => {
       const { childId } = await setup('sync_updates');
       const service = new TicketService();
       const rejection = await runWithTenant(tenantId, async () =>
-        service.update(childId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser })
+        service.update(childId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id })
           .then(() => null, (error: unknown) => error));
       expect(rejection).toBeInstanceOf(ValidationError);
     });
@@ -1386,7 +1424,7 @@ describe('Ticket bundling integration', () => {
     const masterRow = (listResult.tickets ?? []).find((t: any) => t.ticket_id === masterId);
     expect(masterRow?.bundle_open_child_count).toBe(2);
 
-    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId, internalUser as any));
+    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId));
     expect(consolidated.bundle.openChildrenCount).toBe(2);
     const consolidatedChild = (consolidated.bundle.children ?? []).find((c: any) => c.ticket_id === child1Id);
     expect(consolidatedChild?.is_closed).toBe(false);
@@ -1456,7 +1494,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const consolidated = await runWithTenant(tenantId, async () => {
-      return getConsolidatedTicketData(masterId, internalUser as any);
+      return getConsolidatedTicketData(masterId);
     });
 
     expect(Array.isArray(consolidated.aggregatedChildClientComments)).toBe(true);
@@ -1891,7 +1929,7 @@ describe('Ticket bundling integration', () => {
 
     await runWithTenant(tenantId, async () => {
       await expect(
-        service.update(masterId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser }),
+        service.update(masterId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id }),
       ).rejects.toBeInstanceOf(BundlePropagationConfirmationRequiredError);
     });
 
@@ -1899,7 +1937,7 @@ describe('Ticket bundling integration', () => {
     expect(masterAfter?.status_id).toBe(statusOpenId);
 
     await runWithTenant(tenantId, async () => {
-      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: true }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: true }, { tenant: tenantId, userId: internalUser.user_id });
     });
 
     const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
@@ -1921,7 +1959,7 @@ describe('Ticket bundling integration', () => {
       await service.update(
         masterId,
         { status_id: statusClosedId, propagateToChildren: true },
-        { tenant: tenantId, userId: internalUser.user_id, user: internalUser },
+        { tenant: tenantId, userId: internalUser.user_id },
       );
     });
 
@@ -1946,7 +1984,7 @@ describe('Ticket bundling integration', () => {
     const service = new TicketService();
 
     await runWithTenant(tenantId, async () => {
-      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: false }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser });
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: false }, { tenant: tenantId, userId: internalUser.user_id });
     });
 
     const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
@@ -2040,7 +2078,7 @@ describe('Ticket bundling integration', () => {
     // BUNDLE_CHILD_LOCKED_FIELDS gate), so the ledger cannot end up
     // disagreeing with tickets.is_closed through this path.
     const rejection = await runWithTenant(tenantId, async () =>
-      service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id, user: internalUser })
+      service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id })
         .then(() => null, (error: unknown) => error));
     expect(rejection).toBeInstanceOf(ValidationError);
 

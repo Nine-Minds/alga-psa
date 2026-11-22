@@ -20,8 +20,8 @@ export function upgradePgbouncerConfiguration({ compose, template, templatePath 
   const appUser = source.environment?.DB_USER_SERVER || 'app_user';
   assert.ok(typeof appUser === 'string' && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(appUser), 'Invalid application user');
   return { template: ini, compose: { services: {
-    'upgrade-pgbouncer': { image, environment: { POSTGRES_HOST: 'postgres', POSTGRES_USER: 'postgres', DB_USER_SERVER: appUser },
-      secrets: ['postgres_password', 'db_password_server'],
+    'upgrade-pgbouncer': { image, environment: { POSTGRES_HOST: 'postgres', DB_USER_SERVER: appUser },
+      secrets: ['db_password_server'],
       volumes: [{ type: 'bind', source: templatePath, target: '/etc/pgbouncer/pgbouncer.ini.template', read_only: true }],
       networks: ['app-network'], depends_on: { postgres: { condition: 'service_healthy' } } },
     server: { environment: { DB_HOST: 'upgrade-pgbouncer', DB_PORT: '6432', DB_NAME_SERVER: 'upgrade_ci',

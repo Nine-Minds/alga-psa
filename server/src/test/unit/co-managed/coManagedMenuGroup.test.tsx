@@ -9,15 +9,22 @@ const state = vi.hoisted(() => ({
   product: 'psa' as string,
   permissions: ['co_management:read'] as string[],
   sections: [] as any[],
+  purchase: false,
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (_k: string, o?: { defaultValue?: boolean }) => o?.defaultValue ?? false,
+  useServedCapabilities: () => new Set(state.served ? ['co-managed'] : []),
   useCapability: (cap: string) => ({ enabled: cap === 'co-managed' && state.served, admitted: state.served && state.admitted, resolved: true }),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUserPermissions: () => Promise.resolve(state.permissions),
+}));
+vi.mock('@enterprise/components/co-managed/useCoManagedPurchaseNavigation', () => ({
+  useCoManagedPurchaseNavigation: () => state.purchase
+    ? { id: 'co-managed-purchase', title: '', items: [{ name: 'Co-managed IT', translationKey: 'nav.coManaged', icon: () => null, href: '/msp/co-managed' }] }
+    : null,
 }));
 vi.mock('@/context/TierContext', () => ({ useTier: () => ({ hasFeature: () => true }) }));
 vi.mock('@/context/ProductContext', () => ({ useProduct: () => ({ productCode: state.product, edition: 'ee' }) }));
@@ -37,7 +44,7 @@ async function mount() {
   await new Promise((r) => setTimeout(r, 0));
 }
 
-beforeEach(() => { state.served = true; state.admitted = true; state.product = 'psa'; state.permissions = ['co_management:read']; state.sections = []; });
+beforeEach(() => { state.served = true; state.admitted = true; state.product = 'psa'; state.permissions = ['co_management:read']; state.sections = []; state.purchase = false; });
 afterEach(cleanup);
 
 describe('Co-managed IT menu group (msp.navigation.group slot)', () => {
@@ -95,5 +102,48 @@ describe('Co-managed IT menu group (msp.navigation.group slot)', () => {
     const { navigationSections } = await import('@/config/menuConfig');
     const all = navigationSections.flatMap((s) => s.items.flatMap((i) => [i.href, ...(i.subItems ?? []).map((x) => x.href)]));
     expect(all).not.toContain('/msp/co-managed');
+  });
+});
+
+describe('Co-managed IT link for first-purchase discovery (commercial eligibility, not a permission)', () => {
+  const links = () => hrefs().filter((h) => h === '/msp/co-managed');
+
+  it('no entitlement, no relationship, no co_management:read: one root link and no archive', async () => {
+    state.served = false; state.admitted = false; state.permissions = ['account_management:read', 'account_management:update']; state.purchase = true;
+    await mount();
+    expect(links()).toHaveLength(1);
+    expect(hrefs()).not.toContain('/msp/co-managed/archive');
+  });
+
+  it('both paths apply: exactly one link, and the archive row still answers to its own gate', async () => {
+    state.purchase = true;
+    await mount();
+    expect(links()).toHaveLength(1);
+    expect(hrefs()).toContain('/msp/co-managed/archive');
+  });
+
+  it('served but without co_management:read: the purchaser gets the root, never the archive', async () => {
+    state.permissions = ['account_management:read']; state.purchase = true;
+    await mount();
+    expect(links()).toHaveLength(1);
+    expect(hrefs()).not.toContain('/msp/co-managed/archive');
+  });
+
+  it('the link does not depend on permissions having loaded (it survives a permission refresh)', async () => {
+    state.served = false; state.admitted = false; state.permissions = []; state.purchase = true;
+    await mount();
+    expect(links()).toHaveLength(1);
+  });
+
+  it('commercial eligibility closed (the community stub or a closed gate): nothing is contributed', async () => {
+    state.served = false; state.admitted = false; state.permissions = ['account_management:read', 'account_management:update'];
+    await mount();
+    expect(links()).toHaveLength(0);
+  });
+
+  it('a seat technician or algadesk surface cannot be given the link by the contribution', async () => {
+    state.served = false; state.admitted = false; state.product = 'algadesk'; state.purchase = true;
+    await mount();
+    expect(links()).toHaveLength(0);
   });
 });

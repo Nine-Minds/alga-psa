@@ -16,13 +16,13 @@ import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invo
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 import { exportWorkspaceToTemplateAst } from './ast/workspaceAst';
-import PaperInvoice from '../billing-dashboard/PaperInvoice';
-import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
 import TransformsWorkspace from './transforms/TransformsWorkspace';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from './preview/PreviewLocaleSelect';
+import { PreviewSheetFrame } from './preview/PreviewSheetFrame';
+import type { PreviewZoomMode } from './preview/previewSheetScale';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -48,6 +48,8 @@ type DesignerVisualWorkspaceProps = {
   visualWorkspaceTab: VisualWorkspaceTab;
   onVisualWorkspaceTabChange: (tab: VisualWorkspaceTab) => void;
   previewPaused?: boolean;
+  /** Focus mode: pass the height the host has taken down to the designer shell. */
+  fillHeight?: boolean;
 };
 
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
@@ -68,6 +70,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
   previewPaused = false,
+  fillHeight = false,
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -93,6 +96,8 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
   // the document a client receives. Existing invoices already carry real branding.
   const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
+  const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
+  const [previewScale, setPreviewScale] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
     getTenantBrandingForDocumentPreview()
@@ -166,14 +171,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     canDisplaySuccessStates,
   });
   const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
-  const authoritativeRenderOutput =
+  // The preview is the printed pages, drawn server-side; see previewPagination.server.
+  const authoritativeDocumentHtml =
     authoritativePreview?.render.status === 'success' &&
-    typeof authoritativePreview.render.html === 'string' &&
-    typeof authoritativePreview.render.css === 'string'
-      ? {
-          html: authoritativePreview.render.html,
-          css: authoritativePreview.render.css,
-        }
+    typeof authoritativePreview.render.documentHtml === 'string' &&
+    authoritativePreview.render.documentHtml.length > 0
+      ? authoritativePreview.render.documentHtml
       : null;
   const isPreviewRunning =
     previewState.shapeStatus === 'running' ||
@@ -317,11 +320,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     visualWorkspaceTab,
   ]);
 
+  const fill = fillHeight ? 'flex min-h-0 flex-1 flex-col' : '';
+
   return (
     <Tabs
       value={visualWorkspaceTab}
       onValueChange={(value) => onVisualWorkspaceTabChange(value as VisualWorkspaceTab)}
       data-automation-id="invoice-designer-visual-workspace-tabs"
+      className={fill || undefined}
     >
       <TabsList>
         <TabsTrigger value="design" data-automation-id="invoice-designer-design-tab">
@@ -335,13 +341,16 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="design" className="pt-3">
+      <TabsContent value="design" className={`pt-3 ${fill}`.trim()}>
         <CanvasDocumentPreviewContext.Provider value={{ data: previewData, presentationLabels: authoritativePreview?.presentationLabels, locale: authoritativePreview?.effectiveLocale ?? previewState.selectedLocale }}>
           <DesignerShell />
         </CanvasDocumentPreviewContext.Provider>
       </TabsContent>
 
-      <TabsContent value="transforms" className="pt-3">
+      <TabsContent
+        value="transforms"
+        className={`pt-3 ${fillHeight ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : ''}`.trim()}
+      >
         <TransformsWorkspace
           previewState={previewState}
           previewData={previewData}
@@ -354,7 +363,10 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         />
       </TabsContent>
 
-      <TabsContent value="preview" className="pt-3 space-y-3">
+      <TabsContent
+        value="preview"
+        className={`pt-3 space-y-3 ${fillHeight ? 'min-h-0 flex-1 overflow-y-auto' : ''}`.trim()}
+      >
         <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <ViewSwitcher
@@ -460,6 +472,28 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <ViewSwitcher
+                aria-label={t('designer.workspace.preview.zoom.label', { defaultValue: 'Preview zoom' })}
+                currentView={previewZoomMode}
+                onChange={(mode: PreviewZoomMode) => setPreviewZoomMode(mode)}
+                options={[
+                  {
+                    value: 'fit',
+                    id: 'invoice-designer-preview-zoom-fit',
+                    label: previewZoomMode === 'fit' && previewScale !== null
+                      ? t('designer.workspace.preview.zoom.fitWithScale', {
+                        defaultValue: 'Fit ({{percent}}%)',
+                        percent: Math.round(previewScale * 100),
+                      })
+                      : t('designer.workspace.preview.zoom.fit', { defaultValue: 'Fit' }),
+                  },
+                  {
+                    value: 'actual',
+                    id: 'invoice-designer-preview-zoom-actual',
+                    label: t('designer.workspace.preview.zoom.actual', { defaultValue: '100%' }),
+                  },
+                ]}
+              />
               <PreviewLocaleSelect
                 id="invoice-designer-preview-locale-select"
                 value={previewState.selectedLocale}
@@ -554,15 +588,15 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </Alert>
           )}
 
-          {previewData && previewTemplate && authoritativeRenderOutput && (
+          {previewData && previewTemplate && authoritativeDocumentHtml && (
             <div className="p-2" data-automation-id="invoice-designer-preview-render-template">
-              <PaperInvoice templateAst={previewTemplate.templateAst ?? null}>
-                <TemplateRenderer
-                  template={previewTemplate}
-                  invoiceData={previewData}
-                  renderOverride={authoritativeRenderOutput}
-                />
-              </PaperInvoice>
+              <PreviewSheetFrame
+                title={t('designer.workspace.preview.frameTitle', { defaultValue: 'Invoice preview' })}
+                html={authoritativeDocumentHtml}
+                zoomMode={previewZoomMode}
+                onScaleChange={setPreviewScale}
+                automationId="invoice-designer-preview-frame"
+              />
             </div>
           )}
         </div>

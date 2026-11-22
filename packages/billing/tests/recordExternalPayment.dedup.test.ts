@@ -24,14 +24,18 @@ vi.mock('@alga-psa/db', () => ({
 const publishWorkflowEvent = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
-vi.mock('../src/services/accountingSync/syncProducers', () => ({ enqueueExternalPaymentPush: vi.fn() }));
+const enqueueExternalPaymentPush = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('../src/services/accountingSync/syncProducers', () => ({ enqueueExternalPaymentPush }));
 vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({ notifyInvoiceTerminalStatus: vi.fn() }));
 vi.mock('../src/services/prepaidReplenishmentSettlement', () => ({ settlePrepaidReplenishmentInvoice: vi.fn() }));
 
 import { recordExternalPayment } from '../src/services/accountingSync/recordExternalPayment';
 
 describe('recordExternalPayment de-duplication', () => {
-  beforeEach(() => { state.inserts = 0; state.transactions = 0; publishWorkflowEvent.mockClear(); });
+  beforeEach(() => {
+    state.inserts = 0; state.transactions = 0;
+    publishWorkflowEvent.mockClear(); enqueueExternalPaymentPush.mockClear();
+  });
 
   it('returns the existing payment while holding the invoice lock and does not insert again', async () => {
     const trx: any = {};
@@ -108,6 +112,27 @@ describe('recordExternalPayment de-duplication', () => {
     });
     expect(result.paymentRecorded).toBe(true);
     expect(publishWorkflowEvent).not.toHaveBeenCalled();
+  });
+
+  it('pushes the accounting op with the supplied reference', async () => {
+    const knex: any = { transaction: async (fn: (trx: any) => Promise<unknown>) => fn({ fn: { now: () => 'now' } }) };
+    await recordExternalPayment(knex, 'tenant-1', {
+      invoiceId: 'inv-1', amount: 1200, provider: 'stripe', referenceNumber: 'pi-4', currency: 'USD',
+    });
+    expect(enqueueExternalPaymentPush).toHaveBeenCalledWith(knex, 'tenant-1', expect.objectContaining({ referenceNumber: 'pi-4' }));
+  });
+
+  it('falls back to the payment id when a manual payment has no reference', async () => {
+    // paymentPushApplier refuses an op with a blank reference ("Missing payload
+    // fields") and retries it to 'skipped', so a cash entry would never reach
+    // QBO/Xero at all.
+    const knex: any = { transaction: async (fn: (trx: any) => Promise<unknown>) => fn({ fn: { now: () => 'now' } }) };
+    await recordExternalPayment(knex, 'tenant-1', {
+      invoiceId: 'inv-1', amount: 1200, provider: 'cash', currency: 'USD', source: 'manual',
+    });
+    expect(enqueueExternalPaymentPush).toHaveBeenCalledWith(knex, 'tenant-1', expect.objectContaining({
+      paymentId: 'pay-new', referenceNumber: 'pay-new',
+    }));
   });
 
   it('does not publish when the insert fails the transaction', async () => {

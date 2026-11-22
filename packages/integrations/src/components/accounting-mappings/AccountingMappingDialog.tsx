@@ -157,6 +157,14 @@ export function AccountingMappingDialog({
     [algaEntities, mappedAlgaIds, isEditing, ownAlgaId]
   );
 
+  // A searched Alga side (clients) withholds mapped entities on the server instead of filtering a list.
+  const AlgaPicker = module.algaSearch?.Picker;
+  const excludedAlgaIds = useMemo(
+    () => Array.from(mappedAlgaIds ?? []).filter((id) => !(isEditing && id === ownAlgaId)),
+    [mappedAlgaIds, isEditing, ownAlgaId]
+  );
+  const algaPlaceholder = t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField });
+
   const externalOptions = useMemo(
     () =>
       externalEntities
@@ -292,16 +300,26 @@ export function AccountingMappingDialog({
             <Label htmlFor={`${module.id}-alga-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.algaField}
             </Label>
-            <SearchableSelect
-              id={`${module.id}-alga-select`}
-              options={algaOptions}
-              value={selectedAlgaId}
-              onChange={(value: string) => setSelectedAlgaId(value || '')}
-              placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField })}
-              required
-              className="w-full"
-              dropdownMode="overlay"
-            />
+            {AlgaPicker ? (
+              <AlgaPicker
+                id={`${module.id}-alga-select`}
+                value={selectedAlgaId}
+                onChange={setSelectedAlgaId}
+                excludeIds={excludedAlgaIds}
+                placeholder={algaPlaceholder}
+              />
+            ) : (
+              <SearchableSelect
+                id={`${module.id}-alga-select`}
+                options={algaOptions}
+                value={selectedAlgaId}
+                onChange={(value: string) => setSelectedAlgaId(value || '')}
+                placeholder={algaPlaceholder}
+                required
+                className="w-full"
+                dropdownMode="overlay"
+              />
+            )}
           </div>
 
           {targetConfig ? (

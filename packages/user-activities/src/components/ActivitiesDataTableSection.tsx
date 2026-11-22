@@ -281,10 +281,13 @@ function formatActivityPrintDate(dateString?: string): string {
     }
   }, [currentPage, pageSize, getActivities, getEffectiveFilters, listViewMode, t]);
 
-  // useEffect to trigger loadActivities when filters or pagination changes
+  // useEffect to trigger loadActivities when filters or pagination changes.
+  // Nothing is requested until the saved filters have resolved (overrides count as resolved),
+  // so the table shows its skeleton rather than an unfiltered page it then replaces.
   useEffect(() => {
+    if (!filterState.isReady) return;
     loadActivities();
-  }, [loadActivities]); // Dependency is the memoized function itself
+  }, [loadActivities, filterState.isReady]); // Dependency is the memoized function itself
 
   // Memoize event handlers to prevent unnecessary re-renders
   const handleViewDetails = useCallback((activity: Activity) => {

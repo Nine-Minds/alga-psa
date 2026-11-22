@@ -554,7 +554,8 @@
         "success": {
           "one": "1 tavla har importerats.",
           "other": "{{count}} tavlor har importerats."
-        }
+        },
+        "empty": "Alla standardtavlor har redan importerats."
       },
       "table": {
         "headers": {
@@ -584,7 +585,8 @@
           "placeholder": "Välj en tavla för importerade kategorier",
           "help": "Alla importerade kategorier tilldelas den här tavlan"
         },
-        "parentAutoSelectTitle": "Den överordnade kategorin väljs automatiskt"
+        "parentAutoSelectTitle": "Den överordnade kategorin väljs automatiskt",
+        "empty": "Den här tavlan har redan alla standardkategorier."
       },
       "errors": {
         "missingParents": "Det går inte att importera underkategorier utan deras överordnade kategorier. Markera även: {{parents}}",
@@ -702,7 +704,8 @@
         "success": {
           "one": "1 status har importerats.",
           "other": "{{count}} statusar har importerats."
-        }
+        },
+        "empty": "Den här tavlan har redan alla standardstatusar."
       },
       "table": {
         "headers": {
@@ -771,7 +774,8 @@
         "success": {
           "one": "1 prioritet har importerats.",
           "other": "{{count}} prioriteter har importerats."
-        }
+        },
+        "empty": "Alla standardprioriteter har redan importerats."
       },
       "table": {
         "headers": {
@@ -797,6 +801,9 @@
       },
       "table": {
         "actions": "Åtgärder"
+      },
+      "import": {
+        "loading": "Läser in tillgängliga objekt…"
       }
     },
     "header": {

@@ -237,7 +237,6 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   let tenantId: string;
   let clientId: string;
   let staffUserId: string;
-  let staffUser: { user_id: string; user_type: 'internal'; tenant: string };
   let contactId: string;
   let clientUserId: string;
   let boardId: string;
@@ -248,7 +247,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   const originalAllowPrivate = process.env.WEBHOOK_SSRF_ALLOW_PRIVATE;
 
   const table = (name: string) => tenantDb(db, tenantId).table(name);
-  const staffCtx = () => ({ tenant: tenantId, userId: staffUserId, user: staffUser }) as any;
+  const staffCtx = () => ({ tenant: tenantId, userId: staffUserId }) as any;
   const clientCtx = () => ({ tenant: tenantId, userId: clientUserId }) as any;
 
   async function setTracking(enabled: boolean) {
@@ -282,7 +281,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   let commentHookCreated = false;
   async function ensureCommentHook() {
     if (commentHookCreated) return;
-    const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
+    const webhookService = new WebhookService();
     process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = 'true';
     await webhookService.createWebhook(
       {
@@ -317,7 +316,6 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     tenantId = await createTenant(db, 'RS REST Tenant');
     clientId = await createClient(db, tenantId, 'RS REST Client');
     staffUserId = await createUser(db, tenantId, { first_name: 'Sam', last_name: 'Staff', user_type: 'internal' });
-    staffUser = { user_id: staffUserId, user_type: 'internal', tenant: tenantId };
 
     contactId = uuidv4();
     await table('contacts').insert({
@@ -464,7 +462,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     );
     const stub = await startStubServer();
     try {
-      const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
+      const webhookService = new WebhookService();
       const created = await webhookService.createWebhook(
         {
           name: 'RS hook',

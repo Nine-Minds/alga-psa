@@ -244,6 +244,7 @@ const TEMPLATE_PLACEHOLDERS: Record<string, (params: CreateAlertTicketParams) =>
   organization: ({ organizationName, event }) => organizationName ?? event.externalOrganizationId ?? '',
 };
 
+// LEVERAGE: pattern template-token-render — another {{key}} renderer; packages/tickets/src/lib/titleTokens.ts (listTokens/substituteTokens) is the shared engine
 function renderTemplate(template: string | undefined, params: CreateAlertTicketParams): string | null {
   if (!template) return null;
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) => {
@@ -286,11 +287,13 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
     .join('\n');
 }
 
+// LEVERAGE: pattern rmm-provider-registration — hand-maintained provider label map
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
   datto: 'Datto RMM',
   levelio: 'Level',
+  unifi: 'UniFi',
   huntress: 'Huntress',
   tanium: 'Tanium',
 };

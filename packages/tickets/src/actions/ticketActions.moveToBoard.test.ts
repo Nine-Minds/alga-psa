@@ -10,17 +10,28 @@ const updateTicketInTransactionMock = vi.fn();
 const hasPermissionMock = vi.fn();
 const createTagsForEntityWithTransactionMock = vi.fn();
 const findTagsByEntityIdsMock = vi.fn();
+const bulkApplyTagsToEntitiesMock = vi.fn();
+const getTagsByEntitiesMock = vi.fn();
+const authorizeTicketRecordAccessMock = vi.fn();
+const authorizeTicketRecordAccessConcealedMock = vi.fn();
 const assignTeamToTicketMock = vi.fn();
 const removeTeamFromTicketMock = vi.fn();
-const deleteTicketTeamResourcesMock = vi.fn();
-const ticketTeamResourcesWhereMock = vi.fn();
+
+const securityState = vi.hoisted(() => ({
+  user: { user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' } as any,
+  createdTags: [] as Array<{ entityId: string; tagText: string }>,
+  appointmentRows: [] as Array<Record<string, unknown>>,
+  appointmentQueryCount: 0,
+  authorizationOrder: [] as string[],
+  deniedTicketId: null as string | null,
+}));
 
 const getDefaultStatusIdMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
-    action({ user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
+    action(securityState.user, { tenant: 'tenant-1' }, ...args),
   // The real one resolves the caller's locale; with no request scope here it
   // would return the payload unchanged anyway.
   localizeActionError: async (result: unknown) => result,
@@ -39,6 +50,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any) => query,
   }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
@@ -81,6 +93,18 @@ vi.mock('@alga-psa/tags/actions', () => ({
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTagsForEntityWithTransaction: (...args: any[]) => createTagsForEntityWithTransactionMock(...args),
   findTagsByEntityIds: (...args: any[]) => findTagsByEntityIdsMock(...args),
+  bulkApplyTagsToEntities: (...args: any[]) => bulkApplyTagsToEntitiesMock(...args),
+}));
+
+vi.mock('@alga-psa/tags/models/tagMapping', () => ({
+  default: {
+    getByEntities: (...args: any[]) => getTagsByEntitiesMock(...args),
+  },
+}));
+
+vi.mock('../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: (...args: any[]) => authorizeTicketRecordAccessMock(...args),
+  authorizeTicketRecordAccessConcealed: (...args: any[]) => authorizeTicketRecordAccessConcealedMock(...args),
 }));
 
 vi.mock('@alga-psa/tags/actions/tagActionErrors', () => ({
@@ -148,9 +172,23 @@ vi.mock('@alga-psa/sla/services', () => ({
   SlaBackendFactory: {},
 }));
 
-function createMockTrx(tickets: Map<string, Record<string, any>>) {
+function createMockTrx(
+  tickets: Map<string, Record<string, any>>,
+  boards: Map<string, Record<string, any>> = new Map([['board-dest', { board_id: 'board-dest', is_inactive: false }]]),
+) {
   return ((table: string) => {
     let whereClause: Record<string, any> | undefined;
+    if (table === 'boards') {
+      const boardsApi: any = {
+        select: () => boardsApi,
+        where: (criteria: Record<string, any>) => {
+          whereClause = criteria;
+          return boardsApi;
+        },
+        first: async () => (whereClause?.board_id ? boards.get(whereClause.board_id) : undefined),
+      };
+      return boardsApi;
+    }
     const tableApi: any = {
       where: (criteria: Record<string, any>) => {
         whereClause = criteria;
@@ -174,13 +212,18 @@ function createMockTrx(tickets: Map<string, Record<string, any>>) {
         return 1;
       },
     };
-    if (table !== 'tickets') {
-      return {
-        where: vi.fn().mockReturnThis(),
-        first: vi.fn(),
-        update: vi.fn(),
+    if (table === 'appointment_requests as ar') {
+      const query: any = {
+        where: () => query,
+        select: () => query,
+        orderBy: async () => {
+          securityState.appointmentQueryCount += 1;
+          return securityState.appointmentRows;
+        },
       };
+      return query;
     }
+    if (table !== 'tickets') return { where: vi.fn().mockReturnThis(), first: vi.fn(), update: vi.fn() };
     return tableApi;
   }) as any;
 }
@@ -188,7 +231,14 @@ function createMockTrx(tickets: Map<string, Record<string, any>>) {
 describe('ticketActions moveTicketsToBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    securityState.user = { user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' };
+    securityState.createdTags = [];
+    securityState.appointmentRows = [];
+    securityState.appointmentQueryCount = 0;
+    securityState.authorizationOrder = [];
+    securityState.deniedTicketId = null;
     createTenantKnexMock.mockResolvedValue({ knex: {} });
+    getTagsByEntitiesMock.mockReset().mockResolvedValue([]);
     hasPermissionMock.mockResolvedValue(true);
     getDefaultStatusIdMock.mockReset();
     validateStatusBelongsToBoardMock.mockReset();
@@ -198,6 +248,25 @@ describe('ticketActions moveTicketsToBoard', () => {
     updateTicketInTransactionMock.mockResolvedValue('success');
     hasPermissionMock.mockReset();
     hasPermissionMock.mockResolvedValue(true);
+    authorizeTicketRecordAccessMock.mockReset();
+    authorizeTicketRecordAccessMock.mockImplementation(async (input: any) => {
+      securityState.authorizationOrder.push(`authorize:${input.ticketId}`);
+      if (input.ticketId === securityState.deniedTicketId) {
+        throw new Error('Permission denied: Cannot access ticket');
+      }
+    });
+    authorizeTicketRecordAccessConcealedMock.mockReset();
+    authorizeTicketRecordAccessConcealedMock.mockImplementation(async () => undefined);
+    bulkApplyTagsToEntitiesMock.mockReset();
+    bulkApplyTagsToEntitiesMock.mockImplementation(async (_trx: any, _tenant: string, _type: string, applications: any[]) => {
+      securityState.authorizationOrder.push('apply-tags');
+      for (const application of applications) {
+        for (const tagText of application.newTexts) {
+          securityState.createdTags.push({ entityId: application.entityId, tagText });
+        }
+      }
+      return { appliedByEntity: {} };
+    });
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
       const tickets = new Map();
       return callback(createMockTrx(tickets));
@@ -327,31 +396,47 @@ describe('ticketActions moveTicketsToBoard', () => {
     expect(result.movedIds).toEqual(['ticket-7']);
   });
 
-  it('T015: returned authorization errors fail individual moves and leave denied tickets unchanged', async () => {
+  it('rejects an inactive destination board for every selected ticket without moving any', async () => {
     const tickets = new Map<string, Record<string, any>>([
-      ['ticket-allowed', { ticket_id: 'ticket-allowed', tenant: 'tenant-1', board_id: 'board-source' }],
-      ['ticket-denied', { ticket_id: 'ticket-denied', tenant: 'tenant-1', board_id: 'board-source' }],
+      ['ticket-11', { ticket_id: 'ticket-11', tenant: 'tenant-1', board_id: 'board-source' }],
+      ['ticket-12', { ticket_id: 'ticket-12', tenant: 'tenant-1', board_id: 'board-source' }],
     ]);
-    const deniedTicketBefore = { ...tickets.get('ticket-denied')! };
-    getDefaultStatusIdMock.mockResolvedValue('status-default');
-    updateTicketWithCacheMock.mockImplementation(async (ticketId: string, updates: Record<string, any>) => {
-      if (ticketId === 'ticket-denied') {
-        return { permissionError: 'Permission denied: Cannot access ticket' };
-      }
-      tickets.set(ticketId, { ...tickets.get(ticketId), ...updates });
-      return 'success';
-    });
-    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(tickets)));
+    const boards = new Map([['board-dest', { board_id: 'board-dest', is_inactive: true }]]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(createMockTrx(tickets, boards)));
 
     const { moveTicketsToBoard } = await import('./ticketActions');
-    const result = await moveTicketsToBoard(['ticket-allowed', 'ticket-denied'], 'board-dest', '');
+    const result = await moveTicketsToBoard(['ticket-11', 'ticket-12'], 'board-dest', '');
 
     expect(result).toEqual({
-      movedIds: ['ticket-allowed'],
-      failed: [{ ticketId: 'ticket-denied', message: 'Permission denied: Cannot access ticket' }],
+      movedIds: [],
+      failed: [
+        { ticketId: 'ticket-11', message: 'The destination board is inactive. Choose an active board.' },
+        { ticketId: 'ticket-12', message: 'The destination board is inactive. Choose an active board.' },
+      ],
     });
-    expect(tickets.get('ticket-allowed')).toMatchObject({ board_id: 'board-dest', status_id: 'status-default' });
-    expect(tickets.get('ticket-denied')).toEqual(deniedTicketBefore);
+    expect(getDefaultStatusIdMock).not.toHaveBeenCalled();
+    expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a destination board that does not exist', async () => {
+    const tickets = new Map<string, Record<string, any>>([
+      ['ticket-13', { ticket_id: 'ticket-13', tenant: 'tenant-1', board_id: 'board-source' }],
+    ]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(createMockTrx(tickets, new Map())));
+
+    const { moveTicketsToBoard } = await import('./ticketActions');
+    const result = await moveTicketsToBoard(['ticket-13'], 'board-missing', 'status-1');
+
+    expect(result).toEqual({
+      movedIds: [],
+      failed: [
+        { ticketId: 'ticket-13', message: 'Board not found. It may have been deleted. Please refresh and try again.' },
+      ],
+    });
+    expect(validateStatusBelongsToBoardMock).not.toHaveBeenCalled();
+    expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
   });
 
   it('T042: forwards suppression flags to every moved ticket', async () => {
@@ -393,15 +478,7 @@ describe('ticketActions bulk notification suppression options', () => {
     hasPermissionMock.mockResolvedValue(true);
     assignTeamToTicketMock.mockResolvedValue(undefined);
     removeTeamFromTicketMock.mockResolvedValue(undefined);
-    deleteTicketTeamResourcesMock.mockReset().mockResolvedValue(1);
-    ticketTeamResourcesWhereMock.mockReset().mockReturnThis();
-    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(((_table: string) => {
-      const query: any = {
-        where: ticketTeamResourcesWhereMock,
-        delete: deleteTicketTeamResourcesMock,
-      };
-      return query;
-    }) as any));
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback({}));
   });
 
   it('T029: bulk status update forwards silent options to each ticket update', async () => {
@@ -496,14 +573,9 @@ describe('ticketActions bulk notification suppression options', () => {
       expect.objectContaining({ user_id: 'internal-user-1' }),
       'tenant-1',
       'ticket-assignee',
-      { assigned_to: 'user-2', assigned_team_id: null },
-      {
-        suppressContactNotifications: true,
-        suppressInternalNotifications: true,
-      },
+      { assigned_to: 'user-2' },
+      options,
     );
-    expect(deleteTicketTeamResourcesMock).toHaveBeenCalledTimes(1);
-    expect(ticketTeamResourcesWhereMock).toHaveBeenCalledWith({ ticket_id: 'ticket-assignee', role: 'team_member' });
   });
 
   it('T040: bulk team assignment forwards suppression options to the team assignment helper', async () => {
@@ -569,5 +641,193 @@ describe('ticketActions bulk update permission handling', () => {
     expect(createTagsForEntityWithTransactionMock).not.toHaveBeenCalled();
     expect(updateTicketInTransactionMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ticketActions ticket action authorization regressions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    securityState.user = { user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' };
+    securityState.createdTags = [];
+    securityState.appointmentRows = [];
+    securityState.appointmentQueryCount = 0;
+    securityState.authorizationOrder = [];
+    securityState.deniedTicketId = null;
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    getTagsByEntitiesMock.mockReset().mockResolvedValue([]);
+    hasPermissionMock.mockReset().mockResolvedValue(true);
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(new Map())));
+    authorizeTicketRecordAccessMock.mockReset().mockImplementation(async (input: any) => {
+      securityState.authorizationOrder.push(`authorize:${input.ticketId}`);
+      if (input.ticketId === securityState.deniedTicketId) throw new Error('Permission denied: Cannot access ticket');
+    });
+    authorizeTicketRecordAccessConcealedMock.mockReset().mockImplementation(async (input: any) => {
+      if (input.ticketId === securityState.deniedTicketId) throw new Error('Permission denied: Cannot access ticket');
+    });
+    bulkApplyTagsToEntitiesMock.mockReset().mockImplementation(async (_trx: any, _tenant: string, _type: string, applications: any[]) => {
+      securityState.authorizationOrder.push('apply-tags');
+      for (const application of applications) {
+        for (const tagText of application.newTexts) securityState.createdTags.push({ entityId: application.entityId, tagText });
+      }
+      return { appliedByEntity: {} };
+    });
+  });
+
+  it('denies a client with generic ticket:update before bulk tag creation or attachment', async () => {
+    securityState.user = { user_id: 'client-user-1', user_type: 'client', clientId: 'client-1', tenant: 'tenant-1' };
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a'], ['new-tag']);
+
+    expect(result).toEqual({
+      updatedIds: [],
+      failed: [{ ticketId: 'ticket-a', message: 'Permission denied: operation not available in client portal' }],
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(bulkApplyTagsToEntitiesMock).not.toHaveBeenCalled();
+    expect(securityState.createdTags).toEqual([]);
+  });
+
+  it('denies an internal principal without tag:create', async () => {
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) =>
+      resource === 'ticket' && action === 'update');
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a'], ['new-tag']);
+
+    expect(result).toEqual({
+      updatedIds: [],
+      failed: [{ ticketId: 'ticket-a', message: 'Permission denied: Cannot create tags' }],
+    });
+    expect(authorizeTicketRecordAccessMock).not.toHaveBeenCalled();
+    expect(bulkApplyTagsToEntitiesMock).not.toHaveBeenCalled();
+    expect(securityState.createdTags).toEqual([]);
+  });
+
+  it('rejects a mixed batch before creating or attaching any tags', async () => {
+    securityState.deniedTicketId = 'ticket-hidden';
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-visible', 'ticket-hidden'], ['new-tag']);
+
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed).toHaveLength(2);
+    expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(2);
+    expect(securityState.authorizationOrder).toEqual(['authorize:ticket-visible', 'authorize:ticket-hidden']);
+    expect(getTagsByEntitiesMock).not.toHaveBeenCalled();
+    expect(bulkApplyTagsToEntitiesMock).not.toHaveBeenCalled();
+    expect(securityState.createdTags).toEqual([]);
+  });
+
+  it('bulk tags all authorized tickets in one transaction after authorizing every target', async () => {
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a', 'ticket-b'], [' urgent ', 'urgent']);
+
+    expect(result).toEqual({ updatedIds: ['ticket-a', 'ticket-b'], failed: [] });
+    expect(withTransactionMock).toHaveBeenCalledTimes(1);
+    expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(2);
+    expect(authorizeTicketRecordAccessMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      tenant: 'tenant-1', ticketId: 'ticket-a', action: 'update',
+    }));
+    expect(authorizeTicketRecordAccessMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      tenant: 'tenant-1', ticketId: 'ticket-b', action: 'update',
+    }));
+    expect(bulkApplyTagsToEntitiesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      'ticket',
+      [
+        { entityId: 'ticket-a', newTexts: ['urgent'], existingTexts: [] },
+        { entityId: 'ticket-b', newTexts: ['urgent'], existingTexts: [] },
+      ],
+    );
+    expect(securityState.authorizationOrder).toEqual(['authorize:ticket-a', 'authorize:ticket-b', 'apply-tags']);
+    expect(securityState.createdTags).toEqual([
+      { entityId: 'ticket-a', tagText: 'urgent' },
+      { entityId: 'ticket-b', tagText: 'urgent' },
+    ]);
+  });
+
+  it('keeps existing tag snapshots and normalized targets in the authorized tenant transaction', async () => {
+    const trx = createMockTrx(new Map());
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+    getTagsByEntitiesMock.mockImplementation(async () => {
+      securityState.authorizationOrder.push('read-tags');
+      return [
+        { tagged_id: 'ticket-a', tag_text: 'existing-a' },
+        { tagged_id: 'ticket-b', tag_text: 'existing-b' },
+      ];
+    });
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a', 'ticket-a', 'ticket-b'], [' urgent ', 'urgent', '']);
+
+    expect(result).toEqual({ updatedIds: ['ticket-a', 'ticket-b'], failed: [] });
+    expect(securityState.authorizationOrder).toEqual([
+      'authorize:ticket-a', 'authorize:ticket-b', 'read-tags', 'apply-tags',
+    ]);
+    for (const ticketId of ['ticket-a', 'ticket-b']) {
+      expect(authorizeTicketRecordAccessMock).toHaveBeenCalledWith({
+        trx, tenant: 'tenant-1', user: securityState.user, ticketId, action: 'update',
+      });
+    }
+    expect(getTagsByEntitiesMock).toHaveBeenCalledExactlyOnceWith(trx, 'tenant-1', ['ticket-a', 'ticket-b'], 'ticket');
+    expect(bulkApplyTagsToEntitiesMock).toHaveBeenCalledExactlyOnceWith(trx, 'tenant-1', 'ticket', [
+      { entityId: 'ticket-a', newTexts: ['urgent'], existingTexts: ['existing-a'] },
+      { entityId: 'ticket-b', newTexts: ['urgent'], existingTexts: ['existing-b'] },
+    ]);
+    expect(securityState.createdTags).toEqual([
+      { entityId: 'ticket-a', tagText: 'urgent' },
+      { entityId: 'ticket-b', tagText: 'urgent' },
+    ]);
+    expect(revalidatePathMock).toHaveBeenCalledTimes(1);
+    expect(revalidatePathMock.mock.calls[0][0]).toBe('/msp/tickets');
+  });
+
+  it('reports every target as failed and leaves the list cache alone when tag storage rejects the batch', async () => {
+    bulkApplyTagsToEntitiesMock.mockRejectedValue(new Error('tag storage failed'));
+    const { bulkAddTagsToTickets } = await import('./ticketActions');
+
+    const result = await bulkAddTagsToTickets(['ticket-a', 'ticket-a', 'ticket-b'], ['urgent']);
+
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed.map(({ ticketId }) => ticketId)).toEqual(['ticket-a', 'ticket-b']);
+    expect(securityState.createdTags).toEqual([]);
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it('conceals appointment access for a client with ticket:read on a hidden ticket', async () => {
+    securityState.user = { user_id: 'client-user-1', user_type: 'client', clientId: 'client-1', tenant: 'tenant-1' };
+    securityState.deniedTicketId = 'ticket-hidden';
+    securityState.appointmentRows = [{ appointment_request_id: 'appointment-secret' }];
+    const { getTicketAppointmentRequests } = await import('./ticketActions');
+
+    const result = await getTicketAppointmentRequests('ticket-hidden');
+
+    expect(result).toEqual({ success: false, error: 'Permission denied: Cannot access ticket' });
+    expect(authorizeTicketRecordAccessConcealedMock).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-1',
+      ticketId: 'ticket-hidden',
+      action: 'read',
+    }));
+    expect(securityState.appointmentQueryCount).toBe(0);
+    expect(result).not.toHaveProperty('data');
+    expect(JSON.stringify(result)).not.toContain('appointment-secret');
+  });
+
+  it('returns appointment requests for an authorized ticket', async () => {
+    securityState.appointmentRows = [{ appointment_request_id: 'appointment-1', service_name: 'Onsite visit' }];
+    const { getTicketAppointmentRequests } = await import('./ticketActions');
+
+    const result = await getTicketAppointmentRequests('ticket-visible');
+
+    expect(result).toEqual({ success: true, data: securityState.appointmentRows });
+    expect(authorizeTicketRecordAccessConcealedMock).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-1',
+      ticketId: 'ticket-visible',
+      action: 'read',
+    }));
+    expect(securityState.appointmentQueryCount).toBe(1);
   });
 });

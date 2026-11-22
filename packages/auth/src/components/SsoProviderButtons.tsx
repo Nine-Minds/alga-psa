@@ -11,10 +11,7 @@ import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 // `useSuspense: false` keeps this usable without a Suspense boundary.
 import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
-
-// LEVERAGE: pattern sso-provider-buttons — byte-identical copy lives at
-// ee/server/src/components/auth/SsoProviderButtons.tsx; the CE/EE split has no
-// behavioural difference, so both copies must be edited in lockstep.
+import type { SsoProviderId } from '../lib/sso/types';
 
 const MicrosoftMulticolorLogo = () => (
   <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -26,7 +23,7 @@ const MicrosoftMulticolorLogo = () => (
 );
 
 type MspSsoProvider = {
-  id: 'google' | 'azure-ad' | 'keycloak';
+  id: SsoProviderId;
   nameKey: string;
   nameFallback: string;
 };
@@ -71,6 +68,13 @@ export interface SsoProviderButtonsProps {
   discoveryEndpoint?: string;
   resolveEndpoint?: string;
   storageKey?: string;
+  /**
+   * Providers the tenant offers on this surface, decided server-side. When supplied
+   * the visible set is the edition set narrowed to these, from the first render,
+   * and the deployment-wide NextAuth registry is not consulted. Omit it (MSP) for
+   * the registry-driven set.
+   */
+  offeredProviders?: readonly SsoProviderId[];
 }
 
 export default function SsoProviderButtons({
@@ -84,11 +88,19 @@ export default function SsoProviderButtons({
   discoveryEndpoint,
   resolveEndpoint,
   storageKey,
+  offeredProviders,
 }: SsoProviderButtonsProps): React.ReactElement {
   const { t } = useTranslation('common', { useSuspense: false });
   const [hasHydrated, setHasHydrated] = useState(false);
   useEffect(() => setHasHydrated(true), []);
-  const editionProviders = useMemo(() => visibleProviders(authSurface), [authSurface]);
+  const hasOfferedProviders = offeredProviders !== undefined;
+  const offeredKey = offeredProviders?.join(',');
+  const editionProviders = useMemo(() => {
+    const providers = visibleProviders(authSurface);
+    return offeredProviders ? providers.filter((provider) => offeredProviders.includes(provider.id)) : providers;
+    // `offeredKey` stands in for the array so a new array with the same ids is not a change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSurface, offeredKey]);
   // A provider button exists when NextAuth registers it app-wide (deployment-level
   // credentials) or when discovery offers it for the typed email (tenant-level
   // credentials, which NextAuth only loads once sign-in resolution runs). Until
@@ -137,7 +149,8 @@ export default function SsoProviderButtons({
     portalDomainHint || (authSurface === 'client_portal' ? inferredPortalDomain : undefined);
 
   useEffect(() => {
-    if (editionProviders.length === 0) return;
+    // The server already decided the set; the registry is deployment-wide and would only widen it.
+    if (hasOfferedProviders || editionProviders.length === 0) return;
     let cancelled = false;
     const loadRegisteredProviders = async () => {
       try {
@@ -154,7 +167,7 @@ export default function SsoProviderButtons({
     return () => {
       cancelled = true;
     };
-  }, [editionProviders]);
+  }, [editionProviders, hasOfferedProviders]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

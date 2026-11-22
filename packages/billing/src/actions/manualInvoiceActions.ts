@@ -1,6 +1,5 @@
 'use server'
 
-import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { InvoiceViewModel, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types';
@@ -13,7 +12,7 @@ import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, resolveTenantToday } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
@@ -185,7 +184,7 @@ export const generateManualInvoice = withAuth(async (
       currencyCode = billingSettings?.default_currency_code || 'USD';
     }
 
-    const currentDate = Temporal.Now.plainDateISO().toString();
+    const currentDate = (await resolveTenantToday(knex, tenant)).toString();
     // Which profile this invoice bills (F095). The pick is validated against the
     // client so a profile that moved in with a merged client can never be billed
     // under the wrong customer. No pick leaves the invoice unattributed and its
@@ -345,7 +344,7 @@ export const updateManualInvoice = withAuth(async (
 
   // Get client details
   const client = await invoiceService.getClientDetails(knex, tenant, clientId);
-  const currentDate = Temporal.Now.plainDateISO().toString();
+  const currentDate = (await resolveTenantToday(knex, tenant)).toString();
   const billingEngine = new BillingEngine();
 
   // Delete existing items and insert new ones

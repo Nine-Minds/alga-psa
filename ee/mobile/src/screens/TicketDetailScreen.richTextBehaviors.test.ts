@@ -60,8 +60,9 @@ function parseEditorContent(content: string | null | undefined): unknown {
   }
 }
 
-vi.mock("../capabilities/CapabilitiesContext", () => ({
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
   useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
+  useDontNotifyCustomerDefault: () => false,
 }));
 vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("../config/appConfig", () => ({

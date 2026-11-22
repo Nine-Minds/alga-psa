@@ -1,4 +1,4 @@
-import { Handshake } from 'lucide-react';
+import { Archive, Handshake } from 'lucide-react';
 import { registerUiSlot } from '@alga-psa/ui/capability/uiSlotRegistry';
 import type { NavigationSection } from './menuConfig';
 
@@ -19,6 +19,13 @@ export const CO_MANAGED_MENU_GROUP: NavigationSection = {
       translationKey: 'nav.coManaged',
       icon: Handshake,
       href: '/msp/co-managed',
+      requiredPermission: 'co_management:read',
+    },
+    {
+      name: 'Co-managed archive',
+      translationKey: 'nav.coManagedArchive',
+      icon: Archive,
+      href: '/msp/co-managed/archive',
       requiredPermission: 'co_management:read',
     },
   ],

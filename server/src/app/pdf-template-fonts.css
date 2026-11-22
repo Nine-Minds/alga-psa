@@ -1,0 +1,32 @@
+/*
+ * Plain-named faces for the fonts the document renderers name.
+ *
+ * Invoice/quote/label CSS is shared between the PDF (where the faces arrive
+ * inlined, see packages/billing/src/lib/pdf-fonts) and the in-app preview,
+ * which injects the same stylesheet into this document. next/font exposes Inter
+ * and JetBrains Mono only through hashed family names behind --font-inter /
+ * --font-mono, so the plain names the shared CSS emits would otherwise fall
+ * back to a system face and the preview would not match the printed document.
+ *
+ * Italic is left to the browser's synthetic oblique: the served TTF is the
+ * upright variable face, and the preview does not warrant a second binary.
+ *
+ * Both families are SIL Open Font License 1.1; the license texts live next to
+ * the binaries in src/app/fonts (LICENSE-Inter.txt, LICENSE-JetBrainsMono.txt)
+ * and cover the copies served from public/fonts as well.
+ */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}

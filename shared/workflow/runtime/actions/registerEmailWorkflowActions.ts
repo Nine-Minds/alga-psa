@@ -53,7 +53,8 @@ const ticketThreadInfoSchema = z.object({
 const replyTokenMatchSchema = z.object({
   ticketId: z.string().optional().describe('Matched ticket ID'),
   commentId: z.string().optional().describe('Matched comment ID'),
-  projectId: z.string().optional().describe('Matched project ID')
+  projectId: z.string().optional().describe('Matched project ID'),
+  expiryValid: z.boolean().describe('Whether the matched token has a valid future expiry')
 });
 
 /** Schema for parsed email reply */
@@ -226,7 +227,16 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       try {
         const match = await findTicketByReplyToken(input.token, ctx.tenantId ?? '');
-        return { success: !!match, match };
+        const expiryValid = match?.expiryValid === true;
+        return {
+          success: expiryValid,
+          match: match ? {
+            ...match,
+            ticketId: expiryValid ? match.ticketId : undefined,
+            commentId: expiryValid ? match.commentId : undefined,
+            projectId: expiryValid ? match.projectId : undefined,
+          } : null,
+        };
       } catch (error) {
         return { success: false, match: null, message: error instanceof Error ? error.message : String(error) };
       }
@@ -286,14 +296,22 @@ export function registerEmailWorkflowActionsV2(): void {
         const token = (input.parsedEmail as any)?.metadata?.parser?.tokens?.conversationToken;
         if (token) {
           const match = await findTicketByReplyToken(String(token), ctx.tenantId ?? '');
-	          if (match?.ticketId) {
-	            return {
-	              success: true,
-	              ticket: { ticketId: match.ticketId },
-	              source: 'replyToken' as const
-	            };
-	          }
-	        }
+          if (match && match.expiryValid !== true) {
+            return {
+              success: false,
+              ticket: null,
+              source: 'replyToken' as const,
+              message: 'Reply token is expired or invalid',
+            };
+          }
+          if (match?.ticketId) {
+            return {
+              success: true,
+              ticket: { ticketId: match.ticketId },
+              source: 'replyToken' as const
+            };
+          }
+        }
 
         const ticket = await findTicketByEmailThread({
           threadId: input.emailData.threadId,
@@ -302,18 +320,18 @@ export function registerEmailWorkflowActionsV2(): void {
           originalMessageId: input.emailData.inReplyTo
         }, ctx.tenantId ?? '');
 
-	        if (ticket) {
-	          return {
-	            success: true,
-	            ticket: {
-	              ticketId: ticket.ticketId,
-	              ticketNumber: ticket.ticketNumber,
-	              subject: ticket.subject,
-	              status: ticket.status
-	            },
-	            source: 'threadHeaders' as const
-	          };
-	        }
+        if (ticket) {
+          return {
+            success: true,
+            ticket: {
+              ticketId: ticket.ticketId,
+              ticketNumber: ticket.ticketNumber,
+              subject: ticket.subject,
+              status: ticket.status
+            },
+            source: 'threadHeaders' as const
+          };
+        }
 
         return { success: false, ticket: null, source: null };
       } catch (error) {
