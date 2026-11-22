@@ -29,7 +29,7 @@ describe('document upload and association mutation tenant-scoped query contract'
     // Without the folder they land in the library root; without the
     // association nothing ties the image to the article it belongs to.
     expect(uploadAssociationSection).toContain('resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH');
-    expect(uploadAssociationSection).toContain('ensureInlineImageFolder(knex, tenant, authenticatedUserId)');
+    expect(uploadAssociationSection).toContain('ensureInlineImageFolder(trx, tenant, authenticatedUserId)');
     expect(uploadAssociationSection).toContain('if (options.parentDocumentId) {');
     expect(uploadAssociationSection).toContain("entity_type: 'document'");
   });

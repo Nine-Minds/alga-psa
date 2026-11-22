@@ -1,5 +1,6 @@
 'use server'
 
+import { applyAssociationTargetSearchScope, assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
 import { resolveDocumentTypeForMime } from '../lib/documentTypeLookup';
@@ -2062,11 +2063,14 @@ export const searchDocumentAssociationEntities = withAuth(async (
     };
 
     const db = tenantDb(trx, tenant);
+    const scoped = (query: Knex.QueryBuilder, alias: string) =>
+      applyAssociationTargetSearchScope(query, trx, tenant, user, entityType, alias);
 
     if (entityType === 'client') {
       let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');
+      if (!await scoped(query, 'clients')) return { options: [], total: 0 };
       query = applySearch(query, ['client_name']);
       const total = await countRows(query, 'client_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2088,6 +2092,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('c.full_name', 'asc');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.full_name', 'c.email', 'cl.client_name']);
       const total = await countRows(query, 'c.contact_name_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2114,6 +2119,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('t.updated_at', 'desc');
+      if (!await scoped(query, 't')) return { options: [], total: 0 };
       query = applySearch(query, ['t.ticket_number', 't.title', 'cl.client_name']);
       const total = await countRows(query, 't.ticket_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2143,6 +2149,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('a.name', 'asc');
+      if (!await scoped(query, 'a')) return { options: [], total: 0 };
       query = applySearch(query, ['a.name', 'a.serial_number', 'cl.client_name']);
       const total = await countRows(query, 'a.asset_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2174,6 +2181,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('pt.updated_at', 'desc');
+      if (!await scoped(query, 'pt')) return { options: [], total: 0 };
       query = applySearch(query, ['pt.task_name', 'p.project_name', 'cl.client_name']);
       const total = await countRows(query, 'pt.task_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2191,6 +2199,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         )
         .orderBy('c.contract_name', 'asc')
         .distinct('c.contract_id', 'c.contract_name');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.contract_name', 'cl.client_name']);
       const total = await countRows(query, 'c.contract_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2217,6 +2226,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('o.updated_at', 'desc');
+      if (!await scoped(query, 'o')) return { options: [], total: 0 };
       query = applySearch(query, ['o.opportunity_number', 'o.title', 'cl.client_name']);
       const total = await countRows(query, 'o.opportunity_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2242,6 +2252,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         `)
       )
       .orderBy('q.updated_at', 'desc');
+    if (!await scoped(quoteQuery, 'q')) return { options: [], total: 0 };
     quoteQuery = applySearch(quoteQuery, ['q.quote_number', 'q.title', 'cl.client_name']);
     const total = await countRows(quoteQuery, 'q.quote_id');
     const rows = await quoteQuery.limit(safeLimit).offset(offset);
@@ -2299,6 +2310,10 @@ export const createDocumentAssociations = withAuth(async (
         if (!asset || !await isAssetMutationAllowed(trx, tenant, assetContext, asset, 'update')) {
           return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
         }
+      }
+
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
       }
 
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
@@ -2444,6 +2459,10 @@ export const removeDocumentAssociations = withAuth(async (
             return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
           }
         }
+      }
+
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
       }
 
       const targetedDocumentIds = rows.map((row: { document_id: string }) => row.document_id);

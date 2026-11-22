@@ -5,8 +5,10 @@ import * as reconnectRoute from '../../../app/api/email/imap/reconnect/route';
 
 const state = vi.hoisted(() => ({
   user: null as any,
+  tenant: 'tenant-from-session',
   canUpdateSettings: false,
   productAllowed: true,
+  productAccessError: new Error('Email to ticket is unavailable'),
   providerLookups: 0,
   updates: [] as Array<{ table: string; values: unknown; where: unknown }>,
   permissionChecks: 0,
@@ -20,17 +22,17 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => state.user,
 }));
 vi.mock('@/lib/db', () => ({
-  createTenantKnex: async () => {
+  createTenantKnex: vi.fn(async () => {
     state.tenantKnexCalls += 1;
-    return { knex: state.knex, tenant: 'tenant-from-session' };
-  },
+    return { knex: state.knex, tenant: state.tenant };
+  }),
 }));
 vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: async (input: unknown) => {
     state.productChecks.push(input);
-    if (!state.productAllowed) throw new Error('Product access denied');
+    if (!state.productAllowed) throw state.productAccessError;
   },
-  isProductAccessError: (error: unknown) => error instanceof Error && error.message === 'Product access denied',
+  isProductAccessError: (error: unknown) => error === state.productAccessError,
   toProductAccessDeniedResponse: () => new Response(null, { status: 403 }),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -112,6 +114,7 @@ describe('IMAP maintenance route authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.user = { user_id: 'staff-1', tenant: 'tenant-from-session', user_type: 'internal' };
+    state.tenant = 'tenant-from-session';
     state.canUpdateSettings = false;
     state.productAllowed = true;
     state.providerLookups = 0;
@@ -154,6 +157,19 @@ describe('IMAP maintenance route authorization', () => {
 
     it(`${endpoint.name}: rejects a session tenant mismatch before permission or provider access`, async () => {
       state.user = { ...state.user, tenant: 'another-tenant' };
+      state.canUpdateSettings = true;
+      const response = await post(endpoint.name);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'Tenant mismatch' });
+      expect(state.permissionChecks).toBe(0);
+      expect(state.productChecks).toEqual([]);
+      expect(state.tenantDbCalls).toEqual([]);
+      expect(state.updates).toEqual([]);
+    });
+
+    it(`${endpoint.name}: rejects a database tenant mismatch before permission or provider access`, async () => {
+      state.tenant = 'another-tenant';
       state.canUpdateSettings = true;
       const response = await post(endpoint.name);
 

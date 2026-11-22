@@ -54,6 +54,10 @@
       "import": "./dist/pagination/authorizationAwarePagination.js",
       "types": "./src/pagination/authorizationAwarePagination.ts"
     },
+    "./projectReadAuthorization": {
+      "import": "./dist/projectReadAuthorization.js",
+      "types": "./src/projectReadAuthorization.ts"
+    },
     "./assetReadAuthorization": {
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"

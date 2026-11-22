@@ -121,6 +121,30 @@ describe('nx workspace', () => {
     }
   });
 
+  it('keeps shared dependencies below its auth and feature consumers', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-shared-deps-'));
+    try {
+      const outFile = path.join(tmpDir, 'graph.json');
+      await runNx(['graph', '--file', outFile]);
+      const { graph } = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const projects = new Set<string>();
+      function visit(project: string) {
+        if (projects.has(project)) return;
+        projects.add(project);
+        for (const { target } of graph.dependencies[project] ?? []) visit(target);
+      }
+      visit('@alga-psa/shared');
+      expect(projects).toContain('@alga-psa/shared');
+      expect(projects).toContain('@alga-psa/authorization');
+      for (const consumer of ['@alga-psa/auth', '@alga-psa/projects', '@alga-psa/documents', 'server', 'sebastian-ee']) {
+        expect(projects).not.toContain(consumer);
+      }
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('plans dependency builds without prematurely building the server', { timeout: 180_000 }, async () => {
     // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-build-deps-'));
