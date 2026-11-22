@@ -63,6 +63,7 @@ async function expectSentinelsIntact(ownerSchema = sentinelSchema) {
 async function createFixture(options: { nullableExternalId?: boolean; distributeCustomers?: boolean } = {}) {
   await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customers')} CASCADE`);
   await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customer_bindings')} CASCADE`);
+  await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('tenants')} CASCADE`);
   await db.raw(`
     CREATE TABLE ${fixtureTable('stripe_customers')} (
       tenant uuid NOT NULL,
@@ -74,6 +75,16 @@ async function createFixture(options: { nullableExternalId?: boolean; distribute
   if (isCitus && options.distributeCustomers !== false) {
     await db.raw(`SELECT create_distributed_table('${schema}.stripe_customers', 'tenant')`);
   }
+}
+
+async function createLocalCustomerDistributedTenantGraph() {
+  await db.raw(`CREATE TABLE ${fixtureTable('tenants')} (tenant uuid PRIMARY KEY)`);
+  await db('tenants').insert([{ tenant: tenantA }, { tenant: tenantB }]);
+  await db.raw(`
+    ALTER TABLE ${fixtureTable('stripe_customers')}
+    ADD CONSTRAINT stripe_customers_legacy_tenant_fk
+    FOREIGN KEY (tenant) REFERENCES ${fixtureTable('tenants')} (tenant)`);
+  await db.raw('SELECT create_distributed_table(?::regclass, \'tenant\')', [`${schema}.tenants`]);
 }
 
 async function waitForMigrationLock(timeoutMs = 5_000) {
@@ -106,6 +117,22 @@ async function waitForBindingMigrationLock(timeoutMs = 5_000) {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error('Migration did not wait on the binding writer lock in time');
+}
+
+async function waitForQueuedLegacyCustomerWrite(timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { rows } = await admin.raw(`
+      SELECT 1
+      FROM pg_stat_activity a
+      JOIN pg_locks l ON l.pid = a.pid AND NOT l.granted
+      WHERE a.application_name = 'stripe-binding-migration-regression'
+        AND a.query ILIKE 'insert into%stripe_customers%'
+      LIMIT 1`);
+    if (rows.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error('Legacy customer insert did not queue behind the ownership migration lock');
 }
 
 suite('Stripe customer binding migration ownership enforcement', () => {
@@ -242,23 +269,102 @@ suite('Stripe customer binding migration ownership enforcement', () => {
     expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_new' })).toHaveLength(1);
   });
 
-  it.skipIf(!isCitus)('enforces global ownership for Citus local mappings when the FK graph includes distributed tables', async () => {
+  it.skipIf(!isCitus)('enforces binding ownership in the actual Citus local-to-distributed FK graph', async () => {
     await createFixture({ distributeCustomers: false });
-    await db('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_local_owner' });
+    await createLocalCustomerDistributedTenantGraph();
+    await db('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_local_existing' });
+    await db.schema.withSchema(schema).createTable('stripe_customer_bindings', (table) => {
+      table.text('stripe_customer_external_id').notNullable().primary();
+      table.uuid('tenant').notNullable();
+      table.timestamp('bound_at', { useTz: true }).notNullable().defaultTo(db.fn.now());
+      table.unique(['stripe_customer_external_id', 'tenant'], 'stripe_customer_bindings_owner_key');
+    });
+    // Simulate an installation that recorded the earlier migration, which
+    // converted the binding table to reference before Citus saw the full FK graph.
+    await db.raw('SELECT create_reference_table(?::regclass)', [
+      `${schema}.stripe_customer_bindings`,
+    ]);
 
-    await migration.up(db);
-    await forwardMigration.up(db);
+    // Hold a legacy write open while migration requests its lock. It must
+    // commit before migration scans, then receive a binding under the fence.
+    const legacyWriter = await db.transaction();
+    await legacyWriter('stripe_customers').insert({
+      tenant: tenantA,
+      stripe_customer_external_id: 'cus_local_race_before_lock',
+    });
+    const migrationResult = migration.up(db).then(
+      () => ({ error: null }),
+      (error: Error) => ({ error })
+    );
+    await waitForMigrationLock();
 
-    const ownershipConstraints = await db.raw(`
-      SELECT conname FROM pg_constraint
-      WHERE conrelid = 'stripe_customers'::regclass
-        AND conname IN ('stripe_customers_binding_owner_fk', 'stripe_customers_global_owner_key')`);
-    expect(ownershipConstraints.rows).toEqual([{ conname: 'stripe_customers_global_owner_key' }]);
-
-    const rejectedCrossTenantWrite = db('stripe_customers')
-      .insert({ tenant: tenantB, stripe_customer_external_id: 'cus_local_owner' })
+    // This legacy write queues behind the migration lock and resumes only
+    // after the ownership FK is committed; it must then fail without a claim.
+    const queuedLegacyInsert = db('stripe_customers')
+      .insert({ tenant: tenantA, stripe_customer_external_id: 'cus_local_queued_legacy' })
       .then(() => null, (error: Error) => error);
-    expect(await rejectedCrossTenantWrite).toBeInstanceOf(Error);
+    await waitForQueuedLegacyCustomerWrite();
+    await legacyWriter.commit();
+    expect((await migrationResult).error).toBeNull();
+    expect(await queuedLegacyInsert).toBeInstanceOf(Error);
+
+    await forwardMigration.up(db);
+    expect(await db('stripe_customer_bindings')
+      .whereIn('stripe_customer_external_id', ['cus_local_existing', 'cus_local_race_before_lock'])
+      .orderBy('stripe_customer_external_id')
+      .select('stripe_customer_external_id', 'tenant'))
+      .toEqual([
+        { stripe_customer_external_id: 'cus_local_existing', tenant: tenantA },
+        { stripe_customer_external_id: 'cus_local_race_before_lock', tenant: tenantA },
+      ]);
+
+    const ownershipConstraint = await db.raw(`
+      SELECT convalidated FROM pg_constraint
+      WHERE conrelid = 'stripe_customers'::regclass
+        AND conname = 'stripe_customers_binding_owner_fk'`);
+    expect(ownershipConstraint.rows).toEqual([{ convalidated: true }]);
+
+    const rejectedMissingBinding = db('stripe_customers')
+      .insert({ tenant: tenantA, stripe_customer_external_id: 'cus_local_missing_binding' })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedMissingBinding).toBeInstanceOf(Error);
+
+    await db('stripe_customer_bindings').insert({
+      stripe_customer_external_id: 'cus_local_wrong_owner',
+      tenant: tenantA,
+    });
+    const rejectedWrongTenantMapping = db('stripe_customers')
+      .insert({ tenant: tenantB, stripe_customer_external_id: 'cus_local_wrong_owner' })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedWrongTenantMapping).toBeInstanceOf(Error);
+
+    const rejectedTenantReassignment = db('stripe_customers')
+      .where({ tenant: tenantA, stripe_customer_external_id: 'cus_local_existing' })
+      .update({ tenant: tenantB })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedTenantReassignment).toBeInstanceOf(Error);
+
+    const rejectedBindingOwnershipUpdate = db('stripe_customer_bindings')
+      .where({ stripe_customer_external_id: 'cus_local_existing', tenant: tenantA })
+      .update({ tenant: tenantB })
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedBindingOwnershipUpdate).toBeInstanceOf(Error);
+
+    const rejectedBindingDelete = db('stripe_customer_bindings')
+      .where({ stripe_customer_external_id: 'cus_local_existing', tenant: tenantA })
+      .delete()
+      .then(() => null, (error: Error) => error);
+    expect(await rejectedBindingDelete).toBeInstanceOf(Error);
+
+    await db('stripe_customer_bindings').insert({
+      stripe_customer_external_id: 'cus_local_unreferenced',
+      tenant: tenantA,
+    });
+    await db('stripe_customer_bindings')
+      .where({ stripe_customer_external_id: 'cus_local_unreferenced', tenant: tenantA })
+      .update({ tenant: tenantB });
+    await db('stripe_customers').insert({ tenant: tenantB, stripe_customer_external_id: 'cus_local_unreferenced' });
+
   });
 
   it('rejects duplicate tenant ownership and rolls back enforcement state', async () => {

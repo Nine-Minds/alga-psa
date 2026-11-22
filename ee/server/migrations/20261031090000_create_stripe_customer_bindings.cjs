@@ -1,22 +1,35 @@
 /**
  * Establish a global tenant owner for every Stripe customer id.
  *
- * Global ownership is stored in a Citus reference table and enforced by a
- * composite foreign key where the table topology supports it. Citus local
- * tables whose FK graph includes distributed tables use a global unique key.
- * The
- * reference table must be converted before adding the FK to a distributed
- * table. The migration takes an ACCESS EXCLUSIVE lock on stripe_customers
- * before scanning it, fencing legacy and current writers through backfill and
- * NOT VALID FK creation. A later forward migration validates the constraint.
+ * Global ownership is enforced by a composite foreign key. Citus requires
+ * reference-table conversion before FK DDL when stripe_customers is
+ * distributed. When stripe_customers is local, keep the binding table local
+ * too: converting it to a reference table would pull the local Stripe FK
+ * graph into Citus metadata, where its existing distributed-table edge makes
+ * that FK unsupported. The migration locks both tables before scanning and
+ * backfilling, then adds a NOT VALID FK; a forward migration validates it.
  */
 
 const TABLE = 'stripe_customer_bindings';
 const OWNER_KEY = 'stripe_customer_bindings_owner_key';
 const OWNER_CONSTRAINT = 'stripe_customers_binding_owner_fk';
-const CITUS_LOCAL_OWNER_KEY = 'stripe_customers_global_owner_key';
 
-async function ensureBindingTable(knex) {
+async function isCitus(knex) {
+  const result = await knex.raw(
+    `SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS present`
+  );
+  return Boolean(result.rows?.[0]?.present);
+}
+
+async function customersAreDistributed(knex, citus) {
+  if (!citus) return false;
+  const result = await knex.raw(
+    "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = 'stripe_customers'::regclass) AS present"
+  );
+  return Boolean(result.rows?.[0]?.present);
+}
+
+async function ensureBindingTable(knex, { citus, customersDistributed }) {
   if (!(await knex.schema.hasTable(TABLE))) {
     await knex.schema.createTable(TABLE, (table) => {
       table.text('stripe_customer_external_id').notNullable().primary();
@@ -40,41 +53,43 @@ async function ensureBindingTable(knex) {
   const hasReferenceFunction = await knex.raw(
     `SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc WHERE proname = 'create_reference_table') AS present`
   );
-  if (hasReferenceFunction.rows?.[0]?.present) {
-    const isDistributed = await knex.raw(
-      'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = ?::regclass) AS present',
+  if (citus && hasReferenceFunction.rows?.[0]?.present) {
+    const distribution = await knex.raw(
+      'SELECT partmethod FROM pg_catalog.pg_dist_partition WHERE logicalrelid = ?::regclass',
       [TABLE]
     );
-    if (!isDistributed.rows?.[0]?.present) {
+    const bindingIsReference = distribution.rows?.[0]?.partmethod === 'n';
+    const bindingIsDistributed = distribution.rows?.length > 0;
+
+    if (customersDistributed && !bindingIsReference) {
+      if (bindingIsDistributed) {
+        await knex.raw('SELECT pg_catalog.undistribute_table(?::regclass)', [TABLE]);
+      }
       // Citus requires reference-table conversion to finish before distributed
       // table foreign-key DDL, so this intentionally precedes the transaction.
-      await knex.raw('SELECT pg_catalog.create_reference_table(?)', [TABLE]);
+      await knex.raw('SELECT pg_catalog.create_reference_table(?::regclass)', [TABLE]);
+    } else if (!customersDistributed && bindingIsDistributed) {
+      // A prior rollout may already have replicated the binding table. Restore
+      // it to a coordinator-local table before adding the local-to-local FK;
+      // undistribution must run outside the enforcement transaction.
+      await knex.raw(`ALTER TABLE ${TABLE} DROP CONSTRAINT IF EXISTS ${OWNER_CONSTRAINT}`);
+      await knex.raw('SELECT pg_catalog.undistribute_table(?::regclass)', [TABLE]);
     }
   }
 }
 
 async function enforceOwnership(knex) {
-  await ensureBindingTable(knex);
+  const citus = await isCitus(knex);
+  const stripeCustomersDistributed = await customersAreDistributed(knex, citus);
+  await ensureBindingTable(knex, { citus, customersDistributed: stripeCustomersDistributed });
 
   await knex.transaction(async (trx) => {
     await trx.raw("SELECT pg_advisory_xact_lock(hashtext('stripe_customer_bindings_migration'))");
 
-    const citusCatalog = await trx.raw(
-      `SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS present`
-    );
-    let citus = false;
-    let customersAreDistributed = false;
-    if (citusCatalog.rows?.[0]?.present) {
-      citus = true;
-      const isDistributed = await trx.raw(
-        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = 'stripe_customers'::regclass) AS present"
-      );
-      customersAreDistributed = Boolean(isDistributed.rows?.[0]?.present);
-      if (customersAreDistributed) {
-        // Citus requires sequential shard modification for FK DDL involving a
-        // reference table; PostgreSQL has no such setting, so scope it to Citus.
-        await trx.raw("SET LOCAL citus.multi_shard_modify_mode = 'sequential'");
-      }
+    if (stripeCustomersDistributed) {
+      // Citus requires sequential shard modification for FK DDL involving a
+      // reference table; PostgreSQL has no such setting, so scope it to Citus.
+      await trx.raw("SET LOCAL citus.multi_shard_modify_mode = 'sequential'");
     }
 
     // Current application writers claim the binding before inserting the
@@ -156,35 +171,17 @@ async function enforceOwnership(knex) {
       );
     }
 
-    if (!citus || customersAreDistributed) {
-      const constraint = await trx.raw(
-        'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
-        [OWNER_CONSTRAINT]
-      );
-      if (constraint.rows.length === 0) {
-        await trx.raw(`
-          ALTER TABLE stripe_customers
-          ADD CONSTRAINT ${OWNER_CONSTRAINT}
-          FOREIGN KEY (stripe_customer_external_id, tenant)
-          REFERENCES ${TABLE} (stripe_customer_external_id, tenant)
-          NOT VALID`);
-      }
-    } else {
-      // Citus cannot add a local-to-reference FK when the local table's FK
-      // graph includes distributed tables. Local Stripe mappings therefore
-      // enforce the global ownership key directly; all supported DB writers
-      // still claim the reference binding first, and application reads verify
-      // that binding. Distributed stripe_customers retain the composite FK.
-      const ownerKey = await trx.raw(
-        'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
-        [CITUS_LOCAL_OWNER_KEY]
-      );
-      if (ownerKey.rows.length === 0) {
-        await trx.raw(`
-          ALTER TABLE stripe_customers
-          ADD CONSTRAINT ${CITUS_LOCAL_OWNER_KEY}
-          UNIQUE (stripe_customer_external_id)`);
-      }
+    const constraint = await trx.raw(
+      'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
+      [OWNER_CONSTRAINT]
+    );
+    if (constraint.rows.length === 0) {
+      await trx.raw(`
+        ALTER TABLE stripe_customers
+        ADD CONSTRAINT ${OWNER_CONSTRAINT}
+        FOREIGN KEY (stripe_customer_external_id, tenant)
+        REFERENCES ${TABLE} (stripe_customer_external_id, tenant)
+        NOT VALID`);
     }
   });
 }
@@ -192,12 +189,10 @@ async function enforceOwnership(knex) {
 exports.up = enforceOwnership;
 exports.enforceOwnership = enforceOwnership;
 exports.ownerConstraint = OWNER_CONSTRAINT;
-exports.citusLocalOwnerKey = CITUS_LOCAL_OWNER_KEY;
 exports.bindingTable = TABLE;
 
 exports.down = async function down(knex) {
   await knex.raw(`ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS ${OWNER_CONSTRAINT}`);
-  await knex.raw(`ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS ${CITUS_LOCAL_OWNER_KEY}`);
   await knex.schema.dropTableIfExists(TABLE);
 };
 

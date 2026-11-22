@@ -3,7 +3,6 @@
 // the same lock, validated composite FK, and conflict checks as fresh installs.
 const bindingsMigration = require('./20261031090000_create_stripe_customer_bindings.cjs');
 const OWNER_CONSTRAINT = bindingsMigration.ownerConstraint;
-const CITUS_LOCAL_OWNER_KEY = bindingsMigration.citusLocalOwnerKey;
 const BINDING_TABLE = bindingsMigration.bindingTable;
 
 exports.up = async function up(knex) {
@@ -41,19 +40,12 @@ exports.up = async function up(knex) {
         await trx.raw('ALTER TABLE stripe_customers VALIDATE CONSTRAINT stripe_customers_binding_owner_fk');
       }
     } else {
-      const localOwnerKey = await trx.raw(
-        'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
-        [CITUS_LOCAL_OWNER_KEY]
-      );
-      if (localOwnerKey.rows.length === 0) {
-        throw new Error(`Cannot verify missing Stripe customer ownership constraint ${OWNER_CONSTRAINT}`);
-      }
+      throw new Error(`Cannot validate missing Stripe customer ownership constraint ${OWNER_CONSTRAINT}`);
     }
   });
 };
 exports.down = async function down(knex) {
   await knex.raw('ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk');
-  await knex.raw(`ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS ${CITUS_LOCAL_OWNER_KEY}`);
 };
 
 exports.config = { transaction: false };
