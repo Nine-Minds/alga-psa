@@ -1341,16 +1341,29 @@ describe('contact confirmation through the Next server', () => {
         expect(confirmationPreview).toContain(text);
         expect(confirmationPreview).not.toContain('UNSEEN-PLAIN-ALTERNATIVE');
         expect(await page.$('strong')).not.toBeNull();
-        const pendingQuery = db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', recipient: contactEmail });
-        const pending = await pendingQuery.first('source_id', 'payload');
+        const confirmationToken = new URL(url).searchParams.get('token');
+        expect(confirmationToken).toBeTruthy();
+        const { parseInboundSenderConfirmationToken } = await import('@alga-psa/co-managed/inboundSenderConfirmation');
+        const claims = parseInboundSenderConfirmationToken(confirmationToken!);
+        expect(claims?.tenant).toBe(ticketTenant);
+        expect(claims?.sourceId).toBeTruthy();
+        const pending = await db('co_management_deliveries')
+          .where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: claims!.sourceId, recipient: contactEmail })
+          .first('source_id', 'payload');
+        if (!pending) throw new Error('Current contact confirmation delivery was not persisted.');
         const originalPayload = typeof pending.payload === 'string' ? JSON.parse(pending.payload) : pending.payload;
-        await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id, recipient: contactEmail })
-          .update({ payload: { ...originalPayload, emailData: { ...originalPayload.emailData, body: { ...originalPayload.emailData.body, html: '<p>Changed after approval was requested.</p>' } } } });
-        const [tampered] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
-        expect(tampered?.status()).toBe(403);
-        expect(await sharedComments(text)).toHaveLength(0);
-        await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id, recipient: contactEmail })
-          .update({ payload: originalPayload });
+        expect(originalPayload.providerMessageId).toBe(message.providerIdentity || message.id);
+        const delivery = db('co_management_deliveries').where({
+          tenant: ticketTenant, delivery_kind: 'sender_contact_confirmation', source_id: pending.source_id, recipient: contactEmail,
+        });
+        try {
+          await delivery.update({ payload: { ...originalPayload, emailData: { ...originalPayload.emailData, body: { ...originalPayload.emailData.body, html: '<p>Changed after approval was requested.</p>' } } } });
+          const [tampered] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
+          expect(tampered?.status()).toBe(403);
+          expect(await sharedComments(text)).toHaveLength(0);
+        } finally {
+          await delivery.update({ payload: originalPayload });
+        }
         expect((await page.goto(url))?.status()).toBe(200);
       }
       const [approved] = await Promise.all([page.waitForNavigation(), page.click('form button')]);
