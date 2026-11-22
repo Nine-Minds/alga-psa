@@ -35,6 +35,12 @@ vi.mock('@alga-psa/auth', async () => {
   };
 });
 
+// The action words a rejected submission in the signed-in user's language; `server-only` is not
+// resolvable outside Next, so the translator is stood in for by one that echoes the key.
+vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
+  getServerTranslation: vi.fn(async () => ({ t: (key: string) => key })),
+}));
+
 import { submitOnBehalfServiceRequestAction } from '../../app/msp/service-requests/onBehalfActions';
 import { ApiServiceRequestController } from '../../lib/api/controllers/ApiServiceRequestController';
 
