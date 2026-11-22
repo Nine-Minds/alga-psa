@@ -1022,6 +1022,23 @@ describe('updateAsset: warranty-only edits (alga0002283)', () => {
     expect(h.authorizedGroupSummary).not.toHaveBeenCalled();
   });
 
+  it('treats a void authorization result as an unrestricted trusted update', async () => {
+    const storedAsset = seedAsset({ name: 'Original name' });
+
+    const result = await updateAssetRecord(
+      h.knexMock,
+      TENANT,
+      'system-actor',
+      ASSET_ID,
+      { name: 'Updated by trusted authorizer' } as any,
+      { suppressRevalidate: true },
+      { authorize: async () => undefined },
+    );
+
+    expect(result.name).toBe('Updated by trusted authorizer');
+    expect(storedAsset.name).toBe('Updated by trusted authorizer');
+  });
+
   it('keeps an asset update successful and omits a denied group summary from the response', async () => {
     seedAsset();
     seedNetworkDevice();

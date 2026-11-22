@@ -1471,7 +1471,11 @@ export async function updateAssetRecord(
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
             let redactedFields: readonly string[] = [];
             if (hooks?.authorize) {
-                redactedFields = (await hooks.authorize(trx)) ?? [];
+                const authorizationRedactions = await hooks.authorize(trx);
+                // `void` authorizers are supported for trusted callers. Nullish
+                // coalescing keeps `void` in the inferred union here, so narrow
+                // the result to the array the mutation pipeline consumes.
+                redactedFields = Array.isArray(authorizationRedactions) ? authorizationRedactions : [];
             }
 
             // A masked value is absent from the authorized read. Remove even

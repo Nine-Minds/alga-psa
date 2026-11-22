@@ -108,12 +108,10 @@ describe('projectAssetReadFields', () => {
       unrelated: { serial_number: 'Must remain' },
     };
     expect(projectAssetReadFields(asset, ['contact_name_id', 'client.client_name'])).toEqual({
-      client: {},
       workstation: { serial_number: 'Extension Secret' },
       unrelated: { serial_number: 'Must remain' },
     });
     expect(projectAssetReadFields(asset, ['contact_name', 'client_name'])).toEqual({
-      client: {},
       workstation: { serial_number: 'Extension Secret' },
       unrelated: { serial_number: 'Must remain' },
     });
@@ -135,6 +133,16 @@ describe('projectAssetReadFields', () => {
     });
     expect(projectAssetReadFields(asset, ['client'])).toEqual({
       unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
+    });
+  });
+
+  it('omits the derived client summary when its display name is redacted', () => {
+    expect(projectAssetReadFields({
+      client_id: 'client-1',
+      client_name: 'Hidden Client',
+      client: { client_id: 'client-1', client_logo_url: 'https://example.test/logo.png' },
+    }, ['client_name'])).toEqual({
+      client_id: 'client-1',
     });
   });
 });

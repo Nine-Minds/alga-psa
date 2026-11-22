@@ -26,6 +26,10 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
     const result: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
       const childPath = path ? `${path}.${key}` : key;
+      // The enriched client summary (ID and logo URL) is meaningful only
+      // alongside its display name. Do not recreate that derived object after
+      // the authorization projection has hidden the client's name.
+      if (!path && key === 'client' && mask.isMasked('client_name')) continue;
       // History stores asset values below a `changes`/`fields` wrapper. Match
       // asset paths at any depth there, and also support flattened dotted keys.
       const isHistoryValue = path === 'changes' || path.startsWith('changes.');
