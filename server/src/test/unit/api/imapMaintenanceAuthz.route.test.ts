@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   providerLookups: 0,
   updates: [] as Array<{ table: string; values: unknown; where: unknown }>,
   permissionChecks: 0,
+  tenantKnexCalls: 0,
   tenantDbCalls: [] as unknown[],
   createTenantKnex: vi.fn(),
   assertTenantProductAccess: vi.fn(),
@@ -110,8 +111,12 @@ describe('IMAP maintenance route authorization', () => {
     state.providerLookups = 0;
     state.updates = [];
     state.permissionChecks = 0;
+    state.tenantKnexCalls = 0;
     state.tenantDbCalls = [];
-    state.createTenantKnex.mockResolvedValue({ knex: state.knex, tenant: 'tenant-from-session' });
+    state.createTenantKnex.mockImplementation(async () => {
+      state.tenantKnexCalls += 1;
+      return { knex: state.knex, tenant: 'tenant-from-session' };
+    });
     state.assertTenantProductAccess.mockResolvedValue(undefined);
   });
 
@@ -160,6 +165,7 @@ describe('IMAP maintenance route authorization', () => {
         allowedProducts: ['psa', 'algadesk'],
       });
       expect(state.providerLookups).toBe(1);
+      expect(state.tenantKnexCalls).toBe(1);
       expect(state.updates.map(({ table, values }) => ({ table, values }))).toEqual(endpoint.expectedWrites);
       expect(state.tenantDbCalls).toEqual([{ connection: state.knex, tenant: 'tenant-from-session' }]);
     });
