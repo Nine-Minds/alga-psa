@@ -1,0 +1,1757 @@
+[
+  {
+    "id": "T001",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F001"
+    ],
+    "implemented": false,
+    "description": "After build:shared the module resolves from packages/tickets, packages/co-managed, server and shared/workflow, and imports no server action"
+  },
+  {
+    "id": "T002",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Matrix returns the expected level for all 25 Impact x Urgency pairs and rejects values outside 1 to 5"
+  },
+  {
+    "id": "T003",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": false,
+    "description": "Each diagonal pair (n, n) maps to level n"
+  },
+  {
+    "id": "T004",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "listPrioritiesForBoard on an ITIL board returns exactly the five ITIL ticket priorities in level order"
+  },
+  {
+    "id": "T005",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "listPrioritiesForBoard on a non-ITIL board returns only the tenant's own ticket priorities and no project-task priorities"
+  },
+  {
+    "id": "T006",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "listPrioritiesForBoard treats a NULL priority_type as the tenant's own kind"
+  },
+  {
+    "id": "T007",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": false,
+    "description": "listPrioritiesForBoard never returns another tenant's priorities"
+  },
+  {
+    "id": "T008",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "findBoardFieldProblems reports an own priority on an ITIL board and an ITIL priority on a non-ITIL board, naming both"
+  },
+  {
+    "id": "T009",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "findBoardFieldProblems reports a priority id that does not exist or is a project-task priority"
+  },
+  {
+    "id": "T010",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": false,
+    "description": "The existing priorityBoardType integration tests pass unchanged against the delegating helpers"
+  },
+  {
+    "id": "T011",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F005"
+    ],
+    "implemented": false,
+    "description": "A patch without priority_id or board_id on a ticket with a non-fitting priority reports no priority problem"
+  },
+  {
+    "id": "T012",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F005"
+    ],
+    "implemented": false,
+    "description": "A patch that changes only board_id is checked against the ticket's stored priority"
+  },
+  {
+    "id": "T013",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F005"
+    ],
+    "implemented": false,
+    "description": "A patch that changes only the title on a ticket with a category from another board reports no category problem"
+  },
+  {
+    "id": "T014",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "resolveItilPriorityId finds the ITIL priority after it has been renamed"
+  },
+  {
+    "id": "T015",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false,
+    "description": "resolveItilPriorityId returns null when the tenant has no ITIL priority for the level"
+  },
+  {
+    "id": "T016",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "defaultPriorityForBoard returns the stored default when it fits the board"
+  },
+  {
+    "id": "T017",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "defaultPriorityForBoard ignores a stored default of the wrong family and returns level 3 on an ITIL board"
+  },
+  {
+    "id": "T018",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F007"
+    ],
+    "implemented": false,
+    "description": "defaultPriorityForBoard returns the lowest-order own ticket priority on a non-ITIL board with no default, and null when the tenant has none"
+  },
+  {
+    "id": "T019",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": false,
+    "description": "ITIL board, Impact and Urgency supplied: priority is the matrix result and a supplied priority_id is ignored"
+  },
+  {
+    "id": "T020",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": false,
+    "description": "ITIL board, priority only, no stored Impact/Urgency: priority accepted and both stay empty"
+  },
+  {
+    "id": "T021",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": false,
+    "description": "ITIL board, priority only, refuse policy, own-family priority: refused with a priority_id problem"
+  },
+  {
+    "id": "T022",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Fallback returns the configured priority when it fits"
+  },
+  {
+    "id": "T023",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Fallback returns the board default when the configured priority does not fit"
+  },
+  {
+    "id": "T024",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Fallback returns the configured priority unchanged when the tenant has no priority of the board's family"
+  },
+  {
+    "id": "T025",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": false,
+    "description": "Fallback with only one of Impact and Urgency drops both"
+  },
+  {
+    "id": "T026",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": false,
+    "description": "Non-ITIL board with Impact and Urgency supplied: both come back empty and the supplied priority is used"
+  },
+  {
+    "id": "T027",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "Seeding ITIL priorities twice leaves five rows"
+  },
+  {
+    "id": "T028",
+    "commitGroup": "core-rules",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false,
+    "description": "Seeding with a tenant priority already named like an ITIL one fails with an error naming it and does not flag it"
+  },
+  {
+    "id": "T029",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": false,
+    "description": "Inbound defaults form on an ITIL board offers only ITIL priorities; on a non-ITIL board only the tenant's own"
+  },
+  {
+    "id": "T030",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": false,
+    "description": "Changing the board to one of the other kind clears the selected priority; changing between boards of the same kind keeps it"
+  },
+  {
+    "id": "T031",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": false,
+    "description": "Saving inbound defaults with a wrong-family priority fails with a priority field error and stores nothing"
+  },
+  {
+    "id": "T032",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": false,
+    "description": "Saving inbound defaults with a deleted priority fails with a priority field error"
+  },
+  {
+    "id": "T033",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F014"
+    ],
+    "implemented": false,
+    "description": "Saving an existing non-fitting row with only its description changed and the priority untouched is refused with the same error"
+  },
+  {
+    "id": "T034",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": false,
+    "description": "A stored row with a non-fitting priority renders the warning in the form and the badge in the list; a fitting row renders neither"
+  },
+  {
+    "id": "T035",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Email to a board whose default row has a fitting priority creates the ticket with that priority"
+  },
+  {
+    "id": "T036",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Email to a board whose default row has a non-fitting priority creates the ticket with the board's default priority"
+  },
+  {
+    "id": "T037",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Email to a board with a non-fitting priority and no fitting priority in the tenant still creates the ticket, with the configured priority"
+  },
+  {
+    "id": "T038",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": false,
+    "description": "Email to a board whose default row points at a deleted priority creates the ticket with the board's default priority"
+  },
+  {
+    "id": "T039",
+    "commitGroup": "email-hotfix",
+    "featureIds": [
+      "F017"
+    ],
+    "implemented": false,
+    "description": "Every new inbound-defaults key exists in every locale and passes the glossary checks"
+  },
+  {
+    "id": "T040",
+    "commitGroup": "test-harness",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": false,
+    "description": "Fixture produces two ITIL boards, one non-ITIL board and one mixed board with the expected kinds, priorities and categories"
+  },
+  {
+    "id": "T041",
+    "commitGroup": "test-harness",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": false,
+    "description": "The suite fails when a surface listed in the PRD has no row in the table"
+  },
+  {
+    "id": "T042",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F020"
+    ],
+    "implemented": false,
+    "description": "After migration, categories has standard_category_id and the partial unique index"
+  },
+  {
+    "id": "T043",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F021"
+    ],
+    "implemented": false,
+    "description": "A flagged category with a standard name and parent gets the matching standard_category_id"
+  },
+  {
+    "id": "T044",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "A flagged category with a non-standard name loses the flag and gets no link"
+  },
+  {
+    "id": "T045",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": false,
+    "description": "A flagged category on a non-ITIL board loses the flag and stays on that board"
+  },
+  {
+    "id": "T046",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "A tenant with one set and three ITIL boards ends with three complete sets, one per board, each child under its own board's parent"
+  },
+  {
+    "id": "T047",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "An ITIL board with a partial set gets only the missing rows"
+  },
+  {
+    "id": "T048",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F023"
+    ],
+    "implemented": false,
+    "description": "A tenant with ITIL boards and no flagged categories at all gets a full set per board"
+  },
+  {
+    "id": "T049",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": false,
+    "description": "A ticket on the second ITIL board using a shared category ends up on that board's copy with the same name and parent"
+  },
+  {
+    "id": "T050",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": false,
+    "description": "A ticket on the board that held the set keeps its category id"
+  },
+  {
+    "id": "T051",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": false,
+    "description": "A ticket on a non-ITIL board using a formerly flagged category keeps its category id"
+  },
+  {
+    "id": "T052",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F025"
+    ],
+    "implemented": false,
+    "description": "Templates, recurring definitions, their overrides and inbound defaults on the second ITIL board point at that board's copy"
+  },
+  {
+    "id": "T053",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F026"
+    ],
+    "implemented": false,
+    "description": "A workflow action input naming the second ITIL board and a shared category is re-pointed; one naming no board is unchanged"
+  },
+  {
+    "id": "T054",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F027"
+    ],
+    "implemented": false,
+    "description": "Inserting a second row for the same board and standard category violates the index"
+  },
+  {
+    "id": "T055",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "Running the migration twice produces the same rows"
+  },
+  {
+    "id": "T056",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": false,
+    "description": "The migration runs against a Citus-distributed schema"
+  },
+  {
+    "id": "T057",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F029"
+    ],
+    "implemented": false,
+    "description": "Ticket priority_id, itil_impact and itil_urgency are identical before and after the migration for every ticket"
+  },
+  {
+    "id": "T058",
+    "commitGroup": "category-schema",
+    "featureIds": [
+      "F030"
+    ],
+    "implemented": false,
+    "description": "A freshly seeded dev database has the ITIL set on the ITIL board and none on other boards"
+  },
+  {
+    "id": "T059",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "listCategoriesForBoard returns the same 35 names for two ITIL boards, with different ids"
+  },
+  {
+    "id": "T060",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "listCategoriesForBoard on a non-ITIL board returns only its own categories"
+  },
+  {
+    "id": "T061",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F031"
+    ],
+    "implemented": false,
+    "description": "listCategoriesForBoard on an ITIL board also returns a non-standard category attached to it"
+  },
+  {
+    "id": "T062",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F032"
+    ],
+    "implemented": false,
+    "description": "getTicketCategoriesByBoard, ticket-form hydration and GET /api/v1/tickets/categories return the same list for the same board"
+  },
+  {
+    "id": "T063",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "A category from another board is reported, on ITIL and non-ITIL boards"
+  },
+  {
+    "id": "T064",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F033"
+    ],
+    "implemented": false,
+    "description": "A subcategory whose parent is not the ticket's category is reported"
+  },
+  {
+    "id": "T065",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F034"
+    ],
+    "implemented": false,
+    "description": "A template and a recurring schedule on the second ITIL board save with a standard category and generate an occurrence"
+  },
+  {
+    "id": "T066",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F034"
+    ],
+    "implemented": false,
+    "description": "Co-managed edit and the maintenance-ticket workflow action accept a standard category on the second ITIL board"
+  },
+  {
+    "id": "T067",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "Creating a second ITIL board gives it 35 rows and changes no row on any other board"
+  },
+  {
+    "id": "T068",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "A non-ITIL board's category named like a standard one keeps its flag, board and children when an ITIL board is created"
+  },
+  {
+    "id": "T069",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F035"
+    ],
+    "implemented": false,
+    "description": "Two ITIL boards created concurrently end with one set each"
+  },
+  {
+    "id": "T070",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F036"
+    ],
+    "implemented": false,
+    "description": "Deleting one of two ITIL boards leaves the other board's set intact"
+  },
+  {
+    "id": "T071",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F036"
+    ],
+    "implemented": false,
+    "description": "The itilBoardDeletionCleanup integration tests are updated and pass"
+  },
+  {
+    "id": "T072",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F037"
+    ],
+    "implemented": false,
+    "description": "Web update, re-parent and delete of a standard row on an ITIL board are refused"
+  },
+  {
+    "id": "T073",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F038"
+    ],
+    "implemented": false,
+    "description": "REST update and delete and reference-data delete of a standard row on an ITIL board are refused"
+  },
+  {
+    "id": "T074",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F039"
+    ],
+    "implemented": false,
+    "description": "Web add and REST create of a category on an ITIL board are refused; on a non-ITIL board they succeed"
+  },
+  {
+    "id": "T075",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F040"
+    ],
+    "implemented": false,
+    "description": "Copy to an ITIL board is refused; copy from an ITIL board to a non-ITIL board creates plain categories"
+  },
+  {
+    "id": "T076",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F041"
+    ],
+    "implemented": false,
+    "description": "updateTicketCategory ignores or rejects board_id, is_from_itil_standard and standard_category_id in its input"
+  },
+  {
+    "id": "T077",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F042"
+    ],
+    "implemented": false,
+    "description": "Each category mutation is refused for a user without the ticket_settings permission"
+  },
+  {
+    "id": "T078",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F043"
+    ],
+    "implemented": false,
+    "description": "REST delete of a category used only as a ticket's subcategory is refused"
+  },
+  {
+    "id": "T079",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F044"
+    ],
+    "implemented": false,
+    "description": "Categories settings on the second ITIL board shows 35 rows with the Standard badge and no enabled edit, delete or add"
+  },
+  {
+    "id": "T080",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F044"
+    ],
+    "implemented": false,
+    "description": "The copy dialog lists no ITIL board as a target"
+  },
+  {
+    "id": "T081",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "CSV import to the second ITIL board matches a standard category by name"
+  },
+  {
+    "id": "T082",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F045"
+    ],
+    "implemented": false,
+    "description": "CSV import to an ITIL board with an unknown category reports the row and creates no category"
+  },
+  {
+    "id": "T083",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F046"
+    ],
+    "implemented": false,
+    "description": "Surface suite: each listed category picker returns the 35 standard categories for the second ITIL board"
+  },
+  {
+    "id": "T084",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F047"
+    ],
+    "implemented": false,
+    "description": "Every new category key exists in every locale and passes the glossary checks"
+  },
+  {
+    "id": "T085",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F048"
+    ],
+    "implemented": false,
+    "description": "MSP create on an ITIL board with Impact and Urgency stores the matrix priority and both values"
+  },
+  {
+    "id": "T086",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F048"
+    ],
+    "implemented": false,
+    "description": "MSP create on a non-ITIL board with Impact and Urgency in the form stores neither and uses the selected priority"
+  },
+  {
+    "id": "T087",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": false,
+    "description": "MSP update of Impact alone on an assessed ITIL ticket recomputes the priority from the new Impact and stored Urgency"
+  },
+  {
+    "id": "T088",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": false,
+    "description": "No source file matches the P-number name pattern lookup"
+  },
+  {
+    "id": "T089",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "Direct change to the level-2 priority on an assessed ticket stores Impact 2 and Urgency 2"
+  },
+  {
+    "id": "T090",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F050"
+    ],
+    "implemented": false,
+    "description": "Direct priority change on an unassessed ticket leaves Impact and Urgency empty"
+  },
+  {
+    "id": "T091",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F051"
+    ],
+    "implemented": false,
+    "description": "MSP create with Impact and no Urgency on an ITIL board is refused with a field error"
+  },
+  {
+    "id": "T092",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "A service request configured with Impact and Urgency creates a ticket with the matrix priority found by level"
+  },
+  {
+    "id": "T093",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "A template with Impact and Urgency instantiates with the matrix priority even when its stored priority differs"
+  },
+  {
+    "id": "T094",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F052"
+    ],
+    "implemented": false,
+    "description": "Batch duplicate copies priority, Impact and Urgency so they agree"
+  },
+  {
+    "id": "T095",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F053"
+    ],
+    "implemented": false,
+    "description": "A create or update that sends itil_priority_level does not store it"
+  },
+  {
+    "id": "T096",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F053"
+    ],
+    "implemented": false,
+    "description": "Ticket event payloads carry the level of the ticket's priority for an ITIL ticket and none for other tickets"
+  },
+  {
+    "id": "T097",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "Ticket detail for an ITIL ticket without Impact and Urgency shows its stored priority and Not assessed"
+  },
+  {
+    "id": "T098",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": false,
+    "description": "Choosing Impact and Urgency on that ticket shows and saves the matrix priority"
+  },
+  {
+    "id": "T099",
+    "commitGroup": "impact-urgency",
+    "featureIds": [
+      "F055"
+    ],
+    "implemented": false,
+    "description": "Every new Impact/Urgency key exists in every locale and passes the glossary checks"
+  },
+  {
+    "id": "T100",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F056"
+    ],
+    "implemented": false,
+    "description": "createTicket with policy refuse rejects a wrong-family priority and a category from another board"
+  },
+  {
+    "id": "T101",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F056"
+    ],
+    "implemented": false,
+    "description": "createTicket with policy fallback creates the ticket with the board default priority and without the foreign category"
+  },
+  {
+    "id": "T102",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F056"
+    ],
+    "implemented": false,
+    "description": "The ticketCreateFieldPersistence and ticketCreateBoardStatusValidation integration tests pass"
+  },
+  {
+    "id": "T103",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F057"
+    ],
+    "implemented": false,
+    "description": "Client portal create with a wrong-family priority id is refused"
+  },
+  {
+    "id": "T104",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "CSV import with rows for an ITIL and a non-ITIL board imports the fitting rows and reports the others"
+  },
+  {
+    "id": "T105",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F058"
+    ],
+    "implemented": false,
+    "description": "CSV import row without a priority gets its board's default priority"
+  },
+  {
+    "id": "T106",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F059"
+    ],
+    "implemented": false,
+    "description": "Teams message action on a board whose stored default is of the wrong family creates the ticket with a fitting priority"
+  },
+  {
+    "id": "T107",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F060"
+    ],
+    "implemented": false,
+    "description": "Maintenance-ticket action with a wrong-family priority fails the action with a field error"
+  },
+  {
+    "id": "T108",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F061"
+    ],
+    "implemented": false,
+    "description": "RMM alert with a mapped priority of the wrong family creates the ticket with the board default"
+  },
+  {
+    "id": "T109",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F061"
+    ],
+    "implemented": false,
+    "description": "RMM priority lookup never returns a project-task priority"
+  },
+  {
+    "id": "T110",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F062"
+    ],
+    "implemented": false,
+    "description": "Huntress incident with a severity mapped to a wrong-family priority creates the ticket with the board default"
+  },
+  {
+    "id": "T111",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F063"
+    ],
+    "implemented": false,
+    "description": "Telephony auto-ticket and renewal ticket with a non-fitting configured priority are created with the board default"
+  },
+  {
+    "id": "T112",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F064"
+    ],
+    "implemented": false,
+    "description": "Workflow tickets.create with a wrong-family priority creates the ticket with the board default"
+  },
+  {
+    "id": "T113",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F064"
+    ],
+    "implemented": false,
+    "description": "Inbound webhook create with a category from another board creates the ticket without a category"
+  },
+  {
+    "id": "T114",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F065"
+    ],
+    "implemented": false,
+    "description": "Service request without a configured priority uses the board default and never a project-task priority"
+  },
+  {
+    "id": "T115",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F066"
+    ],
+    "implemented": false,
+    "description": "Data-migration import of a ticket with a non-fitting priority imports it with the board default"
+  },
+  {
+    "id": "T116",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F067"
+    ],
+    "implemented": false,
+    "description": "REST create with a category from another board returns 400 with a category_id error"
+  },
+  {
+    "id": "T117",
+    "commitGroup": "writers-create",
+    "featureIds": [
+      "F067"
+    ],
+    "implemented": false,
+    "description": "Surface suite: every create writer on the second ITIL board stores a fitting priority and a category owned by that board"
+  },
+  {
+    "id": "T118",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F068"
+    ],
+    "implemented": false,
+    "description": "prepareTicketFieldPatch returns the patch unchanged when it touches none of board, priority, Impact, Urgency, category or subcategory"
+  },
+  {
+    "id": "T119",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F069"
+    ],
+    "implemented": false,
+    "description": "Both MSP update functions refuse a category from another board"
+  },
+  {
+    "id": "T120",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F070"
+    ],
+    "implemented": false,
+    "description": "REST update with a subcategory that is not a child of the category returns 400"
+  },
+  {
+    "id": "T121",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F070"
+    ],
+    "implemented": false,
+    "description": "REST update with a priority only on an assessed ITIL ticket stores the diagonal Impact and Urgency"
+  },
+  {
+    "id": "T122",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F071"
+    ],
+    "implemented": false,
+    "description": "Workflow tickets.update_fields with a wrong-family priority fails with a field error"
+  },
+  {
+    "id": "T123",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F071"
+    ],
+    "implemented": false,
+    "description": "Inbound webhook update that changes the board without a fitting priority is refused"
+  },
+  {
+    "id": "T124",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F072"
+    ],
+    "implemented": false,
+    "description": "Activities inline priority update with a wrong-family priority is refused, for both action variants"
+  },
+  {
+    "id": "T125",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F073"
+    ],
+    "implemented": false,
+    "description": "Bundle sync leaves the priority of a child on a board of the other family and updates a child on a board of the same family"
+  },
+  {
+    "id": "T126",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F074"
+    ],
+    "implemented": false,
+    "description": "Moving a ticket from an ITIL to a non-ITIL board without a priority is refused; with a fitting priority it saves and clears Impact and Urgency"
+  },
+  {
+    "id": "T127",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F074"
+    ],
+    "implemented": false,
+    "description": "Bulk move across families reports each refused ticket and moves none of them"
+  },
+  {
+    "id": "T128",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F075"
+    ],
+    "implemented": false,
+    "description": "Moving a ticket between two ITIL boards keeps the same category and subcategory by name, with the destination board's ids"
+  },
+  {
+    "id": "T129",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F075"
+    ],
+    "implemented": false,
+    "description": "Moving a ticket between two non-ITIL boards without a category in the patch clears category and subcategory"
+  },
+  {
+    "id": "T130",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F076"
+    ],
+    "implemented": false,
+    "description": "A ticket with a wrong-family priority saves a title, status, assignee and description change through MSP, REST and workflow update"
+  },
+  {
+    "id": "T131",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F076"
+    ],
+    "implemented": false,
+    "description": "A ticket with a category from another board saves the same changes"
+  },
+  {
+    "id": "T132",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F077"
+    ],
+    "implemented": false,
+    "description": "The helper returns ITIL priorities for an ITIL board, own priorities otherwise, and treats a missing kind as own"
+  },
+  {
+    "id": "T133",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F077"
+    ],
+    "implemented": false,
+    "description": "The existing QuickAddTicket.boardScopedPriorities tests pass"
+  },
+  {
+    "id": "T134",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F078"
+    ],
+    "implemented": false,
+    "description": "Workflow designer priority picker with an ITIL board selected lists only ITIL priorities, in both copies"
+  },
+  {
+    "id": "T135",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F079"
+    ],
+    "implemented": false,
+    "description": "Huntress severity mapping lists only priorities that fit the selected board"
+  },
+  {
+    "id": "T136",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F080"
+    ],
+    "implemented": false,
+    "description": "Co-managed edit options for an ITIL ticket contain only ITIL priorities and a patch with another is rejected"
+  },
+  {
+    "id": "T137",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F081"
+    ],
+    "implemented": false,
+    "description": "Service request editor on a non-ITIL board lists no ITIL priority"
+  },
+  {
+    "id": "T138",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F082"
+    ],
+    "implemented": false,
+    "description": "Create ticket from asset lists only priorities the server accepts for the selected board"
+  },
+  {
+    "id": "T139",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F083"
+    ],
+    "implemented": false,
+    "description": "Activities inline picker for a ticket on an ITIL board lists only ITIL priorities"
+  },
+  {
+    "id": "T140",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F084"
+    ],
+    "implemented": false,
+    "description": "CSV import dialog offers ITIL priorities for rows of an ITIL board when the default board is not ITIL"
+  },
+  {
+    "id": "T141",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F085"
+    ],
+    "implemented": false,
+    "description": "Inbound webhook and RMM alert rule priority lookups return no project-task priority"
+  },
+  {
+    "id": "T142",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F086"
+    ],
+    "implemented": false,
+    "description": "GET /api/v1/tickets/priorities with board_id returns only fitting priorities, with itil_priority_level; without it, behaviour is unchanged"
+  },
+  {
+    "id": "T143",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F087"
+    ],
+    "implemented": false,
+    "description": "Mobile ticket detail for a ticket with no priority on an ITIL board lists only ITIL priorities"
+  },
+  {
+    "id": "T144",
+    "commitGroup": "priority-pickers",
+    "featureIds": [
+      "F077"
+    ],
+    "implemented": false,
+    "description": "Surface suite: every priority picker lists the same priorities for both ITIL boards and none the server refuses"
+  },
+  {
+    "id": "T145",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F088"
+    ],
+    "implemented": false,
+    "description": "The existing board action tests (mutation guard, portal status guard, co-managed deactivation) pass against the extracted functions"
+  },
+  {
+    "id": "T146",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F089"
+    ],
+    "implemented": false,
+    "description": "POST /api/v1/boards for an ITIL board produces the same statuses, categories, default priority and SLA assignment as the web action"
+  },
+  {
+    "id": "T147",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F089"
+    ],
+    "implemented": false,
+    "description": "POST /api/v1/boards for a non-ITIL board has seeded statuses"
+  },
+  {
+    "id": "T148",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F090"
+    ],
+    "implemented": false,
+    "description": "The first ITIL board in a tenant that has own priorities gets an ITIL default priority"
+  },
+  {
+    "id": "T149",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F090"
+    ],
+    "implemented": false,
+    "description": "The first ITIL board in a tenant with no priorities at all gets the level-3 ITIL default"
+  },
+  {
+    "id": "T150",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F091"
+    ],
+    "implemented": false,
+    "description": "Create and update with a default priority of the wrong family are refused"
+  },
+  {
+    "id": "T151",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F092"
+    ],
+    "implemented": false,
+    "description": "Create with ITIL categories and own priorities, and the reverse, is refused on web and REST"
+  },
+  {
+    "id": "T152",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F093"
+    ],
+    "implemented": false,
+    "description": "Renaming an existing mixed board saves; changing one of its kinds to another mixed combination is refused"
+  },
+  {
+    "id": "T153",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F094"
+    ],
+    "implemented": false,
+    "description": "A board created with a default team has it stored"
+  },
+  {
+    "id": "T154",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F095"
+    ],
+    "implemented": false,
+    "description": "The create result and BOARD_CREATED payload carry the assigned sla_policy_id"
+  },
+  {
+    "id": "T155",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F096"
+    ],
+    "implemented": false,
+    "description": "A board created by reference-data import or onboarding has a default priority and, when ITIL, its categories"
+  },
+  {
+    "id": "T156",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F097"
+    ],
+    "implemented": false,
+    "description": "DELETE /api/v1/boards on the default board, a board with tickets and a board used by inbound defaults is refused with the web's reason"
+  },
+  {
+    "id": "T157",
+    "commitGroup": "board-lifecycle",
+    "featureIds": [
+      "F097"
+    ],
+    "implemented": false,
+    "description": "DELETE /api/v1/boards on an unused board removes its statuses and categories"
+  },
+  {
+    "id": "T158",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F098"
+    ],
+    "implemented": false,
+    "description": "switchBoardType is refused without the ticket_settings permission"
+  },
+  {
+    "id": "T159",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F099"
+    ],
+    "implemented": false,
+    "description": "Switching a non-ITIL board to ITIL gives it 35 standard categories, keeps its own categories and sets an ITIL default priority"
+  },
+  {
+    "id": "T160",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F099"
+    ],
+    "implemented": false,
+    "description": "Switching to ITIL in a tenant with no ITIL priorities creates the five"
+  },
+  {
+    "id": "T161",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F100"
+    ],
+    "implemented": false,
+    "description": "Switching an ITIL board to the tenant's own kind leaves its categories editable and sets an own default priority"
+  },
+  {
+    "id": "T162",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F100"
+    ],
+    "implemented": false,
+    "description": "Switching the only ITIL board to the tenant's own kind deletes no priority and no category"
+  },
+  {
+    "id": "T163",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F101"
+    ],
+    "implemented": false,
+    "description": "After a switch in either direction, every ticket, inbound default, template and schedule on the board is unchanged"
+  },
+  {
+    "id": "T164",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F101"
+    ],
+    "implemented": false,
+    "description": "After a switch to ITIL, the board's sla_policy_id is unchanged"
+  },
+  {
+    "id": "T165",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F102"
+    ],
+    "implemented": false,
+    "description": "The summary counts match the open tickets, inbound defaults, templates and schedules whose priority will not fit"
+  },
+  {
+    "id": "T166",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F103"
+    ],
+    "implemented": false,
+    "description": "Switching to the tenant's own kind in a tenant with only ITIL ticket priorities is refused with the message"
+  },
+  {
+    "id": "T167",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F104"
+    ],
+    "implemented": false,
+    "description": "The confirmation shows the summary and switches only on confirm; cancel changes nothing"
+  },
+  {
+    "id": "T168",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F104"
+    ],
+    "implemented": false,
+    "description": "A legacy mixed board shows both kinds read-only and offers the switch"
+  },
+  {
+    "id": "T169",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F105"
+    ],
+    "implemented": false,
+    "description": "PUT /api/v1/boards with a changed kind runs the switch; with an unchanged kind it does not touch categories or priorities"
+  },
+  {
+    "id": "T170",
+    "commitGroup": "board-type-switch",
+    "featureIds": [
+      "F106"
+    ],
+    "implemented": false,
+    "description": "Every new board-type key exists in every locale and passes the glossary checks"
+  },
+  {
+    "id": "T171",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F107"
+    ],
+    "implemented": false,
+    "description": "After initializeApp, creating an ITIL board through the server action without rendering any MSP page assigns the ITIL policy"
+  },
+  {
+    "id": "T172",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F107"
+    ],
+    "implemented": false,
+    "description": "The same holds in a production build, for the server action and for POST /api/v1/boards"
+  },
+  {
+    "id": "T173",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F108"
+    ],
+    "implemented": false,
+    "description": "ITIL setup with no hook registered throws on a PSA tenant and is skipped without error on an AlgaDesk tenant"
+  },
+  {
+    "id": "T174",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F109"
+    ],
+    "implemented": false,
+    "description": "The migration flags the policy named ITIL Standard and no other; a second flagged policy in a tenant is rejected"
+  },
+  {
+    "id": "T175",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F110"
+    ],
+    "implemented": false,
+    "description": "After the ITIL policy is renamed, creating another ITIL board reuses it and creates no second policy"
+  },
+  {
+    "id": "T176",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F110"
+    ],
+    "implemented": false,
+    "description": "A tenant's own unflagged policy named ITIL Standard is not adopted or deleted"
+  },
+  {
+    "id": "T177",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F111"
+    ],
+    "implemented": false,
+    "description": "Creating an ITIL board when the policy has no targets for the current ITIL priorities adds five; edited targets keep their values"
+  },
+  {
+    "id": "T178",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F112"
+    ],
+    "implemented": false,
+    "description": "itilSlaService and ensureSlaParity create identical targets and thresholds"
+  },
+  {
+    "id": "T179",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F113"
+    ],
+    "implemented": false,
+    "description": "Updating a board, switching its kind and running this plan's migrations leave sla_policy_id unchanged on every board"
+  },
+  {
+    "id": "T180",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F113"
+    ],
+    "implemented": false,
+    "description": "A new ITIL board created with an explicit SLA policy keeps that policy"
+  },
+  {
+    "id": "T181",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F114"
+    ],
+    "implemented": false,
+    "description": "A ticket with an SLA emits stage-entered with the ticket's resolution due time as the target"
+  },
+  {
+    "id": "T182",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F114"
+    ],
+    "implemented": false,
+    "description": "A closed ticket emits met or breached by comparing closed time with its resolution due time"
+  },
+  {
+    "id": "T183",
+    "commitGroup": "sla",
+    "featureIds": [
+      "F114"
+    ],
+    "implemented": false,
+    "description": "An ITIL ticket without an SLA emits no SLA stage event"
+  },
+  {
+    "id": "T184",
+    "commitGroup": "cleanup",
+    "featureIds": [
+      "F115"
+    ],
+    "implemented": false,
+    "description": "The repository builds and typechecks with both files deleted"
+  },
+  {
+    "id": "T185",
+    "commitGroup": "cleanup",
+    "featureIds": [
+      "F116"
+    ],
+    "implemented": false,
+    "description": "No source file imports a removed itilUtils export"
+  },
+  {
+    "id": "T186",
+    "commitGroup": "cleanup",
+    "featureIds": [
+      "F117"
+    ],
+    "implemented": false,
+    "description": "ticketFieldOptionsActions has no unused exports and no console.log"
+  },
+  {
+    "id": "T187",
+    "commitGroup": "cleanup",
+    "featureIds": [
+      "F118"
+    ],
+    "implemented": false,
+    "description": "The repository builds and the email and category tests pass with both removed"
+  },
+  {
+    "id": "T188",
+    "commitGroup": "cleanup",
+    "featureIds": [
+      "F119"
+    ],
+    "implemented": false,
+    "description": "Board create and update on web and REST succeed with the columns dropped, and a request that still sends them is accepted and ignored"
+  },
+  {
+    "id": "T189",
+    "commitGroup": "guard",
+    "featureIds": [
+      "F120"
+    ],
+    "implemented": false,
+    "description": "The guard passes on the repository after this plan"
+  },
+  {
+    "id": "T190",
+    "commitGroup": "guard",
+    "featureIds": [
+      "F120"
+    ],
+    "implemented": false,
+    "description": "The guard fails on a fixture file that queries categories by board_id outside the allow-list, and on one that updates tickets.priority_id directly"
+  },
+  {
+    "id": "T191",
+    "commitGroup": "guard",
+    "featureIds": [
+      "F121"
+    ],
+    "implemented": false,
+    "description": "The contract test fails when a listed writer stops importing the shared rules"
+  },
+  {
+    "id": "T192",
+    "commitGroup": "docs",
+    "featureIds": [
+      "F122"
+    ],
+    "implemented": false,
+    "description": "Every table, column, function and file named in the doc exists in the repository"
+  },
+  {
+    "id": "T193",
+    "commitGroup": "docs",
+    "featureIds": [
+      "F123"
+    ],
+    "implemented": false,
+    "description": "docs/itil holds only itil-integration.md and no doc links to the old plan path"
+  },
+  {
+    "id": "T194",
+    "commitGroup": "docs",
+    "featureIds": [
+      "F124"
+    ],
+    "implemented": false,
+    "description": "The report runs read-only against a migrated database and returns no category rows for a tenant with two clean ITIL boards"
+  },
+  {
+    "id": "T195",
+    "commitGroup": "docs",
+    "featureIds": [
+      "F125"
+    ],
+    "implemented": false,
+    "description": "The generated OpenAPI matches the route schemas with no diff after regeneration"
+  }
+]
