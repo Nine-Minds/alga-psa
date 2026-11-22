@@ -57,7 +57,7 @@ import {
 } from '@alga-psa/authorization/portal/visibility';
 import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { getUserAvatarUrlsBatchAction, getContactAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { projectClientTicketDetail, projectClientTicketDocument, projectClientTicketList, type ClientTicketDetailResponse, type ClientTicketDocument, type ClientTicketListResponse } from './clientTicketProjection';
 
@@ -75,6 +75,28 @@ const clientTicketDescriptionSchema = clientTicketSchema.pick({ description: tru
 
 const VISIBILITY_NOT_FOUND_ERROR =
   'Visibility group assignment is invalid for this contact.';
+
+async function loadUserAvatarUrls(userIds: Array<string | null | undefined>, tenant: string): Promise<Map<string, string | null>> {
+  const uniqueIds = [...new Set(userIds.filter((userId): userId is string => Boolean(userId)))];
+  if (uniqueIds.length === 0) return new Map();
+
+  try {
+    return await getUserAvatarUrlsBatchAction(uniqueIds, tenant);
+  } catch {
+    return new Map(uniqueIds.map((userId) => [userId, null]));
+  }
+}
+
+function ticketAvatarUserIds(ticket: Record<string, any>): string[] {
+  return [ticket.assigned_to, ...(ticket.additional_agents ?? []).map((agent: any) => agent.user_id)]
+    .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0);
+}
+
+function avatarUrlFromJoinedUser(user: Record<string, any>): string | null {
+  if (typeof user.avatar_file_id !== 'string' || !user.avatar_mime_type?.startsWith('image/')) return null;
+  const timestamp = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : 0;
+  return `/api/documents/view/${user.avatar_file_id}?t=${timestamp}`;
+}
 
 export type ClientTicketActionError = ActionMessageError | ActionPermissionError;
 export type ClientTicketActionResult<T> = T | ClientTicketActionError;
@@ -324,15 +346,16 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       return tickets;
     }) as any[];
 
-    return Promise.all(result.map(async (ticket: any) => {
-      const agents = await Promise.all((ticket.additional_agents ?? []).map(async (agent: any) => ({
+    const avatarUrls = await loadUserAvatarUrls(result.flatMap((ticket: any) => ticketAvatarUserIds(ticket)), tenant);
+    return result.map((ticket: any) => {
+      const agents = (ticket.additional_agents ?? []).map((agent: any) => ({
         name: agent.name,
         role: 'staff' as const,
-        avatar_url: await getUserAvatarUrlAction(agent.user_id, tenant).catch(() => null),
-      })));
-      const assignedAvatar = ticket.assigned_to ? await getUserAvatarUrlAction(ticket.assigned_to, tenant).catch(() => null) : null;
+        avatar_url: avatarUrls.get(agent.user_id) ?? null,
+      }));
+      const assignedAvatar = ticket.assigned_to ? avatarUrls.get(ticket.assigned_to) ?? null : null;
       return projectClientTicketList({ ...ticket, additional_agents: agents, assigned_to_avatar_url: assignedAvatar });
-    }));
+    });
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch client tickets:');
   }
@@ -448,16 +471,21 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'u.user_id',
           'u.first_name',
           'u.last_name',
+          'u.contact_id',
           'u.user_type',
-          'd.file_id as avatar_file_id'
+          'd.file_id as avatar_file_id',
+          'ef.mime_type as avatar_mime_type',
+          'd.updated_at as avatar_updated_at'
         );
       scopedDb.tenantJoin(usersQuery, 'document_associations as da', 'da.entity_id', 'u.user_id', {
         type: 'left',
         on: (join) => {
           join.andOn('da.entity_type', '=', trx.raw('?', ['user']));
+          join.andOn('da.is_entity_logo', '=', trx.raw('?', [true]));
         },
       });
       scopedDb.tenantJoin(usersQuery, 'documents as d', 'd.document_id', 'da.document_id', { type: 'left' });
+      scopedDb.tenantJoin(usersQuery, 'external_files as ef', 'd.file_id', 'ef.file_id', { type: 'left' });
       usersQuery.where(function(this: Knex.QueryBuilder) {
         this.whereIn('u.user_id', commentUserIdsSubquery)
           .orWhereIn('u.user_id', assignedUserIdSubquery)
@@ -572,35 +600,39 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       return ticketNotFoundError();
     }
 
+    // `usersQuery` already joins the avatar document for every commenter,
+    // assignee and additional agent. Use that row rather than issuing another
+    // association lookup for each ticket view.
+    const userAvatarUrls = new Map<string, string | null>(result.users.map((u: any) => [
+      u.user_id,
+      u.user_type === 'internal' ? avatarUrlFromJoinedUser(u) : null,
+    ]));
+    const contactIds: string[] = [...new Set<string>(result.users
+      .filter((u: any) => u.user_type === 'client' && typeof u.contact_id === 'string')
+      .map((u: any) => u.contact_id as string))];
+    let contactAvatarUrls = new Map<string, string | null>();
+    if (contactIds.length > 0) {
+      try {
+        contactAvatarUrls = await getContactAvatarUrlsBatchAction(contactIds, tenant);
+      } catch {
+        contactAvatarUrls = new Map<string, string | null>(contactIds.map((contactId) => [contactId, null]));
+      }
+    }
+
     // Create user map, including avatar URLs
     const usersWithAvatars = await Promise.all(result.users.map(async (userRecord: any) => {
-      let avatarUrl: string | null = null;
+      let avatarUrl: string | null = userAvatarUrls.get(userRecord.user_id) ?? null;
 
-      // For internal users, use getUserAvatarUrlAction
-      if (userRecord.user_type === 'internal') {
-        try {
-          avatarUrl = await getUserAvatarUrlAction(userRecord.user_id, tenant);
-        } catch (error) {
-          console.error(`Error fetching avatar URL for internal user ${userRecord.user_id}:`, error);
-        }
-      }
       // For client users, get their contact avatar
-      else if (userRecord.user_type === 'client') {
-        try {
-          // First, get the user's contact_id
-          const userDbRecord = await tenantDb(db, tenant).table('users')
-            .where({ user_id: userRecord.user_id })
-            .first();
-
-          if (userDbRecord?.contact_id) {
-            avatarUrl = await getContactAvatarUrlAction(userDbRecord.contact_id, tenant);
-          }
-        } catch (error) {
-          console.error(`Error fetching avatar URL for client user ${userRecord.user_id}:`, error);
-        }
+      if (userRecord.user_type === 'client') {
+        avatarUrl = contactAvatarUrls.get(userRecord.contact_id) ?? null;
       }
 
-      const { avatar_file_id, ...userData } = userRecord;
+      const userData = { ...userRecord };
+      delete userData.avatar_file_id;
+      delete userData.avatar_mime_type;
+      delete userData.avatar_updated_at;
+      delete userData.contact_id;
       return {
         ...userData,
         avatarUrl,
@@ -642,8 +674,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }), {} as Record<string, { contact_id: string; full_name: string; avatarUrl: string | null }>);
 
     const ticketRow = result.ticket as any;
-    const agentsWithAvatars = await Promise.all((ticketRow.additional_agents ?? []).map(async (agent: any) => ({ name: agent.name, role: 'staff' as const, avatar_url: await getUserAvatarUrlAction(agent.user_id, tenant).catch(() => null) })));
-    const assignedAvatar = ticketRow.assigned_to ? await getUserAvatarUrlAction(ticketRow.assigned_to, tenant).catch(() => null) : null;
+    const agentsWithAvatars = (ticketRow.additional_agents ?? []).map((agent: any) => ({ name: agent.name, role: 'staff' as const, avatar_url: userAvatarUrls.get(agent.user_id) ?? null }));
+    const assignedAvatar = ticketRow.assigned_to ? userAvatarUrls.get(ticketRow.assigned_to) ?? null : null;
     const safeTicket = projectClientTicketDetail({ ...ticketRow, additional_agents: agentsWithAvatars, assigned_to_avatar_url: assignedAvatar, ticket_origin: getTicketOrigin(ticketRow), has_original_email: Boolean(ticketRow.email_metadata?.messageId || ticketRow.email_metadata?.originalEmailId) });
 
     // Every portal comment goes through the shared client projection: deleted rows become an

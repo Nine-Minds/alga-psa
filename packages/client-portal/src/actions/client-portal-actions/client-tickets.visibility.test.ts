@@ -21,6 +21,10 @@ const applyTicketVisibilityFilterMock = vi.fn((query) => query);
 const createTicketWithRetryMock = vi.fn();
 const getDefaultStatusIdMock = vi.fn();
 const publishEventMock = vi.fn();
+const { getUserAvatarUrlsBatchMock, getContactAvatarUrlsBatchMock } = vi.hoisted(() => ({
+  getUserAvatarUrlsBatchMock: vi.fn(),
+  getContactAvatarUrlsBatchMock: vi.fn(),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -113,6 +117,13 @@ vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlAction: vi.fn().mockResolvedValue(null),
   getContactAvatarUrlAction: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
+  getUserAvatarUrlAction: vi.fn().mockResolvedValue(null),
+  getUserAvatarUrlsBatchAction: (...args: any[]) => getUserAvatarUrlsBatchMock(...args),
+  getContactAvatarUrlAction: vi.fn().mockResolvedValue(null),
+  getContactAvatarUrlsBatchAction: (...args: any[]) => getContactAvatarUrlsBatchMock(...args),
 }));
 
 function makeConnection() {
@@ -1140,6 +1151,8 @@ describe('client portal ticket response projection', () => {
 
   it('serializes list and detail using safe identity and ticket allowlists', async () => {
     const secretUserId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    getUserAvatarUrlsBatchMock.mockResolvedValue(new Map([[secretUserId, '/api/documents/view/avatar-file?t=1']]));
+    getContactAvatarUrlsBatchMock.mockResolvedValue(new Map([['contact-portal', '/api/documents/view/contact-avatar?t=2']]));
     const listRow = {
       ticket_id: TICKET_1, ticket_number: 'T-1', title: 'Portal title', url: null,
       board_id: 'board-1', client_id: 'client-1', contact_name_id: 'contact-1', status_id: 'status-1',
@@ -1167,7 +1180,12 @@ describe('client portal ticket response projection', () => {
     expect(serializedList).not.toContain('sender-secret@example.test');
     expect(serializedList).not.toContain(secretUserId);
     expect(serializedList).not.toContain('unknown-secret');
-    expect(list[0]).toMatchObject({ ticket_number: 'T-1', title: 'Portal title', assigned_to_name: 'Avery Agent', additional_agents: [{ name: 'Avery Agent', role: 'staff' }] });
+    expect(list[0]).toMatchObject({
+      ticket_number: 'T-1', title: 'Portal title', assigned_to_name: 'Avery Agent',
+      assigned_to_avatar_url: '/api/documents/view/avatar-file?t=1',
+      additional_agents: [{ name: 'Avery Agent', role: 'staff', avatar_url: '/api/documents/view/avatar-file?t=1' }],
+    });
+    expect(getUserAvatarUrlsBatchMock).toHaveBeenLastCalledWith([secretUserId], 'tenant-1');
 
     const detailRow = {
       ...listRow,
@@ -1189,8 +1207,8 @@ describe('client portal ticket response projection', () => {
     const systemComment = { ...comment, comment_id: 'comment-system', user_id: null, is_system_generated: true, author_type: 'system', note: 'System update' };
     const deletedComment = { ...ownComment, comment_id: 'comment-deleted', deleted_at: '2026-01-02T00:00:00.000Z', note: '' };
     const involved = makeChainable([
-      { user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: null },
-      { user_id: 'portal-user', first_name: 'Portal', last_name: 'User', email: 'portal-secret@example.test', user_type: 'client', avatar_file_id: null },
+      { user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: 'avatar-file', avatar_mime_type: 'image/png', avatar_updated_at: '2026-01-02T00:00:00.000Z' },
+      { user_id: 'portal-user', first_name: 'Portal', last_name: 'User', email: 'portal-secret@example.test', user_type: 'client', contact_id: 'contact-portal', avatar_file_id: null },
     ]);
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
       if (table === 'users') return makeUserQuery();
@@ -1216,10 +1234,14 @@ describe('client portal ticket response projection', () => {
     expect(detail.ticket_origin).toBe('inbound_email');
     expect(detail.assigned_to_name).toBe('Avery Agent');
     expect(detail.assigned_team_id).toBe('team-1');
-    expect(detail.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: null }]);
+    expect(detail.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: '/api/documents/view/avatar-file?t=1767312000000' }]);
+    expect(detail.assigned_to_avatar_url).toBe('/api/documents/view/avatar-file?t=1767312000000');
+    expect(getUserAvatarUrlsBatchMock).toHaveBeenCalledTimes(1);
+    expect(getContactAvatarUrlsBatchMock).toHaveBeenCalledWith(['contact-portal'], 'tenant-1');
     expect(detail.conversations[0].note).toBe('Visible response');
     expect(detail.conversations[0].portal_author).toMatchObject({ name: 'Avery Agent', role: 'staff' });
     expect(detail.conversations[1].portal_author).toMatchObject({ name: 'Portal User', role: 'client' });
+    expect(detail.conversations[1].portal_author.avatarUrl).toBe('/api/documents/view/contact-avatar?t=2');
     expect(detail.conversations[2].portal_author).toMatchObject({ name: 'Morgan Contact', role: 'contact' });
     expect(detail.conversations[3].portal_author).toMatchObject({ name: 'Taylor Tech (Partner Co)', role: 'collaborator' });
     expect(detail.conversations[0].portal_can_edit).toBe(false);
