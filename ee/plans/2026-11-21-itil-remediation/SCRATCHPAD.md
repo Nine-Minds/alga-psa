@@ -448,6 +448,21 @@ written, and the level is read from the priority row; the "Not assessed" display
   `itilSecondBoardSurfaces` 16 covered + 28 todos, `itilImpactUrgencyContract` 9/9, and all 173 test
   files of `packages/tickets/src/{actions,lib,schemas}` (1465 tests).
 
+### Round 3 housekeeping
+
+- **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
+  `email-hotfix` save check (R3): the file's fake knex served `inbound_ticket_defaults`, `statuses`
+  and `client_locations` only, so `findBoardFieldProblems` found no board and no priority and every
+  case came back "the selected priority no longer exists". The fixture now owns a board and a
+  priority of the tenant's own family — the fitting pair — and all nine cases assert what they
+  asserted before. The `Cannot convert undefined or null to object` throw went with it: it was the
+  same missing rows, not a defect in the action for an update that touches neither client nor
+  location.
+- **The round-2 WIP stash was dropped, not applied.** `stash@{0}` held the code half of
+  `category-rules`, which `cd2edeb245` then landed in full (the stash's `boardFieldRules.ts`,
+  `itilStandardsService.ts` and `ticketCategoryActions.ts` are strictly older than HEAD's). Applying
+  it would have reverted the finished group. No stash of this card's is left.
+
 ### Groups not started
 
 Commit groups 8–16 (`writers-create` through `docs`) are untouched: their features and tests are

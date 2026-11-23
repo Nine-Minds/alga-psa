@@ -55,6 +55,28 @@ function createHarness(plan: Plan) {
         calls.push({ table, op: 'first', where: whereClause });
         if (table === 'inbound_ticket_defaults') return current ?? undefined;
         if (table === 'statuses') return { status_id: whereClause.status_id };
+        // R3: every save checks that the stored priority still fits its board, so the fixture has
+        // to own both rows. Both are of the tenant's own family, which is the fitting pair here.
+        if (table === 'boards') {
+          return {
+            board_id: whereClause.board_id,
+            board_name: 'Support',
+            category_type: 'custom',
+            priority_type: 'custom',
+            default_priority_id: null,
+          };
+        }
+        if (table === 'priorities') {
+          return {
+            priority_id: whereClause.priority_id,
+            priority_name: 'Routine',
+            item_type: 'ticket',
+            is_from_itil_standard: false,
+            itil_priority_level: null,
+            order_number: 1,
+            color: '#111111',
+          };
+        }
         if (table === 'client_locations') {
           const locationId = String(whereClause.location_id);
           return owned[locationId] === whereClause.client_id ? { location_id: locationId } : undefined;
