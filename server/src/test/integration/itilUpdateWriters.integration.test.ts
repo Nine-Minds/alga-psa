@@ -230,6 +230,31 @@ describe('ITIL update writers (integration)', () => {
       });
     }, HOOK_TIMEOUT);
 
+    it('T240: a patch that empties both halves clears the assessment and keeps the priority', async () => {
+      await withFixture();
+      const ticketId = await insertTicket({
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[2],
+        impact: 2,
+        urgency: 2,
+      });
+
+      // An explicit clear: both halves are named and empty. The ticket becomes "Not assessed" and
+      // keeps the priority it had — the stored pair must not be handed back.
+      const patch: Record<string, unknown> = { itil_impact: null, itil_urgency: null };
+      expect(await prepareTicketFieldPatch(db, fixture.tenantId, await current(ticketId), patch as any)).toEqual([]);
+      // The priority the ticket already holds is kept, so the patch stays as small as it arrived.
+      expect(patch).toEqual({ itil_impact: null, itil_urgency: null });
+
+      // Only one half is still refused: a half-assessed ticket is not a thing (R4).
+      const half: Record<string, unknown> = { itil_impact: null };
+      expect(
+        (await prepareTicketFieldPatch(db, fixture.tenantId, await current(ticketId), half as any)).map(
+          (problem) => problem.field
+        )
+      ).toEqual(['itil_impact']);
+    }, HOOK_TIMEOUT);
+
     it('T163: a move to a board of the other priority family needs a fitting priority, and clears the assessment', async () => {
       await withFixture();
       const ticketId = await insertTicket({
@@ -414,6 +439,23 @@ describe('ITIL update writers (integration)', () => {
       expect(await storedTicket(onBoardOne)).toMatchObject({ category_id: held });
       expect(await storedTicket(onBoardTwo)).toMatchObject({
         category_id: standardCategoryOnBoard(fixture.boards.itilTwo, parentStandardId),
+      });
+    }, HOOK_TIMEOUT);
+
+    it('T240: an update that empties both halves stores "Not assessed" and keeps the priority', async () => {
+      await withFixture();
+      const ticketId = await insertTicket({
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[2],
+        impact: 2,
+        urgency: 2,
+      });
+
+      await modelUpdate(ticketId, { itil_impact: null, itil_urgency: null });
+      expect(await storedTicket(ticketId)).toMatchObject({
+        itil_impact: null,
+        itil_urgency: null,
+        priority_id: fixture.itilPriorityIds[2],
       });
     }, HOOK_TIMEOUT);
 

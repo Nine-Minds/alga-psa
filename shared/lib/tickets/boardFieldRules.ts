@@ -673,7 +673,11 @@ export async function resolveTicketPriorityFields(
   const resolved = await resolvePlainPriority(conn, tenant, board, candidatePriorityId, input.policy);
   const storedImpact = normaliseLevel(input.current?.itil_impact);
   const storedUrgency = normaliseLevel(input.current?.itil_urgency);
-  const keepAssessment = !priorityChanged && resolved.problems.length === 0;
+  // A write that names both halves and empties them is an explicit clear: the ticket becomes "Not
+  // assessed" and keeps its priority. Without this the stored pair below would be handed back and
+  // the clear silently lost (the shape workflow `tickets.update_fields` can send).
+  const explicitClear = supplied(input, 'itilImpact') && supplied(input, 'itilUrgency');
+  const keepAssessment = !priorityChanged && !explicitClear && resolved.problems.length === 0;
   return {
     ...resolved,
     itil_impact: keepAssessment ? storedImpact : null,
