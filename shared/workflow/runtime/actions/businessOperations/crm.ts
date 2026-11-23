@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { Buffer } from 'node:buffer';
+import { env } from 'node:process';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
@@ -42,6 +44,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import type { TaggedEntityType } from '@alga-psa/types';
+import { decryptActionReplay, encryptActionReplay, type ActionReplayIdentity } from '../../utils/actionReplayCipher';
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const visibilitySchema = z.enum(['internal', 'client_visible']);
@@ -313,10 +316,11 @@ const findQuotesInputSchema = z
     date_from: z.coerce.date().optional(),
     date_to: z.coerce.date().optional(),
     is_template: z.boolean().default(false),
-    page: z.number().int().positive().default(1),
+    page: z.number().int().positive().max(10_000).default(1),
     pageSize: z.number().int().positive().max(200).default(25),
     sortBy: z.enum(['quote_date', 'total_amount', 'status', 'created_at']).default('quote_date'),
     sortOrder: z.enum(['asc', 'desc']).default('desc'),
+    cursor: z.string().max(2048).optional(),
     on_empty: withWorkflowNotFoundPolicy(onEmptySchema.default('return_empty'), 'What to do when there are no results'),
   })
   .superRefine((value, refinementCtx) => {
@@ -994,30 +998,145 @@ function toQuoteAuthorizationRecord(quote: Record<string, unknown>): QuoteAuthor
   };
 }
 
-async function authorizeQuoteRead(
-  trx: Knex.Transaction,
-  tenantId: string,
-  actorUserId: string,
-  quote: Record<string, unknown>
-): Promise<boolean> {
-  const subject = await resolveQuoteAuthorizationSubject(trx, tenantId, actorUserId);
-  const kernel = createQuoteAuthorizationKernel(trx);
-  const decision = await kernel.authorizeResource({
-    subject,
-    resource: {
-      type: 'billing',
-      action: 'read',
-      id: quote.quote_id == null ? null : String(quote.quote_id),
-    },
-    record: {
-      id: toQuoteAuthorizationRecord(quote).quote_id,
-      ownerUserId: toQuoteAuthorizationRecord(quote).created_by,
-      clientId: toQuoteAuthorizationRecord(quote).client_id,
-    },
-    requestCache: new RequestLocalAuthorizationCache(),
-    knex: trx,
+const MAX_SOURCE_ROWS_PER_REQUEST = 1000;
+const MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP = 800;
+type QuoteSortBy = 'quote_date' | 'total_amount' | 'status' | 'created_at';
+type QuoteCursor = { v: 2; sortBy: QuoteSortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
+
+const POSTGRES_BIGINT_MIN = -9_223_372_036_854_775_808n;
+const POSTGRES_BIGINT_MAX = 9_223_372_036_854_775_807n;
+
+function isPostgresBigintCursorKey(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^-?(?:0|[1-9]\d*)$/.test(value)) return false;
+  const integer = BigInt(value);
+  return integer >= POSTGRES_BIGINT_MIN && integer <= POSTGRES_BIGINT_MAX;
+}
+
+function isPostgresTimestampCursorKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?$/.exec(value);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const daysInMonth = month >= 1 && month <= 12
+    ? [31, (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+    : 0;
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
+
+  return year >= 1 && year <= 9999 && day >= 1 && day <= daysInMonth &&
+    hour <= 23 && minute <= 59 && second <= 59 &&
+    offsetHour <= 15 && offsetMinute <= 59;
+}
+
+function getQuoteCursorIdentity(
+  tx: TenantTxContext,
+  input: z.infer<typeof findQuotesInputSchema>,
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc'
+): ActionReplayIdentity {
+  return {
+    tenantId: tx.tenantId,
+    invocationId: JSON.stringify([
+      'crm.find_quotes', 2, tx.actorUserId, sortBy, order,
+      input.is_template,
+      input.quote_id ?? null,
+      input.quote_number ?? null,
+      input.client_id ?? null,
+      input.status ?? null,
+      input.date_from?.toISOString() ?? null,
+      input.date_to?.toISOString() ?? null,
+    ]),
+  };
+}
+
+function quoteCursorEncryptionKey(): string {
+  const secret = env.NEXTAUTH_SECRET?.trim();
+  if (!secret) throw new Error('NEXTAUTH_SECRET is required to encrypt CRM quote cursors');
+  return secret;
+}
+
+function decodeQuoteCursor(
+  value: string,
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc',
+  identity: ActionReplayIdentity
+): QuoteCursor {
+  try {
+    if (!value.startsWith('q2.') || !/^[A-Za-z0-9_-]+$/.test(value.slice(3))) throw new Error();
+    const encodedEnvelope = value.slice(3);
+    if (encodedEnvelope.length % 4 === 1) throw new Error();
+    const envelopeBytes = Buffer.from(encodedEnvelope, 'base64url');
+    if (envelopeBytes.toString('base64url') !== encodedEnvelope) throw new Error();
+    const envelope = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(envelopeBytes)) as Record<string, unknown>;
+    if (!envelope || Array.isArray(envelope) || Object.keys(envelope).sort().join(',') !== 'ciphertext,nonce,tag,version') throw new Error();
+    const parsed = decryptActionReplay(envelope, quoteCursorEncryptionKey(), identity) as Partial<QuoteCursor>;
+    if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',') !== 'id,key,order,sortBy,v' ||
+      parsed.v !== 2 || parsed.sortBy !== sortBy || parsed.order !== order ||
+      typeof parsed.id !== 'string' || !uuidSchema.safeParse(parsed.id).success) throw new Error();
+    const key = parsed.key;
+    if (key !== null) {
+      if (sortBy === 'total_amount') {
+        if (!isPostgresBigintCursorKey(key)) throw new Error();
+      } else if (sortBy === 'quote_date' || sortBy === 'created_at') {
+        if (!isPostgresTimestampCursorKey(key)) throw new Error();
+      } else if (typeof key !== 'string' || !quoteStatusSchema.safeParse(key).success) throw new Error();
+    }
+    return parsed as QuoteCursor;
+  } catch {
+    throw { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid or incompatible quote cursor', details: null };
+  }
+}
+
+function throwInvalidQuoteCursor(): never {
+  throw { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid or incompatible quote cursor', details: null };
+}
+
+function encodeQuoteCursor(
+  sortBy: QuoteSortBy,
+  order: 'asc' | 'desc',
+  row: Record<string, unknown>,
+  identity: ActionReplayIdentity
+): string {
+  const key = row.__quote_cursor_sort_key ?? row[sortBy];
+  const payload: QuoteCursor = { v: 2, sortBy, order, key: key == null ? null : key instanceof Date ? key.toISOString() : key as string | number, id: String(row.quote_id ?? row.id) };
+  const envelope = encryptActionReplay(payload, quoteCursorEncryptionKey(), identity);
+  return `q2.${Buffer.from(JSON.stringify(envelope)).toString('base64url')}`;
+}
+
+function throwPaginationDepthExceeded(nextCursor: string | null): never {
+  throw {
+    category: 'ActionError',
+    code: 'PAGINATION_DEPTH_EXCEEDED',
+    message: 'This page is beyond the depth this action scans in one request; continue from next_cursor',
+    retryable: false,
+    details: { next_cursor: nextCursor },
+  };
+}
+
+function createQuoteReadAuthorizer(trx: Knex.Transaction, tenantId: string, actorUserId: string) {
+  return resolveQuoteAuthorizationSubject(trx, tenantId, actorUserId).then((subject) => {
+    const kernel = createQuoteAuthorizationKernel(trx);
+    const requestCache = new RequestLocalAuthorizationCache();
+    return async (quote: Record<string, unknown>) => {
+      const record = toQuoteAuthorizationRecord(quote);
+      const decision = await kernel.authorizeResource({
+        subject, resource: { type: 'billing', action: 'read', id: record.quote_id },
+        record: { id: record.quote_id, ownerUserId: record.created_by, clientId: record.client_id }, requestCache, knex: trx,
+      });
+      return decision.allowed;
+    };
   });
-  return decision.allowed;
+}
+
+async function authorizeQuoteRead(trx: Knex.Transaction, tenantId: string, actorUserId: string, quote: Record<string, unknown>): Promise<boolean> {
+  return (await createQuoteReadAuthorizer(trx, tenantId, actorUserId))(quote);
 }
 
 async function getAuthorizedQuoteForMutation(
@@ -1695,6 +1814,8 @@ export function registerCrmActions(): void {
       pagination: z.object({
         page: z.number().int(),
         page_size: z.number().int(),
+        next_cursor: z.string().nullable(),
+        has_more: z.boolean(),
       }),
     }),
     sideEffectful: false,
@@ -1706,15 +1827,23 @@ export function registerCrmActions(): void {
     },
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
-        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
-
         const page = input.page ?? 1;
         const pageSize = input.pageSize ?? 25;
         const sortBy = input.sortBy ?? 'quote_date';
         const sortOrder = input.sortOrder ?? 'desc';
+        if (input.cursor !== undefined && page !== 1) throwInvalidQuoteCursor();
+        const cursorIdentity = getQuoteCursorIdentity(tx, input, sortBy, sortOrder);
+        const cursor = input.cursor !== undefined ? decodeQuoteCursor(input.cursor, sortBy, sortOrder, cursorIdentity) : null;
 
-        const buildQuery = () => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
+        const MAX_AUTHORIZED_ROWS_PER_REQUEST = Math.min(pageSize * 4, MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP);
+        const authorize = await createQuoteReadAuthorizer(tx.trx, tx.tenantId, tx.actorUserId);
+
+        const buildQuery = (after: QuoteCursor | null) => {
           const query = tenantScopedTable(tx, 'quotes')
+            .select('*')
+            .select(tx.trx.raw('??::text as __quote_cursor_sort_key', [sortBy]))
             .where({ is_template: input.is_template ?? false });
 
           if (input.quote_id) query.andWhere('quote_id', input.quote_id);
@@ -1724,31 +1853,82 @@ export function registerCrmActions(): void {
           if (input.date_from) query.andWhere('quote_date', '>=', input.date_from.toISOString());
           if (input.date_to) query.andWhere('quote_date', '<=', input.date_to.toISOString());
 
-          return query.orderBy(sortBy, sortOrder).orderBy('quote_id', 'asc');
-        };
-
-        const authorizedRows: Array<Record<string, unknown>> = [];
-        const targetAuthorizedCount = page * pageSize;
-        const sourceBatchSize = Math.max(pageSize, 100);
-        let sourceOffset = 0;
-
-        while (authorizedRows.length < targetAuthorizedCount) {
-          const rows = await buildQuery().limit(sourceBatchSize).offset(sourceOffset);
-          if (rows.length === 0) break;
-
-          sourceOffset += rows.length;
-          for (const row of rows) {
-            if (await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, row)) {
-              authorizedRows.push(row as Record<string, unknown>);
-              if (authorizedRows.length >= targetAuthorizedCount) break;
+          if (after) {
+            if (after.key === null) {
+              query.whereNull(sortBy).andWhere('quote_id', '>', after.id);
+            } else {
+              query.andWhereRaw(
+                `(?? ${sortOrder === 'asc' ? '>' : '<'} ? OR (?? = ? AND ?? > ?) OR ?? IS NULL)`,
+                [sortBy, after.key, sortBy, after.key, 'quote_id', after.id, sortBy]
+              );
             }
           }
+          return query.orderByRaw(`${sortBy} ${sortOrder} NULLS LAST`).orderBy('quote_id', 'asc');
+        };
 
-          if (rows.length < sourceBatchSize) break;
+        const pageRows: Array<Record<string, unknown>> = [];
+        let after = cursor;
+        let sourceRows = 0;
+        let authorizationEvaluations = 0;
+        let nextCursor: string | null = null;
+        let hasMore = false;
+        let depthExceeded = false;
+        let skippedAuthorized = 0;
+        const legacySkip = cursor ? 0 : (page - 1) * pageSize;
+        while (pageRows.length < pageSize) {
+          if (authorizationEvaluations >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
+            depthExceeded = true;
+            break;
+          }
+          const batchSize = Math.min(Math.max(1, Math.min(pageSize * 2, 200)), MAX_SOURCE_ROWS_PER_REQUEST - sourceRows);
+          if (batchSize <= 0) {
+            depthExceeded = true;
+            break;
+          }
+          const rows = await buildQuery(after).limit(batchSize);
+          if (rows.length === 0) break;
+          for (let index = 0; index < rows.length; index += 1) {
+            const row = rows[index] as Record<string, unknown>;
+            if (sourceRows >= MAX_SOURCE_ROWS_PER_REQUEST || authorizationEvaluations >= MAX_AUTHORIZED_ROWS_PER_REQUEST) {
+              depthExceeded = true;
+              break;
+            }
+            sourceRows += 1;
+            const sortKey = row.__quote_cursor_sort_key ?? row[sortBy];
+            after = { v: 2, sortBy, order: sortOrder, key: sortKey == null ? null : sortKey instanceof Date ? sortKey.toISOString() : sortKey as string | number, id: String(row.quote_id) };
+            const allowed = await authorize(row);
+            authorizationEvaluations += 1;
+            if (allowed) {
+              if (skippedAuthorized < legacySkip) skippedAuthorized += 1;
+              else pageRows.push(row);
+            }
+            if (pageRows.length >= pageSize) {
+              hasMore = index < rows.length - 1 || rows.length === batchSize;
+              nextCursor = hasMore ? encodeQuoteCursor(sortBy, sortOrder, row, cursorIdentity) : null;
+              break;
+            }
+          }
+          if (pageRows.length >= pageSize) break;
+          if (depthExceeded) break;
+          if (rows.length < batchSize) break;
         }
 
-        const pageStart = (page - 1) * pageSize;
-        const pageRows = authorizedRows.slice(pageStart, targetAuthorizedCount);
+        // An error cannot carry the page rows. Return any accumulated rows and resume
+        // after the last delivered row so their boundaries are never skipped.
+        if (depthExceeded && pageRows.length === 0) {
+          throwPaginationDepthExceeded(after ? encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity) : null);
+        }
+        if (depthExceeded && pageRows.length > 0) {
+          nextCursor = encodeQuoteCursor(sortBy, sortOrder, pageRows[pageRows.length - 1], cursorIdentity);
+          hasMore = true;
+        }
+        if (!nextCursor && after && sourceRows === MAX_SOURCE_ROWS_PER_REQUEST) {
+          if (pageRows.length === 0) {
+            throwPaginationDepthExceeded(encodeQuoteCursor(sortBy, sortOrder, { ...after, [sortBy]: after.key }, cursorIdentity));
+          }
+          nextCursor = encodeQuoteCursor(sortBy, sortOrder, pageRows[pageRows.length - 1], cursorIdentity);
+          hasMore = true;
+        }
 
         if (pageRows.length === 0 && input.on_empty === 'error') {
           throwActionError(ctx, {
@@ -1764,8 +1944,10 @@ export function registerCrmActions(): void {
           first_quote: summaries[0] ?? null,
           count: summaries.length,
           pagination: {
-            page,
+            page: cursor ? 1 : page,
             page_size: pageSize,
+            next_cursor: nextCursor,
+            has_more: hasMore || nextCursor !== null,
           },
         };
       }),
