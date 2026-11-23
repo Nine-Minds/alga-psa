@@ -19,7 +19,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER, COMMENT_EMAIL_LEDGER } from '../deliveryLedger';
+import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER, COMMENT_EMAIL_LEDGER, SCHEDULE_REMINDER_LEDGER, scheduleReminderKey } from '../deliveryLedger';
 const db: any = { raw: (s: string) => s };
 
 describe('deliveryLedger', () => {
@@ -51,5 +51,31 @@ describe('deliveryLedger', () => {
   });
   it('rejects a key missing a column', async () => {
     await expect(claimDelivery(db, CO_MANAGED_LEDGER, 't', { delivery_kind: 'k' } as any)).rejects.toThrow(/source_id/);
+  });
+
+  describe('schedule reminder ledger', () => {
+    const start = new Date('2026-11-23T14:45:00.000Z');
+    it('builds canonical keys: ISO-8601 UTC timestamp and decimal lead', () => {
+      expect(scheduleReminderKey({ entryId: 'e', occurrenceStart: new Date('2026-11-23T09:45:00-05:00'), userId: 'u', leadMinutes: 15 }))
+        .toEqual({ entry_id: 'e', occurrence_start: '2026-11-23T14:45:00.000Z', user_id: 'u', lead_minutes: '15' });
+      expect(scheduleReminderKey({ entryId: 'e', occurrenceStart: '2026-11-23T14:45:00Z', userId: 'u', leadMinutes: 0 }).lead_minutes).toBe('0');
+    });
+    it('claim inserts on the tenant-leading PK with canonical values, from raw Date/number keys too', async () => {
+      insertResult = [{ entry_id: 'e' }];
+      expect(await claimDelivery(db, SCHEDULE_REMINDER_LEDGER, 't', { entry_id: 'e', occurrence_start: start, user_id: 'u', lead_minutes: 0 })).toBe(true);
+      expect(calls[0][2]).toMatchObject({ tenant: 't', entry_id: 'e', occurrence_start: '2026-11-23T14:45:00.000Z', user_id: 'u', lead_minutes: '0', state: 'sending' });
+      expect(calls[1][1]).toEqual(['tenant', 'entry_id', 'occurrence_start', 'user_id', 'lead_minutes']);
+    });
+    it('re-claims only failed rows by default and matches the same key', async () => {
+      updateResult = 1;
+      await claimDelivery(db, SCHEDULE_REMINDER_LEDGER, 't', scheduleReminderKey({ entryId: 'e', occurrenceStart: start, userId: 'u', leadMinutes: 5 }));
+      expect(calls.find((c) => c[0] === 'whereIn')[2]).toEqual(['failed']);
+      expect(calls.find((c) => c[0] === 'where')[1]).toMatchObject({ occurrence_start: '2026-11-23T14:45:00.000Z', lead_minutes: '5' });
+    });
+    it('rejects non-integer leads and invalid dates', async () => {
+      await expect(claimDelivery(db, SCHEDULE_REMINDER_LEDGER, 't', { entry_id: 'e', occurrence_start: start, user_id: 'u', lead_minutes: 1.5 })).rejects.toThrow(/lead_minutes/);
+      await expect(claimDelivery(db, SCHEDULE_REMINDER_LEDGER, 't', { entry_id: 'e', occurrence_start: new Date('x'), user_id: 'u', lead_minutes: 5 })).rejects.toThrow(/occurrence_start/);
+      expect(() => scheduleReminderKey({ entryId: 'e', occurrenceStart: 'nope', userId: 'u', leadMinutes: 5 })).toThrow(/occurrence_start/);
+    });
   });
 });

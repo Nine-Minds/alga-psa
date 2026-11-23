@@ -26,6 +26,8 @@ export interface InternalNotificationSubtype {
   is_default_enabled: boolean;
   available_for_client_portal: boolean;
   display_title?: string;
+  /** Web shows a live toast when this subtype arrives while the app is open (S4 consumer). */
+  toast_on_arrival?: boolean;
   /** System default priority for this subtype (from internal_notification_subtypes). */
   default_priority?: InternalNotificationPriority;
   /** Tenant admin override, if any (from tenant_internal_notification_subtype_settings). NULL = inherit default. */

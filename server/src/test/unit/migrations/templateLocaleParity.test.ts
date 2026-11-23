@@ -206,7 +206,9 @@ function emailTemplateDefs() {
 // first of those then shipped without a Swedish variant unnoticed.
 function internalTemplateDefs() {
   const { ALL_TEMPLATES } = require(path.join(migrationsDir, '20260924071125_add_swedish_internal_notification_templates.cjs'));
-  return [...ALL_TEMPLATES];
+  // Templates added after that migration froze its list.
+  const { ALL_SCHEDULE_REMINDER_TEMPLATES } = require(path.join(migrationsDir, 'utils/templates/internal/scheduleEntryReminder.cjs'));
+  return [...ALL_TEMPLATES, ...ALL_SCHEDULE_REMINDER_TEMPLATES];
 }
 
 /**
