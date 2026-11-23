@@ -25,7 +25,7 @@ import { tierFromStripeProduct } from './stripeTierMapping';
 import { stripeApiOverride } from './stripeApiOverride';
 import { countLicensedInternalUsers, lockCoManagedSponsorPool, reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { bindTrialPurchase, reconcileTrialPurchase, releaseTrialPurchase, type SeatTrialQuote } from '../co-managed/seatTrialConversion';
-import { billingPeriodEnd, coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { billingPeriodEnd, coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry, recognizesPrice } from './coManagedSubscription';
 import { CoManagedPurchaseBlockedError } from './coManagedPurchaseErrors';
 import {
   StripeOwnershipError,
@@ -37,7 +37,7 @@ import { dispatchPaymentEvent } from './paymentEventRegistry';
 import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
 import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, PortalFulfillmentRetryableError, portalPurchaseIdOfEvent, reconcilePortalPurchase } from './coManagedFulfillment';
 import {
-  CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, type CatalogOperator, type OfferCatalog, type ResolvedOffer,
+  CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, UnmappedPriceError, type CatalogOperator, type OfferCatalog, type ResolvedOffer,
 } from './offerCatalog';
 import { createBillingOfferCatalog, resolveStripeSecretKey } from './offerCatalog/catalogFactory';
 
@@ -1966,13 +1966,18 @@ export class StripeService {
     if (subscription) await this.syncCoManagedSubscription(tenant, subscription, db);
   }
 
+  /**
+   * The display terms of the current seat offer. `resolveCurrentOffer` has already re-read the price from
+   * Stripe in the catalog's account and validated it as a sellable monthly licensed per-seat price (a superset
+   * of `assertCoManagedPrice`'s shape checks), and that read is shared with the rest of the request, so no
+   * second Stripe call is made here. Only the recognition check is left to do.
+   */
   async coManagedSeatPrice() {
     await this.ensureInitialized();
     const recognized = await this.recognizedCoManagedPrices();
     const offer = await (await this.getOfferCatalog()).resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL);
-    const price = await this.stripe.prices.retrieve(offer.priceId);
-    assertCoManagedPrice(price, recognized);
-    return { unitAmount: price.unit_amount!, currency: price.currency };
+    if (!recognizesPrice(recognized, offer.priceId)) throw new UnmappedPriceError(offer.priceId);
+    return { unitAmount: offer.terms.unitAmount, currency: offer.terms.currency };
   }
 
   /**

@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const flag = vi.hoisted(() => ({ enabled: vi.fn() }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag.enabled }));
 
-import { AsyncResource } from 'node:async_hooks';
+import { AsyncLocalStorage, AsyncResource } from 'node:async_hooks';
 import {
   currentBillingCatalogContext, isCoManagedPurchaseSurfaceOpen, registerBillingCatalogContextLoader,
+  registerBillingCatalogRenderScope, memoiseInBillingCatalogRequest, forgetBillingCatalogRequest,
   resolveCoManagedPurchaseAvailability, runWithBillingCatalogContext, runWithBillingCatalogRequest, hasBillingCatalogScope, type BillingCatalogContext,
 } from './co-managed-purchase-surface';
 
@@ -19,8 +20,23 @@ beforeEach(() => {
   process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = 'price_co_managed';
   delete process.env.FORCE_CAPABILITIES;
   registerBillingCatalogContextLoader(undefined);
+  registerBillingCatalogRenderScope(undefined);
 });
-afterEach(() => { delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID; delete process.env.FORCE_CAPABILITIES; registerBillingCatalogContextLoader(undefined); });
+afterEach(() => { delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID; delete process.env.FORCE_CAPABILITIES; registerBillingCatalogContextLoader(undefined); registerBillingCatalogRenderScope(undefined); });
+
+/**
+ * Stands in for React's `cache(() => ({}))` as Next uses it: one holder per render request, and outside a
+ * render (no request cache) a fresh object on every call.
+ */
+const renders = new AsyncLocalStorage<Map<string, object>>();
+const renderSlot = () => {
+  const cache = renders.getStore();
+  if (!cache) return {};
+  let holder = cache.get('slot');
+  if (!holder) cache.set('slot', holder = {});
+  return holder;
+};
+const render = <T>(work: () => Promise<T>): Promise<T> => request(() => renders.run(new Map(), work));
 
 describe('co-managed purchase surface', () => {
   it('keeps bootstrap behavior and existing feature-flag semantics', async () => {
@@ -193,5 +209,90 @@ describe('co-managed purchase surface', () => {
       expect(loader).toHaveBeenCalledTimes(3);
     });
   });
+  });
+  describe('server render scope (registerBillingCatalogRenderScope: one load per render)', () => {
+    it('shares one load across the separate branches of one render, and loads again for the next render', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      registerBillingCatalogRenderScope(renderSlot);
+      // Root layout bootstrap, the co-managed resolver (which opens a request scope: it joins the render) and
+      // a nested branch, concurrently, as React renders them.
+      const answers = await render(() => Promise.all([
+        request(() => isCoManagedPurchaseSurfaceOpen('t')),
+        request(() => runWithBillingCatalogRequest(async () => [await isCoManagedPurchaseSurfaceOpen('t'), await isCoManagedPurchaseSurfaceOpen('t')])),
+        request(async () => (await currentBillingCatalogContext())?.priceId),
+      ]));
+      expect(answers).toEqual([true, [true, true], 'price_db']);
+      expect(loader).toHaveBeenCalledTimes(1);
+      await render(() => isCoManagedPurchaseSurfaceOpen('t'));
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+    it('is no scope at all outside a render, even with a slot registered (never a process cache)', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      registerBillingCatalogRenderScope(renderSlot);
+      expect(hasBillingCatalogScope()).toBe(false);
+      await isCoManagedPurchaseSurfaceOpen('t');
+      await isCoManagedPurchaseSurfaceOpen('t');
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+    it('lets a pinned context inside a render win, and a slot that throws count as no scope', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      registerBillingCatalogRenderScope(renderSlot);
+      expect(await render(() => runWithBillingCatalogContext(unconfigured, () => isCoManagedPurchaseSurfaceOpen('t')))).toBe(false);
+      expect(loader).not.toHaveBeenCalled();
+      registerBillingCatalogRenderScope(() => { throw new Error('not in a render'); });
+      expect(await render(() => isCoManagedPurchaseSurfaceOpen('t'))).toBe(true);
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('request memo (memoiseInBillingCatalogRequest / forgetBillingCatalogRequest)', () => {
+    it('runs a catalog read once per request scope, concurrent calls included, and per call with no scope', async () => {
+      const read = vi.fn(async () => 'price_db');
+      await request(() => runWithBillingCatalogRequest(async () => {
+        expect(await Promise.all([memoiseInBillingCatalogRequest('k', read), memoiseInBillingCatalogRequest('k', read)])).toEqual(['price_db', 'price_db']);
+        await memoiseInBillingCatalogRequest('k', read);
+      }));
+      expect(read).toHaveBeenCalledTimes(1);
+      await request(() => runWithBillingCatalogRequest(() => memoiseInBillingCatalogRequest('k', read)));
+      expect(read).toHaveBeenCalledTimes(2);
+      await memoiseInBillingCatalogRequest('k', read);
+      await memoiseInBillingCatalogRequest('k', read);
+      expect(read).toHaveBeenCalledTimes(4);
+    });
+    it('shares a failure within the request rather than retrying, and keeps keys apart', async () => {
+      const failing = vi.fn(async () => { throw new Error('stripe down'); });
+      const other = vi.fn(async () => 'other');
+      await request(() => runWithBillingCatalogRequest(async () => {
+        await expect(memoiseInBillingCatalogRequest('a', failing)).rejects.toThrow('stripe down');
+        await expect(memoiseInBillingCatalogRequest('a', failing)).rejects.toThrow('stripe down');
+        expect(await memoiseInBillingCatalogRequest('b', other)).toBe('other');
+      }));
+      expect(failing).toHaveBeenCalledTimes(1);
+      expect(other).toHaveBeenCalledTimes(1);
+    });
+    it('after a catalog write in the request, re-reads and reloads the lazy context but keeps a pinned one', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      const read = vi.fn(async () => 'v');
+      await request(() => runWithBillingCatalogRequest(async () => {
+        await isCoManagedPurchaseSurfaceOpen('t');
+        await memoiseInBillingCatalogRequest('k', read);
+        forgetBillingCatalogRequest();
+        await isCoManagedPurchaseSurfaceOpen('t');
+        await memoiseInBillingCatalogRequest('k', read);
+      }));
+      expect(loader).toHaveBeenCalledTimes(2);
+      expect(read).toHaveBeenCalledTimes(2);
+      loader.mockClear();
+      expect(await request(() => runWithBillingCatalogContext(unconfigured, async () => {
+        forgetBillingCatalogRequest();
+        return isCoManagedPurchaseSurfaceOpen('t');
+      }))).toBe(false);
+      expect(loader).not.toHaveBeenCalled();
+      forgetBillingCatalogRequest(); // no scope: a no-op
+    });
   });
 });

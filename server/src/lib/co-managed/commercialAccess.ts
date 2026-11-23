@@ -27,9 +27,9 @@ export interface CoManagedRootAccess {
 }
 
 export const resolveCoManagedRootAccess = cache((tenant: string): Promise<CoManagedRootAccess> =>
-  // The root render is not a server action, so withAuth does not open the catalog scope for it. This is the
-  // one function the layout, page and metadata share (cache() above), so the scope opened here covers every
-  // gate check the render makes: purchase discovery, trial discovery and the capability's eligibility.
+  // The root render is not a server action, so withAuth does not open the catalog scope for it. Inside a
+  // render this scope joins the render-wide slot (billingCatalogRenderScope.ts), so these checks share one load
+  // with the root layout's capability bootstrap; called anywhere else it is this call's own request scope.
   runWithBillingCatalogRequest(() => resolveRootAccess(tenant)));
 
 async function resolveRootAccess(tenant: string): Promise<CoManagedRootAccess> {

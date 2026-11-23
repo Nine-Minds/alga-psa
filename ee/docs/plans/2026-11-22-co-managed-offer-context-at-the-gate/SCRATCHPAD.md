@@ -86,6 +86,43 @@
 - **Not covered.** API route handlers, other page renders and Temporal activities do not open a scope, so each gate check
   there loads per check; each such entry makes one or two checks. Candidates if they show up in measurements.
 
+## Repair round 2: one Stripe price read per request, render included (2026-11-23, Implement)
+
+- **Measured first.** The previous round (8ace84ebb4) was measured live for the first time: one cold `/msp/co-managed`
+  trial view as tenant A against the card's Stripe emulator still made 9 Stripe requests (8 price, 1 subscription).
+  Attribution by timing against the client's server-action requests: render 2, `getCoManagedPurchaseDiscoveryAction` 1,
+  `getSeatTrialOfferAction` 3, `getCoManagedPurchaseState` 1, `previewCoManagedSeatsAction` 1 price + 1 subscription.
+- **Why the scope was not enough.** (1) The context load is not the only price read: `StripeService.coManagedSeatPrice`
+  called `resolveCurrentOffer` (a Stripe read) and then read the same price again, so a scoped action still made 3.
+  (2) The server render is not one async call: the root layout's `resolveCapabilityBootstrap` evaluates
+  `admits('co-managed-seat')`, which reaches the gate outside `resolveCoManagedRootAccess`'s scope, so the render loaded twice.
+- **Mechanism.** Licensing's request scope now also memoises other catalog reads: `memoiseInBillingCatalogRequest(key, work)`
+  (once per scope, concurrent and failed calls share the promise; per call with no scope) and
+  `forgetBillingCatalogRequest()` (drops the memo and a lazily loaded context; a pinned context stays). The EE offer catalog
+  returns `resolveCurrentOffer` memoised under `offer-catalog:current-offer:<key>:<interval>` (keyed by fact, not instance,
+  since Next can hold one StripeService per bundle) and wraps `setAccountSetting`/`publishBinding`/`pauseSales` to forget
+  afterwards, success or not. The context loader already resolves through `resolveCurrentOffer`, so the gate and every
+  display/preview/purchase read in the request share one Stripe read. `coManagedSeatPrice` now returns the resolved offer's
+  terms: `resolveCurrentOffer` already validated the price as an active monthly licensed per-unit price in the catalog's
+  account (a superset of `assertCoManagedPrice`'s shape checks); only the recognition check remains.
+- **Render scope.** `registerBillingCatalogRenderScope(slot)`: the server registers `cache(() => ({}))` from
+  `server/src/lib/co-managed/billingCatalogRenderScope.ts`, imported by the root layout (React `cache` is request-scoped
+  only in the server-component layer). The active scope is the explicit ALS store, else the render slot. Outside a render
+  React `cache` returns a new object per call; the slot is called twice and only a stable holder counts, so it can never
+  become a process cache. `runWithBillingCatalogRequest` inside a render runs on the render's holder (joins it).
+- **Measured after.** Same view, same method: 6 Stripe requests (5 price, 1 subscription). Render 1, discovery 1, seat trial
+  offer 1, purchase state 1, preview 1 + subscription list. Repeated twice, same result. Pause -> the overview renders
+  not-found; restore -> back (fail-closed intact). A page view is still five requests (one render, four client server
+  actions) that each read the price once; one read per page view would need a cross-request cache or the render handing
+  that data to the client components. Neither was built.
+- **Measuring on the dev server.** The emulator's `GET :9826/control/stripe/requests` is a 1000-entry ring buffer: diff by
+  `sequence`, not by array index. After a dev-server restart Turbopack's lazy compiles push HMR updates that full-reload a
+  headless page in a loop (seen as hundreds of aborted navigations, and once a dev-server OOM); the measuring browser proxies
+  `/_next/hmr` and drops update messages.
+- **Card DB.** `app_user`'s password in the card Postgres no longer matched `secrets/db_password_server` (sign-in failed with
+  CredentialsSignin, `initializeApp` failed at boot), most likely because a DB test run against port 5826 reset the
+  cluster-wide role. Reset it to the checkout's secret.
+
 ## Implementation notes (2026-11-22)
 
 - **Request memo (superseded by the repair round above: entry points now open the scope).** A "request" is one explicit `AsyncLocalStorage.run` scope: `runWithBillingCatalogContext` and

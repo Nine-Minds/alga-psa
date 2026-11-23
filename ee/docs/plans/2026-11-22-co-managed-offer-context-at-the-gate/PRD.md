@@ -87,10 +87,13 @@ No UI change. The trial card (`CoManagedSeatTrial`) already renders when
 - **Licensing owns resolution.** `@alga-psa/licensing` exposes
   `registerBillingCatalogContextLoader(loader)`. `currentBillingCatalogContext()` and
   `isCoManagedPurchaseSurfaceOpen` resolve the context in this order:
-  1. The active AsyncLocalStorage store.
-  2. The registered loader. Inside an explicit request scope (`runWithBillingCatalogRequest`, opened by
-     `withAuth` and the co-managed root access resolver) the result is shared by every check in that
-     request and never across requests. With no scope the loader runs on every check; nothing is
+  1. The active request scope: an explicit AsyncLocalStorage store, else the current server render's
+     slot (see below).
+  2. The registered loader. Inside a request scope (`runWithBillingCatalogRequest`, opened by `withAuth`
+     and the co-managed root access resolver; or the render slot the server registers with
+     `registerBillingCatalogRenderScope`, React `cache()`, which covers the whole server render: root
+     layout capability bootstrap, nested layouts, page and metadata) the result is shared by every check in
+     that request and never across requests. With no scope the loader runs on every check; nothing is
      memoised by the gate itself.
   3. Only when no loader is registered (CE, or self-hosted without the EE catalog), the legacy
      env var.
@@ -108,8 +111,12 @@ No UI change. The trial card (`CoManagedSeatTrial`) already renders when
 
 ### Non-functional Requirements
 
-- At most one catalog context load per request in the common page render, the same as today
-  for wrapped paths.
+- At most one catalog context load, and one Stripe read of the current seat price, per request: the
+  server render is one request, and so is each server action. The scope also memoises the offer
+  catalog's `resolveCurrentOffer` (`memoiseInBillingCatalogRequest`), so the gate's context load, the
+  displayed seat price and a preview's new-sale terms share one Stripe read; a catalog write in the
+  request drops the memo. No cross-request cache: a page view whose client components make their own
+  server-action requests makes one read per such request.
 
 ## Data / API / Integrations
 
