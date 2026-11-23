@@ -59,6 +59,31 @@ export function assertProjectFieldsWritable(redactedFields: readonly string[], f
   }
 }
 
+/** Rejects writes to fields redacted on a project-owned child resource. */
+export function assertProjectChildFieldsWritable(
+  redactedFields: readonly string[],
+  resource: 'project_phases' | 'project_tasks' | 'statuses' | 'project_status_mappings',
+  fields: readonly string[],
+): void {
+  const childResource = resource === 'statuses'
+    ? 'status'
+    : resource.endsWith('ies')
+      ? `${resource.slice(0, -3)}y`
+      : resource.endsWith('s')
+        ? resource.slice(0, -1)
+        : resource;
+  const hidden = fields.filter((field) => {
+    const candidates = [field, `${resource}.${field}`, `${childResource}.${field}`];
+    return redactedFields.some((redacted) =>
+      redacted === '*' || redacted === `${resource}.*` || redacted === `${childResource}.*` ||
+      candidates.some((candidate) => isProjectFieldRedacted([redacted], candidate)),
+    );
+  });
+  if (hidden.length > 0) {
+    throw new Error(`Permission denied: Cannot update redacted project field${hidden.length === 1 ? '' : 's'}`);
+  }
+}
+
 /** Removes hidden source fields and any display values derived from those sources. */
 export function projectRecord<T extends ProjectRecord>(record: T, redactedFields: readonly string[]): T {
   if (redactedFields.length === 0) return record;

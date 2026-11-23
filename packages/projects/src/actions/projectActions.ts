@@ -56,7 +56,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
-import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay, isProjectFieldRedacted, isWholeProjectRedacted, PROJECT_SEARCH_INDEX_FIELD_SOURCES, PROJECT_SEARCH_INDEX_TYPES } from '../lib/projectReadProjection';
+import { assertProjectChildFieldsWritable, assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay, isProjectFieldRedacted, isWholeProjectRedacted, PROJECT_SEARCH_INDEX_FIELD_SOURCES, PROJECT_SEARCH_INDEX_TYPES, type ProjectReadDecision } from '../lib/projectReadProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -137,6 +137,7 @@ const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
     'Phase not found',
     'Project not found',
     'Project phase not found',
+    'Project task not found',
     'Project status not found',
 ];
 
@@ -343,6 +344,24 @@ async function assertProjectReadAllowed(
   }
 
   return project;
+}
+
+async function assertProjectMutationAllowed(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectId: string,
+): Promise<ProjectReadDecision> {
+  const project = await assertProjectReadAllowed(trx, tenant, user, projectId);
+  const authorizeProjectUpdate = await createProjectReadAuthorizer(trx, tenant, user, 'update');
+  const decision = await authorizeProjectUpdate(project);
+  if (!decision.allowed) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+  if (isWholeProjectRedacted(decision.redactedFields ?? [])) {
+    throw new Error('Permission denied: Cannot update redacted project field');
+  }
+  return decision;
 }
 
 async function resolveProjectIdForPhase(
@@ -1008,7 +1027,20 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const updateDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            if ('tenant' in phaseData || 'phase_id' in phaseData) {
+                throw new Error('Permission denied: Cannot change project phase identity');
+            }
+            assertProjectChildFieldsWritable(updateDecision.redactedFields, 'project_phases', Object.keys(phaseData));
+            if ('project_id' in phaseData) {
+                if (typeof phaseData.project_id !== 'string' || phaseData.project_id.length === 0) {
+                    throw new Error('Permission denied: Cannot change project phase ownership');
+                }
+                if (phaseData.project_id !== projectId) {
+                    const targetDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phaseData.project_id);
+                    assertProjectChildFieldsWritable(targetDecision.redactedFields, 'project_phases', ['project_id']);
+                }
+            }
 
             return await ProjectModel.updatePhase(trx, tenant, phaseId, {
                 ...phaseData,
@@ -2303,7 +2335,41 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
         if (denied) return denied;
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const updateDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            for (const phase of updates.phases) {
+                if (!phase.phase_id) throw new Error('Phase ID is required for update');
+                if ('tenant' in phase || 'project_id' in phase) {
+                    throw new Error('Permission denied: Cannot change project phase ownership');
+                }
+                const existing = await tenantScopedTable(trx, 'project_phases', tenant)
+                    .where({ phase_id: phase.phase_id, project_id: projectId })
+                    .first<{ phase_id: string }>('phase_id');
+                if (!existing) throw new Error('Project phase not found');
+                assertProjectChildFieldsWritable(updateDecision.redactedFields, 'project_phases', Object.keys(phase).filter((field) => field !== 'wbs_code'));
+            }
+            for (const task of updates.tasks) {
+                if (!task.task_id) throw new Error('Task ID is required for update');
+                if ('tenant' in task) {
+                    throw new Error('Permission denied: Cannot change project task identity');
+                }
+                const existing = await tenantScopedTable(trx, 'project_tasks as pt', tenant)
+                    .join('project_phases as ph', function () {
+                        this.on('ph.phase_id', '=', 'pt.phase_id').andOn('ph.tenant', '=', 'pt.tenant');
+                    })
+                    .where({ 'pt.task_id': task.task_id, 'ph.project_id': projectId })
+                    .first<{ task_id: string }>('pt.task_id');
+                if (!existing) throw new Error('Project task not found');
+                if ('phase_id' in task) {
+                    if (typeof task.phase_id !== 'string' || task.phase_id.length === 0) {
+                        throw new Error('Permission denied: Cannot change project task ownership');
+                    }
+                    const targetPhase = await tenantScopedTable(trx, 'project_phases', tenant)
+                        .where({ phase_id: task.phase_id, project_id: projectId })
+                        .first<{ phase_id: string }>('phase_id');
+                    if (!targetPhase) throw new Error('Project phase not found');
+                }
+                assertProjectChildFieldsWritable(updateDecision.redactedFields, 'project_tasks', Object.keys(task).filter((field) => field !== 'wbs_code'));
+            }
             await ProjectModel.updateStructure(trx, tenant, projectId, updates);
         });
     } catch (error) {
@@ -2458,15 +2524,24 @@ export const updateProjectStatus = withAuth(async (
         if (denied) return denied;
 
         const updatedStatus = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-
             const relatedProjectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);
-            if (relatedProjectIds.length > 0) {
-                await Promise.all(
-                    relatedProjectIds.map((relatedProjectId) =>
-                        assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, relatedProjectId)
-                    )
-                );
+            const affectedProjectIds = Array.from(new Set([projectId, ...relatedProjectIds]));
+            if ('tenant' in statusData || 'status_id' in statusData || 'tenant' in mappingData || 'project_id' in mappingData) {
+                throw new Error('Permission denied: Cannot change project status ownership');
+            }
+            const decisions = await Promise.all(affectedProjectIds.map((affectedProjectId =>
+                assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, affectedProjectId)
+            )));
+            for (const decision of decisions) {
+                const projectFields = [
+                    ...(Object.keys(statusData).includes('name') ? ['status_name'] : []),
+                    ...(Object.keys(statusData).includes('is_closed') ? ['is_closed'] : []),
+                    ...(Object.keys(mappingData).includes('custom_name') ? ['status_name'] : []),
+                    ...(Object.keys(mappingData).includes('status_id') ? ['status'] : []),
+                ];
+                assertProjectFieldsWritable(decision.redactedFields, projectFields);
+                assertProjectChildFieldsWritable(decision.redactedFields, 'statuses', Object.keys(statusData));
+                assertProjectChildFieldsWritable(decision.redactedFields, 'project_status_mappings', Object.keys(mappingData));
             }
 
             return await ProjectModel.updateProjectStatus(trx, tenant, statusId, statusData, mappingData);
