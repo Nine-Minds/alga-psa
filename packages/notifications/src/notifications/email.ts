@@ -32,7 +32,12 @@ export type EmailNotificationResult =
  * row shadows — are allow-listed out instead of trusted.
  */
 const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'default_dont_notify_customer', 'rate_limit_per_minute'] as const;
-const TEMPLATE_WRITABLE_COLUMNS = ['subject', 'html_content', 'text_content', 'language_code'] as const;
+// The derived_* columns are provenance, never UI input: the actions that call this decide them
+// (cleared on every tenant edit), and a payload that names none of them leaves them alone.
+const TEMPLATE_WRITABLE_COLUMNS = [
+  'subject', 'html_content', 'text_content', 'language_code',
+  'derived_from_system_id', 'derived_palette', 'derived_snapshot_hash',
+] as const;
 
 function pickDefined<T extends object>(source: T, columns: readonly (keyof T & string)[]): Partial<T> {
   const picked: Partial<T> = {};
@@ -183,6 +188,7 @@ export class EmailNotificationService implements NotificationService {
     return updated;
   }
 
+  // LEVERAGE: pattern tenant-then-system template lookup — same precedence as lookupEmailTemplate (@alga-psa/email/templateLookup), minus its derived-row handling
   async getEffectiveTemplate(
     tenant: string,
     name: string,

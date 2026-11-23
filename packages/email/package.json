@@ -37,6 +37,21 @@
       "import": "./dist/branding/index.js",
       "require": "./dist/branding/index.cjs"
     },
+    "./derivedTemplates": {
+      "types": "./src/derivedTemplates.ts",
+      "import": "./dist/derivedTemplates.js",
+      "require": "./dist/derivedTemplates.cjs"
+    },
+    "./backfillDerivedTemplates": {
+      "types": "./src/backfillDerivedTemplates.ts",
+      "import": "./dist/backfillDerivedTemplates.js",
+      "require": "./dist/backfillDerivedTemplates.cjs"
+    },
+    "./templateLookup": {
+      "types": "./src/templateLookup.ts",
+      "import": "./dist/templateLookup.js",
+      "require": "./dist/templateLookup.cjs"
+    },
     "./senderSelection": {
       "types": "./src/senderSelection.ts",
       "import": "./src/senderSelection.ts"

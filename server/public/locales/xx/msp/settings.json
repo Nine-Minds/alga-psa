@@ -1913,7 +1913,9 @@
         "templateCount": "⟦({{templateCount}} ŧḗḿƥŀȧŧḗş)⟧",
         "usingCustom": "⟦Ŭşīƞɠ ƈŭşŧȯḿ ŧḗḿƥŀȧŧḗ⟧",
         "usingStandard": "⟦Ŭşīƞɠ şŧȧƞḓȧřḓ ŧḗḿƥŀȧŧḗ⟧",
-        "notCurrentlySent": "⟦Ƞȯŧ ƈŭřřḗƞŧŀẏ şḗƞŧ⟧"
+        "notCurrentlySent": "⟦Ƞȯŧ ƈŭřřḗƞŧŀẏ şḗƞŧ⟧",
+        "followsStandard": "⟦Şŧȧƞḓȧřḓ ŧḗḿƥŀȧŧḗ īƞ ẏȯŭř ƀřȧƞḓ — ƒȯŀŀȯẇş Ȧŀɠȧ ŭƥḓȧŧḗş⟧",
+        "missingVariables": "⟦Ŧħḗ şŧȧƞḓȧřḓ ŧḗḿƥŀȧŧḗ ƞȯẇ ŭşḗş {{variables}}. Ẏȯŭř ḗḓīŧḗḓ ƈȯƥẏ ḓȯḗşƞ'ŧ.⟧"
       },
       "columns": {
         "name": "⟦Ƞȧḿḗ⟧",
@@ -1930,6 +1932,7 @@
         "expand": "⟦Ḗẋƥȧƞḓ⟧",
         "edit": "⟦Ḗḓīŧ⟧",
         "useStandard": "⟦Ŭşḗ Şŧȧƞḓȧřḓ⟧",
+        "resetToStandard": "⟦Řḗşḗŧ ŧȯ şŧȧƞḓȧřḓ⟧",
         "view": "⟦Ṽīḗẇ⟧",
         "customize": "⟦Ƈŭşŧȯḿīẑḗ⟧",
         "sending": "⟦Şḗƞḓīƞɠ...⟧",

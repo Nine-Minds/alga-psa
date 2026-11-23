@@ -17,6 +17,7 @@ import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
   getEmailBrandingStatusAction,
+  applyEmailBrandingAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
@@ -25,7 +26,8 @@ import {
 } from "../../actions";
 import {
   SystemEmailTemplate,
-  TenantEmailTemplate
+  TenantEmailTemplate,
+  TenantEmailTemplateView
 } from "../../types/notification";
 import {
   applyEmailPalette,
@@ -89,7 +91,7 @@ interface TemplateRow {
   displayName: string;
   category: string;
   systemTemplate: SystemEmailTemplate;
-  tenantTemplate?: TenantEmailTemplate;
+  tenantTemplate?: TenantEmailTemplateView;
   activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
   isCustom: boolean;
   language: string;
@@ -103,7 +105,7 @@ export function EmailTemplates() {
   const { data: session } = useSession();
   const [templates, setTemplates] = useState<{
     systemTemplates: (SystemEmailTemplate & { category: string })[];
-    tenantTemplates: TenantEmailTemplate[];
+    tenantTemplates: TenantEmailTemplateView[];
   } | null>(null);
   // Readiness only: the actions take their tenant from the session server-side.
   const sessionTenant = (session?.user as any)?.tenant as string | undefined;
@@ -236,20 +238,25 @@ export function EmailTemplates() {
         return;
       }
 
-      // With a palette saved, the copy the tenant starts editing should already
-      // wear their colors instead of the stock purple.
-      if (brandingTarget) {
-        const branded = applyEmailPalette(template.html_content, STOCK_EMAIL_PALETTE, brandingTarget);
-        if (branded !== template.html_content) {
-          await updateTenantTemplateAction(result.id, { html_content: branded });
-        }
-      }
-
       await refreshTemplates();
     } catch (error) {
       console.error("Failed to create custom template:", error);
     } finally {
       setIsCloning(false);
+    }
+  };
+
+  // Rebuilds one template from the standard one in the tenant's palette, edits and all, and
+  // ties it to the standard template again so it follows it from here on.
+  const handleResetToStandard = async (name: string, language: string) => {
+    try {
+      const result = await applyEmailBrandingAction({ names: [name], languages: [language], overwrite: [name] });
+      if (result.failed.length > 0) {
+        console.error("Failed to reset template to standard:", result.failed);
+      }
+      await refreshTemplates();
+    } catch (error) {
+      console.error("Failed to reset template to standard:", error);
     }
   };
 
@@ -314,7 +321,7 @@ export function EmailTemplates() {
     return acc;
   }, {} as Record<string, Array<{
     systemTemplate: SystemEmailTemplate & { category: string };
-    tenantTemplate?: TenantEmailTemplate;
+    tenantTemplate?: TenantEmailTemplateView;
     activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
   }>>);
 
@@ -394,8 +401,23 @@ export function EmailTemplates() {
               <div>
                 <span className="font-medium text-gray-700">{tplRecord.displayName}</span>
                 <div className="text-xs text-gray-500">
-                  {tplRecord.isCustom ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template') : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
+                  {tplRecord.tenantTemplate?.derived
+                    ? t('notifications.emailTemplatesUi.list.followsStandard', 'Standard template in your brand — follows Alga updates')
+                    : tplRecord.isCustom
+                      ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template')
+                      : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
                 </div>
+                {!!tplRecord.tenantTemplate?.missingVariables?.length && (
+                  <div
+                    id={`missing-variables-${tplRecord.systemTemplate.id}`}
+                    className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]"
+                  >
+                    {t('notifications.emailTemplatesUi.list.missingVariables', {
+                      defaultValue: "The standard template now uses {{variables}}. Your edited copy doesn't.",
+                      variables: tplRecord.tenantTemplate.missingVariables!.map((variable) => `{{${variable}}}`).join(', '),
+                    })}
+                  </div>
+                )}
                 {templateVariableRegistry[tplRecord.name]?.contractInferred && (
                   <div className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]">
                     {t('notifications.emailTemplatesUi.list.notCurrentlySent', 'Not currently sent')}
@@ -462,6 +484,17 @@ export function EmailTemplates() {
               >
                 {t('notifications.emailTemplatesUi.actions.edit', 'Edit')}
               </Button>
+              {/* Resetting rebuilds the row in the saved palette, so it needs one; without a palette "Use Standard" is the way back. */}
+              {brandingStatus?.palette && (tplRecord.tenantTemplate?.derived || !!tplRecord.tenantTemplate?.missingVariables?.length) && (
+                <Button
+                  id={`reset-to-standard-${tplRecord.systemTemplate.id}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleResetToStandard(tplRecord.systemTemplate.name, tplRecord.systemTemplate.language_code)}
+                >
+                  {t('notifications.emailTemplatesUi.actions.resetToStandard', 'Reset to standard')}
+                </Button>
+              )}
               <Button
                 id={`use-standard-${tplRecord.systemTemplate.id}`}
                 variant="outline"
@@ -771,7 +804,7 @@ function EditTemplateDialog({
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
-  onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
+  onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplateView[] }) => void;
   /** Token map to rewrite into the editor, null when no palette is saved. */
   brandingPalette: EmailPaletteTokens | null;
   /** What the last apply wrote, so its tokens are recognized too. */

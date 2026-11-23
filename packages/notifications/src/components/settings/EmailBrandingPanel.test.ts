@@ -243,7 +243,9 @@ describe('enterprise logo and attribution', () => {
     expect(panelSource).toContain(
       'pickBrandLogoVariant(draft.logoVariant, headerIsDark, status.logoOptions, draft.logoArtwork)',
     );
-    expect(actionsSource).toContain('pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {');
+    expect(readFileSync(resolve(__dirname, '../../../../email/src/branding/brandDecorator.ts'), 'utf8')).toContain(
+      'pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {',
+    );
   });
 
   it('decorates a dark header with the dark artwork of the chosen shape', () => {

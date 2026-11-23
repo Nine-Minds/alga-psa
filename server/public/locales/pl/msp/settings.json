@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} szablonów)",
         "usingCustom": "Używany szablon niestandardowy",
         "usingStandard": "Używany szablon standardowy",
-        "notCurrentlySent": "Obecnie niewysyłany"
+        "notCurrentlySent": "Obecnie niewysyłany",
+        "followsStandard": "Szablon standardowy w Twojej marce — zgodny z aktualizacjami Alga",
+        "missingVariables": "Szablon standardowy używa teraz {{variables}}. Twoja edytowana kopia – nie."
       },
       "columns": {
         "name": "Nazwa",
@@ -1930,6 +1932,7 @@
         "expand": "Rozwiń",
         "edit": "Edytuj",
         "useStandard": "Użyj standardowego",
+        "resetToStandard": "Przywróć standardowy",
         "view": "Wyświetl",
         "customize": "Dostosuj",
         "sending": "Wysyłanie...",

@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} mallar)",
         "usingCustom": "Använder anpassad mall",
         "usingStandard": "Använder standardmall",
-        "notCurrentlySent": "Skickas inte för närvarande"
+        "notCurrentlySent": "Skickas inte för närvarande",
+        "followsStandard": "Standardmall i ditt varumärke — följer Algas uppdateringar",
+        "missingVariables": "Standardmallen använder nu {{variables}}. Din redigerade kopia gör det inte."
       },
       "columns": {
         "name": "Namn",
@@ -1930,6 +1932,7 @@
         "expand": "Expandera",
         "edit": "Redigera",
         "useStandard": "Använd standard",
+        "resetToStandard": "Återställ till standard",
         "view": "Visa",
         "customize": "Anpassa",
         "sending": "Skickar…",

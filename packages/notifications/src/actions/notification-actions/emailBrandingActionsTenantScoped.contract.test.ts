@@ -3,6 +3,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const source = readFileSync(resolve(__dirname, 'emailBrandingActions.ts'), 'utf8');
+// The decorator is shared with the send-time resolver, so it lives in the email package.
+const decoratorSource = readFileSync(resolve(__dirname, '../../../../email/src/branding/brandDecorator.ts'), 'utf8');
 
 describe('email branding actions contract', () => {
   it('reads and writes every table through tenant-scoped builders', () => {
@@ -39,8 +41,10 @@ describe('email branding actions contract', () => {
     expect(apply).toContain('updated_at: now,');
     expect(apply).not.toMatch(/\.update\([^)]*knex\.raw/);
     // Subject and plain text move only when the planner asked for an overwrite.
-    expect(apply).toContain('...(update.subject !== undefined ? { subject: update.subject } : {})');
-    expect(apply).toContain('...(update.text !== undefined ? { text_content: update.text } : {})');
+    // A row stamped as derived is stored whole, so its hash covers exactly what is in the table.
+    expect(apply).toContain('...(update.subject !== undefined || derived ? { subject: update.subject ?? existing?.subject } : {})');
+    expect(apply).toContain('...(update.text !== undefined || derived ? { text_content: update.text ?? existing?.text_content } : {})');
+    expect(apply).toContain('derived_snapshot_hash: provenance.derived_snapshot_hash,');
   });
 
   it('runs every action under withAuth so the tenant comes from the session', () => {
@@ -85,14 +89,14 @@ describe('apply preview', () => {
     expect(body).toContain('const target = resolveEmailPalette(context.palette)');
     expect(body).toContain('appliedPalette: context.palette.appliedPalette ?? null');
     expect(body).toContain(
-      'decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
+      'decorate: brandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
     );
   });
 });
 
 describe('enterprise brand assets', () => {
   it('builds the decorator only on Enterprise', () => {
-    const decorator = source.slice(source.indexOf('function buildBrandDecorator'));
+    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function brandDecorator'));
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     expect(body).toContain('if (!enterprise) return undefined;');
@@ -103,7 +107,7 @@ describe('enterprise brand assets', () => {
   });
 
   it('writes the variant that reads on the header the palette paints', () => {
-    const decorator = source.slice(source.indexOf('function buildBrandDecorator'));
+    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function brandDecorator'));
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     // One shared chooser, so the settings preview cannot disagree with it.
@@ -125,8 +129,11 @@ describe('enterprise brand assets', () => {
 
   it('runs the decorator over everything the apply writes', () => {
     const apply = source.slice(source.indexOf('export const applyEmailBrandingAction'));
+    // One decorator feeds both the plan and the provenance check, so a stamped row is exactly what is stored.
     expect(apply).toContain(
-      'decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
+      'const decorate = brandDecorator(context.palette, context.settings.branding, isEnterprise, target);',
     );
+    expect(apply).toContain('    decorate,\n');
+    expect(apply).toContain('stampDerivedTemplate(content, systemRow, target, decorate)');
   });
 });

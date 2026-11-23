@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTemplateSampleData } from '../../lib/templateSampleData';
 
+const NO_PROVENANCE = { derived_from_system_id: null, derived_palette: null, derived_snapshot_hash: null };
 const SESSION_TENANT = 'session-tenant';
 const OTHER_TENANT = 'victim-tenant';
 const SESSION_USER = { user_id: 'user-1', user_type: 'internal', tenant: SESSION_TENANT };
@@ -139,12 +140,15 @@ describe('notification settings and template actions require settings permission
     expect(service.createTenantTemplate).toHaveBeenCalledWith(SESSION_TENANT, {
       name: 'invoice',
       tenant: OTHER_TENANT,
+      ...NO_PROVENANCE,
     });
 
     await actions.updateTenantTemplateAction(7, { subject: 'hi', tenant: OTHER_TENANT } as any);
+    // Saving is the tenant's edit: the row stops following the standard template.
     expect(service.updateTenantTemplate).toHaveBeenCalledWith(SESSION_TENANT, 7, {
       subject: 'hi',
       tenant: OTHER_TENANT,
+      ...NO_PROVENANCE,
     });
 
     await actions.deactivateTenantTemplateAction('invoice');

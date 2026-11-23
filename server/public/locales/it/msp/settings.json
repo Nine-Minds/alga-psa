@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} modelli)",
         "usingCustom": "Utilizzo del modello personalizzato",
         "usingStandard": "Utilizzo del modello standard",
-        "notCurrentlySent": "Attualmente non inviata"
+        "notCurrentlySent": "Attualmente non inviata",
+        "followsStandard": "Modello standard con il tuo brand — segue gli aggiornamenti di Alga",
+        "missingVariables": "Il modello standard ora usa {{variables}}. La tua copia modificata no."
       },
       "columns": {
         "name": "Nome",
@@ -1930,6 +1932,7 @@
         "expand": "Espandi",
         "edit": "Modifica",
         "useStandard": "Usa standard",
+        "resetToStandard": "Ripristina lo standard",
         "view": "Visualizza",
         "customize": "Personalizza",
         "sending": "Invio in corso...",

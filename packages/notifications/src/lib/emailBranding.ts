@@ -9,7 +9,8 @@
 import {
   isHexColor,
   normalizeHex,
-  type EmailBrandingLogo,
+  readBrandLogo,
+  readEmailBrandingPalette,
   type EmailBrandingLogoArtwork,
   type EmailBrandingPalette,
   type EmailBrandingPreview,
@@ -20,6 +21,9 @@ import {
   type TenantTemplateDifference,
   type TenantTemplateState,
 } from '@alga-psa/email/branding';
+
+// The reader lives with the palette types so the send-time resolver parses the blob exactly as the settings panel does.
+export { readEmailBrandingPalette };
 
 export interface EmailBrandingTemplateStatus {
   name: string;
@@ -97,16 +101,6 @@ export interface EmailBrandingPaletteInput {
   hideAttribution?: boolean;
 }
 
-/** The logo block as persisted or submitted; only an explicit pin survives, auto is the absence of one. */
-function readBrandLogo(raw: unknown): EmailBrandingLogo | null {
-  const value = raw as Record<string, any> | null | undefined;
-  if (value?.variant !== 'wide' && value?.variant !== 'default') return null;
-  return {
-    variant: value.variant,
-    ...(value.artwork === 'light' || value.artwork === 'dark' ? { artwork: value.artwork } : {}),
-  };
-}
-
 export interface TenantSettingsBlob {
   theme?: unknown;
   branding?: Record<string, any> | null;
@@ -143,26 +137,6 @@ export function resolveTenantLanguages(settings: TenantSettingsBlob, available: 
   }
 
   return [...languages].filter((code) => available.length === 0 || available.includes(code)).sort();
-}
-
-/** Reads the persisted palette, ignoring a blob that carries no usable primary. */
-export function readEmailBrandingPalette(raw: unknown): EmailBrandingPalette | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const value = raw as Record<string, any>;
-  if (!isHexColor(value.primary)) return null;
-  const logo = readBrandLogo(value.logo);
-
-  return {
-    primary: normalizeHex(value.primary)!,
-    secondary: isHexColor(value.secondary) ? normalizeHex(value.secondary)! : null,
-    ...(value.overrides && typeof value.overrides === 'object' ? { overrides: value.overrides } : {}),
-    ...(logo ? { logo } : {}),
-    ...(value.hideAttribution === true ? { hideAttribution: true } : {}),
-    ...(typeof value.appliedAt === 'string' ? { appliedAt: value.appliedAt } : {}),
-    ...(value.appliedPalette && typeof value.appliedPalette === 'object'
-      ? { appliedPalette: value.appliedPalette as EmailPaletteTokens }
-      : {}),
-  };
 }
 
 function assertHex(value: string, field: string): string {

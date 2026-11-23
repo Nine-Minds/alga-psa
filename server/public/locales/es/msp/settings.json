@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} plantillas)",
         "usingCustom": "Usando plantilla personalizada",
         "usingStandard": "Usando plantilla estándar",
-        "notCurrentlySent": "No se envía actualmente"
+        "notCurrentlySent": "No se envía actualmente",
+        "followsStandard": "Plantilla estándar con su marca — sigue las actualizaciones de Alga",
+        "missingVariables": "La plantilla estándar ahora usa {{variables}}. Su copia editada no."
       },
       "columns": {
         "name": "Nombre",
@@ -1930,6 +1932,7 @@
         "expand": "Expandir",
         "edit": "Editar",
         "useStandard": "Usar estándar",
+        "resetToStandard": "Restablecer al estándar",
         "view": "Ver",
         "customize": "Personalizar",
         "sending": "Enviando...",

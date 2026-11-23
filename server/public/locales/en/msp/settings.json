@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} templates)",
         "usingCustom": "Using custom template",
         "usingStandard": "Using standard template",
-        "notCurrentlySent": "Not currently sent"
+        "notCurrentlySent": "Not currently sent",
+        "followsStandard": "Standard template in your brand — follows Alga updates",
+        "missingVariables": "The standard template now uses {{variables}}. Your edited copy doesn't."
       },
       "columns": {
         "name": "Name",
@@ -1930,6 +1932,7 @@
         "expand": "Expand",
         "edit": "Edit",
         "useStandard": "Use Standard",
+        "resetToStandard": "Reset to standard",
         "view": "View",
         "customize": "Customize",
         "sending": "Sending...",

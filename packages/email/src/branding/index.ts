@@ -16,6 +16,7 @@ export {
 } from './applyEmailPalette';
 export {
   classifyTenantTemplate,
+  withoutBrandAssets,
   copiedFromSystemRowFor,
   type ClassifiableTemplate,
   type ClassifyTenantTemplateInput,
@@ -59,3 +60,7 @@ export {
   type EmailBrandingPreviewAction,
   type EmailBrandingPreviewInput,
 } from './previewEmailBrandingApply';
+export { brandDecorator } from './brandDecorator';
+export { deriveTemplate, type DerivableTemplate } from './deriveTemplate';
+export { missingTemplateVariables, templateVariables } from './templateVariables';
+export { readBrandLogo, readEmailBrandingPalette } from './readEmailBrandingPalette';

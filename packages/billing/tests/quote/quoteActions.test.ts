@@ -51,6 +51,8 @@ const makeQuery = (result: any) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  // The shared template resolver also looks for a legacy row with no language.
+  chain.whereNull = vi.fn(() => chain);
   chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => result);
   return chain;

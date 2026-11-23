@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} Vorlagen)",
         "usingCustom": "Benutzerdefinierte Vorlage wird verwendet",
         "usingStandard": "Standardvorlage wird verwendet",
-        "notCurrentlySent": "Wird derzeit nicht gesendet"
+        "notCurrentlySent": "Wird derzeit nicht gesendet",
+        "followsStandard": "Standardvorlage in Ihrer Marke — folgt den Alga-Updates",
+        "missingVariables": "Die Standardvorlage verwendet jetzt {{variables}}. Ihre bearbeitete Kopie nicht."
       },
       "columns": {
         "name": "Name",
@@ -1930,6 +1932,7 @@
         "expand": "Erweitern",
         "edit": "Bearbeiten",
         "useStandard": "Standard verwenden",
+        "resetToStandard": "Auf Standard zurücksetzen",
         "view": "Anzeigen",
         "customize": "Anpassen",
         "sending": "Wird gesendet...",

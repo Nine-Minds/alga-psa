@@ -1913,7 +1913,9 @@
         "templateCount": "({{templateCount}} sjablonen)",
         "usingCustom": "Aangepast sjabloon wordt gebruikt",
         "usingStandard": "Standaardsjabloon wordt gebruikt",
-        "notCurrentlySent": "Wordt momenteel niet verzonden"
+        "notCurrentlySent": "Wordt momenteel niet verzonden",
+        "followsStandard": "Standaardsjabloon in uw huisstijl — volgt Alga-updates",
+        "missingVariables": "Het standaardsjabloon gebruikt nu {{variables}}. Uw bewerkte kopie niet."
       },
       "columns": {
         "name": "Naam",
@@ -1930,6 +1932,7 @@
         "expand": "Uitklappen",
         "edit": "Bewerken",
         "useStandard": "Standaard gebruiken",
+        "resetToStandard": "Terugzetten naar standaard",
         "view": "Bekijken",
         "customize": "Aanpassen",
         "sending": "Verzenden...",
