@@ -780,11 +780,35 @@ lifecycle suite.
   `itilStandardsService.ts` and `ticketCategoryActions.ts` are strictly older than HEAD's). Applying
   it would have reverted the finished group. No stash of this card's is left.
 
+### Group 15 — guard
+
+- **Two shapes, not one.** The guard fails on a direct read of `priorities`/`categories` *and* on a
+  direct write of `tickets.priority_id | category_id | subcategory_id | board_id`. A read-only
+  guard would have let the next alert writer insert its own priority; a write-only guard would have
+  let the next picker offer a value the server then refuses. Both allow-lists are explicit and
+  short, and each entry says why the file owns those rows.
+- **The write window had to be bounded.** The first draft read 900 characters after every
+  `table('tickets')` and flagged `itilStandardsService.ts:355`, where an unrelated later statement
+  mentioned `priority_id`. The payload is now cut at the next `table(`/`from(` call and capped at
+  500 characters, so a `.update({ sla_policy_id: null })` on tickets followed by a `priorities`
+  sweep is not read as a field write.
+- **`--root` exists for the test.** T234 writes a throwaway tree with one offending file and runs
+  the guard against it, so the failing case is proved on a fixture instead of by breaking the
+  repository. The third fixture case pins the allow-list: the same query inside
+  `shared/lib/tickets/boardFieldRules.ts` is not a violation.
+- **T235 names the writers.** It is a containment check over the PRD's refuse/fall-back table —
+  each writer file must still mention the rule entry point it goes through
+  (`prepareTicketCreateFields`, `prepareTicketFieldPatch(OrThrow)`, `findBoardFieldProblems`,
+  `resolveTicketPriorityFields`, `defaultPriorityForBoard(Row)` or
+  `boardFieldPolicy: 'fallback'`). A writer that drops the import fails here, in a test that names
+  the file, before the guard's broader scan reports it as a bypass.
+- Run after the change: `npm run guard:ticket-board-field-rules` clean on the repository and
+  `itilBoardFieldRulesGuard` 5/5.
+
 ### Groups not started
 
-Commit groups 15 and 16 (`guard`, `docs`) are untouched: their features and tests are
-still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
-production together (see Rollout) and are all on this branch.
+Commit group 16 (`docs`) is untouched: its features and tests are still `implemented: false`.
+Groups 4, 5 and 6 reach production together (see Rollout) and are all on this branch.
 
 ## Commands
 

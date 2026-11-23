@@ -2098,7 +2098,7 @@
     "featureIds": [
       "F135"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The guard passes on the repository after this plan"
   },
   {
@@ -2107,7 +2107,7 @@
     "featureIds": [
       "F135"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The guard fails on a fixture file that queries categories by board_id outside the allow-list, and on one that updates tickets.priority_id directly"
   },
   {
@@ -2116,7 +2116,7 @@
     "featureIds": [
       "F136"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The contract test fails when a listed writer stops importing the shared rules"
   },
   {

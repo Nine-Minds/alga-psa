@@ -1211,7 +1211,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "scripts/guard-ticket-board-field-rules.mjs fails on a direct read of priorities or categories, or a direct write of a ticket's priority, category or board, outside an allow-list; wired as an npm script and a CI step"
   },
   {
@@ -1220,7 +1220,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract test asserts every writer module listed in the PRD imports the shared rules"
   },
   {

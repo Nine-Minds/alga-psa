@@ -1,0 +1,15 @@
+name: Ticket Board Field Rules Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  ticket-board-field-rules-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check that priority and category lists and ticket field writes go through the shared rules
+        run: npm run guard:ticket-board-field-rules
