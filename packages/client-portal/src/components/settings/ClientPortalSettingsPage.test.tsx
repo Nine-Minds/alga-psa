@@ -35,7 +35,7 @@ vi.mock('../account/ClientAccount', () => ({
   default: (props: any) => <div data-testid="account" data-plan={String(props.showPlanCard)} data-inv={String(props.showInvoicesCard)} />,
 }));
 
-const base = { hasBillingAccess: false, hasClientReadAccess: false, hasUserManagementAccess: false, hasVisibilityGroupAccess: false, isHosted: true };
+const base = { hasBillingAccess: false, hasClientReadAccess: false, hasUserManagementAccess: false, hasVisibilityGroupAccess: false };
 const tabIds = () => screen.getAllByTestId(/^tab-/).map((e) => e.getAttribute('data-testid')!.slice(4));
 
 describe('ClientPortalSettingsPage', () => {

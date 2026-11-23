@@ -10,33 +10,35 @@ const none: ClientPortalSettingsPermissions = {
   hasClientReadAccess: false,
   hasUserManagementAccess: false,
   hasVisibilityGroupAccess: false,
-  isHosted: false,
 };
 const p = (o: Partial<ClientPortalSettingsPermissions>) => ({ ...none, ...o });
 
 describe('resolveClientPortalSettingsSurfaces', () => {
   it('no permissions -> nothing', () => {
     expect(resolve(none)).toEqual({ tabs: [], showPlanCard: false, showInvoicesCard: false, canOpenSettings: false });
-    expect(resolve(p({ isHosted: true })).canOpenSettings).toBe(false);
+    expect(resolve(p({})).canOpenSettings).toBe(false);
   });
 
   it('default User (client:read only): Client Details only, no billing cards', () => {
-    const s = resolve(p({ hasClientReadAccess: true, isHosted: true }));
+    const s = resolve(p({ hasClientReadAccess: true }));
     expect(s.tabs).toEqual(['client-details']);
     expect(s.showPlanCard).toBe(false);
     expect(s.showInvoicesCard).toBe(false);
     expect(s.canOpenSettings).toBe(true);
   });
 
-  it('Finance (hosted): Account + Client Details with billing cards', () => {
-    const s = resolve(p({ hasClientReadAccess: true, hasBillingAccess: true, isHosted: true }));
+  it('Finance/Admin with billing:read get Account + Client Details', () => {
+    const s = resolve(p({ hasClientReadAccess: true, hasBillingAccess: true }));
     expect(s.tabs).toEqual(['account', 'client-details']);
     expect(s.showPlanCard && s.showInvoicesCard).toBe(true);
   });
 
-  it('Finance on a non-hosted tenant: no Account tab', () => {
-    const s = resolve(p({ hasClientReadAccess: true, hasBillingAccess: true, isHosted: false }));
-    expect(s.tabs).toEqual(['client-details']);
+  it('billing:read alone is enough for Account (no hosting requirement)', () => {
+    expect(resolve(p({ hasBillingAccess: true })).tabs).toEqual(['account']);
+  });
+
+  it('default User without billing:read gets no Account tab', () => {
+    expect(resolve(p({ hasClientReadAccess: true })).tabs).not.toContain('account');
   });
 
   it('client-admin contact adds Visibility Groups', () => {
@@ -50,8 +52,7 @@ describe('resolveClientPortalSettingsSurfaces', () => {
       hasClientReadAccess: true,
       hasUserManagementAccess: true,
       hasVisibilityGroupAccess: true,
-      isHosted: true,
-    });
+      });
     expect(s.tabs).toEqual(['account', 'client-details', 'user-management', 'visibility-groups']);
   });
 
@@ -63,7 +64,7 @@ describe('resolveClientPortalSettingsSurfaces', () => {
 });
 
 describe('coerceClientPortalSettingsTab', () => {
-  const user = resolve(p({ hasClientReadAccess: true, isHosted: true }));
+  const user = resolve(p({ hasClientReadAccess: true }));
   it('?tab=account for a User lands on client-details', () => {
     expect(coerceClientPortalSettingsTab('account', user)).toBe('client-details');
   });
@@ -71,7 +72,7 @@ describe('coerceClientPortalSettingsTab', () => {
     expect(coerceClientPortalSettingsTab('user-management', user)).toBe('client-details');
   });
   it('accepts permitted tabs case-insensitively; defaults when absent', () => {
-    const admin = resolve({ ...none, hasBillingAccess: true, hasClientReadAccess: true, isHosted: true, hasUserManagementAccess: true });
+    const admin = resolve({ ...none, hasBillingAccess: true, hasClientReadAccess: true, hasUserManagementAccess: true });
     expect(coerceClientPortalSettingsTab('User-Management', admin)).toBe('user-management');
     expect(coerceClientPortalSettingsTab(null, admin)).toBe('account');
   });

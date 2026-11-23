@@ -17,7 +17,6 @@ export interface ClientPortalSettingsPermissions {
   hasClientReadAccess: boolean; // client:read
   hasUserManagementAccess: boolean; // user:read
   hasVisibilityGroupAccess: boolean; // contacts.is_client_admin
-  isHosted: boolean;
 }
 
 export interface ClientPortalSettingsSurfaces {
@@ -33,7 +32,9 @@ export function resolveClientPortalSettingsSurfaces(
   const showPlanCard = p.hasBillingAccess;
   const showInvoicesCard = p.hasBillingAccess;
 
-  const canSeeAccountTab = p.hasBillingAccess && p.isHosted;
+  // Gated on billing:read only. Hosting (stripe_customers) is the MSP's own Stripe integration
+  // and is unrelated to a client's view of its contract line and invoices.
+  const canSeeAccountTab = p.hasBillingAccess;
   // Design decision: flipping Client Details to admin-only is a change to this one line
   // (use p.hasVisibilityGroupAccess instead of p.hasClientReadAccess).
   const canSeeClientDetailsTab = p.hasClientReadAccess;

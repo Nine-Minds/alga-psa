@@ -25,7 +25,6 @@ const none = {
   hasClientReadAccess: false,
   hasUserManagementAccess: false,
   hasVisibilityGroupAccess: false,
-  isHosted: false,
 };
 
 describe('client-settings route guard', () => {

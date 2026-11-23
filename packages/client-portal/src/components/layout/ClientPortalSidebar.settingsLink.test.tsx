@@ -28,7 +28,6 @@ const base = {
   hasBillingAccess: false,
   hasUserManagementAccess: false,
   hasVisibilityGroupAccess: false,
-  isHosted: false,
   hasProjectAccess: false,
   hasDocumentAccess: false,
   isLicenseDistributor: false,

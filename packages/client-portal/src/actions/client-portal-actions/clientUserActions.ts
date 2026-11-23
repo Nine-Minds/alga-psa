@@ -906,7 +906,6 @@ export const checkClientPortalPermissions = withAuth(async (
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
   hasClientReadAccess: boolean;
-  isHosted: boolean;
   hasAccountAccess: boolean;
   hasVisibilityGroupAccess: boolean;
   hasProjectAccess: boolean;
@@ -953,7 +952,6 @@ export const checkClientPortalPermissions = withAuth(async (
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
       hasClientReadAccess: hasClient,
-      isHosted,
       // Account access requires both hosted tenant and settings permission
       hasAccountAccess: isHosted && hasSettings,
       hasVisibilityGroupAccess,
@@ -971,7 +969,6 @@ export const checkClientPortalPermissions = withAuth(async (
       hasBillingAccess: false,
       hasUserManagementAccess: false,
       hasClientReadAccess: false,
-      isHosted: false,
       hasAccountAccess: false,
       hasVisibilityGroupAccess: false,
       hasProjectAccess: false,

@@ -41,7 +41,6 @@ interface SidebarPermissions {
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
   hasVisibilityGroupAccess: boolean;
-  isHosted: boolean;
   hasProjectAccess: boolean;
   hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
