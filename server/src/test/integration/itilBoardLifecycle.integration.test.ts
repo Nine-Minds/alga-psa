@@ -217,6 +217,33 @@ describe('ITIL board lifecycle (integration)', () => {
       ).toBe(false);
     }, HOOK_TIMEOUT);
 
+    it('T232: a payload that still carries the dropped ITIL display columns saves, ignored', async () => {
+      await withFixture();
+      const { createBoardInputSchema, updateBoardInputSchema } = await import(
+        '../../../../packages/tickets/src/actions/board-actions/boardInputSchema'
+      );
+
+      // What an older client sends. The schema accepts it and drops the two keys, so the create
+      // never writes a column that no longer exists.
+      const parsed = createBoardInputSchema.parse({
+        board_name: 'Legacy payload board',
+        display_itil_impact: true,
+        display_itil_urgency: true,
+      });
+      expect(parsed).toEqual({ board_name: 'Legacy payload board' });
+
+      const board = await create(parsed as Record<string, unknown>);
+      expect(board.board_name).toBe('Legacy payload board');
+      expect('display_itil_impact' in board).toBe(false);
+
+      const patch = updateBoardInputSchema.parse({ description: 'edited', display_itil_impact: false });
+      expect(patch).toEqual({ description: 'edited' });
+      const updated = await db.transaction((trx) =>
+        updateBoardCore(trx, fixture.tenantId, actor(), board.board_id as string, patch as never)
+      );
+      expect(updated.description).toBe('edited');
+    }, HOOK_TIMEOUT);
+
     it('T192: a board created with a default team keeps it', async () => {
       await withFixture();
       const teamId = randomUUID();

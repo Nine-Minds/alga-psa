@@ -377,8 +377,6 @@ export async function createBoardCore(
       is_default: isDefault,
       category_type: boardData.category_type || 'custom',
       priority_type: boardData.priority_type || 'custom',
-      display_itil_impact: boardData.display_itil_impact || false,
-      display_itil_urgency: boardData.display_itil_urgency || false,
       default_assigned_to: boardData.default_assigned_to || null,
       // F109: the settings screen sends a default team, and the insert used to drop it.
       default_assigned_team_id: boardData.default_assigned_team_id || null,

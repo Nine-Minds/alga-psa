@@ -445,19 +445,16 @@ export const updateTicketCategory = withAuth(async (user, { tenant }, categoryId
 
 export interface BoardCategoryData {
   categories: ITicketCategory[];
+  /** The board's two kinds. Whether a form shows Impact and Urgency follows from `priority_type` (R4). */
   boardConfig: {
     category_type: 'custom' | 'itil';
     priority_type: 'custom' | 'itil';
-    display_itil_impact?: boolean;
-    display_itil_urgency?: boolean;
   };
 }
 
 type BoardCategoryConfigRow = {
   category_type?: 'custom' | 'itil' | null;
   priority_type?: 'custom' | 'itil' | null;
-  display_itil_impact?: boolean | null;
-  display_itil_urgency?: boolean | null;
 };
 
 type MaxDisplayOrderRow = {
@@ -475,7 +472,7 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
       // Get board configuration
       const board = await tenantScopedTable<BoardCategoryConfigRow>(trx, 'boards', tenant)
         .where('board_id', boardId)
-        .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency')
+        .select('category_type', 'priority_type')
         .first();
 
       if (!board) {
@@ -485,8 +482,6 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
       const boardConfig = {
         category_type: (board.category_type || 'custom') as 'custom' | 'itil',
         priority_type: (board.priority_type || 'custom') as 'custom' | 'itil',
-        display_itil_impact: board.display_itil_impact || false,
-        display_itil_urgency: board.display_itil_urgency || false,
       };
 
       // R2: a board's categories are the rows it owns, whatever its kind — an ITIL board owns its

@@ -2053,7 +2053,7 @@
     "featureIds": [
       "F130"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The repository builds and typechecks with both files deleted"
   },
   {
@@ -2062,7 +2062,7 @@
     "featureIds": [
       "F131"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "No source file imports a removed itilUtils export"
   },
   {
@@ -2071,7 +2071,7 @@
     "featureIds": [
       "F132"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ticketFieldOptionsActions has no unused exports and no console.log"
   },
   {
@@ -2080,7 +2080,7 @@
     "featureIds": [
       "F133"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The repository builds and the category REST tests pass with the model removed"
   },
   {
@@ -2089,7 +2089,7 @@
     "featureIds": [
       "F134"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board create and update on web and REST succeed with the columns dropped, and a request that still sends them is accepted and ignored"
   },
   {

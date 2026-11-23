@@ -41,6 +41,8 @@ const writableBoardColumns = {
   is_default: z.boolean().optional(),
   category_type: z.enum(['custom', 'itil']).optional(),
   priority_type: z.enum(['custom', 'itil']).optional(),
+  // Dropped columns (F134). Still accepted so an older client's payload saves, and stripped from
+  // the projection below so they reach nothing.
   display_itil_impact: z.boolean().optional(),
   display_itil_urgency: z.boolean().optional(),
   default_assigned_to: nullableString,
@@ -58,12 +60,22 @@ const writableBoardColumns = {
   ticket_statuses: z.array(boardTicketStatusInputSchema).optional(),
 };
 
+/** The two dropped ITIL display columns: accepted for compatibility, never persisted (F134). */
+const DROPPED_BOARD_COLUMNS = ['display_itil_impact', 'display_itil_urgency'] as const;
+
+function withoutDroppedColumns<T extends Record<string, unknown>>(value: T): T {
+  const next = { ...value };
+  for (const key of DROPPED_BOARD_COLUMNS) delete next[key];
+  return next;
+}
+
 export const createBoardInputSchema = z
   .object({
     ...writableBoardColumns,
     copy_ticket_statuses_from_board_id: nullableString,
   })
-  .strict();
+  .strict()
+  .transform(withoutDroppedColumns);
 
 export const updateBoardInputSchema = z
   .object({
@@ -71,7 +83,8 @@ export const updateBoardInputSchema = z
     board_name: writableBoardColumns.board_name.optional(),
     list_view_settings: z.unknown().optional(),
   })
-  .strict();
+  .strict()
+  .transform(withoutDroppedColumns);
 
 export type ParsedCreateBoardInput = z.infer<typeof createBoardInputSchema>;
 export type ParsedUpdateBoardInput = z.infer<typeof updateBoardInputSchema>;

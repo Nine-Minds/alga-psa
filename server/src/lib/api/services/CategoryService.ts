@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 // Import category models and interfaces
-import TicketCategory from '../../models/ticketCategory';
 import { ITicketCategory } from '../../../interfaces/ticket.interfaces';
 
 // Import schemas for validation

@@ -280,8 +280,6 @@ export function QuickAddTicket({
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
-    display_itil_impact: false,
-    display_itil_urgency: false,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
@@ -647,8 +645,6 @@ export function QuickAddTicket({
             setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
             });
             return;
           }
@@ -662,8 +658,6 @@ export function QuickAddTicket({
             setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
             });
           }
         } catch (error) {
@@ -672,8 +666,6 @@ export function QuickAddTicket({
           setBoardConfig({
             category_type: 'custom',
             priority_type: 'custom',
-            display_itil_impact: false,
-            display_itil_urgency: false,
           });
         }
       } else {

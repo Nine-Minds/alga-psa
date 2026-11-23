@@ -15,6 +15,8 @@ export const createBoardSchema = z.object({
   category_type: z.enum(['custom', 'itil']).optional(),
   priority_type: z.enum(['custom', 'itil']).optional(),
   default_assigned_to: uuidSchema.nullable().optional(),
+  // Dropped columns (F134 of ee/plans/2026-11-21-itil-remediation): still accepted so an older
+  // API client's payload is not rejected, and dropped before the write.
   display_itil_impact: z.boolean().optional(),
   display_itil_urgency: z.boolean().optional(),
   enable_live_ticket_timer: z.boolean().optional().describe('Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board\'s tickets; a stopwatch already running keeps running. Defaults to true.'),
@@ -36,8 +38,6 @@ export const boardResponseSchema = z.object({
   is_inactive: z.boolean(),
   category_type: z.enum(['custom', 'itil']).nullable(),
   priority_type: z.enum(['custom', 'itil']).nullable(),
-  display_itil_impact: z.boolean().nullable(),
-  display_itil_urgency: z.boolean().nullable(),
   default_assigned_to: uuidSchema.nullable(),
   default_assigned_team_id: uuidSchema.nullable(),
   inbound_reply_reopen_enabled: z.boolean().optional(),

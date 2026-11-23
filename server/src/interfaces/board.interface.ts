@@ -67,8 +67,6 @@ export interface IBoard extends TenantEntity {
   display_due_date?: boolean;
 
   // ITIL-specific display configuration
-  display_itil_impact?: boolean;
-  display_itil_urgency?: boolean;
 
   // Default assignment configuration
   default_assigned_to?: string | null;

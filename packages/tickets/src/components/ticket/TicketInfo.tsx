@@ -197,8 +197,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
-    display_itil_impact: false,
-    display_itil_urgency: false,
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(ticket.title);
@@ -674,8 +672,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
             });
             return;
           }
@@ -693,8 +689,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
               });
           }
         } else {
@@ -707,8 +701,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
-              display_itil_impact: false,
-              display_itil_urgency: false,
             });
             return;
           }
@@ -722,8 +714,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           setBoardConfig({
             category_type: 'custom',
             priority_type: 'custom',
-            display_itil_impact: false,
-            display_itil_urgency: false,
           });
         }
       } catch (error) {
@@ -734,8 +724,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setBoardConfig({
           category_type: 'custom',
           priority_type: 'custom',
-          display_itil_impact: false,
-          display_itil_urgency: false,
         });
       }
     };

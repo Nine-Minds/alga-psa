@@ -34,8 +34,6 @@ exports.seed = async function(knex) {
     description: 'ITIL-compliant support board for testing',
     category_type: 'itil',
     priority_type: 'itil',
-    display_itil_impact: true,
-    display_itil_urgency: true,
     display_priority: true,
     display_category: true,
     display_subcategory: true,

@@ -172,8 +172,8 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 }));
 
 vi.mock('../../../actions/ticketCategoryActions', () => ({
-  getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
-  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
+  getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom' } }),
+  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom' } }),
 }));
 
 vi.mock('../../../lib/ticketRichText', () => ({
@@ -196,7 +196,7 @@ vi.mock('../useTicketRichTextUploadSession', () => ({
 describe('TicketInfo board change status reselection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getTicketCategoriesByBoard).mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } });
+    vi.mocked(getTicketCategoriesByBoard).mockResolvedValue({ categories: [], boardConfig: { category_type: 'custom', priority_type: 'custom' } });
   });
 
   const baseTicket = {
@@ -231,8 +231,6 @@ describe('TicketInfo board change status reselection', () => {
       boardConfig: {
         category_type: 'custom',
         priority_type: boardId === 'board-a' ? 'itil' : 'custom',
-        display_itil_impact: false,
-        display_itil_urgency: false,
       },
     }));
     const onSaveChanges = vi.fn().mockResolvedValue(true);

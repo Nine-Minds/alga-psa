@@ -188,8 +188,6 @@ export const getTicketFieldOptions = withAuth(async (
         })))
     ]);
 
-    console.log('categories', categories);
-
     return {
       options: {
         boards: boards || [],
@@ -255,63 +253,6 @@ export const getAvailableStatuses = withAuth(async (
   } catch (error) {
     console.error('Failed to load statuses:', error);
     return ticketFieldOptionsLoadError('statuses');
-  }
-});
-
-export const getAvailablePriorities = withAuth(async (
-  user,
-  { tenant }
-): Promise<{ priorities: TicketFieldOptions['priorities'] } | TicketFieldOptionsActionError> => {
-  const { knex } = await createTenantKnex();
-  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
-  if (!permitted) {
-    return ticketFieldOptionsPermissionError();
-  }
-
-  try {
-    const priorities = await tenantDb(knex, tenant).table('priorities')
-      .where({ item_type: 'ticket' })
-      .orderBy('order_number', 'asc')
-      .orderBy('priority_name', 'asc')
-      .select('priority_id as id', 'priority_name as name')
-      .then(rows => rowsAs<PriorityOptionRow>(rows).map(row => ({
-        id: row.id,
-        name: row.name
-      })));
-
-    return { priorities };
-  } catch (error) {
-    console.error('Failed to load priorities:', error);
-    return ticketFieldOptionsLoadError('priorities');
-  }
-});
-
-export const getAvailableCategories = withAuth(async (
-  user,
-  { tenant }
-): Promise<{ categories: TicketFieldOptions['categories'] } | TicketFieldOptionsActionError> => {
-  const { knex } = await createTenantKnex();
-  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
-  if (!permitted) {
-    return ticketFieldOptionsPermissionError();
-  }
-
-  try {
-    const categories = await tenantDb(knex, tenant).table('categories')
-      .orderBy('display_order', 'asc')
-      .orderBy('category_name', 'asc')
-      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'board_id')
-      .then(rows => rowsAs<CategoryOptionRow>(rows).map(row => ({
-        id: row.id,
-        name: row.name,
-        parent_id: row.parent_id ?? undefined,
-        board_id: row.board_id ?? undefined
-      })));
-
-    return { categories };
-  } catch (error) {
-    console.error('Failed to load categories:', error);
-    return ticketFieldOptionsLoadError('categories');
   }
 });
 

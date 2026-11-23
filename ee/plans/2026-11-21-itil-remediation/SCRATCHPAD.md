@@ -733,6 +733,38 @@ surface probe.
   11/11, `packages/sla` 204/204, `packages/tickets` {actions,lib,services} 1,462 and the 450
   workflow-event contract cases.
 
+### Commit group 14 — `cleanup` (done)
+
+Landed: `server/src/lib/utils/itilUtils.ts`, `packages/tickets/src/lib/itilUtils.server.ts` and
+`server/src/lib/models/ticketCategory.tsx` deleted; `packages/tickets/src/lib/itilUtils.ts` down to
+the matrix re-export; `getAvailablePriorities`, `getAvailableCategories` and the stray
+`console.log('categories', …)` gone from `ticketFieldOptionsActions`;
+`boards.display_itil_impact` and `display_itil_urgency` dropped by
+`20261123093000_drop_board_itil_display_columns.cjs` and removed from the row types, the board
+create, the dev seed, the co-managed portable catalogue, the category action's `boardConfig` and
+the three screens that carried them;
+`server/src/test/unit/itilCleanupContract.test.ts` (5 cases) and the T232 case in the board
+lifecycle suite.
+
+- **The dropped columns are still accepted.** T232 asks for a request that still sends them to be
+  "accepted and ignored", and both board input schemas are `.strict()`, so removing the keys would
+  have turned an older client's payload into `Invalid board input`. They stay in the schema and are
+  stripped by a `.transform()`, so nothing reaches the insert; the REST *response* schema no longer
+  describes them.
+- **`getTicketCategoriesByBoard` was still selecting them**, which the integration suites caught
+  as soon as the migration ran. Its `boardConfig` is the board's two kinds now — whether a form
+  shows Impact and Urgency follows from `priority_type` (R4), which is what the screens already
+  read.
+- **The migration lint needed two annotations** (R5 for the single-row policy flag update, R1 for
+  the partial unique index, R3 for the column drop); the R3 one has to sit on the `dropColumn`
+  line itself, not above the `alterTable` call.
+- Run after the change: `packages/tickets` {actions,lib,services} 1,462 and {components} 938,
+  `packages/integrations` email actions 142/142, `itilCleanupContract` 5/5,
+  `itilBoardLifecycle` 12/12, `itilCategoryBoardRules` + `itilSecondBoardSurfaces` 72/72, and
+  `npm run test:migration-lint` 54/54. Not this group's:
+  `packages/tickets/src/components/TicketingDashboard.printLabels.test.tsx` cannot resolve
+  `packages/ui/src/hooks/useRangeSelection.ts`, a file that does not exist in this worktree.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -750,7 +782,7 @@ surface probe.
 
 ### Groups not started
 
-Commit groups 14–16 (`cleanup`, `guard`, `docs`) are untouched: their features and tests are
+Commit groups 15 and 16 (`guard`, `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

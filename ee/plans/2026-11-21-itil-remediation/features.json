@@ -1166,7 +1166,7 @@
     "prdRefs": [
       "SCRATCHPAD dead code"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "server/src/lib/utils/itilUtils.ts and packages/tickets/src/lib/itilUtils.server.ts are deleted"
   },
   {
@@ -1175,7 +1175,7 @@
     "prdRefs": [
       "SCRATCHPAD dead code"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Unused exports are removed from packages/tickets itilUtils"
   },
   {
@@ -1184,7 +1184,7 @@
     "prdRefs": [
       "SCRATCHPAD dead code"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getAvailablePriorities, getAvailableCategories and the stray console.log are removed from ticketFieldOptionsActions"
   },
   {
@@ -1193,7 +1193,7 @@
     "prdRefs": [
       "SCRATCHPAD dead code"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The unused category model server/src/lib/models/ticketCategory.tsx and its unused import in CategoryService are removed"
   },
   {
@@ -1202,7 +1202,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "display_itil_impact and display_itil_urgency are removed from board schemas, types and writes, and dropped by migration"
   },
   {

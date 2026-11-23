@@ -55,12 +55,14 @@ exports.up = async function up(knex) {
       .select('sla_policy_id');
     if (candidates.length === 0) continue;
 
+    // migration-lint: allow R5 - one row by primary key: the one policy this tenant's ITIL setup created
     await db.table('sla_policies')
       .where({ sla_policy_id: candidates[0].sla_policy_id })
       .update({ is_itil_standard: true });
   }
 
   // At most one per tenant. Partial, so the many unflagged policies are unaffected.
+  // migration-lint: allow R1 - CONCURRENTLY cannot run here: sla_policies is tiny (one or two rows per tenant)
   await knex.raw(`
     CREATE UNIQUE INDEX IF NOT EXISTS ${UNIQUE_INDEX}
     ON sla_policies (tenant)

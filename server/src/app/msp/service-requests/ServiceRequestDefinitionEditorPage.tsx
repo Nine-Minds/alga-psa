@@ -184,8 +184,6 @@ type FormField = BasicFormField;
 interface TicketRoutingBoardConfig {
   category_type: 'custom' | 'itil';
   priority_type: 'custom' | 'itil';
-  display_itil_impact?: boolean;
-  display_itil_urgency?: boolean;
 }
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
