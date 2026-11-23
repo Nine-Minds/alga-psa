@@ -25,7 +25,7 @@ const buildRecord = (rows: Row[]): Record<string, TemplateI18nText> | undefined 
 };
 
 const buttonClassName =
-  'rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-1.5 py-0.5 text-[10px] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800';
+  'rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-1.5 py-0.5 text-[10px] text-[rgb(var(--color-text-600))] hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-100))]';
 
 /**
  * Edits `valueLabels`: the wording a table cell prints for a data value
@@ -68,7 +68,7 @@ export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggest
   return (
     <div data-automation-id={`${domId}-value-labels`}>
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+        <label className="text-[10px] font-medium text-[rgb(var(--color-text-500))] block mb-0.5">
           {t('invoiceDesigner.tableEditor.columns.valueLabels', { defaultValue: 'Value wording' })}
         </label>
         <div className="flex items-center gap-1">
@@ -92,14 +92,14 @@ export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggest
           </button>
         </div>
       </div>
-      <p className="mb-1 text-[10px] text-slate-400 dark:text-slate-500">
+      <p className="mb-1 text-[10px] text-[rgb(var(--color-text-400))]">
         {t('invoiceDesigner.tableEditor.columns.valueLabelsHint', {
           defaultValue: 'Choose the words printed for a value, such as true → Included. An empty label prints nothing.',
         })}
       </p>
       <div className="space-y-1.5">
         {rows.map((row) => (
-          <div key={row.rowId} className="rounded border border-slate-100 dark:border-slate-700 p-1">
+          <div key={row.rowId} className="rounded border border-[rgb(var(--color-border-100))] p-1">
             <div className="flex items-center gap-1">
               <Input
                 id={`${domId}-key-${row.rowId}`}
@@ -112,7 +112,7 @@ export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggest
                 onBlur={() => commit(rows, true)}
                 className="text-xs font-mono"
               />
-              <span aria-hidden className="text-slate-400">→</span>
+              <span aria-hidden className="text-[rgb(var(--color-text-400))]">→</span>
               <Input
                 id={`${domId}-label-${row.rowId}`}
                 size="sm"
@@ -129,7 +129,7 @@ export const ValueLabelsEditor: React.FC<Props> = ({ domId, valueLabels, suggest
                 id={`${domId}-remove-${row.rowId}`}
                 type="button"
                 aria-label={t('invoiceDesigner.tableEditor.columns.removeValueLabel', { defaultValue: 'Remove wording' })}
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:text-destructive hover:bg-destructive/10"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[rgb(var(--color-text-400))] hover:text-destructive hover:bg-destructive/10"
                 onClick={() => commit(rows.filter((entry) => entry.rowId !== row.rowId), true)}
               >
                 ×
