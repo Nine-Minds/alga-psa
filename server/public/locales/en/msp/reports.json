@@ -2,12 +2,6 @@
   "page": {
     "title": "Reports"
   },
-  "actions": {
-    "refresh": "Refresh"
-  },
-  "placeholders": {
-    "selectContract": "Select contract..."
-  },
   "units": {
     "hoursShort": "hrs",
     "days": "days",
@@ -433,64 +427,6 @@
       "label": "Columns",
       "title": "Columns",
       "reset": "Reset to default columns"
-    }
-  },
-  "contractPerformance": {
-    "title": "Contract Performance Metrics",
-    "errors": {
-      "loadData": "Failed to load contract data"
-    },
-    "metrics": {
-      "totalClients": "Total Clients",
-      "activeClients": "Active Clients",
-      "totalPlans": "Total Plans",
-      "averagePlansPerClient": "Avg. Plans Per Client",
-      "totalRevenue": "Total Revenue",
-      "averageRevenuePerClient": "Avg. Revenue Per Client"
-    },
-    "empty": {
-      "selectContract": "Select a contract to view performance metrics",
-      "noContracts": "No contracts available"
-    },
-    "comparison": {
-      "title": "Contract Comparison",
-      "table": {
-        "contract": "Contract",
-        "clients": "Clients",
-        "plans": "Plans",
-        "revenue": "Revenue"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Contract Usage Report",
-    "errors": {
-      "loadInitialData": "Failed to load initial data",
-      "loadUsageData": "Failed to load contract usage data"
-    },
-    "empty": {
-      "noClientsUsingContract": "No clients are using this contract",
-      "selectContract": "Select a contract to view usage data"
-    },
-    "table": {
-      "client": "Client",
-      "startDate": "Start Date",
-      "endDate": "End Date",
-      "contractLines": "Contract Lines",
-      "totalBilled": "Total Billed",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "ongoing": "Ongoing",
-      "unknownClient": "Unknown Client"
-    },
-    "summary": {
-      "title": "Summary",
-      "totalClients": "Total Clients",
-      "activeAssignments": "Active Assignments",
-      "totalBilled": "Total Billed"
     }
   },
   "deferredRevenue": {
