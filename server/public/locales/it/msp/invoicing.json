@@ -1167,7 +1167,9 @@
       "send_one": "Invia e-mail {{count}}",
       "send_other": "Invia e-mail {{count}}",
       "sending_one": "Invio fattura {{count}}...",
-      "sending_other": "Invio fatture {{count}}..."
+      "sending_other": "Invio fatture {{count}}...",
+      "schedule": "Programma",
+      "scheduling": "Programmazione..."
     },
     "toasts": {
       "noValidRecipients": "Nessun destinatario valido trovato",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "Fatture {{count}} inviate con successo",
       "sentFailure_one": "Impossibile inviare la fattura {{count}}",
       "sentFailure_other": "Impossibile inviare fatture {{count}}",
-      "sentPartial": "{{successCount}} inviato, {{failureCount}} non riuscito"
+      "sentPartial": "{{successCount}} inviato, {{failureCount}} non riuscito",
+      "scheduled": "E-mail della fattura programmata"
     },
     "errors": {
       "loadRecipients": "Impossibile caricare le informazioni sul destinatario",
-      "sendFailed": "Impossibile inviare e-mail"
+      "sendFailed": "Impossibile inviare e-mail",
+      "scheduleFailed": "Impossibile programmare l’e-mail della fattura"
     }
   },
   "generateTab": {
@@ -1789,7 +1793,9 @@
           "actual": "100%",
           "label": "Zoom anteprima",
           "fitWithScale": "Adatta ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} di {{total}}",
+        "frameTitle": "Anteprima della fattura"
       },
       "tabs": {
         "design": "Progettazione",
@@ -1885,6 +1891,10 @@
       "spacer": {
         "label": "Spaziatore",
         "description": "Spazio vuoto per regolare il layout."
+      },
+      "page-break": {
+        "label": "Interruzione di pagina",
+        "description": "Avvia il blocco successivo su una nuova pagina."
       },
       "container": {
         "label": "Contenitore",
@@ -2208,6 +2218,17 @@
               "label": "Colore"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginazione",
+          "fields": {
+            "breakBefore": {
+              "label": "Inizia su una nuova pagina"
+            },
+            "breakInside": {
+              "label": "Mantieni unito in una sola pagina"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2342,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Allegati",
       "spacerLabel": "Spaziatore",
+      "pageBreakLabel": "Interruzione di pagina",
+      "pageBreakBefore": "Inizia su una nuova pagina",
       "companyLogo": "Logo aziendale",
       "insertionMarker": "Il prossimo blocco che aggiungi andrà qui",
       "emptyContainer": "Vuoto — selezionalo e aggiungi blocchi dal pannello a sinistra",
@@ -2677,6 +2700,15 @@
         "clearLines": "Riga singola",
         "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
         "removeLine": "Rimuovi la riga {{index}}",
+        "valueLabels": "Testo dei valori",
+        "addKnownValues": "+ Valori noti",
+        "addValueLabel": "+ Valore",
+        "valueLabelsHint": "Scegli le parole stampate per un valore, ad esempio true → Incluso. Un’etichetta vuota non stampa nulla.",
+        "valueLabelKey": "Valore",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Testo stampato",
+        "valueLabelTextPlaceholder": "Vuoto",
+        "removeValueLabel": "Rimuovi testo",
         "align": "Allineamento",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2803,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Nuovo layout per {{type}}",
-        "edit": "Modifica layout per {{type}}"
-      },
-      "description": "Progetta il layout per {{type}} usando l’editor visuale, quindi visualizzane l’anteprima con dati di esempio.",
-      "errorTitle": "Editor di layout per {{type}}",
-      "sections": {
-        "details": "Dettagli del layout"
+        "edit": "Modifica layout: {{name}}"
       },
       "fields": {
-        "version": "Versione",
+        "created": "Creato {{time}}",
         "labelClass": "Classe di etichetta",
         "labelFields": "Campi mostrati sull'etichetta",
-        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati.",
+        "notSaved": "Non ancora salvato",
+        "savedAt": "Salvato {{time}}",
+        "version": "Versione"
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"
       },
       "actions": {
-        "back": "Torna ai layout",
+        "back": "Torna ai layout di {{type}}",
+        "labelSettings": "Impostazioni etichetta",
         "save": "Salva layout"
-      },
-      "labels": {
-        "created": "Creato: {{date}}",
-        "lastUpdated": "Ultimo aggiornamento: {{date}}"
       },
       "preview": {
         "sampleNote": "Generato usando dati di esempio rappresentativi per {{type}}.",
@@ -2860,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
+      "invoiceFinalize": "Autorizzazione negata: è richiesta l’autorizzazione per finalizzare le fatture",
       "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
       "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
       "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente",
-      "invoiceRead": "Permesso negato: richiesta lettura fatture"
+      "invoiceRead": "Permesso negato: richiesta lettura fatture",
+      "invoiceSend": "Autorizzazione negata: è necessaria l’autorizzazione per inviare fatture"
     },
     "invoice": {
       "notFound": "Fattura non trovata",

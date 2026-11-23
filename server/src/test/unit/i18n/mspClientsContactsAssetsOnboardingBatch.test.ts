@@ -261,4 +261,21 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
       expect(getValue(source, key).length).toBeLessThanOrEqual(maxLength);
     }
   });
+
+  it('onboarding address copy: every locale carries the description and prefill keys', () => {
+    const english = readLocaleJson('en', 'onboarding');
+    const englishDescription = getValue(english, 'clientInfoStep.address.description');
+    expect(englishDescription).toBe('This address appears on your invoices and quotes.');
+
+    for (const locale of [...productionLocales, ...pseudoLocales]) {
+      const bundle = readLocaleJson(locale, 'onboarding');
+      const description = getValue(bundle, 'clientInfoStep.address.description');
+      const prefill = getValue(bundle, 'clientInfoStep.address.prefilledFromBilling');
+      expect(typeof description, `${locale} description`).toBe('string');
+      expect(typeof prefill, `${locale} prefilledFromBilling`).toBe('string');
+      expect(prefill.length, `${locale} prefilledFromBilling`).toBeGreaterThan(0);
+      // The neutral description no longer claims a prefill.
+      expect(description).not.toMatch(/Prefilled|Préremplie|Vorausgefüllt/i);
+    }
+  });
 });

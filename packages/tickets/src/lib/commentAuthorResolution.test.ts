@@ -3,6 +3,20 @@ import type { IComment } from '@alga-psa/types';
 import { resolveCommentAuthor } from './commentAuthorResolution';
 
 describe('resolveCommentAuthor', () => {
+  it('uses the safe portal display identity without needing UUID keyed directory maps', () => {
+    const resolved = resolveCommentAuthor({
+      user_id: null,
+      contact_id: null,
+      portal_author: { name: 'Avery Agent', role: 'staff', avatarUrl: '/avatars/avery.png' },
+    }, { userMap: {}, contactMap: {} });
+    expect(resolved.displayName).toBe('Avery Agent');
+    expect(resolved.authorKind).toBe('internal');
+    expect(resolved.avatarUrl).toBe('/avatars/avery.png');
+    expect(resolved.email).toBeUndefined();
+    expect(resolved.userId).toBeUndefined();
+    expect(resolved.contactId).toBeUndefined();
+  });
+
   it('prefers user author when both user_id and contact_id are present', () => {
     const resolved = resolveCommentAuthor(
       {

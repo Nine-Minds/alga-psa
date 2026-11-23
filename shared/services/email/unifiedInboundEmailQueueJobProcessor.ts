@@ -29,6 +29,7 @@ import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/grap
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import { assertImapOauthCredentialIssuerBound, assertSafeImapHost } from '@alga-psa/shared/services/email/imapOutboundTarget';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
 
@@ -635,6 +636,8 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
       'ic.username',
       'ic.access_token',
       'ic.oauth_token_url',
+      'ic.oauth_credentials_token_url',
+      'ic.oauth_credentials_secret_version',
       'ic.oauth_client_id',
       'ic.oauth_client_secret',
       'ic.refresh_token',
@@ -665,6 +668,11 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
   const oauthMechanism: 'XOAUTH2' | 'OAUTHBEARER' =
     process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
+  const imapTarget = await assertSafeImapHost(provider.host, Number(provider.port));
+  if (provider.auth_type === 'oauth2') {
+    assertImapOauthCredentialIssuerBound(provider);
+  }
 
   const password =
     provider.auth_type === 'oauth2'
@@ -704,7 +712,10 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
       connectionTimeout: connectionTimeoutMs,
       greetingTimeout: connectionTimeoutMs,
       socketTimeout: socketTimeoutMs,
-      tls: secure || provider.allow_starttls ? { rejectUnauthorized } : undefined,
+      tls: {
+        lookup: imapTarget.lookup as any,
+        ...(secure || provider.allow_starttls ? { rejectUnauthorized } : {}),
+      },
     });
     applyOauthMechanismOverride(client, oauthMechanism);
     client.on('error', (error: any) => {

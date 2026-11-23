@@ -132,6 +132,21 @@ const exportI18nText = (text: string, ref: unknown): TemplateI18nText | undefine
   return text.length > 0 ? text : undefined;
 };
 
+/**
+ * Value labels are stored in the workspace exactly as the AST carries them
+ * (`{ [String(value)]: TemplateI18nText }`), so key references survive a
+ * designer roundtrip. Entries that are not a string or key reference are dropped.
+ */
+const mapValueLabels = (value: unknown): Record<string, TemplateI18nText> | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, TemplateI18nText] => typeof entry[1] === 'string' || isTemplateI18nRef(entry[1])
+  );
+  return entries.length > 0 ? Object.fromEntries(entries.map(([key, label]) => [key, typeof label === 'string' ? label : { ...label }])) : undefined;
+};
+
 const resolveExpressionPreviewText = (
   expression: TemplateValueExpression,
   astInput: TemplateAst,
@@ -477,6 +492,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.tableLayout) inline.tableLayout = style.tableLayout;
   if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
   if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
+  if (style.breakInside) inline.breakInside = style.breakInside;
+  if (style.breakAfter) inline.breakAfter = style.breakAfter;
+  if (style.breakBefore) inline.breakBefore = style.breakBefore;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -675,6 +693,32 @@ const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] |
   return undefined;
 };
 
+const coerceBreakInside = (value: unknown): DesignerNodeStyle['breakInside'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceBreakBeforeAfter = (value: unknown): DesignerNodeStyle['breakAfter'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page' || value === 'page') {
+    return value;
+  }
+  return undefined;
+};
+
+/** The fragmentation hints of an inline style, with every other declaration dropped. */
+const pickBreakInlineStyles = (
+  inline: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => {
+  if (!inline) return undefined;
+  const picked: Record<string, unknown> = {};
+  for (const key of ['breakBefore', 'breakAfter', 'breakInside'] as const) {
+    if (inline[key] !== undefined) picked[key] = inline[key];
+  }
+  return Object.keys(picked).length > 0 ? picked : undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -848,6 +892,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
   if (overflowWrap) style.overflowWrap = overflowWrap;
 
+  const breakInside = coerceBreakInside(inline.breakInside);
+  if (breakInside) style.breakInside = breakInside;
+
+  const breakAfter = coerceBreakBeforeAfter(inline.breakAfter);
+  if (breakAfter) style.breakAfter = breakAfter;
+
+  const breakBefore = coerceBreakBeforeAfter(inline.breakBefore);
+  if (breakBefore) style.breakBefore = breakBefore;
+
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;
 
@@ -927,6 +980,10 @@ const mapWorkspaceColumnLines = (
     if (style) {
       line.style = style;
     }
+    const lineValueLabels = mapValueLabels(entry.valueLabels);
+    if (lineValueLabels) {
+      line.valueLabels = lineValueLabels;
+    }
     if (entry.supplemental === true) {
       line.supplemental = true;
     }
@@ -1000,6 +1057,10 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       }
       if (parsedFormat) {
         mapped.format = parsedFormat;
+      }
+      const columnValueLabels = mapValueLabels(column.valueLabels);
+      if (columnValueLabels) {
+        mapped.valueLabels = columnValueLabels;
       }
       return mapped;
     })
@@ -1276,6 +1337,10 @@ const mapDesignerNodeToAstNode = (
       if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
         mapped.displayFormat = displayFormat;
       }
+      const fieldValueLabels = mapValueLabels(metadata.valueLabels);
+      if (fieldValueLabels) {
+        mapped.valueLabels = fieldValueLabels;
+      }
       const labelStyle = resolveLabelStyleRef(metadata);
       if (labelStyle) {
         mapped.labelStyle = labelStyle;
@@ -1360,6 +1425,10 @@ const mapDesignerNodeToAstNode = (
               if (format) {
                 mappedRow.format = format;
               }
+              const rowValueLabels = mapValueLabels(row.valueLabels);
+              if (rowValueLabels) {
+                mappedRow.valueLabels = rowValueLabels;
+              }
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
               }
@@ -1410,6 +1479,15 @@ const mapDesignerNodeToAstNode = (
       return {
         ...createBaseNode(node),
         type: 'divider',
+      };
+    case 'page-break':
+      // An instruction, not content: a rule-less, zero-height divider whose only
+      // contribution to the document is the forced break. The canvas draws its
+      // own marker band for it; nothing of that reaches the page.
+      return {
+        ...createBaseNode(node),
+        type: 'divider',
+        style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } },
       };
     case 'barcode': {
       const metadata = getWorkspaceNodeMetadata(node);
@@ -1927,8 +2005,15 @@ export const importTemplateAstToWorkspace = (
         depth: number
       ): WorkspaceNode => {
         const def = getDefinition(designerType);
-        const size = parseSizeFromStyle(inputNode);
-        const inline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        // A Page Break is written out as a zero-height, rule-less divider (see the export
+        // above) so nothing of it reaches the page. Those marks are the writer's, not the
+        // author's: handed back as editable style, `height: 0` collapses the canvas marker
+        // band to a hairline on reopen. So the block reopens as the block the palette
+        // inserts — the forced break, at the palette's own size.
+        const isPageBreakNode = designerType === 'page-break';
+        const size = isPageBreakNode ? {} : parseSizeFromStyle(inputNode);
+        const rawInline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        const inline = isPageBreakNode ? pickBreakInlineStyles(rawInline) : rawInline;
         const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
         const preferredDirection = inputNode.type === 'stack' ? inputNode.direction : undefined;
         const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline, preferredDirection);
@@ -2022,10 +2107,18 @@ export const importTemplateAstToWorkspace = (
             : node.src.type === 'binding'
               ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
               : '';
+        // A divider that forces a page break is what the designer calls a Page
+        // Break block, so it reopens as the block it was built from.
+        const isPageBreakDivider =
+          inputNode.type === 'divider' &&
+          isRecord(inputNode.style?.inline) &&
+          (inputNode.style.inline as Record<string, unknown>).breakAfter === 'page';
         const designerType =
           inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
             ? 'logo'
-            : typeMap[inputNode.type];
+            : isPageBreakDivider
+              ? 'page-break'
+              : typeMap[inputNode.type];
         if (!designerType) {
           // Fail loudly: silently dropping an unrecognized node would delete
           // content when a layout is opened and saved in the designer.
@@ -2068,6 +2161,9 @@ export const importTemplateAstToWorkspace = (
           }
           if (inputNode.displayFormat) {
             metadata.displayFormat = inputNode.displayFormat;
+          }
+          if (inputNode.valueLabels) {
+            metadata.valueLabels = cloneJson(inputNode.valueLabels);
           }
           if (inputNode.borderStyle) {
             metadata.fieldBorderStyle = inputNode.borderStyle;
@@ -2123,6 +2219,9 @@ export const importTemplateAstToWorkspace = (
               mappedColumn.type = column.format;
               mappedColumn.format = column.format;
             }
+            if (column.valueLabels) {
+              mappedColumn.valueLabels = cloneJson(column.valueLabels);
+            }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
             }
@@ -2145,6 +2244,9 @@ export const importTemplateAstToWorkspace = (
                 }
                 if (line.style) {
                   mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                if (line.valueLabels) {
+                  mappedLine.valueLabels = cloneJson(line.valueLabels);
                 }
                 if (line.supplemental) {
                   mappedLine.supplemental = true;
@@ -2188,6 +2290,7 @@ export const importTemplateAstToWorkspace = (
               valuePath: row.value.type === 'path' ? row.value.path : '',
               type: row.format,
               format: row.format,
+              ...(row.valueLabels ? { valueLabels: cloneJson(row.valueLabels) } : {}),
               emphasize: row.emphasize === true,
               ...(row.hideWhenZero === true ? { hideWhenZero: true } : {}),
               ...(row.style ? { style: cloneJson(row.style) } : {}),

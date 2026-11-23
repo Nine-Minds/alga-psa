@@ -21181,7 +21181,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. The file is internal-only unless you pass is_client_visible=true (only when the user asks for the client to see it; ticket, project_task and client only, contact and asset get 400; needs document:update); the returned document shows is_client_visible. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -21269,6 +21269,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "mime_type": {
           "type": "string",
           "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        },
+        "is_client_visible": {
+          "type": "boolean",
+          "description": "Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible."
         }
       },
       "required": [
@@ -41645,6 +41649,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "client_portal_visible": {
           "type": "boolean"
+        },
+        "default_assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "additionalProperties": false,

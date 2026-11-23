@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Firmenadresse",
-      "description": "Aus Ihren Rechnungsdaten vorausgefüllt — bitte prüfen und bei Bedarf korrigieren. Diese Adresse erscheint auf Ihren Rechnungen und Angeboten.",
+      "description": "Diese Adresse erscheint auf Ihren Rechnungen und Angeboten.",
+      "prefilledFromBilling": "Einige dieser Werte wurden aus Ihren Rechnungsdaten übernommen. Bitte prüfen Sie sie.",
       "fields": {
         "addressLine1": {
           "label": "Adresszeile 1",
@@ -554,7 +555,8 @@
         "success": {
           "one": "1 Board erfolgreich importiert.",
           "other": "{{count}} Boards erfolgreich importiert."
-        }
+        },
+        "empty": "Alle Standard-Boards wurden bereits importiert."
       },
       "table": {
         "headers": {
@@ -584,7 +586,8 @@
           "placeholder": "Ein Board für importierte Kategorien auswählen",
           "help": "Alle importierten Kategorien werden diesem Board zugewiesen"
         },
-        "parentAutoSelectTitle": "Elternkategorie wird automatisch ausgewählt"
+        "parentAutoSelectTitle": "Elternkategorie wird automatisch ausgewählt",
+        "empty": "Dieses Board enthält bereits alle Standard-Kategorien."
       },
       "errors": {
         "missingParents": "Unterkategorien können nicht ohne ihre Elternkategorien importiert werden. Bitte wählen Sie auch: {{parents}}",
@@ -702,7 +705,8 @@
         "success": {
           "one": "1 Status erfolgreich importiert.",
           "other": "{{count}} Status erfolgreich importiert."
-        }
+        },
+        "empty": "Dieses Board enthält bereits alle Standard-Status."
       },
       "table": {
         "headers": {
@@ -771,7 +775,8 @@
         "success": {
           "one": "1 Priorität erfolgreich importiert.",
           "other": "{{count}} Prioritäten erfolgreich importiert."
-        }
+        },
+        "empty": "Alle Standard-Prioritäten wurden bereits importiert."
       },
       "table": {
         "headers": {
@@ -797,6 +802,9 @@
       },
       "table": {
         "actions": "Aktionen"
+      },
+      "import": {
+        "loading": "Verfügbare Elemente werden geladen..."
       }
     },
     "header": {

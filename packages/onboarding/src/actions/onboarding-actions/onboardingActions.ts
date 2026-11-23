@@ -15,7 +15,7 @@ import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alg
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
-import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
+import { getLicenseUsage } from '@alga-psa/licensing/server';
 import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
 import { teamMemberEmailKey, uniqueTeamMemberEmails } from '../../lib/teamMemberEmails';
 
@@ -40,6 +40,8 @@ export interface ClientInfoData {
   companyPostalCode?: string;
   companyCountryCode?: string;
   companyCountryName?: string;
+  // Read-only: set by getOnboardingInitialData, never saved
+  companyAddressPrefilled?: boolean;
 }
 
 export interface TeamMember {
@@ -222,6 +224,7 @@ export const saveClientInfo = withAuth(async (
         data.companyCountryCode,
       ].some(v => v !== undefined);
 
+      let addressSavedByWizard = false;
       if (hasAddressInput) {
         const mspClient = await tenantDb(trx, tenant).table('clients')
           .where({ is_inactive: false })
@@ -277,6 +280,7 @@ export const saveClientInfo = withAuth(async (
             }).returning('*');
             queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
           }
+          addressSavedByWizard = true;
         }
       }
 
@@ -284,9 +288,12 @@ export const saveClientInfo = withAuth(async (
       // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
       // These fields are specific to the current user and should not be shared across users in the tenant
       // Only save tenant-level data like tenantName
-      const progressData: any = {
+      const progressData: Partial<WizardData> = {
         tenantName: data.tenantName
       };
+      // Server-side record that the stored address is the user's own, so
+      // getOnboardingInitialData stops reporting it as a billing prefill.
+      if (addressSavedByWizard) progressData.companyAddressSavedByWizard = true;
 
       await persistTenantOnboardingProgress(trx, tenant, progressData);
     });
@@ -1284,10 +1291,10 @@ export const getAvailableRoles = withAuth(async (
 });
 
 /**
- * License usage for the Team Members onboarding step. Uses the withAuth
- * session tenant directly instead of getLicenseUsageAction's header/async
- * -context lookup, which is unreliable this early in onboarding and left the
- * step's "Users: N" counter stuck at 0.
+ * License usage for the Team Members onboarding step. This action keeps its
+ * own count because onboarding includes pending invitation reservations, while
+ * getLicenseUsageAction reports active internal users only. The tenant is
+ * derived from the authenticated withAuth context.
  *
  * A seat here is an active internal user plus a pending invitation
  * (`used_at IS NULL AND expires_at > now()`, tenant-scoped) — plan §6.2 and
@@ -1346,8 +1353,23 @@ export const getOnboardingInitialData = withAuth(async (
         );
     }
     const blankPlaceholder = (value: string | null | undefined) =>
-      !value || value === 'N/A' ? '' : value;
+      !value || value === 'N/A' || value === 'Unknown' ? '' : value;
     const hasRealCountry = location?.country_code && location.country_code !== 'XX';
+    const addressFields = [
+      location?.address_line1,
+      location?.address_line2,
+      location?.city,
+      location?.state_province,
+      location?.postal_code,
+    ];
+    // Once the wizard has saved the address it is the user's own, not billing's.
+    const settingsRow = await tenantDb(knex, tenant).table('tenant_settings').first('onboarding_data');
+    const rawProgress = settingsRow?.onboarding_data;
+    const savedProgress: Partial<WizardData> =
+      (typeof rawProgress === 'string' ? JSON.parse(rawProgress) : rawProgress) ?? {};
+    const companyAddressPrefilled =
+      savedProgress.companyAddressSavedByWizard !== true &&
+      (!!hasRealCountry || addressFields.some((value) => blankPlaceholder(value) !== ''));
 
     return {
       success: true,
@@ -1363,7 +1385,8 @@ export const getOnboardingInitialData = withAuth(async (
         companyStateProvince: blankPlaceholder(location?.state_province),
         companyPostalCode: blankPlaceholder(location?.postal_code),
         companyCountryCode: hasRealCountry ? location!.country_code : '',
-        companyCountryName: hasRealCountry ? location!.country_name : ''
+        companyCountryName: hasRealCountry ? location!.country_name : '',
+        companyAddressPrefilled
       }
     };
   } catch (error) {

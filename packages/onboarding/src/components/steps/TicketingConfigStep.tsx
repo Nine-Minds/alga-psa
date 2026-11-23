@@ -176,6 +176,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     statuses: false,
     priorities: false
   });
+  // Starts true: no fetch has completed yet, so a freshly opened import dialog
+  // shows "loading" instead of a premature "already imported" message.
+  const [isLoadingAvailable, setIsLoadingAvailable] = useState<Record<string, boolean>>({
+    boards: true,
+    categories: true,
+    statuses: true,
+    priorities: true
+  });
 
   // Imported items tracking
   const [importedBoards, setImportedBoards] = useState<any[]>([]);
@@ -334,6 +342,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   useEffect(() => {
     setSelectedStatuses([]);
     setAvailableStatuses([]);
+    // The cleared list is stale, not "all imported", until the board refetch lands.
+    setIsLoadingAvailable(prev => ({ ...prev, statuses: true }));
   }, [effectiveStatusBoardId]);
 
   useEffect(() => {
@@ -343,6 +353,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   }, [showImportDialogs.priorities]);
 
   const loadAvailableBoards = async () => {
+    setIsLoadingAvailable(prev => ({ ...prev, boards: true }));
     try {
       const boards = await getAvailableReferenceData('boards');
       setAvailableBoards(boards);
@@ -353,10 +364,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
     } catch (error) {
       console.error('Error loading available boards:', error);
+    } finally {
+      setIsLoadingAvailable(prev => ({ ...prev, boards: false }));
     }
   };
 
   const loadAvailableCategories = async () => {
+    setIsLoadingAvailable(prev => ({ ...prev, categories: true }));
     try {
       // For categories, we need a board first
       if (data.boardId || importedBoards.length > 0) {
@@ -382,10 +396,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
     } catch (error) {
       console.error('Error loading available categories:', error);
+    } finally {
+      setIsLoadingAvailable(prev => ({ ...prev, categories: false }));
     }
   };
 
   const loadAvailableStatuses = async () => {
+    setIsLoadingAvailable(prev => ({ ...prev, statuses: true }));
     try {
       const activeBoardId = effectiveStatusBoardId;
       if (!activeBoardId) {
@@ -405,6 +422,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
     } catch (error) {
       console.error('Error loading available statuses:', error);
+    } finally {
+      setIsLoadingAvailable(prev => ({ ...prev, statuses: false }));
     }
   };
 
@@ -417,6 +436,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   }, [showImportDialogs.statuses, effectiveStatusBoardId]);
 
   const loadAvailablePriorities = async () => {
+    setIsLoadingAvailable(prev => ({ ...prev, priorities: true }));
     try {
       const priorities = await getAvailableReferenceData('priorities', { item_type: 'ticket' });
       setAvailablePriorities(priorities);
@@ -427,6 +447,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
     } catch (error) {
       console.error('Error loading available priorities:', error);
+    } finally {
+      setIsLoadingAvailable(prev => ({ ...prev, priorities: false }));
     }
   };
 
@@ -1299,6 +1321,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
+  // Import dialogs: show a loading line while fetching, and an informational
+  // "already imported" message instead of a bare table header when nothing is left.
+  const importLoadingText = t('ticketingConfigStep.common.import.loading', {
+    defaultValue: 'Loading available items...'
+  });
+  const isBoardsImportEmpty = !isLoadingAvailable.boards && availableBoards.length === 0;
+  const isCategoriesImportEmpty = !isLoadingAvailable.categories && availableCategories.length === 0;
+  const isStatusesImportEmpty = !isLoadingAvailable.statuses && availableStatuses.length === 0;
+  const isPrioritiesImportEmpty = !isLoadingAvailable.priorities && availablePriorities.length === 0;
+
   if (isLoadingData) {
     return (
       <div className="space-y-6">
@@ -1745,6 +1777,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </div>
                 )}
 
+                {isLoadingAvailable.boards ? (
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
+                ) : isBoardsImportEmpty ? (
+                  <p id="import-boards-empty-state" className="text-sm text-muted-foreground">
+                    {t('ticketingConfigStep.boards.import.empty', {
+                      defaultValue: 'All standard boards are already imported.'
+                    })}
+                  </p>
+                ) : (
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
@@ -1838,6 +1879,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </table>
                   </div>
                 </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button
@@ -1855,22 +1897,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       defaultValue: 'Cancel'
                     })}
                   </Button>
-                  <Button
-                    id="confirm-import-boards"
-                    type="button"
-                    onClick={handleImportBoards}
-                    disabled={selectedBoards.length === 0 || isImporting.boards}
-                    className="flex-1"
-                  >
-                    {isImporting.boards
-                      ? t('ticketingConfigStep.common.actions.importing', {
-                          defaultValue: 'Importing...'
-                        })
-                      : t('ticketingConfigStep.common.actions.importCount', {
-                          defaultValue: 'Import ({{count}})',
-                          count: selectedBoards.length
-                        })}
-                  </Button>
+                  {!isBoardsImportEmpty && (
+                    <Button
+                      id="confirm-import-boards"
+                      type="button"
+                      onClick={handleImportBoards}
+                      disabled={selectedBoards.length === 0 || isImporting.boards}
+                      className="flex-1"
+                    >
+                      {isImporting.boards
+                        ? t('ticketingConfigStep.common.actions.importing', {
+                            defaultValue: 'Importing...'
+                          })
+                        : t('ticketingConfigStep.common.actions.importCount', {
+                            defaultValue: 'Import ({{count}})',
+                            count: selectedBoards.length
+                          })}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -2255,6 +2299,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </p>
                 </div>
 
+                {isLoadingAvailable.categories ? (
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
+                ) : isCategoriesImportEmpty ? (
+                  <p id="import-categories-empty-state" className="text-sm text-muted-foreground">
+                    {t('ticketingConfigStep.categories.import.empty', {
+                      defaultValue: 'This board already has all the standard categories.'
+                    })}
+                  </p>
+                ) : (
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
@@ -2375,6 +2428,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </table>
                   </div>
                 </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button
@@ -2392,22 +2446,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       defaultValue: 'Cancel'
                     })}
                   </Button>
-                  <Button
-                    id="confirm-import-categories"
-                    type="button"
-                    onClick={handleImportCategories}
-                    disabled={selectedCategories.length === 0 || !importTargetBoard || isImporting.categories}
-                    className="flex-1"
-                  >
-                    {isImporting.categories
-                      ? t('ticketingConfigStep.common.actions.importing', {
-                          defaultValue: 'Importing...'
-                        })
-                      : t('ticketingConfigStep.common.actions.importCount', {
-                          defaultValue: 'Import ({{count}})',
-                          count: selectedCategories.length
-                        })}
-                  </Button>
+                  {!isCategoriesImportEmpty && (
+                    <Button
+                      id="confirm-import-categories"
+                      type="button"
+                      onClick={handleImportCategories}
+                      disabled={selectedCategories.length === 0 || !importTargetBoard || isImporting.categories}
+                      className="flex-1"
+                    >
+                      {isImporting.categories
+                        ? t('ticketingConfigStep.common.actions.importing', {
+                            defaultValue: 'Importing...'
+                          })
+                        : t('ticketingConfigStep.common.actions.importCount', {
+                            defaultValue: 'Import ({{count}})',
+                            count: selectedCategories.length
+                          })}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -2925,6 +2981,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </div>
                 )}
 
+                {isLoadingAvailable.statuses ? (
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
+                ) : isStatusesImportEmpty ? (
+                  <p id="import-statuses-empty-state" className="text-sm text-muted-foreground">
+                    {t('ticketingConfigStep.statuses.import.empty', {
+                      defaultValue: 'This board already has all the standard statuses.'
+                    })}
+                  </p>
+                ) : (
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
@@ -2997,6 +3062,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </table>
                   </div>
                 </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button
@@ -3013,22 +3079,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       defaultValue: 'Cancel'
                     })}
                   </Button>
-                  <Button
-                    id="confirm-import-statuses"
-                    type="button"
-                    onClick={handleImportStatuses}
-                    disabled={selectedStatuses.length === 0 || isImporting.statuses}
-                    className="flex-1"
-                  >
-                    {isImporting.statuses
-                      ? t('ticketingConfigStep.common.actions.importing', {
-                          defaultValue: 'Importing...'
-                        })
-                      : t('ticketingConfigStep.common.actions.importCount', {
-                          defaultValue: 'Import ({{count}})',
-                          count: selectedStatuses.length
-                        })}
-                  </Button>
+                  {!isStatusesImportEmpty && (
+                    <Button
+                      id="confirm-import-statuses"
+                      type="button"
+                      onClick={handleImportStatuses}
+                      disabled={selectedStatuses.length === 0 || isImporting.statuses}
+                      className="flex-1"
+                    >
+                      {isImporting.statuses
+                        ? t('ticketingConfigStep.common.actions.importing', {
+                            defaultValue: 'Importing...'
+                          })
+                        : t('ticketingConfigStep.common.actions.importCount', {
+                            defaultValue: 'Import ({{count}})',
+                            count: selectedStatuses.length
+                          })}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -3364,6 +3432,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </div>
                 )}
 
+                {isLoadingAvailable.priorities ? (
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
+                ) : isPrioritiesImportEmpty ? (
+                  <p id="import-priorities-empty-state" className="text-sm text-muted-foreground">
+                    {t('ticketingConfigStep.priorities.import.empty', {
+                      defaultValue: 'All standard priorities are already imported.'
+                    })}
+                  </p>
+                ) : (
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
@@ -3431,6 +3508,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </table>
                   </div>
                 </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button
@@ -3447,22 +3525,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       defaultValue: 'Cancel'
                     })}
                   </Button>
-                  <Button
-                    id="confirm-import-priorities"
-                    type="button"
-                    onClick={handleImportPriorities}
-                    disabled={selectedPriorities.length === 0 || isImporting.priorities}
-                    className="flex-1"
-                  >
-                    {isImporting.priorities
-                      ? t('ticketingConfigStep.common.actions.importing', {
-                          defaultValue: 'Importing...'
-                        })
-                      : t('ticketingConfigStep.common.actions.importCount', {
-                          defaultValue: 'Import ({{count}})',
-                          count: selectedPriorities.length
-                        })}
-                  </Button>
+                  {!isPrioritiesImportEmpty && (
+                    <Button
+                      id="confirm-import-priorities"
+                      type="button"
+                      onClick={handleImportPriorities}
+                      disabled={selectedPriorities.length === 0 || isImporting.priorities}
+                      className="flex-1"
+                    >
+                      {isImporting.priorities
+                        ? t('ticketingConfigStep.common.actions.importing', {
+                            defaultValue: 'Importing...'
+                          })
+                        : t('ticketingConfigStep.common.actions.importCount', {
+                            defaultValue: 'Import ({{count}})',
+                            count: selectedPriorities.length
+                          })}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

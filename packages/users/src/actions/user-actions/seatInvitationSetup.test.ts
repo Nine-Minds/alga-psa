@@ -13,7 +13,12 @@ const gate = vi.hoisted(() => ({ seatServed: true, coManagedServed: true }));
 const accept = vi.hoisted(() => vi.fn());
 const createFromInvitation = vi.hoisted(() => vi.fn());
 const upsert = vi.hoisted(() => vi.fn(async () => undefined));
-const txRows = vi.hoisted(() => ({ productCode: 'psa', role: { role_id: 'role-1' } }));
+const txRows = vi.hoisted(() => ({
+  productCode: 'psa',
+  role: { role_id: 'role-1' },
+  invitation: { invitation_id: 'invitation-1', email_normalized: 'dana@client.example' },
+  updates: [] as Array<{ table: string; values: Record<string, unknown> }>,
+}));
 
 class SeatError extends Error { constructor(public code: string) { super(code); } }
 
@@ -23,10 +28,24 @@ vi.mock('@alga-psa/core/capability', () => ({
   serves: async (key: string) => ({ served: served(key) }),
 }));
 const tenantDbMock = vi.hoisted(() => (_c: unknown, _t: string) => ({
-  table: (name: string) => ({
-    first: async () => (name === 'tenants' ? { product_code: txRows.productCode } : undefined),
-    where: () => ({ first: async () => (name === 'roles' ? txRows.role : undefined), update: async () => 1 }),
-  }),
+  table: (name: string) => {
+    const query: any = {
+      where: () => query,
+      whereNull: () => query,
+      forUpdate: () => query,
+      first: async () => {
+        if (name === 'tenants') return { product_code: txRows.productCode };
+        if (name === 'roles') return txRows.role;
+        if (name === 'user_invitations') return txRows.invitation;
+        return undefined;
+      },
+      update: async (values: Record<string, unknown>) => {
+        txRows.updates.push({ table: name, values });
+        return 1;
+      },
+    };
+    return query;
+  },
 }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: { transaction: async (fn: any) => fn({ trx: true, fn: { now: () => 0 } }) }, tenant: 't1' }),
@@ -74,6 +93,7 @@ const registerSeatProvider = () => seam.register(() => ({
 
 beforeEach(() => {
   gate.seatServed = true; gate.coManagedServed = true; txRows.productCode = 'psa';
+  txRows.updates.length = 0;
   seam.reset(); registerSeatProvider();
   for (const fn of [accept, createFromInvitation, upsert, verify]) fn.mockReset();
   upsert.mockResolvedValue(undefined);
@@ -157,6 +177,10 @@ describe('ordinary invitations', () => {
     expect(result).toMatchObject({ success: true, userId: 'ordinary-user', username: invitee.email });
     expect(createFromInvitation).toHaveBeenCalledOnce();
     expect(accept).not.toHaveBeenCalled();
+    expect(txRows.updates).toContainEqual({
+      table: 'user_invitations',
+      values: { invited_user_id: 'ordinary-user' },
+    });
   });
 
   it('are unaffected by the seat capability being closed', async () => {

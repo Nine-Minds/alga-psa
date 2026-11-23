@@ -527,7 +527,8 @@ describe('journey: client portal service request → MSP ticket triage → porta
     const portalTicket = portalTicketDetails as any;
     expect(portalTicket.ticket_id).toBe(ticketId);
     expect(portalTicket.status_name).toBe(`Journey In Progress ${suffix}`);
-    expect(portalTicket.assigned_to).toBe(mspUserId);
+    expect(portalTicket.assigned_to_name).toBe('Morgan Agent');
+    expect(portalTicket).not.toHaveProperty('assigned_to');
     const replyComment = (portalTicket.conversations as any[]).find(
       (comment) => comment.comment_id === commentId
     );
@@ -535,11 +536,9 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(replyComment.note).toBe(mspReply);
     expect(replyComment.is_internal).toBe(false);
     expect(replyComment.author_type).toBe('internal');
-    expect(portalTicket.userMap[mspUserId]).toMatchObject({
-      first_name: 'Morgan',
-      last_name: 'Agent',
-      user_type: 'internal',
-    });
+    expect(replyComment).not.toHaveProperty('user_id');
+    expect(replyComment.portal_author).toMatchObject({ name: 'Morgan Agent', role: 'staff' });
+    expect(portalTicket).not.toHaveProperty('userMap');
 
     const portalOpenTickets = await getClientTickets(TICKET_STATUS_FILTER_OPEN);
     expect(Array.isArray(portalOpenTickets)).toBe(true);

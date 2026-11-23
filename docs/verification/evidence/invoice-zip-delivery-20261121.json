@@ -1,0 +1,55 @@
+{
+  "testedRevision": "d8263ffd388313ffbd3c41e4478a19ff377ed91a",
+  "run": "2026-11-21 app-free invoice ZIP handler integration with isolated worktree database",
+  "command": "cd server && TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts --reporter=verbose",
+  "result": "passed; 1 test file, 1 test",
+  "capturedHandlerEvidence": {
+    "evidenceType": "app-free-handler-integration",
+    "tenantId": "7932adbe-3bad-4e70-a469-5a79524dd348",
+    "invoiceId": "083c4228-a8ff-4050-a8a0-244508cc792e",
+    "invoiceNumber": "INV-000001",
+    "jobId": "e9f552f6-18f5-43d9-9e3a-6ad553ee700a",
+    "executionId": "9d4cffa2-fdd8-4d14-b661-39d344e47f64",
+    "jobStatusAfterHandler": "failed",
+    "executionOutcome": {
+      "error": "verification fixture failure",
+      "status": "failed",
+      "executionId": "9d4cffa2-fdd8-4d14-b661-39d344e47f64"
+    },
+    "documentId": "922cd9e2-c9ee-4b8b-aab9-dba8d96707a4",
+    "fileId": "bccdea95-c737-481b-bdf8-5a0068e7ea2f",
+    "mimeType": "application/zip",
+    "storedBytes": 28535,
+    "archiveCheck": "No errors detected in compressed data of /tmp/invoice-render-journey-K1gRb0/7932adbe-3bad-4e70-a469-5a79524dd348/1795249239234-hae7hhz30yo.zip.",
+    "archiveMembers": [
+      "INV-000001.pdf"
+    ],
+    "pdfInfo": "Pages:           1",
+    "pdfContainsInvoiceNumber": true,
+    "pdfContainsClientName": true
+  },
+  "boundary": "No application server, authenticated UI, or Temporal worker was started. This proves real handler execution, PDF generation, archive creation, local storage upload, external_files/documents persistence, archive integrity, and invoice/client content only.",
+  "tests": {
+    "postgresPersistence": "passed after restoration; 1 file, 4 tests using cd server && TEST_DB_NAME=test_db_feature_security_authz_scheduleinvoiceemailaction npx vitest run src/test/integration/forwardedJobPersistence.integration.test.ts --reporter=verbose. The ZIP case runs the real handler and JobService persistence, checks failed jobs.status and the unchanged serverExecution after each of 3 progress/completion writes, and checks ZIP started/completed stepResults including file_id and storage_path.",
+    "completionForwardingNegativeControl": "expected failure observed; temporarily removed only forwardedExecutionId from the ZIP JobStatus.Completed call. The integration regression failed because persisted jobs.status became completed instead of failed. The field was restored and the full persistence suite passed again.",
+    "subscriberForwardingRegression": "passed; 1 file, 10 tests using cd server && npx vitest run src/test/unit/eventBus/maintenanceJobSubscriber.unit.test.ts --reporter=verbose",
+    "scopedTypecheck": "passed; exit 0; cd server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.invoiceZipValidation.json --pretty false"
+  },
+  "cleanup": "The journey removes ZIP document associations, documents, external_files rows, job details, and jobs. Test teardown removes extracted PDFs and the temporary storage directory. Existing tenant/client/invoice fixture rows follow the invoice render journey retention policy. The disposable worktree test database remains available and is dropped/recreated by the next test run.",
+  "validation": {
+    "appFreeArtifactIntegration": "passed; isolated TEST_DB_NAME; 1 test file, 1 test",
+    "forwardedJobPersistence": "passed after restoration; 1 test file, 4 tests",
+    "maintenanceJobSubscriber": "passed; 1 test file, 10 tests",
+    "scopedTypecheck": "passed; exit 0",
+    "serverTypecheck": "failed with exit 134 after V8 reported FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory at the requested 8 GB heap; no source diagnostics were emitted before abort",
+    "serverBuild": "failed with exit 1; Next.js webpack build worker reported FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory and exited with SIGABRT",
+    "completionForwardingNegativeControl": "expected failure observed; removing forwardedExecutionId from the final completion update let jobs.status become completed; restored before final verification"
+  },
+  "testDatabase": {
+    "name": "test_db_feature_security_authz_scheduleinvoiceemailaction",
+    "owner": "app_user",
+    "purpose": "worktree-specific disposable integration-test database; bootstrap drops and recreates this database",
+    "environmentFile": "repository-root .env.localtest; PostgreSQL at 127.0.0.1:5472"
+  },
+  "capturedOutputLine": "INVOICE_ZIP_DELIVERY_EVIDENCE {\"evidenceType\":\"app-free-handler-integration\",\"tenantId\":\"7932adbe-3bad-4e70-a469-5a79524dd348\",\"invoiceId\":\"083c4228-a8ff-4050-a8a0-244508cc792e\",\"invoiceNumber\":\"INV-000001\",\"jobId\":\"e9f552f6-18f5-43d9-9e3a-6ad553ee700a\",\"executionId\":\"9d4cffa2-fdd8-4d14-b661-39d344e47f64\",\"jobStatusAfterHandler\":\"failed\",\"executionOutcome\":{\"error\":\"verification fixture failure\",\"status\":\"failed\",\"executionId\":\"9d4cffa2-fdd8-4d14-b661-39d344e47f64\"},\"documentId\":\"922cd9e2-c9ee-4b8b-aab9-dba8d96707a4\",\"fileId\":\"bccdea95-c737-481b-bdf8-5a0068e7ea2f\",\"mimeType\":\"application/zip\",\"storedBytes\":28535,\"archiveCheck\":\"No errors detected in compressed data of /tmp/invoice-render-journey-K1gRb0/7932adbe-3bad-4e70-a469-5a79524dd348/1795249239234-hae7hhz30yo.zip.\",\"archiveMembers\":[\"INV-000001.pdf\"],\"pdfInfo\":\"Pages:           1\",\"pdfContainsInvoiceNumber\":true,\"pdfContainsClientName\":true}"
+}

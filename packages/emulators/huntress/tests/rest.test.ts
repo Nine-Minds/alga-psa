@@ -335,13 +335,20 @@ describe('Huntress v1 REST surface', () => {
 
   it('honors sort_field/sort_direction with an id tiebreak on equal timestamps', async () => {
     const org = (await huntress.seed('organization', { name: 'Acme Inc.' })).organizations[0];
-    // Three reports created in the same virtual instant: equal updated_at.
+    // The clock follows wall time plus an offset, so separate seed requests
+    // need explicit timestamps to exercise ties even across second boundaries.
+    const seededAt = huntress.host.clock.now().toISOString();
     const ids: number[] = [];
     for (let index = 0; index < 3; index += 1) {
-      ids.push((await huntress.seed('incident', { organization_id: org.id })).incident_report.id);
+      ids.push((await huntress.seed('incident', {
+        organization_id: org.id,
+        created_at: seededAt,
+        updated_at: seededAt,
+      })).incident_report.id);
+      huntress.host.clock.advance('1s');
     }
     const tied = (await raw('/v1/incident_reports?sort_field=updated_at&sort_direction=desc')).body.incident_reports;
-    expect(tied.map((i: any) => i.updated_at)).toEqual([tied[0].updated_at, tied[0].updated_at, tied[0].updated_at]);
+    expect(tied.map((i: any) => i.updated_at)).toEqual([seededAt, seededAt, seededAt]);
     expect(tied.map((i: any) => i.id)).toEqual([...ids].reverse());
     expect((await raw('/v1/incident_reports?sort_field=updated_at&sort_direction=asc')).body.incident_reports.map((i: any) => i.id))
       .toEqual(ids);

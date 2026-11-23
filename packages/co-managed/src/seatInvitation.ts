@@ -250,6 +250,8 @@ export async function inviteCoManagedSeatTechnician(
     const [invitation] = await sponsor.table('user_invitations').insert({
       tenant: input.sponsorTenant,
       email,
+      email_normalized: email,
+      invited_user_id: null,
       first_name: firstName,
       last_name: lastName,
       role_id: null,

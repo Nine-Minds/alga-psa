@@ -1,0 +1,9 @@
+[
+  {"id": "F001", "description": "tenant-creation-steps fetches Stripe checkout details when checkoutSessionId is present and the input lacks a Stripe customer ID or a billing address", "implemented": true},
+  {"id": "F002", "description": "Fetched Stripe details fill only fields the workflow input left undefined; caller-supplied Stripe IDs and billing address win", "implemented": true},
+  {"id": "F003", "description": "A failed Stripe fetch stays non-fatal and tenant creation continues with placeholders", "implemented": true},
+  {"id": "F004", "description": "Workflow change is replay-safe for runs in flight during worker rollout (patched marker if needed)", "implemented": true},
+  {"id": "F005", "description": "getOnboardingInitialData reports whether the company address carries values prefilled from billing that the user has not yet saved", "implemented": true},
+  {"id": "F006", "description": "ClientInfoStep always shows the neutral address description and shows the prefill sentence only when values were prefilled and the step is not a revisit", "implemented": true},
+  {"id": "F007", "description": "Locale files for every language carry the new neutral description and the conditional prefill sentence; the prefill sentence reads true for partial addresses", "implemented": true}
+]

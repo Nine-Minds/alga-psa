@@ -26,6 +26,30 @@ test('every honoured annotation carries a reason of at least 12 characters', () 
   for (const a of report.allowed) assert.ok(a.reason.replace(/\s/g, '').length >= 12, `${a.file}:${a.line}`);
 });
 
+test('IMAP OAuth state migration passes safety and filename validation at CI handoff', async (t) => {
+  const dir = new URL('../../server/migrations/', import.meta.url);
+  const files = fs.readdirSync(dir)
+    .filter((name) => /_create_imap_oauth_states\.cjs$/.test(name))
+    .map((name) => ({ name, source: fs.readFileSync(new URL(name, dir), 'utf8') }));
+  assert.equal(files.length, 1);
+
+  // Keep the failing run's baseline and clock: advancing main must not
+  // invalidate a migration after it has shipped.
+  const report = lintMigrationSet(files, {
+    baseMaxTimestamp: '20261120120100',
+    isExistingTable: () => false,
+    isExistingFunction: () => false,
+  });
+  assert.deepEqual(report.violations, []);
+  assert.deepEqual(report.undecided, []);
+  assert.deepEqual(report.stale, []);
+
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-21T23:26:55Z') });
+  const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../', import.meta.url)) });
+  const results = await eslint.lintFiles(files.map(({ name }) => fileURLToPath(new URL(name, dir))));
+  assert.deepEqual(results.flatMap((result) => result.messages.filter((message) => message.severity === 2)), []);
+});
+
 test('quote approval migrations pass safety and filename validation at CI handoff', async (t) => {
   const dir = new URL('../../server/migrations/', import.meta.url);
   const files = fs.readdirSync(dir)

@@ -1257,7 +1257,7 @@
       "$.layout.children[5].columns[1].value.path=phase",
       "$.layout.children[5].columns[2].header.i18nKey=labels.optional",
       "$.layout.children[5].columns[2].id=optional",
-      "$.layout.children[5].columns[2].value.path=is_optional",
+      "$.layout.children[5].columns[2].value.path=optional_label",
       "$.layout.children[5].columns[3].header.i18nKey=labels.recurring",
       "$.layout.children[5].columns[3].id=recurring",
       "$.layout.children[5].columns[3].value.path=is_recurring",

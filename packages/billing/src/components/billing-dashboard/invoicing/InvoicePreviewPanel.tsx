@@ -1158,21 +1158,28 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   );
                 })}
               </div>
-              <div
-                style={{
-                  zoom: scale,
-                  width: `${baseInvoiceWidth}px`,
-                  transition: 'zoom 0.2s ease-out'
-                }}
-              >
-                <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
-                  <TemplateRenderer
-                    template={selectedTemplate}
-                    invoiceData={detailedInvoiceData}
-                    invoiceId={invoiceId}
-                  />
-                </PaperInvoice>
-              </div>
+              {/* The pages this invoice prints as: a layout with page breaks is read as the
+                  separate sheets it will be read on. The renderer falls back to the single
+                  roll (framed by PaperInvoice below) when the chunking pass cannot run. */}
+              <TemplateRenderer
+                template={selectedTemplate}
+                invoiceData={detailedInvoiceData}
+                invoiceId={invoiceId}
+                paginated
+                fallbackWrapper={(children) => (
+                  <div
+                    style={{
+                      zoom: scale,
+                      width: `${baseInvoiceWidth}px`,
+                      transition: 'zoom 0.2s ease-out'
+                    }}
+                  >
+                    <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
+                      {children}
+                    </PaperInvoice>
+                  </div>
+                )}
+              />
             </div>
 
             {creditApplied > 0 && (

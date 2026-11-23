@@ -15,7 +15,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: mocks.feature }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => mocks.service }));
 
-import { isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { isCoManagedPurchaseSurfaceOpen, runWithBillingCatalogContext } from '@alga-psa/licensing';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
 
 const scope = { stripeAccount: 'acct_test', livemode: false };
@@ -41,7 +41,7 @@ describe('quote admission from an already-open purchase screen', () => {
         first: async () => versions.find((row) => Object.entries(criteria).every(([key, value]) => row[key as keyof typeof row] === value)),
       }),
     });
-    const catalog = createOfferCatalog({ db: db as never, stripe: {} as never, scope: async () => scope, env: {} });
+    const catalog = createOfferCatalog({ db: async () => db as never, stripe: {} as never, scope: async () => scope, env: {} });
     mocks.service.getOfferCatalog.mockResolvedValue(catalog);
     // An existing pool can still be priced from its historical subscription even if new sales close.
     mocks.service.previewCoManagedSeats.mockResolvedValue(reviewedQuote);
@@ -49,12 +49,14 @@ describe('quote admission from an already-open purchase screen', () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  const context = () => ({ mode: 'test' as const, stripeAccount: scope.stripeAccount, priceId: 'price-test', source: 'database' as const, sellable: versions.length > 0 && versions[0].is_current });
+
   it('withholds existing-pool terms after sales pause and keeps confirmation closed', async () => {
-    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(true);
+    expect(await runWithBillingCatalogContext(context(), () => isCoManagedPurchaseSurfaceOpen(mocks.user.tenant))).toBe(true);
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'quote', ...reviewedQuote });
     versions[0].is_current = false;
 
-    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(false);
+    expect(await runWithBillingCatalogContext(context(), () => isCoManagedPurchaseSurfaceOpen(mocks.user.tenant))).toBe(false);
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
     expect(mocks.service.previewCoManagedSeats).toHaveBeenCalledTimes(1);
     await expect(purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'operation', offerRef: reviewedQuote.offerRef })).rejects.toThrow('not available');
@@ -63,7 +65,7 @@ describe('quote admission from an already-open purchase screen', () => {
 
   it('reports missing configuration before trying to price a pool', async () => {
     versions = [];
-    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(false);
+    expect(await runWithBillingCatalogContext(context(), () => isCoManagedPurchaseSurfaceOpen(mocks.user.tenant))).toBe(false);
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
     expect(mocks.service.previewCoManagedSeats).not.toHaveBeenCalled();
   });

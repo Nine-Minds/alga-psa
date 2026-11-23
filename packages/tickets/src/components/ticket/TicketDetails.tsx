@@ -123,6 +123,7 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { pickCloseRulePendingFields } from '../../lib/closeRuleConstants';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -1442,6 +1443,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
+
+    // The bootstrap's "on my activities list" answer holds for the saved assignment the page loaded
+    // with. Once a save changes it, the answer is stale: hand the control nothing and let it re-check.
+    const loadedAssignmentKey = useRef(buildTicketAssignmentKey(
+        initialTicket.assigned_to,
+        initialAdditionalAgents.map((a) => a.additional_user_id || a.assigned_to),
+    )).current;
+    const initialOnMyActivityList = buildTicketAssignmentKey(
+        ticket.assigned_to,
+        additionalAgents.map((a) => a.additional_user_id || a.assigned_to),
+    ) === loadedAssignmentKey ? bootstrap?.onMyActivityList ?? null : null;
 
     const additionalAgentsForInfo = useMemo(() => {
         return additionalAgents.map(a => {
@@ -4631,6 +4643,7 @@ const handleClose = () => {
                     workflowLocked={bundleWorkflowLocked}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
+                    initialOnMyActivityList={initialOnMyActivityList}
                     onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                     taskActions={effectiveRenderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     quickInvoiceActions={effectiveRenderQuickInvoice?.({ ticket })}
@@ -4763,6 +4776,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}
                                     tags={tags}
+                                    initialOnMyActivityList={initialOnMyActivityList}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                     isInDrawer={isInDrawer}
@@ -5005,6 +5019,7 @@ const handleClose = () => {
                             isSubmitting={isSubmitting}
                             users={availableAgents}
                             tags={tags}
+                            initialOnMyActivityList={initialOnMyActivityList}
                             allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                             onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                             isInDrawer

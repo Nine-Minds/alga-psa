@@ -164,6 +164,10 @@ spec:
               value: "{{ .Values.logLevel }}"
             - name: PORT
               value: "{{ .Values.service.port }}"
+            {{- with .Values.imap.privateTargetAllowlist }}
+            - name: EMAIL_PROVIDER_IMAP_PRIVATE_TARGET_ALLOWLIST
+              value: {{ . | quote }}
+            {{- end }}
 
             - name: EDITION
               value: "{{ .Values.app.edition }}"

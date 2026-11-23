@@ -67,7 +67,11 @@ describe('purchase-only co-managed overview', () => {
     expect(await screen.findByText(/paid seat costs .*9.99 per month/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(container.querySelector('#co-managed-pool-editor')).not.toBeNull();
-    expect(mocks.editorProps[0]).toEqual({ showTotals: true });
+    // The first-purchase explainer rides with the pool; a commercial-only actor gets no Clients link.
+    expect(mocks.editorProps[0]).toEqual({ showTotals: true, explainer: expect.anything(), clientsHref: undefined });
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByText(/Co-managed IT lets a client's own IT staff work alongside your team in AlgaPSA/)).toBeInTheDocument();
+    expect(screen.getByText(/Each client technician uses one seat from a pool you buy here\./)).toBeInTheDocument();
     expect(container.querySelectorAll('a')).toHaveLength(0);
     expect(container.querySelector('input[type="search"]')).toBeNull();
     expect(container.textContent).not.toMatch(/archive|SLA|Search clients|Set up co-managed/i);

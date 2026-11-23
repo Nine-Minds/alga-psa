@@ -1022,6 +1022,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'policies', deletion: 'ordered' },
   { table: 'google_email_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
   { table: 'microsoft_email_provider_config', deletion: 'ordered', clientKeyed: { by: 'exempt', column: 'client_id', reason: 'OAuth client id, not a PSA client.' } },
+  { table: 'imap_oauth_states', deletion: 'ordered' },
   { table: 'imap_email_provider_config', deletion: 'ordered' },
   { table: 'email_provider_health', deletion: 'ordered' },
   { table: 'email_provider_configs', deletion: 'ordered' },

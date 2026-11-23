@@ -29,6 +29,7 @@ import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
+  DesignerFocusToggle,
   DesignerPalette,
   DesignerPaletteTile,
   DesignerSaveStatus,
@@ -98,6 +99,13 @@ import {
 } from './formBuilderState';
 
 const SAVE_DEBOUNCE_MS = 900;
+/**
+ * Narrower than this, the palette, the inspector and the canvas cannot all be useful at once:
+ * at 1280 px with the app sidebar open the canvas is about 284 px wide with the palette open.
+ * The palette therefore starts out of the way and comes back when the builder gets the width,
+ * including on entering focus mode — until the author says otherwise.
+ */
+const PALETTE_AUTO_COLLAPSE_WIDTH = 1100;
 /** Shorter than the save, so an interrupted edit is on disk before the save would clear it. */
 const BACKUP_DEBOUNCE_MS = 500;
 const SIDEBAR_NAMESPACE = 'serviceRequestFormBuilder';
@@ -186,6 +194,10 @@ export function ServiceRequestFormBuilder({
   const [isGalleryDismissed, setIsGalleryDismissed] = useState(false);
   const [inspectorWidth, setInspectorWidth] = useState(420);
   const [isLeftPaneCollapsed, setIsLeftPaneCollapsed] = useState(false);
+  // Once the author has collapsed or expanded the palette by hand, the width rule stops
+  // second-guessing them for the rest of the visit.
+  const paletteChosenByAuthor = useRef(false);
+  const builderRef = useRef<HTMLDivElement>(null);
   const [draggingPaletteType, setDraggingPaletteType] = useState<FieldTypeKey | null>(null);
   const [tryValues, setTryValues] = useState<Record<string, unknown>>({});
   const [tryErrors, setTryErrors] = useState<Record<string, string>>({});
@@ -231,6 +243,23 @@ export function ServiceRequestFormBuilder({
 
   useEffect(() => {
     setInspectorWidth(readStoredDesignerSidebarWidth(SIDEBAR_NAMESPACE));
+  }, []);
+
+  // The builder's own width, not the window's: the app sidebar and focus mode both change it.
+  useEffect(() => {
+    const node = builderRef.current;
+    if (!node) return;
+    const applyWidth = (width: number) => {
+      if (paletteChosenByAuthor.current || width === 0) return;
+      setIsLeftPaneCollapsed(width < PALETTE_AUTO_COLLAPSE_WIDTH);
+    };
+    applyWidth(node.getBoundingClientRect().width);
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) applyWidth(entry.contentRect.width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   const isDirty = useMemo(
@@ -621,7 +650,10 @@ export function ServiceRequestFormBuilder({
         className="h-full"
         maxHeightClassName="max-h-full"
         isCollapsed={isLeftPaneCollapsed}
-        onToggleCollapse={() => setIsLeftPaneCollapsed((previous) => !previous)}
+        onToggleCollapse={() => {
+          paletteChosenByAuthor.current = true;
+          setIsLeftPaneCollapsed((previous) => !previous);
+        }}
         search={paletteSearch}
         onSearchChange={setPaletteSearch}
         registryError={false}
@@ -746,6 +778,7 @@ export function ServiceRequestFormBuilder({
       >
         <Settings className="h-4 w-4" />
       </Button>
+      <DesignerFocusToggle id="service-request-form-builder-focus-toggle" />
       <Button
         id="service-request-form-builder-publish"
         size="sm"
@@ -903,6 +936,7 @@ export function ServiceRequestFormBuilder({
       onDragEnd={handleDragEnd}
     >
       <DesignerShell
+        rootRef={builderRef}
         idPrefix="service-request-form-builder"
         toolbar={toolbar}
         leftPane={leftPane}

@@ -100,10 +100,19 @@ export class OfferPublishError extends Error {
 export interface CatalogOperator { tenantId: string; userId: string }
 
 export interface CatalogDeps {
-  db: Knex;
+  /**
+   * Resolves the current admin connection. Called once per catalog operation and never memoised:
+   * the pool behind it can be destroyed and rebuilt (connection-reset recovery), so a captured
+   * Knex goes stale. Hold the result only for the duration of one operation.
+   */
+  db: () => Promise<Knex>;
   stripe: Pick<Stripe, 'prices'>;
-  /** Trusted configuration: Stripe account and mode. Resolved lazily and memoised by the caller. */
-  scope: () => Promise<CatalogScope>;
+  /** Optional reference inventory used to refuse account switches with live billing references. */
+  subscriptions?: Pick<Stripe, 'subscriptions'>['subscriptions'];
+  /** Trusted configuration: Stripe account and mode. Resolved lazily. Without `db` it resolves the current pool itself. */
+  scope: (db?: Knex) => Promise<CatalogScope>;
+  /** The key's mode is available even when no merchant account can yet be resolved. */
+  livemode?: () => boolean;
   env?: EnvLike;
 }
 

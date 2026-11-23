@@ -74,6 +74,7 @@ import {
   StretchHorizontal,
   Grid3X3,
 } from 'lucide-react';
+import { useDesignerFocusState } from '@alga-psa/ui/components/designer';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { useStructureCommands, type StructureCommand } from './hooks/useStructureCommands';
 import { planSubtreeRename, resolveInsertionTarget } from './utils/structureEditing';
@@ -730,7 +731,15 @@ const CustomPageSizeFields: React.FC<{ size: CustomPageSize; onChange: (next: Cu
   );
 };
 
-export const DesignerShell: React.FC = () => {
+export interface DesignerShellProps {
+  /**
+   * Hosts that size the designer area themselves pass this, so the shell fills the box it is
+   * given instead of budgeting for page chrome it cannot see.
+   */
+  fillParent?: boolean;
+}
+
+export const DesignerShell: React.FC<DesignerShellProps> = ({ fillParent = false }) => {
   const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -834,6 +843,9 @@ export const DesignerShell: React.FC = () => {
     [applyHandleResizePatches]
   );
 
+  // Not a prop: the shell is rendered with none in three hosts and in many tests.
+  const { isFocused: isFocusedSurface } = useDesignerFocusState();
+
   const zoomToFit = useCallback(() => {
     const viewport = document.querySelector<HTMLElement>(DESIGNER_CANVAS_VIEWPORT_SELECTOR);
     const page = useInvoiceDesignerStore.getState().nodes.find((node) => node.type === 'page');
@@ -841,14 +853,31 @@ export const DesignerShell: React.FC = () => {
     setCanvasScale(resolveFitScale(viewport.clientWidth, page.size.width));
   }, [setCanvasScale]);
 
-  // Each document opens at a zoom where the whole page width is visible, unless it
-  // was saved at another zoom.
+  // Each document opens at a zoom where the whole page width is visible, unless it was
+  // saved at another zoom. Focus mode is the exception: the canvas has the window to
+  // itself there, so it shows the page at actual size, and the zoom the page layout was
+  // working at comes back on the way out. The live zoom is read, never watched, so a
+  // manual zoom inside focus mode is left alone.
   const workspaceLoadCount = useInvoiceDesignerStore((state) => state.workspaceLoadCount);
+  const scaleBeforeFocusRef = useRef<number | null>(null);
   useEffect(() => {
-    if (useInvoiceDesignerStore.getState().canvasScale !== 1) return;
+    const currentScale = useInvoiceDesignerStore.getState().canvasScale;
+    if (isFocusedSurface) {
+      if (currentScale === 1) return;
+      scaleBeforeFocusRef.current = currentScale;
+      setCanvasScale(1);
+      return;
+    }
+    const scaleBeforeFocus = scaleBeforeFocusRef.current;
+    scaleBeforeFocusRef.current = null;
+    if (scaleBeforeFocus !== null) {
+      setCanvasScale(scaleBeforeFocus);
+      return;
+    }
+    if (currentScale !== 1) return;
     const frame = requestAnimationFrame(zoomToFit);
     return () => cancelAnimationFrame(frame);
-  }, [workspaceLoadCount, zoomToFit]);
+  }, [isFocusedSurface, workspaceLoadCount, setCanvasScale, zoomToFit]);
 
   const handleTextEdit = useCallback(
     (id: string, text: string, commit: boolean) => {
@@ -2514,7 +2543,14 @@ export const DesignerShell: React.FC = () => {
   return (
     // Sized so the editor page fits the window: the page never scrolls, so nothing
     // shifts under the pointer while editing (panels scroll inside themselves).
-    <div className="relative flex flex-col h-[calc(100vh-24.75rem)] min-h-[480px] border border-slate-200 rounded-lg overflow-hidden">
+    // In focus mode, or under a host that measured the room it has, the shell fills
+    // what it is given instead of budgeting for chrome that is no longer there.
+    <div
+      className={clsx(
+        'relative flex flex-col border border-slate-200 rounded-lg overflow-hidden',
+        isFocusedSurface || fillParent ? 'flex-1 min-h-0' : 'h-[calc(100vh-24.75rem)] min-h-[480px]'
+      )}
+    >
       <DesignerToolbar
         snapToGrid={snapToGrid}
         showGuides={showGuides}

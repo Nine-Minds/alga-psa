@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Bedrijfsadres",
-      "description": "Vooraf ingevuld op basis van uw factuurgegevens — controleer en corrigeer indien nodig. Dit adres verschijnt op uw facturen en offertes.",
+      "description": "Dit adres verschijnt op uw facturen en offertes.",
+      "prefilledFromBilling": "Een deel van deze waarden is ingevuld op basis van uw factuurgegevens. Controleer ze.",
       "fields": {
         "addressLine1": {
           "label": "Adresregel 1",
@@ -554,7 +555,8 @@
         "success": {
           "one": "1 bord succesvol geïmporteerd.",
           "other": "{{count}} borden succesvol geïmporteerd."
-        }
+        },
+        "empty": "Alle standaardborden zijn al geïmporteerd."
       },
       "table": {
         "headers": {
@@ -584,7 +586,8 @@
           "placeholder": "Selecteer een bord voor geïmporteerde categorieën",
           "help": "Alle geïmporteerde categorieën worden aan dit bord toegewezen"
         },
-        "parentAutoSelectTitle": "Bovenliggende categorie wordt automatisch geselecteerd"
+        "parentAutoSelectTitle": "Bovenliggende categorie wordt automatisch geselecteerd",
+        "empty": "Dit bord heeft al alle standaardcategorieën."
       },
       "errors": {
         "missingParents": "Subcategorieën kunnen niet worden geïmporteerd zonder hun bovenliggende categorieën. Selecteer ook: {{parents}}",
@@ -702,7 +705,8 @@
         "success": {
           "one": "1 status succesvol geïmporteerd.",
           "other": "{{count}} statussen succesvol geïmporteerd."
-        }
+        },
+        "empty": "Dit bord heeft al alle standaardstatussen."
       },
       "table": {
         "headers": {
@@ -771,7 +775,8 @@
         "success": {
           "one": "1 prioriteit succesvol geïmporteerd.",
           "other": "{{count}} prioriteiten succesvol geïmporteerd."
-        }
+        },
+        "empty": "Alle standaardprioriteiten zijn al geïmporteerd."
       },
       "table": {
         "headers": {
@@ -797,6 +802,9 @@
       },
       "table": {
         "actions": "Acties"
+      },
+      "import": {
+        "loading": "Beschikbare items laden..."
       }
     },
     "header": {
