@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 
 import { Activity, ActivityType, ProjectTaskActivity, ScheduleActivity } from "@alga-psa/types";
+import { buildScheduleEntryLink } from '@alga-psa/core/scheduleEntryLinks';
 import { useActivityCrossFeature } from "@alga-psa/ui/context";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@alga-psa/ui/components/DropdownMenu";
@@ -126,7 +127,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
   const handleEditAction = () => {
     switch (activity.type) {
       case ActivityType.SCHEDULE:
-        router.push(`/msp/schedule/entries/${activity.id}`);
+        router.push(buildScheduleEntryLink(activity.id));
         break;
       case ActivityType.PROJECT_TASK: {
         const projectTask = activity as ProjectTaskActivity;

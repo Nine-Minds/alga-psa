@@ -27,13 +27,15 @@ import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import EntryPopup from './EntryPopup';
+import type { ScheduleEntryDeepLink } from '@alga-psa/core';
+import { deepLinkFetchId, resolveScheduleDeepLinkTarget } from '../../lib/scheduleEntryDeepLink';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import MonthScheduleChip from './MonthScheduleChip';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
 import { workItemFills } from '../../lib/scheduleChipInk';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, addScheduleEntry, getScheduleEntryById, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult, IScheduleViewerCapabilities, IVisibleCalendar, IUser } from '@alga-psa/types';
 import ShareCalendarDialog from './sharing/ShareCalendarDialog';
 import GroupCalendarDialog from './sharing/GroupCalendarDialog';
@@ -86,9 +88,13 @@ function normalizeOverlayPreference(value: unknown): ScheduleOverlayPreference {
 
 interface ScheduleCalendarProps {
   headerActionsSlot?: HTMLElement | null;
+  /** `?entryId=` deep link: open this entry (or one occurrence of it) on its date. */
+  deepLink?: ScheduleEntryDeepLink | null;
+  /** Called once the deep link has been acted on (opened or failed), so the page does not replay it. */
+  onDeepLinkHandled?: () => void;
 }
 
-const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }): React.ReactElement | null => {
+const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot, deepLink = null, onDeepLinkHandled }): React.ReactElement | null => {
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
   // Use the custom hook for schedule view preference
@@ -663,6 +669,45 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     setSelectedEvent(scheduleEvent);
     setShowEntryPopup(true);
   };
+
+  // `?entryId=` deep link. The read goes through getScheduleEntryById, which applies permissions and
+  // private-entry masking; a missing or unreadable entry leaves the page as it was, with a toast.
+  useEffect(() => {
+    if (!deepLink) return;
+    let active = true;
+    const unavailable = () => toast.error(t('calendar.errors.deepLinkEntryUnavailable', {
+      defaultValue: 'That schedule entry could not be opened. It may have been deleted, or you may not have access to it.',
+    }));
+    (async () => {
+      try {
+        const result = await getScheduleEntryById(deepLinkFetchId(deepLink.entryId));
+        if (!active) return;
+        // Null (not found / not visible) and action errors both lack an entry id.
+        if (!result || !('entry_id' in result)) {
+          unavailable();
+        } else {
+          const target = resolveScheduleDeepLinkTarget(result, deepLink);
+          setDate(target.date);
+          if (target.entry.access === 'busy') {
+            setBusyEntry(target.entry);
+          } else {
+            setSelectedEvent(target.entry);
+            setShowEntryPopup(true);
+          }
+        }
+      } catch (error) {
+        if (!active) return;
+        console.error('Failed to open schedule entry from deep link:', error);
+        unavailable();
+      }
+      onDeepLinkHandled?.();
+    })();
+    return () => {
+      active = false;
+    };
+    // The link is identified by its entry and occurrence, not by object identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLink?.entryId, deepLink?.occurrence?.getTime()]);
 
   const handleEntryPopupClose = () => {
     setShowEntryPopup(false);

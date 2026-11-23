@@ -46,6 +46,10 @@
       "import": "./dist/lib/fileNames.js",
       "types": "./src/lib/fileNames.ts"
     },
+    "./scheduleEntryLinks": {
+      "import": "./dist/lib/scheduleEntryLinks.js",
+      "types": "./src/lib/scheduleEntryLinks.ts"
+    },
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"

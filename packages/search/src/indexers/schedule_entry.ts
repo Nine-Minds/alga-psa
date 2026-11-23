@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { buildScheduleEntryLink } from '@alga-psa/core/scheduleEntryLinks';
 
 interface ScheduleEntrySearchRow {
   entry_id: string;
@@ -33,9 +34,9 @@ function toSearchDoc(tenant: string, row: ScheduleEntrySearchRow): SearchDoc {
     objectId: row.entry_id,
     title: row.title,
     body: row.notes ?? undefined,
-    url: `/msp/schedule/${row.entry_id}`,
+    url: buildScheduleEntryLink(row.entry_id),
     acl: {
-      requiredPermission: 'schedule:read',
+      requiredPermission: 'user_schedule:read',
       visibleToUserIds: toStringArray(row.assigned_user_ids),
     },
     sourceUpdatedAt: toSourceUpdatedAt(row),

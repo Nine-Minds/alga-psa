@@ -75,6 +75,7 @@
       "loadPermissions": "Impossibile caricare le autorizzazioni.",
       "loadCurrentUser": "Impossibile caricare l'utente corrente.",
       "unknown": "Si è verificato un errore sconosciuto",
+      "deepLinkEntryUnavailable": "Impossibile aprire questa voce del calendario. Potrebbe essere stata eliminata o potresti non avervi accesso.",
       "deleteFailed": "Impossibile eliminare la voce di pianificazione",
       "deleteUnexpected": "Si è verificato un errore durante l'eliminazione della voce del programma",
       "updateFailed": "Impossibile aggiornare la voce di pianificazione: {{error}}",

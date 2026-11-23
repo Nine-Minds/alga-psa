@@ -47,6 +47,7 @@ export * from './lib/address';
 export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
 export * from './lib/appointmentRequestLinks';
+export * from './lib/scheduleEntryLinks';
 
 // Task → phase → project service fallback (shared by scheduling + projects)
 export * from './lib/effectiveService';
