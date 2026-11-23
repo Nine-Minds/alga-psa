@@ -492,6 +492,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.tableLayout) inline.tableLayout = style.tableLayout;
   if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
   if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
+  if (style.breakInside) inline.breakInside = style.breakInside;
+  if (style.breakAfter) inline.breakAfter = style.breakAfter;
+  if (style.breakBefore) inline.breakBefore = style.breakBefore;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -690,6 +693,32 @@ const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] |
   return undefined;
 };
 
+const coerceBreakInside = (value: unknown): DesignerNodeStyle['breakInside'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceBreakBeforeAfter = (value: unknown): DesignerNodeStyle['breakAfter'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page' || value === 'page') {
+    return value;
+  }
+  return undefined;
+};
+
+/** The fragmentation hints of an inline style, with every other declaration dropped. */
+const pickBreakInlineStyles = (
+  inline: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => {
+  if (!inline) return undefined;
+  const picked: Record<string, unknown> = {};
+  for (const key of ['breakBefore', 'breakAfter', 'breakInside'] as const) {
+    if (inline[key] !== undefined) picked[key] = inline[key];
+  }
+  return Object.keys(picked).length > 0 ? picked : undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -862,6 +891,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
 
   const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
   if (overflowWrap) style.overflowWrap = overflowWrap;
+
+  const breakInside = coerceBreakInside(inline.breakInside);
+  if (breakInside) style.breakInside = breakInside;
+
+  const breakAfter = coerceBreakBeforeAfter(inline.breakAfter);
+  if (breakAfter) style.breakAfter = breakAfter;
+
+  const breakBefore = coerceBreakBeforeAfter(inline.breakBefore);
+  if (breakBefore) style.breakBefore = breakBefore;
 
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;
@@ -1442,6 +1480,15 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'divider',
       };
+    case 'page-break':
+      // An instruction, not content: a rule-less, zero-height divider whose only
+      // contribution to the document is the forced break. The canvas draws its
+      // own marker band for it; nothing of that reaches the page.
+      return {
+        ...createBaseNode(node),
+        type: 'divider',
+        style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } },
+      };
     case 'barcode': {
       const metadata = getWorkspaceNodeMetadata(node);
       return {
@@ -1958,8 +2005,15 @@ export const importTemplateAstToWorkspace = (
         depth: number
       ): WorkspaceNode => {
         const def = getDefinition(designerType);
-        const size = parseSizeFromStyle(inputNode);
-        const inline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        // A Page Break is written out as a zero-height, rule-less divider (see the export
+        // above) so nothing of it reaches the page. Those marks are the writer's, not the
+        // author's: handed back as editable style, `height: 0` collapses the canvas marker
+        // band to a hairline on reopen. So the block reopens as the block the palette
+        // inserts — the forced break, at the palette's own size.
+        const isPageBreakNode = designerType === 'page-break';
+        const size = isPageBreakNode ? {} : parseSizeFromStyle(inputNode);
+        const rawInline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        const inline = isPageBreakNode ? pickBreakInlineStyles(rawInline) : rawInline;
         const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
         const preferredDirection = inputNode.type === 'stack' ? inputNode.direction : undefined;
         const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline, preferredDirection);
@@ -2053,10 +2107,18 @@ export const importTemplateAstToWorkspace = (
             : node.src.type === 'binding'
               ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
               : '';
+        // A divider that forces a page break is what the designer calls a Page
+        // Break block, so it reopens as the block it was built from.
+        const isPageBreakDivider =
+          inputNode.type === 'divider' &&
+          isRecord(inputNode.style?.inline) &&
+          (inputNode.style.inline as Record<string, unknown>).breakAfter === 'page';
         const designerType =
           inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
             ? 'logo'
-            : typeMap[inputNode.type];
+            : isPageBreakDivider
+              ? 'page-break'
+              : typeMap[inputNode.type];
         if (!designerType) {
           // Fail loudly: silently dropping an unrecognized node would delete
           // content when a layout is opened and saved in the designer.

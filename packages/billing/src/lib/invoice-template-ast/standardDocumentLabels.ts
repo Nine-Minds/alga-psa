@@ -29,6 +29,7 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' },
   { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' },
   { i18nKey: 'labels.locationSubtotal', defaultValue: 'Location Subtotal' },
+  { i18nKey: 'labels.unassignedLocation', defaultValue: 'Quote-wide' },
   { i18nKey: 'labels.monthly', defaultValue: 'Monthly' },
   { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
   { i18nKey: 'labels.monthlyTotal', defaultValue: 'Monthly Total' },

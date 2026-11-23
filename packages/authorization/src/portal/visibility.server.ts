@@ -99,6 +99,56 @@ async function resolveGrantedTicketProfiles(
 }
 
 /**
+ * FR-E7b: the tickets linked to a shared workspace one of `contactIds` uses.
+ *
+ * Resolved here, once per request, rather than as a correlated EXISTS inside
+ * the ticket predicate: CitusDB cannot push down a subquery that correlates on
+ * the distribution column, so the portal ticket list failed outright (0A000,
+ * "complex joins are only supported when all distributed tables are joined on
+ * their distribution columns"). Every join re-asserts tenant equality through
+ * `tenantJoin`, exactly as the correlated form did.
+ */
+async function resolveSharedWorkspaceTicketIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: string[]
+): Promise<string[]> {
+  if (contactIds.length === 0) return [];
+  const db = tenantDb(trx, tenant);
+  let query: Knex.QueryBuilder = tenantScopedTable(trx, 'asset_associations as aa', tenant);
+  query = db.tenantJoin(query, 'asset_group_members as m', 'm.asset_id', 'aa.asset_id');
+  query = db.tenantJoin(query, 'asset_groups as g', 'g.group_id', 'm.group_id');
+  query = db.tenantJoin(query, 'asset_group_contacts as gc', 'gc.group_id', 'g.group_id');
+
+  const rows: Array<{ entity_id: string }> = await query
+    .where({ 'aa.entity_type': 'ticket', 'g.kind': 'shared_workspace', 'gc.role': 'user' })
+    .whereIn('gc.contact_name_id', contactIds)
+    .distinct('aa.entity_id');
+
+  return rows.map((row) => row.entity_id);
+}
+
+/** FR-E7: the assets that are members of a shared workspace one of `contactIds` uses. */
+async function resolveSharedWorkspaceAssetIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactIds: string[]
+): Promise<string[]> {
+  if (contactIds.length === 0) return [];
+  const db = tenantDb(trx, tenant);
+  let query: Knex.QueryBuilder = tenantScopedTable(trx, 'asset_group_members as m', tenant);
+  query = db.tenantJoin(query, 'asset_groups as g', 'g.group_id', 'm.group_id');
+  query = db.tenantJoin(query, 'asset_group_contacts as gc', 'gc.group_id', 'g.group_id');
+
+  const rows: Array<{ asset_id: string }> = await query
+    .where({ 'g.kind': 'shared_workspace', 'gc.role': 'user' })
+    .whereIn('gc.contact_name_id', contactIds)
+    .distinct('m.asset_id');
+
+  return rows.map((row) => row.asset_id);
+}
+
+/**
  * Everyone below `contactId` in the reports-to tree, transitively, given every
  * (contact, manager) edge of the client. Walks in memory with a visited set, so
  * a cycle the database guard and `assertValidContactManager` both missed
@@ -258,12 +308,22 @@ export async function getClientContactVisibilityContext(
   // resolved when any one of them is contact-scoped.
   const needsSubtree =
     effectiveTicketScope === 'contact' || effectiveAssetScope === 'contact' || effectiveProjectScope === 'contact';
-  const contactGrants = needsSubtree
-    ? {
-        ...contactTicketGrants,
-        visibleContactIds: await resolveVisibleContactIds(trx, tenant, contactId, contact.client_id),
-      }
-    : contactTicketGrants;
+  const visibleContactIds = needsSubtree
+    ? await resolveVisibleContactIds(trx, tenant, contactId, contact.client_id)
+    : undefined;
+  const contactGrants = visibleContactIds ? { ...contactTicketGrants, visibleContactIds } : contactTicketGrants;
+  // The shared-workspace grants (FR-E7 / FR-E7b) are resolved to id lists here
+  // so the predicates stay plain `IN (...)` restrictions; see
+  // resolveSharedWorkspaceTicketIds for why a correlated EXISTS cannot be used.
+  // Projects have no membership model, so no project ids are ever resolved.
+  const workspaceGrants = {
+    ...(effectiveTicketScope === 'contact'
+      ? { workspaceTicketIds: await resolveSharedWorkspaceTicketIds(trx, tenant, visibleContactIds ?? []) }
+      : {}),
+    ...(effectiveAssetScope === 'contact'
+      ? { workspaceAssetIds: await resolveSharedWorkspaceAssetIds(trx, tenant, visibleContactIds ?? []) }
+      : {}),
+  };
 
   return {
     ticketScope: group.ticket_scope,
@@ -278,5 +338,6 @@ export async function getClientContactVisibilityContext(
     projectScope,
     effectiveProjectScope,
     ...contactGrants,
+    ...workspaceGrants,
   };
 }

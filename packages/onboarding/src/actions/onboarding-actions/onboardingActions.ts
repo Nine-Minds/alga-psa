@@ -15,7 +15,7 @@ import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alg
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
-import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
+import { getLicenseUsage } from '@alga-psa/licensing/server';
 import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
 import { teamMemberEmailKey, uniqueTeamMemberEmails } from '../../lib/teamMemberEmails';
 
@@ -1284,10 +1284,10 @@ export const getAvailableRoles = withAuth(async (
 });
 
 /**
- * License usage for the Team Members onboarding step. Uses the withAuth
- * session tenant directly instead of getLicenseUsageAction's header/async
- * -context lookup, which is unreliable this early in onboarding and left the
- * step's "Users: N" counter stuck at 0.
+ * License usage for the Team Members onboarding step. This action keeps its
+ * own count because onboarding includes pending invitation reservations, while
+ * getLicenseUsageAction reports active internal users only. The tenant is
+ * derived from the authenticated withAuth context.
  *
  * A seat here is an active internal user plus a pending invitation
  * (`used_at IS NULL AND expires_at > now()`, tenant-scoped) — plan §6.2 and

@@ -31,6 +31,7 @@ describeDb('one capacity reading for the co-managed seat pool', { shuffle: false
   /** A workspace allocation exactly as code before the kind column wrote it. */
   const workspace = (seats: number, state: string) => ({ ...base(seats, state), customer_tenant: randomUUID(), relationship_id: randomUUID() });
   const seat = (seats: number, state: string) => ({ ...base(seats, state), allocation_kind: 'seat', sponsor_client_id: randomUUID() });
+  const trialSeat = (seats: number, state: string) => ({ ...seat(seats, state), funding_source: 'seat_trial' });
 
   /** The allocated-seat query as the three call sites each wrote it before this slice. */
   const legacyAllocated = async () => {
@@ -79,6 +80,15 @@ describeDb('one capacity reading for the co-managed seat pool', { shuffle: false
     expect(pool).toEqual({ purchased: PURCHASED, allocated: 7, available: 3, byKind: { workspace: 5, seat: 2 } });
     expect(pool.byKind.workspace + pool.byKind.seat).toBe(pool.allocated);
     expect(pool.allocated).toBe(await legacyAllocated());
+  });
+
+  it('keeps pilot-funded allocations out of paid usage and available-capacity decisions', async () => {
+    const before = await reading();
+    const allocatedBefore = await legacyAllocated();
+    await db(TABLE).insert(trialSeat(1, 'active'));
+    expect(await reading()).toEqual(before);
+    // The database still retains the pilot allocation; only the paid-capacity view excludes it.
+    expect(await legacyAllocated()).toBe(allocatedBefore + 1);
   });
 
   it('never reads a negative availability when the pool is over-allocated', async () => {

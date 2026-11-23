@@ -111,6 +111,34 @@ describe('MCP OAuth grant lifecycle – DB integration', () => {
     expect(await isGrantActive(grantId)).toBe(false);
   });
 
+  it('serializes overlapping rotations and revokes the grant on the losing replay', async () => {
+    const grantId = await upsertGrant({ tenant, userId, clientId });
+    const original = await issueRefreshToken(grantId, tenant);
+
+    const attempts = await Promise.allSettled([
+      rotateRefreshToken(original),
+      rotateRefreshToken(original),
+    ]);
+    const successful = attempts.filter(
+      (attempt): attempt is PromiseFulfilledResult<Awaited<ReturnType<typeof rotateRefreshToken>>> =>
+        attempt.status === 'fulfilled',
+    );
+    const rejected = attempts.filter((attempt) => attempt.status === 'rejected');
+
+    expect(successful).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(OAuthGrantError);
+    expect(await isGrantActive(grantId)).toBe(false);
+
+    // Replay revocation must commit before the OAuth error reaches the caller.
+    const remainingRefreshTokens = await db('mcp_oauth_refresh_tokens').where({ grant_id: grantId });
+    expect(remainingRefreshTokens).toHaveLength(0);
+
+    // The winner's successor is unusable after the competing replay revokes
+    // the grant and removes its refresh tokens.
+    await expect(rotateRefreshToken(successful[0].value.refreshToken)).rejects.toBeInstanceOf(OAuthGrantError);
+  });
+
   it('revokes a grant; access checks then fail (T008)', async () => {
     const grantId = await upsertGrant({ tenant, userId, clientId });
     await issueRefreshToken(grantId, tenant);

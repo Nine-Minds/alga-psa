@@ -750,7 +750,7 @@ describe('getAssetDocuments (integration)', () => {
     expect(await createDocumentAssociations(randomUUID(), 'asset', [local.documentId])).toHaveProperty('permissionError');
     expect(await createDocumentAssociations(local.assetId, 'asset', [foreign.documentId])).toHaveProperty('permissionError');
     expect(await removeDocumentAssociations(local.assetId, 'invalid' as any, [local.documentId])).toHaveProperty('permissionError');
-    expect(await removeDocumentAssociations(foreign.assetId, 'asset', [foreign.documentId])).toMatchObject({ success: true });
+    expect(await removeDocumentAssociations(foreign.assetId, 'asset', [foreign.documentId])).toHaveProperty('permissionError');
     expect(await removeDocumentAssociations(local.assetId, 'asset', [randomUUID()])).toMatchObject({ success: true });
 
     expect(await table(local.tenantId, 'document_associations').where({ association_id: local.associationId }).first()).toBeDefined();

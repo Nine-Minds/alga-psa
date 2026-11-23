@@ -29,7 +29,8 @@ vi.mock('../../lib/i18n/client', () => ({
     },
   }),
 }));
-vi.mock('./useLabelPrint', () => ({
+vi.mock('./useLabelPrint', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useLabelPrint')>()),
   useLabelPrint: () => ({ ...hook, isPrinting: false }),
 }));
 vi.mock('../Dialog', () => ({
@@ -37,9 +38,23 @@ vi.mock('../Dialog', () => ({
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
+// Option elements carry no text so the labels only ever appear in data-options, never as page text.
 vi.mock('../CustomSelect', () => ({
-  default: ({ id, disabled, options }: { id: string; disabled?: boolean; options: Array<{ value: string; label: string }> }) => (
-    <div data-testid="select" id={id} data-disabled={String(Boolean(disabled))} data-options={JSON.stringify(options.map((o) => o.label))} />
+  default: ({ id, disabled, options, value, onValueChange }: {
+    id: string; disabled?: boolean; value?: string;
+    options: Array<{ value: string; label: string }>; onValueChange?: (value: string) => void;
+  }) => (
+    <select
+      data-testid="select"
+      id={id}
+      value={value ?? ''}
+      disabled={Boolean(disabled)}
+      data-disabled={String(Boolean(disabled))}
+      data-options={JSON.stringify(options.map((o) => o.label))}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {options.map((option) => <option key={option.value} value={option.value} />)}
+    </select>
   ),
 }));
 vi.mock('../Checkbox', () => ({
@@ -65,6 +80,7 @@ const B = '22222222-2222-4222-8222-222222222222';
 
 beforeEach(() => {
   translation.t = null;
+  window.localStorage.clear();
   hook.print.mockReset();
   hook.loadTemplates.mockResolvedValue({ defaultTemplateId: 'standard-ticket-work-tag', templates: [{ id: 'standard-ticket-work-tag', name: 'Ticket', source: 'standard' }] });
   hook.loadLinkedAssets.mockResolvedValue([]);
@@ -129,6 +145,64 @@ describe('LabelPrintDialog', () => {
     render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={ids} />);
     expect(screen.getByText('You can print at most 200 labels at a time.')).toBeTruthy();
     expect((screen.getByText('Print') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('defaults to the template size: no layout is sent, and the option is offered first', async () => {
+    hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
+    const layoutSelect = document.getElementById('label-print-layout-select') as HTMLSelectElement;
+    expect(JSON.parse(layoutSelect.getAttribute('data-options')!)[0]).toBe('Match template size');
+    expect(layoutSelect.value).toBe('template-preferred');
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    expect('layout' in hook.print.mock.calls[0][0]).toBe(false);
+  });
+
+  it('choosing the 4 x 2 in roll sends that layout and remembers it', async () => {
+    hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
+    fireEvent.change(document.getElementById('label-print-layout-select')!, { target: { value: 'roll-4x2' } });
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    expect(hook.print.mock.calls[0][0].layout).toEqual({ kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } });
+    expect(window.localStorage.getItem('alga.labels.layout')).toBe('roll-4x2');
+  });
+
+  it('restores a remembered layout choice', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'letter-2x5');
+    hook.print.mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="asset-identity" ids={[A]} />);
+    expect((document.getElementById('label-print-layout-select') as HTMLSelectElement).value).toBe('letter-2x5');
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalled());
+    expect(hook.print.mock.calls[0][0].layout).toMatchObject({ kind: 'grid', paper: 'Letter' });
+  });
+
+  it('a size-mismatch refusal points at the template size and reprints without a layout', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'roll-4x2');
+    hook.print
+      .mockResolvedValueOnce({
+        status: 'failed', httpStatus: 422, code: 'template-size-mismatch',
+        message: 'Label 1 is designed for 62.0 x 80.0 mm but its label cell is 101.6 x 50.8 mm.',
+        failures: [],
+      })
+      .mockResolvedValue({ status: 'printed', printed: 1, skipped: 0, blobUrl: 'blob:x', popupBlocked: false });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(document.getElementById('label-print-size-mismatch')).toBeTruthy());
+    fireEvent.click(screen.getByText('Match template size'));
+    await waitFor(() => expect(hook.print).toHaveBeenCalledTimes(2));
+    expect('layout' in hook.print.mock.calls[1][0]).toBe(false);
+    expect(window.localStorage.getItem('alga.labels.layout')).toBe('template-preferred');
+  });
+
+  it('a refusal without that code shows no template-size pointer', async () => {
+    window.localStorage.setItem('alga.labels.layout', 'roll-4x2');
+    hook.print.mockResolvedValue({ status: 'failed', httpStatus: 422, message: 'too long', failures: [] });
+    render(<LabelPrintDialog isOpen onClose={vi.fn()} labelClass="ticket-work-tag" ids={[A]} />);
+    fireEvent.click(screen.getByText('Print'));
+    await waitFor(() => expect(screen.getByText('too long')).toBeTruthy());
+    expect(document.getElementById('label-print-size-mismatch')).toBeNull();
   });
 
   it('single ticket: sends overrides only for fields the user changed', async () => {

@@ -17,7 +17,7 @@ const {
   mockGetAvailableStatuses,
   mockGetAllBoards,
   mockGetAllClients,
-  mockGetIntegrationClients,
+  pickerClients,
   mockGetAllPriorities,
   mockGetAllUsersBasic,
   mockGetUserAvatarUrlsBatchAction,
@@ -28,7 +28,8 @@ const {
   mockGetAvailableStatuses: vi.fn(),
   mockGetAllBoards: vi.fn(),
   mockGetAllClients: vi.fn(),
-  mockGetIntegrationClients: vi.fn(),
+  // Options the mocked ClientPicker offers; the real picker searches on the server.
+  pickerClients: { current: [] as any[] },
   mockGetAllPriorities: vi.fn(),
   mockGetAllUsersBasic: vi.fn(),
   mockGetUserAvatarUrlsBatchAction: vi.fn(),
@@ -57,7 +58,7 @@ vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: ({ id, clients = [], selectedClientId, onSelect, placeholder }: any) => (
+  ClientPicker: ({ id, selectedClientId, onSelect, placeholder }: any) => (
     <select
       id={id}
       aria-label="Client *"
@@ -66,7 +67,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
       onChange={(e) => onSelect(e.target.value ? e.target.value : '')}
     >
       <option value="">{placeholder ?? 'Select Client'}</option>
-      {clients.map((c: any) => (
+      {pickerClients.current.map((c: any) => (
         <option key={c.client_id || c.id} value={c.client_id || c.id}>
           {c.client_name || c.name}
         </option>
@@ -143,13 +144,6 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [] }),
 }));
 
-// The form hydrates its client picker via getIntegrationClients (deep action),
-// not the @alga-psa/clients barrel.
-vi.mock('../../../../../packages/integrations/src/actions/clientLookupActions', () => ({
-  __esModule: true,
-  getIntegrationClients: mockGetIntegrationClients,
-}));
-
 vi.mock('@alga-psa/tickets/actions', () => ({
   __esModule: true,
   getAllBoards: mockGetAllBoards,
@@ -206,7 +200,7 @@ describe('InboundTicketDefaultsManager', () => {
     mockGetAvailableStatuses.mockResolvedValue({ statuses: sampleFieldOptions.statuses });
     mockGetAllBoards.mockResolvedValue(sampleBoards);
     mockGetAllClients.mockResolvedValue(sampleClients);
-    mockGetIntegrationClients.mockResolvedValue(sampleClients);
+    pickerClients.current = sampleClients;
     mockGetAllPriorities.mockResolvedValue(samplePriorities);
     mockGetAllUsersBasic.mockResolvedValue([]);
     mockGetUserAvatarUrlsBatchAction.mockResolvedValue(new Map());

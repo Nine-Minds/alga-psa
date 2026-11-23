@@ -5,6 +5,7 @@ import {
   CoManagedReservationError, reserveAndActivateCoManagedSeatAllocation, type CoManagedAllocationKind,
 } from '@alga-psa/licensing';
 import { admitCoManagedSeatRole } from './seatRole';
+import { lockCoManagedSponsorPool } from '@alga-psa/licensing';
 
 /**
  * Seat arrangements: one of the sponsor's own clients, bound to the seat allocation that pays for
@@ -67,6 +68,8 @@ export interface CreateCoManagedSeatArrangementInput {
   /** Idempotency key. It is also the allocation's operation id. */
   operationId: string;
   seats: number;
+  /** EE hosted pilot setup only. Ordinary callers reserve paid capacity. */
+  fundingSource?: 'paid' | 'seat_trial';
 }
 
 /**
@@ -99,7 +102,7 @@ export async function createCoManagedSeatArrangement(
     const sponsor = tenantDb(trx, input.sponsorTenant);
     // The pool lock, taken before any other row so this command orders its locks the way the
     // reservation it composes does. The reservation re-reads the row inside this transaction.
-    await sponsor.table('co_managed_entitlements').forUpdate().first('tenant');
+    await lockCoManagedSponsorPool(trx, input.sponsorTenant);
 
     const replayed = await sponsor.table('co_managed_allocations')
       .where('operation_id', input.operationId).first('allocation_id');

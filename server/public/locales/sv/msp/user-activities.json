@@ -124,6 +124,7 @@
       "dismissError": "Det gick inte att avfärda uppgiften: {{message}}"
     },
     "retryLater": "Försök igen senare.",
+    "tryAgain": "Försök igen",
     "adHoc": {
       "endBeforeStart": "Sluttiden måste vara efter starttiden.",
       "fields": {

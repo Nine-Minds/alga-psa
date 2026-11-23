@@ -1459,6 +1459,7 @@
   },
   "pickers": {
     "addNewClient": "Aggiungi nuovo cliente",
+    "clientsSelectedCount": "{{count}} clienti",
     "addNewContact": "Aggiungi nuovo contatto",
     "loadingUsers": "Caricamento utenti...",
     "errorLoadingUsers": "Errore durante il caricamento degli utenti",
@@ -1684,6 +1685,7 @@
       "printing": "Preparazione…",
       "print": "Stampa",
       "reason": "Motivo",
+      "sizeMismatch": "Questa disposizione è più piccola dell'etichetta per cui è stato progettato questo modello. Stampa invece nella dimensione del modello.",
       "skipFailures": "Salta questi e stampa il resto",
       "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
       "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
@@ -1694,6 +1696,9 @@
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme."
+    },
+    "layout": {
+      "template-preferred": "Usa la dimensione del modello"
     }
   },
   "deleteEntity": {
@@ -2299,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "altri {{count}} tag: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Modalità focus",
+      "exit": "Esci dalla modalità focus"
+    }
   }
 }

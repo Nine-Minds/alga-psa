@@ -298,13 +298,15 @@
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto.",
-        "portalUserAlreadyExists": "Für diesen Kontakt existiert bereits ein Portal-Benutzer.",
+        "portalUserAlreadyExists": "Für diese E-Mail-Adresse existiert bereits ein Konto. Bitte melden Sie sich an oder setzen Sie Ihr Passwort auf der Anmeldeseite zurück.",
         "noDefaultClient": "Für diesen Mandanten ist kein Standard-Kunde konfiguriert.",
         "noDefaultLocation": "Der Standard-Kunde hat keinen Standard-Standort konfiguriert.",
         "noLocationEmail": "Für den Kundenstandort ist keine Kontakt-E-Mail konfiguriert.",
         "baseUrlNotConfigured": "Die Basis-URL der Anwendung ist nicht konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden.",
-        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut."
+        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut.",
+        "batchLimitExceeded": "Zu viele Kontakte in einer Anfrage. Bitte laden Sie weniger Kontakte auf einmal ein.",
+        "noTargetsSelected": "Wählen Sie mindestens einen Kontakt zum Einladen aus."
       }
     },
     "features": {

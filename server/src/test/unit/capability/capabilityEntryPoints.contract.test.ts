@@ -87,9 +87,9 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'independent-upgrade-activity': { glob: 'ee/temporal-workflows/src/activities/co-managed-upgrade-activities.ts', files: 1 },
   'tenant-deletion-cleanup': { glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', files: 1 },
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 2 },
-  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 3 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 6 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 92 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 97 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -190,6 +190,12 @@ export const ADAPTER_EXPORTS = new Set([
   // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
   // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
   'isCoManagedPurchaseSurfaceOpen',
+  // 8 first-purchase discovery: the commercial decision for an actor with no entitlement yet. It opens with
+  // the purchase surface (7) and then account permissions and the hosted-Pro tenant row; it grants only the
+  // pool view and never co-managed operational access.
+  'resolveCoManagedPurchaseDiscovery',
+  // Trial discovery checks intake for new trials and client scope for existing-trial recovery.
+  'canDiscoverSeatTrial',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
@@ -360,6 +366,7 @@ export const SESSION_TENANT_ADAPTERS = new Map([
   ['requireCapabilityEitherMode', 1],
   ['capabilityRouteGuard', 1],
   ['requireCapabilityForPage', 1],
+  ['canDiscoverSeatTrial', 1],
 ]);
 /** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
 const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);

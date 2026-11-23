@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import { getBreadcrumbTrailByPath, getMenuItemNameByPath } from '../../../components/layout/Header';
 
 const translate = (_key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? '');

@@ -21,6 +21,29 @@ describe('computePreviewSheetScale', () => {
     expect(computePreviewSheetScale(label, { widthPx: 1600, heightPx: 592 }, 'actual')).toBe(1);
     expect(computePreviewSheetScale(label, { widthPx: 100, heightPx: 100 }, 'actual')).toBe(1);
   });
+
+  describe("a document's stack of pages", () => {
+    // Letter at 96 dpi.
+    const page = { widthPx: 816, heightPx: 1056 };
+
+    it('fits the width and lets the pages run past the pane, because they are scrolled through', () => {
+      // A height-bounded fit would shrink an 1056 px page into a 592 px pane and make it unreadable.
+      expect(computePreviewSheetScale(page, { widthPx: 612, heightPx: 592 }, 'fit', 'width')).toBe(0.75);
+    });
+
+    it('never blows a page up past its printed size', () => {
+      expect(computePreviewSheetScale(page, { widthPx: 2400, heightPx: 4000 }, 'fit', 'width')).toBe(1);
+    });
+
+    it('still shows a page at actual size on 100%', () => {
+      expect(computePreviewSheetScale(page, { widthPx: 400, heightPx: 400 }, 'actual', 'width')).toBe(1);
+    });
+
+    it('leaves the single label sheet on the height-bounded fit it had', () => {
+      expect(computePreviewSheetScale(label, { widthPx: 1600, heightPx: 592 }, 'fit', 'box')).toBe(3.08);
+      expect(computePreviewSheetScale(label, { widthPx: 1600, heightPx: 592 }, 'fit')).toBe(3.08);
+    });
+  });
 });
 
 describe('readPreviewSheetMetrics', () => {

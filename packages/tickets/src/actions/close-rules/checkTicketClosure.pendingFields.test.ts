@@ -67,6 +67,10 @@ vi.mock('../../lib/validateTicketClosure', async () => {
   };
 });
 
+vi.mock('../../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccessConcealed: async () => undefined,
+}));
+
 const { checkTicketClosure } = await import('./closeRuleActions');
 
 describe('checkTicketClosure pending required fields', () => {
@@ -74,7 +78,7 @@ describe('checkTicketClosure pending required fields', () => {
     evaluateTicketCloseRulesMock.mockReset();
     evaluateTicketCloseRulesMock.mockResolvedValue([]);
     hasPermissionMock.mockReset();
-    hasPermissionMock.mockResolvedValue(false);
+    hasPermissionMock.mockResolvedValue(true);
   });
 
   it('evaluates the gates against the classification the batch is about to save', async () => {

@@ -17,7 +17,8 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import type { IDocument } from 'server/src/interfaces/document.interface';
 import { isUploadContentTypeError, isUploadSizeLimitError } from '@alga-psa/storage/ingest/errors';
-import { ConflictError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
+import { hasApiContextPermission } from '../../middleware/apiContextPermission';
 import { ENTITY_ADAPTERS, type AttachHookOptions, type AttachableEntityType } from './entityAdapters';
 
 export interface AttachDocumentInput {
@@ -38,6 +39,11 @@ export interface AttachDocumentInput {
   /** Where the bytes came from; used only in log lines. */
   source: 'multipart' | 'url' | 'base64';
   options?: AttachHookOptions;
+  /**
+   * Who is attaching, for the `document:update` check that making a document client-visible
+   * requires. Without it a client-visible request is refused (fail closed).
+   */
+  permissionContext?: { tenant: string; user?: unknown; viaPrincipalUserId?: string | null };
   /** Read-model loader for the returned document (a service may return its own enriched shape). */
   loadDocument?: (documentId: string) => Promise<IDocument | null>;
 }
@@ -157,6 +163,33 @@ export async function attachDocument(input: AttachDocumentInput): Promise<IDocum
   }
 }
 
+/**
+ * Runs before `StorageService.uploadFile` so a refused request leaves no object in storage.
+ * A comment-attachment draft is always client-visible and has its own authorization, so it skips this.
+ */
+async function assertClientVisibilityAllowed(
+  input: AttachDocumentInput,
+  adapter: (typeof ENTITY_ADAPTERS)[AttachableEntityType],
+  options: AttachHookOptions,
+): Promise<void> {
+  if (!options.isClientVisible || options.commentAttachmentDraft) return;
+  if (!adapter.portalVisible) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['is_client_visible'],
+        message: `is_client_visible is not supported for ${input.target.entityType} documents; no client portal page shows them`,
+      },
+    ]);
+  }
+  // Same rule as the UI's toggleDocumentVisibility: making a document visible is a document update.
+  const allowed = input.permissionContext
+    ? await hasApiContextPermission(input.permissionContext, 'document', 'update', input.knex)
+    : false;
+  if (!allowed) {
+    throw new ForbiddenError('Permission denied: Cannot update document visibility');
+  }
+}
+
 async function attachDocumentOwningStream(input: AttachDocumentInput): Promise<IDocument> {
   const { knex, tenant, actorUserId, target, file } = input;
   const options = input.options ?? {};
@@ -166,6 +199,8 @@ async function attachDocumentOwningStream(input: AttachDocumentInput): Promise<I
       { path: ['entity_type'], message: `Unsupported entity type: ${String(target.entityType)}` },
     ]);
   }
+
+  await assertClientVisibilityAllowed(input, adapter, options);
 
   // An error inside the source stream (a URL timeout) reaches us wrapped by uploadFile; keep the original.
   let sourceError: unknown;

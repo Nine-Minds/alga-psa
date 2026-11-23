@@ -30,6 +30,7 @@
     "invoiceTitle": "FATURA",
     "issueDate": "Data de emissão",
     "locationSubtotal": "Subtotal do local",
+    "unassignedLocation": "Toda a cotação",
     "monthly": "Mensal",
     "monthlyItems": "Itens mensais",
     "monthlyTotal": "Total mensal",

@@ -135,6 +135,18 @@ export async function createTestDbConnection(
   const recreate = (options.recreate ?? true)
     || !(await isBootstrapped(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser));
 
+  // Point application-owned connection pools at the same database whether this
+  // call bootstraps it or reuses a database prepared by an earlier suite. The
+  // reuse path is common in integration tests, where the suite handle is
+  // transaction-scoped but services still resolve their pool from DB_* env.
+  if (databaseName === TEST_DB_NAME) {
+    process.env.DB_HOST = dbHost;
+    process.env.DB_PORT = String(dbPort);
+    process.env.DB_NAME_SERVER = databaseName;
+    process.env.DB_USER_SERVER = appUser;
+    process.env.DB_USER_ADMIN = adminUser;
+  }
+
   if (!recreate) {
     return knex({
       client: 'pg',
@@ -168,19 +180,6 @@ export async function createTestDbConnection(
     : false;
   if (!cloned) {
     await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
-  }
-
-  // Point the app's connection layers (tenant/admin pools read DB_* env at
-  // call time) at the suite database — but only for the standard one. Scratch
-  // databases (custom databaseName) are used via the returned handle only;
-  // the suite runs singleFork, so mutating global env for them would leak the
-  // scratch name into later files and send their queries to the wrong DB.
-  if (databaseName === TEST_DB_NAME) {
-    process.env.DB_HOST = dbHost;
-    process.env.DB_PORT = String(dbPort);
-    process.env.DB_NAME_SERVER = databaseName;
-    process.env.DB_USER_SERVER = appUser;
-    process.env.DB_USER_ADMIN = adminUser;
   }
 
   const adminKnex = adminConnection(databaseName, dbHost, dbPort, adminUser, adminPassword, migrationsDir, seedsDir);

@@ -6,7 +6,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { checkInternalUserLicenseLimit, countPendingInvitationSeats } from './internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, countPendingInvitationSeats, lockTenantSeatState } from './internalUserLicenseGuard';
 
 const lockCalls: unknown[][] = [];
 
@@ -21,10 +21,15 @@ function asTransaction(fn: any) {
 }
 
 function fakeTrx(input: { plan: string | null; licensedUserCount: number | null; usedInternalUsers: number }) {
-  return asTransaction((table: string) => {
+  const trx: any = (table: string) => {
     if (table === 'tenants') {
       const tenantRow = { licensed_user_count: input.licensedUserCount, plan: input.plan };
-      return { first: async (..._fields: any[]) => tenantRow };
+      return {
+        where: (criteria: Record<string, any>) => ({
+          forUpdate: () => ({ first: async (..._fields: any[]) => { lockCalls.push(['tenant-for-update', criteria]); return { tenant: 'tenant-1' }; } }),
+        }),
+        first: async (..._fields: any[]) => { lockCalls.push(['tenant-read']); return tenantRow; },
+      };
     }
 
     // The seat-assignment subquery that leaves seat technicians out of the licensed count.
@@ -42,11 +47,12 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
     }
 
     throw new Error(`Unexpected tenant table ${table}`);
-  }) as any;
+  };
+  return asTransaction(trx);
 }
 
 describe('seat lock and transaction requirement', () => {
-  it('takes the per-tenant advisory xact lock before any read', async () => {
+  it('takes the per-tenant advisory xact lock before seat admission reads', async () => {
     lockCalls.length = 0;
     await checkInternalUserLicenseLimit(
       fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 0 }),
@@ -54,7 +60,13 @@ describe('seat lock and transaction requirement', () => {
     );
     expect(lockCalls).toEqual([
       ['SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['internal_user_seats', 'tenant-1']],
+      ['tenant-read'],
     ]);
+  });
+
+  it('requires a transaction before locking tenant seat state', async () => {
+    const notTrx = (() => { throw new Error('must not query'); }) as any;
+    await expect(lockTenantSeatState(notTrx, 'tenant-1')).rejects.toThrow(/inside a transaction/);
   });
 
   it('throws for a non-transaction caller', async () => {
@@ -135,10 +147,14 @@ describe('checkInternalUserLicenseLimit', () => {
   it('throws when the tenant row cannot be found', async () => {
     const trx = asTransaction((table: string) => {
       if (table === 'tenants') {
-        return { first: async () => undefined };
+        return {
+          where: () => ({ forUpdate: () => ({ first: async () => undefined }) }),
+          first: async () => undefined,
+        };
       }
       throw new Error(`Unexpected tenant table ${table}`);
     }) as any;
+    trx.raw = async () => undefined;
 
     await expect(checkInternalUserLicenseLimit(trx, 'missing-tenant')).rejects.toThrow(
       'Tenant not found: missing-tenant'

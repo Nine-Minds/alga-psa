@@ -217,7 +217,15 @@ vi.mock('../../src/components/billing-dashboard/quotes/QuoteSendRecipientsField'
 vi.mock('../../src/components/billing-dashboard/quotes/QuoteStatusBadge', () => ({
   default: () => null,
 }));
+// The location remove-group confirmation is covered in
+// QuoteForm.locations.test.tsx; stub it here so this suite keeps its minimal
+// Dialog mock (the real component also needs DialogFooter and RadioGroup).
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ id, isOpen }: any) =>
+    (isOpen ? React.createElement('div', { id }) : null),
+}));
 vi.mock('../../src/components/billing-dashboard/quotes/quoteLineItemDraft', () => ({
+  buildDraftLocalId: () => `local-${Math.random().toString(36).slice(2, 10)}`,
   createDraftQuoteItemFromQuoteItem: (item: any) => ({
     local_id: item.quote_item_id,
     quote_item_id: item.quote_item_id,

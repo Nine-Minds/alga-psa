@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Återställ markerade till utkast",
       "downloadPdf": "Ladda ner PDF",
       "sendEmail": "Skicka e-post",
-      "unfinalize": "Återställ till utkast"
+      "unfinalize": "Återställ till utkast",
+      "recordPayment": "Registrera betalning",
+      "viewPayments": "Betalningar"
     },
     "status": {
       "finalized": "Fastställd"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Orsak till makulering…",
       "cancel": "Avbryt",
       "confirm": "Makulera faktura",
-      "voiding": "Makulerar…"
+      "voiding": "Makulerar…",
+      "algaOnly": "Makulera endast i AlgaPSA (koppla bort från {{provider}})",
+      "algaOnlyWarning": "Dokumentet i {{provider}} lämnas exakt som det är och den här fakturan kopplas bort från det, så AlgaPSA och {{provider}} kommer att skilja sig åt om den."
     },
     "history": {
       "title": "Historik",
@@ -1163,7 +1167,9 @@
       "send_one": "Skicka {{count}} e-postmeddelande",
       "send_other": "Skicka {{count}} e-postmeddelanden",
       "sending_one": "Skickar {{count}} faktura…",
-      "sending_other": "Skickar {{count}} fakturor…"
+      "sending_other": "Skickar {{count}} fakturor…",
+      "schedule": "Schemalägg",
+      "scheduling": "Schemalägger..."
     },
     "toasts": {
       "noValidRecipients": "Inga giltiga mottagare hittades",
@@ -1171,11 +1177,13 @@
       "sentSuccess_other": "{{count}} fakturor har skickats",
       "sentFailure_one": "Det gick inte att skicka {{count}} faktura",
       "sentFailure_other": "Det gick inte att skicka {{count}} fakturor",
-      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades"
+      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades",
+      "scheduled": "Fakturamejl schemalagt"
     },
     "errors": {
       "loadRecipients": "Det gick inte att läsa in mottagaruppgifterna",
-      "sendFailed": "Det gick inte att skicka e-postmeddelandena"
+      "sendFailed": "Det gick inte att skicka e-postmeddelandena",
+      "scheduleFailed": "Det gick inte att schemalägga fakturamejlet"
     }
   },
   "generateTab": {
@@ -1785,7 +1793,9 @@
           "actual": "100 %",
           "label": "Förhandsgranskningszoom",
           "fitWithScale": "Anpassa ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Sida {{page}} av {{total}}",
+        "frameTitle": "Förhandsgranskning av faktura"
       },
       "tabs": {
         "design": "Design",
@@ -1881,6 +1891,10 @@
       "spacer": {
         "label": "Avståndselement",
         "description": "Tomt utrymme för layoutjustering."
+      },
+      "page-break": {
+        "label": "Sidbrytning",
+        "description": "Startar nästa block på en ny sida."
       },
       "container": {
         "label": "Rutbehållare",
@@ -2204,6 +2218,17 @@
               "label": "Färg"
             }
           }
+        },
+        "pagination": {
+          "title": "Sidbrytning",
+          "fields": {
+            "breakBefore": {
+              "label": "Börja på en ny sida"
+            },
+            "breakInside": {
+              "label": "Håll ihop på en sida"
+            }
+          }
         }
       }
     },
@@ -2317,6 +2342,8 @@
       "signatureLabel": "Underskrift",
       "attachmentsLabel": "Bilagor",
       "spacerLabel": "Avståndselement",
+      "pageBreakLabel": "Sidbrytning",
+      "pageBreakBefore": "Börjar på en ny sida",
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
@@ -2808,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Ny layout ({{type}})",
-        "edit": "Redigera layout ({{type}})"
-      },
-      "description": "Utforma layouten för dokumenttypen {{type}} i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
-      "errorTitle": "Layoutredigerare ({{type}})",
-      "sections": {
-        "details": "Layoutdetaljer"
+        "edit": "Redigera layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Skapad {{time}}",
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
-        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
+        "notSaved": "Inte sparad än",
+        "savedAt": "Sparad {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
       },
       "actions": {
-        "back": "Tillbaka till layouter",
+        "back": "Tillbaka till layouter ({{type}})",
+        "labelSettings": "Etikettinställningar",
         "save": "Spara layout"
-      },
-      "labels": {
-        "created": "Skapad: {{date}}",
-        "lastUpdated": "Senast uppdaterad: {{date}}"
       },
       "preview": {
         "sampleNote": "Renderad med representativa exempeldata för dokumenttypen {{type}}.",
@@ -2865,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
+      "invoiceFinalize": "Åtkomst nekad: behörighet att fastställa fakturor krävs",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
       "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",
-      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs"
+      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs",
+      "invoiceSend": "Åtkomst nekad: behörighet att skicka fakturor krävs"
     },
     "invoice": {
       "notFound": "Fakturan hittades inte",
@@ -2920,6 +2944,36 @@
       "missingField": "Ett obligatoriskt fakturamallsfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt fakturamallsfält saknas: {{field}}.",
       "evaluationFailed": "Mallens databindning misslyckades: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Åtkomst nekad: att registrera fakturabetalningar kräver behörigheten för fakturabetalning.",
+      "invoiceNotFound": "Fakturan hittades inte. Den kan ha uppdaterats eller tagits bort. Uppdatera sidan och försök igen.",
+      "amountPositive": "Ange ett betalningsbelopp som är större än noll.",
+      "methodRequired": "Välj ett betalningssätt.",
+      "invalidDate": "Ange ett giltigt betalningsdatum.",
+      "noBalanceDue": "Den här fakturan har inget återstående belopp.",
+      "statusNotPayable": "Det går inte att registrera en betalning för en faktura med status: {{status}}.",
+      "overpaymentNotConfirmed": "Betalningen är högre än det återstående beloppet. Bekräfta överbetalningen för att registrera den.",
+      "recordFailed": "Det gick inte att registrera betalningen. Försök igen."
+    },
+    "void": {
+      "paymentsRecorded": "Återför betalningarna innan du makulerar.",
+      "paymentsRecordedManual": "Återför betalningarna som registrerats i AlgaPSA ({{sources}}) innan du makulerar den här fakturan.",
+      "paymentsRecordedIntegration": "Den här fakturan har betalningar från ditt bokföringssystem ({{sources}}). Ta bort eller redigera dem där så återför nästa synkronisering dem här, eller återför dem endast i AlgaPSA.",
+      "paymentsRecordedGateway": "Den här fakturan har betalningar som tagits emot via en betalleverantör ({{sources}}). Återbetala dem där innan du makulerar.",
+      "paymentsRecordedMixed": "Återför betalningarna på den här fakturan ({{sources}}) innan du makulerar den.",
+      "creditNoteCreditApplied": "Den här kreditfakturan har använt tillgodohavande. Ta bort användningen av tillgodohavandet innan du makulerar."
+    },
+    "reversePayment": {
+      "permissionDenied": "Åtkomst nekad: att återföra fakturabetalningar kräver behörigheten för fakturabetalning.",
+      "reasonRequired": "En orsak krävs för att återföra en betalning.",
+      "paymentNotFound": "Betalningen hittades inte. Den kan ha uppdaterats eller tagits bort. Uppdatera sidan och försök igen.",
+      "notReversible": "Den här betalningen kan inte återföras.",
+      "alreadyReversed": "Den här betalningen har redan återförts.",
+      "gatewayRefundRequired": "Den här betalningen togs emot via en betalleverantör ({{method}}). Återbetala den där i stället.",
+      "integrationOwned": "Den här betalningen kommer från betalning {{reference}} i {{provider}}. Ta bort eller redigera den i {{provider}} så återför nästa synkronisering den här.",
+      "remoteMutateRequired": "Åtkomst nekad: att återföra en synkroniserad betalning endast i AlgaPSA kräver behörigheten för fjärrändringar i bokföringen.",
+      "reverseFailed": "Det gick inte att återföra betalningen. Försök igen."
     }
   },
   "periodTotal": {
@@ -2942,6 +2996,74 @@
     "blocked": {
       "exported": "Den här fakturan är synkroniserad med ett bokföringssystem. Makulera den eller utfärda en separat kreditfaktura i stället för att redigera raderna.",
       "exporting": "En bokföringsexport förbereds för den här fakturan. Vänta tills den är klar innan du ändrar fakturan."
+    }
+  },
+  "recordPayment": {
+    "title": "Registrera betalning",
+    "titleForInvoice": "Registrera betalning — {{invoiceNumber}}",
+    "loading": "Läser in fakturasaldo...",
+    "summary": {
+      "balanceDue": "Återstående belopp",
+      "alreadyPaid": "Redan betalt"
+    },
+    "fields": {
+      "amount": "Belopp",
+      "paymentDate": "Betalningsdatum",
+      "method": "Betalningssätt",
+      "reference": "Referens",
+      "notes": "Anteckningar"
+    },
+    "placeholders": {
+      "reference": "Check- eller transaktionsnummer"
+    },
+    "methods": {
+      "manual": "Manuell",
+      "check": "Check",
+      "bank_transfer": "Banköverföring",
+      "cash": "Kontant",
+      "other": "Annat"
+    },
+    "overpayment": {
+      "warning": "Den här betalningen är {{excess}} mer än det återstående beloppet på {{balanceDue}}.",
+      "confirm": "Registrera överbetalningen ändå"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "record": "Registrera betalning"
+    },
+    "toasts": {
+      "recorded": "Betalning registrerad"
+    }
+  },
+  "invoicePayments": {
+    "title": "Betalningar",
+    "titleForInvoice": "Betalningar — {{invoiceNumber}}",
+    "loading": "Läser in betalningar...",
+    "empty": "Inga betalningar har registrerats för den här fakturan.",
+    "sources": {
+      "manual": "Registrerad i AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Betalleverantör"
+    },
+    "fields": {
+      "reason": "Orsak"
+    },
+    "actions": {
+      "reverse": "Återför betalning",
+      "confirmReverse": "Återför betalning",
+      "algaOnly": "Återför endast i AlgaPSA",
+      "cancel": "Avbryt",
+      "close": "Stäng"
+    },
+    "notes": {
+      "gatewayRefund": "Togs emot via en betalleverantör ({{method}}): återbetala den där i stället.",
+      "alreadyReversed": "Redan återförd.",
+      "providerOwned": "Den här betalningen kommer från betalning {{reference}} i {{provider}}. Ta bort eller redigera den där så återför nästa synkronisering den här.",
+      "algaOnlyWarning": "AlgaPSA och {{provider}} kommer att skilja sig åt om den här betalningen: posten i {{provider}} lämnas exakt som den är och betalningen kopplas bort här."
+    },
+    "toasts": {
+      "reversed": "Betalningen återfördes"
     }
   }
 }

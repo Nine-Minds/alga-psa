@@ -15,6 +15,9 @@ const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): 
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const getUserWithRolesMock = vi.hoisted(() => vi.fn(async () => ({ user_id: 'target-1' })));
+// contacts.is_client_admin is re-derived from the roles by this shared helper;
+// its own decision table is covered in packages/db (clientPortalAdminFlag.test.ts).
+const syncContactClientAdminFlagMock = vi.hoisted(() => vi.fn(async (..._args: any[]) => undefined));
 
 vi.mock('@alga-psa/core', () => ({ isEnterprise: false }));
 vi.mock('@alga-psa/core/server', () => ({
@@ -52,6 +55,7 @@ vi.mock('@alga-psa/db', () => ({
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
   UserRoleFloorError: UserRoleFloorErrorStub,
+  syncContactClientAdminFlag: (...args: any[]) => syncContactClientAdminFlagMock(...args),
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,
@@ -169,6 +173,44 @@ describe('updateUserRoles', () => {
     await expect(updateUserRoles('target-1', ['role-admin', 'role-tech'])).resolves.toBeUndefined();
     expect(spies.del).toHaveBeenCalledTimes(1);
     expect(spies.insert).toHaveBeenCalledTimes(1);
+  });
+
+  // alga-2026-0003317: contacts.is_client_admin is a mirror of the portal
+  // 'Admin' role, so the set-replace path re-derives it in its own transaction.
+  it('re-derives the portal admin flag in the same transaction as the role writes', async () => {
+    const spies = { del: vi.fn(async () => 1), insert: vi.fn(async () => []) };
+    let seenTrx: any;
+    withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) => {
+      seenTrx = buildRolesTrx(spies);
+      return cb(seenTrx);
+    });
+
+    const { updateUserRoles } = await import('./userActions');
+
+    await updateUserRoles('target-1', ['role-admin']);
+
+    expect(syncContactClientAdminFlagMock).toHaveBeenCalledWith(seenTrx, 'tenant-1', 'target-1');
+    expect(spies.insert.mock.invocationCallOrder[0]).toBeLessThan(
+      syncContactClientAdminFlagMock.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('leaves the portal admin flag alone when the floors refuse the change', async () => {
+    assertUserRoleFloorMock.mockResolvedValue({
+      ok: false,
+      violation: 'last_role',
+      message: 'A user must keep at least one role. Assign another role first, then remove this one.',
+    });
+    const spies = { del: vi.fn(async () => 1), insert: vi.fn(async () => []) };
+    withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+      cb(buildRolesTrx(spies))
+    );
+
+    const { updateUserRoles } = await import('./userActions');
+
+    await updateUserRoles('target-1', []);
+
+    expect(syncContactClientAdminFlagMock).not.toHaveBeenCalled();
   });
 });
 

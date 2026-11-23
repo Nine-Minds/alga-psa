@@ -1231,11 +1231,25 @@
           "viewDetails": "Zobacz szczegóły"
         },
         "details": {
+          "contactsFailed_few": "{{count}} kontakty zakończyły się błędem",
+          "contactsFailed_many": "{{count}} kontaktów zakończyło się błędem",
+          "contactsFailed_one": "{{count}} kontakt zakończył się błędem",
+          "contactsFailed_other": "{{count}} kontaktów zakończyło się błędem",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "i {{count}} więcej",
           "noResults": "Nie zarejestrowano wyników tenantów.",
+          "noticeHeading": "Uwagi",
+          "stages": {
+            "create": "tworzenie",
+            "link": "łączenie",
+            "match": "dopasowanie"
+          },
           "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
+          "summaryFailed": "Kontakty z błędami: {{count}}",
           "summarySkipped": "Pominięte wyniki inicjowania obsługi: {{count}}",
           "tenantHeader": "Organizacja {{tenant}} · {{status}}",
-          "unknownTenant": "nieznany"
+          "unknownTenant": "nieznany",
+          "userUnknown": "nieznany użytkownik"
         },
         "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
         "errors": {

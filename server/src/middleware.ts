@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { bodySizeGuardResponse } from './middleware/bodySizeGuard';
+import { principalApiSurfaceResponse } from './middleware/principalApiSurface';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
@@ -272,6 +273,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // IMAP maintenance routes authenticate the browser session in-handler and
+  // require ticket_settings:update. Header presence is never API-key auth.
+  '/api/email/imap/resync',
+  '/api/email/imap/reconnect',
   // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
   // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
   // Exact match only, so nothing else under /api/co-management is exempted by this entry.
@@ -486,6 +491,9 @@ const _middleware = auth(async (request) => {
     }
     return corsPreflightResponse(origin);
   }
+
+  const principalApiRefusal = principalApiSurfaceResponse(request);
+  if (principalApiRefusal) return applyCorsHeaders(principalApiRefusal, origin);
 
   // Dev-only guard: prevent noisy stack traces from stale Server Action IDs after refactors/restarts.
   // If the browser is running an older bundle, it can keep POSTing an action id that no longer exists.

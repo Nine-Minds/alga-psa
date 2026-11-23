@@ -2,24 +2,22 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrawer } from '@alga-psa/ui';
-import { useParams } from 'next/navigation';
-import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { Eye, PencilRuler, Trash2 } from 'lucide-react';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import {
-  addServiceRequestFormFieldAction,
   getServiceRequestDefinitionSubmissionDetailAction,
   getServiceRequestDefinitionEditorDataAction,
   getServiceRequestTicketRoutingBoardDataAction,
   getServiceRequestTicketRoutingReferenceDataAction,
   listServiceRequestDefinitionSubmissionsAction,
   publishServiceRequestDefinitionAction,
-  removeServiceRequestFormFieldAction,
-  reorderServiceRequestFormFieldsAction,
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
   updateServiceRequestBasicsAction,
   updateServiceRequestFormBehaviorConfigAction,
   updateServiceRequestFormBehaviorProviderAction,
-  updateServiceRequestFormFieldAction,
   updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
   updateServiceRequestExecutionProviderAction,
@@ -27,11 +25,11 @@ import {
   updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
+import { DeleteServiceRequestDefinitionDialog } from './DeleteServiceRequestDefinitionDialog';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Card } from '@alga-psa/ui/components/Card';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -46,8 +44,8 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
+import { ServiceRequestFormRenderer } from '../../../components/service-requests/ServiceRequestFormRenderer';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
-import { FieldVisibilityEditor } from './FieldVisibilityEditor';
 import { AnswerMappingSection } from './AnswerMappingSection';
 import {
   ServiceRequestAudienceEditor,
@@ -57,6 +55,7 @@ import {
 import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -72,6 +71,10 @@ import {
   getServiceRequestDraftLifecycleLabel,
   resolveTicketSubjectTemplate,
 } from '../../../lib/service-requests/editorHelpers';
+import {
+  normalizeBasicFormSchema,
+  type BasicFormField,
+} from '../../../lib/service-requests/formSchema';
 import {
   findUnknownServiceRequestTemplateTokens,
   getServiceRequestTemplateFields,
@@ -174,20 +177,8 @@ function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-interface FormFieldOption {
-  label: string;
-  value: string;
-}
-
-interface FormField {
-  key: string;
-  type: 'short-text' | 'long-text' | 'select' | 'checkbox' | 'date' | 'file-upload';
-  label: string;
-  helpText?: string | null;
-  required?: boolean;
-  defaultValue?: string | boolean | null;
-  options?: FormFieldOption[];
-}
+/** The schema the summary and the preview read; the builder owns editing it. */
+type FormField = BasicFormField;
 
 interface TicketRoutingBoardConfig {
   category_type: 'custom' | 'itil';
@@ -199,30 +190,6 @@ interface TicketRoutingBoardConfig {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-const FORM_FIELD_TYPES: Array<FormField['type']> = [
-  'short-text',
-  'long-text',
-  'select',
-  'checkbox',
-  'date',
-  'file-upload',
-];
-
-function buildFormFieldTypeOptions(t: TFunction): SelectOption[] {
-  return FORM_FIELD_TYPES.map((fieldType) => ({
-    value: fieldType,
-    label: t(`editor.form.types.${fieldType}`, { defaultValue: fieldType }),
-  }));
-}
-
-function buildCheckboxDefaultOptions(t: TFunction): SelectOption[] {
-  return [
-    { value: '', label: t('editor.form.checkboxDefaults.none') },
-    { value: 'true', label: t('editor.form.checkboxDefaults.checked') },
-    { value: 'false', label: t('editor.form.checkboxDefaults.unchecked') },
-  ];
-}
-
 function getSchemaFields(schema: Record<string, unknown>): FormField[] {
   const fields = schema.fields;
   if (!Array.isArray(fields)) {
@@ -233,43 +200,12 @@ function getSchemaFields(schema: Record<string, unknown>): FormField[] {
   );
 }
 
-function parseSelectOptionsText(optionsText: string): FormFieldOption[] {
-  return optionsText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const separatorIndex = line.indexOf(':');
-      if (separatorIndex <= 0 || separatorIndex >= line.length - 1) {
-        return null;
-      }
-      const value = line.slice(0, separatorIndex).trim();
-      const label = line.slice(separatorIndex + 1).trim();
-      if (!value || !label) {
-        return null;
-      }
-      return { value, label };
-    })
-    .filter((option): option is FormFieldOption => option !== null);
-}
-
-function formatSelectOptionsText(options: FormFieldOption[] | undefined): string {
-  if (!Array.isArray(options) || options.length === 0) {
-    return '';
-  }
-  return options.map((option) => `${option.value}:${option.label}`).join('\n');
-}
-
 function getSelectedIconLabel(iconValue: string, t: TFunction): string {
   const match = SERVICE_REQUEST_ICON_OPTIONS.find((option) => option.value === iconValue);
   if (match) {
     return t(`icons.${match.value}`, { defaultValue: match.label });
   }
   return t('editor.basics.noIconSelected');
-}
-
-function getCheckboxDefaultValue(defaultValue: FormField['defaultValue']): string {
-  return typeof defaultValue === 'boolean' ? String(defaultValue) : '';
 }
 
 function getDefaultStatus(statuses: ITicketStatus[]): ITicketStatus | null {
@@ -360,347 +296,21 @@ function buildItilUrgencyOptions(t: TFunction): SelectOption[] {
   }));
 }
 
-interface FormFieldEditorCardProps {
-  definitionId: string;
-  field: FormField;
-  index: number;
-  allFields: FormField[];
-  /** Present only when the advanced form-behavior panel is enabled; gates the "Show when…" editor. */
-  formBehaviorConfig?: Record<string, unknown>;
-  reloadDefinitionEditorState: (definitionId: string) => Promise<void>;
-}
-
-function FormFieldEditorCard({
-  definitionId,
-  field,
-  index,
-  allFields,
-  formBehaviorConfig,
-  reloadDefinitionEditorState,
-}: FormFieldEditorCardProps) {
-  const { t } = useTranslation('msp/service-requests');
-  const checkboxDefaultOptions = useMemo(() => buildCheckboxDefaultOptions(t), [t]);
-  const key = field.key ?? `field_${index}`;
-  const [labelValue, setLabelValue] = useState(field.label ?? key);
-  const [helpTextValue, setHelpTextValue] = useState(field.helpText ?? '');
-  const [defaultStringValue, setDefaultStringValue] = useState(
-    typeof field.defaultValue === 'string' ? field.defaultValue : ''
-  );
-  const [defaultCheckboxValue, setDefaultCheckboxValue] = useState(
-    getCheckboxDefaultValue(field.defaultValue)
-  );
-  const [optionsTextValue, setOptionsTextValue] = useState(formatSelectOptionsText(field.options));
-
-  useEffect(() => {
-    setLabelValue(field.label ?? key);
-  }, [field.label, key]);
-
-  useEffect(() => {
-    setHelpTextValue(field.helpText ?? '');
-  }, [field.helpText]);
-
-  useEffect(() => {
-    setDefaultStringValue(typeof field.defaultValue === 'string' ? field.defaultValue : '');
-    setDefaultCheckboxValue(getCheckboxDefaultValue(field.defaultValue));
-  }, [field.defaultValue]);
-
-  useEffect(() => {
-    setOptionsTextValue(formatSelectOptionsText(field.options));
-  }, [field.options]);
-
-  return (
-    <div
-      key={`${key}-${index}`}
-      className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-3 shadow-sm space-y-3"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-medium">
-          {t(`editor.form.types.${field.type}`, { defaultValue: field.type })} · <span className="font-mono">{key}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            id={`service-request-form-move-up-${key}`}
-            variant="ghost"
-            size="icon"
-            tooltipText={t('editor.form.moveUp')}
-            disabled={index === 0}
-            onClick={async () => {
-              const nextKeys = allFields.map((candidate) => candidate.key);
-              const currentIndex = nextKeys.indexOf(key);
-              if (currentIndex <= 0) {
-                return;
-              }
-              [nextKeys[currentIndex - 1], nextKeys[currentIndex]] = [
-                nextKeys[currentIndex],
-                nextKeys[currentIndex - 1],
-              ];
-              await reorderServiceRequestFormFieldsAction(definitionId, nextKeys);
-              await reloadDefinitionEditorState(definitionId);
-            }}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`service-request-form-move-down-${key}`}
-            variant="ghost"
-            size="icon"
-            tooltipText={t('editor.form.moveDown')}
-            disabled={index === allFields.length - 1}
-            onClick={async () => {
-              const nextKeys = allFields.map((candidate) => candidate.key);
-              const currentIndex = nextKeys.indexOf(key);
-              if (currentIndex < 0 || currentIndex >= nextKeys.length - 1) {
-                return;
-              }
-              [nextKeys[currentIndex], nextKeys[currentIndex + 1]] = [
-                nextKeys[currentIndex + 1],
-                nextKeys[currentIndex],
-              ];
-              await reorderServiceRequestFormFieldsAction(definitionId, nextKeys);
-              await reloadDefinitionEditorState(definitionId);
-            }}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`service-request-form-remove-field-${key}`}
-            variant="ghost"
-            size="icon"
-            tooltipText={t('editor.form.remove')}
-            className="chip-accent hover: hover:"
-            onClick={async () => {
-              await removeServiceRequestFormFieldAction(definitionId, key);
-              await reloadDefinitionEditorState(definitionId);
-              toast.success(t('messages.success.fieldRemoved'));
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <Input
-          label={t('editor.form.label')}
-          containerClassName="mb-0"
-          value={labelValue}
-          onChange={(event) => setLabelValue(event.target.value)}
-          onBlur={async (event) => {
-            await updateServiceRequestFormFieldAction(definitionId, key, {
-              label: event.target.value.trim() || key,
-            });
-            await reloadDefinitionEditorState(definitionId);
-          }}
-        />
-        <Input
-          label={t('editor.form.helpText')}
-          containerClassName="mb-0"
-          value={helpTextValue}
-          onChange={(event) => setHelpTextValue(event.target.value)}
-          onBlur={async (event) => {
-            const value = event.target.value.trim();
-            await updateServiceRequestFormFieldAction(definitionId, key, {
-              helpText: value.length > 0 ? value : null,
-            });
-            await reloadDefinitionEditorState(definitionId);
-          }}
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
-        <Checkbox
-          id={`service-request-form-required-${key}`}
-          label={t('editor.form.required')}
-          containerClassName="min-h-10"
-          checked={Boolean(field.required)}
-          onChange={async (event) => {
-            await updateServiceRequestFormFieldAction(definitionId, key, {
-              required: event.target.checked,
-            });
-            await reloadDefinitionEditorState(definitionId);
-          }}
-        />
-        {field.type !== 'file-upload' && (
-          <>
-            {field.type === 'checkbox' ? (
-              <CustomSelect
-                id={`service-request-form-default-value-${key}`}
-                label={t('editor.form.defaultValue')}
-                value={defaultCheckboxValue}
-                options={checkboxDefaultOptions}
-                onValueChange={async (value) => {
-                  setDefaultCheckboxValue(value);
-                  await updateServiceRequestFormFieldAction(definitionId, key, {
-                    defaultValue: value === '' ? null : value === 'true',
-                  });
-                  await reloadDefinitionEditorState(definitionId);
-                }}
-              />
-            ) : (
-              <Input
-                label={t('editor.form.defaultValue')}
-                containerClassName="mb-0"
-                value={defaultStringValue}
-                onChange={(event) => setDefaultStringValue(event.target.value)}
-                onBlur={async (event) => {
-                  const value = event.target.value.trim();
-                  await updateServiceRequestFormFieldAction(definitionId, key, {
-                    defaultValue: value.length > 0 ? value : null,
-                  });
-                  await reloadDefinitionEditorState(definitionId);
-                }}
-              />
-            )}
-          </>
-        )}
-      </div>
-      {field.type === 'select' && (
-        <TextArea
-          label={t('editor.form.options')}
-          wrapperClassName="mb-0"
-          className="font-mono min-h-[84px]"
-          value={optionsTextValue}
-          onChange={(event) => setOptionsTextValue(event.target.value)}
-          onBlur={async (event) => {
-            await updateServiceRequestFormFieldAction(definitionId, key, {
-              options: parseSelectOptionsText(event.target.value),
-            });
-            await reloadDefinitionEditorState(definitionId);
-          }}
-        />
-      )}
-      {formBehaviorConfig && (
-        <FieldVisibilityEditor
-          fieldKey={key}
-          precedingFields={allFields.slice(0, index).map((candidate) => ({
-            key: candidate.key,
-            type: candidate.type,
-            label: candidate.label,
-            options: candidate.options,
-          }))}
-          config={formBehaviorConfig}
-          onSave={async (nextConfig) => {
-            await updateServiceRequestFormBehaviorConfigAction(definitionId, nextConfig);
-            await reloadDefinitionEditorState(definitionId);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function FormFieldPreview({
-  field,
-  index,
-}: {
-  field: FormField;
-  index: number;
-}) {
-  const { t } = useTranslation('msp/service-requests');
-  const key = field.key ?? `field_${index}`;
-  const label = field.label ?? key;
-  const helpText = field.helpText ?? null;
-  const required = Boolean(field.required);
-  const defaultStringValue = typeof field.defaultValue === 'string' ? field.defaultValue : '';
-  const defaultBooleanValue = typeof field.defaultValue === 'boolean' ? field.defaultValue : false;
-  const labelWithRequired = `${label}${required ? ' *' : ''}`;
-
-  if (field.type === 'long-text') {
-    return (
-      <div key={key} className="space-y-1">
-        <TextArea
-          label={labelWithRequired}
-          wrapperClassName="mb-0"
-          value={defaultStringValue}
-          readOnly
-          disabled
-          rows={4}
-        />
-        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-      </div>
-    );
-  }
-
-  if (field.type === 'select') {
-    return (
-      <div key={key} className="space-y-1">
-        <CustomSelect
-          id={`service-request-form-preview-${key}`}
-          label={labelWithRequired}
-          value={defaultStringValue || null}
-          options={(field.options ?? []).map((option) => ({
-            value: option.value,
-            label: option.label,
-          }))}
-          onValueChange={() => {}}
-          placeholder={t('editor.form.selectOption')}
-          disabled
-        />
-        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-      </div>
-    );
-  }
-
-  if (field.type === 'checkbox') {
-    return (
-      <Checkbox
-        key={key}
-        id={`service-request-form-preview-checkbox-${key}`}
-        containerClassName="items-start"
-        checked={defaultBooleanValue}
-        disabled
-        onChange={() => {}}
-        label={
-          <span className="text-sm">
-            <span className="font-medium">{labelWithRequired}</span>
-            {helpText && (
-              <span className="block text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>
-            )}
-          </span>
-        }
-      />
-    );
-  }
-
-  if (field.type === 'file-upload') {
-    return (
-      <div key={key} className="space-y-1">
-        <Input
-          label={labelWithRequired}
-          containerClassName="mb-0"
-          type="file"
-          disabled
-        />
-        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-      </div>
-    );
-  }
-
-  return (
-    <div key={key} className="space-y-1">
-      <Input
-        label={labelWithRequired}
-        containerClassName="mb-0"
-        type={field.type === 'date' ? 'date' : 'text'}
-        value={defaultStringValue}
-        readOnly
-        disabled
-      />
-      {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-    </div>
-  );
-}
-
 export default function ServiceRequestDefinitionEditorPage() {
   const { t } = useTranslation('msp/service-requests');
   const { formatDate } = useFormatters();
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
-  const formFieldTypeOptions = useMemo(() => buildFormFieldTypeOptions(t), [t]);
   const itilImpactOptions = useMemo(() => buildItilImpactOptions(t), [t]);
   const itilUrgencyOptions = useMemo(() => buildItilUrgencyOptions(t), [t]);
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  // The questions are authored in the builder; the read-back list opens on request.
+  const [isFormSummaryCollapsed, setIsFormSummaryCollapsed] = useState(true);
   const [linkedServiceQuery, setLinkedServiceQuery] = useState('');
   const [linkedServiceResults, setLinkedServiceResults] = useState<
     Array<{ service_id: string; service_name: string; description: string | null }>
@@ -756,7 +366,6 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [ticketRoutingBoardFilterState, setTicketRoutingBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [ticketRoutingSelectedCategories, setTicketRoutingSelectedCategories] = useState<string[]>([]);
   const [ticketRoutingLoading, setTicketRoutingLoading] = useState(false);
-  const [newFieldType, setNewFieldType] = useState<FormField['type']>('short-text');
   const { openDrawer, replaceDrawer } = useDrawer();
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
@@ -1296,6 +905,15 @@ export default function ServiceRequestDefinitionEditorPage() {
           >
             {isPublishing ? t('editor.publishing') : t('editor.publish')}
           </Button>
+          <Button
+            id="service-request-editor-delete"
+            variant="outline"
+            className="text-[rgb(var(--color-destructive))]"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t('editor.delete')}
+          </Button>
         </div>
       </div>
 
@@ -1471,63 +1089,70 @@ export default function ServiceRequestDefinitionEditorPage() {
       </Card>
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">{t('editor.form.title')}</h2>
-        <div className="rounded border p-3 bg-[rgb(var(--color-border-100))] space-y-3">
-          <div className="text-sm font-semibold">{t('editor.form.authorFields')}</div>
-          <div className="flex flex-wrap items-start gap-2">
-            <div className="min-w-[220px] flex-1">
-              <CustomSelect
-                id="service-request-form-new-field-type"
-                label={t('editor.form.fieldType')}
-                value={newFieldType}
-                options={formFieldTypeOptions}
-                onValueChange={(value) => setNewFieldType(value as FormField['type'])}
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="mb-1 text-sm font-medium invisible select-none">{t('editor.form.fieldType')}</span>
-              <Button
-                id="service-request-form-add-field"
-                variant="default"
-                className="h-10 gap-1.5"
-                onClick={async () => {
-                  try {
-                    await addServiceRequestFormFieldAction(data.definitionId, newFieldType);
-                    await reloadDefinitionEditorState(data.definitionId);
-                    toast.success(t('messages.success.fieldAdded'));
-                  } catch (error) {
-                    console.error('Failed to add form field', error);
-                    toast.error(t('messages.error.addFieldFailed'));
-                  }
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                {t('editor.form.addField')}
-              </Button>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2">
+            <CollapseToggleButton
+              id="service-request-editor-form-toggle"
+              isCollapsed={isFormSummaryCollapsed}
+              collapsedLabel={t('editor.form.showFields')}
+              expandedLabel={t('editor.form.hideFields')}
+              tone="ghost"
+              className="mt-0.5"
+              aria-expanded={!isFormSummaryCollapsed}
+              aria-controls="service-request-editor-form-summary"
+              onClick={() => setIsFormSummaryCollapsed((previous) => !previous)}
+            />
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">{t('editor.form.title')}</h2>
+              <p className="text-sm text-[rgb(var(--color-text-600))]">
+                {t('editor.form.summary', {
+                  questions: getSchemaFields(data.form.schema).filter(
+                    (field) => getFieldElementKind(field.type) === 'input'
+                  ).length,
+                  required: getSchemaFields(data.form.schema).filter(
+                    (field) => getFieldElementKind(field.type) === 'input' && field.required
+                  ).length,
+                })}
+              </p>
             </div>
           </div>
-          <div className="space-y-3">
-            {getSchemaFields(data.form.schema).length === 0 ? (
-              <div className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.form.noFields')}</div>
-            ) : (
-              getSchemaFields(data.form.schema).map((field, index, allFields) => (
-                <FormFieldEditorCard
-                  key={`${field.key ?? `field_${index}`}-${index}`}
-                  definitionId={data.definitionId}
-                  field={field}
-                  index={index}
-                  allFields={allFields}
-                  formBehaviorConfig={
-                    data.execution.showAdvancedFormBehaviorConfigPanel
-                      ? data.execution.formBehaviorConfig ?? {}
-                      : undefined
-                  }
-                  reloadDefinitionEditorState={reloadDefinitionEditorState}
-                />
-              ))
-            )}
-          </div>
+          <Link
+            id="service-request-editor-open-form-builder"
+            href={`/msp/service-requests/${data.definitionId}/form-builder`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[rgb(var(--color-primary-500))] px-3 py-2 text-sm font-medium text-white hover:bg-[rgb(var(--color-primary-600))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
+          >
+            <PencilRuler className="h-4 w-4" />
+            {t('editor.form.openBuilder')}
+          </Link>
         </div>
+        {/* The questions themselves are authored in the builder, so the list here is a
+            read-back the author opens when they want it, not the page's main body. */}
+        {isFormSummaryCollapsed ? null : getSchemaFields(data.form.schema).length === 0 ? (
+          <p className="rounded border border-dashed border-[rgb(var(--color-border-200))] p-4 text-sm text-[rgb(var(--color-text-600))]">
+            {t('editor.form.noFields')}
+          </p>
+        ) : (
+          <ul id="service-request-editor-form-summary" className="space-y-1">
+            {getSchemaFields(data.form.schema).map((field, index) => (
+              <li
+                key={`${field.key ?? index}-${index}`}
+                className="flex items-center gap-2 rounded border border-[rgb(var(--color-border-200))] px-2 py-1.5 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {field.type === 'divider' ? t('editor.form.types.divider') : field.label || field.key}
+                </span>
+                <span className="shrink-0 text-xs text-[rgb(var(--color-text-600))]">
+                  {t(`editor.form.types.${field.type}`, { defaultValue: field.type })}
+                </span>
+                {field.required ? (
+                  <span className="shrink-0 text-xs text-[rgb(var(--color-text-500))]">
+                    {t('editor.form.requiredChip')}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card id="service-request-editor-execution" className="p-4 space-y-3">
@@ -1934,10 +1559,12 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <AnswerMappingSection
         definitionId={data.definitionId}
-        questions={getSchemaFields(data.form.schema).map((field) => ({
-          key: field.key,
-          label: field.label || field.key,
-        }))}
+        questions={getSchemaFields(data.form.schema)
+          .filter((field) => getFieldElementKind(field.type) === 'input')
+          .map((field) => ({
+            key: field.key,
+            label: field.label || field.key,
+          }))}
         t={t}
         formatDate={formatDate}
       />
@@ -2153,7 +1780,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                 <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
                   {t('editor.preview.formSubheading')}
                 </div>
-                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white shadow-md">
+                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-md">
                   <div className="flex items-center gap-1.5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 py-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-accent-400))]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-status-warning))]" />
@@ -2161,15 +1788,19 @@ export default function ServiceRequestDefinitionEditorPage() {
                   </div>
                   <div className="p-4 pointer-events-none select-none">
                     {getSchemaFields(data.form.schema).length > 0 ? (
-                      <form className="space-y-3">
-                        {getSchemaFields(data.form.schema).map((field, index) => (
-                          <FormFieldPreview
-                            key={field.key ?? `field_${index}`}
-                            field={field}
-                            index={index}
-                          />
-                        ))}
-                      </form>
+                      /* The real portal renderer, so this preview cannot drift from the form. */
+                      <ServiceRequestFormRenderer
+                        fields={normalizeBasicFormSchema(data.form.schema).fields}
+                        settings={normalizeBasicFormSchema(data.form.schema).settings}
+                        values={{}}
+                        onValueChange={() => {}}
+                        disabled
+                        idPrefix="service-request-editor-preview-field"
+                        labels={{
+                          selectPlaceholder: t('editor.form.selectOption'),
+                          datePlaceholder: t('editor.form.datePlaceholder'),
+                        }}
+                      />
                     ) : (
                       <p className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.form.noFields')}</p>
                     )}
@@ -2180,6 +1811,20 @@ export default function ServiceRequestDefinitionEditorPage() {
           </Card>
         </aside>
       </div>
+      <DeleteServiceRequestDefinitionDialog
+        definition={
+          isDeleteDialogOpen
+            ? {
+                definition_id: data.definitionId,
+                name: data.basics.name,
+                lifecycle_state: data.lifecycleState,
+              }
+            : null
+        }
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onDeleted={() => router.push('/msp/service-requests')}
+        onArchived={() => reloadDefinitionEditorState(data.definitionId)}
+      />
     </div>
   );
 }

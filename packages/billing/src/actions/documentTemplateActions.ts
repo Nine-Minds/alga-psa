@@ -371,14 +371,27 @@ export const runAuthoritativeTemplatePreview = withAuth(
     const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry(
       existingDocumentId ? { salesOrderId: existingDocumentId } : {}
     );
+    const printGeometry = getDocumentTypeRegistryEntry(type).printGeometry;
+    const previewLocale = normalizeLocale(locale) ?? undefined;
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
       title: 'Preview',
       knex,
-      locale: normalizeLocale(locale) ?? undefined,
+      locale: previewLocale,
       dateFormat,
-      // A label is drawn on the cell it prints in (same size, margin and clipping); documents stay unframed.
-      previewSheet: resolveTemplatePreviewSheetFromAst(templateAst, getDocumentTypeRegistryEntry(type).printGeometry) ?? undefined,
+      // A label is drawn on the single cell it prints in (same size, margin and clipping). A document
+      // prints across many pages, so it is drawn as those pages below instead of framed here.
+      previewSheet:
+        printGeometry === 'label-cell'
+          ? resolveTemplatePreviewSheetFromAst(templateAst, printGeometry) ?? undefined
+          : undefined,
+      printGeometry,
     });
-    return { html };
+    if (printGeometry === 'label-cell') {
+      return { html };
+    }
+    const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+    // No caption locale: the author reading the preview is captioned in their own language, whatever
+    // language they asked to see the document itself in.
+    return { html: (await paginateDocumentPreviewHtml(html, templateAst)).html };
   },
 );
