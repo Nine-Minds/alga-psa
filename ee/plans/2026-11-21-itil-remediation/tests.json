@@ -1072,7 +1072,7 @@
     "featureIds": [
       "F061"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP create on an ITIL board with Impact and Urgency stores the matrix priority and both values"
   },
   {
@@ -1081,7 +1081,7 @@
     "featureIds": [
       "F061"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP create on a non-ITIL board with Impact and Urgency in the form stores neither and uses the selected priority"
   },
   {
@@ -1090,7 +1090,7 @@
     "featureIds": [
       "F062"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP update of Impact alone on an assessed ITIL ticket recomputes the priority from the new Impact and stored Urgency"
   },
   {
@@ -1099,7 +1099,7 @@
     "featureIds": [
       "F062"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "No source file matches the P-number name pattern lookup"
   },
   {
@@ -1108,7 +1108,7 @@
     "featureIds": [
       "F063"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Direct priority change on an assessed ITIL ticket clears Impact and Urgency, and the ticket then shows Not assessed"
   },
   {
@@ -1117,7 +1117,7 @@
     "featureIds": [
       "F063"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Direct priority change on an unassessed ticket leaves Impact and Urgency empty"
   },
   {
@@ -1126,7 +1126,7 @@
     "featureIds": [
       "F064"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP create with Impact and no Urgency on an ITIL board is refused with a field error"
   },
   {
@@ -1135,7 +1135,7 @@
     "featureIds": [
       "F065"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A service request configured with Impact and Urgency creates a ticket with the matrix priority found by level"
   },
   {
@@ -1144,7 +1144,7 @@
     "featureIds": [
       "F065"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A template with Impact and Urgency instantiates with the matrix priority even when its stored priority differs"
   },
   {
@@ -1153,7 +1153,7 @@
     "featureIds": [
       "F065"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Batch duplicate copies priority, Impact and Urgency so they agree"
   },
   {
@@ -1162,7 +1162,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A create or update that sends itil_priority_level does not store it"
   },
   {
@@ -1171,7 +1171,7 @@
     "featureIds": [
       "F066"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket event payloads carry the level of the ticket's priority for an ITIL ticket and none for other tickets"
   },
   {
@@ -1180,7 +1180,7 @@
     "featureIds": [
       "F067"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket detail for an ITIL ticket without Impact and Urgency shows its stored priority and Not assessed"
   },
   {
@@ -1189,7 +1189,7 @@
     "featureIds": [
       "F067"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Choosing Impact and Urgency on that ticket shows and saves the matrix priority"
   },
   {
@@ -1198,7 +1198,7 @@
     "featureIds": [
       "F068"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every new Impact/Urgency key exists in every locale and passes the glossary checks"
   },
   {

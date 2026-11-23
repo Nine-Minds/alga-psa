@@ -350,6 +350,11 @@ export function QuickAddTicket({
     return null;
   }, [itilImpact, itilUrgency]);
 
+  // R4: the pair is needed unless the form already carries an ITIL priority (a prefill from a
+  // duplicate or a template can), and one value without the other is never enough.
+  const needsItilAssessment =
+    !itilImpact || !itilUrgency ? (!priorityId || Boolean(itilImpact) !== Boolean(itilUrgency)) : false;
+
   // ITIL options for selects
   const itilImpactOptions = useMemo<SelectOption[]>(() => [
     { value: '1', label: t('itil.impactLevels.1', '1 - High (Critical business function affected)') },
@@ -1138,9 +1143,13 @@ export function QuickAddTicket({
         validationErrors.push(t('validation.quickAdd.priorityRequired', 'Please select a priority'));
       }
     } else if (boardConfig.priority_type === 'itil') {
-      // ITIL priority boards require impact and urgency
-      if (!itilImpact) validationErrors.push(t('validation.quickAdd.impactRequired', 'Please select an impact'));
-      if (!itilUrgency) validationErrors.push(t('validation.quickAdd.urgencyRequired', 'Please select an urgency'));
+      // R4: Impact and Urgency go together or not at all. A ticket prefilled from a duplicate or a
+      // template may carry an ITIL priority with no assessment ("Not assessed", D5); that is a
+      // valid ticket, so the pair is only required when neither it nor a priority is there.
+      if (needsItilAssessment) {
+        if (!itilImpact) validationErrors.push(t('validation.quickAdd.impactRequired', 'Please select an impact'));
+        if (!itilUrgency) validationErrors.push(t('validation.quickAdd.urgencyRequired', 'Please select an urgency'));
+      }
     } else {
       // Default to custom behavior if priority_type is undefined
       if (!priorityId) {
@@ -1471,7 +1480,7 @@ export function QuickAddTicket({
 
   const hasRequiredFieldErrors = !title.trim() || !boardId || !statusId ||
     (boardConfig.priority_type === 'custom' && !priorityId) ||
-    (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+    (boardConfig.priority_type === 'itil' && needsItilAssessment) ||
     (boardConfig.priority_type === undefined && !priorityId) ||
     !clientId;
 
@@ -2023,6 +2032,19 @@ export function QuickAddTicket({
                                   <span className="text-sm text-gray-500">
                                     ({t('itil.impact', 'Impact')} {itilImpact} × {t('itil.urgency', 'Urgency')} {itilUrgency})
                                   </span>
+                                </div>
+                              ) : priorityId ? (
+                                /* A prefill can carry an ITIL priority with no assessment (D5). */
+                                <div className="flex items-center gap-2" id="quick-add-itil-not-assessed">
+                                  <div
+                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    style={{ backgroundColor: priorities.find((priority) => priority.priority_id === priorityId)?.color || '#6B7280' }}
+                                  />
+                                  <span className="text-gray-900">
+                                    {priorities.find((priority) => priority.priority_id === priorityId)?.priority_name
+                                      ?? t('itil.notAssessed', 'Not assessed')}
+                                  </span>
+                                  <span className="text-sm text-gray-500">({t('itil.notAssessed', 'Not assessed')})</span>
                                 </div>
                               ) : (
                                 <span className="text-gray-500">{t('itil.calculatePrompt', 'Select Impact and Urgency to calculate priority')}</span>

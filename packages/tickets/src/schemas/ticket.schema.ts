@@ -19,7 +19,8 @@ export const ticketFormSchema = z.object({
   // ITIL-specific fields (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).optional(),
   itil_urgency: z.number().int().min(1).max(5).optional(),
-  itil_priority_level: z.number().int().min(1).max(5).optional(),
+  // D8: `itil_priority_level` is not accepted from a client. It is the level of the ticket's
+  // priority, read from the priority row.
   due_date: z.string().datetime().nullable().optional(),
 });
 
@@ -92,6 +93,8 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   // Server-owned audit columns, stamped by ticketUpdateStamp.
   updated_at: true,
   updated_by: true,
+  // D8: derived from the ticket's priority, never sent by a client.
+  itil_priority_level: true,
 });
 
 export const ticketAttributesQuerySchema = z.object({

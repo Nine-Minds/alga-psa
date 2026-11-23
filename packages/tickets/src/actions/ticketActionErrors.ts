@@ -8,7 +8,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-import { PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+import { TicketBoardFieldError } from '../lib/ticketFieldReferences';
 
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
@@ -154,7 +154,8 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
     return permissionError(error instanceof Error ? error.message : String(error));
   }
 
-  if (error instanceof PriorityBoardTypeError) {
+  // Covers PriorityBoardTypeError, which is one of its flavours.
+  if (error instanceof TicketBoardFieldError) {
     return actionError(error.message, error.messageKey, error.messageParams);
   }
 

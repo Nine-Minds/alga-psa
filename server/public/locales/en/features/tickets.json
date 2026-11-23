@@ -1287,7 +1287,9 @@
       "3": "Medium\nUrgency (3)",
       "4": "Medium-Low\nUrgency (4)",
       "5": "Low\nUrgency (5)"
-    }
+    },
+    "notAssessed": "Not assessed",
+    "priorityLabel": "Priority:"
   },
   "info": {
     "saveTitle": "Save title",
@@ -1864,7 +1866,9 @@
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
       "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
       "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
-      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities.",
+      "impactUrgencyTogether": "Impact and urgency must be set together on a board that uses ITIL priorities.",
+      "itilPriorityMissingForAssessment": "Board ‘{{board}}’ uses ITIL priorities but none matches this impact and urgency."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",

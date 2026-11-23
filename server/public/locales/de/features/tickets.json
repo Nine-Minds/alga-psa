@@ -1175,7 +1175,9 @@
       "3": "Mittlere\nDringlichkeit (3)",
       "4": "Mittel-niedrige\nDringlichkeit (4)",
       "5": "Geringe\nDringlichkeit (5)"
-    }
+    },
+    "notAssessed": "Nicht bewertet",
+    "priorityLabel": "Priorität:"
   },
   "info": {
     "saveTitle": "Titel speichern",
@@ -1726,7 +1728,9 @@
       "conflict": "Diese Ticketänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "valueNotAllowed": "Einer der Ticketwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "priorityItilBoardCustom": "Die Priorität ‚{{priority}}‘ ist eine ITIL-Priorität, aber das Board ‚{{board}}‘ verwendet benutzerdefinierte Prioritäten.",
-      "priorityCustomBoardItil": "Die Priorität ‚{{priority}}‘ ist eine benutzerdefinierte Priorität, aber das Board ‚{{board}}‘ verwendet ITIL-Prioritäten."
+      "priorityCustomBoardItil": "Die Priorität ‚{{priority}}‘ ist eine benutzerdefinierte Priorität, aber das Board ‚{{board}}‘ verwendet ITIL-Prioritäten.",
+      "impactUrgencyTogether": "Auswirkung und Dringlichkeit müssen auf einem Board mit ITIL-Prioritäten gemeinsam gesetzt werden.",
+      "itilPriorityMissingForAssessment": "Das Board ‚{{board}}‘ verwendet ITIL-Prioritäten, aber keine passt zu dieser Auswirkung und Dringlichkeit."
     },
     "board": {
       "invalidReference": "Das ausgewählte Board, der Status oder die Regel ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

@@ -463,6 +463,21 @@ export async function resolveItilPriorityId(
   return resolveItilPriorityIdForLevel(conn, tenant, level);
 }
 
+/**
+ * D8. The ITIL level of a ticket is the level of its priority, never a stored ticket column:
+ * `tickets.itil_priority_level` is no longer written, so readers ask the priority row.
+ */
+export async function itilPriorityLevelForPriority(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  priorityId: string | null | undefined
+): Promise<number | null> {
+  if (!priorityId) return null;
+  const priority = await loadPriority(conn, tenant, priorityId);
+  if (!priority || !priority.is_from_itil_standard) return null;
+  return normaliseLevel(priority.itil_priority_level);
+}
+
 /** {@link resolveItilPriorityId} for a level already computed. */
 export async function resolveItilPriorityIdForLevel(
   conn: Knex | Knex.Transaction,
@@ -597,6 +612,7 @@ export async function resolveTicketPriorityFields(
           {
             field: 'priority_id',
             message: `Board ‘${board.board_name}’ uses ITIL priorities but the tenant has none for this impact and urgency`,
+            messageKey: 'features/tickets:errors.ticket.itilPriorityMissingForAssessment',
             messageParams: { board: board.board_name },
           },
         ],
@@ -618,7 +634,8 @@ export async function resolveTicketPriorityFields(
         problems: [
           {
             field: impact === null ? 'itil_impact' : 'itil_urgency',
-            message: 'Impact and urgency must be set together',
+            message: 'Impact and urgency must be set together on a board that uses ITIL priorities.',
+            messageKey: 'features/tickets:errors.ticket.impactUrgencyTogether',
           },
         ],
       };

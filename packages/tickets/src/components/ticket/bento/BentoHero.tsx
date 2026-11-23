@@ -586,6 +586,11 @@ export function BentoHero({
     [priorityOptions, effectiveBoardConfig?.priority_type, displayedPriorityId],
   );
 
+  // D5: an ITIL ticket may hold a priority with no Impact/Urgency — a direct priority change
+  // clears the pair — and the hero is where that priority is changed.
+  const itilAssessmentMissing =
+    effectiveBoardConfig?.priority_type === 'itil' && !(ticket.itil_impact && ticket.itil_urgency);
+
   // The team currently assigned to the ticket, resolved from the teams pool so
   // the picker can sit beside a compact team badge (mirrors the legacy layout).
   const assignedTeam = useMemo(
@@ -1140,6 +1145,13 @@ export function BentoHero({
                 className="!w-full"
               />
             ))}
+            {/* D5: changing the priority here clears Impact and Urgency, so say so when the ticket
+                on an ITIL board carries no assessment. */}
+            {itilAssessmentMissing ? (
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]" id={`${id}-itil-not-assessed`}>
+                {t('itil.impact', 'Impact')} × {t('itil.urgency', 'Urgency')}: {t('itil.notAssessed', 'Not assessed')}
+              </p>
+            ) : null}
           </HeroField>
           {responseStateTrackingEnabled ? (
             <HeroField label={t('bento.hero.replyStatus', 'Reply status')}>

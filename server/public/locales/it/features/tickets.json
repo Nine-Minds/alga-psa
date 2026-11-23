@@ -1287,7 +1287,9 @@
       "3": "Media\nurgenza (3)",
       "4": "Medio-bassa\nurgenza (4)",
       "5": "Bassa\nurgenza (5)"
-    }
+    },
+    "notAssessed": "Non valutato",
+    "priorityLabel": "Priorità:"
   },
   "info": {
     "saveTitle": "Salva titolo",
@@ -1864,7 +1866,9 @@
       "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
       "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare.",
       "priorityItilBoardCustom": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate.",
-      "priorityCustomBoardItil": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL."
+      "priorityCustomBoardItil": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL.",
+      "impactUrgencyTogether": "Impatto e urgenza devono essere impostati insieme su una bacheca che usa priorità ITIL.",
+      "itilPriorityMissingForAssessment": "La bacheca ‘{{board}}’ usa priorità ITIL, ma nessuna corrisponde a questo impatto e a questa urgenza."
     },
     "board": {
       "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",

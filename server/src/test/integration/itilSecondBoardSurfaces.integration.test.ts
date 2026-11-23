@@ -364,14 +364,71 @@ const SURFACES: Surface[] = [
     surface: 'Impact × Urgency on MSP create and update',
     commitGroup: 'impact-urgency',
     claims: ['MSP create and update'],
-    expectedFail:
-      'the ITIL priority is looked up by `priority_name LIKE ‘P{n} -%’` and is computed whenever Impact and Urgency are present, whatever the board',
+    probe: async (db, fixture) => {
+      const { resolveTicketPriorityFieldsOrThrow, resolveTicketPriorityPatch } = await import(
+        '../../../../packages/tickets/src/lib/ticketFieldReferences'
+      );
+
+      // A create on the second ITIL board: Impact × Urgency decides the priority, by level.
+      const created = await resolveTicketPriorityFieldsOrThrow(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[5],
+        itilImpact: 1,
+        itilUrgency: 2,
+        policy: 'refuse',
+      });
+      expect(created.priority_id).toBe(fixture.itilPriorityIds[2]);
+      expect([created.itil_impact, created.itil_urgency]).toEqual([1, 2]);
+
+      // The same answer on the first ITIL board: the rule is the board's kind, not its identity.
+      const onOne = await resolveTicketPriorityFieldsOrThrow(db, fixture.tenantId, {
+        boardId: fixture.boards.itilOne,
+        priorityId: fixture.itilPriorityIds[5],
+        itilImpact: 1,
+        itilUrgency: 2,
+        policy: 'refuse',
+      });
+      expect(onOne.priority_id).toBe(created.priority_id);
+
+      // An update that only moves the priority clears the assessment (D5).
+      const patch: Record<string, unknown> = { priority_id: fixture.itilPriorityIds[4] };
+      await resolveTicketPriorityPatch(
+        db,
+        fixture.tenantId,
+        {
+          board_id: fixture.boards.itilTwo,
+          priority_id: fixture.itilPriorityIds[1],
+          itil_impact: 1,
+          itil_urgency: 1,
+        },
+        patch,
+        'refuse'
+      );
+      expect(patch).toEqual({
+        priority_id: fixture.itilPriorityIds[4],
+        itil_impact: null,
+        itil_urgency: null,
+      });
+    },
   },
   {
     surface: 'Service request provider',
     commitGroup: 'impact-urgency',
     claims: ['Service request provider'],
-    expectedFail: 'ticketOnlyExecutionProvider looks the ITIL priority up by name',
+    probe: async (db, fixture) => {
+      // The provider's policy is fall-back (R6) and its lookup is by level, so a configured pair
+      // resolves on the second ITIL board exactly as on the first.
+      const resolved = await resolveTicketPriorityFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        itilImpact: 3,
+        itilUrgency: 4,
+        policy: 'fallback',
+      });
+      expect(resolved.problems).toEqual([]);
+      expect(resolved.priority_id).toBe(fixture.itilPriorityIds[4]);
+      expect([resolved.itil_impact, resolved.itil_urgency]).toEqual([3, 4]);
+    },
   },
   {
     surface: 'Service request editor',

@@ -85,6 +85,11 @@ const fake = vi.hoisted(() => {
       async first() {
         return (await resolve())[0];
       },
+      // R2: the import asks which boards own the standard ITIL categories before it decides what a
+      // row's category may be, and it asks with `pluck`.
+      async pluck(column: string) {
+        return (await resolve()).map((row) => row[column]);
+      },
       then(onFulfilled: any, onRejected: any) {
         return resolve().then(onFulfilled, onRejected);
       },

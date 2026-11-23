@@ -1295,7 +1295,9 @@
       "3": "Średnia\nPilność (3)",
       "4": "Średnio-niska\nPilność (4)",
       "5": "Niska\nPilność (5)"
-    }
+    },
+    "notAssessed": "Nieoceniony",
+    "priorityLabel": "Priorytet:"
   },
   "info": {
     "saveTitle": "Zapisz tytuł",
@@ -1872,7 +1874,9 @@
       "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "priorityItilBoardCustom": "Priorytet „{{priority}}” jest priorytetem ITIL, ale tablica „{{board}}” używa priorytetów niestandardowych.",
-      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL."
+      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL.",
+      "impactUrgencyTogether": "Wpływ i pilność trzeba ustawić razem na tablicy, która używa priorytetów ITIL.",
+      "itilPriorityMissingForAssessment": "Tablica „{{board}}” używa priorytetów ITIL, ale żaden nie odpowiada temu wpływowi i tej pilności."
     },
     "board": {
       "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",

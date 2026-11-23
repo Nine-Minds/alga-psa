@@ -545,7 +545,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP ticket create computes the ITIL priority only when the board has ITIL priorities, through resolveTicketPriorityFields"
   },
   {
@@ -554,7 +554,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Both MSP ticket update functions use resolveTicketPriorityFields; the four name-pattern lookups are removed"
   },
   {
@@ -563,7 +563,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A direct priority change on an ITIL ticket that has Impact and Urgency clears both, and the ticket shows Not assessed"
   },
   {
@@ -572,7 +572,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A write that supplies only one of Impact and Urgency is refused on interactive paths"
   },
   {
@@ -581,7 +581,7 @@
     "prdRefs": [
       "R4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Service request provider, template instantiation, the recurring generator and batch duplicate resolve priority and Impact/Urgency through the shared function"
   },
   {
@@ -590,7 +590,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "itil_priority_level is no longer accepted in the ticket schema or written; event payloads and list queries take the level from the priority row"
   },
   {
@@ -599,7 +599,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket detail, the bento hero and quick add show the stored priority and Not assessed when an ITIL ticket has no Impact and Urgency"
   },
   {
@@ -608,7 +608,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "New Impact/Urgency strings use translation keys in every locale"
   },
   {

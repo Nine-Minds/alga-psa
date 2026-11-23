@@ -398,9 +398,59 @@ options payload through `TicketingDashboardContainer`.
   covered + 30 todos, `ticketQuerySchema` + `ticketFilterPredicates` 50/50,
   `checklistRulePredicates` 5/5, the portal contract test 2/2.
 
+### Commit group 7 — `impact-urgency` (done)
+
+Landed: `resolveTicketPriorityFieldsOrThrow` and `resolveTicketPriorityPatch` in
+`packages/tickets/src/lib/ticketFieldReferences.ts` (with `TicketBoardFieldError`, which
+`PriorityBoardTypeError` now extends and `ticketActionErrorFrom` reports); MSP create and both MSP
+update functions, the service-request provider, template instantiation (so every recurring
+occurrence too) and batch duplicate call them; `itil_priority_level` is no longer accepted or
+written, and the level is read from the priority row; the "Not assessed" display in `TicketInfo`,
+`BentoHero` and `QuickAddTicket`; four strings in every locale.
+
+- **The four name-pattern lookups are gone, and a test bans the pattern.** The `P{n} -%` lookup is
+  replaced by `resolveItilPriorityId`, which finds the priority by `itil_priority_level` (D8). The
+  integration fixture names its ITIL priorities `ITIL level n (renamed)`, so a test that passes
+  there cannot be passing by name, and `itilImpactUrgencyContract.test.ts` scans every source file
+  of the touched packages for the pattern and for a second `calculateItilPriority` caller on the
+  server.
+- **Where the stage events get their level, and why both halves are in this branch.** The SCRATCHPAD
+  gotcha says deriving the level without moving `TICKET_SLA_STAGE_*` onto the ticket's real SLA would
+  switch those events on with hard-coded hours. The PRD's commit table puts the derivation in group 7
+  and the real-SLA source in group 13, and both ship in this branch — the whole card is one release —
+  so the gotcha's "deploy one without the other" case cannot happen. Nothing was reinterpreted; it is
+  recorded here because the two groups are written apart.
+- **Quick add no longer demands the pair when a prefill carries a priority.** R4 accepts an ITIL
+  priority on its own ("Not assessed"), and a duplicate or template prefill can bring one. The form
+  required both values, which would have forced a re-prioritisation of such a ticket; it now requires
+  the pair only when there is no priority, and still refuses one value without the other.
+- **`resolveTicketPriorityPatch` writes a field only when the answer differs from the stored value**
+  (or the patch named it). That keeps an unrelated edit's patch untouched — R5/D3, the legacy ticket
+  whose pair already mismatches — while still clearing Impact and Urgency when D5 says so.
+- **T119–T132 test the rule where it lives.** `addTicket`/`updateTicket` pull in the authorization
+  kernel, the event bus and analytics; standing those up adds no coverage of the decision. The
+  behaviour runs against this slot's database through the two helpers the actions call, and the
+  contract test pins that each named writer calls them, which is the thing that can silently regress.
+  `instantiateTicketTemplate.itilPriority.test.ts` is the one path tested end to end, because its
+  create seam is already mocked there.
+- **Three assertions in other suites had to be reconciled** (all this card's own doing, found by
+  running the package's suites): `optimizedTicketActions.tenantScopedAuth` asked for a `priorities`
+  read in `updateTicketInTransaction` that moved into the shared module, and its resolver-subquery
+  tenant check matched only `FROM … AS __x WHERE __x.tenant = ??` — R9's matcher (group 6) joins a
+  second copy of `categories`, which is correlated but not in that shape, so the check became
+  per-alias; `optimizedTicketActions.contactAuthor` asked for the removed ITIL-flag category query;
+  and the CSV-import fake query builder in `ticketImport.contactCacheRollback` needed `pluck`, which
+  the group-5 ITIL-board lookup uses. Two order-dependent flakes in
+  `packages/tickets/src/lib/{ticketListViews,nativeTicketDataSource}.test.ts` fail identically with
+  and without this group's changes (vitest shuffles within the file and both tests assert "nothing
+  has been called yet" against state that lives on `globalThis`); they are not this card's.
+- Run against this slot's database: `itilImpactUrgency` 12/12, `itilBoardFieldRules` 27/27,
+  `itilSecondBoardSurfaces` 16 covered + 28 todos, `itilImpactUrgencyContract` 9/9, and all 173 test
+  files of `packages/tickets/src/{actions,lib,schemas}` (1465 tests).
+
 ### Groups not started
 
-Commit groups 7–16 (`impact-urgency` through `docs`) are untouched: their features and tests are
+Commit groups 8–16 (`writers-create` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

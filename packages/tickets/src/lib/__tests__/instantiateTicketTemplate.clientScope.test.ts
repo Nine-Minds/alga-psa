@@ -12,6 +12,14 @@ vi.mock('@alga-psa/shared/services/tickets/createTicketWithSideEffects', () => (
 }));
 vi.mock('../ticketFieldReferences', () => ({
   findTicketFieldReferenceProblems: async () => [],
+  // R4 lives in the shared rules module; this suite is about client scope, so the resolver passes
+  // the template's own values through. itilBoardFieldRules covers the rule itself.
+  resolveTicketPriorityFieldsOrThrow: async (_conn: unknown, _tenant: string, input: any) => ({
+    priority_id: input.priorityId ?? null,
+    itil_impact: input.itilImpact ?? null,
+    itil_urgency: input.itilUrgency ?? null,
+    problems: [],
+  }),
 }));
 
 function query(table: string): any {

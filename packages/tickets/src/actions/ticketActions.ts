@@ -72,7 +72,13 @@ import {
 } from '@alga-psa/event-bus/events';
 
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
-import { findPriorityBoardTypeProblem, findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+import { itilPriorityLevelForPriority } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import {
+  findPriorityBoardTypeProblem,
+  PriorityBoardTypeError,
+  resolveTicketPriorityFieldsOrThrow,
+  resolveTicketPriorityPatch,
+} from '../lib/ticketFieldReferences';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
@@ -89,7 +95,6 @@ import {
 import { TicketModelEventPublisher } from '@alga-psa/shared/services/tickets/ticketModelEventPublisher';
 import { createTicketWithSideEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
-import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
@@ -550,7 +555,7 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
               tenantId: tenant,
               ticketId: ticketResult.ticket_id,
-              itilPriorityLevel: fullTicket.itil_priority_level,
+              itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, fullTicket.priority_id),
               enteredAt: fullTicket.entered_at,
             });
             if (enteredSlaEvent) {
@@ -648,33 +653,19 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const itil_impact = data.get('itil_impact');
       const itil_urgency = data.get('itil_urgency');
 
-      // For ITIL boards, calculate priority and map to standard_priorities record
-      let finalPriorityId = data.get('priority_id') as string;
-
-      if (itil_impact && itil_urgency) {
-        // Calculate ITIL priority level
-        const priorityLevel = calculateItilPriority(parseInt(itil_impact as string), parseInt(itil_urgency as string));
-
-        // Map priority level to ITIL priority name pattern
-        const priorityNamePattern = `P${priorityLevel} -%`;
-
-        // Get the corresponding ITIL priority record from tenant's priorities table
-        const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
-          .where('is_from_itil_standard', true)
-          .where('priority_name', 'like', priorityNamePattern)
-          .where('item_type', 'ticket')
-          .first();
-
-        if (itilPriorityRecord) {
-          finalPriorityId = itilPriorityRecord.priority_id;
-        }
-      }
-
+      // R3/R4: one rule decides the priority, Impact and Urgency. Impact × Urgency picks the
+      // priority only on a board that uses ITIL priorities, and is found by `itil_priority_level`
+      // (D8) rather than by a `P{n} -` name; on a board with the tenant's own priorities neither
+      // value is stored. MSP create is interactive, so a value that does not fit is refused (R6).
       const addBoardId = data.get('board_id') as string;
-      if (addBoardId && finalPriorityId) {
-        const priorityProblem = await findPriorityBoardTypeProblem(trx, tenant, addBoardId, finalPriorityId);
-        if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
-      }
+      const resolvedPriority = await resolveTicketPriorityFieldsOrThrow(trx, tenant, {
+        boardId: addBoardId || null,
+        priorityId: (data.get('priority_id') as string) || null,
+        itilImpact: itil_impact === null || itil_impact === '' ? null : parseInt(itil_impact as string, 10),
+        itilUrgency: itil_urgency === null || itil_urgency === '' ? null : parseInt(itil_urgency as string, 10),
+        policy: 'refuse',
+      });
+      const finalPriorityId = resolvedPriority.priority_id as string;
 
       // Convert FormData to CreateTicketInput format
       const createTicketInput: CreateTicketInput = {
@@ -703,9 +694,9 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         category_id: category_id === '' ? undefined : (category_id as string),
         subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
         priority_id: finalPriorityId, // Always use priority_id (mapped from ITIL if needed)
-        // ITIL-specific fields (kept for UI display)
-        itil_impact: itil_impact ? parseInt(itil_impact as string) : undefined,
-        itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
+        // ITIL-specific fields (kept for UI display), as the one rule resolved them.
+        itil_impact: resolvedPriority.itil_impact ?? undefined,
+        itil_urgency: resolvedPriority.itil_urgency ?? undefined,
         due_date: due_date === '' ? undefined : (due_date as string),
         entered_by: user.user_id,
         source: 'web_app',
@@ -953,7 +944,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
         tenantId: tenant,
         ticketId: ticketResult.ticket_id,
-        itilPriorityLevel: fullTicket.itil_priority_level,
+        itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, fullTicket.priority_id),
         enteredAt: fullTicket.entered_at,
       });
       if (enteredSlaEvent) {
@@ -1266,6 +1257,18 @@ export const duplicateTicketBatch = withAuth(async (
             entered_by: user.user_id,
           });
 
+          // A copy carries the source's priority, Impact and Urgency, so the three have to agree on
+          // the copy's board: Impact × Urgency decides the priority on an ITIL board and neither is
+          // stored elsewhere (R4). Duplicate is interactive, so a source that cannot be copied
+          // coherently is refused rather than silently re-prioritised (R6).
+          const copyPriority = await resolveTicketPriorityFieldsOrThrow(trx, tenant, {
+            boardId: source.board_id ?? null,
+            priorityId: source.priority_id ?? null,
+            itilImpact: source.itil_impact ?? null,
+            itilUrgency: source.itil_urgency ?? null,
+            policy: 'refuse',
+          });
+
           // LEVERAGE: pattern ticket-create-composition — single Duplicate still composes creation by hand in addTicket; moving it onto createTicketWithSideEffects removes this second composition (batch-duplicate plan, R1)
           const createdTicket = await createTicketWithSideEffects(trx, tenant, {
             actor: { type: 'user', userId: user.user_id },
@@ -1277,9 +1280,9 @@ export const duplicateTicketBatch = withAuth(async (
               location_id: source.location_id ?? undefined,
               category_id: source.category_id ?? undefined,
               subcategory_id: source.subcategory_id ?? undefined,
-              priority_id: source.priority_id ?? undefined,
-              itil_impact: source.itil_impact ?? undefined,
-              itil_urgency: source.itil_urgency ?? undefined,
+              priority_id: copyPriority.priority_id ?? undefined,
+              itil_impact: copyPriority.itil_impact ?? undefined,
+              itil_urgency: copyPriority.itil_urgency ?? undefined,
               assigned_to: source.assigned_to ?? undefined,
               description: draft.description,
               source: 'web_app',
@@ -1580,36 +1583,12 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updateData.due_date = null;
       }
 
-      // Handle ITIL priority calculation if impact or urgency is being updated
-      if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
-        const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
-        const newUrgency = 'itil_urgency' in updateData ? updateData.itil_urgency : currentTicket.itil_urgency;
-
-        if (newImpact && newUrgency) {
-          // Calculate ITIL priority level
-          const priorityLevel = calculateItilPriority(newImpact, newUrgency);
-
-          // Map priority level to ITIL priority name pattern
-          const priorityNamePattern = `P${priorityLevel} -%`;
-
-          // Get the corresponding ITIL priority record from tenant's priorities table
-          const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
-            .where('is_from_itil_standard', true)
-            .where('priority_name', 'like', priorityNamePattern)
-            .where('item_type', 'ticket')
-            .first();
-
-          if (itilPriorityRecord) {
-            updateData.priority_id = itilPriorityRecord.priority_id;
-            updateData.itil_priority_level = priorityLevel;
-          }
-        }
-      }
-
-      // The priority family must match the board's priority_type. Checked only when this patch changes
-      // the priority or board, so an unrelated update still works on legacy mismatched tickets.
-      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
-      if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
+      // R4/R5/R6 in one place: Impact × Urgency decides the priority on a board that uses ITIL
+      // priorities (found by level, D8), a direct priority change clears a stored assessment (D5),
+      // one value without the other is refused, and the priority's family must fit the board. Runs
+      // only when the patch touches a priority field or the board, so an unrelated edit still saves
+      // on a legacy ticket whose stored pair already mismatches (D3).
+      await resolveTicketPriorityPatch(trx, tenant, currentTicket, updateData, 'refuse');
 
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
@@ -2008,7 +1987,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
           tenantId: tenant,
           ticketId: id,
-          itilPriorityLevel: currentTicket.itil_priority_level,
+          itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, updatedTicket.priority_id ?? currentTicket.priority_id),
           enteredAt: currentTicket.entered_at,
           closedAt: occurredAt,
         });
@@ -2185,6 +2164,8 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         't.*',
         's.name as status_name',
         'p.priority_name',
+        // D8: the ticket's ITIL level is its priority's level, not the stored ticket column.
+        'p.itil_priority_level as priority_itil_level',
         'c.board_name',
         'cat.category_name',
         'co.client_name as client_name',
@@ -2351,6 +2332,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           client_name,
           entered_by_name,
           assigned_to_name,
+          priority_itil_level,
           ...rest
         } = ticket;
 
@@ -2371,7 +2353,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           // Convert null ITIL fields to undefined for proper type compatibility
           itil_impact: rest.itil_impact === null || rest.itil_impact === undefined ? undefined : rest.itil_impact,
           itil_urgency: rest.itil_urgency === null || rest.itil_urgency === undefined ? undefined : rest.itil_urgency,
-          itil_priority_level: rest.itil_priority_level === null || rest.itil_priority_level === undefined ? undefined : rest.itil_priority_level,
+          itil_priority_level: priority_itil_level === null || priority_itil_level === undefined ? undefined : priority_itil_level,
           // Convert null optional fields to undefined for proper type compatibility
           estimated_hours: rest.estimated_hours === null || rest.estimated_hours === undefined ? undefined : rest.estimated_hours,
           due_date: rest.due_date === null || rest.due_date === undefined ? undefined : rest.due_date

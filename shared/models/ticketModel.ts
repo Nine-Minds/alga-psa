@@ -145,6 +145,9 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   duplicated_from_ticket_id: true,
   is_closed: true,
   created_from_template_id: true,
+  // D8: the ITIL level is the level of the ticket's priority, read from the priority row, so no
+  // caller (workflow `update_fields`, inbound webhook update) may send it.
+  itil_priority_level: true,
 });
 
 // Comment validation schema

@@ -1287,7 +1287,9 @@
       "3": "Médio\nUrgência (3)",
       "4": "Médio-Baixo\nUrgência (4)",
       "5": "Baixo\nUrgência (5)"
-    }
+    },
+    "notAssessed": "Não avaliado",
+    "priorityLabel": "Prioridade:"
   },
   "info": {
     "saveTitle": "Salvar título",
@@ -1864,7 +1866,9 @@
       "conflict": "Esta alteração do ticket conflita com um registro existente. Atualize a página e tente novamente.",
       "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente.",
       "priorityItilBoardCustom": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas.",
-      "priorityCustomBoardItil": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL."
+      "priorityCustomBoardItil": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL.",
+      "impactUrgencyTogether": "O impacto e a urgência devem ser definidos juntos em um quadro que usa prioridades ITIL.",
+      "itilPriorityMissingForAssessment": "O quadro ‘{{board}}’ usa prioridades ITIL, mas nenhuma corresponde a este impacto e esta urgência."
     },
     "board": {
       "invalidReference": "O quadro, o status ou a regra selecionados são inválidos. Atualize a página e tente novamente.",

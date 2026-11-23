@@ -9,7 +9,7 @@ import {
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
 import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
-import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import { itilPriorityLevelForPriority, listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { standardCategoryFilterOptions } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
@@ -72,7 +72,7 @@ import {
 import { Knex } from 'knex';
 import { runGatedPreloads, gatedPreload } from '../lib/ticketPreloads';
 import { NATIVE_TICKET_CAPABILITIES, type TicketCapabilities } from '../lib/ticketDataSource';
-import { findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
+import { resolveTicketPriorityPatch } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { checkMultiplePermissions, hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -89,7 +89,6 @@ import {
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
 import { Temporal } from '@js-temporal/polyfill';
-import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { getContactAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
@@ -1967,7 +1966,9 @@ function buildTicketListItemsQuery(
       't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
       't.is_closed', 't.attributes',
       't.master_ticket_id', 't.tenant',
-      't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
+      't.itil_impact', 't.itil_urgency',
+      // D8: the ticket's ITIL level is its priority's level, not a stored ticket column.
+      'p.itil_priority_level as itil_priority_level',
       't.response_state', 't.ticket_origin',
       't.sla_policy_id', 't.sla_started_at',
       't.sla_response_due_at', 't.sla_response_at', 't.sla_response_met',
@@ -3043,31 +3044,11 @@ export async function updateTicketInTransaction(
       updateData.subcategory_id = null;
     }
 
-    // Handle ITIL priority calculation if impact or urgency is being updated
-    if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
-      const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
-      const newUrgency = 'itil_urgency' in updateData ? updateData.itil_urgency : currentTicket.itil_urgency;
-
-      if (newImpact && newUrgency) {
-        // Calculate ITIL priority level
-        const priorityLevel = calculateItilPriority(newImpact, newUrgency);
-
-        // Map priority level to ITIL priority name pattern
-        const priorityNamePattern = `P${priorityLevel} -%`;
-
-        // Get the corresponding ITIL priority record from tenant's priorities table
-        const itilPriorityRecord = await tenantScopedTable(trx, 'priorities', tenant)
-          .where('is_from_itil_standard', true)
-          .where('priority_name', 'like', priorityNamePattern)
-          .where('item_type', 'ticket')
-          .first();
-
-        if (itilPriorityRecord) {
-          updateData.priority_id = itilPriorityRecord.priority_id;
-          updateData.itil_priority_level = priorityLevel;
-        }
-      }
-    }
+    // R4/R5/R6 in one place, as in ticketActions: Impact × Urgency decides the priority on a board
+    // that uses ITIL priorities (by level, D8), a direct priority change clears a stored assessment
+    // (D5), one value without the other is refused, and the family must fit the board. Runs only
+    // when the patch touches a priority field or the board (D3).
+    await resolveTicketPriorityPatch(trx, tenant, currentTicket, updateData, 'refuse');
 
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
@@ -3076,10 +3057,6 @@ export async function updateTicketInTransaction(
       'board_id' in updateData &&
       !!updateData.board_id &&
       updateData.board_id !== currentTicket.board_id;
-
-    // Priority family must match the board's priority_type; only checked when the patch changes either.
-    const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
-    if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');
@@ -3479,7 +3456,7 @@ export async function updateTicketInTransaction(
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
         ticketId: id,
-        itilPriorityLevel: currentTicket.itil_priority_level,
+        itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, updatedTicket.priority_id ?? currentTicket.priority_id),
         enteredAt: currentTicket.entered_at,
         closedAt: occurredAt,
       });

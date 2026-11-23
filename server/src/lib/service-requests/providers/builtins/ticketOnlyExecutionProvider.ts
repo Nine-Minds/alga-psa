@@ -5,7 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@shared/models/ticketModel';
 import { ticketCreatedPublishedByCaller } from '@shared/lib/tickets/ticketLifecycleEvents';
 import type { Knex } from 'knex';
-import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { resolveTicketPriorityFields } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import {
@@ -282,26 +282,20 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           } as const;
         }
 
-        let priorityId =
-          configuredPriorityId ??
-          (
-            await db.table('priorities')
-              .orderBy('order_number', 'asc')
-              .first<{ priority_id: string }>('priority_id')
-          )?.priority_id;
-
-        if (configuredItilImpact && configuredItilUrgency) {
-          const priorityLevel = calculateItilPriority(configuredItilImpact, configuredItilUrgency);
-          const itilPriorityRecord = await db.table('priorities')
-            .where('is_from_itil_standard', true)
-            .where('priority_name', 'like', `P${priorityLevel} -%`)
-            .where('item_type', 'ticket')
-            .first<{ priority_id: string }>('priority_id');
-
-          if (itilPriorityRecord?.priority_id) {
-            priorityId = itilPriorityRecord.priority_id;
-          }
-        }
+        // R4/R6: one rule resolves the priority with the Impact/Urgency pair for this board.
+        // Impact × Urgency decides the priority only on a board that uses ITIL priorities and is
+        // found by `itil_priority_level` (D8), never by a `P{n} -` name; on a board with the
+        // tenant's own priorities neither value is stored. Nobody watches a service request being
+        // executed, so a configured priority that does not fit the board falls back to the board's
+        // default (R7) rather than failing the request.
+        const resolvedPriority = await resolveTicketPriorityFields(trx, context.tenant, {
+          boardId,
+          priorityId: configuredPriorityId ?? null,
+          itilImpact: configuredItilImpact ?? null,
+          itilUrgency: configuredItilUrgency ?? null,
+          policy: 'fallback',
+        });
+        const priorityId = resolvedPriority.priority_id ?? undefined;
 
         if (!priorityId) {
           return {
@@ -334,8 +328,8 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
             assigned_to: configuredAssignedTo,
             client_id: context.clientId,
             contact_id: context.contactId ?? undefined,
-            itil_impact: configuredItilImpact,
-            itil_urgency: configuredItilUrgency,
+            itil_impact: resolvedPriority.itil_impact ?? undefined,
+            itil_urgency: resolvedPriority.itil_urgency ?? undefined,
             entered_by: context.requesterUserId,
             source: 'client_portal',
             ticket_origin: 'client_portal',

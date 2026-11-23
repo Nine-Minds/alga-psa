@@ -18,7 +18,7 @@ import {
   type RecurringTemplateFields,
   type RecurringTicketOverrides,
 } from './recurring/effectiveFields';
-import { findTicketFieldReferenceProblems } from './ticketFieldReferences';
+import { findTicketFieldReferenceProblems, resolveTicketPriorityFieldsOrThrow } from './ticketFieldReferences';
 import { renderTitleTemplate, type TitleTokenContext } from './ticketTitleTokens';
 import { countDuplicableCustomFields, pickDuplicableAttributes } from './ticketDuplicate';
 
@@ -197,6 +197,23 @@ export async function instantiateTicketTemplate(
     throw new TicketTemplateInstantiationError(problems.map((problem) => problem.message).join('; '), 'INVALID_REFERENCES');
   }
 
+  // R4: a template that carries Impact and Urgency has them decide the priority on a board that
+  // uses ITIL priorities, even when the stored `priority_id` says otherwise; on a board with the
+  // tenant's own priorities neither value is stored. A schedule has already been validated above,
+  // so a problem here is a refusal the caller reports per occurrence.
+  const priorityFields = await resolveTicketPriorityFieldsOrThrow(trx, tenant, {
+    boardId: fields.board_id,
+    priorityId: fields.priority_id,
+    itilImpact: template.itil_impact ?? null,
+    itilUrgency: template.itil_urgency ?? null,
+    policy: 'refuse',
+  }).catch((error: unknown) => {
+    throw new TicketTemplateInstantiationError(
+      error instanceof Error ? error.message : String(error),
+      'INVALID_REFERENCES'
+    );
+  });
+
   const provenance = templateTicketProvenance(template);
   const { ticketId, ticketNumber } = await createTicketWithSideEffects(trx, tenant, {
     actor: input.actor,
@@ -208,12 +225,12 @@ export async function instantiateTicketTemplate(
       location_id: input.client.location_id ?? undefined,
       board_id: fields.board_id as string,
       status_id: fields.status_id ?? undefined,
-      priority_id: fields.priority_id as string,
+      priority_id: priorityFields.priority_id as string,
       category_id: fields.category_id ?? undefined,
       subcategory_id: fields.subcategory_id ?? undefined,
       assigned_to: fields.assigned_to ?? undefined,
-      itil_impact: template.itil_impact ?? undefined,
-      itil_urgency: template.itil_urgency ?? undefined,
+      itil_impact: priorityFields.itil_impact ?? undefined,
+      itil_urgency: priorityFields.itil_urgency ?? undefined,
       due_date: input.dueDate ? input.dueDate.toISOString() : undefined,
       ticket_origin: input.origin.ticket_origin,
       source: input.origin.source,

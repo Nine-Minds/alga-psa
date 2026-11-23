@@ -189,10 +189,18 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(compilerSource).toContain('const tenant = tenantColumnOf(this.schema);');
     expect(compilerSource).toContain("bindings: [`${childAlias}.${tenant}`, `${parentAlias}.${tenant}`]");
     const schemaSource = fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/ticketQuery/ticketQuerySchema.ts'), 'utf8');
-    const resolverTables = schemaSource.match(/FROM \w+ AS __\w+ WHERE __\w+\.tenant = \?\?/g) ?? [];
-    const resolverSubqueries = schemaSource.match(/FROM \w+ AS __\w+/g) ?? [];
-    expect(resolverSubqueries.length).toBeGreaterThan(0);
-    expect(resolverTables).toHaveLength(resolverSubqueries.length);
+    // Every alias a resolver subquery introduces correlates its own tenant, either to the bound
+    // tenant or to an alias that already is. The predicate need not sit immediately after the
+    // FROM: R9's "any board's copy of this standard category" joins a second copy of `categories`
+    // and correlates it to the first.
+    const resolverAliases = [...schemaSource.matchAll(/(?:FROM|JOIN)\s+\w+\s+AS\s+(__\w+)/g)].map(
+      (match) => match[1]
+    );
+    expect(resolverAliases.length).toBeGreaterThan(0);
+    const unscopedAliases = [...new Set(resolverAliases)].filter(
+      (alias) => !new RegExp(`${alias}\\.tenant = (\\?\\?|__\\w+\\.tenant)`).test(schemaSource)
+    );
+    expect(unscopedAliases, 'resolver subquery aliases with no tenant correlation').toEqual([]);
 
     expect(listActionSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
     expect(listActionSection).not.toContain(".where('tm.tenant', tenant)");
@@ -260,7 +268,13 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     const section = source.slice(start, end);
 
     expect(section).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'priorities', tenant)");
+    // Priorities are no longer read here: the Impact × Urgency and family rules live in the shared
+    // board-field rules module, which scopes every read through `tenantDb(conn, tenant)`.
+    expect(section).toContain('resolveTicketPriorityPatch(trx, tenant,');
+    expect(section).not.toContain("tenantScopedTable(trx, 'priorities', tenant)");
+    expect(
+      fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/tickets/boardFieldRules.ts'), 'utf8')
+    ).toContain('tenantDb(conn, tenant)');
     expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");

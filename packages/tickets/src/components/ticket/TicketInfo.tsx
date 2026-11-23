@@ -314,6 +314,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const effectiveItilImpact = pendingItilChanges.itil_impact ?? itilImpact;
   const effectiveItilUrgency = pendingItilChanges.itil_urgency ?? itilUrgency;
 
+  // The priority the ticket actually holds, for the ITIL layout: on an ITIL board the form offers
+  // Impact and Urgency, and the stored priority still has to be visible (D5, "Not assessed").
+  const storedPriorityOption = useMemo(
+    () => priorityOptions.find((option) => option.value === pendingPriorityValue) ?? null,
+    [priorityOptions, pendingPriorityValue]
+  );
+
   const calculatedItilPriority = useMemo(() => {
     if (effectiveItilImpact && effectiveItilUrgency) {
       try {
@@ -1739,6 +1746,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       />
                     ) : null}
                   </div>
+                  {/* D5: an ITIL ticket may carry a priority with no assessment — a direct priority
+                      change clears Impact and Urgency — so the stored priority is shown with
+                      "Not assessed" rather than nothing at all. */}
+                  {!calculatedItilPriority && (
+                    <div className="col-span-2 flex items-center gap-2 mt-1" id="ticket-itil-not-assessed">
+                      <span className="text-sm text-gray-500">{t('itil.priorityLabel', 'Priority:')}</span>
+                      <span className="text-sm font-medium">{storedPriorityOption?.label ?? t('properties.notAvailable', 'N/A')}</span>
+                      <span className="text-sm text-gray-500">({t('itil.notAssessed', 'Not assessed')})</span>
+                    </div>
+                  )}
                   {/* Calculated ITIL Priority Badge */}
                   {calculatedItilPriority && (
                     <div className="col-span-2 flex items-center gap-2 mt-1">

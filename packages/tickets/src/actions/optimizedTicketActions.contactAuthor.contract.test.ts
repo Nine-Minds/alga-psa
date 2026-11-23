@@ -31,7 +31,10 @@ describe('MSP consolidated ticket data category scoping contract', () => {
     const source = readOptimizedTicketActionsSource();
 
     expect(source).toContain("getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly");
-    expect(source).toContain("where({ board_id: ticket.board_id })");
-    expect(source).toContain("where('is_from_itil_standard', true)");
+    // R2/D9: a board's categories are the rows it owns, ITIL board or not, so the hydration asks
+    // the shared lister for the ticket's board instead of selecting the ITIL flag — which only
+    // ever found the first ITIL board's set.
+    expect(source).toContain('listCategoriesForBoard(trx, tenant, ticket.board_id)');
+    expect(source).not.toContain("where('is_from_itil_standard', true)");
   });
 });

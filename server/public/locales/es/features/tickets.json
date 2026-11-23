@@ -1287,7 +1287,9 @@
       "3": "Media\nUrgencia (3)",
       "4": "Media-Baja\nUrgencia (4)",
       "5": "Baja\nUrgencia (5)"
-    }
+    },
+    "notAssessed": "Sin evaluar",
+    "priorityLabel": "Prioridad:"
   },
   "info": {
     "saveTitle": "Guardar título",
@@ -1864,7 +1866,9 @@
       "conflict": "Este cambio del ticket entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
       "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo.",
       "priorityItilBoardCustom": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas.",
-      "priorityCustomBoardItil": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL."
+      "priorityCustomBoardItil": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL.",
+      "impactUrgencyTogether": "El impacto y la urgencia se deben establecer juntos en un tablero que usa prioridades ITIL.",
+      "itilPriorityMissingForAssessment": "El tablero ‘{{board}}’ usa prioridades ITIL, pero ninguna coincide con este impacto y esta urgencia."
     },
     "board": {
       "invalidReference": "El tablero, el estado o la regla seleccionados no son válidos. Actualice la página e inténtelo de nuevo.",
