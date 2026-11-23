@@ -1,6 +1,8 @@
 import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-const LEADING_TICKET_LABEL = /^ticket(?=\s|#|$)/i;
+// A whitespace-separated numeric segment means TICKET is the identifier prefix (for example,
+// "TICKET 2026 0002826"), while "Ticket ALGA…" and "Ticket #ALGA…" use it as a label.
+const LEADING_TICKET_LABEL = /^ticket(?=#|$|\s+(?!\d))/i;
 const SEPARATORS = /[\s-]+/g;
 
 export interface TicketSearchQuery {

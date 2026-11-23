@@ -10,6 +10,16 @@ const ticket = {
   priority_name: 'High',
 };
 const other = { ...ticket, title: 'VPN', ticket_number: 'ALGA-2026-0000001', status_name: 'Closed', priority_name: 'Low' };
+const ticketPrefixNumber = {
+  title: 'No matching title',
+  ticket_number: 'TICKET-2026-0002826',
+  status_name: 'No matching status',
+  priority_name: 'No matching priority',
+};
+const algaNumber = {
+  ...ticketPrefixNumber,
+  ticket_number: 'ALGA-2026-0002826',
+};
 
 describe('buildTicketSearchPredicate', () => {
   it.each([
@@ -31,5 +41,16 @@ describe('buildTicketSearchPredicate', () => {
   it('applies no filter for empty or whitespace queries', () => {
     expect(buildTicketSearchPredicate('')(other)).toBe(true);
     expect(buildTicketSearchPredicate('   ')(other)).toBe(true);
+  });
+
+  it.each([
+    ['TICKET 2026 0002826', ['TICKET-2026-0002826']],
+    ['TICKET-2026-0002826', ['TICKET-2026-0002826']],
+    ['TICKET20260002826', ['TICKET-2026-0002826']],
+    ['Ticket #ALGA-2026-0002826', ['ALGA-2026-0002826']],
+    ['2826', ['TICKET-2026-0002826', 'ALGA-2026-0002826']],
+  ])('returns exact ticket numbers for %j', (query, expectedNumbers) => {
+    const results = [ticketPrefixNumber, algaNumber].filter(buildTicketSearchPredicate(query));
+    expect(results.map(({ ticket_number }) => ticket_number)).toEqual(expectedNumbers);
   });
 });
