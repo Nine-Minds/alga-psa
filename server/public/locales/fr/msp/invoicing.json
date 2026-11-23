@@ -2376,6 +2376,18 @@
         "label": "Description du ticket",
         "description": "Description du ticket en texte brut, disponible uniquement sur les feuilles de travail client en portrait d’au moins 210 mm de large."
       },
+      "label_contactName": {
+        "label": "Nom du contact",
+        "description": "Nom du contact associé au ticket."
+      },
+      "label_contactPhone": {
+        "label": "Téléphone du contact",
+        "description": "Numéro de téléphone principal du contact associé au ticket."
+      },
+      "label_contactEmail": {
+        "label": "E-mail du contact",
+        "description": "Adresse e-mail du contact associé au ticket."
+      },
       "label_custodyLocation": {
         "label": "Lieu de garde",
         "description": "Chemin des données : {{path}}"

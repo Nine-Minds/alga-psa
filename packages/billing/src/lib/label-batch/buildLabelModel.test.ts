@@ -45,17 +45,19 @@ describe('buildLabelModel', () => {
     expect(templateAstSchema.safeParse({ ...base, metadata: { templateName: 'Invoice' } }).success).toBe(true);
   });
 
-  it('T-sens: the catalog exposes worksheet fields without exposing record ids or contact data', () => {
+  it('T-sens: the catalog exposes worksheet fields and explicit contact fields without exposing record ids', () => {
     const paths = Object.values(LABEL_TEMPLATE_VALUE_BINDINGS).map((b) => (b as { path: string }).path).sort();
     expect(paths).toEqual([
-      'assetSerialNumber', 'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
+      'assetSerialNumber', 'clientName', 'code128Value', 'contactEmail', 'contactName', 'contactPhone', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
       'identifier', 'linkedAsset.cpuLine', 'linkedAsset.manufacturer', 'linkedAsset.model', 'linkedAsset.name', 'linkedAsset.osLine', 'linkedAsset.ramLine', 'linkedAsset.storageLine',
       'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
       'tenantClient.logoUrl', 'tenantClient.name', 'ticketDescription', 'ticketDescriptionRichText', 'title', 'url',
     ]);
     // assetSerialNumber is the only full serial; it is gated to full-page worksheets (tested below).
     const allowedSerialPaths = new Set(['serialSuffix', 'assetSerialNumber']);
-    expect(paths.some((p) => /serial(Number)?$|recordId|email|phone/i.test(p) && !allowedSerialPaths.has(p))).toBe(false);
+    const allowedContactPaths = new Set(['contactEmail', 'contactPhone']);
+    expect(paths.some((p) => /serial(Number)?$|recordId|email|phone/i.test(p)
+      && !allowedSerialPaths.has(p) && !allowedContactPaths.has(p))).toBe(false);
   });
 
   it('provides the full serial, description and asset specifications only to full-page ticket worksheets before evaluation', () => {

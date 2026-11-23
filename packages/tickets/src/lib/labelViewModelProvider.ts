@@ -61,11 +61,22 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
         const query = facade
           .table('tickets as t')
           .where('t.ticket_id', ticketId)
-          .select('t.ticket_id', 't.ticket_number', 't.title', 'c.client_name', 'cat.category_name', 'sub.category_name as subcategory_name');
+          .select(
+            't.ticket_id',
+            't.ticket_number',
+            't.title',
+            't.contact_name_id',
+            'c.client_name',
+            'ct.full_name as contact_name',
+            'ct.email as contact_email',
+            'cat.category_name',
+            'sub.category_name as subcategory_name'
+          );
         if (context.includeWorksheetDetails) {
           query.select('t.attributes');
         }
         facade.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+        facade.tenantJoin(query, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as sub', 't.subcategory_id', 'sub.category_id', { type: 'left' });
         const row = (await query.first()) as
@@ -73,7 +84,10 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
               ticket_id: string;
               ticket_number: string | null;
               title: string | null;
+              contact_name_id: string | null;
               client_name: string | null;
+              contact_name: string | null;
+              contact_email: string | null;
               category_name: string | null;
               subcategory_name: string | null;
               attributes?: { description?: unknown } | null;
@@ -83,6 +97,17 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           return null;
         }
 
+        const contactPhone = row.contact_name_id
+          ? ((await facade
+              .table('contact_phone_numbers')
+              .where('contact_name_id', row.contact_name_id)
+              .select('phone_number')
+              .orderBy([
+                { column: 'is_default', order: 'desc' },
+                { column: 'display_order', order: 'asc' },
+              ])
+              .first()) as { phone_number: string } | undefined)
+          : undefined;
         const description = row.attributes?.description;
         const ticketDescription = flattenBlockContentToPlainText(description).trim() || null;
 
@@ -95,6 +120,9 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           code128Value: null,
           title: row.title ?? null,
           clientName: row.client_name ?? null,
+          contactName: row.contact_name ?? null,
+          contactPhone: contactPhone?.phone_number ?? null,
+          contactEmail: row.contact_email ?? null,
           detail: deriveWorkReason(row.subcategory_name, row.category_name),
           ...(context.includeWorksheetDetails
             ? {

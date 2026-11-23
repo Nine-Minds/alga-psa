@@ -110,6 +110,10 @@ export interface LabelViewModel {
   code128Value: string | null;
   title: string | null;
   clientName: string | null;
+  /** Ticket work-tag contact fields, available to custom templates at every page size. */
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
   /** Free detail line: work reason (ticket), asset type (asset), product name (stock unit). */
   detail: string | null;
   /** Linked asset tag (ticket work tag). */

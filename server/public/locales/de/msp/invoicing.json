@@ -2376,6 +2376,18 @@
         "label": "Ticketbeschreibung",
         "description": "Ticketbeschreibung als Klartext, nur auf Kunden-Arbeitsblättern mit Hochformatseiten von mindestens 210 mm Breite verfügbar."
       },
+      "label_contactName": {
+        "label": "Name des Kontakts",
+        "description": "Name des Kontakts, der dem Ticket zugeordnet ist."
+      },
+      "label_contactPhone": {
+        "label": "Telefon des Kontakts",
+        "description": "Primäre Telefonnummer des Kontakts, der dem Ticket zugeordnet ist."
+      },
+      "label_contactEmail": {
+        "label": "E-Mail des Kontakts",
+        "description": "E-Mail-Adresse des Kontakts, der dem Ticket zugeordnet ist."
+      },
       "label_custodyLocation": {
         "label": "Aufbewahrungsort",
         "description": "Datenpfad: {{path}}"

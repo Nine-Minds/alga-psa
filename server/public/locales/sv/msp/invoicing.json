@@ -2376,6 +2376,18 @@
         "label": "Ärendebeskrivning",
         "description": "Ärendebeskrivning som ren text, endast tillgänglig på kundarbetsblad med stående sida som är minst 210 mm bred."
       },
+      "label_contactName": {
+        "label": "Kontaktpersonens namn",
+        "description": "Namnet på kontaktpersonen som är kopplad till ärendet."
+      },
+      "label_contactPhone": {
+        "label": "Kontaktpersonens telefon",
+        "description": "Det primära telefonnumret till kontaktpersonen som är kopplad till ärendet."
+      },
+      "label_contactEmail": {
+        "label": "Kontaktpersonens e-post",
+        "description": "E-postadressen till kontaktpersonen som är kopplad till ärendet."
+      },
       "label_custodyLocation": {
         "label": "Förvaringsplats",
         "description": "Datasökväg: {{path}}"

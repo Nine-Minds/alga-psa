@@ -83,6 +83,9 @@ describe('document binding catalog generation', () => {
 
   it('offers worksheet fields and asset specifications in the work-tag picker with round-trip paths', () => {
     const expected = [
+      ['label.contactName', 'contactName'],
+      ['label.contactPhone', 'contactPhone'],
+      ['label.contactEmail', 'contactEmail'],
       ['label.secondaryIdentifier', 'secondaryIdentifier'],
       ['label.assetSerialNumber', 'assetSerialNumber'],
       ['label.ticketDescription', 'ticketDescription'],

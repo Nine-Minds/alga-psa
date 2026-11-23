@@ -43,6 +43,24 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     category: 'Work Tag',
     description: 'Structured ticket description for rich-text nodes on full-page customer worksheets.',
   },
+  'label.contactName': {
+    path: 'label.contactName',
+    label: 'Contact Name',
+    category: 'Work Tag',
+    description: 'Name of the contact assigned to the ticket.',
+  },
+  'label.contactPhone': {
+    path: 'label.contactPhone',
+    label: 'Contact Phone',
+    category: 'Work Tag',
+    description: 'Primary phone number for the contact assigned to the ticket.',
+  },
+  'label.contactEmail': {
+    path: 'label.contactEmail',
+    label: 'Contact Email',
+    category: 'Work Tag',
+    description: 'Email address for the contact assigned to the ticket.',
+  },
   'invoice.number': {
     path: 'invoice.number',
     label: 'Invoice Number',

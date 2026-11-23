@@ -2413,6 +2413,18 @@
         "label": "Descripción del ticket",
         "description": "Descripción del ticket como texto sin formato, disponible solo en hojas de trabajo de cliente a página completa."
       },
+      "label_contactName": {
+        "label": "Nombre del contacto",
+        "description": "Nombre del contacto asignado al ticket."
+      },
+      "label_contactPhone": {
+        "label": "Teléfono del contacto",
+        "description": "Número de teléfono principal del contacto asignado al ticket."
+      },
+      "label_contactEmail": {
+        "label": "Correo electrónico del contacto",
+        "description": "Dirección de correo electrónico del contacto asignado al ticket."
+      },
       "label_custodyLocation": {
         "label": "Ubicación de custodia",
         "description": "Ruta de datos: {{path}}"

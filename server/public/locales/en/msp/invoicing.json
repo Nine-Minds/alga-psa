@@ -2376,6 +2376,18 @@
         "label": "Ticket description",
         "description": "Ticket description as plain text, available on full-page customer worksheets."
       },
+      "label_contactName": {
+        "label": "Contact Name",
+        "description": "Name of the contact assigned to the ticket."
+      },
+      "label_contactPhone": {
+        "label": "Contact Phone",
+        "description": "Primary phone number for the contact assigned to the ticket."
+      },
+      "label_contactEmail": {
+        "label": "Contact Email",
+        "description": "Email address for the contact assigned to the ticket."
+      },
       "label_custodyLocation": {
         "label": "Custody location",
         "description": "Data path: {{path}}"

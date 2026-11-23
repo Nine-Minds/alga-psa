@@ -2376,6 +2376,18 @@
         "label": "Descrizione del ticket",
         "description": "Descrizione del ticket in testo semplice, disponibile solo nei fogli di lavoro cliente in verticale con larghezza di almeno 210 mm."
       },
+      "label_contactName": {
+        "label": "Nome del contatto",
+        "description": "Nome del contatto assegnato al ticket."
+      },
+      "label_contactPhone": {
+        "label": "Telefono del contatto",
+        "description": "Numero di telefono principale del contatto assegnato al ticket."
+      },
+      "label_contactEmail": {
+        "label": "E-mail del contatto",
+        "description": "Indirizzo e-mail del contatto assegnato al ticket."
+      },
       "label_custodyLocation": {
         "label": "Luogo di custodia",
         "description": "Percorso dati: {{path}}"

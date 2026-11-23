@@ -2376,6 +2376,18 @@
         "label": "Ticketbeschrijving",
         "description": "Ticketbeschrijving als platte tekst, alleen beschikbaar op klantenwerkbladen met een staande pagina van minstens 210 mm breed."
       },
+      "label_contactName": {
+        "label": "Naam van contactpersoon",
+        "description": "Naam van de contactpersoon die aan het ticket is toegewezen."
+      },
+      "label_contactPhone": {
+        "label": "Telefoon van contactpersoon",
+        "description": "Primair telefoonnummer van de contactpersoon die aan het ticket is toegewezen."
+      },
+      "label_contactEmail": {
+        "label": "E-mail van contactpersoon",
+        "description": "E-mailadres van de contactpersoon die aan het ticket is toegewezen."
+      },
       "label_custodyLocation": {
         "label": "Bewaarlocatie",
         "description": "Gegevenspad: {{path}}"

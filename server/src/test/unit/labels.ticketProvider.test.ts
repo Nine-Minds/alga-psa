@@ -5,7 +5,10 @@ const state = vi.hoisted(() => ({
   permitted: true,
   authorizationError: null as Error | null,
   row: null as Record<string, unknown> | null,
+  contactPhone: null as Record<string, unknown> | null,
   selected: [] as string[],
+  joins: [] as string[],
+  phoneOrder: [] as Array<{ column: string; order: string }>,
   queries: 0,
 }));
 
@@ -13,7 +16,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => state.permitt
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: {} }),
   tenantDb: () => ({
-    table: () => {
+    table: (tableName: string) => {
       state.queries += 1;
       const query = {
         where: () => query,
@@ -21,11 +24,17 @@ vi.mock('@alga-psa/db', () => ({
           state.selected.push(...columns);
           return query;
         },
-        first: async () => state.row,
+        orderBy: (order: Array<{ column: string; order: string }>) => {
+          if (tableName === 'contact_phone_numbers') state.phoneOrder = order;
+          return query;
+        },
+        first: async () => tableName === 'contact_phone_numbers' ? state.contactPhone : state.row,
       };
       return query;
     },
-    tenantJoin: () => undefined,
+    tenantJoin: (_query: unknown, tableName: string) => {
+      state.joins.push(tableName);
+    },
   }),
 }));
 vi.mock('@alga-psa/tickets/lib/ticketRecordAuthorization', () => ({
@@ -48,12 +57,18 @@ beforeEach(() => {
   state.permitted = true;
   state.authorizationError = null;
   state.selected = [];
+  state.joins = [];
+  state.contactPhone = { phone_number: '+1-206-555-0142' };
+  state.phoneOrder = [];
   state.queries = 0;
   state.row = {
     ticket_id: ticketId,
     ticket_number: 'TIC-1',
     title: 'Broken laptop',
+    contact_name_id: 'contact-1',
     client_name: 'Client',
+    contact_name: 'Avery Johnson',
+    contact_email: 'avery.johnson@example.com',
     category_name: 'Hardware',
     subcategory_name: 'Laptop',
     attributes: { description: 'First paragraph\nSecond paragraph' },
@@ -61,6 +76,22 @@ beforeEach(() => {
 });
 
 describe('ticketLabelViewModelProvider worksheet details', () => {
+  it.each([context, worksheetContext])('includes contact fields regardless of page-size mode', async (requestContext) => {
+    const [result] = await ticketLabelViewModelProvider.getLabelViewModels(requestContext, [ticketId]);
+
+    expect(result).toMatchObject({
+      contactName: 'Avery Johnson',
+      contactPhone: '+1-206-555-0142',
+      contactEmail: 'avery.johnson@example.com',
+    });
+    expect(state.selected).toContain('t.contact_name_id');
+    expect(state.joins).toContain('contacts as ct');
+    expect(state.phoneOrder).toEqual([
+      { column: 'is_default', order: 'desc' },
+      { column: 'display_order', order: 'asc' },
+    ]);
+  });
+
   it('does not read or return a description for ordinary tags', async () => {
     const [result] = await ticketLabelViewModelProvider.getLabelViewModels(context, [ticketId]);
     expect(state.selected).not.toContain('t.attributes');
