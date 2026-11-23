@@ -39,10 +39,10 @@ export const OpenerCommentRow: React.FC<OpenerCommentRowProps> = ({
   return (
     <div
       {...withDataAutomationId({ id })}
-      className={`flex w-full max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))] ${
+      className={`flex w-full max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-[rgb(var(--color-text-500))] ${
         isCompact
-          ? `border-l-2 rounded-r-md pl-3 pr-2 py-1 ${accentBorderClassName ?? 'border-gray-200 dark:border-[rgb(var(--color-border-200))]'}`
-          : 'rounded-lg border border-dashed border-gray-200 dark:border-[rgb(var(--color-border-200))] px-3 py-1.5 mb-2'
+          ? `border-l-2 rounded-r-md pl-3 pr-2 py-1 ${accentBorderClassName ?? 'border-[rgb(var(--color-border-200))]'}`
+          : 'rounded-lg border border-dashed border-[rgb(var(--color-border-200))] px-3 py-1.5 mb-2'
       }`}
     >
       <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
