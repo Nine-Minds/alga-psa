@@ -208,4 +208,66 @@ describe('QuoteLineItemsEditor product description (alga-2026-0002804)', () => {
     await renderEditor([catalogLine({ catalog_description: 'Old snapshot text' })]);
     expect(caption()).toBeNull();
   });
+
+  describe('lookup in flight while the quote lines change', () => {
+    type Lookup = { ids: string[]; resolve: (value: Record<string, string | null>) => void };
+    const deferLookups = () => {
+      const lookups: Lookup[] = [];
+      actionMocks.getServiceCatalogDescriptions.mockImplementation((ids: string[]) =>
+        new Promise((resolve) => { lookups.push({ ids, resolve }); }));
+      return lookups;
+    };
+    const caption = (id = 'catalog-1') => document.getElementById(`quote-line-product-description-edited-${id}`);
+    const rerenderEditor = (utils: ReturnType<typeof render>, items: DraftQuoteItem[]) =>
+      utils.rerender(<QuoteLineItemsEditor items={items} currencyCode="USD" onChange={vi.fn()} />);
+
+    it('keeps the result when the lines are re-rendered (quantity edited) before the lookup resolves', async () => {
+      const lookups = deferLookups();
+      const original = catalogLine({ catalog_description: 'Edited wording', catalog_description_edited: true });
+      const utils = await renderEditor([original]);
+
+      rerenderEditor(utils, [{ ...original, quantity: 5 }]);
+      await act(async () => { await Promise.resolve(); });
+
+      await act(async () => { lookups.forEach((l) => l.resolve({ 'svc-1': PRODUCT_TEXT })); });
+
+      await waitFor(() => expect(refreshButton()?.disabled).toBe(false));
+      expect(caption()?.textContent).toBe('Edited for this quote');
+    });
+
+    it('loads every id when a product line is added before the first lookup resolves', async () => {
+      const lookups = deferLookups();
+      const original = catalogLine({ catalog_description: 'Edited wording', catalog_description_edited: true });
+      const utils = await renderEditor([original]);
+
+      const added = catalogLine({
+        local_id: 'catalog-2', quote_item_id: 'catalog-2', service_id: 'svc-2', service_name: 'Switch',
+        catalog_description: 'Edited switch', catalog_description_edited: true,
+      });
+      const gone = catalogLine({
+        local_id: 'catalog-3', quote_item_id: 'catalog-3', service_id: 'svc-3', service_name: 'Retired',
+        catalog_description: 'Edited retired', catalog_description_edited: true,
+      });
+      rerenderEditor(utils, [original, added, gone]);
+      await act(async () => { await Promise.resolve(); });
+
+      // Every id has been asked for by some lookup; none is stuck un-requested.
+      const requested = new Set(lookups.flatMap((l) => l.ids));
+      expect(requested).toEqual(new Set(['svc-1', 'svc-2', 'svc-3']));
+
+      // The mock omits svc-3 (product gone).
+      await act(async () => {
+        lookups.forEach((l) => l.resolve(Object.fromEntries(
+          l.ids.filter((id) => id !== 'svc-3').map((id) => [id, id === 'svc-1' ? PRODUCT_TEXT : 'Switch text']),
+        )));
+      });
+
+      await waitFor(() => expect(refreshButton('catalog-1')?.disabled).toBe(false));
+      await waitFor(() => expect(refreshButton('catalog-2')?.disabled).toBe(false));
+      expect(caption('catalog-1')).not.toBeNull();
+      expect(caption('catalog-2')).not.toBeNull();
+      expect(refreshButton('catalog-3')?.closest('[data-tooltip]')?.getAttribute('data-tooltip'))
+        .toBe('Product no longer in the catalog');
+    });
+  });
 });

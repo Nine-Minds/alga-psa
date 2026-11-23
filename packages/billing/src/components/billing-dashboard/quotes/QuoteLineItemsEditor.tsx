@@ -311,21 +311,36 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [goneServiceIds, setGoneServiceIds] = useState<Record<string, true>>({});
   const requestedServiceIds = useRef<Set<string>>(new Set());
 
-  const catalogBackedServiceIds = useMemo(
+  // Stable key: only changes when the *set* of catalog-backed services changes,
+  // so typing / quantity edits don't re-run the lookup effect.
+  const catalogBackedServiceKey = useMemo(
     () => Array.from(new Set(
       items.filter((item) => !item.is_discount && item.service_id).map((item) => item.service_id as string)
-    )),
+    )).sort().join('\u0000'),
     [items]
   );
 
+  // Unmount-only guard. Results of a started lookup are merged by id (idempotent)
+  // even if the quote lines changed meanwhile; dropping them would leave their ids
+  // marked as requested and therefore never fetched again.
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    const missing = catalogBackedServiceIds.filter((id) => !requestedServiceIds.current.has(id));
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    const ids = catalogBackedServiceKey ? catalogBackedServiceKey.split('\u0000') : [];
+    const missing = ids.filter((id) => !requestedServiceIds.current.has(id));
     if (missing.length === 0) return;
     missing.forEach((id) => requestedServiceIds.current.add(id));
-    let cancelled = false;
     getServiceCatalogDescriptions(missing)
       .then((result) => {
-        if (cancelled || !result || typeof result !== 'object') return;
+        if (!isMountedRef.current) return;
+        if (!result || typeof result !== 'object') {
+          missing.forEach((id) => requestedServiceIds.current.delete(id));
+          return;
+        }
         setCurrentDescriptions((prev) => ({ ...prev, ...result }));
         const gone: Record<string, true> = {};
         for (const id of missing) {
@@ -337,8 +352,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         // Let a later render retry; until then the refresh button stays disabled.
         missing.forEach((id) => requestedServiceIds.current.delete(id));
       });
-    return () => { cancelled = true; };
-  }, [catalogBackedServiceIds]);
+  }, [catalogBackedServiceKey]);
 
   const renderProductDescription = (item: DraftQuoteItem) => {
     if (item.is_discount) return null;
