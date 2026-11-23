@@ -6,21 +6,21 @@
     "indexEntriesPerProject": 4,
     "totalIndexRows": 10000
   },
-  "tenant": "8da37da6-29ac-457d-b94f-e8c06bbc35e9",
+  "tenant": "4d419742-f6b9-4358-bd23-b1fd06cc460b",
   "authorization": {
     "evaluation": "createProjectReadAuthorizer + real kernel + builtin provider + database-backed bundle provider",
     "policy": {
       "resource": "project",
       "action": "read",
       "template": "selected_clients",
-      "allowedClientId": "d472db47-8a47-4659-843f-917af108a917",
-      "deniedClientId": "a81c0dee-79a8-488c-9513-f953e286525f",
+      "allowedClientId": "d21236ce-7305-46eb-b2e1-7766e8893397",
+      "deniedClientId": "9721ec00-317c-4d92-af90-7cc2668b20b2",
       "redactedFields": [
         "projects.description",
         "project_tasks.description"
       ],
-      "bundleId": "beeca5d5-261d-413b-9081-6d4c446d184f",
-      "revisionId": "db32f1e9-cd6e-4a24-8d81-2a15d1ecdd5b"
+      "bundleId": "75cc7750-614d-4726-8b50-2dcfabebed12",
+      "revisionId": "d10f7310-1be4-42a3-9601-a1f25b38de08"
     },
     "projectDecisionCounts": {
       "allowed": 1250,
@@ -29,11 +29,11 @@
       "redactedDenied": 1250
     },
     "separateSweepMs": [
-      1137.053906,
-      1006.9067899999995,
-      990.5794739999992
+      1110.0386720000001,
+      1059.901555,
+      987.2535809999999
     ],
-    "separateSweepMedianMs": 1006.9067899999995,
+    "separateSweepMedianMs": 1059.901555,
     "fullTenantSweepIsDiagnosticOnly": true
   },
   "warmCache": {
@@ -44,20 +44,20 @@
   "searches": {
     "common": {
       "actionMs": [
-        794.8351189999994,
-        795.1831080000002,
-        809.3719520000004
+        802.194007,
+        779.707676,
+        795.0759640000006
       ],
       "databaseMs": [
-        529.8199800000002,
-        532.5599320000001,
-        539.5163979999998
+        534.987674,
+        533.1225779999986,
+        535.5993629999994
       ],
       "databaseStatementMs": {
         "baselineSearch_0": [
-          529.8199800000002,
-          532.5599320000001,
-          539.5163979999998
+          534.987674,
+          533.1225779999986,
+          535.5993629999994
         ]
       },
       "plans": [
@@ -74,8 +74,8 @@
                 "Total Cost": 40.77,
                 "Plan Rows": 1,
                 "Plan Width": 32,
-                "Actual Startup Time": 731.904,
-                "Actual Total Time": 732.087,
+                "Actual Startup Time": 741,
+                "Actual Total Time": 741.176,
                 "Actual Rows": 625,
                 "Actual Loops": 1,
                 "Shared Hit Blocks": 146879,
@@ -98,8 +98,8 @@
                     "Total Cost": 40.76,
                     "Plan Rows": 1,
                     "Plan Width": 32,
-                    "Actual Startup Time": 731.903,
-                    "Actual Total Time": 731.959,
+                    "Actual Startup Time": 740.999,
+                    "Actual Total Time": 741.054,
                     "Actual Rows": 2500,
                     "Actual Loops": 1,
                     "Sort Key": [
@@ -129,8 +129,8 @@
                         "Total Cost": 40.75,
                         "Plan Rows": 1,
                         "Plan Width": 32,
-                        "Actual Startup Time": 0.385,
-                        "Actual Total Time": 730.888,
+                        "Actual Startup Time": 0.326,
+                        "Actual Total Time": 739.973,
                         "Actual Rows": 2500,
                         "Actual Loops": 1,
                         "Inner Unique": true,
@@ -157,8 +157,8 @@
                             "Total Cost": 32.42,
                             "Plan Rows": 1,
                             "Plan Width": 128,
-                            "Actual Startup Time": 0.383,
-                            "Actual Total Time": 729.397,
+                            "Actual Startup Time": 0.324,
+                            "Actual Total Time": 738.448,
                             "Actual Rows": 2500,
                             "Actual Loops": 1,
                             "Inner Unique": false,
@@ -188,13 +188,13 @@
                                 "Total Cost": 21.22,
                                 "Plan Rows": 1,
                                 "Plan Width": 112,
-                                "Actual Startup Time": 0.015,
-                                "Actual Total Time": 27.964,
+                                "Actual Startup Time": 0.014,
+                                "Actual Total Time": 27.823,
                                 "Actual Rows": 2500,
                                 "Actual Loops": 1,
-                                "Index Cond": "((tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
+                                "Index Cond": "((tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
                                 "Rows Removed by Index Recheck": 0,
-                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((search_vector @@ '''commonamb'''::tsquery) OR (search_vector @@ '''commonamb'':*'::tsquery) OR (title ~~* '%commonamber%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%commonamber%'::text) OR (title % 'commonamber'::text) OR (COALESCE(subtitle, ''::text) % 'commonamber'::text)))",
+                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((search_vector @@ '''commonamb'''::tsquery) OR (search_vector @@ '''commonamb'':*'::tsquery) OR (title ~~* '%commonamber%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%commonamber%'::text) OR (title % 'commonamber'::text) OR (COALESCE(subtitle, ''::text) % 'commonamber'::text)))",
                                 "Rows Removed by Filter": 7500,
                                 "Shared Hit Blocks": 2504,
                                 "Shared Read Blocks": 0,
@@ -219,10 +219,10 @@
                                 "Plan Rows": 2,
                                 "Plan Width": 48,
                                 "Actual Startup Time": 0.019,
-                                "Actual Total Time": 0.151,
+                                "Actual Total Time": 0.152,
                                 "Actual Rows": 2500,
                                 "Actual Loops": 2500,
-                                "Recheck Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                "Recheck Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                 "Rows Removed by Index Recheck": 0,
                                 "Exact Heap Blocks": 135000,
                                 "Lossy Heap Blocks": 0,
@@ -247,11 +247,11 @@
                                     "Total Cost": 4.29,
                                     "Plan Rows": 2,
                                     "Plan Width": 0,
-                                    "Actual Startup Time": 0.018,
-                                    "Actual Total Time": 0.018,
+                                    "Actual Startup Time": 0.017,
+                                    "Actual Total Time": 0.017,
                                     "Actual Rows": 2500,
                                     "Actual Loops": 2500,
-                                    "Index Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                    "Index Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                     "Shared Hit Blocks": 7500,
                                     "Shared Read Blocks": 0,
                                     "Shared Dirtied Blocks": 0,
@@ -284,7 +284,7 @@
                             "Actual Total Time": 0,
                             "Actual Rows": 0,
                             "Actual Loops": 2500,
-                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (phase_id = project_tasks.phase_id))",
+                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (phase_id = project_tasks.phase_id))",
                             "Rows Removed by Index Recheck": 0,
                             "Shared Hit Blocks": 1875,
                             "Shared Read Blocks": 0,
@@ -315,9 +315,9 @@
                 "Temp Read Blocks": 0,
                 "Temp Written Blocks": 0
               },
-              "Planning Time": 0.353,
+              "Planning Time": 0.329,
               "Triggers": [],
-              "Execution Time": 732.126
+              "Execution Time": 741.214
             }
           ]
         }
@@ -327,26 +327,26 @@
         625,
         625
       ],
-      "actionMedianMs": 795.1831080000002,
-      "databaseMedianMs": 532.5599320000001,
+      "actionMedianMs": 795.0759640000006,
+      "databaseMedianMs": 534.987674,
       "returnedProjectCount": 625
     },
     "rare": {
       "actionMs": [
-        34.85036300000138,
-        35.4749869999996,
-        35.47138099999938
+        34.60890599999948,
+        34.39118400000007,
+        34.38476199999968
       ],
       "databaseMs": [
-        33.7728819999993,
-        33.04702599999837,
-        32.88604099999975
+        32.42916400000104,
+        32.43117899999925,
+        35.35095299999921
       ],
       "databaseStatementMs": {
         "baselineSearch_0": [
-          33.7728819999993,
-          33.04702599999837,
-          32.88604099999975
+          32.42916400000104,
+          32.43117899999925,
+          35.35095299999921
         ]
       },
       "plans": [
@@ -363,8 +363,8 @@
                 "Total Cost": 40.77,
                 "Plan Rows": 1,
                 "Plan Width": 32,
-                "Actual Startup Time": 32.537,
-                "Actual Total Time": 32.539,
+                "Actual Startup Time": 32.166,
+                "Actual Total Time": 32.168,
                 "Actual Rows": 1,
                 "Actual Loops": 1,
                 "Shared Hit Blocks": 2735,
@@ -387,8 +387,8 @@
                     "Total Cost": 40.76,
                     "Plan Rows": 1,
                     "Plan Width": 32,
-                    "Actual Startup Time": 32.537,
-                    "Actual Total Time": 32.538,
+                    "Actual Startup Time": 32.166,
+                    "Actual Total Time": 32.167,
                     "Actual Rows": 4,
                     "Actual Loops": 1,
                     "Sort Key": [
@@ -418,8 +418,8 @@
                         "Total Cost": 40.75,
                         "Plan Rows": 1,
                         "Plan Width": 32,
-                        "Actual Startup Time": 0.272,
-                        "Actual Total Time": 32.535,
+                        "Actual Startup Time": 0.258,
+                        "Actual Total Time": 32.164,
                         "Actual Rows": 4,
                         "Actual Loops": 1,
                         "Inner Unique": true,
@@ -446,8 +446,8 @@
                             "Total Cost": 32.42,
                             "Plan Rows": 1,
                             "Plan Width": 128,
-                            "Actual Startup Time": 0.27,
-                            "Actual Total Time": 32.529,
+                            "Actual Startup Time": 0.256,
+                            "Actual Total Time": 32.159,
                             "Actual Rows": 4,
                             "Actual Loops": 1,
                             "Inner Unique": false,
@@ -477,13 +477,13 @@
                                 "Total Cost": 21.22,
                                 "Plan Rows": 1,
                                 "Plan Width": 112,
-                                "Actual Startup Time": 0.019,
-                                "Actual Total Time": 31.356,
+                                "Actual Startup Time": 0.018,
+                                "Actual Total Time": 31.014,
                                 "Actual Rows": 4,
                                 "Actual Loops": 1,
-                                "Index Cond": "((tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
+                                "Index Cond": "((tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
                                 "Rows Removed by Index Recheck": 0,
-                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((search_vector @@ '''rarezircon'''::tsquery) OR (search_vector @@ '''rarezircon'':*'::tsquery) OR (title ~~* '%rarezircon%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%rarezircon%'::text) OR (title % 'rarezircon'::text) OR (COALESCE(subtitle, ''::text) % 'rarezircon'::text)))",
+                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((search_vector @@ '''rarezircon'''::tsquery) OR (search_vector @@ '''rarezircon'':*'::tsquery) OR (title ~~* '%rarezircon%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%rarezircon%'::text) OR (title % 'rarezircon'::text) OR (COALESCE(subtitle, ''::text) % 'rarezircon'::text)))",
                                 "Rows Removed by Filter": 9996,
                                 "Shared Hit Blocks": 2504,
                                 "Shared Read Blocks": 0,
@@ -507,11 +507,11 @@
                                 "Total Cost": 11.16,
                                 "Plan Rows": 2,
                                 "Plan Width": 48,
-                                "Actual Startup Time": 0.023,
-                                "Actual Total Time": 0.157,
+                                "Actual Startup Time": 0.022,
+                                "Actual Total Time": 0.156,
                                 "Actual Rows": 2500,
                                 "Actual Loops": 4,
-                                "Recheck Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                "Recheck Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                 "Rows Removed by Index Recheck": 0,
                                 "Exact Heap Blocks": 216,
                                 "Lossy Heap Blocks": 0,
@@ -536,11 +536,11 @@
                                     "Total Cost": 4.29,
                                     "Plan Rows": 2,
                                     "Plan Width": 0,
-                                    "Actual Startup Time": 0.02,
-                                    "Actual Total Time": 0.02,
+                                    "Actual Startup Time": 0.019,
+                                    "Actual Total Time": 0.019,
                                     "Actual Rows": 2500,
                                     "Actual Loops": 4,
-                                    "Index Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                    "Index Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                     "Shared Hit Blocks": 12,
                                     "Shared Read Blocks": 0,
                                     "Shared Dirtied Blocks": 0,
@@ -569,11 +569,11 @@
                             "Total Cost": 8.29,
                             "Plan Rows": 1,
                             "Plan Width": 48,
-                            "Actual Startup Time": 0.001,
-                            "Actual Total Time": 0.001,
+                            "Actual Startup Time": 0,
+                            "Actual Total Time": 0,
                             "Actual Rows": 0,
                             "Actual Loops": 4,
-                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (phase_id = project_tasks.phase_id))",
+                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (phase_id = project_tasks.phase_id))",
                             "Rows Removed by Index Recheck": 0,
                             "Shared Hit Blocks": 3,
                             "Shared Read Blocks": 0,
@@ -604,9 +604,9 @@
                 "Temp Read Blocks": 0,
                 "Temp Written Blocks": 0
               },
-              "Planning Time": 0.263,
+              "Planning Time": 0.241,
               "Triggers": [],
-              "Execution Time": 32.555
+              "Execution Time": 32.184
             }
           ]
         }
@@ -616,26 +616,26 @@
         1,
         1
       ],
-      "actionMedianMs": 35.47138099999938,
-      "databaseMedianMs": 33.04702599999837,
+      "actionMedianMs": 34.39118400000007,
+      "databaseMedianMs": 32.43117899999925,
       "returnedProjectCount": 1
     },
     "noMatch": {
       "actionMs": [
-        36.49884900000143,
-        36.63573799999904,
-        36.47784900000079
+        37.14997200000107,
+        36.564963999999236,
+        36.55199899999934
       ],
       "databaseMs": [
-        36.16754099999889,
-        36.36738899999909,
-        38.89364800000112
+        35.91868799999975,
+        36.16802199999984,
+        35.909600999999384
       ],
       "databaseStatementMs": {
         "baselineSearch_0": [
-          36.16754099999889,
-          36.36738899999909,
-          38.89364800000112
+          35.91868799999975,
+          36.16802199999984,
+          35.909600999999384
         ]
       },
       "plans": [
@@ -652,8 +652,8 @@
                 "Total Cost": 40.77,
                 "Plan Rows": 1,
                 "Plan Width": 32,
-                "Actual Startup Time": 35.684,
-                "Actual Total Time": 35.684,
+                "Actual Startup Time": 35.621,
+                "Actual Total Time": 35.622,
                 "Actual Rows": 0,
                 "Actual Loops": 1,
                 "Shared Hit Blocks": 2504,
@@ -676,8 +676,8 @@
                     "Total Cost": 40.76,
                     "Plan Rows": 1,
                     "Plan Width": 32,
-                    "Actual Startup Time": 35.684,
-                    "Actual Total Time": 35.684,
+                    "Actual Startup Time": 35.621,
+                    "Actual Total Time": 35.622,
                     "Actual Rows": 0,
                     "Actual Loops": 1,
                     "Sort Key": [
@@ -707,8 +707,8 @@
                         "Total Cost": 40.75,
                         "Plan Rows": 1,
                         "Plan Width": 32,
-                        "Actual Startup Time": 35.683,
-                        "Actual Total Time": 35.683,
+                        "Actual Startup Time": 35.62,
+                        "Actual Total Time": 35.62,
                         "Actual Rows": 0,
                         "Actual Loops": 1,
                         "Inner Unique": true,
@@ -735,8 +735,8 @@
                             "Total Cost": 32.42,
                             "Plan Rows": 1,
                             "Plan Width": 128,
-                            "Actual Startup Time": 35.682,
-                            "Actual Total Time": 35.683,
+                            "Actual Startup Time": 35.62,
+                            "Actual Total Time": 35.62,
                             "Actual Rows": 0,
                             "Actual Loops": 1,
                             "Inner Unique": false,
@@ -766,13 +766,13 @@
                                 "Total Cost": 21.22,
                                 "Plan Rows": 1,
                                 "Plan Width": 112,
-                                "Actual Startup Time": 35.682,
-                                "Actual Total Time": 35.682,
+                                "Actual Startup Time": 35.619,
+                                "Actual Total Time": 35.619,
                                 "Actual Rows": 0,
                                 "Actual Loops": 1,
-                                "Index Cond": "((tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
+                                "Index Cond": "((tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (object_type = ANY ('{project,project_phase,project_task,project_task_comment}'::text[])))",
                                 "Rows Removed by Index Recheck": 0,
-                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{7e902712-e683-411e-b29e-c029633aecd3}'::uuid[])) AND ((search_vector @@ '''nevermatchingtoken'''::tsquery) OR (search_vector @@ '''nevermatchingtoken'':*'::tsquery) OR (title ~~* '%nevermatchingtoken%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%nevermatchingtoken%'::text) OR (title % 'nevermatchingtoken'::text) OR (COALESCE(subtitle, ''::text) % 'nevermatchingtoken'::text)))",
+                                "Filter": "(((required_permission IS NULL) OR (required_permission = ANY ('{project:read}'::text[]))) AND ((NOT is_private) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((cardinality(visible_to_user_ids) = 0) OR (visible_to_user_ids && '{c5cbc4eb-b548-4be1-9123-555ca210146d}'::uuid[])) AND ((search_vector @@ '''nevermatchingtoken'''::tsquery) OR (search_vector @@ '''nevermatchingtoken'':*'::tsquery) OR (title ~~* '%nevermatchingtoken%'::text) OR (COALESCE(subtitle, ''::text) ~~* '%nevermatchingtoken%'::text) OR (title % 'nevermatchingtoken'::text) OR (COALESCE(subtitle, ''::text) % 'nevermatchingtoken'::text)))",
                                 "Rows Removed by Filter": 10000,
                                 "Shared Hit Blocks": 2504,
                                 "Shared Read Blocks": 0,
@@ -800,7 +800,7 @@
                                 "Actual Total Time": 0,
                                 "Actual Rows": 0,
                                 "Actual Loops": 0,
-                                "Recheck Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                "Recheck Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                 "Rows Removed by Index Recheck": 0,
                                 "Exact Heap Blocks": 0,
                                 "Lossy Heap Blocks": 0,
@@ -829,7 +829,7 @@
                                     "Actual Total Time": 0,
                                     "Actual Rows": 0,
                                     "Actual Loops": 0,
-                                    "Index Cond": "(tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid)",
+                                    "Index Cond": "(tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid)",
                                     "Shared Hit Blocks": 0,
                                     "Shared Read Blocks": 0,
                                     "Shared Dirtied Blocks": 0,
@@ -862,7 +862,7 @@
                             "Actual Total Time": 0,
                             "Actual Rows": 0,
                             "Actual Loops": 0,
-                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '8da37da6-29ac-457d-b94f-e8c06bbc35e9'::uuid) AND (phase_id = project_tasks.phase_id))",
+                            "Index Cond": "((tenant = project_tasks.tenant) AND (tenant = '4d419742-f6b9-4358-bd23-b1fd06cc460b'::uuid) AND (phase_id = project_tasks.phase_id))",
                             "Rows Removed by Index Recheck": 0,
                             "Shared Hit Blocks": 0,
                             "Shared Read Blocks": 0,
@@ -893,9 +893,9 @@
                 "Temp Read Blocks": 0,
                 "Temp Written Blocks": 0
               },
-              "Planning Time": 0.238,
+              "Planning Time": 0.236,
               "Triggers": [],
-              "Execution Time": 35.699
+              "Execution Time": 35.637
             }
           ]
         }
@@ -905,8 +905,8 @@
         0,
         0
       ],
-      "actionMedianMs": 36.49884900000143,
-      "databaseMedianMs": 36.36738899999909,
+      "actionMedianMs": 36.564963999999236,
+      "databaseMedianMs": 35.91868799999975,
       "returnedProjectCount": 0
     }
   },
