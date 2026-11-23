@@ -64,7 +64,7 @@ export async function ensureInlineImageFolder(
     created_by: createdBy ?? null,
   });
 
-  await folders().insert(inserts);
+  await folders().insert(inserts).onConflict().ignore();
 
   return INLINE_IMAGE_FOLDER_PATH;
 }

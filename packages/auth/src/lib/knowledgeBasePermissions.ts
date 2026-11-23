@@ -1,5 +1,6 @@
 import { isMspPrincipalUserType, type IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { canReadPublishedKnowledgeBase as canReadPublishedKnowledgeBaseShared } from '@alga-psa/authorization/knowledgeBasePermissions';
 import { checkMultiplePermissions } from './rbac';
 
 /** Existing document grants remain sufficient. Scoped grants authorize only
@@ -18,7 +19,9 @@ export async function canReadKnowledgeBase(user: IUser, connection?: Knex): Prom
 }
 
 /** Portal readers must still filter to published articles with a client/public
- * audience. A client scoped grant does not authorize the internal KB actions. */
+ * audience. A client scoped grant does not authorize the internal KB actions.
+ * Delegates to the shared predicate that document authorization also uses, so
+ * the portal KB page and article image reads cannot disagree. */
 export async function canReadPublishedKnowledgeBase(user: IUser, connection?: Knex): Promise<boolean> {
-  return (await knowledgeBaseGrants(user, connection)).some(permission => permission.granted);
+  return canReadPublishedKnowledgeBaseShared(user, connection);
 }

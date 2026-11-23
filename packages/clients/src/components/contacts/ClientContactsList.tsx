@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
 import {
   getContactsByClient,
@@ -25,6 +26,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
 import { contactLocationCell } from '../../lib/contactLocationDisplay';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { isPlainLeftClick } from '@alga-psa/ui/lib/plainLeftClick';
 import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
@@ -363,20 +365,22 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             size="sm"
             className="mr-2"
           />
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => handleContactClick(record)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleContactClick(record);
-              }
+          {/* Plain click keeps Quick View, so the client context survives;
+              modified and middle clicks fall through to the browser and open
+              the full contact page (in a new tab when asked for). */}
+          <Link
+            id={`client-contact-name-link-${record.contact_name_id}`}
+            href={`/msp/contacts/${record.contact_name_id}`}
+            prefetch={false}
+            onClick={(e) => {
+              if (!isPlainLeftClick(e)) return;
+              e.preventDefault();
+              handleContactClick(record);
             }}
             className="text-blue-600 hover:underline cursor-pointer"
           >
             {record.full_name}
-          </div>
+          </Link>
           {record.contact_kind === 'shared_mailbox' && <span className="ml-2 rounded-full border px-2 py-0.5 text-xs">{t('contactsPage.sharedMailbox', { defaultValue: 'Shared mailbox' })}</span>}
         </div>
       ),

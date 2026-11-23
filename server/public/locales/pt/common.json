@@ -2304,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "mais {{count}} tags: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Modo de foco",
+      "exit": "Sair do modo de foco"
+    }
   }
 }

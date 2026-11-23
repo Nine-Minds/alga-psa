@@ -10,6 +10,7 @@ import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Laye
 import {
   getInvoiceEmailRecipientAction,
   InvoiceEmailRecipientInfo,
+  scheduleInvoiceEmailAction,
   sendInvoiceEmailAction
 } from '@alga-psa/billing/actions/invoiceJobActions';
 import toast from 'react-hot-toast';
@@ -158,6 +159,33 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     }
   };
 
+  const handleSchedule = async () => {
+    const validInvoiceIds = recipients.filter((r) => r.recipientEmail).map((r) => r.invoiceId);
+    if (validInvoiceIds.length === 0) return;
+
+    setSending(true);
+    const toastId = toast.loading(t('sendEmail.actions.scheduling', { defaultValue: 'Scheduling invoice email...' }));
+    try {
+      const result = await scheduleInvoiceEmailAction(validInvoiceIds, senderIdForSend(senderId));
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result), { id: toastId });
+        return;
+      }
+      if ('jobId' in result) {
+        toast.success(t('sendEmail.toasts.scheduled', { defaultValue: 'Invoice email scheduled' }), { id: toastId });
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(t('sendEmail.errors.scheduleFailed', { defaultValue: 'Failed to schedule invoice email' }), { id: toastId });
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      handleError(error, t('sendEmail.errors.scheduleFailed', { defaultValue: 'Failed to schedule invoice email' }));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const validRecipientCount = recipients.filter(r => r.recipientEmail).length;
   const invalidRecipientCount = recipients.filter(r => !r.recipientEmail).length;
   const resolvedFromEmail = senderId === DEFAULT_SENDER_SELECTION
@@ -180,6 +208,14 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
             disabled={sending}
           >
             {t('sendEmail.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            id="schedule-invoice-email"
+            variant="outline"
+            onClick={handleSchedule}
+            disabled={loading || sending || validRecipientCount === 0}
+          >
+            {sending ? t('sendEmail.actions.scheduling', { defaultValue: 'Scheduling...' }) : t('sendEmail.actions.schedule', { defaultValue: 'Schedule' })}
           </Button>
           <Button
             id="send-invoice-email-send"

@@ -396,6 +396,12 @@
         "label": "Visa länkmarkeringar för ny flik",
         "description": "Visa tangentmarkeringar och öppna länkar i en ny flik när det är möjligt."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Växla fokusläge",
+        "description": "Expandera layoutredigeraren till hela fönstret eller gå tillbaka till den vanliga layouten."
+      }
     }
   },
   "platform": {

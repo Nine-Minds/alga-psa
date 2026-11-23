@@ -1167,7 +1167,9 @@
       "send_one": "⟦Şḗƞḓ {{count}} Ḗḿȧīŀ⟧",
       "send_other": "⟦Şḗƞḓ {{count}} Ḗḿȧīŀş⟧",
       "sending_one": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗ...⟧",
-      "sending_other": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗş...⟧"
+      "sending_other": "⟦Şḗƞḓīƞɠ {{count}} īƞṽȯīƈḗş...⟧",
+      "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
+      "scheduling": "⟦Şƈħḗḓŭŀīƞɠ...⟧"
     },
     "toasts": {
       "noValidRecipients": "⟦Ƞȯ ṽȧŀīḓ řḗƈīƥīḗƞŧş ƒȯŭƞḓ⟧",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "⟦{{count}} īƞṽȯīƈḗş şḗƞŧ şŭƈƈḗşşƒŭŀŀẏ⟧",
       "sentFailure_one": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ {{count}} īƞṽȯīƈḗ⟧",
       "sentFailure_other": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ {{count}} īƞṽȯīƈḗş⟧",
-      "sentPartial": "⟦{{successCount}} şḗƞŧ, {{failureCount}} ƒȧīŀḗḓ⟧"
+      "sentPartial": "⟦{{successCount}} şḗƞŧ, {{failureCount}} ƒȧīŀḗḓ⟧",
+      "scheduled": "⟦Īƞṽȯīƈḗ ḗḿȧīŀ şƈħḗḓŭŀḗḓ⟧"
     },
     "errors": {
       "loadRecipients": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗƈīƥīḗƞŧ īƞƒȯ⟧",
-      "sendFailed": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ ḗḿȧīŀş⟧"
+      "sendFailed": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ ḗḿȧīŀş⟧",
+      "scheduleFailed": "⟦Ƒȧīŀḗḓ ŧȯ şƈħḗḓŭŀḗ īƞṽȯīƈḗ ḗḿȧīŀ⟧"
     }
   },
   "generateTab": {
@@ -1789,7 +1793,9 @@
           "actual": "⟦100%⟧",
           "label": "⟦Ƥřḗṽīḗẇ ẑȯȯḿ⟧",
           "fitWithScale": "⟦Ƒīŧ ({{percent}}%)⟧"
-        }
+        },
+        "pageCaption": "⟦Ƥȧɠḗ {{page}} ȯƒ {{total}}⟧",
+        "frameTitle": "⟦Īƞṽȯīƈḗ ƥřḗṽīḗẇ⟧"
       },
       "tabs": {
         "design": "⟦Ḓḗşīɠƞ⟧",
@@ -1885,6 +1891,10 @@
       "spacer": {
         "label": "⟦Şƥȧƈḗř⟧",
         "description": "⟦Ḗḿƥŧẏ şƥȧƈḗ ƒȯř ŀȧẏȯŭŧ ȧḓĵŭşŧḿḗƞŧ.⟧"
+      },
+      "page-break": {
+        "label": "⟦Ƥȧɠḗ Ɓřḗȧķ⟧",
+        "description": "⟦Şŧȧřŧş ŧħḗ ƞḗẋŧ ƀŀȯƈķ ȯƞ ȧ ƞḗẇ ƥȧɠḗ.⟧"
       },
       "container": {
         "label": "⟦Ɓȯẋ Ƈȯƞŧȧīƞḗř⟧",
@@ -2208,6 +2218,17 @@
               "label": "⟦Ƈȯŀȯř⟧"
             }
           }
+        },
+        "pagination": {
+          "title": "⟦Ƥȧɠīƞȧŧīȯƞ⟧",
+          "fields": {
+            "breakBefore": {
+              "label": "⟦Şŧȧřŧ ȯƞ ȧ ƞḗẇ ƥȧɠḗ⟧"
+            },
+            "breakInside": {
+              "label": "⟦Ķḗḗƥ ŧȯɠḗŧħḗř ȯƞ ȯƞḗ ƥȧɠḗ⟧"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2342,8 @@
       "signatureLabel": "⟦Şīɠƞȧŧŭřḗ⟧",
       "attachmentsLabel": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
       "spacerLabel": "⟦Şƥȧƈḗř⟧",
+      "pageBreakLabel": "⟦Ƥȧɠḗ ƀřḗȧķ⟧",
+      "pageBreakBefore": "⟦Şŧȧřŧş ȯƞ ȧ ƞḗẇ ƥȧɠḗ⟧",
       "companyLogo": "⟦Ƈȯḿƥȧƞẏ ŀȯɠȯ⟧",
       "insertionMarker": "⟦Ŧħḗ ƞḗẋŧ ƀŀȯƈķ ẏȯŭ ȧḓḓ ɠȯḗş ħḗřḗ⟧",
       "emptyContainer": "⟦Ḗḿƥŧẏ — şḗŀḗƈŧ īŧ ȧƞḓ ȧḓḓ ƀŀȯƈķş ƒřȯḿ ŧħḗ ŀḗƒŧ ƥȧƞḗŀ⟧",
@@ -2677,6 +2700,15 @@
         "clearLines": "⟦Şīƞɠŀḗ ŀīƞḗ⟧",
         "stackedLinesHint": "⟦Ḗȧƈħ ƞȯƞ-ḗḿƥŧẏ ŀīƞḗ řḗƞḓḗřş ȯƞ īŧş ȯẇƞ řȯẇ. Ẇħḗƞ ȧŀŀ ŀīƞḗş ȧřḗ ḗḿƥŧẏ ŧħḗ ƈȯŀŭḿƞ’ş ƀīƞḓīƞɠ ķḗẏ ȧƀȯṽḗ īş şħȯẇƞ.⟧",
         "removeLine": "⟦Řḗḿȯṽḗ ŀīƞḗ {{index}}⟧",
+        "valueLabels": "⟦Ṽȧŀŭḗ ẇȯřḓīƞɠ⟧",
+        "addKnownValues": "⟦+ Ķƞȯẇƞ ṽȧŀŭḗş⟧",
+        "addValueLabel": "⟦+ Ṽȧŀŭḗ⟧",
+        "valueLabelsHint": "⟦Ƈħȯȯşḗ ŧħḗ ẇȯřḓş ƥřīƞŧḗḓ ƒȯř ȧ ṽȧŀŭḗ, şŭƈħ ȧş ŧřŭḗ → Īƞƈŀŭḓḗḓ. Ȧƞ ḗḿƥŧẏ ŀȧƀḗŀ ƥřīƞŧş ƞȯŧħīƞɠ.⟧",
+        "valueLabelKey": "⟦Ṽȧŀŭḗ⟧",
+        "valueLabelKeyPlaceholder": "⟦ŧřŭḗ⟧",
+        "valueLabelText": "⟦Ƥřīƞŧḗḓ ẇȯřḓīƞɠ⟧",
+        "valueLabelTextPlaceholder": "⟦Ɓŀȧƞķ⟧",
+        "removeValueLabel": "⟦Řḗḿȯṽḗ ẇȯřḓīƞɠ⟧",
         "align": "⟦Ȧŀīɠƞ⟧",
         "widthPlaceholder": "⟦ȧŭŧȯ | 50% | 120ƥẋ⟧"
       },
@@ -2803,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "⟦Ƞḗẇ {{type}} Ŀȧẏȯŭŧ⟧",
-        "edit": "⟦Ḗḓīŧ {{type}} Ŀȧẏȯŭŧ⟧"
-      },
-      "description": "⟦Ḓḗşīɠƞ ŧħḗ {{type}} ŀȧẏȯŭŧ ŭşīƞɠ ŧħḗ ṽīşŭȧŀ ḗḓīŧȯř, ŧħḗƞ ƥřḗṽīḗẇ ẇīŧħ şȧḿƥŀḗ ḓȧŧȧ.⟧",
-      "errorTitle": "⟦{{type}} Ŀȧẏȯŭŧ Ḗḓīŧȯř⟧",
-      "sections": {
-        "details": "⟦Ŀȧẏȯŭŧ Ḓḗŧȧīŀş⟧"
+        "edit": "⟦Ḗḓīŧ Ŀȧẏȯŭŧ: {{name}}⟧"
       },
       "fields": {
-        "version": "⟦Ṽḗřşīȯƞ⟧",
+        "created": "⟦Ƈřḗȧŧḗḓ {{time}}⟧",
         "labelClass": "⟦Ŀȧƀḗŀ ƈŀȧşş⟧",
         "labelFields": "⟦Ƒīḗŀḓş şħȯẇƞ ȯƞ ŧħḗ ŀȧƀḗŀ⟧",
-        "labelFieldsHint": "⟦Ŧħḗ řḗƈȯřḓ ŀīƞķ (ɊŘ ƈȯḓḗ) ȧƞḓ ŧħḗ īḓḗƞŧīƒīḗř ȧřḗ ȧŀẇȧẏş şħȯẇƞ.⟧"
+        "labelFieldsHint": "⟦Ŧħḗ řḗƈȯřḓ ŀīƞķ (ɊŘ ƈȯḓḗ) ȧƞḓ ŧħḗ īḓḗƞŧīƒīḗř ȧřḗ ȧŀẇȧẏş şħȯẇƞ.⟧",
+        "notSaved": "⟦Ƞȯŧ şȧṽḗḓ ẏḗŧ⟧",
+        "savedAt": "⟦Şȧṽḗḓ {{time}}⟧",
+        "version": "⟦Ṽḗřşīȯƞ⟧"
       },
       "placeholders": {
         "templateName": "⟦{{type}} Ŧḗḿƥŀȧŧḗ⟧"
       },
       "actions": {
-        "back": "⟦Ɓȧƈķ ŧȯ Ŀȧẏȯŭŧş⟧",
+        "back": "⟦Ɓȧƈķ ŧȯ {{type}} Ŀȧẏȯŭŧş⟧",
+        "labelSettings": "⟦Ŀȧƀḗŀ şḗŧŧīƞɠş⟧",
         "save": "⟦Şȧṽḗ Ŀȧẏȯŭŧ⟧"
-      },
-      "labels": {
-        "created": "⟦Ƈřḗȧŧḗḓ: {{date}}⟧",
-        "lastUpdated": "⟦Ŀȧşŧ Ŭƥḓȧŧḗḓ: {{date}}⟧"
       },
       "preview": {
         "sampleNote": "⟦Řḗƞḓḗřḗḓ ȧɠȧīƞşŧ řḗƥřḗşḗƞŧȧŧīṽḗ {{type}} şȧḿƥŀḗ ḓȧŧȧ.⟧",
@@ -2860,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ŭƥḓȧŧḗ řḗʠŭīřḗḓ⟧",
+      "invoiceFinalize": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ƒīƞȧŀīẑḗ řḗʠŭīřḗḓ⟧",
       "invoiceDelete": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ḓḗŀḗŧḗ řḗʠŭīřḗḓ⟧",
       "invoiceAccess": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ȧƈƈḗşş ḓḗƞīḗḓ⟧",
       "otherClientInvoices": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ȧƈƈḗşş īƞṽȯīƈḗş ƒȯř ȧƞȯŧħḗř ƈŀīḗƞŧ⟧",
-      "invoiceRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ řḗȧḓ řḗʠŭīřḗḓ⟧"
+      "invoiceRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ řḗȧḓ řḗʠŭīřḗḓ⟧",
+      "invoiceSend": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ şḗƞḓ řḗʠŭīřḗḓ⟧"
     },
     "invoice": {
       "notFound": "⟦Īƞṽȯīƈḗ ƞȯŧ ƒȯŭƞḓ⟧",

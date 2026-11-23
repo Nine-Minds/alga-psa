@@ -57,36 +57,59 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * purchase (`portal_purchase_id`). So the storefront generates the id, creates the session carrying it,
  * then binds here before the customer pays. Without it the id would only exist after the session.
  */
-export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'catalog'>, input: {
+export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'catalog' | 'stripe'>, input: {
   entitlementId: string; licenseTenantId: string; offerKey: string; interval: BillingInterval; offerRef?: string;
   quantity: number; checkoutSessionId: string; purchaseId?: string;
 }): Promise<PortalPurchaseRow> {
   if (!input.entitlementId || !input.licenseTenantId || !input.checkoutSessionId) throw new Error('entitlementId, licenseTenantId and checkoutSessionId are required');
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > MAX_CO_MANAGED_FULFILLMENT_SEATS) throw new Error('Invalid co-managed seat quantity');
   if (input.purchaseId !== undefined && !UUID.test(input.purchaseId)) throw new Error('purchaseId must be a UUID');
-  const offer = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
-  const ref = offer.versionId ?? `price:${offer.priceId}`;
-  if (input.offerRef && input.offerRef !== ref) throw new OfferTermsChangedError(input.offerRef, offer);
-  if (!offer.versionId) throw new Error('Appliance purchases require a managed catalog offer');
-  const existing: PortalPurchaseRow | undefined = await deps.db(PURCHASES)
-    .where({ checkout_session_id: input.checkoutSessionId })
-    .modify((q: Knex.QueryBuilder) => { if (input.purchaseId) q.orWhere({ purchase_id: input.purchaseId }); })
-    .first();
-  if (existing) {
-    if (existing.entitlement_id !== input.entitlementId || existing.license_tenant_id !== input.licenseTenantId) throw new PortalPurchaseOwnershipError('checkout is bound to another entitlement');
-    if (existing.checkout_session_id !== input.checkoutSessionId || (input.purchaseId && existing.purchase_id !== input.purchaseId.toLowerCase())) {
-      throw new PortalPurchaseOwnershipError('purchase id and checkout session are bound to different purchases');
+  return deps.db.transaction(async (trx) => {
+    const findExisting = async (): Promise<PortalPurchaseRow | undefined> => trx(PURCHASES)
+      .where({ checkout_session_id: input.checkoutSessionId })
+      .modify((q: Knex.QueryBuilder) => { if (input.purchaseId) q.orWhere({ purchase_id: input.purchaseId.toLowerCase() }); })
+      .first();
+    const returnPinnedBinding = async (existing: PortalPurchaseRow): Promise<PortalPurchaseRow> => {
+      if (existing.entitlement_id !== input.entitlementId || existing.license_tenant_id !== input.licenseTenantId ||
+          existing.offer_key !== input.offerKey || existing.billing_interval !== input.interval || existing.quantity !== input.quantity) {
+        throw new PortalPurchaseOwnershipError('checkout is bound to different entitlement or offer terms');
+      }
+      if (existing.checkout_session_id !== input.checkoutSessionId || (input.purchaseId && existing.purchase_id !== input.purchaseId.toLowerCase())) {
+        throw new PortalPurchaseOwnershipError('purchase id and checkout session are bound to different purchases');
+      }
+      const checkout = await deps.stripe.checkout.sessions.retrieve(input.checkoutSessionId, { expand: ['line_items'] },
+        { stripeAccount: existing.stripe_account });
+      const checkoutPriceIds = checkout.line_items?.data.map((item) => typeof item.price === 'string' ? item.price : item.price?.id) ?? [];
+      if (!checkoutPriceIds.includes(existing.price_id)) throw new Error('Portal checkout does not contain its pinned historical Price in the original merchant scope');
+      return existing;
+    };
+    let existing = await findExisting();
+    if (existing) {
+      await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${existing.livemode ? 'live' : 'test'}`]);
+      existing = await findExisting();
+      if (existing) return returnPinnedBinding(existing);
     }
-    return existing; // pinned terms stay as first recorded
-  }
-  // write-admission: exempt — the authenticated storefront records a platform checkout binding for an appliance entitlement.
-  const [row] = await deps.db(PURCHASES).insert({
-    ...(input.purchaseId ? { purchase_id: input.purchaseId.toLowerCase() } : {}),
-    stripe_account: offer.scope.stripeAccount, livemode: offer.scope.livemode, entitlement_id: input.entitlementId,
-    license_tenant_id: input.licenseTenantId, offer_key: input.offerKey, billing_interval: input.interval,
-    offer_version_id: offer.versionId, price_id: offer.priceId, quantity: input.quantity, checkout_session_id: input.checkoutSessionId,
-  }).returning('*');
-  return row;
+    // Shared with catalog switches: this binding and the selected merchant/price are one admission.
+    const catalog = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
+    await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${catalog.scope.livemode ? 'live' : 'test'}`]);
+    existing = await findExisting();
+    if (existing) return returnPinnedBinding(existing);
+    const offer = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
+    const ref = offer.versionId ?? `price:${offer.priceId}`;
+    if (input.offerRef && input.offerRef !== ref) throw new OfferTermsChangedError(input.offerRef, offer);
+    if (!offer.versionId) throw new Error('Appliance purchases require a managed catalog offer');
+    const checkout = await deps.stripe.checkout.sessions.retrieve(input.checkoutSessionId, { expand: ['line_items'] }, { stripeAccount: offer.scope.stripeAccount });
+    const checkoutPriceIds = checkout.line_items?.data.map((item) => typeof item.price === 'string' ? item.price : item.price?.id) ?? [];
+    if (!checkoutPriceIds.includes(offer.priceId)) throw new Error('Portal checkout does not contain the validated catalog price in this merchant scope');
+    // write-admission: exempt — the authenticated storefront records a platform checkout binding for an appliance entitlement.
+    const [row] = await trx(PURCHASES).insert({
+      ...(input.purchaseId ? { purchase_id: input.purchaseId.toLowerCase() } : {}),
+      stripe_account: offer.scope.stripeAccount, livemode: offer.scope.livemode, entitlement_id: input.entitlementId,
+      license_tenant_id: input.licenseTenantId, offer_key: input.offerKey, billing_interval: input.interval,
+      offer_version_id: offer.versionId, price_id: offer.priceId, quantity: input.quantity, checkout_session_id: input.checkoutSessionId,
+    }).returning('*');
+    return row;
+  });
 }
 
 const idOf = (value: string | { id: string } | null | undefined): string | undefined => (typeof value === 'string' ? value : value?.id);
@@ -106,20 +129,20 @@ export async function reconcilePortalPurchase(deps: FulfillmentDeps, purchaseId:
 
   let subscriptionId = purchase.stripe_subscription_id;
   if (!subscriptionId) {
-    const session = await deps.stripe.checkout.sessions.retrieve(purchase.checkout_session_id);
+    const session = await deps.stripe.checkout.sessions.retrieve(purchase.checkout_session_id, {}, { stripeAccount: purchase.stripe_account });
     if (session.id !== purchase.checkout_session_id || session.metadata?.portal_purchase_id !== purchase.purchase_id ||
         session.metadata?.entitlement_id !== purchase.entitlement_id) throw new PortalPurchaseOwnershipError('checkout metadata names a different purchase or entitlement');
     if (session.status !== 'complete' || !session.subscription) return { kind: 'noop', reason: 'checkout_incomplete' };
     subscriptionId = idOf(session.subscription)!;
   }
-  const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+  const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] }, { stripeAccount: purchase.stripe_account });
   if (subscription.metadata?.portal_purchase_id !== purchase.purchase_id || subscription.metadata?.entitlement_id !== purchase.entitlement_id) {
     throw new PortalPurchaseOwnershipError('subscription metadata names a different purchase or entitlement');
   }
   if (subscription.items.data.length !== 1) throw new PortalPurchaseOwnershipError('subscription does not have exactly one seat item');
   const item = subscription.items.data[0];
   // RECOGNITION: the billed price must be an offer version of the purchase's own offer (retired included).
-  const scope = await deps.catalog.scope();
+  const scope = { stripeAccount: purchase.stripe_account, livemode: purchase.livemode };
   const classified = await deps.catalog.classifyPrice(scope, item.price.id);
   if (!classified) throw new UnmappedPriceError(item.price.id);
   if (classified.offerKey !== purchase.offer_key || classified.interval !== purchase.billing_interval) throw new PortalPurchaseOwnershipError(`price ${item.price.id} belongs to ${classified.offerKey}/${classified.interval}`);

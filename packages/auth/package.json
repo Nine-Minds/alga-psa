@@ -14,6 +14,10 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./lib/meetingDocumentActor": {
+      "import": "./src/lib/meetingDocumentActor.ts",
+      "types": "./src/lib/meetingDocumentActor.ts"
+    },
     "./session": {
       "import": "./src/lib/session.ts",
       "types": "./src/lib/session.ts"
@@ -89,6 +93,10 @@
     "./lib/commercialAccess": {
       "import": "./src/lib/commercialAccess.ts",
       "types": "./src/lib/commercialAccess.ts"
+    },
+    "./lib/authenticateUserForAuth": {
+      "import": "./src/lib/authenticateUserForAuth.ts",
+      "types": "./src/lib/authenticateUserForAuth.ts"
     },
     "./lib/authPolicy": {
       "import": "./src/lib/authPolicy.ts",
@@ -172,6 +180,7 @@
     "jose": "^6.1.3",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
+    "server-only": "0.0.1",
     "ua-parser-js": "^1.0.37"
   },
   "devDependencies": {

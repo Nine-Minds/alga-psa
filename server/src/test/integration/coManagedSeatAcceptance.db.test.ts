@@ -248,7 +248,9 @@ describeDb('accepting an invitation into the seat role', { shuffle: false }, () 
     // An ordinary team invitation is not a seat invitation, whatever its token.
     const [adminRole] = await db('roles').where({ tenant: sponsor, role_name: 'Admin', msp: true });
     const teamToken = 'b'.repeat(64);
-    await db('user_invitations').insert({ tenant: sponsor, email: address('team'), first_name: 'Team', last_name: 'Member',
+    const teamEmail = address('team');
+    await db('user_invitations').insert({ tenant: sponsor, email: teamEmail, email_normalized: teamEmail.trim().toLowerCase(),
+      first_name: 'Team', last_name: 'Member',
       role_id: adminRole.role_id, token: teamToken, expires_at: new Date(Date.now() + DAY), metadata: {} });
     await expect(accept(teamToken)).rejects.toMatchObject({ code: 'INVITATION_NOT_FOUND' });
 

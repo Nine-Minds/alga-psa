@@ -162,7 +162,7 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     state.exportInProgress = false;
     state.blocker = null;
     state.voidOutcome = { ok: true };
-    grant('invoice:update', 'invoice:finalize', 'invoice:send', 'accounting_integrations:remote_mutate');
+    grant('invoice:update', 'invoice:finalize', 'invoice:void', 'invoice:send', 'accounting_integrations:remote_mutate');
 
     mocks.hasPermission.mockImplementation(async (_user: any, resource: string, action: string) =>
       state.granted.has(`${resource}:${action}`)
@@ -261,8 +261,8 @@ describe('FinancialService.bulkInvoiceOperation', () => {
       expect(lookups).not.toHaveBeenCalled();
     });
 
-    it('refuses cancel without the void authority (no invoice:update); invoice is not cancelled', async () => {
-      grant('invoice:finalize');
+    it('refuses cancel without invoice:void even when invoice:update is granted', async () => {
+      grant('invoice:update', 'invoice:finalize');
 
       await expect(bulk('cancel', [SENT])).rejects.toMatchObject({ statusCode: 403 });
 
@@ -271,7 +271,7 @@ describe('FinancialService.bulkInvoiceOperation', () => {
     });
 
     it('refuses cancel on a connected tenant without remote-mutate, per id, and cancels nothing', async () => {
-      grant('invoice:update');
+      grant('invoice:update', 'invoice:void');
       state.connected = true;
 
       const { data } = await bulk('cancel', [SENT, FINAL]);

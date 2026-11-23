@@ -1167,7 +1167,9 @@
       "send_one": "Stuur {{count}} e-mail",
       "send_other": "Stuur {{count}} e-mails",
       "sending_one": "{{count}}-factuur verzenden...",
-      "sending_other": "{{count}}-facturen verzenden..."
+      "sending_other": "{{count}}-facturen verzenden...",
+      "schedule": "Plannen",
+      "scheduling": "Bezig met plannen..."
     },
     "toasts": {
       "noValidRecipients": "Geen geldige ontvangers gevonden",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "{{count}} facturen succesvol verzonden",
       "sentFailure_one": "Kan {{count}}-factuur niet verzenden",
       "sentFailure_other": "Kan {{count}}-facturen niet verzenden",
-      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt"
+      "sentPartial": "{{successCount}} verzonden, {{failureCount}} mislukt",
+      "scheduled": "Factuure-mail ingepland"
     },
     "errors": {
       "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
-      "sendFailed": "Het verzenden van e-mails is niet gelukt"
+      "sendFailed": "Het verzenden van e-mails is niet gelukt",
+      "scheduleFailed": "Factuure-mail inplannen mislukt"
     }
   },
   "generateTab": {
@@ -1789,7 +1793,9 @@
           "actual": "100%",
           "label": "Zoom voorbeeld",
           "fitWithScale": "Passend ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} van {{total}}",
+        "frameTitle": "Factuurvoorbeeld"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1885,6 +1891,10 @@
       "spacer": {
         "label": "Tussenruimte",
         "description": "Lege ruimte voor lay-outaanpassing."
+      },
+      "page-break": {
+        "label": "Pagina-einde",
+        "description": "Begint het volgende blok op een nieuwe pagina."
       },
       "container": {
         "label": "Box-container",
@@ -2208,6 +2218,17 @@
               "label": "Kleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginering",
+          "fields": {
+            "breakBefore": {
+              "label": "Op een nieuwe pagina beginnen"
+            },
+            "breakInside": {
+              "label": "Bij elkaar houden op één pagina"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2342,8 @@
       "signatureLabel": "Handtekening",
       "attachmentsLabel": "Bijlagen",
       "spacerLabel": "Tussenruimte",
+      "pageBreakLabel": "Pagina-einde",
+      "pageBreakBefore": "Begint op een nieuwe pagina",
       "companyLogo": "Bedrijfslogo",
       "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
       "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
@@ -2677,6 +2700,15 @@
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
         "removeLine": "Regel {{index}} verwijderen",
+        "valueLabels": "Tekst voor waarden",
+        "addKnownValues": "+ Bekende waarden",
+        "addValueLabel": "+ Waarde",
+        "valueLabelsHint": "Kies de woorden die voor een waarde worden afgedrukt, bijvoorbeeld true → Inbegrepen. Een leeg label drukt niets af.",
+        "valueLabelKey": "Waarde",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Afgedrukte tekst",
+        "valueLabelTextPlaceholder": "Leeg",
+        "removeValueLabel": "Tekst verwijderen",
         "align": "Uitlijning",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2803,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Nieuwe indeling voor {{type}}",
-        "edit": "Indeling voor {{type}} bewerken"
-      },
-      "description": "Ontwerp de indeling voor {{type}} in de visuele editor en bekijk deze daarna met voorbeeldgegevens.",
-      "errorTitle": "Indelingseditor voor {{type}}",
-      "sections": {
-        "details": "Indelingsgegevens"
+        "edit": "Lay-out bewerken: {{name}}"
       },
       "fields": {
-        "version": "Versie",
+        "created": "Gemaakt {{time}}",
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
-        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
+        "notSaved": "Nog niet opgeslagen",
+        "savedAt": "Opgeslagen {{time}}",
+        "version": "Versie"
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
       },
       "actions": {
-        "back": "Terug naar indelingen",
+        "back": "Terug naar {{type}}-indelingen",
+        "labelSettings": "Labelinstellingen",
         "save": "Indeling opslaan"
-      },
-      "labels": {
-        "created": "Gemaakt: {{date}}",
-        "lastUpdated": "Laatst bijgewerkt: {{date}}"
       },
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
@@ -2860,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
+      "invoiceFinalize": "Toestemming geweigerd: finalisatierechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
       "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
-      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist",
+      "invoiceSend": "Toestemming geweigerd: toestemming voor het verzenden van facturen is vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",

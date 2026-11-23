@@ -71,6 +71,24 @@ the other keys again when:
 One rejected key does not stop the others. AlgaPSA asks you to reconnect only when every
 key has been rejected.
 
+## Composite console IDs
+
+Site Manager can return console IDs containing a colon. AlgaPSA preserves that complete
+ID when addressing the Cloud Connector; only the final colon in a stored
+`<consoleId>:<siteId>` mapping separates the site ID. Existing client and asset mappings
+do not need to be recreated after a scope-parsing fix. Run a full device sync to retry
+previously failed consoles.
+
+For example, `console-1:123456:site-1` identifies console `console-1:123456` and site
+`site-1`.
+
+Credential removal does not guess the console for a malformed mapped-site scope
+(for example, `console-1:` or `console-1:123456:`). If a key has console routes and
+the integration contains an invalid client-mapped scope, removal fails before
+deleting anything, even after confirmation. Repair or unmap the invalid site mapping
+before trying again. The failure is logged without key material. Valid legacy
+`console-1:site-1` and migrated `local:site-1` mappings still require confirmation.
+
 ## Related topics
 
 - [Provider setup order](provider-setup-order.md) — the order in which to connect integrations

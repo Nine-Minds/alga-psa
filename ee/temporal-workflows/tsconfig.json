@@ -78,6 +78,7 @@
       "@alga-psa/auth/*": ["../../packages/auth/src/*"],
       "@alga-psa/tenancy": ["../../packages/tenancy/src/index.ts"],
       "@alga-psa/tenancy/server": ["../../packages/tenancy/src/server.ts"],
+      "@alga-psa/tenancy/server/*": ["../../packages/tenancy/src/server/*"],
       "@alga-psa/tenancy/*": ["../../packages/tenancy/src/*"],
       "@alga-psa/reference-data": ["../../packages/reference-data/src/index.ts"],
       "@alga-psa/reference-data/*": ["../../packages/reference-data/src/*"],

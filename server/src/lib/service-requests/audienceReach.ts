@@ -11,7 +11,7 @@ export async function getAudienceReach(knex: Knex, tenant: string, audience: unk
   const row = await db.table('contacts as c')
     .whereExists(db.subquery('users as u').select(knex.raw('1'))
       .whereRaw('u.contact_id = c.contact_name_id').where('u.user_type', 'client').where('u.is_inactive', false))
-    .whereRaw(compilePredicate(knex, audienceSchema, parsed.data, { rootAlias: 'c' }))
+    .whereRaw(compilePredicate(knex, audienceSchema, parsed.data, { rootAlias: 'c', tenant }))
     .count({ contacts: '*' }).countDistinct({ clients: 'c.client_id' }).first() as { contacts: string; clients: string } | undefined;
   return { contacts: Number(row?.contacts ?? 0), clients: Number(row?.clients ?? 0) };
 }

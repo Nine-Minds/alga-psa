@@ -396,6 +396,12 @@
         "label": "Afficher les indices de liens dans un nouvel onglet",
         "description": "Afficher les indices clavier et ouvrir les liens dans un nouvel onglet lorsque cela est possible."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Basculer le mode focus",
+        "description": "Agrandir l’éditeur de mise en page à toute la fenêtre ou revenir à la mise en page normale."
+      }
     }
   },
   "platform": {

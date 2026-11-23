@@ -1167,7 +1167,9 @@
       "send_one": "Enviar e-mail {{count}}",
       "send_other": "Enviar e-mails {{count}}",
       "sending_one": "Enviando fatura {{count}}...",
-      "sending_other": "Enviando faturas {{count}}..."
+      "sending_other": "Enviando faturas {{count}}...",
+      "schedule": "Agendar",
+      "scheduling": "Agendando..."
     },
     "toasts": {
       "noValidRecipients": "Nenhum destinatário válido encontrado",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "Faturas {{count}} enviadas com sucesso",
       "sentFailure_one": "Falha ao enviar fatura {{count}}",
       "sentFailure_other": "Falha ao enviar faturas {{count}}",
-      "sentPartial": "{{successCount}} enviado, {{failureCount}} falhou"
+      "sentPartial": "{{successCount}} enviado, {{failureCount}} falhou",
+      "scheduled": "E-mail da fatura agendado"
     },
     "errors": {
       "loadRecipients": "Falha ao carregar informações do destinatário",
-      "sendFailed": "Falha ao enviar e-mails"
+      "sendFailed": "Falha ao enviar e-mails",
+      "scheduleFailed": "Falha ao agendar o e-mail da fatura"
     }
   },
   "generateTab": {
@@ -1789,7 +1793,9 @@
           "actual": "100%",
           "label": "Zoom da pré-visualização",
           "fitWithScale": "Ajustar ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Pré-visualização da fatura"
       },
       "tabs": {
         "design": "Projeto",
@@ -1885,6 +1891,10 @@
       "spacer": {
         "label": "Espaçador",
         "description": "Espaço vazio para ajuste de layout."
+      },
+      "page-break": {
+        "label": "Quebra de página",
+        "description": "Inicia o próximo bloco em uma nova página."
       },
       "container": {
         "label": "Caixa Recipiente",
@@ -2208,6 +2218,17 @@
               "label": "Cor"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginação",
+          "fields": {
+            "breakBefore": {
+              "label": "Começar em uma nova página"
+            },
+            "breakInside": {
+              "label": "Manter junto em uma única página"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2342,8 @@
       "signatureLabel": "Assinatura",
       "attachmentsLabel": "Anexos",
       "spacerLabel": "Espaçador",
+      "pageBreakLabel": "Quebra de página",
+      "pageBreakBefore": "Começa em uma nova página",
       "companyLogo": "Logotipo da empresa",
       "insertionMarker": "O próximo bloco que você adicionar ficará aqui",
       "emptyContainer": "Vazio — selecione-o e adicione blocos pelo painel esquerdo",
@@ -2677,6 +2700,15 @@
         "clearLines": "Linha única",
         "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
         "removeLine": "Remover a linha {{index}}",
+        "valueLabels": "Texto dos valores",
+        "addKnownValues": "+ Valores conhecidos",
+        "addValueLabel": "+ Valor",
+        "valueLabelsHint": "Escolha as palavras impressas para um valor, por exemplo true → Incluído. Um rótulo vazio não imprime nada.",
+        "valueLabelKey": "Valor",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Texto impresso",
+        "valueLabelTextPlaceholder": "Em branco",
+        "removeValueLabel": "Remover texto",
         "align": "Alinhamento",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2803,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Novo layout de {{type}}",
-        "edit": "Editar layout de {{type}}"
-      },
-      "description": "Crie o layout de {{type}} no editor visual e depois visualize-o com dados de exemplo.",
-      "errorTitle": "Editor de layout de {{type}}",
-      "sections": {
-        "details": "Detalhes do layout"
+        "edit": "Editar layout: {{name}}"
       },
       "fields": {
-        "version": "Versão",
+        "created": "Criado {{time}}",
         "labelClass": "Classe da etiqueta",
         "labelFields": "Campos exibidos na etiqueta",
-        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos."
+        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos.",
+        "notSaved": "Ainda não salvo",
+        "savedAt": "Salvo {{time}}",
+        "version": "Versão"
       },
       "placeholders": {
         "templateName": "Modelo de {{type}}"
       },
       "actions": {
-        "back": "Voltar aos layouts",
+        "back": "Voltar para Layouts de {{type}}",
+        "labelSettings": "Configurações de etiqueta",
         "save": "Salvar layout"
-      },
-      "labels": {
-        "created": "Criado: {{date}}",
-        "lastUpdated": "Última atualização: {{date}}"
       },
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
@@ -2860,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
+      "invoiceFinalize": "Permissão negada: é necessária permissão para finalizar faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
       "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",
-      "invoiceRead": "Permissão negada: leitura de faturas necessária"
+      "invoiceRead": "Permissão negada: leitura de faturas necessária",
+      "invoiceSend": "Permissão negada: é necessária permissão para enviar faturas"
     },
     "invoice": {
       "notFound": "Fatura não encontrada",

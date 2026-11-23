@@ -20,6 +20,7 @@ import type {
 } from '@alga-psa/types';
 import { formatTemplateDateValue, formatTemplateFieldValue } from './fieldFormatting';
 import { templateI18nTextToString } from './i18nLabels';
+import { formatTemplateValue } from './valueFormatting';
 
 // Last-resort currency when template metadata carries an invalid code.
 const FALLBACK_CURRENCY = 'USD';
@@ -52,12 +53,21 @@ type RenderContext = {
   /** The recipient country's date shape: digit order, separator and clock. */
   dateFormat: CountryDateFormat;
   currencyCode: string;
+  /** The `documents` label translator, for default wording such as Yes/No. */
+  t?: TemplateLabelTranslator;
   /**
    * Barcode SVGs from the async server prepass, keyed by node id. Undefined means "no prepass"
    * (designer / client preview): barcode nodes render a placeholder. When provided, a barcode node
    * without an entry is a bug and throws.
    */
   barcodes?: Record<string, string>;
+  /**
+   * Node ids that nothing drawing ink follows: the document's last inked child,
+   * its own last inked child, and so on, plus the inkless blocks trailing each
+   * of them. A forced page break on any of these opens a page there is nothing
+   * to put on, so honouring it would print an empty final page.
+   */
+  trailingNodeIds: Set<string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -211,6 +221,77 @@ const resolveFieldBorderStyle = (
   };
 };
 
+/** The designer's Page Break block: a rule-less divider whose only job is the break. */
+const isPageBreakDivider = (node: TemplateNode): boolean =>
+  node.type === 'divider' && isRecord(node.style?.inline) && node.style.inline.breakAfter === 'page';
+
+/**
+ * True when a node puts nothing on the page it would open. Conservative: only a
+ * Page Break block (and a wrapper holding nothing but those) is known to draw
+ * no ink — anything else is assumed to print something.
+ */
+const drawsNoInk = (node: TemplateNode): boolean => {
+  if (isPageBreakDivider(node)) return true;
+  const children: TemplateNode[] = Array.isArray(node.children) ? node.children : [];
+  return children.length > 0 && children.every(drawsNoInk);
+};
+
+/**
+ * The nodes that close the document: its last child that draws ink, that
+ * child's own last inked child, and so on — plus the inkless blocks trailing
+ * each of them. Only these can carry a forced break with nothing after it.
+ *
+ * Skipping the inkless trailing blocks is what keeps a Page Break dropped after
+ * a block that already ended with one from printing a blank sheet: the first
+ * break would otherwise open a page occupied solely by the second (itself
+ * dropped for being last).
+ */
+export const collectTrailingNodeIds = (root: TemplateNode): Set<string> => {
+  const ids = new Set<string>();
+  const addSubtree = (node: TemplateNode) => {
+    ids.add(node.id);
+    (Array.isArray(node.children) ? node.children : []).forEach(addSubtree);
+  };
+
+  let current: TemplateNode | undefined = root;
+  while (current) {
+    const children: TemplateNode[] = Array.isArray(current.children) ? current.children : [];
+    let index = children.length - 1;
+    while (index >= 0 && drawsNoInk(children[index])) {
+      // Every break inside an inkless block is equally pointless, however deeply
+      // the author nested it.
+      addSubtree(children[index]);
+      index -= 1;
+    }
+    const lastInked = index >= 0 ? children[index] : undefined;
+    if (!lastInked) break;
+    ids.add(lastInked.id);
+    current = lastInked;
+  }
+  return ids;
+};
+
+/**
+ * Strip a forced break that would open a page with nothing on it: a
+ * `break-after: page` nothing inked follows, or a `break-before: page` on a
+ * block that itself draws no ink and is followed by none either.
+ */
+const dropPointlessPageBreak = (
+  style: React.CSSProperties | undefined,
+  node: TemplateNode,
+  ctx: RenderContext
+): React.CSSProperties | undefined => {
+  if (!style || !ctx.trailingNodeIds.has(node.id)) return style;
+  const dropsAfter = style.breakAfter === 'page';
+  const dropsBefore = style.breakBefore === 'page' && drawsNoInk(node);
+  if (!dropsAfter && !dropsBefore) return style;
+  return {
+    ...style,
+    ...(dropsAfter ? { breakAfter: 'auto' as const } : {}),
+    ...(dropsBefore ? { breakBefore: 'auto' as const } : {}),
+  };
+};
+
 const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSProperties | undefined => {
   if (ast.layout.type !== 'document' || !isRecord(ast.metadata?.printSettings)) {
     return undefined;
@@ -243,10 +324,26 @@ const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSPropertie
   };
 };
 
-const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+const formatValue = (
+  value: unknown,
+  format: TemplateValueFormat | undefined,
+  ctx: RenderContext,
+  valueLabels?: Record<string, TemplateI18nText>
+): string => {
   if (value === null || value === undefined) {
     return '';
   }
+
+  return formatTemplateValue({
+    value,
+    valueLabels,
+    t: ctx.t,
+    fallback: (unlabeled) => formatUnlabeledValue(unlabeled, format, ctx),
+  });
+};
+
+// LEVERAGE: pattern value-format-paths — currency/number/date formatting is written twice (here and in fieldFormatting.ts formatPrimitiveValue) with different coercion rules; only the label/boolean layer is shared via formatTemplateValue.
+const formatUnlabeledValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
 
   const normalizedFormat: TemplateValueFormat = format ?? 'text';
 
@@ -326,7 +423,7 @@ const resolveColumnCellLines = (
     const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
     const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
     return {
-      text: formatValue(raw ?? '', line.format ?? column.format, ctx),
+      text: formatValue(raw ?? '', line.format ?? column.format, ctx, line.valueLabels ?? column.valueLabels),
       style: lineStyle,
       className: lineClassName,
     };
@@ -353,7 +450,7 @@ const resolveColumnCellLines = (
   }
   if (supplemental.length > 0) {
     const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
-    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
+    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx, column.valueLabels) };
     return withoutRepeats([...(nonEmpty(flat) ? [flat] : []), ...supplemental]);
   }
   return null;
@@ -386,7 +483,7 @@ const renderTableCellContent = (
   }
 
   const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
-  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
+  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx, column.valueLabels));
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
 };
 
@@ -415,7 +512,12 @@ const resolveSignedChange = (
 };
 
 /** Child-row numbers follow the document locale (quantities may be fractional). */
-const formatChildValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+const formatChildValue = (
+  value: unknown,
+  format: TemplateValueFormat | undefined,
+  ctx: RenderContext,
+  valueLabels?: Record<string, TemplateI18nText>
+): string => {
   // An unbound value is blank whatever the format (currency would otherwise render $0.00).
   if (value === undefined || value === null || value === '') return '';
   if (format === 'number' && value !== null && value !== undefined && value !== '') {
@@ -428,7 +530,7 @@ const formatChildValue = (value: unknown, format: TemplateValueFormat | undefine
       }
     }
   }
-  return formatValue(value ?? '', format, ctx);
+  return formatValue(value ?? '', format, ctx, valueLabels);
 };
 
 const resolveChildItems = (childRows: TemplateChildRows, parentRow: UnknownRecord, parentBinding: string, scope: RenderScope): UnknownRecord[] => {
@@ -474,13 +576,13 @@ const renderChildRow = (
           ? cell.lines.map((line) => {
               const { className, style: lineStyle } = resolveStyleRef(line.style);
               return {
-                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx),
+                text: formatChildValue(resolveExpressionValue(line.value, evaluation, childScope, ctx), line.format ?? cell.format, ctx, line.valueLabels ?? cell.valueLabels),
                 className,
                 style: lineStyle,
               };
             }).filter((line) => line.text.trim().length > 0)
           : [];
-        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx);
+        const flat = formatChildValue(resolveExpressionValue(cell.value, evaluation, childScope, ctx), cell.format, ctx, cell.valueLabels);
         const lineEntries = lineSource.length > 0 ? lineSource : flat.trim().length > 0 ? [{ text: flat, className: null as string | null, style: undefined as React.CSSProperties | undefined }] : [];
         const isMarkerColumn = columnIndex === 0;
         return (
@@ -770,7 +872,11 @@ const renderNode = (
   rootDocumentStyleOverride?: React.CSSProperties
 ): React.ReactNode => {
   const nodeTypeClass = `ast-node ast-node-type-${sanitizeCssIdentifier(node.type)}`;
-  const { className: styleClassName, style } = resolveStyleRef(node.style);
+  const { className: styleClassName, style: authoredStyle } = resolveStyleRef(node.style);
+  // A forced break with nothing inked after it is dropped here rather than in a
+  // stylesheet: whether it is the last thing in the document is a fact about
+  // document order, which no selector can ask about.
+  const style = dropPointlessPageBreak(authoredStyle, node, ctx);
   const elementClassName = joinClassNames(nodeTypeClass, styleClassName);
 
   switch (node.type) {
@@ -898,6 +1004,8 @@ const renderNode = (
         locale: ctx.locale,
         dateFormat: ctx.dateFormat,
         displayFormat: node.displayFormat,
+        valueLabels: node.valueLabels,
+        t: ctx.t,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
         ? {
@@ -983,8 +1091,21 @@ const renderNode = (
         />
       );
     }
-    case 'divider':
-      return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
+    case 'divider': {
+      // The designer's Page Break block exports as a rule-less divider whose only job is
+      // the forced break, so it is marked as one in the output — the same way every node
+      // carries its `ast-node-type-*` class. No stylesheet selects it today: the one rule
+      // it needs, dropping a break with nothing after it, depends on document order rather
+      // than on a selector, so it is applied inline (dropPointlessPageBreak) instead.
+      return (
+        <hr
+          key={node.id}
+          id={node.id}
+          className={joinClassNames(elementClassName, isPageBreakDivider(node) && 'ast-page-break') || undefined}
+          style={style}
+        />
+      );
+    }
     case 'table': {
       const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
@@ -1121,7 +1242,7 @@ const renderNode = (
                 <span className={joinClassNames('ast-totals-label', labelClassName) || undefined} style={labelStyle}>
                   {displayText(row.label)}
                 </span>
-                <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
+                <span className="ast-totals-value">{formatValue(raw, row.format, ctx, row.valueLabels)}</span>
               </div>
             );
           })}
@@ -1158,6 +1279,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   locale: localeOverride,
   dateFormat,
   barcodes,
+  t,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -1173,7 +1295,15 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
+        {
+          ast,
+          currencyCode,
+          locale,
+          dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
+          barcodes,
+          trailingNodeIds: collectTrailingNodeIds(ast.layout),
+          t,
+        },
         rootDocumentStyleOverride
       )}
     </div>
@@ -1210,6 +1340,7 @@ export const resolveTemplateExpressionValue = (
     currencyCode,
     locale,
     dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+    trailingNodeIds: new Set<string>(),
   });
 };
 
@@ -1230,6 +1361,7 @@ export const renderEvaluatedTemplateAst = async (
         locale={options.locale}
         dateFormat={options.dateFormat}
         barcodes={options.barcodes}
+        t={options.t}
       />
     ),
     css: buildAstCss(normalizedAst),

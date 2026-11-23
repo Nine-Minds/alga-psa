@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   sendEmail: vi.fn(async () => ({ success: true, queued: false })),
+  hasPermission: vi.fn(async (_user: unknown, _resource: string, _action: string) => true),
+  enqueueImmediateJob: vi.fn(async () => ({ jobId: 'job-1', scheduledJobId: 'scheduled-1' })),
+  generateAndStore: vi.fn(async () => ({ file_id: 'file-invoice-1' })),
+  publish: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -9,7 +13,13 @@ vi.mock('@alga-psa/auth', () => ({
     { user_id: 'billing-user' }, { tenant: 'tenant-test' }, ...args,
   ),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
+vi.mock('@alga-psa/core', () => ({
+  enqueueImmediateJob: mocks.enqueueImmediateJob,
+  formatCurrency: () => '$100.00',
+  formatLocalizedCalendarDate: () => 'Jan 1, 2026',
+  isValidEmail: () => true,
+}));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
@@ -50,8 +60,8 @@ vi.mock('../services/invoiceBillingRecipientService', () => ({
   })),
 }));
 vi.mock('../services/pdfGenerationService', () => ({
-  createPDFGenerationService: () => ({ generateAndStore: vi.fn(async () => ({ file_id: 'file-invoice-1' })) }),
-  publishGeneratedDocumentsToClient: vi.fn(async () => undefined),
+  createPDFGenerationService: () => ({ generateAndStore: mocks.generateAndStore }),
+  publishGeneratedDocumentsToClient: mocks.publish,
 }));
 vi.mock('./invoiceQueries', () => ({
   getInvoiceForRendering: vi.fn(async () => ({
@@ -68,10 +78,14 @@ vi.mock('./invoiceEmailLinkContext', () => ({
   getInvoiceEmailLinkContext: vi.fn(async () => ({ paymentUrl: null, portalUrl: null })),
 }));
 
-import { sendInvoiceEmailAction } from './invoiceJobActions';
+import { scheduleInvoiceEmailAction, sendInvoiceEmailAction } from './invoiceJobActions';
 
 describe('sendInvoiceEmailAction sender plumbing', () => {
-  beforeEach(() => mocks.sendEmail.mockClear());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.enqueueImmediateJob.mockResolvedValue({ jobId: 'job-1', scheduledJobId: 'scheduled-1' });
+  });
 
   it('sends the billing class and selected sender with only the PDF attachment', async () => {
     const senderId = 'sender-invoices';
@@ -88,5 +102,45 @@ describe('sendInvoiceEmailAction sender plumbing', () => {
         contentType: 'application/pdf',
       })],
     }));
+    expect(mocks.hasPermission).toHaveBeenCalledWith(expect.anything(), 'invoice', 'send');
+  });
+
+  it.each([
+    ['schedule', () => scheduleInvoiceEmailAction(['invoice-1'])],
+    ['immediate send', () => sendInvoiceEmailAction(['invoice-1'])],
+  ])('denies %s with billing create/read but without invoice send before side effects', async (_label, invoke) => {
+    mocks.hasPermission.mockImplementation(async (_user: unknown, resource: string, action: string) =>
+      resource === 'billing' && (action === 'create' || action === 'read'));
+
+    const result = await invoke();
+
+    expect(result).toMatchObject({ permissionError: 'Permission denied: invoice send required' });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(expect.anything(), 'invoice', 'send');
+    expect(mocks.enqueueImmediateJob).not.toHaveBeenCalled();
+    expect(mocks.generateAndStore).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.publish).not.toHaveBeenCalled();
+  });
+
+  it('allows invoice:send to schedule the invoice email job', async () => {
+    await expect(scheduleInvoiceEmailAction(['invoice-1'])).resolves.toMatchObject({ jobId: 'job-1' });
+    expect(mocks.enqueueImmediateJob).toHaveBeenCalledWith('invoice_email', {
+      invoiceIds: ['invoice-1'],
+      tenantId: 'tenant-test',
+      user_id: 'billing-user',
+      steps: [
+        {
+          stepName: 'PDF Generation for Invoice #INV-1 (Test Client)',
+          type: 'pdf_generation',
+          metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-test' },
+        },
+        {
+          stepName: 'Email Sending for Invoice #INV-1 (Test Client)',
+          type: 'email_sending',
+          metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-test' },
+        },
+      ],
+      metadata: { user_id: 'billing-user', invoice_count: 1, tenantId: 'tenant-test' },
+    });
   });
 });

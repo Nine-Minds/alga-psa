@@ -511,8 +511,14 @@ export async function recropEntityLogo(
 }
 
 export interface LinkEntityImageFromDocumentParams {
-  /** Image document already in the tenant's library. */
-  documentId: string;
+  /** Source fields returned by the caller's complete document authorization. */
+  sourceDocument: {
+    tenant: string;
+    documentId: string;
+    fileId: string;
+    documentName?: string | null;
+    mimeType: string;
+  };
   /** Variant the document fills; defaults to the light image. */
   logoVariant?: EntityLogoVariant;
   contextName?: string;
@@ -529,27 +535,25 @@ export async function linkEntityImageFromDocument(
   entityId: string,
   userId: string,
   tenant: string,
-  { documentId, logoVariant = 'default', contextName }: LinkEntityImageFromDocumentParams,
+  { sourceDocument, logoVariant = 'default', contextName }: LinkEntityImageFromDocumentParams,
 ): Promise<UploadResult> {
   const { knex } = await createTenantKnex(tenant);
 
   try {
-    const document = await tenantScopedTable(knex, 'documents', tenant)
-      .select('file_id', 'document_name', 'mime_type')
-      .where({ document_id: documentId })
-      .first();
-
-    if (!document?.file_id) {
+    if (sourceDocument.tenant !== tenant) {
+      return { success: false, message: 'Document not found.' };
+    }
+    if (!sourceDocument.fileId) {
       return { success: false, message: 'Document not found.' };
     }
 
-    const mimeType: string | undefined = document.mime_type;
+    const mimeType = sourceDocument.mimeType;
     if (!mimeType?.startsWith('image/')) {
       return { success: false, message: 'Only image documents can be used here.' };
     }
 
-    const { buffer, metadata } = await StorageService.downloadFile(document.file_id);
-    const storedName = document.document_name || metadata.original_name;
+    const { buffer, metadata } = await StorageService.downloadFile(sourceDocument.fileId);
+    const storedName = sourceDocument.documentName || metadata.original_name;
 
     const newDocumentId = await storeEntityImageVariant({
       knex,
@@ -577,7 +581,7 @@ export async function linkEntityImageFromDocument(
       entityType,
       entityId,
       tenant,
-      documentId,
+      documentId: sourceDocument.documentId,
       logoVariant,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });
