@@ -120,6 +120,16 @@ describe('runAppSearch', () => {
     expect(allowedTypes).not.toContain('invoice');
   });
 
+  it('queries schedule entries for holders of the real user_schedule:read permission', async () => {
+    mocks.resolveSearchAclPrincipal.mockResolvedValue({ userId: 'user-1', tenant: 'tenant-1', permissions: ['user_schedule:read'] });
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await runAppSearch(knex, 'tenant-1', internalUser, { query: 'patch window' });
+
+    expect(mocks.runSearchQuery.mock.calls[0][0].allowedTypes).toEqual(['schedule_entry']);
+  });
+
   it('honours an explicit type filter intersected with permissions', async () => {
     const acl = {
       userId: 'user-1',

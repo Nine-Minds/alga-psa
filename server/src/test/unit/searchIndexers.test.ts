@@ -1196,7 +1196,7 @@ describe('search entity indexers', () => {
       body: 'Bring replacement switch',
       url: '/msp/schedule?entryId=entry-1',
       acl: {
-        requiredPermission: 'schedule:read',
+        requiredPermission: 'user_schedule:read',
         visibleToUserIds: [
           '11111111-1111-4111-8111-111111111111',
           '22222222-2222-4222-8222-222222222222',

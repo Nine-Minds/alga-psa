@@ -36,7 +36,7 @@ function toSearchDoc(tenant: string, row: ScheduleEntrySearchRow): SearchDoc {
     body: row.notes ?? undefined,
     url: buildScheduleEntryLink(row.entry_id),
     acl: {
-      requiredPermission: 'schedule:read',
+      requiredPermission: 'user_schedule:read',
       visibleToUserIds: toStringArray(row.assigned_user_ids),
     },
     sourceUpdatedAt: toSourceUpdatedAt(row),

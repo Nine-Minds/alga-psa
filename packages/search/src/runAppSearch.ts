@@ -33,6 +33,9 @@ const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 // `required_permission` enforced by aclPredicateSql. Types whose rows can
 // require different permissions (e.g. `status` spans ticket vs project
 // statuses) list all of them so no class of user is wrongly excluded.
+// LEVERAGE: friction search-permission-strings — hand-typed `resource:action` strings with no check
+// against the RBAC permission catalog; `schedule:read` matched no role (the resource is
+// `user_schedule`) and `time:read` matches none either (`time_entry`), so those types never return.
 export const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string | readonly string[]> = {
   client: 'client:read',
   contact: 'contact:read',
@@ -59,7 +62,7 @@ export const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string | readonl
   service_request_definition: 'admin',
   workflow_task: 'workflow_task:read',
   interaction: 'interaction:read',
-  schedule_entry: 'schedule:read',
+  schedule_entry: 'user_schedule:read',
   time_entry: 'time:read',
   board: 'ticket:read',
   category: 'ticket:read',
