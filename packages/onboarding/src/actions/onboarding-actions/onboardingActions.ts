@@ -224,6 +224,7 @@ export const saveClientInfo = withAuth(async (
         data.companyCountryCode,
       ].some(v => v !== undefined);
 
+      let addressSavedByWizard = false;
       if (hasAddressInput) {
         const mspClient = await tenantDb(trx, tenant).table('clients')
           .where({ is_inactive: false })
@@ -279,6 +280,7 @@ export const saveClientInfo = withAuth(async (
             }).returning('*');
             queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
           }
+          addressSavedByWizard = true;
         }
       }
 
@@ -286,9 +288,12 @@ export const saveClientInfo = withAuth(async (
       // IMPORTANT: Do NOT save user-specific fields (firstName, lastName, email) to tenant-wide storage
       // These fields are specific to the current user and should not be shared across users in the tenant
       // Only save tenant-level data like tenantName
-      const progressData: any = {
+      const progressData: Partial<WizardData> = {
         tenantName: data.tenantName
       };
+      // Server-side record that the stored address is the user's own, so
+      // getOnboardingInitialData stops reporting it as a billing prefill.
+      if (addressSavedByWizard) progressData.companyAddressSavedByWizard = true;
 
       await persistTenantOnboardingProgress(trx, tenant, progressData);
     });
@@ -1357,8 +1362,14 @@ export const getOnboardingInitialData = withAuth(async (
       location?.state_province,
       location?.postal_code,
     ];
+    // Once the wizard has saved the address it is the user's own, not billing's.
+    const settingsRow = await tenantDb(knex, tenant).table('tenant_settings').first('onboarding_data');
+    const rawProgress = settingsRow?.onboarding_data;
+    const savedProgress: Partial<WizardData> =
+      (typeof rawProgress === 'string' ? JSON.parse(rawProgress) : rawProgress) ?? {};
     const companyAddressPrefilled =
-      !!hasRealCountry || addressFields.some((value) => blankPlaceholder(value) !== '');
+      savedProgress.companyAddressSavedByWizard !== true &&
+      (!!hasRealCountry || addressFields.some((value) => blankPlaceholder(value) !== ''));
 
     return {
       success: true,

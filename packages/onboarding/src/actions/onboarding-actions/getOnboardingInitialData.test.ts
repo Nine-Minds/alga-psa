@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let locationRow: Record<string, any> | undefined;
+let onboardingData: unknown;
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
@@ -10,8 +11,11 @@ vi.mock('@alga-psa/db', () => ({
       const chain: any = {
         where: () => chain,
         orderBy: () => chain,
-        first: async () =>
-          name === 'clients' ? { client_id: 'client-1', client_name: 'Acme MSP' } : locationRow,
+        first: async () => {
+          if (name === 'clients') return { client_id: 'client-1', client_name: 'Acme MSP' };
+          if (name === 'tenant_settings') return { onboarding_data: onboardingData };
+          return locationRow;
+        },
       };
       return chain;
     },
@@ -61,6 +65,7 @@ const location = (overrides: Record<string, any>) => ({
 describe('getOnboardingInitialData company address prefill', () => {
   beforeEach(() => {
     locationRow = undefined;
+    onboardingData = null;
   });
 
   it('T006: placeholder location returns blank fields and companyAddressPrefilled=false', async () => {
@@ -104,5 +109,21 @@ describe('getOnboardingInitialData company address prefill', () => {
 
     locationRow = undefined;
     expect((await (getOnboardingInitialData as any)()).data.companyAddressPrefilled).toBe(false);
+  });
+
+  it('is not prefilled once the wizard saved the address, even as a JSON string', async () => {
+    locationRow = location({ address_line1: '1 Main St', city: 'Seattle', country_code: 'US', country_name: 'United States' });
+
+    onboardingData = { companyAddressSavedByWizard: true };
+    expect((await (getOnboardingInitialData as any)()).data).toMatchObject({
+      companyAddressLine1: '1 Main St',
+      companyAddressPrefilled: false,
+    });
+
+    onboardingData = JSON.stringify({ companyAddressSavedByWizard: true });
+    expect((await (getOnboardingInitialData as any)()).data.companyAddressPrefilled).toBe(false);
+
+    onboardingData = { tenantName: 'Acme' };
+    expect((await (getOnboardingInitialData as any)()).data.companyAddressPrefilled).toBe(true);
   });
 });
