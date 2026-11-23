@@ -359,7 +359,7 @@ Bytes come from `StorageService.downloadFile(file_id)` inside `AttachmentSource.
   - A shared cache would be a second store of customer content. It would need authorization-aware keys and its own retention policy, and the current read volume does not justify that.
   - "Cache miss for a scan" therefore means simply that the scan renders on the call that reaches it.
   - If production timings later show renders dominating, the cache to add is a Redis entry keyed `attcontent:v1:{tenant}:{file_id}:{updated_at}:{page}:{dpi}`. It would hold the rendered page only, with a TTL of 10 minutes, so that one pagination session hits. Invalidation comes from the key itself: a replaced file changes `file_id`/`updated_at`. That is recorded here as the shape to use, not built now.
-- **Cursor staleness.** The cursor carries `(document_id, file_id, updated_at)` for every document it covers. If any of those has changed by the next call, the call fails with `409 CURSOR_STALE`: "The attachments changed since this read started; call read_attachment again without a cursor." It does not silently serve a mix of old and new.
+- **Cursor staleness.** The cursor carries a SHA-256 digest of the ordered `(document_id, file_id, updated_at)` tuples of the authorized list (constant size however many attachments there are). If any of those has changed by the next call, the call fails with `409 CURSOR_STALE`: "The attachments changed since this read started; call read_attachment again without a cursor." It does not silently serve a mix of old and new.
 
 ### 5. Large and many-attachment reads
 
@@ -377,7 +377,7 @@ The budget is per call. All numbers are constants in `attachmentContent/limits.t
 **Pagination.**
 
 - Everything is one ordered stream of units. A whole-ticket read follows the ticket's attachments in a **stable order**, `(association_created_at, document_id)`, not `getTicketDocuments`' `updated_at desc`, which can reorder between calls. Within each attachment, units go in natural order.
-- The cursor is an opaque base64url JSON string: `{ v: 1, entity, document_id|null, docIndex, unitIndex, fingerprints }`. It is not signed, because authorization re-runs on every call. Tampering can only point at units of documents the caller may already read.
+- The cursor is an opaque base64url JSON string: `{ v: 2, entity, document_id|null, docIndex, unitIndex, listDigest }`. It is not signed, because authorization re-runs on every call. Tampering can only point at units of documents the caller may already read.
 - The same mechanism covers a 22-photo ticket and a 300-page PDF.
 
 **Expected shapes:**

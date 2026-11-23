@@ -1,18 +1,15 @@
 import type { AttachmentDocument, ReadPosition } from './types';
 
-export interface DocumentFingerprint {
-  document_id: string;
-  file_id: string | null;
-  updated_at: string;
-}
+import { createHash } from 'crypto';
 
 export interface CursorPayload {
-  v: 1;
+  v: 2;
   entity: { type: string; id: string };
   document_id: string | null;
   docIndex: number;
   unitIndex: number;
-  fingerprints: DocumentFingerprint[];
+  /** SHA-256 (base64url) of the ordered authorized list; fixed size however many attachments the entity has. */
+  listDigest: string;
 }
 
 export class InvalidCursorError extends Error {
@@ -34,11 +31,23 @@ export class CursorStaleError extends Error {
   }
 }
 
-export function fingerprintOf(doc: AttachmentDocument): DocumentFingerprint {
-  return { document_id: doc.document_id, file_id: doc.file_id, updated_at: doc.updated_at };
+/**
+ * Digest of the canonical authorized list: SHA-256 over the JSON encoding of the ordered
+ * [document_id, file_id, updated_at] tuples (JSON makes the framing unambiguous). Any reorder, add,
+ * remove, file replacement or edit changes it.
+ */
+export function digestOfList(docs: AttachmentDocument[]): string {
+  return createHash('sha256')
+    .update(JSON.stringify(docs.map((d) => [d.document_id, d.file_id, d.updated_at])))
+    .digest('base64url');
 }
 
-/** Opaque base64url JSON. Not signed: authorization re-runs on every call, so tampering can only reach readable documents. */
+/**
+ * Opaque base64url JSON, constant size (it holds a digest of the authorized list, not the list).
+ * Not signed: authorization re-runs on every call and the digest is only a staleness check, so
+ * tampering can only reposition within, or invalidate against, documents the caller may already read.
+ * Version 1 cursors (per-document fingerprints) are rejected as invalid; cursors are short-lived.
+ */
 export function encodeCursor(payload: CursorPayload): string {
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
@@ -55,17 +64,15 @@ export function decodeCursor(raw: string): CursorPayload {
   const p = parsed as Partial<CursorPayload> | null;
   if (
     !p ||
-    p.v !== 1 ||
+    p.v !== 2 ||
     !p.entity ||
     typeof p.entity.type !== 'string' ||
     typeof p.entity.id !== 'string' ||
     !(p.document_id === null || typeof p.document_id === 'string') ||
     !isInt(p.docIndex) ||
     !isInt(p.unitIndex) ||
-    !Array.isArray(p.fingerprints) ||
-    !p.fingerprints.every(
-      (f) => f && typeof f.document_id === 'string' && (f.file_id === null || typeof f.file_id === 'string') && typeof f.updated_at === 'string',
-    )
+    typeof p.listDigest !== 'string' ||
+    !/^[A-Za-z0-9_-]{43}$/.test(p.listDigest)
   ) {
     throw new InvalidCursorError();
   }
@@ -74,7 +81,7 @@ export function decodeCursor(raw: string): CursorPayload {
 
 /**
  * Resolve a cursor against the CURRENT authorized document list. The cursor must describe exactly this
- * list (same documents, same order, same file_id and updated_at); anything else is stale. Returns the
+ * list (same documents, same order, same file_id and updated_at, checked by digest); anything else is stale. Returns the
  * position to resume from.
  */
 export function resolveCursor(
@@ -85,13 +92,7 @@ export function resolveCursor(
   if (cursor.entity.type !== scope.entity.type || cursor.entity.id !== scope.entity.id || cursor.document_id !== scope.documentId) {
     throw new InvalidCursorError('The cursor belongs to a different read; call read_attachment again without a cursor.');
   }
-  const now = current.map(fingerprintOf);
-  if (
-    now.length !== cursor.fingerprints.length ||
-    now.some((f, i) => f.document_id !== cursor.fingerprints[i].document_id || f.file_id !== cursor.fingerprints[i].file_id || f.updated_at !== cursor.fingerprints[i].updated_at)
-  ) {
-    throw new CursorStaleError();
-  }
+  if (digestOfList(current) !== cursor.listDigest) throw new CursorStaleError();
   if (cursor.docIndex > current.length) throw new InvalidCursorError();
   return { docIndex: cursor.docIndex, unitIndex: cursor.unitIndex };
 }
@@ -102,11 +103,11 @@ export function buildCursor(
   next: ReadPosition,
 ): string {
   return encodeCursor({
-    v: 1,
+    v: 2,
     entity: scope.entity,
     document_id: scope.documentId,
     docIndex: next.docIndex,
     unitIndex: next.unitIndex,
-    fingerprints: current.map(fingerprintOf),
+    listDigest: digestOfList(current),
   });
 }
