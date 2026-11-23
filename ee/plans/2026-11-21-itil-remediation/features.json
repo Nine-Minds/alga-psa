@@ -824,7 +824,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "One client helper filters a priority list for a board; QuickAddTicket, TicketInfo, BentoHero, BoardsSettings, surveys TriggerForm and TicketImportDialog use it instead of their own copies"
   },
   {
@@ -833,7 +833,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow designer priority options carry their family and are filtered by the selected board, in both copies of the picker"
   },
   {
@@ -842,7 +842,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Huntress settings list priorities that fit the selected board"
   },
   {
@@ -851,7 +851,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Co-managed ticket edit lists and accepts only priorities that fit the ticket's board"
   },
   {
@@ -860,7 +860,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Service request editor lists priorities that fit the selected board, for both board kinds"
   },
   {
@@ -869,7 +869,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Create ticket from asset lists priorities that fit the selected board"
   },
   {
@@ -878,7 +878,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Activities inline priority picker lists priorities that fit the ticket's board"
   },
   {
@@ -887,7 +887,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import dialog maps priorities using each row's board, not the default board"
   },
   {
@@ -896,7 +896,7 @@
     "prdRefs": [
       "R3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound webhook mapping and RMM alert rule lookups return ticket priorities only; the webhook lookup filters by the mapped board"
   },
   {
@@ -905,7 +905,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/tickets/priorities accepts board_id and returns itil_priority_level"
   },
   {
@@ -914,7 +914,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Mobile ticket detail lists priorities by the board's kind instead of the current priority's family"
   },
   {

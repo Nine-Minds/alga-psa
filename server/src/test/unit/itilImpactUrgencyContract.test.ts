@@ -172,8 +172,10 @@ describe('ITIL Impact × Urgency wiring', () => {
       "messageKey: 'features/tickets:errors.ticket.itilPriorityMissingForAssessment'"
     );
     // The thrown error is the channel that reaches the user as a field error, not a redacted 500.
+    // It is recognised by its code since the `writers-create` group moved the class into `shared/`
+    // (two bundles, two classes), which also covers the refusals `TicketModel` raises.
     expect(source('packages/tickets/src/actions/ticketActionErrors.ts')).toContain(
-      'error instanceof TicketBoardFieldError'
+      'isBoardFieldRuleError(error)'
     );
   });
 });

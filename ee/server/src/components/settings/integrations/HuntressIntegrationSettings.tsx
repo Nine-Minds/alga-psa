@@ -27,6 +27,7 @@ import {
   type HuntressConnectionStatus,
 } from '../../../lib/actions/integrations/huntressActions';
 import HuntressOrganizationMappingManager from './huntress/OrganizationMappingManager';
+import { filterPrioritiesForBoard } from '@alga-psa/tickets/lib/boardDefaultPriority';
 
 type RoutingOptions = Awaited<ReturnType<typeof getHuntressRoutingOptions>>;
 
@@ -214,9 +215,14 @@ const HuntressIntegrationSettings: React.FC = () => {
 
   const boardOptions =
     routingOptions?.boards.map((b: any) => ({ value: b.board_id, label: b.board_name })) ?? [];
-  const priorityOptions =
-    routingOptions?.priorities.map((p: any) => ({ value: p.priority_id, label: p.priority_name })) ??
-    [];
+  // R3/F094: the severity map offers the priorities the selected board uses, so an incident is
+  // never routed with a priority that board's family does not include.
+  const selectedBoardPriorityType = routingOptions?.boards.find((b: any) => b.board_id === boardId)
+    ?.priority_type;
+  const priorityOptions = filterPrioritiesForBoard(
+    routingOptions?.priorities ?? [],
+    selectedBoardPriorityType,
+  ).map((p: any) => ({ value: p.priority_id, label: p.priority_name }));
   const categoryOptions = [
     { value: '', label: t('integrations.rmm.huntress.routing.noCategory', { defaultValue: 'None' }) },
     ...(routingOptions?.categories

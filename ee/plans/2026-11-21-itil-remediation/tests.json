@@ -1540,7 +1540,7 @@
     "featureIds": [
       "F092"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The helper returns ITIL priorities for an ITIL board, own priorities otherwise, and treats a missing kind as own"
   },
   {
@@ -1549,7 +1549,7 @@
     "featureIds": [
       "F092"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The existing QuickAddTicket.boardScopedPriorities tests pass"
   },
   {
@@ -1558,7 +1558,7 @@
     "featureIds": [
       "F093"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow designer priority picker with an ITIL board selected lists only ITIL priorities, in both copies"
   },
   {
@@ -1567,7 +1567,7 @@
     "featureIds": [
       "F094"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Huntress severity mapping lists only priorities that fit the selected board"
   },
   {
@@ -1576,7 +1576,7 @@
     "featureIds": [
       "F095"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Co-managed edit options for an ITIL ticket contain only ITIL priorities and a patch with another is rejected"
   },
   {
@@ -1585,7 +1585,7 @@
     "featureIds": [
       "F096"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Service request editor on a non-ITIL board lists no ITIL priority"
   },
   {
@@ -1594,7 +1594,7 @@
     "featureIds": [
       "F097"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Create ticket from asset lists only priorities the server accepts for the selected board"
   },
   {
@@ -1603,7 +1603,7 @@
     "featureIds": [
       "F098"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Activities inline picker for a ticket on an ITIL board lists only ITIL priorities"
   },
   {
@@ -1612,7 +1612,7 @@
     "featureIds": [
       "F099"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import dialog offers ITIL priorities for rows of an ITIL board when the default board is not ITIL"
   },
   {
@@ -1621,7 +1621,7 @@
     "featureIds": [
       "F100"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound webhook and RMM alert rule priority lookups return no project-task priority"
   },
   {
@@ -1630,7 +1630,7 @@
     "featureIds": [
       "F101"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/tickets/priorities with board_id returns only fitting priorities, with itil_priority_level; without it, behaviour is unchanged"
   },
   {
@@ -1639,7 +1639,7 @@
     "featureIds": [
       "F102"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Mobile ticket detail for a ticket with no priority on an ITIL board lists only ITIL priorities"
   },
   {
@@ -1648,7 +1648,7 @@
     "featureIds": [
       "F092"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Surface suite: every priority picker lists the same priorities for both ITIL boards and none the server refuses"
   },
   {

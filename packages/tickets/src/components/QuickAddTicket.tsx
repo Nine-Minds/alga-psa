@@ -44,7 +44,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
-import { getBoardDefaultPriorityId } from '../lib/boardDefaultPriority';
+import { filterPrioritiesForBoard, getBoardDefaultPriorityId } from '../lib/boardDefaultPriority';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -1502,10 +1502,7 @@ export function QuickAddTicket({
       const selectedBoard = boards.find(board => board.board_id === boardId);
       const priorityType = selectedBoard?.priority_type ?? boardConfig.priority_type ?? 'custom';
 
-      return priorities
-        .filter(priority => priorityType === 'itil'
-          ? Boolean(priority.is_from_itil_standard)
-          : !priority.is_from_itil_standard)
+      return filterPrioritiesForBoard(priorities, priorityType)
         .map((priority): SelectOption => ({
           value: priority.priority_id,
           label: (

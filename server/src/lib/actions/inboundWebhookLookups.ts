@@ -3,6 +3,7 @@
 import { projectedPeopleAsUsers, projectedPeopleForCaller } from '@alga-psa/user-composition/lib/seatPeople';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { boardFieldKind, loadBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import type { IUser, ITeam } from '@alga-psa/types';
 
 export type InboundWebhookLookupEntityType =
@@ -127,9 +128,18 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'ticket_priority': {
+        // R3/F100: ticket priorities only, and — when the mapping fixes a board — only the family
+        // that board uses, so a webhook cannot be mapped to a priority the create then replaces.
+        const priorityBoard = scope.board_id
+          ? await loadBoard(knex, tenant, scope.board_id)
+          : null;
         const rows = await db.table('priorities')
           .select<{ priority_id: string; priority_name: string }[]>('priority_id', 'priority_name')
+          .where({ item_type: 'ticket' })
           .modify((query) => {
+            if (priorityBoard) {
+              query.andWhere('is_from_itil_standard', boardFieldKind(priorityBoard.priority_type) === 'itil');
+            }
             if (search) {
               query.andWhereILike('priority_name', `%${search}%`);
             }

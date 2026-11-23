@@ -11,7 +11,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-type BoardOptionRow = { id: string; name: string; is_default: boolean | null };
+type BoardOptionRow = { id: string; name: string; is_default: boolean | null; priority_type: string | null };
 type StatusOptionRow = {
   id: string;
   name: string;
@@ -20,7 +20,7 @@ type StatusOptionRow = {
   board_id: string | null;
   board_name: string | null;
 };
-type PriorityOptionRow = { id: string; name: string };
+type PriorityOptionRow = { id: string; name: string; is_from_itil_standard: boolean | null };
 type CategoryOptionRow = { id: string; name: string; parent_id: string | null; board_id: string | null };
 type UserOptionRow = { id: string; name: string | null; username: string };
 type LocationOptionRow = { id: string; name: string; client_id: string };
@@ -128,11 +128,14 @@ export const getTicketFieldOptions = withAuth(async (
       // Boards
       tenantDb(knex, tenant).table('boards')
         .orderBy('display_order', 'asc')
-        .select('board_id as id', 'board_name as name', 'is_default')
+        // `priority_type` travels with the board so a picker can offer the priorities that board
+        // uses (R3), rather than every priority of the tenant.
+        .select('board_id as id', 'board_name as name', 'is_default', 'priority_type')
         .then(rows => rowsAs<BoardOptionRow>(rows).map(row => ({
           id: row.id,
           name: row.name,
-          is_default: Boolean(row.is_default)
+          is_default: Boolean(row.is_default),
+          priority_type: row.priority_type ?? null
         }))),
 
       // Statuses (ticket-only)
@@ -143,10 +146,11 @@ export const getTicketFieldOptions = withAuth(async (
         .where({ item_type: 'ticket' })
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc')
-        .select('priority_id as id', 'priority_name as name')
+        .select('priority_id as id', 'priority_name as name', 'is_from_itil_standard')
         .then(rows => rowsAs<PriorityOptionRow>(rows).map(row => ({
           id: row.id,
-          name: row.name
+          name: row.name,
+          is_from_itil_standard: Boolean(row.is_from_itil_standard)
         }))),
 
       // Categories (including subcategories) - parent_category is the correct column

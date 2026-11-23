@@ -4,23 +4,33 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Activity, ActivityType, IPriority } from '@alga-psa/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 import { Check, ChevronDown } from 'lucide-react';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
 import { updateActivityPriorityById } from '@alga-psa/user-activities/actions';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-// Module-level cache for priorities — rarely change and re-fetching on every row is wasteful
-const priorityCache: Map<'ticket' | 'project_task', Promise<IPriority[]>> = new Map();
+// Module-level cache for priorities — rarely change and re-fetching on every row is wasteful.
+// A ticket's list depends on its board (R3), so the board is part of the key.
+const priorityCache: Map<string, Promise<IPriority[]>> = new Map();
 
-function loadPriorities(itemType: 'ticket' | 'project_task'): Promise<IPriority[]> {
-  let cached = priorityCache.get(itemType);
+/**
+ * R3/F098: a ticket is offered the priorities its own board uses, through the canonical lister, so
+ * the grid cannot suggest a value the write then refuses. A ticket with no board on the row, and a
+ * project task, fall back to every priority of that item type.
+ */
+function loadPriorities(itemType: 'ticket' | 'project_task', boardId?: string): Promise<IPriority[]> {
+  const key = `${itemType}:${boardId ?? ''}`;
+  let cached = priorityCache.get(key);
   if (!cached) {
-    cached = getAllPriorities(itemType).catch((err) => {
+    cached = (itemType === 'ticket' && boardId
+      ? getPrioritiesByBoardType(boardId, 'ticket')
+      : getAllPriorities(itemType)
+    ).catch((err) => {
       // On error, clear cache so next attempt retries
-      priorityCache.delete(itemType);
+      priorityCache.delete(key);
       throw err;
     });
-    priorityCache.set(itemType, cached);
+    priorityCache.set(key, cached);
   }
   return cached;
 }
@@ -44,15 +54,19 @@ export function InlinePriorityPicker({ activity, onPriorityChange }: InlinePrior
         ? 'project_task'
         : null;
 
+  const boardId = activity.type === ActivityType.TICKET
+    ? (activity as { boardId?: string }).boardId
+    : undefined;
+
   // Load priorities when popover opens for the first time
   useEffect(() => {
     if (!open || !itemType || priorities.length > 0) return;
     setLoading(true);
-    loadPriorities(itemType)
+    loadPriorities(itemType, boardId)
       .then((data) => setPriorities(data))
       .catch((err) => console.error('Error loading priorities:', err))
       .finally(() => setLoading(false));
-  }, [open, itemType, priorities.length]);
+  }, [open, itemType, boardId, priorities.length]);
 
   const handleSelect = useCallback(async (priorityId: string) => {
     if (!itemType || updating) return;

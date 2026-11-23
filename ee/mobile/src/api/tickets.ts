@@ -337,11 +337,14 @@ export function getTicketStatuses(
 
 export function getTicketPriorities(
   client: ApiClient,
-  params: { apiKey: string },
+  params: { apiKey: string; boardId?: string | null },
 ): Promise<ApiResult<SuccessResponse<TicketPriority[]>>> {
+  // `board_id` asks the server which priorities that board uses (ITIL or the tenant's own), so the
+  // picker offers exactly what an update would accept.
+  const query = params.boardId ? `?board_id=${encodeURIComponent(params.boardId)}` : "";
   return client.request<SuccessResponse<TicketPriority[]>>({
     method: "GET",
-    path: "/api/v1/tickets/priorities",
+    path: `/api/v1/tickets/priorities${query}`,
     headers: {
       "x-api-key": params.apiKey,
     },

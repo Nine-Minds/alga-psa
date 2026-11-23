@@ -77,6 +77,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_BOARD_STOPWATCH_ENABLED, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
+import { filterPrioritiesForBoard, priorityFitsBoardKind } from '../../lib/boardDefaultPriority';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 
@@ -782,8 +783,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
 
     const effectivePriorityType: PriorityType = formData.is_itil_compliant ? 'itil' : 'custom';
-    const isItil = !!match.is_from_itil_standard;
-    if ((effectivePriorityType === 'itil' && !isItil) || (effectivePriorityType !== 'itil' && isItil)) {
+    if (!priorityFitsBoardKind(match, effectivePriorityType)) {
       setFormData(prev => ({ ...prev, default_priority_id: '' }));
     }
   }, [editingBoard, formData.default_priority_id, formData.is_itil_compliant, priorities]);
@@ -2851,11 +2851,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     ? formData.priority_type
                     : (formData.is_itil_compliant ? 'itil' : 'custom');
 
-                  const allowed = priorities.filter(p => {
-                    if (p.item_type !== 'ticket') return false;
-                    const isItil = !!p.is_from_itil_standard;
-                    return effectivePriorityType === 'itil' ? isItil : !isItil;
-                  });
+                  const allowed = filterPrioritiesForBoard(
+                    priorities.filter(p => p.item_type === 'ticket'),
+                    effectivePriorityType
+                  );
 
                   return [
                     { value: '', label: t('ticketing.boards.fields.defaultPriority.none') },

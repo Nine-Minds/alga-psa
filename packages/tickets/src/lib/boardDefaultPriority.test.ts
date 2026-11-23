@@ -2,7 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { IBoard, IPriority } from '@alga-psa/types';
-import { getBoardDefaultPriorityId, getDefaultPriorityId } from './boardDefaultPriority';
+import {
+  filterPrioritiesForBoard,
+  getBoardDefaultPriorityId,
+  getDefaultPriorityId,
+  priorityFitsBoardKind,
+} from './boardDefaultPriority';
 
 const customPriority = (id: string, name: string): IPriority => ({
   tenant: 'tenant-1',
@@ -112,5 +117,51 @@ describe('getBoardDefaultPriorityId', () => {
 
   it('returns an empty string when the board has no priorities at all', () => {
     expect(getBoardDefaultPriorityId(board({ default_priority_id: 'custom-high' }), [])).toBe('');
+  });
+});
+
+/**
+ * T171 — F092 of `ee/plans/2026-11-21-itil-remediation` (`priority-pickers`).
+ *
+ * The one client-side answer to "which priorities does this board offer?" (R3). Every picker uses
+ * it, so none of them can drift into offering a value the server then refuses.
+ */
+describe('filterPrioritiesForBoard', () => {
+  const own = customPriority('custom-low', 'Low');
+  const ownHigh = customPriority('custom-high', 'High');
+  const itil = itilPriority('itil-3', 'P3 - Medium', 3);
+
+  it('offers the ITIL family on an ITIL board and the tenant’s own elsewhere', () => {
+    expect(filterPrioritiesForBoard([own, ownHigh, itil], 'itil')).toEqual([itil]);
+    expect(filterPrioritiesForBoard([own, ownHigh, itil], 'custom')).toEqual([own, ownHigh]);
+  });
+
+  it('treats a missing or unknown kind as the tenant’s own', () => {
+    expect(filterPrioritiesForBoard([own, itil], undefined)).toEqual([own]);
+    expect(filterPrioritiesForBoard([own, itil], null)).toEqual([own]);
+    expect(filterPrioritiesForBoard([own, itil], '')).toEqual([own]);
+    expect(priorityFitsBoardKind(itil, undefined)).toBe(false);
+    expect(priorityFitsBoardKind(own, undefined)).toBe(true);
+  });
+
+  it('keeps the value a ticket already carries listed, so a legacy row still renders (D3)', () => {
+    expect(
+      filterPrioritiesForBoard([own, itil], 'itil', { keep: (priority) => priority.priority_id === 'custom-low' })
+    ).toEqual([own, itil]);
+  });
+
+  it('answers on the option shapes the pickers actually hold', () => {
+    // The ticket screens pass `{ value, label, is_from_itil_standard }` rather than a priority row.
+    const options = [
+      { value: 'custom-low', label: 'Low', is_from_itil_standard: false },
+      { value: 'itil-3', label: 'P3 - Medium', is_from_itil_standard: true },
+      // A legacy option with no flag counts as the tenant's own.
+      { value: 'legacy', label: 'Legacy' },
+    ];
+    expect(filterPrioritiesForBoard(options, 'itil').map((option) => option.value)).toEqual(['itil-3']);
+    expect(filterPrioritiesForBoard(options, 'custom').map((option) => option.value)).toEqual([
+      'custom-low',
+      'legacy',
+    ]);
   });
 });

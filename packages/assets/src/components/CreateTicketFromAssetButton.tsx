@@ -22,6 +22,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { filterPrioritiesForBoard } from '@alga-psa/tickets/lib/boardDefaultPriority';
 
 interface CreateTicketFromAssetButtonProps {
     asset: Asset;
@@ -175,7 +176,12 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         };
     }, [isDialogOpen, board, t]);
 
-    const priorityOptions: SelectOption[] = priorities.map((p) => ({
+    // R3/F097: the dialog offers the priorities of the selected board's family, so it never
+    // suggests a value the create then refuses.
+    const priorityOptions: SelectOption[] = filterPrioritiesForBoard(
+        priorities,
+        boards.find((candidate) => candidate.board_id === board)?.priority_type,
+    ).map((p) => ({
         value: p.priority_id,
         label: p.priority_name
     }));

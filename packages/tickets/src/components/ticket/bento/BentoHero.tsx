@@ -45,6 +45,7 @@ import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
 import { CategoryPicker } from '../../CategoryPicker';
+import { filterPrioritiesForBoard } from '../../../lib/boardDefaultPriority';
 
 interface HeroSelectOption {
   value: string;
@@ -563,13 +564,11 @@ export function BentoHero({
   const displayedPriorityId = displayValue('priority_id');
   const priorityJsxOptions = useMemo<SelectOption[]>(
     () =>
-      priorityOptions
-        .filter((option) => option.value !== 'all')
-        .filter((option) => (
-          effectiveBoardConfig?.priority_type === 'itil'
-            ? Boolean(option.is_from_itil_standard)
-            : !option.is_from_itil_standard
-        ) || option.value === displayedPriorityId)
+      filterPrioritiesForBoard(
+        priorityOptions.filter((option) => option.value !== 'all'),
+        effectiveBoardConfig?.priority_type,
+        { keep: (option) => option.value === displayedPriorityId }
+      )
         .map((option) => ({
           value: option.value,
           textValue: option.label,

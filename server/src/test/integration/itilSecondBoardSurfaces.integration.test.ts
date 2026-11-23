@@ -39,6 +39,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+// Some actions import the narrow entry point rather than the package barrel.
+vi.mock('@alga-psa/auth/withAuth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth/withAuth')>()),
+  withAuth: (action: any) => (...args: any[]) => action(userRef.user, { tenant: dbRef.tenant }, ...args),
+}));
+
 // Probes call server actions outside a request, where `revalidatePath` has no store.
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -301,7 +307,18 @@ const SURFACES: Surface[] = [
     surface: 'Co-managed ticket edit priorities',
     commitGroup: 'priority-pickers',
     claims: ['co-managed edit'],
-    expectedFail: 'the co-managed option search offers every ticket priority, of both families',
+    probe: async (db, fixture) => {
+      // The collaborator's option search asks the same question the write does: the board's family.
+      const offered = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.itilTwo, 'ticket');
+      expect(offered.map((priority) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+      const refused = await findBoardFieldProblems(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+      });
+      expect(refused.map((problem) => problem.field)).toEqual(['priority_id']);
+    },
   },
   {
     surface: 'Checklist apply rules',
@@ -442,7 +459,15 @@ const SURFACES: Surface[] = [
     surface: 'Service request editor',
     commitGroup: 'priority-pickers',
     claims: ['Service request editor'],
-    expectedFail: 'a board with the tenant’s own priorities is offered every ticket priority',
+    probe: async (db, fixture) => {
+      // Both kinds: the editor lists the board's own family, never every ticket priority.
+      const onOwn = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.own, 'ticket');
+      expect(onOwn.map((priority) => priority.priority_id).sort()).toEqual([...fixture.ownPriorityIds].sort());
+      const onTwo = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.itilTwo, 'ticket');
+      expect(onTwo.map((priority) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+    },
   },
   {
     surface: 'Client portal create',
@@ -775,43 +800,124 @@ const SURFACES: Surface[] = [
     surface: 'Create ticket from asset (MSP)',
     commitGroup: 'priority-pickers',
     claims: ['Create ticket from asset'],
-    expectedFail: 'CreateTicketFromAssetButton offers every priority',
+    probe: async (db, fixture) => {
+      // The dialog filters the list it fetched by the selected board's kind, so every value it
+      // offers on the second ITIL board passes the server's own check.
+      const { filterPrioritiesForBoard } = await import(
+        '../../../../packages/tickets/src/lib/boardDefaultPriority'
+      );
+      const all = await tenantDb(db, fixture.tenantId)
+        .table('priorities')
+        .where({ item_type: 'ticket' })
+        .select('priority_id', 'is_from_itil_standard');
+      const offered = filterPrioritiesForBoard(all as any[], 'itil');
+      expect(offered.map((priority: any) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+      for (const priority of offered) {
+        await expect(
+          findBoardFieldProblems(db, fixture.tenantId, {
+            boardId: fixture.boards.itilTwo,
+            priorityId: (priority as any).priority_id,
+          })
+        ).resolves.toEqual([]);
+      }
+    },
   },
   {
     surface: 'Workflow designer (two copies)',
     commitGroup: 'priority-pickers',
     claims: ['Workflow designer (two copies)'],
-    expectedFail: 'neither copy is sent the priority family, and categories are filtered by boardId alone',
+    probe: async (db, fixture) => {
+      // Both copies narrow the priority list by the action's fixed board, using the family the
+      // options payload now carries. The payload is what this probe checks on the second board.
+      const { getTicketFieldOptions } = await import(
+        '../../../../packages/integrations/src/actions/email-actions/ticketFieldOptionsActions'
+      );
+      const result = (await getTicketFieldOptions()) as any;
+      const options = result.options;
+      const boardTwo = options.boards.find((board: any) => board.id === fixture.boards.itilTwo);
+      expect(boardTwo.priority_type).toBe('itil');
+      const itilOptions = options.priorities.filter((priority: any) => priority.is_from_itil_standard);
+      expect(itilOptions.map((priority: any) => priority.id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+    },
   },
   {
     surface: 'Huntress settings',
     commitGroup: 'priority-pickers',
     claims: ['Huntress settings'],
-    expectedFail: 'offers every priority and filters categories by board_id alone',
+    probe: async (db, fixture) => {
+      // The severity map is offered the selected board's priorities; the rows carry the family and
+      // the board carries its kind, which is what the screen filters on.
+      const boards = await tenantDb(db, fixture.tenantId)
+        .table('boards')
+        .select('board_id', 'priority_type');
+      expect(boards.find((board: any) => board.board_id === fixture.boards.itilTwo)?.priority_type).toBe('itil');
+      const offered = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.itilTwo, 'ticket');
+      expect(offered.map((priority) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+    },
   },
   {
     surface: 'Inbound webhook mapping',
     commitGroup: 'priority-pickers',
     claims: ['Inbound webhook mapping'],
-    expectedFail: 'inboundWebhookLookups filters neither by item_type nor by board',
+    probe: async (db, fixture) => {
+      const { listInboundWebhookLookup } = await import('../../lib/actions/inboundWebhookLookups');
+      const offered = await listInboundWebhookLookup({
+        entityType: 'ticket_priority',
+        scope: { board_id: fixture.boards.itilTwo },
+      });
+      expect(offered.map((option: any) => option.value).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+    },
   },
   {
     surface: 'RMM alert rules',
     commitGroup: 'priority-pickers',
     claims: ['RMM alert rules'],
-    expectedFail: 'rmmAlertRuleActions does not filter by item_type',
+    probe: async (db, fixture) => {
+      const { getRmmAlertRuleFormOptions } = await import(
+        '../../../../packages/integrations/src/actions/integrations/rmmAlertRuleActions'
+      );
+      const result = (await getRmmAlertRuleFormOptions({ integrationId: fixture.tenantId })) as any;
+      const offered = (result?.data ?? result).priorities;
+      const projectTaskIds = await tenantDb(db, fixture.tenantId)
+        .table('priorities')
+        .where({ item_type: 'project_task' })
+        .pluck('priority_id');
+      expect(offered.some((priority: any) => projectTaskIds.includes(priority.priority_id))).toBe(false);
+    },
   },
   {
     surface: 'REST priorities',
     commitGroup: 'priority-pickers',
     claims: ['REST priorities'],
-    expectedFail: '`GET /api/v1/tickets/priorities` takes no board_id and omits the ITIL level',
+    probe: async (db, fixture) => {
+      // The engine behind `GET /api/v1/tickets/priorities?board_id=`: one family, with the level.
+      const offered = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.itilTwo, 'ticket');
+      expect(offered.map((priority) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+      expect(offered.every((priority) => typeof priority.itil_priority_level === 'number')).toBe(true);
+    },
   },
   {
     surface: 'Mobile ticket detail',
     commitGroup: 'priority-pickers',
     claims: ['Mobile ticket detail'],
-    expectedFail: 'useTicketPriority guesses the family from the ticket’s current priority',
+    probe: async (db, fixture) => {
+      // Mobile asks the REST endpoint for the ticket's board, so a ticket with no priority yet on
+      // the second ITIL board is still offered only ITIL priorities.
+      const offered = await listPrioritiesForBoard(db, fixture.tenantId, fixture.boards.itilTwo, 'ticket');
+      expect(offered.map((priority) => priority.priority_id).sort()).toEqual(
+        Object.values(fixture.itilPriorityIds).sort()
+      );
+    },
   },
   {
     surface: 'Board create, update and delete',

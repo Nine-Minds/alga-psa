@@ -550,6 +550,61 @@ surface probes.
   gap, no file of this card involved), two `src/test/unit/api/*.db.test.ts` files need port 5472,
   and `microsoftEmailSetupCallback.test.ts` has two `warn`-count assertions unrelated to tickets.
 
+### Commit group 10 — `priority-pickers` (done)
+
+Landed: `filterPrioritiesForBoard` / `priorityFitsBoardKind` in
+`packages/tickets/src/lib/boardDefaultPriority.ts`, used by Quick Add, ticket detail, the hero,
+Boards settings, the CSV import dialog, the surveys trigger form, the service-request editor, the
+from-asset dialog and the Huntress screen; the family and the board's kind carried on
+`TicketFieldOptions` and both workflow designer pickers narrowing by the fixed board; the
+Activities inline picker and the co-managed option search asking by board; the webhook and RMM
+lookups restricted to ticket priorities (and the webhook one to the mapped board's family);
+`GET /api/v1/tickets/priorities?board_id=` with `itil_priority_level`; mobile asking the API by
+board. Tests: the helper's cases in `boardDefaultPriority.test.ts` (T171),
+`server/src/test/unit/itilPriorityPickersContract.test.ts` (11 cases),
+`server/src/test/integration/itilPriorityPickers.integration.test.ts` (4 cases), the mobile hook's
+board cases, and nine surface probes.
+
+- **One client helper, and a scan that keeps it the only one.** T183 walks every `.tsx` under
+  `packages`, `server/src` and `ee` and fails on a component that filters a priority list by
+  `is_from_itil_standard` itself. That is what stops the six copies from growing back; the helper
+  also takes the `{ value, label, is_from_itil_standard }` option shape the ticket screens hold,
+  not only a priority row.
+- **The workflow designer narrows in the filter, not in the loader.** The second copy
+  (`ee/packages/workflows`) receives its data through injected actions and cannot call a server
+  action of its own, so adding a board-scoped lister there would have meant a new injected
+  dependency in every host. Both copies instead narrow `ticket-priority` in
+  `filterWorkflowPickerOptions`, which now also takes the loaded data so it can read the fixed
+  board's `priority_type`. The payload carries both halves: `TicketFieldOptions.boards` gained
+  `priority_type` and its `priorities` gained `is_from_itil_standard`.
+- **Only the create-side actions declare the board dependency.** `tickets.create` and
+  `assets.create_maintenance_ticket` now say `['board_id']` on their priority picker.
+  `tickets.update_fields` has no board input — its board comes from the ticket — and declaring
+  `['ticket_id']` there would render an unresolved-dependency hint instead of a list, so it was
+  left alone and its priority list stays the tenant's whole ticket set.
+- **The CSV dialog maps per row, not per default board.** A mapping is per priority *name*, and a
+  name can appear on rows of several boards, so the dialog collects the board kinds of the rows
+  that use each name: one kind offers that family, two kinds offer nothing (no single priority
+  fits both) and "Create new" is refused as soon as one of them is ITIL.
+- **The service-request editor's own `getDefaultPriorityId` is gone**; it imports the shared one.
+  Its priority select also used to list every ticket priority on a board with the tenant's own
+  priorities, which is the bug T176 names.
+- **Mobile keeps its old heuristic as the fallback.** With a board id the server answers with the
+  board's list (the new `board_id` parameter) and the hook shows it as it came; without one — an
+  older screen, a cached payload — it still narrows by the current priority's family. The cache
+  key gained the board so one board's list cannot be served to another.
+- **`DB` note:** the mobile suite cannot run in this worktree (`ee/mobile/node_modules` is not
+  installed, so `expo/tsconfig.base/tsconfig.json` is missing and all 17 files fail to transform);
+  its two new cases are written and will run where mobile dependencies are installed. The
+  `packages/integrations` typecheck needs `NODE_OPTIONS=--max-old-space-size=8192` on this machine.
+- Run against this slot's database: `itilPriorityPickers` 4/4, `itilSecondBoardSurfaces` 41
+  covered + 3 todos (only `board-lifecycle`, `board-type-switch` and `sla` are left),
+  `itilPriorityPickersContract` 11/11, `boardDefaultPriority` 14/14, the 13
+  `packages/tickets/src/components/__tests__` files, `packages/surveys` 10/10 and
+  `packages/co-managed` 588/588. One group-7 contract assertion was reconciled: it named
+  `error instanceof TicketBoardFieldError`, which `writers-create` replaced with
+  `isBoardFieldRuleError(error)`.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -567,7 +622,7 @@ surface probes.
 
 ### Groups not started
 
-Commit groups 10–16 (`priority-pickers` through `docs`) are untouched: their features and tests are
+Commit groups 11–16 (`board-lifecycle` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

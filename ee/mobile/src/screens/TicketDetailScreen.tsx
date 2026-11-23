@@ -280,7 +280,7 @@ export function TicketDetailBody({
       scrollRef.current?.scrollTo({ y: Math.max(0, columnsYRef.current + (twoColumn ? sideYRef.current : sectionsYRef.current) + checklistYRef.current - spacing.md), animated: true });
     },
   });
-  const priorityHook = useTicketPriority({ ...deps, fetchTicket, currentPriorityId: ticket?.priority_id ?? null });
+  const priorityHook = useTicketPriority({ ...deps, fetchTicket, currentPriorityId: ticket?.priority_id ?? null, boardId: boardId ?? null });
   const categoryHook = useTicketCategory({ ...deps, fetchTicket, boardId });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });

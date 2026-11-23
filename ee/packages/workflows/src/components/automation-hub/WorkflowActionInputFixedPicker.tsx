@@ -51,6 +51,8 @@ type DependencyResolution = {
 
 type WorkflowPickerOption = SelectOption & {
   boardId?: string | null;
+  /** A priority's family (R3), so a board-scoped list can drop the other one. */
+  isFromItilStandard?: boolean | null;
   clientId?: string | null;
   parentId?: string | null;
   projectId?: string | null;
@@ -335,6 +337,7 @@ const mapTicketFieldOptions = (
       return ticketOptions.priorities.map((priority) => ({
         value: priority.id,
         label: priority.name,
+        isFromItilStandard: priority.is_from_itil_standard ?? null,
       }));
     case 'ticket-category':
     case 'ticket-subcategory':
@@ -428,7 +431,8 @@ const mapWorkflowPickerOptions = (
 const filterWorkflowPickerOptions = (
   kind: string,
   options: WorkflowPickerOption[],
-  dependencies: DependencyResolution[]
+  dependencies: DependencyResolution[],
+  data: WorkflowPickerData
 ): WorkflowPickerOption[] => {
   const dependencyValues = new Map(
     dependencies
@@ -448,6 +452,18 @@ const filterWorkflowPickerOptions = (
       return clientId
         ? options.filter((option) => option.clientId === clientId)
         : options;
+    }
+    case 'ticket-priority': {
+      // R3/F093: with a board fixed, the picker offers only the priorities of that board's
+      // family — the same rule the server applies on the write. With no fixed board (a condition
+      // comparing a ticket's priority, an expression-bound board) every priority stays listed.
+      const boardId = dependencyValues.get('board_id');
+      if (!boardId) return options;
+      const board = data.ticketOptions?.boards.find((candidate) => candidate.id === boardId);
+      if (!board) return options;
+      return options.filter(
+        (option) => Boolean(option.isFromItilStandard) === (board.priority_type === 'itil')
+      );
     }
     case 'ticket-category': {
       const boardId = dependencyValues.get('board_id');
@@ -922,7 +938,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   }, [data, pickerKind]);
   const filteredOptions = useMemo(() => {
     if (!pickerKind) return [];
-    return filterWorkflowPickerOptions(pickerKind, baseOptions, dependencyResolutions);
+    return filterWorkflowPickerOptions(pickerKind, baseOptions, dependencyResolutions, data);
   }, [baseOptions, dependencyResolutions, pickerKind]);
   const pickerOptions = useMemo(() => {
     return appendCurrentValueOption(filteredOptions, value);

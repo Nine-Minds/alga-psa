@@ -7,9 +7,13 @@ import type { TicketDetailDeps } from "../types";
 import { getApiErrorMessage, ticketUpdateSuccessMessage } from "../utils";
 
 /**
- * The priorities a ticket can move to: the same family (ITIL or custom) as its current priority, because the
- * server refuses a priority of the other family for the ticket's board and the current one already matches it.
- * Everything when the ticket has no priority, or the server (or cache) carries no ITIL flag.
+ * The priorities a ticket can move to when its board is unknown: the same family (ITIL or custom) as its
+ * current priority, because the server refuses a priority of the other family for the ticket's board and the
+ * current one already matches it. Everything when the ticket has no priority, or the server (or cache)
+ * carries no ITIL flag.
+ *
+ * With a board id the list comes from the server already narrowed to that board (R3), which also answers the
+ * case this heuristic cannot: a ticket with no priority yet on a board that uses ITIL priorities.
  */
 export function prioritiesOfSameFamily(options: TicketPriority[], currentPriorityId: string | null | undefined): TicketPriority[] {
   const current = options.find((p) => p.priority_id === currentPriorityId);
@@ -21,6 +25,8 @@ export function useTicketPriority(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
     currentPriorityId?: string | null;
+    /** The ticket's board, so the server can answer with the priorities that board uses. */
+    boardId?: string | null;
   },
 ) {
   const { client, session, ticketId, t, showToast, fetchTicket } = deps;
@@ -36,7 +42,8 @@ export function useTicketPriority(
     if (!client || !session) return;
     setPriorityPickerOpen(true);
     if (priorityOptions.length > 0) return;
-    const tenantKey = session.tenantId ?? "unknownTenant";
+    // The list depends on the board, so the board is part of the cache key.
+    const tenantKey = `${session.tenantId ?? "unknownTenant"}:${deps.boardId ?? ""}`;
     const cached = getCachedTicketPriorities(tenantKey);
     if (Array.isArray(cached) && cached.length > 0) {
       setPriorityOptions(cached as TicketPriority[]);
@@ -45,7 +52,7 @@ export function useTicketPriority(
     setPriorityOptionsLoading(true);
     setPriorityOptionsError(null);
     try {
-      const res = await getTicketPriorities(client, { apiKey: session.accessToken });
+      const res = await getTicketPriorities(client, { apiKey: session.accessToken, boardId: deps.boardId ?? null });
       if (!res.ok) {
         setPriorityOptionsError(t("detail.errors.unableToLoadPriorities"));
         return;
@@ -99,7 +106,10 @@ export function useTicketPriority(
   return {
     priorityPickerOpen,
     setPriorityPickerOpen,
-    priorityOptions: prioritiesOfSameFamily(priorityOptions, deps.currentPriorityId),
+    // Already narrowed by the server when the board is known; the heuristic is the fallback.
+    priorityOptions: deps.boardId
+      ? priorityOptions
+      : prioritiesOfSameFamily(priorityOptions, deps.currentPriorityId),
     priorityOptionsLoading,
     priorityOptionsError,
     priorityUpdating,

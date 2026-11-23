@@ -436,7 +436,8 @@ export function registerTicketActions(): void {
         'ticket-status',
         ['board_id']
       ),
-      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
+      // R3: a board's priorities are one family, so the picker narrows by the chosen board.
+      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority', ['board_id']),
       assignment: withTicketAssignmentEditor(
         buildWorkflowTicketAssignmentSchema({ dependencyPrefix: 'assignment' }).optional(),
         'Ticket assignment configuration'

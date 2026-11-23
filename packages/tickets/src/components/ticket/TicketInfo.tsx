@@ -63,6 +63,7 @@ import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
 import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
+import { filterPrioritiesForBoard } from '../../lib/boardDefaultPriority';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -299,15 +300,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // A board only offers the priority family its priority_type declares. The
   // ticket's own priority stays listed so a legacy value still renders.
-  const scopedPriorityOptions = useMemo(() => {
-    const wantsItil = effectiveBoardConfig.priority_type === 'itil';
-    const currentPriorityId = pendingPriorityValue;
-
-    return priorityOptions.filter((option) =>
-      (wantsItil ? Boolean(option.is_from_itil_standard) : !option.is_from_itil_standard)
-      || option.value === currentPriorityId
-    );
-  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingPriorityValue]);
+  const scopedPriorityOptions = useMemo(
+    () => filterPrioritiesForBoard(priorityOptions, effectiveBoardConfig.priority_type, {
+      keep: (option) => option.value === pendingPriorityValue,
+    }),
+    [priorityOptions, effectiveBoardConfig.priority_type, pendingPriorityValue]
+  );
 
   // Calculate ITIL priority when impact and urgency are available
   // Use pending ITIL values if available, otherwise use prop values

@@ -1,21 +1,44 @@
 import { IBoard, IPriority } from '@alga-psa/types';
 
 /**
- * One rule for "the default priority of this board", shared by the MSP Quick Add
- * and the client portal ticket form so a board's configured default is honoured
- * wherever a ticket is created.
+ * The client half of the board field rules: which priorities a board offers, and which of them is
+ * its default. The server half is `@alga-psa/shared/lib/tickets/boardFieldRules`
+ * (`listPrioritiesForBoard`, `defaultPriorityForBoard`); these two agree on R3 and R7 and exist
+ * separately only because a picker filters a list it has already fetched.
+ *
+ * Every picker uses {@link filterPrioritiesForBoard} rather than its own copy of the family test,
+ * so a board never offers a priority the server then refuses
+ * (ee/plans/2026-11-21-itil-remediation, R3/F092).
  */
+
+/** R3: a priority's family must match the board's `priority_type`. A missing kind is the tenant's own. */
+export const priorityFitsBoardKind = (
+  priority: { is_from_itil_standard?: boolean | null },
+  priorityType?: string | null,
+): boolean => Boolean(priority.is_from_itil_standard) === (priorityType === 'itil');
+
+/**
+ * The priorities a board offers. `keep` lists a value anyway — a ticket's own stored priority, so
+ * a legacy row still renders in its picker (R5/D3); nothing else is added.
+ */
+export const filterPrioritiesForBoard = <T extends { is_from_itil_standard?: boolean | null }>(
+  priorities: readonly T[],
+  priorityType?: string | null,
+  options?: { keep?: (priority: T) => boolean },
+): T[] => priorities.filter(
+  (priority) => priorityFitsBoardKind(priority, priorityType) || options?.keep?.(priority) === true,
+);
 
 export const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: 'custom' | 'itil'): string => {
   if (!availablePriorities.length) return '';
 
   if (priorityType === 'itil') {
-    const itilPriorities = availablePriorities.filter(priority => priority.is_from_itil_standard);
+    const itilPriorities = filterPrioritiesForBoard(availablePriorities, 'itil');
     const mediumItilPriority = itilPriorities.find(priority => priority.itil_priority_level === 3);
     return mediumItilPriority?.priority_id || itilPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
   }
 
-  const customPriorities = availablePriorities.filter(priority => !priority.is_from_itil_standard);
+  const customPriorities = filterPrioritiesForBoard(availablePriorities, 'custom');
   return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
 };
 
@@ -27,9 +50,7 @@ export const getBoardDefaultPriorityId = (board: IBoard | undefined, availablePr
     const match = availablePriorities.find(p => p.priority_id === boardDefault);
     if (match) {
       // Guard against misconfiguration: only use ITIL defaults for ITIL boards and vice versa.
-      const priorityType = board?.priority_type || 'custom';
-      if (priorityType === 'itil' && match.is_from_itil_standard) return boardDefault;
-      if (priorityType !== 'itil' && !match.is_from_itil_standard) return boardDefault;
+      if (priorityFitsBoardKind(match, board?.priority_type)) return boardDefault;
     }
   }
 

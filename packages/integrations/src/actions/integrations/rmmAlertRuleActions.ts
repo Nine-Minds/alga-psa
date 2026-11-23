@@ -336,7 +336,11 @@ export const getRmmAlertRuleFormOptions = withAuth(
     const db = tenantDb(knex, tenant);
     const [boards, priorities, closedStatuses, users, organizations] = await Promise.all([
       db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
-      db.table('priorities').select('priority_id', 'priority_name').orderBy('priority_name'),
+      // R3/F100: a rule routes a ticket, so a project-task priority is never an option.
+      db.table('priorities')
+        .where({ item_type: 'ticket' })
+        .select('priority_id', 'priority_name')
+        .orderBy('priority_name'),
       db.table('statuses')
         .where({ status_type: 'ticket', is_closed: true })
         .select('status_id', 'name', 'board_id')

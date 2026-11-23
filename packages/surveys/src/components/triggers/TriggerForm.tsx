@@ -29,6 +29,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import type { SurveyTriggerConditions } from '@alga-psa/surveys/actions/surveyActions';
+import { filterPrioritiesForBoard } from '@alga-psa/tickets/lib/boardDefaultPriority';
 
 type TriggerType = 'ticket_closed' | 'project_completed';
 
@@ -299,12 +300,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     if (formState.triggerType !== 'ticket_closed') {
       return [];
     }
-    if (selectedPriorityType === 'itil') {
-      return priorityOptions.filter((option) => option.is_from_itil_standard);
+    if (selectedPriorityType === 'itil' || selectedPriorityType === 'custom') {
+      return filterPrioritiesForBoard(priorityOptions, selectedPriorityType);
     }
-    if (selectedPriorityType === 'custom') {
-      return priorityOptions.filter((option) => !option.is_from_itil_standard);
-    }
+    // No board chosen, or boards of both kinds: every priority stays listed.
     return priorityOptions;
   }, [formState.triggerType, priorityOptions, selectedPriorityType]);
 

@@ -36,6 +36,7 @@ import {
   validateTicketImportData,
   processTicketRows,
 } from '../lib/ticketImportUtils';
+import { filterPrioritiesForBoard } from '../lib/boardDefaultPriority';
 import {
   MappableTicketField,
   TICKET_IMPORT_FIELDS,
@@ -660,6 +661,42 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
     const board = initialBoards.find(b => b.board_id === defaultBoardId);
     return (board as { priority_type?: string } | undefined)?.priority_type === 'itil';
   }, [initialBoards, defaultBoardId]);
+
+  /**
+   * R3/F099: a priority mapping is offered per row's own board, not per the import's default
+   * board. One CSV can carry rows for several boards, so each unmatched priority name is mapped
+   * against the kinds of the boards its rows actually target: one kind offers that family, two
+   * kinds offer nothing (no single priority fits both) and "Create new" is refused as soon as one
+   * of them uses ITIL priorities.
+   */
+  const priorityBoardKindsByName = useMemo(() => {
+    const boardKindByName = new Map<string, 'custom' | 'itil'>();
+    for (const board of initialBoards) {
+      if (!board.board_name) continue;
+      boardKindByName.set(
+        board.board_name.toLowerCase().trim(),
+        (board as { priority_type?: string }).priority_type === 'itil' ? 'itil' : 'custom'
+      );
+    }
+    const defaultKind: 'custom' | 'itil' = isItilBoard ? 'itil' : 'custom';
+
+    const kindsByName = new Map<string, Set<'custom' | 'itil'>>();
+    for (const result of validationResults) {
+      const priorityName = result.data.priority?.trim();
+      if (!priorityName) continue;
+      const rowBoardName = result.data.board?.trim()?.toLowerCase();
+      const kind = (rowBoardName && boardKindByName.get(rowBoardName)) || defaultKind;
+      const key = priorityName.toLowerCase();
+      const kinds = kindsByName.get(key) ?? new Set<'custom' | 'itil'>();
+      kinds.add(kind);
+      kindsByName.set(key, kinds);
+    }
+    return kindsByName;
+  }, [initialBoards, isItilBoard, validationResults]);
+
+  const priorityBoardKinds = (priorityName: string): Set<'custom' | 'itil'> =>
+    priorityBoardKindsByName.get(priorityName.toLowerCase().trim())
+      ?? new Set<'custom' | 'itil'>([isItilBoard ? 'itil' : 'custom']);
 
   // R2: a board with the standard ITIL categories owns exactly its copy of the standard set, so
   // an unmatched category there is mapped or skipped, never created.
@@ -1322,6 +1359,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                       {unmatchedPriorityInfo.map(info => {
                         const res = priorityResolutions.find(r => r.originalPriorityName.toLowerCase() === info.name.toLowerCase());
                         if (!res) return null;
+                        const rowKinds = priorityBoardKinds(info.name);
+                        const createRefused = rowKinds.has('itil');
+                        const mappable = rowKinds.size === 1
+                          ? filterPrioritiesForBoard(referenceData?.priorities ?? [], [...rowKinds][0])
+                          : [];
                         return (
                           <div key={info.name} className="pt-3 space-y-2">
                             <div><span className="font-medium text-sm">&quot;{info.name}&quot;</span> <span className="text-xs text-gray-500">{t('importDialog.ticketCount', { defaultValue: '({{count}} tickets)', count: info.ticketCount })}</span></div>
@@ -1332,13 +1374,13 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
                               orientation="horizontal"
                               size="sm"
                               options={[
-                                ...(!isItilBoard ? [{ value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) }] : []),
+                                ...(!createRefused ? [{ value: 'create', label: t('importDialog.resolve.createNew', { defaultValue: 'Create new' }) }] : []),
                                 { value: 'map_to_existing', label: t('importDialog.resolve.mapToExisting', { defaultValue: 'Map to existing' }) },
                                 { value: 'use_default', label: t('importDialog.resolve.useDefault', { defaultValue: 'Use default' }) },
                               ]}
                             />
                             {res.action === 'map_to_existing' && referenceData && (
-                              <div className="ml-1 w-fit"><CustomSelect options={referenceData.priorities.filter(p => !isItilBoard || p.is_from_itil_standard).map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectPriority', { defaultValue: 'Select priority...' })} /></div>
+                              <div className="ml-1 w-fit"><CustomSelect options={mappable.map(p => ({ value: p.priority_id, label: p.priority_name }))} value={res.mappedPriorityId || ''} onValueChange={(v) => handlePriorityResolutionChange(info.name, 'map_to_existing', v)} placeholder={t('importDialog.resolve.selectPriority', { defaultValue: 'Select priority...' })} /></div>
                             )}
                           </div>
                         );

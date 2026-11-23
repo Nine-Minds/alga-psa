@@ -488,10 +488,12 @@ export const getHuntressRoutingOptions = withHuntressAccess(
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const [boards, priorities, categories, closedStatuses] = await Promise.all([
-      db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
+      // `priority_type` travels with the board so the screen can offer the priorities that board
+      // actually uses (R3/F094).
+      db.table('boards').select('board_id', 'board_name', 'priority_type').orderBy('board_name'),
       db.table('priorities')
         .where({ item_type: 'ticket' })
-        .select('priority_id', 'priority_name')
+        .select('priority_id', 'priority_name', 'is_from_itil_standard')
         .orderBy('order_number'),
       db.table('categories')
         .select('category_id', 'category_name', 'parent_category', 'board_id')

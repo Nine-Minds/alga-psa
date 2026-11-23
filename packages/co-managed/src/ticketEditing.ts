@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
-import { findBoardFieldProblems } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import { boardFieldKind, findBoardFieldProblems, loadBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -178,6 +178,12 @@ export async function searchCoManagedTicketEditOptions(db: Knex, inputActor: CoM
       if (field === 'category_id') query.where({ board_id: row.board_id }).whereNull('parent_category');
       else query.where('item_type', 'ticket');
       if (field === 'status_id') query.where('board_id', row.board_id);
+      // R3/F095: a priority's family must match the ticket's board, so the collaborator is offered
+      // only what the write would accept. The board row is read on the same transaction.
+      if (field === 'priority_id') {
+        const board = await loadBoard(context.trx, resource.tenant, row.board_id);
+        query.where('is_from_itil_standard', boardFieldKind(board?.priority_type) === 'itil');
+      }
       if (afterId) query.where(field, '>', afterId);
       if (search) query.whereILike(name, `%${search.replace(/[\\%_]/g, '\\$&')}%`);
       const rows = await query.select(`${field} as id`, `${name} as name`);
@@ -213,8 +219,15 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
         if (Object.entries(request.expected).some(([field, value]) => fieldValue(row, field as CoManagedTicketEditField) !== value)) throw new CoManagedTicketEditError('TICKET_EDIT_CONFLICT');
         if (request.patch.status_id && !await owner.table('statuses').where({ status_id: request.patch.status_id,
           board_id: row.board_id, item_type: 'ticket' }).forShare().first('status_id')) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
-        if (request.patch.priority_id && !await owner.table('priorities').where({ priority_id: request.patch.priority_id, item_type: 'ticket' }).forShare().first('priority_id')) {
-          throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
+        if (request.patch.priority_id) {
+          // The lock stays a SELECT … FOR SHARE on the row; the rule itself is the shared one (R3).
+          if (!await owner.table('priorities').where({ priority_id: request.patch.priority_id, item_type: 'ticket' }).forShare().first('priority_id')) {
+            throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
+          }
+          const priorityProblems = await findBoardFieldProblems(context.trx, resource.tenant, {
+            boardId: row.board_id, priorityId: request.patch.priority_id,
+          });
+          if (priorityProblems.length > 0) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
         }
         // R2 lives in the shared rules module, which this package can import (the tickets package it
         // deliberately cannot). The row lock stays: the rule is shared, the read is still SELECT … FOR SHARE.

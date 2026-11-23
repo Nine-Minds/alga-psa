@@ -154,7 +154,7 @@ export function registerAssetMaintenanceActions(): void {
       description: z.string().default(''),
       board_id: withWorkflowPicker(uuidSchema, 'Board id', 'board'),
       status_id: withWorkflowPicker(uuidSchema, 'Open ticket status id', 'ticket-status', ['board_id']),
-      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
+      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority', ['board_id']),
       category_id: withWorkflowPicker(
         uuidSchema.optional(),
         'Optional ticket category or subcategory id (like the ticket UI category dropdown; must belong to the selected board)',

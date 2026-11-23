@@ -235,9 +235,9 @@ export interface InboundTicketDefaults {
  * Options for ticket field dropdowns
  */
 export interface TicketFieldOptions {
-  boards: Array<{ id: string; name: string; is_default: boolean }>;
+  boards: Array<{ id: string; name: string; is_default: boolean; priority_type?: string | null }>;
   statuses: Array<{ id: string; name: string; is_default?: boolean; board_id?: string; board_name?: string; is_closed?: boolean }>;
-  priorities: Array<{ id: string; name: string; is_default?: boolean }>;
+  priorities: Array<{ id: string; name: string; is_default?: boolean; is_from_itil_standard?: boolean | null }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
   users: Array<{ id: string; name: string; username: string }>;
   locations: Array<{ id: string; name: string; client_id: string }>;

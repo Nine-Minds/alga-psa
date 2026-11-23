@@ -79,6 +79,7 @@ import {
   findUnknownServiceRequestTemplateTokens,
   getServiceRequestTemplateFields,
 } from '../../../lib/service-requests/ticketTextTemplate';
+import { filterPrioritiesForBoard, getDefaultPriorityId } from '@alga-psa/tickets/lib/boardDefaultPriority';
 
 interface EditorData {
   definitionId: string;
@@ -218,24 +219,6 @@ function getDefaultStatus(statuses: ITicketStatus[]): ITicketStatus | null {
     statuses[0] ||
     null
   );
-}
-
-function getDefaultPriorityId(
-  priorities: IPriority[],
-  priorityType?: 'custom' | 'itil'
-): string {
-  if (priorities.length === 0) {
-    return '';
-  }
-
-  if (priorityType === 'itil') {
-    const itilPriorities = priorities.filter((priority) => priority.is_from_itil_standard);
-    const mediumPriority = itilPriorities.find((priority) => priority.itil_priority_level === 3);
-    return mediumPriority?.priority_id ?? itilPriorities[0]?.priority_id ?? priorities[0]?.priority_id ?? '';
-  }
-
-  const customPriorities = priorities.filter((priority) => !priority.is_from_itil_standard);
-  return customPriorities[0]?.priority_id ?? priorities[0]?.priority_id ?? '';
 }
 
 function deriveSelectedRoutingCategories(config: {
@@ -407,16 +390,19 @@ export default function ServiceRequestDefinitionEditorPage() {
     ],
     [data?.basics.availableCategories, t]
   );
+  // R3/F096: the editor offers the priorities of the selected board's family, for both kinds. The
+  // list it had offered every ticket priority, so a definition on a board with the tenant's own
+  // priorities could be configured with an ITIL one the server then replaced.
   const ticketPriorityOptions = useMemo(
     () =>
-      ticketRoutingPriorities.map((priority) => ({
+      filterPrioritiesForBoard(ticketRoutingPriorities, ticketRoutingBoardConfig?.priority_type).map((priority) => ({
         value: priority.priority_id,
         label: priority.priority_name,
         color: priority.color ?? undefined,
         is_from_itil_standard: priority.is_from_itil_standard ?? undefined,
         itil_priority_level: priority.itil_priority_level ?? undefined,
       })),
-    [ticketRoutingPriorities]
+    [ticketRoutingPriorities, ticketRoutingBoardConfig?.priority_type]
   );
 
   const openTicketDrawer = async (ticketId: string | null) => {
