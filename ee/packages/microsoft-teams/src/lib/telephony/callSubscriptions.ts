@@ -1,7 +1,11 @@
-import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import {
+  assertGraphClientStateFits,
+  fitsGraphClientState,
+  generateGraphClientStateSecret,
+} from '../graphClientState';
 import { isTeamsEmulatorModeEnabled } from '../teams/emulatorMode';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from '../meetings/meetingConfig';
@@ -17,9 +21,6 @@ import { resolveTeamsMeetingGraphConfig } from '../meetings/meetingConfig';
  */
 
 const SUBSCRIPTION_TTL_HOURS = 60;
-// Microsoft Graph rejects subscriptions whose clientState exceeds 128 characters.
-const MAX_CLIENT_STATE_LENGTH = 128;
-const WEBHOOK_SECRET_BYTES = 16;
 export const TEAMS_PHONE_PROVIDER = 'teams-phone' as const;
 export const TEAMS_CALL_RECORDS_RESOURCE = 'communications/callRecords';
 
@@ -58,13 +59,7 @@ function formatClientState(tenantId: string, secret: string): string {
 }
 
 export function buildTelephonyClientState(tenantId: string, secret: string): string {
-  const clientState = formatClientState(tenantId, secret);
-  if (clientState.length > MAX_CLIENT_STATE_LENGTH) {
-    throw new Error(
-      `Teams call-records subscription clientState is ${clientState.length} characters; Microsoft Graph allows at most ${MAX_CLIENT_STATE_LENGTH}.`,
-    );
-  }
-  return clientState;
+  return assertGraphClientStateFits(formatClientState(tenantId, secret), 'Teams call-records subscription');
 }
 
 export function parseTelephonyClientState(
@@ -81,10 +76,6 @@ export function parseTelephonyClientState(
   }
 
   return { tenantId, provider, secret };
-}
-
-function generateWebhookSecret(): string {
-  return crypto.randomBytes(WEBHOOK_SECRET_BYTES).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -233,8 +224,8 @@ export async function renewTelephonyCallSubscriptions(input: {
   // Secrets stored by earlier releases were too long for Graph's clientState limit, so no
   // subscription can be using them; replace them rather than failing every renewal.
   let clientStateSecret = normalizeString(row.webhook_secret);
-  if (!clientStateSecret || formatClientState(tenantId, clientStateSecret).length > MAX_CLIENT_STATE_LENGTH) {
-    clientStateSecret = generateWebhookSecret();
+  if (!clientStateSecret || !fitsGraphClientState(formatClientState(tenantId, clientStateSecret))) {
+    clientStateSecret = generateGraphClientStateSecret();
     await db.table('telephony_providers')
       .where({ provider_id: row.provider_id })
       .update({ webhook_secret: clientStateSecret, updated_at: knex.fn.now() });

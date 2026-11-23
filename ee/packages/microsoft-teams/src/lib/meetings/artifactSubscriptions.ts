@@ -1,15 +1,16 @@
-import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import {
+  assertGraphClientStateFits,
+  fitsGraphClientState,
+  generateGraphClientStateSecret,
+} from '../graphClientState';
 import { isTeamsEmulatorModeEnabled } from '../teams/emulatorMode';
 import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
 
 const SUBSCRIPTION_TTL_HOURS = 60;
-// Microsoft Graph rejects subscriptions whose clientState exceeds 128 characters.
-const MAX_CLIENT_STATE_LENGTH = 128;
-const ARTIFACT_WEBHOOK_SECRET_BYTES = 16;
 const TEAMS_RECORDING_KIND = 'recordings' as const;
 const TEAMS_TRANSCRIPT_KIND = 'transcripts' as const;
 
@@ -51,18 +52,12 @@ function formatClientState(tenantId: string, kind: ArtifactSubscriptionKind, sec
 }
 
 export function buildTeamsArtifactClientState(tenantId: string, kind: ArtifactSubscriptionKind, secret: string): string {
-  const clientState = formatClientState(tenantId, kind, secret);
-  if (clientState.length > MAX_CLIENT_STATE_LENGTH) {
-    throw new Error(
-      `Teams ${kind} subscription clientState is ${clientState.length} characters; Microsoft Graph allows at most ${MAX_CLIENT_STATE_LENGTH}.`,
-    );
-  }
-  return clientState;
+  return assertGraphClientStateFits(formatClientState(tenantId, kind, secret), `Teams ${kind} subscription`);
 }
 
 function fitsClientState(tenantId: string, secret: string): boolean {
   return [TEAMS_RECORDING_KIND, TEAMS_TRANSCRIPT_KIND].every(
-    (kind) => formatClientState(tenantId, kind, secret).length <= MAX_CLIENT_STATE_LENGTH,
+    (kind) => fitsGraphClientState(formatClientState(tenantId, kind, secret)),
   );
 }
 
@@ -80,10 +75,6 @@ export function parseTeamsArtifactClientState(
   }
 
   return { tenantId, kind, secret };
-}
-
-function generateArtifactWebhookSecret(): string {
-  return crypto.randomBytes(ARTIFACT_WEBHOOK_SECRET_BYTES).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -266,7 +257,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   // subscription can be using them; replace them rather than failing every renewal.
   let clientStateSecret = normalizeString(row.meeting_artifact_webhook_secret);
   if (!clientStateSecret || !fitsClientState(tenantId, clientStateSecret)) {
-    clientStateSecret = generateArtifactWebhookSecret();
+    clientStateSecret = generateGraphClientStateSecret();
     await db.table('teams_integrations')
       .update({ meeting_artifact_webhook_secret: clientStateSecret, updated_at: knex.fn.now() });
   }
