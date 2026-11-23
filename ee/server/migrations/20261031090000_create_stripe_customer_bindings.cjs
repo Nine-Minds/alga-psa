@@ -1,85 +1,198 @@
 /**
- * Global ownership of Stripe customer ids (alga-2026-0002926).
+ * Establish a global tenant owner for every Stripe customer id.
  *
- * `stripe_customers` is tenant-scoped (PK/unique keys all lead with `tenant`) and may be
- * Citus-distributed on `tenant` in production (no migration in this repo distributes it, but
- * production tables have been distributed out-of-band before). On a distributed table a UNIQUE
- * index that omits the distribution column is impossible, so a plain
- * `UNIQUE (stripe_customer_external_id)` cannot be relied on. Instead this adds a global
- * binding table with PRIMARY KEY (stripe_customer_external_id): one external id, one tenant.
- * It is a Citus *reference* table when Citus is available (reference tables may carry any
- * unique key), and it deliberately has no foreign key to `tenants` (a reference table cannot
- * reference a distributed table). Every writer of `stripe_customers` inserts the binding in the
- * same transaction; the tenant-deletion manifest releases it with the tenant.
- *
- * PRE-FLIGHT: if any external id is already present under more than one tenant the migration
- * FAILS, listing them, and changes nothing. It never picks a winner; resolve the disputes by
- * hand (the captain decides), then re-run.
+ * Global ownership is enforced by a composite foreign key. Citus requires
+ * reference-table conversion before FK DDL when stripe_customers is
+ * distributed. When stripe_customers is local, keep the binding table local
+ * too: converting it to a reference table would pull the local Stripe FK
+ * graph into Citus metadata, where its existing distributed-table edge makes
+ * that FK unsupported. The migration locks both tables before scanning and
+ * backfilling, then adds a NOT VALID FK; a forward migration validates it.
  */
 
 const TABLE = 'stripe_customer_bindings';
+const OWNER_KEY = 'stripe_customer_bindings_owner_key';
+const OWNER_CONSTRAINT = 'stripe_customers_binding_owner_fk';
 
-async function findCrossTenantDuplicates(knex) {
-  const { rows } = await knex.raw(`
-    SELECT stripe_customer_external_id AS external_id,
-           array_agg(DISTINCT tenant::text ORDER BY tenant::text) AS tenants
-    FROM stripe_customers
-    GROUP BY stripe_customer_external_id
-    HAVING COUNT(DISTINCT tenant) > 1
-    ORDER BY stripe_customer_external_id
-  `);
-  return rows;
+async function isCitus(knex) {
+  const result = await knex.raw(
+    `SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS present`
+  );
+  return Boolean(result.rows?.[0]?.present);
 }
 
-exports.up = async function up(knex) {
-  const duplicates = await findCrossTenantDuplicates(knex);
-  if (duplicates.length > 0) {
-    const lines = duplicates.map((d) => `  ${d.external_id} -> tenants [${d.tenants.join(', ')}]`);
-    throw new Error(
-      `Cannot enforce global uniqueness of stripe_customer_external_id: ${duplicates.length} ` +
-        `Stripe customer id(s) are bound to more than one tenant. Resolve each dispute manually ` +
-        `(delete or re-point the wrong stripe_customers rows), then re-run this migration:\n` +
-        lines.join('\n')
-    );
-  }
+async function customersAreDistributed(knex, citus) {
+  if (!citus) return false;
+  const result = await knex.raw(
+    "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = 'stripe_customers'::regclass) AS present"
+  );
+  return Boolean(result.rows?.[0]?.present);
+}
 
+async function ensureBindingTable(knex, { citus, customersDistributed }) {
   if (!(await knex.schema.hasTable(TABLE))) {
     await knex.schema.createTable(TABLE, (table) => {
       table.text('stripe_customer_external_id').notNullable().primary();
       table.uuid('tenant').notNullable();
       table.timestamp('bound_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.unique(['stripe_customer_external_id', 'tenant'], OWNER_KEY);
       table.index(['tenant'], 'stripe_customer_bindings_tenant_idx');
     });
-  }
-
-  // Reference table on Citus; no-op on plain Postgres and when already a reference table.
-  const hasFn = await knex.raw(`SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_reference_table') AS present`);
-  if (hasFn.rows?.[0]?.present) {
-    const dist = await knex.raw(
-      `SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass) AS present`,
-      [TABLE]
+  } else {
+    const ownerKey = await knex.raw(
+      'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass',
+      [OWNER_KEY, TABLE]
     );
-    if (!dist.rows?.[0]?.present) {
-      await knex.raw(`SELECT create_reference_table('${TABLE}')`);
+    if (ownerKey.rows.length === 0) {
+      await knex.raw(
+        `ALTER TABLE ${TABLE} ADD CONSTRAINT ${OWNER_KEY} UNIQUE (stripe_customer_external_id, tenant)`
+      );
     }
   }
 
-  // Backfill from existing rows (pre-flight guarantees one tenant per id). Read then insert in
-  // batches rather than INSERT..SELECT, which Citus cannot plan from a distributed table into a
-  // reference table.
-  const existing = await knex('stripe_customers')
-    .distinct('stripe_customer_external_id', 'tenant')
-    .orderBy('stripe_customer_external_id');
-  for (let i = 0; i < existing.length; i += 500) {
-    const batch = existing.slice(i, i + 500).map((r) => ({
-      stripe_customer_external_id: r.stripe_customer_external_id,
-      tenant: r.tenant,
-    }));
-    await knex(TABLE).insert(batch).onConflict('stripe_customer_external_id').ignore();
+  const hasReferenceFunction = await knex.raw(
+    `SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc WHERE proname = 'create_reference_table') AS present`
+  );
+  if (citus && hasReferenceFunction.rows?.[0]?.present) {
+    const distribution = await knex.raw(
+      'SELECT partmethod FROM pg_catalog.pg_dist_partition WHERE logicalrelid = ?::regclass',
+      [TABLE]
+    );
+    const bindingIsReference = distribution.rows?.[0]?.partmethod === 'n';
+    const bindingIsDistributed = distribution.rows?.length > 0;
+
+    if (customersDistributed && !bindingIsReference) {
+      if (bindingIsDistributed) {
+        await knex.raw('SELECT pg_catalog.undistribute_table(?::regclass)', [TABLE]);
+      }
+      // Citus requires reference-table conversion to finish before distributed
+      // table foreign-key DDL, so this intentionally precedes the transaction.
+      await knex.raw('SELECT pg_catalog.create_reference_table(?::regclass)', [TABLE]);
+    } else if (!customersDistributed && bindingIsDistributed) {
+      // A prior rollout may already have replicated the binding table. Restore
+      // it to a coordinator-local table before adding the local-to-local FK;
+      // undistribution must run outside the enforcement transaction.
+      await knex.raw(`ALTER TABLE ${TABLE} DROP CONSTRAINT IF EXISTS ${OWNER_CONSTRAINT}`);
+      await knex.raw('SELECT pg_catalog.undistribute_table(?::regclass)', [TABLE]);
+    }
   }
-};
+}
+
+async function enforceOwnership(knex) {
+  const citus = await isCitus(knex);
+  const stripeCustomersDistributed = await customersAreDistributed(knex, citus);
+  await ensureBindingTable(knex, { citus, customersDistributed: stripeCustomersDistributed });
+
+  await knex.transaction(async (trx) => {
+    await trx.raw("SELECT pg_advisory_xact_lock(hashtext('stripe_customer_bindings_migration'))");
+
+    if (stripeCustomersDistributed) {
+      // Citus requires sequential shard modification for FK DDL involving a
+      // reference table; PostgreSQL has no such setting, so scope it to Citus.
+      await trx.raw("SET LOCAL citus.multi_shard_modify_mode = 'sequential'");
+    }
+
+    // Current application writers claim the binding before inserting the
+    // mapping. Lock in that same order, then the mapping table, to fence both
+    // participating and legacy writers without introducing a lock inversion.
+    await trx.raw(`LOCK TABLE ${TABLE} IN ACCESS EXCLUSIVE MODE`);
+    // This lock also excludes unmodified legacy writers. Hold both locks
+    // through validation, backfill, and constraint creation.
+    await trx.raw('LOCK TABLE stripe_customers IN ACCESS EXCLUSIVE MODE');
+
+    const invalidRows = await trx.raw(`
+      SELECT stripe_customer_external_id AS external_id,
+             array_agg(DISTINCT tenant::text ORDER BY tenant::text)
+               FILTER (WHERE tenant IS NOT NULL) AS tenants
+      FROM stripe_customers
+      GROUP BY stripe_customer_external_id
+      HAVING stripe_customer_external_id IS NULL
+          OR COUNT(*) FILTER (WHERE tenant IS NULL) > 0
+          OR COUNT(DISTINCT tenant) > 1
+      ORDER BY stripe_customer_external_id NULLS FIRST`);
+    if (invalidRows.rows.length > 0) {
+      throw new Error(
+        `Cannot enforce Stripe customer tenant ownership: ${invalidRows.rows.length} ` +
+          `mapping(s) have a null key or conflicting tenants. Resolve them manually, then re-run:\n` +
+          invalidRows.rows
+            .map((row) => `  ${row.external_id ?? '<null>'} -> tenants [${(row.tenants ?? []).join(', ')}]`)
+            .join('\n')
+      );
+    }
+
+    const conflicts = await trx.raw(`
+      SELECT sc.stripe_customer_external_id AS external_id,
+             sc.tenant AS mapping_tenant,
+             b.tenant AS binding_tenant
+      FROM stripe_customers sc
+      JOIN ${TABLE} b USING (stripe_customer_external_id)
+      WHERE b.tenant <> sc.tenant
+      ORDER BY sc.stripe_customer_external_id`);
+    if (conflicts.rows.length > 0) {
+      throw new Error(
+        `Cannot enforce Stripe customer tenant ownership: existing bindings conflict with mappings: ` +
+          JSON.stringify(conflicts.rows)
+      );
+    }
+
+    const existing = await trx('stripe_customers')
+      .distinct('stripe_customer_external_id', 'tenant')
+      .orderBy('stripe_customer_external_id');
+    for (let offset = 0; offset < existing.length; offset += 500) {
+      const batch = existing.slice(offset, offset + 500);
+      for (const binding of batch) {
+        const current = await trx(TABLE)
+          .where({ stripe_customer_external_id: binding.stripe_customer_external_id })
+          .first('tenant');
+        if (!current) {
+          // Do not ignore conflicts: a concurrent or pre-existing different
+          // owner must abort, never be silently accepted.
+          await trx(TABLE).insert(binding);
+        } else if (current.tenant !== binding.tenant) {
+          throw new Error(
+            `Cannot enforce Stripe customer tenant ownership: ${binding.stripe_customer_external_id} ` +
+              `is bound to tenant ${current.tenant}, but its mapping belongs to ${binding.tenant}`
+          );
+        }
+      }
+    }
+
+    const mismatch = await trx.raw(`
+      SELECT sc.stripe_customer_external_id AS external_id,
+             sc.tenant AS mapping_tenant,
+             b.tenant AS binding_tenant
+      FROM stripe_customers sc
+      LEFT JOIN ${TABLE} b USING (stripe_customer_external_id)
+      WHERE b.tenant IS NULL OR b.tenant <> sc.tenant
+      LIMIT 20`);
+    if (mismatch.rows.length > 0) {
+      throw new Error(
+        `Stripe customer tenant binding backfill mismatch: ${JSON.stringify(mismatch.rows)}`
+      );
+    }
+
+    const constraint = await trx.raw(
+      'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = \'stripe_customers\'::regclass',
+      [OWNER_CONSTRAINT]
+    );
+    if (constraint.rows.length === 0) {
+      await trx.raw(`
+        ALTER TABLE stripe_customers
+        ADD CONSTRAINT ${OWNER_CONSTRAINT}
+        FOREIGN KEY (stripe_customer_external_id, tenant)
+        REFERENCES ${TABLE} (stripe_customer_external_id, tenant)
+        NOT VALID`);
+    }
+  });
+}
+
+exports.up = enforceOwnership;
+exports.enforceOwnership = enforceOwnership;
+exports.ownerConstraint = OWNER_CONSTRAINT;
+exports.bindingTable = TABLE;
 
 exports.down = async function down(knex) {
+  await knex.raw(`ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS ${OWNER_CONSTRAINT}`);
   await knex.schema.dropTableIfExists(TABLE);
 };
 

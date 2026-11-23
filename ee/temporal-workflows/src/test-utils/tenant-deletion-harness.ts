@@ -26,15 +26,19 @@ import { deleteTenantData } from '../activities/tenant-deletion-activities.js';
 export async function expectTenantDeletion(
   dependencies: string[][],
   tableData: Record<string, Record<string, unknown>> = {},
+  tenantTableData: Record<string, Record<string, Record<string, unknown>>> = {},
+  includeTenantRecord = false,
 ) {
   const target = 'tenant-to-delete';
   const survivor = 'another-tenant';
   const tables = [...new Set(dependencies.flat())];
   const seed = (table: string, tenant: string): Record<string, unknown> & { tenant: string } => ({
     ...tableData[table],
+    ...tenantTableData[table]?.[tenant],
     tenant,
   });
   const rows = new Map(tables.map(table => [table, [seed(table, target), seed(table, survivor)]]));
+  if (includeTenantRecord) rows.set('tenants', [{ tenant: target }, { tenant: survivor }]);
   const deletedTables: string[] = [];
   const operations: { table: string; kind: string; data?: object }[] = [];
   const query = (table: string, tenant?: string) => {
@@ -91,8 +95,9 @@ export async function expectTenantDeletion(
 
   const result = await deleteTenantData(target, 'deletion-id');
 
-  expect(result).toMatchObject({ success: true, deletedRecords: tables.length, tablesAffected: tables.length });
-  expect(deletedTables).toHaveLength(tables.length);
+  const expectedDeleted = tables.length + Number(includeTenantRecord);
+  expect(result).toMatchObject({ success: true, deletedRecords: expectedDeleted, tablesAffected: expectedDeleted });
+  expect(deletedTables).toHaveLength(expectedDeleted);
   for (const [child, parent] of dependencies) {
     expect(deletedTables).toContain(child);
     expect(deletedTables).toContain(parent);
