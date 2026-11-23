@@ -95,6 +95,55 @@ export async function setPriority(trx: unknown, tenant: string, ticketId: string
     }
   }, 120_000);
 
+  it('T234: fails on a writer that reaches the table through a helper', () => {
+    // `tenantScopedTable(trx, 'tickets', tenant)` names the table through a helper, not
+    // `.table('tickets')`; the guard reads the helper shape too, so a writer cannot hide there.
+    const root = fixtureTree(
+      'packages/tickets/src/actions/helperPriorityWrite.ts',
+      `import { tenantScopedTable } from '@alga-psa/db';
+
+export async function setPriority(trx: unknown, tenant: string, ticketId: string, priorityId: string) {
+  await tenantScopedTable(trx as never, 'tickets', tenant)
+    .where({ ticket_id: ticketId })
+    .update({ priority_id: priorityId });
+}
+`
+    );
+    try {
+      const result = runGuard(root);
+      expect(result.status).toBe(1);
+      expect(result.output).toContain('writes `tickets.priority_id` directly');
+      expect(result.output).toContain('helperPriorityWrite.ts');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('T234: an update whose payload is built elsewhere is not a ticket field write', () => {
+    // The payload is a variable, so the guard cannot read it; a nearby `priority_id` in an
+    // unrelated call must not be mistaken for this update's. F136 covers those writers instead.
+    const root = fixtureTree(
+      'packages/sla/src/services/slaWrite.ts',
+      `import { tenantScopedTable } from '@alga-psa/db';
+
+export async function stampSla(trx: unknown, tenant: string, ticketId: string, priorityId: string) {
+  const slaUpdateData: Record<string, unknown> = { sla_started_at: new Date() };
+  await tenantScopedTable(trx as never, tenant, 'tickets')
+    .where({ ticket_id: ticketId })
+    .update(slaUpdateData);
+  await logSlaEvent(trx, tenant, ticketId, 'sla_started', { priority_id: priorityId });
+}
+
+declare function logSlaEvent(...args: unknown[]): Promise<void>;
+`
+    );
+    try {
+      expect(runGuard(root).status).toBe(0);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it('T234: a file on the allow-list is not a violation', () => {
     // The same two shapes, in a file the guard names: the rules themselves may read the rows.
     const root = fixtureTree(

@@ -1002,9 +1002,17 @@ applies to a stored filter value. Both call sites now carry their aliases throug
 `TicketingDashboard`, which threads it into `createTicketColumns`; the client portal's `TicketList`
 now calls `standardCategoryFilterOptions` directly (rather than the `dedupeStandardCategoriesForFilter`
 wrapper, which only returns the categories half) and keeps the aliases in state alongside the
-de-duplicated list. `MspContactTickets`/`MspClientTickets` (the client/contact profile tab's ticket
-list) were checked and need no change: their categories come from `ClientCrossFeatureContext`, which
-never runs the dedup, so `formatCategoryLabel` there always sees the full per-board list.
+de-duplicated list.
+
+That first pass got the client/contact profile tab wrong, and the review caught it: it claimed
+`MspClientTickets`/`MspContactTickets` need no change because their categories come from
+`ClientCrossFeatureContext` — but the context's own `getTicketFormOptions` *is* the de-duplicating
+function, so the profile tab's list had exactly the same "Unknown Category" on a ticket carrying a
+second ITIL board's copy. `ClientDetails` now keeps `categoryAliases` beside `categories` in its
+ticket-form-options state and passes it as `initialCategoryAliases` on the render props
+(`ClientTicketsRenderProps`, `ContactTicketsRenderProps`); both cross-feature providers (MSP and
+AlgaDesk) hand it to `MspClientTickets`/`MspContactTickets`, which pass it to `createTicketColumns`
+as `categoryAliases`. Same map, same translation, three screens.
 
 - T109's contract test pinned the exact `dedupeStandardCategoriesForFilter` import line; switching
   the import updates the test's assertions to match (still proves the same de-duplication behaviour,
@@ -1018,6 +1026,62 @@ never runs the dedup, so `formatCategoryLabel` there always sees the full per-bo
 - Verified live on this slot (one headless sign-in + screenshot of `/msp/tickets`, both the "QA
   Second ITIL" tab and "All tickets"): the ticket that previously read "Unknown Category" now shows
   "Network" in the list, matching the detail screen.
+
+### Four repo gates the later groups left red, and three sharper edges
+
+The review ran the repository's own contract gates on the branch and found four reds, all this
+card's doing, plus three smaller things. None of them is a rule change; each is a gate catching a
+file the groups moved.
+
+- `ticketCategoriesRoute.test.ts` still described the pre-F039 route: it asserted the ITIL *flag*
+  was the filter and pinned the five-column `select`. The route asks `listCategoriesForBoard`, which
+  reads the whole row and is filtered by `board_id` on an ITIL board too (D9), and the route then
+  projects the picker fields. The fixture now gives the second ITIL board its own copy of the
+  standard pair — which is what the migration and the per-board seeding actually leave — and the
+  cases assert the board predicate, the projection on the board path and the five-column select on
+  the no-board path. The two sibling category tests were reconciled in commit 5871f630e9; this one
+  was missed.
+- `searchEventPublishing.contract.test.ts` (T068) read `boardActions.ts` for `BOARD_CREATED`.
+  F103/F110 moved create/update/delete into `services/boardLifecycle.ts`, which both the web action
+  and `BoardService` call, so the test reads the lifecycle module too.
+- `readAuthorizationCoverage.contract.test.ts`: F086 gave the two Activities priority writers a
+  read of `tickets` (`resolveTicketPriorityWrite` loads the board/priority/Impact/Urgency of the row
+  it is about to write so the shared rule can refuse a priority that does not fit). Both exports
+  already carry that same unguarded ticket write in `permissionCoveragePinned`, and the row never
+  leaves the action, so they are pinned with that reason rather than given a kernel decision the
+  Activities grid has never had — a gate there is a product change, not this card's. The stale
+  `boardActions.ts#updateBoard` pin is deleted: the board update no longer reaches the cleanup read.
+- `permissionCoverage.contract.test.ts` was red too (the review listed four gates; this is the
+  fifth). Two of its four violations were `switchBoardType`/`getBoardTypeSwitchSummary`, which *do*
+  check `ticket_settings:update` — through `boardMutationGuard`, which hands the checker to the
+  board policy as a value (`evaluateBoardMutationPolicy(user, action, hasPermission)`), so neither
+  a reader nor the analysis sees a check at the call site. That half is now a named function,
+  `checkBoardMutationPermission`, which also retires the pins `createBoard`, `updateBoard`,
+  `deleteBoard` and `deleteBoardLegacy` carried for the same blind spot. The other two
+  (`getPrioritiesByBoardType`, `getTicketCategoriesByBoard`) are unguarded picker reads, as their
+  siblings have always been; they became *visible* only because the shared rule lists the rows with
+  a plain function instead of the db helper the analysis does not enter. Pinned with that reason
+  rather than given a permission the pickers' callers may not hold — a gate there is a product
+  decision, not this card's. `deleteReferenceDataItem` left both pinned lists: group 5 gave it a
+  real `ticket_settings` check. Net: five pins out, two in.
+- `themeContract.test.ts`: four touched components added raw palette classes over their baseline
+  (`text-amber-600` on the inbound-defaults warning, the QuickAddTicket "Not assessed" row, the
+  BoardsSettings board-type help button, the TicketInfo "Not assessed" row). They now use the
+  semantic utilities (`text-warning`, `text-muted-foreground`, `text-foreground`, `border-border`).
+  Worth knowing for the next one: writing `text-[rgb(var(--color-text-500))]` instead would push a
+  file over the *other* baseline — three `var(--color-…)` occurrences make a file "themed", and a
+  themed file's pre-existing inline colour literals then have to be in the literal baseline.
+- `standardCategoryFilterOptions.ts` held a literal NUL inside the `rank()` template string, so git
+  treated the whole file as binary and the diff was unreviewable. It is `\0` now.
+- `ticketImportActions.ts` called `prepareTicketCreateFields` per row while the comment claimed one
+  question per destination board. The answer depends only on (board, priority, category) and nothing
+  in the resolution loop writes those rows, so it is memoised on that triple and the comment says so.
+- The guard only saw `.table('tickets')`/`from('tickets')`, so a writer reaching the table through
+  `tenantScopedTable(trx, 'tickets', tenant)` was invisible. It now matches the helper shape as well
+  — and, to stay honest about what it can judge, reads only an object-literal payload up to its own
+  closing brace (an `.update(slaUpdateData)` followed by an event log carrying `priority_id` was a
+  false positive). A payload built elsewhere is still out of its reach by construction; those
+  writers are what the F136 contract test lists. Two fixtures pin both halves.
 
 ### Groups
 

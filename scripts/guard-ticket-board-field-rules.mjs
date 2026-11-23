@@ -77,8 +77,12 @@ const WRITE_ALLOW_LIST = new Set([
   'shared/services/emailService.ts',
 ]);
 
+// A table is named through `.table('x')`, `from('x')` or a helper whose name ends in `table`
+// (`tenantScopedTable(trx, 'tickets', tenant)`), so the table literal may follow earlier
+// arguments. Matching the helper shape too keeps a writer from hiding behind one.
+const TABLE_CALL = String.raw`\b[\w.]*(?:table|from)\s*\(\s*(?:[^()'"]*,\s*)?`;
 const READ_PATTERN = /(?:\.table|\.from|\btable|\bfrom)\(\s*['"](priorities|categories)(?:\s+as\s+\w+)?['"]/g;
-const TICKETS_TABLE_PATTERN = /(?:\.table|\btable|\bfrom)\(\s*['"]tickets(?:\s+as\s+\w+)?['"]\s*\)/g;
+const TICKETS_TABLE_PATTERN = new RegExp(`${TABLE_CALL}['"]tickets(?:\\s+as\\s+\\w+)?['"]`, 'gi');
 const BOARD_FIELD_PATTERN = /\b(priority_id|category_id|subcategory_id|board_id)\b\s*:/;
 const WRITE_CALL_PATTERN = /\.(update|insert)\(/;
 
@@ -108,22 +112,38 @@ function lineOf(source, index) {
 /**
  * A write is "direct" when an update/insert on `tickets` names one of the board-owned columns.
  *
- * The payload read stops at the next `table(` call, so a later statement on another table cannot
- * be mistaken for this one's — `.update({ sla_policy_id: null })` on tickets followed by an
- * unrelated `priorities` sweep is not a ticket field write.
+ * Only an object literal is read, and only as far as its own closing brace, so a later statement
+ * cannot be mistaken for this one's payload — `.update(slaUpdateData)` followed by an event log
+ * that carries `priority_id` is not a ticket field write. A payload built elsewhere and passed by
+ * name is not a shape this guard can judge; the contract test (F136) covers those writers.
  */
 function findDirectTicketWrites(source) {
   const findings = [];
   for (const match of source.matchAll(TICKETS_TABLE_PATTERN)) {
     const window = source.slice(match.index + match[0].length, match.index + 900);
-    if (!WRITE_CALL_PATTERN.test(window)) continue;
-    let payload = window.slice(window.search(WRITE_CALL_PATTERN));
-    const nextTable = payload.search(/(?:\.table|\btable|\bfrom)\(\s*['"]/);
-    if (nextTable > 0) payload = payload.slice(0, nextTable);
-    const field = BOARD_FIELD_PATTERN.exec(payload.slice(0, 500));
+    const callAt = window.search(WRITE_CALL_PATTERN);
+    if (callAt === -1) continue;
+    const payload = objectLiteralAfter(window.slice(callAt));
+    if (!payload) continue;
+    const field = BOARD_FIELD_PATTERN.exec(payload);
     if (field) findings.push({ line: lineOf(source, match.index), field: field[1] });
   }
   return findings;
+}
+
+/** The `{ ... }` an `.update(`/`.insert(` opens with, up to its matching brace; null for anything else. */
+function objectLiteralAfter(text) {
+  const open = text.indexOf('{');
+  if (open === -1 || /[^\s(]/.test(text.slice(text.indexOf('(') + 1, open))) return null;
+  let depth = 0;
+  for (let i = open; i < text.length; i += 1) {
+    if (text[i] === '{') depth += 1;
+    else if (text[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(open, i + 1);
+    }
+  }
+  return text.slice(open);
 }
 
 const violations = [];

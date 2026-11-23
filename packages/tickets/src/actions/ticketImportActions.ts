@@ -13,6 +13,7 @@ import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketMo
 import {
   defaultPriorityForBoard,
   prepareTicketCreateFields,
+  type PreparedTicketFields,
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import {
@@ -618,6 +619,29 @@ export const importTickets = withAuth(async (
       throw new Error('No ticket priorities found. Please configure priorities first.');
     }
 
+    // The rule's answer depends only on the board, the priority and the category, and an import
+    // repeats those combinations row after row, so one answer is kept per distinct combination.
+    // Nothing between here and the end of the resolution loop writes a board, a priority or a
+    // category, so a kept answer cannot go stale.
+    const preparedFieldsByRowShape = new Map<string, PreparedTicketFields>();
+    const prepareRowFields = async (
+      boardId: string,
+      priorityId: string | null,
+      categoryId: string | null,
+    ): Promise<PreparedTicketFields> => {
+      const key = `${boardId}\u0000${priorityId ?? ''}\u0000${categoryId ?? ''}`;
+      const cached = preparedFieldsByRowShape.get(key);
+      if (cached) return cached;
+      const prepared = await prepareTicketCreateFields(trx, tenant, {
+        boardId,
+        priorityId,
+        categoryId,
+        policy: 'refuse',
+      });
+      preparedFieldsByRowShape.set(key, prepared);
+      return prepared;
+    };
+
     // Pre-load statuses to avoid per-ticket queries and resolve a closed
     // historical row to a status that belongs to its destination board.
     const allStatuses = await tenantScopedTable('statuses')
@@ -653,7 +677,7 @@ export const importTickets = withAuth(async (
     const closedUpdates: Array<{ ticket_id: string; board_id: string | null }> = [];
 
     // Step 6: Pre-resolve all tickets. Reference resolution is pure; the board field rules (R2/R3)
-    // ask the database once per distinct destination board.
+    // ask the database once per distinct board/priority/category combination.
     interface ResolvedTicket {
       ticket: IProcessedTicketData;
       clientId: string;
@@ -732,12 +756,7 @@ export const importTickets = withAuth(async (
       // reported for that row and the row is skipped, so one bad row never stops the import. A row
       // that named no priority takes the destination board's default (R7).
       const rowPriorityId = resolvedPriorityId || (await boardDefaultPriorityId(destinationBoardId));
-      const prepared = await prepareTicketCreateFields(trx, tenant, {
-        boardId: destinationBoardId,
-        priorityId: rowPriorityId,
-        categoryId: resolvedCategoryId || null,
-        policy: 'refuse',
-      });
+      const prepared = await prepareRowFields(destinationBoardId, rowPriorityId, resolvedCategoryId || null);
       if (prepared.problems.length > 0) {
         errors.push(
           `Row ${ticket.rowNumber}: Cannot import "${ticket.title}" — ${prepared.problems.map((problem) => problem.message).join('; ')}`
