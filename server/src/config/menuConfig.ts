@@ -2,6 +2,7 @@
 
 import type { ElementType } from 'react';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { MSP_SUBMIT_PERMISSION_KEYS } from '../lib/service-requests/mspSubmitPermissions';
 import {
   Activity,
   AtSign,
@@ -89,7 +90,8 @@ export interface MenuItem {
   availableEditions?: readonly MenuEdition[];
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
-  requiredPermission?: string;
+  /** One `resource:action`, or several that must all be held. */
+  requiredPermission?: string | readonly string[];
 }
 
 export interface NavigationSection {
@@ -136,7 +138,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Service Requests',
         translationKey: 'nav.serviceRequests',
         icon: LayoutTemplate,
-        href: '/msp/service-requests'
+        subItems: [
+          { name: 'Manage Requests', translationKey: 'nav.serviceRequestsManage', icon: LayoutTemplate, href: '/msp/service-requests' },
+          { name: 'Submit on behalf of…', translationKey: 'nav.serviceRequestsSubmit', icon: LayoutTemplate, href: '/msp/service-requests/submit', requiredPermission: MSP_SUBMIT_PERMISSION_KEYS }
+        ]
       },
       {
         name: 'Surveys',

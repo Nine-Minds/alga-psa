@@ -17,7 +17,10 @@ export interface ServiceRequestExecutionContext {
   definitionId: string;
   definitionVersionId: string;
   submissionId: string;
-  requesterUserId: string;
+  /** The requester's portal user; null for a contact with no portal login. */
+  requesterUserId: string | null;
+  /** The MSP user who filed this on the requester's behalf; null/omitted when self-filed. */
+  submittedByUserId?: string | null;
   clientId: string;
   contactId?: string | null;
   payload: Record<string, unknown>;
@@ -48,7 +51,7 @@ export interface ServiceRequestExecutionProvider {
 
 export interface ServiceRequestFormBehaviorContext {
   tenant: string;
-  requesterUserId: string;
+  requesterUserId: string | null;
   clientId: string;
   contactId?: string | null;
 }
@@ -71,7 +74,7 @@ export interface ServiceRequestFormBehaviorProvider {
 
 export interface ServiceRequestVisibilityContext {
   tenant: string;
-  requesterUserId: string;
+  requesterUserId: string | null;
   clientId: string;
   contactId?: string | null;
 }

@@ -871,7 +871,8 @@
       "cancel": "Cancelar",
       "empty": "Aún no hay notas",
       "add": "Agregar notas"
-    }
+    },
+    "submitServiceRequest": "Enviar solicitud de servicio"
   },
   "errors": {
     "contact": {

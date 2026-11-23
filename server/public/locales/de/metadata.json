@@ -242,6 +242,9 @@
       "title": "Serviceanfragen",
       "formBuilder": {
         "title": "Formular-Editor"
+      },
+      "submit": {
+        "title": "Serviceanfrage einreichen"
       }
     },
     "surveys": {

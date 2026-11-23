@@ -848,5 +848,35 @@
   },
   "deleteDialog": {
     "confirmation": "‘{{name}}’ en alle bijbehorende versies worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt."
+  },
+  "submit": {
+    "title": "Serviceaanvraag indienen",
+    "description": "Dien een gepubliceerde serviceaanvraag in voor een klantcontact. Het contact wordt vastgelegd als aanvrager en u als indiener.",
+    "client": "Klant",
+    "clientPlaceholder": "Klant selecteren",
+    "contact": "Aanvrager (contact)",
+    "contactPlaceholder": "Contact selecteren",
+    "definition": "Serviceaanvraag",
+    "definitionPlaceholder": "Selecteer een serviceaanvraag",
+    "loadError": "De serviceaanvragen voor dit contact konden niet worden geladen.",
+    "emptyCatalog": "Dit contact kan geen gepubliceerde serviceaanvragen zien.",
+    "notAvailable": "Deze serviceaanvraag is niet beschikbaar voor dit contact.",
+    "unableToSubmit": "Indienen niet mogelijk",
+    "noFields": "Deze aanvraag heeft geen velden.",
+    "optionLabel": "Optie {{index}}",
+    "selectOption": "Selecteer een optie",
+    "datePlaceholder": "Selecteer een datum",
+    "submit": "Aanvraag indienen",
+    "requiredField": "Dit veld is verplicht",
+    "submitted": "Serviceaanvraag ingediend",
+    "alreadySubmitted": "Deze aanvraag is al ingediend",
+    "viewTicket": "Ticket bekijken",
+    "noTicket": "Voor deze aanvraag is geen ticket aangemaakt.",
+    "action": "Indienen namens…",
+    "actionShort": "Indienen voor een klant",
+    "noAccess": {
+      "title": "U kunt geen serviceaanvragen indienen",
+      "description": "Voor het indienen van een aanvraag voor een klantcontact is toestemming nodig om tickets aan te maken en klanten en contacten te bekijken. Vraag een beheerder om toegang te verlenen."
+    }
   }
 }

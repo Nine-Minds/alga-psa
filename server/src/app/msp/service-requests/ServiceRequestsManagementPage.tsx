@@ -9,6 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Archive, Copy, MoreVertical, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { currentUserCanSubmitOnBehalf } from '../../../lib/service-requests/mspSubmitAccess';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   archiveServiceRequestDefinitionAction,
@@ -98,6 +99,17 @@ export default function ServiceRequestsManagementPage() {
       )
     );
   };
+
+  const [canSubmitOnBehalf, setCanSubmitOnBehalf] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    currentUserCanSubmitOnBehalf()
+      .then((allowed) => mounted && setCanSubmitOnBehalf(allowed))
+      .catch(() => mounted && setCanSubmitOnBehalf(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -265,6 +277,15 @@ export default function ServiceRequestsManagementPage() {
                 : t('management.showArchived')
             }
           />
+          {canSubmitOnBehalf && (
+            <Button
+              id="service-request-submit-on-behalf"
+              variant="outline"
+              onClick={() => router.push('/msp/service-requests/submit')}
+            >
+              {t('submit.action', { defaultValue: 'Submit on behalf of…' })}
+            </Button>
+          )}
           <Button
             id="service-request-create-blank"
             onClick={() =>

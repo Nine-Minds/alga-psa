@@ -114,7 +114,9 @@
     "coManaged": "Samförvaltad IT",
     "coManagedArchive": "Arkiv för samförvaltning",
     "coManagedAdministration": "Åtkomst och administration",
-    "assetsAudits": "Platsgranskningar"
+    "assetsAudits": "Platsgranskningar",
+    "serviceRequestsManage": "Hantera förfrågningar",
+    "serviceRequestsSubmit": "Skicka in på uppdrag av…"
   },
   "marketing": {
     "dialogs": {
@@ -569,6 +571,10 @@
         "product": {
           "label": "Produkt",
           "description": "Lägg till en ny produkt i din katalog"
+        },
+        "serviceRequest": {
+          "label": "Servicebegäran",
+          "description": "Skicka in en servicebegäran för en kundkontakt"
         }
       }
     },

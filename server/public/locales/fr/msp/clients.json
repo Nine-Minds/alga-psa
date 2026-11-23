@@ -330,7 +330,8 @@
       "loadFailed": "Échec du chargement des modèles de listes de contrôle",
       "retry": "Réessayer"
     },
-    "audits": "Audits"
+    "audits": "Audits",
+    "submitServiceRequest": "Soumettre une demande de service"
   },
   "clientCommandCenter": {
     "cards": {

@@ -455,6 +455,9 @@
       "title": "Tjänsteförfrågningar",
       "formBuilder": {
         "title": "Formulärbyggare"
+      },
+      "submit": {
+        "title": "Skicka in servicebegäran"
       }
     },
     "settings": {

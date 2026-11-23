@@ -455,6 +455,9 @@
       },
       "formBuilder": {
         "title": "Formulierbouwer"
+      },
+      "submit": {
+        "title": "Serviceaanvraag indienen"
       }
     },
     "technicianDispatch": {

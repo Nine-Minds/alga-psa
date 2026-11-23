@@ -8,10 +8,10 @@ import {
   computeVisibleFieldKeys,
   type VisibilityContext,
   type VisibilityRule,
-} from '../../../../lib/service-requests/formVisibility';
-import { collectFormFieldIssues } from '../../../../lib/service-requests/formValidation';
-import type { BasicFormField, BasicFormSettings } from '../../../../lib/service-requests/formSchema';
-import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
+} from '../../lib/service-requests/formVisibility';
+import { collectFormFieldIssues } from '../../lib/service-requests/formValidation';
+import type { BasicFormField, BasicFormSettings } from '../../lib/service-requests/formSchema';
+import { ServiceRequestFormRenderer } from './ServiceRequestFormRenderer';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 export type RequestServiceFormField = BasicFormField;

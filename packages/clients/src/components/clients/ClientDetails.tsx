@@ -192,6 +192,8 @@ interface ClientDetailsProps {
   quickView?: boolean;
   surveySummary?: SurveyClientSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
+  /** Prebuilt "submit a service request for this client" route; the page only passes it when the user may read services. */
+  submitServiceRequestHref?: string;
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({
@@ -203,6 +205,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   quickView = false,
   surveySummary = null,
   isAlgaDeskMode = false,
+  submitServiceRequestHref,
 }) => {
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
@@ -1910,6 +1913,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   </p>
                 ) : null}
               </div>
+            )}
+            {submitServiceRequestHref && (
+              <Button
+                id={`${id}-submit-service-request-button`}
+                onClick={() => router.push(submitServiceRequestHref)}
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+              >
+                {t('clientDetails.submitServiceRequest', { defaultValue: 'Submit service request' })}
+              </Button>
             )}
             <PrintButton
               id={`${id}-print-button`}

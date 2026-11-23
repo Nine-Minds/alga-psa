@@ -235,6 +235,9 @@
       },
       "formBuilder": {
         "title": "Editor del modulo"
+      },
+      "submit": {
+        "title": "Invia richiesta di servizio"
       }
     },
     "surveys": {

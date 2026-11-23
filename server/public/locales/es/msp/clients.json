@@ -330,7 +330,8 @@
       "loadFailed": "No se pudieron cargar las plantillas de listas de verificación",
       "retry": "Reintentar"
     },
-    "audits": "Auditorías"
+    "audits": "Auditorías",
+    "submitServiceRequest": "Enviar solicitud de servicio"
   },
   "clientCommandCenter": {
     "cards": {

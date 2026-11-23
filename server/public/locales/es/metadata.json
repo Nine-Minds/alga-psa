@@ -242,6 +242,9 @@
       },
       "formBuilder": {
         "title": "Editor de formularios"
+      },
+      "submit": {
+        "title": "Enviar solicitud de servicio"
       }
     },
     "surveys": {

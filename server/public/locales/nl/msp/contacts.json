@@ -867,7 +867,8 @@
       "cancel": "Annuleren",
       "empty": "Nog geen notities",
       "add": "Notities toevoegen"
-    }
+    },
+    "submitServiceRequest": "Serviceaanvraag indienen"
   },
   "errors": {
     "contact": {

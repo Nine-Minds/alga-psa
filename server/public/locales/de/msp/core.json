@@ -114,7 +114,9 @@
     "coManaged": "Gemeinsam verwaltete IT",
     "coManagedArchive": "Archiv der gemeinsamen Verwaltung",
     "coManagedAdministration": "Zugriff & Administration",
-    "assetsAudits": "Standort-Audits"
+    "assetsAudits": "Standort-Audits",
+    "serviceRequestsManage": "Anfragen verwalten",
+    "serviceRequestsSubmit": "Im Namen von … einreichen"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",
@@ -212,6 +214,10 @@
         "product": {
           "label": "Produkt",
           "description": "Neues Produkt zu Ihrem Katalog hinzufügen"
+        },
+        "serviceRequest": {
+          "label": "Serviceanfrage",
+          "description": "Eine Serviceanfrage für einen Kundenkontakt einreichen"
         }
       }
     },

@@ -455,6 +455,9 @@
       "title": "Service Requests",
       "formBuilder": {
         "title": "Form builder"
+      },
+      "submit": {
+        "title": "Submit Service Request"
       }
     },
     "settings": {

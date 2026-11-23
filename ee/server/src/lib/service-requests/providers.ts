@@ -225,7 +225,7 @@ const advancedFormBehaviorProvider: ServiceRequestFormBehaviorProvider = {
       }
 
       resolved[key] = value
-        .replace('{{requesterUserId}}', context.requesterUserId)
+        .replace('{{requesterUserId}}', context.requesterUserId ?? '')
         .replace('{{clientId}}', context.clientId)
         .replace('{{contactId}}', context.contactId ?? '');
     }

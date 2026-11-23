@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { RequestServiceForm } from "./RequestServiceForm";
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from "./clientSubmissionKey";
-import type { BasicFormField } from "../../../../lib/service-requests/formSchema";
+import type { BasicFormField } from "../../lib/service-requests/formSchema";
 
 describe("RequestServiceForm long-text fields", () => {
   afterEach(() => cleanup());

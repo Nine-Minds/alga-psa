@@ -114,7 +114,9 @@
     "coManaged": "IT cogérée",
     "coManagedArchive": "Archive IT cogérée",
     "coManagedAdministration": "Accès et administration",
-    "assetsAudits": "Audits de sites"
+    "assetsAudits": "Audits de sites",
+    "serviceRequestsManage": "Gérer les demandes",
+    "serviceRequestsSubmit": "Soumettre au nom de…"
   },
   "sidebar": {
     "backToMain": "Retour au principal",
@@ -212,6 +214,10 @@
         "product": {
           "label": "Produit",
           "description": "Ajouter un nouveau produit à votre catalogue"
+        },
+        "serviceRequest": {
+          "label": "Demande de service",
+          "description": "Soumettre une demande de service pour un contact client"
         }
       }
     },

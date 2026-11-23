@@ -92,7 +92,7 @@ export function collectElementVisibilityRules(
 }
 
 export interface VisibilityContext {
-  requesterUserId: string;
+  requesterUserId: string | null;
   clientId: string;
   contactId?: string | null;
 }

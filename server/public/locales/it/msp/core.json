@@ -114,7 +114,9 @@
     "coManaged": "IT in co-gestione",
     "coManagedArchive": "Archivio IT in co-gestione",
     "coManagedAdministration": "Accesso e amministrazione",
-    "assetsAudits": "Audit delle sedi"
+    "assetsAudits": "Audit delle sedi",
+    "serviceRequestsManage": "Gestisci richieste",
+    "serviceRequestsSubmit": "Invia per conto di…"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -212,6 +214,10 @@
         "product": {
           "label": "Prodotto",
           "description": "Aggiungi un nuovo prodotto al catalogo"
+        },
+        "serviceRequest": {
+          "label": "Richiesta di servizio",
+          "description": "Invia una richiesta di servizio per un contatto del cliente"
         }
       }
     },

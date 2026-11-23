@@ -217,6 +217,9 @@
       },
       "formBuilder": {
         "title": "Éditeur de formulaire"
+      },
+      "submit": {
+        "title": "Soumettre une demande de service"
       }
     },
     "surveys": {

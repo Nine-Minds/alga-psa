@@ -447,6 +447,9 @@
       },
       "formBuilder": {
         "title": "Kreator formularza"
+      },
+      "submit": {
+        "title": "Prześlij zgłoszenie usługi"
       }
     },
     "timeEntry": {

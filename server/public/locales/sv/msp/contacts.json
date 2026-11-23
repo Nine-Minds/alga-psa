@@ -871,7 +871,8 @@
       "cancel": "Avbryt",
       "empty": "Inga anteckningar ännu",
       "add": "Lägg till anteckningar"
-    }
+    },
+    "submitServiceRequest": "Skicka in servicebegäran"
   },
   "errors": {
     "contact": {

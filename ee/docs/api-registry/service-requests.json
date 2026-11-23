@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/service-requests/catalog"
+      },
+      "metadata": {
+        "rbacResource": "client",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/service-requests/{definitionId}/submissions"
+      },
+      "metadata": {
+        "rbacResource": "ticket",
+        "approvalRequired": true
+      }
+    }
+  ]
+}

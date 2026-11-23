@@ -19,7 +19,7 @@ import {
 import type { FormFieldIssue } from '../../../../lib/service-requests/formValidation';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getFieldElementKind } from '@alga-psa/ui/form-fields';
-import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
+import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from '../../../../components/service-requests/clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,
@@ -64,6 +64,7 @@ function buildRequestServiceCatalogRedirectUrl(
  * first with the same wording; this path is what a bypassed or stale form falls back to, and it
  * must not answer a client user in English.
  */
+// LEVERAGE: pattern service-request-issue-message — same rendering as lib/service-requests/submissionIssueMessages.ts (this 'use server' file cannot export it); import that one here.
 async function describeSubmissionIssuesForRequester(
   issues: ReadonlyArray<FormFieldIssue>
 ): Promise<string> {
@@ -299,6 +300,8 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         tenant,
         definitionId,
         requesterUserId: currentUser.user_id,
+        // The requester filed this themselves: no separate submitter.
+        submittedByUserId: null,
         clientId,
         contactId: currentUser.contact_id ?? null,
         payload,

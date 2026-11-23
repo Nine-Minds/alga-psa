@@ -362,6 +362,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/contracts',
       '/api/v1/contract-lines',
       '/api/v1/services',
+      '/api/v1/service-requests',
       '/api/v1/service-types',
       '/api/v1/products',
       '/api/v1/accounting-exports',

@@ -21,7 +21,7 @@ import {
   normalizeBasicFormSchema,
 } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
-import { RequestServiceForm } from './RequestServiceForm';
+import { RequestServiceForm } from '../../../../components/service-requests/RequestServiceForm';
 
 interface RequestServiceDetailPageProps {
   params: Promise<{
