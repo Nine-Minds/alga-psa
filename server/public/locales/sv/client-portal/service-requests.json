@@ -29,7 +29,8 @@
       "maxDate": "Välj {{maxDate}} eller tidigare.",
       "minSelected": "Välj minst {{minSelected}}.",
       "maxSelected": "Välj högst {{maxSelected}}."
-    }
+    },
+    "unsupportedField": "Den här frågan är inte tillgänglig."
   },
   "myRequests": {
     "title": "Mina förfrågningar",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "Behandlingen av förfrågan har slutförts",
       "service_request_submission_execution_failed": "Behandlingen av förfrågan misslyckades"
     },
-    "unnamedAttachment": "Bilaga"
+    "unnamedAttachment": "Bilaga",
+    "lookupUnavailable": "(inte längre tillgänglig)"
   },
   "recent": {
     "title": "Dina senaste förfrågningar",

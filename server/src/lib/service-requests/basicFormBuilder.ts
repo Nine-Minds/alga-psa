@@ -8,6 +8,7 @@ import {
   type BasicFormSchema,
   type BasicFormSettings,
 } from './formSchema';
+import { defaultLookupDescriptor, type FieldLookupDescriptor } from '@alga-psa/ui/form-fields';
 import { saveServiceRequestDefinitionDraft, type ServiceRequestDefinitionManagementRow } from './definitionManagement';
 
 /**
@@ -81,6 +82,8 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
     required: Boolean(input.field.required),
     defaultValue: input.field.defaultValue,
     options: input.field.options,
+    // A new lookup starts valid (first entity, its default scope) so the author only has to change it.
+    lookup: input.field.type === 'lookup' ? (input.field.lookup ?? defaultLookupDescriptor()) : undefined,
   };
 
   const nextFields = [...schema.fields];
@@ -103,17 +106,20 @@ export async function updateBasicFormFieldInDefinitionDraft(input: {
   tenant: string;
   definitionId: string;
   fieldKey: string;
-  updates: Omit<Partial<BasicFormField>, 'key'>;
+  /** A `lookup` update may omit `scope`; the normalizer derives it from the entity. */
+  updates: Omit<Partial<BasicFormField>, 'key' | 'lookup'> & {
+    lookup?: Pick<FieldLookupDescriptor, 'entity'> & Partial<FieldLookupDescriptor>;
+  };
   updatedBy?: string | null;
 }): Promise<ServiceRequestDefinitionManagementRow> {
   const schema = await getDefinitionFormSchema(input.knex, input.tenant, input.definitionId);
   const nextFields = schema.fields.map((field) =>
     field.key === input.fieldKey
-      ? {
+      ? ({
           ...field,
           ...input.updates,
           key: field.key,
-        }
+        } as BasicFormField)
       : field
   );
 

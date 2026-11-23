@@ -2,10 +2,10 @@
  * What the "Add" tab offers, grouped by purpose. Each entry is a field type plus the element
  * the author gets when they click or drop it.
  *
- * Phase 2 adds a "Data" group here (pickers backed by the client's own data); phase 3 adds
+ * The "Data" group holds pickers backed by the client's own data (lookup); phase 3 adds
  * containers (steps, repeatable groups). Both are new rows in this table, nothing more.
  */
-import type { FieldTypeKey } from '@alga-psa/ui/form-fields';
+import { defaultLookupDescriptor, type FieldTypeKey } from '@alga-psa/ui/form-fields';
 import type { BasicFormField } from '../../../../lib/service-requests/formSchema';
 
 /** Palette categories, in the order the pane shows them. */
@@ -14,6 +14,7 @@ export const FORM_PALETTE_CATEGORY_ORDER = [
   'choices',
   'datesAndNumbers',
   'files',
+  'data',
   'layout',
 ] as const;
 
@@ -45,6 +46,9 @@ export const FORM_PALETTE_ENTRIES: readonly FormPaletteEntry[] = [
 
   { id: 'file-upload', category: 'files', icon: 'Paperclip', sortOrder: 1 },
 
+  // Data-sourced questions: the choices are the requester's own records, resolved on the server.
+  { id: 'lookup', category: 'data', icon: 'Users', sortOrder: 1 },
+
   { id: 'section', category: 'layout', icon: 'Rows3', sortOrder: 1 },
   { id: 'text', category: 'layout', icon: 'TextQuote', sortOrder: 2 },
   { id: 'callout', category: 'layout', icon: 'Info', sortOrder: 3 },
@@ -69,6 +73,9 @@ export function buildPaletteElement(
       { label: optionLabels?.optionOne ?? 'Option 1', value: 'option_1' },
       { label: optionLabels?.optionTwo ?? 'Option 2', value: 'option_2' },
     ];
+  }
+  if (type === 'lookup') {
+    element.lookup = defaultLookupDescriptor();
   }
   if (type === 'callout') {
     element.display = { tone: 'info' };

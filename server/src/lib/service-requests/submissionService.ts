@@ -12,11 +12,12 @@ import {
   type VisibilityContext,
 } from './formVisibility';
 import { collectFormFieldIssues, type FormFieldIssue } from './formValidation';
-import { describeFieldValidationIssue } from '@alga-psa/ui/form-fields';
+import { describeFieldValidationIssue, isUnsupportedFieldType } from '@alga-psa/ui/form-fields';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 import { isUniqueViolationOnIndex } from './pgUniqueConstraint';
+import { findInvalidLookupAnswers } from './lookupFields';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -339,7 +340,17 @@ export async function submitPortalServiceRequest(
     clientId,
     contactId,
   });
-  const visibleFieldKeySet = new Set(visibleFieldKeys);
+  // An unsupported-type question is an inert row in the portal: nothing can be answered there, so a
+  // value posted for it is dropped like a hidden answer rather than stored as if it were free text.
+  const formFields = Array.isArray((definitionDetail.formSchema as any)?.fields)
+    ? ((definitionDetail.formSchema as any).fields as any[])
+    : [];
+  const unsupportedFieldKeys = new Set(
+    formFields
+      .filter((field) => typeof field?.key === 'string' && isUnsupportedFieldType(field?.type))
+      .map((field) => field.key as string)
+  );
+  const visibleFieldKeySet = new Set(visibleFieldKeys.filter((key) => !unsupportedFieldKeys.has(key)));
   const visiblePayload = Object.fromEntries(
     Object.entries(payload).filter(([key]) => visibleFieldKeySet.has(key))
   );
@@ -358,6 +369,25 @@ export async function submitPortalServiceRequest(
     throw new ServiceRequestSubmissionValidationError(
       `Submission validation failed: ${validationErrors.join('; ')}`,
       collectSubmissionValidationIssues(validationInput)
+    );
+  }
+
+  // The one async step. Every visible lookup answer must resolve inside its own field's option set
+  // for THIS requester (clientId is the session's, never the request's). It runs after schema
+  // validation and before the insert, so a refused submission leaves no row; hidden lookups were
+  // already dropped from visiblePayload and are not validated.
+  const invalidLookups = await findInvalidLookupAnswers(
+    knex,
+    tenant,
+    formFields,
+    visiblePayload,
+    { clientId, contactId },
+    visibleFieldKeySet
+  );
+  if (invalidLookups.length > 0) {
+    throw new ServiceRequestSubmissionValidationError(
+      `Submission validation failed: ${invalidLookups.map((entry) => entry.message).join('; ')}`,
+      invalidLookups.map(({ fieldKey, label }) => ({ fieldKey, label, issue: { rule: 'type' as const } }))
     );
   }
 

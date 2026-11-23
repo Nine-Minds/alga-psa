@@ -104,7 +104,8 @@
         "section": "Sectie",
         "text": "Toelichting",
         "callout": "Uitgelichte notitie",
-        "divider": "Scheidingslijn"
+        "divider": "Scheidingslijn",
+        "lookup": "Opzoeken"
       },
       "visibility": {
         "title": "Tonen wanneer…",
@@ -532,7 +533,8 @@
         "choices": "Keuzes",
         "datesAndNumbers": "Datums en getallen",
         "files": "Bestanden",
-        "layout": "Indeling"
+        "layout": "Indeling",
+        "data": "Gegevens"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "Het antwoord wordt gecontroleerd",
       "datePlaceholder": "Kies een datum",
       "emptyHint": "Hier staat nog niets. Voeg de eerste vraag toe via het tabblad Toevoegen links.",
-      "showTemplates": "Sjablonen tonen"
+      "showTemplates": "Sjablonen tonen",
+      "unsupportedField": "Deze vraag is niet beschikbaar."
     },
     "outline": {
       "empty": "Nog niets op het formulier.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "Een lijn tussen elementen"
+      },
+      "lookup": {
+        "description": "Een persoon gekozen uit een lijst met records"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Dit element heeft ook een regel buiten de bouwer, die blijft gelden.",
       "renameBreaksTemplates": "Het ticketonderwerp of de omschrijving verwijst nog naar ‘{{key}}’. Werk dat bij op de aanvraagpagina.",
       "renameKeyEmpty": "Een antwoordsleutel mag niet leeg zijn. De vorige sleutel blijft in gebruik.",
-      "renameKeyTaken": "Een andere vraag gebruikt de antwoordsleutel ‘{{key}}’ al. De vorige sleutel blijft in gebruik."
+      "renameKeyTaken": "Een andere vraag gebruikt de antwoordsleutel ‘{{key}}’ al. De vorige sleutel blijft in gebruik.",
+      "lookup": {
+        "title": "Opzoeken",
+        "help": "De keuzes zijn de geregistreerde personen en worden voor elke aanvrager bepaald wanneer het formulier opent.",
+        "entity": "Opzoeken van",
+        "entities": {
+          "contact": "Contactpersoon",
+          "user": "MSP-gebruiker"
+        },
+        "scope": "Opties komen van",
+        "scopes": {
+          "requester-client": "Klant van de aanvrager",
+          "tenant": "Hele werkruimte"
+        }
+      },
+      "unsupportedType": "Niet-ondersteund veldtype \"{{type}}\". Verwijder dit veld en voeg het opnieuw toe voordat u publiceert."
     },
     "tryIt": {
       "banner": "Antwoorden op dit scherm worden nergens bewaard. Regels en controles werken precies zoals bij een klant.",

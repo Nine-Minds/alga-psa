@@ -13,6 +13,7 @@ import {
   getFieldType,
   isDisplayFieldType,
   isInputFieldType,
+  isUnsupportedFieldType,
 } from './registry';
 import {
   describeFieldValidationIssue,
@@ -150,5 +151,57 @@ describe('field validation', () => {
     expect(describeFieldValidationIssue({ rule: 'required' }, 'Full name')).toBe(
       'Required field missing: "Full name"'
     );
+  });
+});
+
+describe('lookup field type', () => {
+  const definition = getFieldType('lookup')!;
+
+  it('is a data-sourced input: no authored options, no default, a reference answer', () => {
+    expect(definition.kind).toBe('input');
+    expect(definition.control).toBe('lookup');
+    expect(definition.supportsOptions).toBe(false);
+    expect(definition.supportsDefaultValue).toBe(false);
+    expect(definition.valueIsReference).toBe(true);
+  });
+
+  it('reads its descriptor off the element and keeps an unknown entity for validation to refuse', () => {
+    expect(definition.readDescriptor!({ lookup: { entity: 'contact' } })).toEqual({
+      lookup: { entity: 'contact', scope: 'requester-client' },
+    });
+    expect(definition.readDescriptor!({ lookup: { entity: 'asset' } })).toEqual({
+      lookup: { entity: 'asset', scope: undefined },
+    });
+    expect(definition.readDescriptor!({})).toEqual({});
+  });
+
+  it('requires an entity and refuses options, a default, a foreign scope and unlisted filters', () => {
+    const problems = (element: Record<string, unknown>) => definition.validateElement!(element).join('\n');
+    expect(problems({ lookup: { entity: 'contact', scope: 'requester-client' } })).toBe('');
+    expect(problems({})).toContain('requires an entity');
+    expect(problems({ lookup: { entity: 'contact', scope: 'requester-client' }, options: [{}] })).toContain('static options');
+    expect(problems({ lookup: { entity: 'contact', scope: 'requester-client' }, defaultValue: 'x' })).toContain('default value');
+    expect(problems({ lookup: { entity: 'contact', scope: 'tenant' } })).toContain('cannot use scope "tenant"');
+    expect(
+      problems({ lookup: { entity: 'contact', scope: 'requester-client', filters: { password: 'x' } } })
+    ).toContain('"password" is not supported');
+  });
+
+  it('shows a resolved label and never the stored id', () => {
+    expect(formatFieldValue('lookup', 'abc', [{ value: 'abc', label: 'Jane' }])).toBe('Jane');
+    expect(formatFieldValue('lookup', 'abc')).toBe('');
+  });
+
+  it('treats a non-string answer as an answer (refused elsewhere), not as left blank', () => {
+    expect(definition.isEmpty('')).toBe(true);
+    expect(definition.isEmpty(['x'])).toBe(false);
+  });
+});
+
+describe('unsupported types', () => {
+  it('is whatever the registry has no entry for; a missing type is not unsupported', () => {
+    expect(isUnsupportedFieldType('rating')).toBe(true);
+    expect(isUnsupportedFieldType('short-text')).toBe(false);
+    expect(isUnsupportedFieldType(undefined)).toBe(false);
   });
 });

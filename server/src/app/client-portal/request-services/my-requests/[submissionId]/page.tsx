@@ -87,6 +87,9 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
     locale,
     yes: tCommon('yes', { defaultValue: 'Yes' }),
     no: tCommon('no', { defaultValue: 'No' }),
+    // A lookup answer is an id; the server resolved its name, and one that no longer resolves says so.
+    referenceLabels: submission.lookup_labels,
+    unresolved: t('submissionDetail.lookupUnavailable'),
   };
 
   return (

@@ -62,6 +62,8 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
     : null;
+  // Options for lookup fields arrive with the detail, resolved on the server from the session's client.
+  const lookupOptions = detail.lookupOptions ?? {};
 
   // The page takes the measure the form was authored at, so a boxed form sits in a card its
   // own size instead of a narrow column stranded in a page-wide one. The author chooses it
@@ -99,6 +101,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
             fields={fields}
             settings={formSchema.settings}
             initialValues={detail.initialValues}
+            lookupOptions={lookupOptions}
             visibility={{
               enabled: visibilityEnabled && visibilityContext !== null,
               rules: visibilityEnabled && visibilityContext !== null ? visibilityRules : [],
@@ -110,6 +113,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
               requiredField: t('detail.requiredField'),
+              unsupportedField: t('detail.unsupportedField'),
               validation: {
                 type: t('detail.validation.type'),
                 minLength: t('detail.validation.minLength'),

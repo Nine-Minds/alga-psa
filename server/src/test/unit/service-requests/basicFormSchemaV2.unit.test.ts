@@ -56,11 +56,12 @@ describe('schema v2 is backward compatible', () => {
     expect(validateBasicFormSchema(V1_SCHEMA).isValid).toBe(true);
   });
 
-  it('keeps coercing an unknown type to short-text, as published snapshots expect', () => {
-    const normalized = normalizeBasicFormSchema({
-      fields: [{ key: 'mystery', type: 'quantum-slider', label: 'Mystery' }],
-    });
-    expect(normalized.fields[0].type).toBe('short-text');
+  it('keeps an unknown type as written and refuses it at validation, never coercing it to text', () => {
+    const schema = { fields: [{ key: 'mystery', type: 'quantum-slider', label: 'Mystery' }] };
+    expect(normalizeBasicFormSchema(schema).fields[0].type).toBe('quantum-slider');
+    expect(validateBasicFormSchema(schema).errors).toEqual([
+      'Field #1 ("Mystery") has unsupported type "quantum-slider"',
+    ]);
   });
 });
 

@@ -18,6 +18,8 @@ import {
   getFieldElementKind,
   groupFormElementsBySection,
 } from '../../formSchema';
+import { getFieldType } from '@alga-psa/ui/form-fields';
+import { resolveLookupLabels } from '../../lookupFields';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
   const value = config[key];
@@ -57,9 +59,19 @@ export function buildTicketTitle(
     }
   }
 
+  // A reference answer (a lookup) is an id: it reads as its resolved label as a configured subject
+  // field, and is never the "first answer" fallback, whatever its position in the payload.
+  const referenceKeys = new Set(
+    (Array.isArray(text.formSchema?.fields) ? (text.formSchema.fields as FormFieldSnapshot[]) : [])
+      .filter((field) => getFieldType(field?.type)?.valueIsReference && typeof field?.key === 'string')
+      .map((field) => field.key as string)
+  );
+
   const configuredFieldKey = getStringConfig(config, 'titleFieldKey');
   if (configuredFieldKey) {
-    const configuredValue = payload[configuredFieldKey];
+    const configuredValue = referenceKeys.has(configuredFieldKey)
+      ? text.format.referenceLabels?.[configuredFieldKey]
+      : payload[configuredFieldKey];
     if (typeof configuredValue === 'string') {
       const normalized = normalizeTicketSubject(configuredValue);
       if (normalized.length > 0) {
@@ -68,7 +80,8 @@ export function buildTicketTitle(
     }
   }
 
-  for (const value of Object.values(payload)) {
+  for (const [key, value] of Object.entries(payload)) {
+    if (referenceKeys.has(key)) continue;
     if (typeof value === 'string') {
       const normalized = normalizeTicketSubject(value);
       if (normalized.length > 0) {
@@ -317,7 +330,16 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         const text: TicketTextContext = {
           formSchema: context.formSchema,
           payload: context.payload,
-          format: { locale, yes: t('yes', { defaultValue: 'Yes' }), no: t('no', { defaultValue: 'No' }) },
+          format: {
+            locale,
+            yes: t('yes', { defaultValue: 'Yes' }),
+            no: t('no', { defaultValue: 'No' }),
+            // Snapshot at execution time: the ticket keeps saying "Manager: Jane Doe" even if Jane is renamed.
+            referenceLabels: await resolveLookupLabels(trx, context.tenant, context.formSchema?.fields, context.payload, {
+              clientId: context.clientId,
+              contactId: context.contactId ?? null,
+            }),
+          },
         };
         const title = buildTicketTitle(text, context.definitionId, context.config);
         const description = buildTicketDescription(text, context.config);

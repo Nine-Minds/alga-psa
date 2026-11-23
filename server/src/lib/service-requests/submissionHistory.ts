@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveLookupLabels } from './lookupFields';
 import {
   CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS,
   type ClientVisibleSubmissionAuditOperation,
@@ -50,6 +51,8 @@ export interface ServiceRequestClientSubmissionDetail {
   ticket_number: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
+  /** Live display labels for lookup answers, keyed by field key; the payload itself holds ids. */
+  lookup_labels: Record<string, string>;
   attachments: ServiceRequestClientSubmissionAttachment[];
   audit_events: ServiceRequestClientSubmissionHistoryEvent[];
 }
@@ -115,6 +118,8 @@ export interface ServiceRequestAdminDefinitionSubmissionDetail
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  /** Live display labels for lookup answers, keyed by field key; the payload itself holds ids. */
+  lookup_labels: Record<string, string>;
   audit_events: ServiceRequestSubmissionAuditEvent[];
 }
 
@@ -258,6 +263,7 @@ export async function getServiceRequestSubmissionDetailForDefinition(
       'submission.created_ticket_id',
       'submission.workflow_execution_id',
       'submission.created_at as submitted_at',
+      'version.form_schema_snapshot',
       'client.client_name as client_name',
       'contact.full_name as contact_name',
       knex.raw(`
@@ -286,9 +292,20 @@ export async function getServiceRequestSubmissionDetailForDefinition(
   }
 
   const auditEvents = await listServiceRequestSubmissionAuditEvents(knex, tenant, submissionId);
+  const { form_schema_snapshot: formSchemaSnapshot, ...detailRow } = row as unknown as Omit<
+    ServiceRequestAdminDefinitionSubmissionDetail,
+    'audit_events' | 'lookup_labels'
+  > & { form_schema_snapshot: Record<string, unknown> | null };
+  const lookupLabels = detailRow.client_id
+    ? await resolveLookupLabels(knex, tenant, formSchemaSnapshot?.fields, detailRow.submitted_payload ?? {}, {
+        clientId: detailRow.client_id,
+        contactId: detailRow.contact_id ?? null,
+      })
+    : {};
 
   return {
-    ...(row as unknown as Omit<ServiceRequestAdminDefinitionSubmissionDetail, 'audit_events'>),
+    ...detailRow,
+    lookup_labels: lookupLabels,
     audit_events: auditEvents,
   };
 }
@@ -416,6 +433,7 @@ export async function getClientServiceRequestSubmissionDetail(
       'submission.submission_id',
       'submission.request_name',
       'submission.submitted_payload',
+      'submission.contact_id',
       'submission.execution_status',
       'submission.created_ticket_id',
       'ticket.ticket_number',
@@ -448,8 +466,22 @@ export async function getClientServiceRequestSubmissionDetail(
     timestamp: event.timestamp,
   }));
 
+  // `contact_id` is selected only to scope label resolution; it is not part of the portal DTO.
+  const { contact_id: submissionContactId, ...clientRow } = row as unknown as Omit<
+    ServiceRequestClientSubmissionDetail,
+    'attachments' | 'audit_events' | 'lookup_labels'
+  > & { contact_id: string | null };
+  const lookupLabels = await resolveLookupLabels(
+    knex,
+    tenant,
+    clientRow.form_schema_snapshot?.fields,
+    clientRow.submitted_payload ?? {},
+    { clientId, contactId: submissionContactId }
+  );
+
   return {
-    ...(row as unknown as Omit<ServiceRequestClientSubmissionDetail, 'attachments' | 'audit_events'>),
+    ...clientRow,
+    lookup_labels: lookupLabels,
     attachments: attachments as ServiceRequestClientSubmissionAttachment[],
     audit_events: auditEvents,
   };

@@ -16,7 +16,11 @@ import { RadioGroup } from '../components/RadioGroup';
 import SearchableSelect from '../components/SearchableSelect';
 import { DatePicker } from '../components/DatePicker';
 import { DateTimePicker } from '../components/DateTimePicker';
+import { ContactPicker } from '../components/ContactPicker';
+import UserPicker from '../components/UserPicker';
+import type { IContact, IUser } from '@alga-psa/types';
 import { getFieldType } from './registry';
+import type { FieldLookupEntity, FieldLookupOption } from './lookup';
 import type { FieldOption, FieldTypeKey } from './types';
 
 export interface FieldInputControlProps {
@@ -26,6 +30,11 @@ export interface FieldInputControlProps {
   value: unknown;
   onChange: (value: unknown) => void;
   options?: readonly FieldOption[];
+  /**
+   * A lookup's picker: which entity it picks and the choices the server resolved for this
+   * requester. The control never fetches anything itself.
+   */
+  lookup?: { entity: FieldLookupEntity; options: readonly FieldLookupOption[] };
   placeholder?: string | null;
   required?: boolean;
   disabled?: boolean;
@@ -68,6 +77,35 @@ const asText = (value: unknown): string => (typeof value === 'string' ? value : 
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
 
+// The shared pickers take full entity rows; these carry only what the pickers read for display.
+function toPickerContact(option: FieldLookupOption): IContact {
+  return {
+    contact_name_id: option.id,
+    full_name: option.label,
+    email: option.secondaryLabel ?? null,
+    is_inactive: false,
+    client_id: null,
+    phone_numbers: [],
+    role: null,
+    notes: null,
+    created_at: '',
+    updated_at: '',
+    tenant: '',
+  } as unknown as IContact;
+}
+
+function toPickerUser(option: FieldLookupOption): IUser {
+  return {
+    user_id: option.id,
+    first_name: option.label,
+    last_name: '',
+    email: option.secondaryLabel ?? '',
+    user_type: 'internal',
+    is_inactive: false,
+    tenant: '',
+  } as unknown as IUser;
+}
+
 const errorRing = 'border-[rgb(var(--color-status-error))]';
 
 export function FieldInputControl(props: FieldInputControlProps): React.ReactElement | null {
@@ -77,6 +115,7 @@ export function FieldInputControl(props: FieldInputControlProps): React.ReactEle
     value,
     onChange,
     options,
+    lookup,
     placeholder,
     required,
     disabled,
@@ -87,7 +126,10 @@ export function FieldInputControl(props: FieldInputControlProps): React.ReactEle
     labels,
   } = props;
   const definition = getFieldType(type);
-  const control = definition?.control ?? 'text';
+  // A type with no registry entry has no control: drawing it as a text box would invite an
+  // answer the form can neither validate nor store.
+  if (!definition) return null;
+  const control = definition.control;
   const selectOptions = (options ?? []).map((option) => ({
     value: option.value,
     label: option.label,
@@ -248,6 +290,41 @@ export function FieldInputControl(props: FieldInputControlProps): React.ReactEle
           containerClassName="mb-0"
         />
       );
+
+    case 'lookup': {
+      const choices = lookup?.options ?? [];
+      const selectedId = asText(value);
+      return (
+        <>
+          {lookup?.entity === 'user' ? (
+            <UserPicker
+              id={id}
+              labelStyle="none"
+              value={selectedId}
+              onValueChange={(next) => onChange(next)}
+              users={choices.map(toPickerUser)}
+              userTypeFilter="internal"
+              placeholder={placeholder || labels?.selectPlaceholder}
+              buttonWidth="full"
+              disabled={disabled}
+              modal={false}
+            />
+          ) : (
+            <ContactPicker
+              id={id}
+              contacts={choices.map(toPickerContact)}
+              value={selectedId}
+              onValueChange={(next) => onChange(next)}
+              placeholder={placeholder || labels?.selectPlaceholder}
+              buttonWidth="full"
+              disabled={disabled}
+              modal={false}
+            />
+          )}
+          {name ? <input type="hidden" name={name} value={selectedId} /> : null}
+        </>
+      );
+    }
 
     case 'none':
       return null;

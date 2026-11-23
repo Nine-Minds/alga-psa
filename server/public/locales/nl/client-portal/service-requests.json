@@ -29,7 +29,8 @@
       "maxDate": "Kies {{maxDate}} of eerder.",
       "minSelected": "Kies er ten minste {{minSelected}}.",
       "maxSelected": "Kies er hoogstens {{maxSelected}}."
-    }
+    },
+    "unsupportedField": "Deze vraag is niet beschikbaar."
   },
   "myRequests": {
     "title": "Mijn aanvragen",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "Verwerking voltooid",
       "service_request_submission_execution_failed": "Verwerking mislukt"
     },
-    "unnamedAttachment": "Bijlage"
+    "unnamedAttachment": "Bijlage",
+    "lookupUnavailable": "(niet meer beschikbaar)"
   },
   "recent": {
     "title": "Uw recente verzoeken",

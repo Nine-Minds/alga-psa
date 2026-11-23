@@ -29,7 +29,8 @@
       "maxDate": "Elija {{maxDate}} o anterior.",
       "minSelected": "Elija al menos {{minSelected}}.",
       "maxSelected": "Elija {{maxSelected}} como máximo."
-    }
+    },
+    "unsupportedField": "Esta pregunta no está disponible."
   },
   "myRequests": {
     "title": "Mis solicitudes",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "Procesamiento completado",
       "service_request_submission_execution_failed": "Error en el procesamiento"
     },
-    "unnamedAttachment": "Archivo adjunto"
+    "unnamedAttachment": "Archivo adjunto",
+    "lookupUnavailable": "(ya no está disponible)"
   },
   "recent": {
     "title": "Sus solicitudes recientes",

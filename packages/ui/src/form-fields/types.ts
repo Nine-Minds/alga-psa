@@ -33,7 +33,8 @@ export type FieldInputTypeKey =
   | 'checkbox'
   | 'date'
   | 'date-time'
-  | 'file-upload';
+  | 'file-upload'
+  | 'lookup';
 
 export type FieldDisplayTypeKey = 'section' | 'text' | 'callout' | 'divider';
 
@@ -57,6 +58,7 @@ export type FieldControlKey =
   | 'date'
   | 'date-time'
   | 'file'
+  | 'lookup'
   | 'none';
 
 export type FieldValidationRuleKey =
@@ -116,6 +118,21 @@ export interface FieldTypeDefinition {
   supportsPlaceholder: boolean;
   supportsDefaultValue: boolean;
   supportsHelpText: boolean;
+  /**
+   * The stored answer is an opaque record id (a lookup). It is never shown as stored: readers
+   * show the label the server resolved from the record, or nothing, and never use it as free text.
+   */
+  valueIsReference?: boolean;
+  /**
+   * For a type whose element carries a descriptor beyond the shared keys: reads those keys off
+   * the raw element so the schema normalizer can keep them (a lookup's `lookup`).
+   */
+  readDescriptor?(raw: Record<string, unknown>): Record<string, unknown>;
+  /**
+   * Everything wrong with an element of this type, as sentences that continue `Field "<key>" …`.
+   * Type-specific; the shared checks (key, label, options, defaults) are the schema's own.
+   */
+  validateElement?(element: Record<string, unknown>): string[];
   /** Group used by palettes and type pickers. */
   group: FieldTypeGroup;
   /** Normalizes a raw stored or posted value into this type's value shape. */

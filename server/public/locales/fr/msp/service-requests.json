@@ -104,7 +104,8 @@
         "section": "Section",
         "text": "Consignes",
         "callout": "Encadré",
-        "divider": "Séparateur"
+        "divider": "Séparateur",
+        "lookup": "Recherche"
       },
       "visibility": {
         "title": "Afficher quand…",
@@ -532,7 +533,8 @@
         "choices": "Choix",
         "datesAndNumbers": "Dates et nombres",
         "files": "Fichiers",
-        "layout": "Mise en page"
+        "layout": "Mise en page",
+        "data": "Données"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "La réponse est vérifiée",
       "datePlaceholder": "Choisir une date",
       "emptyHint": "Il n'y a encore rien ici. Ajoutez la première question depuis l'onglet Ajouter, à gauche.",
-      "showTemplates": "Afficher les modèles"
+      "showTemplates": "Afficher les modèles",
+      "unsupportedField": "Cette question n'est pas disponible."
     },
     "outline": {
       "empty": "Le formulaire est encore vide.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "Une ligne entre les éléments"
+      },
+      "lookup": {
+        "description": "Une personne choisie dans une liste d'enregistrements"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Cet élément a aussi une règle définie hors du générateur, qui continue de s’appliquer.",
       "renameBreaksTemplates": "L’objet ou la description du ticket fait encore référence à « {{key}} ». Mettez-le à jour sur la page de la demande.",
       "renameKeyEmpty": "Une clé de réponse ne peut pas être vide. La clé précédente reste en place.",
-      "renameKeyTaken": "Une autre question utilise déjà la clé de réponse « {{key}} ». La clé précédente reste en place."
+      "renameKeyTaken": "Une autre question utilise déjà la clé de réponse « {{key}} ». La clé précédente reste en place.",
+      "lookup": {
+        "title": "Recherche",
+        "help": "Les choix sont les personnes enregistrées, déterminées pour chaque demandeur à l'ouverture du formulaire.",
+        "entity": "Rechercher",
+        "entities": {
+          "contact": "Contact",
+          "user": "Utilisateur MSP"
+        },
+        "scope": "Les options proviennent de",
+        "scopes": {
+          "requester-client": "Client du demandeur",
+          "tenant": "Tout l'espace de travail"
+        }
+      },
+      "unsupportedType": "Type de champ non pris en charge « {{type}} ». Supprimez ce champ et ajoutez-le à nouveau avant de publier."
     },
     "tryIt": {
       "banner": "Les réponses saisies ici ne sont enregistrées nulle part. Les règles et vérifications se comportent comme pour un client.",

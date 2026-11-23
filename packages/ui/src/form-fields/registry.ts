@@ -10,6 +10,7 @@ import type {
   FieldTypeKey,
   FieldValidationRuleKey,
 } from './types';
+import { normalizeLookupDescriptor, validateLookupElement } from './lookup';
 
 const PRESENCE: readonly PredicateOperator[] = ['is_empty', 'is_not_empty'];
 const EQUALITY: readonly PredicateOperator[] = ['equals', 'not_equals'];
@@ -252,6 +253,35 @@ const DEFINITIONS: Record<FieldTypeKey, FieldTypeDefinition> = {
     isEmpty: (value) => value === null || value === undefined,
     format: () => '',
   },
+  // LEVERAGE: friction data-sourced-field-type — the registry assumed options are authored; a lookup's
+  // choices are resolved on the server per requester, so it carries a descriptor hook pair
+  // (readDescriptor/validateElement) and a reference trait instead of `options`.
+  lookup: {
+    key: 'lookup',
+    kind: 'input',
+    valueShape: 'string',
+    control: 'lookup',
+    validationRules: [],
+    // An id is not something a condition can usefully compare to; only "was it answered".
+    operators: PRESENCE,
+    supportsOptions: false,
+    supportsPlaceholder: false,
+    supportsDefaultValue: false,
+    supportsHelpText: true,
+    valueIsReference: true,
+    readDescriptor: (raw) => {
+      const lookup = normalizeLookupDescriptor(raw.lookup);
+      return lookup ? { lookup } : {};
+    },
+    validateElement: (element) => validateLookupElement(element),
+    group: 'choice',
+    coerce: (value) => toTrimmedString(value),
+    // Only a missing or blank answer is empty. Anything else (a list, an object) is an answer that
+    // is not an id, and is refused as an invalid selection rather than read as "left blank".
+    isEmpty: (value) => value === null || value === undefined || (typeof value === 'string' && value.trim() === ''),
+    // The answer is an id: only a resolved label is readable. No label, no text; never the id.
+    format: (value, options) => options?.find((option) => option.value === toTrimmedString(value))?.label ?? '',
+  },
   section: displayType('section'),
   text: displayType('text'),
   callout: displayType('callout'),
@@ -278,9 +308,19 @@ export function getFieldType(key: unknown): FieldTypeDefinition | null {
 }
 
 /**
- * The element kind for a type. Unknown types are treated as `input`, which is what the
- * legacy schema did when it coerced an unknown type to short-text.
+ * The element kind for a type. An unknown type is treated as `input` so that nothing reads it as
+ * a display block, but it is NOT a text input: see `isUnsupportedFieldType`.
  */
+/**
+ * A type this build has no registry entry for (a form authored by a newer or older build, or a
+ * typo). It is kept as written and refused at publish; on an already-published form it is an inert
+ * row that holds no answer and is never required. A missing type is not "unsupported": a v1 field
+ * without one has always read as plain text.
+ */
+export function isUnsupportedFieldType(type: unknown): boolean {
+  return type !== undefined && !isFieldTypeKey(type);
+}
+
 export function getFieldElementKind(key: unknown): FieldElementKind {
   return getFieldType(key)?.kind ?? 'input';
 }

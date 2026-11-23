@@ -276,3 +276,112 @@ describe("RequestServiceForm conditional sections", () => {
     expect(document.getElementById("request-service-field-laptop_model")).not.toBeNull();
   });
 });
+
+describe("RequestServiceForm lookup fields", () => {
+  afterEach(() => cleanup());
+
+  const labels = {
+    selectPlaceholder: "Select",
+    datePlaceholder: "Date",
+    submit: "Submit request",
+    requiredField: "This field is required.",
+    unsupportedField: "This question is not available.",
+  };
+  const lookupOptions = {
+    manager: [
+      { id: "11111111-1111-4111-8111-111111111111", label: "Jane Manager", secondaryLabel: "jane@example.com" },
+      { id: "22222222-2222-4222-8222-222222222222", label: "Sam Supervisor" },
+    ],
+  };
+
+  it("renders the contact picker over the server-resolved options and posts the chosen id", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={[{ key: "manager", type: "lookup", label: "Manager", required: true, lookup: { entity: "contact", scope: "requester-client" } }]}
+        initialValues={{}}
+        lookupOptions={lookupOptions}
+        labels={labels}
+        clientSubmissionKey="attempt-1"
+      />,
+    );
+
+    // The question is labelled like every other field (the shared picker draws no label of its own).
+    // ...and the label names the picker for assistive tech.
+    await user.click(screen.getByRole("button", { name: "Manager *" }));
+    // Only the scoped options are offered; there is no other source of contacts in the form.
+    expect(screen.getByText("Sam Supervisor")).toBeInTheDocument();
+    await user.click(screen.getByText("Jane Manager"));
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+
+    expect(action).toHaveBeenCalledTimes(1);
+    const submitted = action.mock.calls[0][0] as FormData;
+    expect(submitted.get("manager")).toBe("11111111-1111-4111-8111-111111111111");
+  });
+
+  it("treats an empty required lookup like any empty required field", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={[{ key: "manager", type: "lookup", label: "Manager", required: true, lookup: { entity: "contact", scope: "requester-client" } }]}
+        initialValues={{}}
+        lookupOptions={lookupOptions}
+        labels={labels}
+        clientSubmissionKey="attempt-1"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("This field is required.");
+  });
+
+  it("renders a user lookup with the user picker", async () => {
+    const user = userEvent.setup();
+    render(
+      <RequestServiceForm
+        action={vi.fn()}
+        fields={[{ key: "manager", type: "lookup", label: "Owner", lookup: { entity: "user", scope: "tenant" } }]}
+        initialValues={{}}
+        lookupOptions={lookupOptions}
+        labels={labels}
+        clientSubmissionKey="attempt-1"
+      />,
+    );
+
+    // One label for the question, not the picker's own heading on top of it.
+    expect(screen.getAllByText("Owner")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Owner" }));
+    expect(screen.getByText("Jane Manager")).toBeInTheDocument();
+  });
+
+  it("draws a question of an unsupported type as an inert row: no input, never required, nothing posted", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={[
+          { key: "rating", type: "rating" as BasicFormField["type"], label: "Satisfaction score", required: true },
+          { key: "summary", type: "short-text", label: "Summary" },
+        ]}
+        initialValues={{ rating: "5" }}
+        labels={labels}
+        clientSubmissionKey="attempt-1"
+      />,
+    );
+
+    expect(screen.getByText("Satisfaction score *")).toBeInTheDocument();
+    expect(screen.getByText("This question is not available.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Satisfaction score/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(action).toHaveBeenCalledTimes(1);
+    const submitted = action.mock.calls[0][0] as FormData;
+    expect(submitted.has("rating")).toBe(false);
+  });
+});

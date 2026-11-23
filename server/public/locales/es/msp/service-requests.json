@@ -104,7 +104,8 @@
         "section": "Sección",
         "text": "Instrucciones",
         "callout": "Nota destacada",
-        "divider": "Separador"
+        "divider": "Separador",
+        "lookup": "Búsqueda"
       },
       "visibility": {
         "title": "Mostrar cuando…",
@@ -532,7 +533,8 @@
         "choices": "Opciones",
         "datesAndNumbers": "Fechas y números",
         "files": "Archivos",
-        "layout": "Diseño"
+        "layout": "Diseño",
+        "data": "Datos"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "La respuesta se comprueba",
       "datePlaceholder": "Elija una fecha",
       "emptyHint": "Aquí todavía no hay nada. Añada la primera pregunta desde la pestaña Añadir, a la izquierda.",
-      "showTemplates": "Mostrar plantillas"
+      "showTemplates": "Mostrar plantillas",
+      "unsupportedField": "Esta pregunta no está disponible."
     },
     "outline": {
       "empty": "Todavía no hay nada en el formulario.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "Una línea entre elementos"
+      },
+      "lookup": {
+        "description": "Una persona elegida de una lista de registros"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Este elemento también tiene una regla definida fuera del creador, que se sigue aplicando.",
       "renameBreaksTemplates": "El asunto o la descripción del ticket sigue haciendo referencia a «{{key}}». Actualícelo en la página de la solicitud.",
       "renameKeyEmpty": "La clave de respuesta no puede estar vacía. Se mantiene la clave anterior.",
-      "renameKeyTaken": "Otra pregunta ya usa la clave de respuesta «{{key}}». Se mantiene la clave anterior."
+      "renameKeyTaken": "Otra pregunta ya usa la clave de respuesta «{{key}}». Se mantiene la clave anterior.",
+      "lookup": {
+        "title": "Búsqueda",
+        "help": "Las opciones son las personas registradas y se determinan para cada solicitante al abrir el formulario.",
+        "entity": "Buscar",
+        "entities": {
+          "contact": "Contacto",
+          "user": "Usuario MSP"
+        },
+        "scope": "Las opciones provienen de",
+        "scopes": {
+          "requester-client": "Cliente del solicitante",
+          "tenant": "Todo el espacio de trabajo"
+        }
+      },
+      "unsupportedType": "Tipo de campo no compatible «{{type}}». Elimine este campo y vuelva a añadirlo antes de publicar."
     },
     "tryIt": {
       "banner": "Las respuestas de esta pantalla no se guardan. Las reglas y comprobaciones funcionan igual que para un cliente.",

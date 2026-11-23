@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import type { FieldValidationIssue } from '@alga-psa/ui/form-fields';
-import { getFieldElementKind, getFieldType } from '@alga-psa/ui/form-fields';
+import type { FieldLookupOption, FieldValidationIssue } from '@alga-psa/ui/form-fields';
+import { getFieldElementKind, getFieldType, isUnsupportedFieldType } from '@alga-psa/ui/form-fields';
 import {
   computeVisibleFieldKeys,
   type VisibilityContext,
@@ -22,6 +22,8 @@ export interface RequestServiceFormLabels {
   submit: string;
   /** Shown under a visible required field that is still empty when the client submits. */
   requiredField: string;
+  /** Shown instead of an input for a question whose type this build does not support. */
+  unsupportedField?: string;
   /** Wording per validation rule; the key is the rule name. */
   validation?: Partial<Record<FieldValidationIssue['rule'], string>>;
 }
@@ -37,6 +39,11 @@ interface RequestServiceFormProps {
   fields: RequestServiceFormField[];
   settings?: BasicFormSettings;
   initialValues: Record<string, unknown>;
+  /**
+   * Choices for lookup fields keyed by field key, resolved server-side for this requester. The
+   * form never asks for a list of people itself, and the server re-checks every posted id on submit.
+   */
+  lookupOptions?: Record<string, FieldLookupOption[]>;
   /** Live conditional-visibility rules; when absent or disabled every field renders. */
   visibility?: RequestServiceFormVisibility;
   labels: RequestServiceFormLabels;
@@ -61,6 +68,7 @@ export function RequestServiceForm({
   fields,
   settings,
   initialValues,
+  lookupOptions,
   visibility,
   labels,
   clientSubmissionKey,
@@ -71,7 +79,7 @@ export function RequestServiceForm({
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = { ...initialValues };
     for (const field of fields) {
-      if (getFieldElementKind(field.type) === 'display') {
+      if (getFieldElementKind(field.type) === 'display' || isUnsupportedFieldType(field.type)) {
         continue;
       }
       const value = initialValues[field.key];
@@ -177,7 +185,9 @@ export function RequestServiceForm({
         labels={{
           selectPlaceholder: labels.selectPlaceholder,
           datePlaceholder: labels.datePlaceholder,
+          unsupportedField: labels.unsupportedField,
         }}
+        lookupOptions={lookupOptions}
         postFieldNames
         idPrefix="request-service-field"
       >

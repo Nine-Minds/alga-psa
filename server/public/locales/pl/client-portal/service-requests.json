@@ -29,7 +29,8 @@
       "maxDate": "Wybierz {{maxDate}} lub wcześniej.",
       "minSelected": "Wybierz co najmniej {{minSelected}}.",
       "maxSelected": "Wybierz najwyżej {{maxSelected}}."
-    }
+    },
+    "unsupportedField": "To pytanie jest niedostępne."
   },
   "myRequests": {
     "title": "Moje zgłoszenia",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "Przetwarzanie zakończone",
       "service_request_submission_execution_failed": "Przetwarzanie nie powiodło się"
     },
-    "unnamedAttachment": "Załącznik"
+    "unnamedAttachment": "Załącznik",
+    "lookupUnavailable": "(już niedostępne)"
   },
   "recent": {
     "title": "Twoje ostatnie zgłoszenia",

@@ -12,6 +12,8 @@ import {
   submitPortalServiceRequest,
   resolveSubmissionVisibility,
   collectSubmissionValidationIssues,
+  resolveLookupOptionsForFields,
+  type LookupOption,
   toPortalFormView,
   ServiceRequestSubmissionValidationError,
   type ServiceRequestPortalFormView,
@@ -20,6 +22,11 @@ import type { FormFieldIssue } from '../../../../lib/service-requests/formValida
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
+
+export type RequestServicePortalFormWithLookups = ServiceRequestPortalFormView & {
+  /** Server-resolved options for each lookup field, keyed by field key; `{}` when the form has none. */
+  lookupOptions: Record<string, LookupOption[]>;
+};
 
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,
@@ -91,6 +98,7 @@ function requestServiceSubmitErrorMessage(error: unknown): string {
     return 'This request form is no longer available.';
   }
 
+  // Includes lookup refusals ("Invalid selection for "<field label>""), which name the field.
   if (error.message.startsWith('Submission validation failed:')) {
     return `Please fix the form: ${error.message.replace('Submission validation failed:', '').trim()}`;
   }
@@ -106,11 +114,17 @@ function requestServiceSubmitErrorMessage(error: unknown): string {
   return 'Unable to submit request. Please review the form and try again.';
 }
 
+/**
+ * The portal form for one definition the requester can see, plus the options for its lookup fields.
+ * Lookup options ride on this action on purpose: there is no general "list contacts" action, scope is
+ * derived from the session's client (never a parameter), and a definition that is not visible yields
+ * nothing at all. Forms without lookup fields get an empty map and no extra query.
+ */
 export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   definitionId: string
-): Promise<ServiceRequestPortalFormView | null> => {
+): Promise<RequestServicePortalFormWithLookups | null> => {
   if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
@@ -118,17 +132,22 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
     const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
+    const requester = { clientId, contactId: currentUser.contact_id ?? null };
     const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
       trx,
-      {
-        tenant,
-        requesterUserId: currentUser.user_id,
-        clientId,
-        contactId: currentUser.contact_id ?? null,
-      },
+      { tenant, requesterUserId: currentUser.user_id, ...requester },
       definitionId
     );
-    return detail ? toPortalFormView(detail) : null;
+    if (!detail) {
+      return null;
+    }
+    const lookupOptions = await resolveLookupOptionsForFields(
+      trx,
+      tenant,
+      (detail.formSchema as { fields?: unknown } | null)?.fields,
+      requester
+    );
+    return { ...toPortalFormView(detail), lookupOptions };
   });
 });
 

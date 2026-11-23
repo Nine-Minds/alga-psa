@@ -24,6 +24,9 @@ export interface ServiceRequestTemplateFormat {
   locale: string;
   yes: string;
   no: string;
+  /** Display labels for lookup answers by field key; the stored answer is an id and is never shown. */
+  referenceLabels?: Record<string, string>;
+  unresolved?: string;
 }
 
 interface SchemaField extends ServiceRequestTemplateField {
@@ -50,7 +53,8 @@ function readSchemaFields(formSchema: unknown): SchemaField[] {
       : [];
     result.push({
       key: field.key,
-      type: typeof field.type === 'string' ? field.type : 'short-text',
+      // A missing type stays missing; describeFormAnswer falls back to the raw answer for it.
+      type: typeof field.type === 'string' ? field.type : '',
       label: typeof field.label === 'string' && field.label.trim() ? field.label : field.key,
       options,
     });

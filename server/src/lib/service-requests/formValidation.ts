@@ -9,6 +9,7 @@
  */
 import {
   getFieldElementKind,
+  isUnsupportedFieldType,
   validateFieldValue,
   type FieldValidationIssue,
   type FieldValidationRules,
@@ -52,6 +53,11 @@ export function collectFormFieldIssues(input: {
       continue;
     }
     if (getFieldElementKind(field.type) === 'display') {
+      continue;
+    }
+    // A published question of a type this build cannot render is an inert row: nothing to answer,
+    // so nothing to require (otherwise the whole form would be unsubmittable).
+    if (isUnsupportedFieldType(field.type)) {
       continue;
     }
     const fieldKey = field.key;

@@ -29,7 +29,8 @@
       "maxDate": "〖Ƥīƈķ {{maxDate}} ȯř ḗȧřŀīḗř. ············〗",
       "minSelected": "〖Ƥīƈķ ȧŧ ŀḗȧşŧ {{minSelected}}. ············〗",
       "maxSelected": "〖Ƥīƈķ {{maxSelected}} ȧŧ ḿȯşŧ. ············〗"
-    }
+    },
+    "unsupportedField": "〖Ŧħīş ʠŭḗşŧīȯƞ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ. ·············〗"
   },
   "myRequests": {
     "title": "〖Ḿẏ Řḗʠŭḗşŧş ·····〗",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "〖Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƈȯḿƥŀḗŧḗḓ ············〗",
       "service_request_submission_execution_failed": "〖Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƒȧīŀḗḓ ··········〗"
     },
-    "unnamedAttachment": "〖Ȧŧŧȧƈħḿḗƞŧ ····〗"
+    "unnamedAttachment": "〖Ȧŧŧȧƈħḿḗƞŧ ····〗",
+    "lookupUnavailable": "〖(ƞȯ ŀȯƞɠḗř ȧṽȧīŀȧƀŀḗ) ·········〗"
   },
   "recent": {
     "title": "〖Ẏȯŭř řḗƈḗƞŧ řḗʠŭḗşŧş ········〗",

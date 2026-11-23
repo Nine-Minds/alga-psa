@@ -5,6 +5,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
+import type { FieldLookupEntity } from '@alga-psa/ui/form-fields';
 import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import {
   isActionMessageError,
@@ -21,6 +22,7 @@ import {
   createServiceRequestDefinitionFromTemplate,
   duplicateServiceRequestDefinition,
   type BasicFormFieldType,
+
   listServiceRequestDefinitionsForManagement,
   listServiceRequestTemplateOptions,
   removeBasicFormFieldFromDefinitionDraft,
@@ -412,6 +414,8 @@ export const updateServiceRequestFormFieldAction = withAuth(async (
     required?: boolean;
     defaultValue?: string | boolean | null;
     options?: Array<{ label: string; value: string }>;
+    /** Entity only: the scope is derived server-side from the entity and cannot be set by the caller. */
+    lookup?: { entity: FieldLookupEntity };
   }
 ): Promise<ServiceRequestDefinitionManagementRow> => {
   const { knex } = await createTenantKnex();

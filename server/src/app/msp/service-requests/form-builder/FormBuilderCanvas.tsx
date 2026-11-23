@@ -30,7 +30,7 @@ export interface FormBuilderCanvasProps {
   /** The element the author asked to rename from the keyboard. */
   renamingKey: string | null;
   onRenamingKeyChange: (key: string | null) => void;
-  labels: { selectPlaceholder: string; datePlaceholder: string };
+  labels: { selectPlaceholder: string; datePlaceholder: string; unsupportedField?: string };
   /** Brings the template gallery back, for a form the author started blank. */
   onShowTemplates: () => void;
 }

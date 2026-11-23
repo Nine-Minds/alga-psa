@@ -1,9 +1,10 @@
 import {
-  FIELD_TYPE_REGISTRY,
   getFieldElementKind,
   getFieldType,
+  isUnsupportedFieldType,
   normalizeFieldValidationRules,
   type FieldElementKind,
+  type FieldLookupDescriptor,
   type FieldTypeKey,
   type FieldValidationRules,
 } from '@alga-psa/ui/form-fields';
@@ -68,6 +69,8 @@ export interface BasicFormField {
   /** The answer the form opens with. A list for `multi-select`, a boolean for `checkbox`. */
   defaultValue?: string | boolean | string[] | null;
   options?: BasicFormFieldOption[];
+  /** Present only on `lookup` elements: where the choices come from. The answer is the entity id. */
+  lookup?: FieldLookupDescriptor;
   placeholder?: string | null;
   validation?: BasicFormFieldValidation;
   layout?: BasicFormElementLayout;
@@ -139,9 +142,6 @@ export interface BasicFormSchema {
 }
 
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
-const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>(
-  Object.keys(FIELD_TYPE_REGISTRY) as FieldTypeKey[]
-);
 
 /** Element kinds, re-exported so service-request consumers read one table. */
 export { getFieldElementKind, type FieldElementKind };
@@ -257,10 +257,11 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
       : withUniqueFieldKey(slugifyFieldKey(fallbackLabel), seenKeys);
     seenKeys.add(nextKey);
 
+    // An unrecognised type is kept as written. Coercing it to 'short-text' made the unsupported-type
+    // check in validateBasicFormSchema unreachable and silently rewrote the author's schema on
+    // re-save. validateBasicFormSchema rejects it; the cast is the one place the type is unproven.
     const rawType = (raw as any).type;
-    const type: BasicFormFieldType = SUPPORTED_FIELD_TYPES.has(rawType)
-      ? (rawType as BasicFormFieldType)
-      : 'short-text';
+    const type = (typeof rawType === 'string' ? rawType : '') as BasicFormFieldType;
     const definition = getFieldType(type);
     const isDisplay = definition?.kind === 'display';
 
@@ -291,6 +292,8 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
         }))
         .filter((option: BasicFormFieldOption) => option.label && option.value);
     }
+
+    Object.assign(field, definition?.readDescriptor?.(raw as Record<string, unknown>));
 
     if (definition?.supportsPlaceholder) {
       const placeholder = (raw as any).placeholder;
@@ -367,6 +370,13 @@ export interface FormAnswerDisplayFormat {
   no?: string;
   /** Stand-in for an element that carries no answer. */
   empty?: string;
+  /**
+   * Display labels for reference answers (lookups), keyed by field key, resolved by the server
+   * for the requester. The stored answer is an id and is never shown.
+   */
+  referenceLabels?: Record<string, string>;
+  /** Stand-in for a reference answer whose record no longer resolves. Falls back to `empty`. */
+  unresolved?: string;
 }
 
 function readAnswerOptions(field: FormAnswerField | undefined) {
@@ -461,6 +471,12 @@ export function describeFormAnswer(
     return empty;
   }
 
+  // A reference answer is an opaque id: only the label the server resolved is readable.
+  if (definition?.valueIsReference) {
+    const key = typeof field?.key === 'string' ? field.key : '';
+    return format.referenceLabels?.[key]?.trim() || (format.unresolved ?? empty);
+  }
+
   if ((definition?.key === 'date' || definition?.key === 'date-time') && format.locale) {
     const formatted = formatDateAnswer(String(value).trim(), format.locale);
     if (formatted) {
@@ -501,8 +517,14 @@ export function resolveStaticDefaultValues(schema: unknown): ServiceRequestIniti
       continue;
     }
 
-    // Display blocks and uploads never seed a value.
-    if (field.type === 'file-upload' || isDisplayElement(field)) {
+    // Display blocks, uploads, lookups (their choices are data) and unsupported types never seed
+    // a value; an unsupported type must not pick up a string default as if it were text.
+    if (
+      field.type === 'file-upload' ||
+      isDisplayElement(field) ||
+      getFieldType(field.type)?.valueIsReference ||
+      isUnsupportedFieldType(field.type)
+    ) {
       continue;
     }
 
@@ -552,12 +574,17 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
     }
     seenKeys.add(field.key);
 
-    if (!SUPPORTED_FIELD_TYPES.has(field.type)) {
-      errors.push(`${fieldRef} has unsupported type "${String(field.type)}"`);
+    if (!getFieldType(field.type)) {
+      // Named by label as well as position: the author finds the question, not a number.
+      errors.push(`${fieldRef} ("${field.label}") has unsupported type "${String(field.type)}"`);
     }
     // A divider has nothing to say, so it needs no label.
     if (!field.label?.trim() && field.type !== 'divider') {
       errors.push(`${fieldRef} is missing a label`);
+    }
+
+    for (const problem of getFieldType(field.type)?.validateElement?.(field as unknown as Record<string, unknown>) ?? []) {
+      errors.push(`Field "${field.key}" ${problem}`);
     }
 
     const defaultValue = field.defaultValue;

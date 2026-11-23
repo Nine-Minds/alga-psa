@@ -104,7 +104,8 @@
         "section": "Avsnitt",
         "text": "Instruktioner",
         "callout": "Framhävd notis",
-        "divider": "Avdelare"
+        "divider": "Avdelare",
+        "lookup": "Uppslag"
       },
       "visibility": {
         "title": "Visa när…",
@@ -532,7 +533,8 @@
         "choices": "Val",
         "datesAndNumbers": "Datum och tal",
         "files": "Filer",
-        "layout": "Layout"
+        "layout": "Layout",
+        "data": "Uppgifter"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "Svaret kontrolleras",
       "datePlaceholder": "Välj ett datum",
       "emptyHint": "Här finns inget ännu. Använd fliken Lägg till i vänsterpanelen för den första frågan.",
-      "showTemplates": "Visa mallar"
+      "showTemplates": "Visa mallar",
+      "unsupportedField": "Den här frågan är inte tillgänglig."
     },
     "outline": {
       "empty": "Inget på formuläret än.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "En linje mellan element"
+      },
+      "lookup": {
+        "description": "En person vald från en lista med poster"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Elementet har även en regel som satts utanför byggaren och fortsätter att gälla.",
       "renameBreaksTemplates": "Ärendets rubrik eller beskrivning hänvisar fortfarande till ”{{key}}”. Uppdatera det på begärandesidan.",
       "renameKeyEmpty": "En svarsnyckel kan inte vara tom. Den tidigare nyckeln gäller fortfarande.",
-      "renameKeyTaken": "En annan fråga använder redan svarsnyckeln ”{{key}}”. Den tidigare nyckeln gäller fortfarande."
+      "renameKeyTaken": "En annan fråga använder redan svarsnyckeln ”{{key}}”. Den tidigare nyckeln gäller fortfarande.",
+      "lookup": {
+        "title": "Uppslag",
+        "help": "Alternativen är de personer som finns registrerade och bestäms för varje beställare när formuläret öppnas.",
+        "entity": "Slå upp",
+        "entities": {
+          "contact": "Kontakt",
+          "user": "MSP-användare"
+        },
+        "scope": "Alternativen hämtas från",
+        "scopes": {
+          "requester-client": "Beställarens kund",
+          "tenant": "Hela arbetsytan"
+        }
+      },
+      "unsupportedType": "Fälttypen ”{{type}}” stöds inte. Ta bort fältet och lägg till det igen innan du publicerar."
     },
     "tryIt": {
       "banner": "Svaren på den här skärmen sparas ingenstans. Regler och kontroller fungerar precis som för en kund.",

@@ -615,6 +615,7 @@ export function ServiceRequestFormBuilder({
   const rendererLabels = {
     selectPlaceholder: t('editor.form.selectOption'),
     datePlaceholder: t('formBuilder.canvas.datePlaceholder'),
+    unsupportedField: t('formBuilder.canvas.unsupportedField'),
   };
 
   const tabButton = (tab: LeftTab, label: string) => (

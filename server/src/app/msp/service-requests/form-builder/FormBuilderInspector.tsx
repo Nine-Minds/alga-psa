@@ -15,7 +15,10 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   FieldInputControl,
+  LOOKUP_ENTITIES,
+  defaultLookupScope,
   getFieldType,
+  isUnsupportedFieldType,
   validateFieldValue,
   type FieldValidationRuleKey,
 } from '@alga-psa/ui/form-fields';
@@ -359,6 +362,45 @@ export function FormBuilderInspector({
           />
         ) : null}
       </InspectorGroup>
+
+      {isUnsupportedFieldType(element.type) ? (
+        <p id="service-request-form-builder-unsupported-type" role="note" className="px-4 py-2 text-sm text-destructive">
+          {t('formBuilder.inspector.unsupportedType', { type: String(element.type) })}
+        </p>
+      ) : null}
+
+      {element.lookup ? (
+        <InspectorGroup
+          title={t('formBuilder.inspector.lookup.title')}
+          description={t('formBuilder.inspector.lookup.help')}
+        >
+          <CustomSelect
+            id="service-request-form-builder-lookup-entity"
+            label={t('formBuilder.inspector.lookup.entity')}
+            value={element.lookup.entity}
+            options={LOOKUP_ENTITIES.map((entity) => ({
+              value: entity,
+              label: t(`formBuilder.inspector.lookup.entities.${entity}`),
+            }))}
+            // The scope is derived from the entity, never chosen: a contact is only ever
+            // offered from the requester's own client.
+            onValueChange={(value) => {
+              const entity = value as (typeof LOOKUP_ENTITIES)[number];
+              onChange({ lookup: { entity, scope: defaultLookupScope(entity) } });
+            }}
+          />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+              {t('formBuilder.inspector.lookup.scope')}
+            </p>
+            <p id="service-request-form-builder-lookup-scope" className="text-sm text-[rgb(var(--color-text-600))]">
+              {t(`formBuilder.inspector.lookup.scopes.${element.lookup.scope}`, {
+                defaultValue: String(element.lookup.scope),
+              })}
+            </p>
+          </div>
+        </InspectorGroup>
+      ) : null}
 
       {!isDisplay ? (
         <InspectorGroup title={t('formBuilder.inspector.asking')}>

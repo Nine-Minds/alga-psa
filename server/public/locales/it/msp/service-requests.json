@@ -104,7 +104,8 @@
         "section": "Sezione",
         "text": "Istruzioni",
         "callout": "Nota in evidenza",
-        "divider": "Separatore"
+        "divider": "Separatore",
+        "lookup": "Ricerca"
       },
       "visibility": {
         "title": "Mostra quando…",
@@ -532,7 +533,8 @@
         "choices": "Scelte",
         "datesAndNumbers": "Date e numeri",
         "files": "File",
-        "layout": "Struttura"
+        "layout": "Struttura",
+        "data": "Dati"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "La risposta viene verificata",
       "datePlaceholder": "Scegli una data",
       "emptyHint": "Qui non c'è ancora niente. Aggiungi la prima domanda dalla scheda Aggiungi, a sinistra.",
-      "showTemplates": "Mostra i modelli"
+      "showTemplates": "Mostra i modelli",
+      "unsupportedField": "Questa domanda non è disponibile."
     },
     "outline": {
       "empty": "Il modulo è ancora vuoto.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "Una linea tra gli elementi"
+      },
+      "lookup": {
+        "description": "Una persona scelta da un elenco di record"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Questo elemento ha anche una regola impostata fuori dal generatore, che continua a valere.",
       "renameBreaksTemplates": "L'oggetto o la descrizione del ticket fa ancora riferimento a «{{key}}». Aggiornalo nella pagina della richiesta.",
       "renameKeyEmpty": "La chiave di risposta non può essere vuota. Resta in uso la chiave precedente.",
-      "renameKeyTaken": "Un’altra domanda usa già la chiave di risposta «{{key}}». Resta in uso la chiave precedente."
+      "renameKeyTaken": "Un’altra domanda usa già la chiave di risposta «{{key}}». Resta in uso la chiave precedente.",
+      "lookup": {
+        "title": "Ricerca",
+        "help": "Le opzioni sono le persone registrate e vengono determinate per ogni richiedente all'apertura del modulo.",
+        "entity": "Cerca",
+        "entities": {
+          "contact": "Contatto",
+          "user": "Utente MSP"
+        },
+        "scope": "Le opzioni provengono da",
+        "scopes": {
+          "requester-client": "Cliente del richiedente",
+          "tenant": "Intero spazio di lavoro"
+        }
+      },
+      "unsupportedType": "Tipo di campo non supportato «{{type}}». Rimuovi questo campo e aggiungilo di nuovo prima di pubblicare."
     },
     "tryIt": {
       "banner": "Le risposte su questa schermata non vengono salvate. Regole e controlli si comportano come per un cliente.",

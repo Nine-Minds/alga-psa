@@ -29,7 +29,8 @@
       "maxDate": "{{maxDate}} oder früher wählen.",
       "minSelected": "Mindestens {{minSelected}} auswählen.",
       "maxSelected": "Höchstens {{maxSelected}} auswählen."
-    }
+    },
+    "unsupportedField": "Diese Frage ist nicht verfügbar."
   },
   "myRequests": {
     "title": "Meine Anfragen",
@@ -68,7 +69,8 @@
       "service_request_submission_execution_succeeded": "Verarbeitung abgeschlossen",
       "service_request_submission_execution_failed": "Verarbeitung fehlgeschlagen"
     },
-    "unnamedAttachment": "Anhang"
+    "unnamedAttachment": "Anhang",
+    "lookupUnavailable": "(nicht mehr verfügbar)"
   },
   "recent": {
     "title": "Ihre letzten Anfragen",

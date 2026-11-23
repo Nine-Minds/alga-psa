@@ -104,7 +104,8 @@
         "section": "Abschnitt",
         "text": "Hinweistext",
         "callout": "Hervorgehobener Hinweis",
-        "divider": "Trennlinie"
+        "divider": "Trennlinie",
+        "lookup": "Nachschlagen"
       },
       "visibility": {
         "title": "Anzeigen, wenn…",
@@ -532,7 +533,8 @@
         "choices": "Auswahl",
         "datesAndNumbers": "Daten und Zahlen",
         "files": "Dateien",
-        "layout": "Layout"
+        "layout": "Layout",
+        "data": "Daten"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "Die Antwort wird geprüft",
       "datePlaceholder": "Datum auswählen",
       "emptyHint": "Hier ist noch nichts. Fügen Sie die erste Frage über den Tab „Hinzufügen“ links hinzu.",
-      "showTemplates": "Vorlagen anzeigen"
+      "showTemplates": "Vorlagen anzeigen",
+      "unsupportedField": "Diese Frage ist nicht verfügbar."
     },
     "outline": {
       "empty": "Noch nichts im Formular.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "Eine Linie zwischen Elementen"
+      },
+      "lookup": {
+        "description": "Eine Person aus einer Datensatzliste"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "Für dieses Element gibt es außerdem eine Regel außerhalb des Builders, die weiterhin gilt.",
       "renameBreaksTemplates": "Der Ticket-Betreff oder die Beschreibung verweist weiterhin auf „{{key}}“. Bitte auf der Anfrageseite anpassen.",
       "renameKeyEmpty": "Ein Antwortschlüssel darf nicht leer sein. Der bisherige Schlüssel bleibt bestehen.",
-      "renameKeyTaken": "Eine andere Frage verwendet den Antwortschlüssel „{{key}}“ bereits. Der bisherige Schlüssel bleibt bestehen."
+      "renameKeyTaken": "Eine andere Frage verwendet den Antwortschlüssel „{{key}}“ bereits. Der bisherige Schlüssel bleibt bestehen.",
+      "lookup": {
+        "title": "Nachschlagen",
+        "help": "Die Auswahl besteht aus den vorhandenen Personen und wird für jeden Anfragenden beim Öffnen des Formulars ermittelt.",
+        "entity": "Nachschlagen von",
+        "entities": {
+          "contact": "Kontakt",
+          "user": "MSP-Benutzer"
+        },
+        "scope": "Optionen stammen aus",
+        "scopes": {
+          "requester-client": "Kunde des Anfragenden",
+          "tenant": "Gesamter Arbeitsbereich"
+        }
+      },
+      "unsupportedType": "Nicht unterstützter Feldtyp „{{type}}“. Entfernen Sie dieses Feld und fügen Sie es vor der Veröffentlichung erneut hinzu."
     },
     "tryIt": {
       "banner": "Antworten auf diesem Bildschirm werden nirgends gespeichert. Regeln und Prüfungen verhalten sich genau wie beim Kunden.",

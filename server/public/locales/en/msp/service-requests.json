@@ -104,7 +104,8 @@
         "section": "Section",
         "text": "Instructions",
         "callout": "Highlighted note",
-        "divider": "Divider"
+        "divider": "Divider",
+        "lookup": "Lookup"
       },
       "visibility": {
         "title": "Show when…",
@@ -532,7 +533,8 @@
         "choices": "Choices",
         "datesAndNumbers": "Dates and numbers",
         "files": "Files",
-        "layout": "Layout"
+        "layout": "Layout",
+        "data": "Data"
       }
     },
     "saveStatus": {
@@ -573,7 +575,8 @@
       "validationChip": "The answer is checked",
       "datePlaceholder": "Pick a date",
       "emptyHint": "Nothing here yet. Add your first question from the Add tab on the left.",
-      "showTemplates": "Show templates"
+      "showTemplates": "Show templates",
+      "unsupportedField": "This question is not available."
     },
     "outline": {
       "empty": "Nothing on the form yet.",
@@ -648,6 +651,9 @@
       },
       "divider": {
         "description": "A line between elements"
+      },
+      "lookup": {
+        "description": "A person chosen from a list of records"
       }
     },
     "inspector": {
@@ -739,7 +745,22 @@
       "legacyRuleOutsideBuilder": "This element also has a rule set outside the builder, which keeps applying.",
       "renameBreaksTemplates": "The ticket subject or description still refers to \"{{key}}\". Update it on the request page.",
       "renameKeyEmpty": "An answer key cannot be blank. The previous key is still in use.",
-      "renameKeyTaken": "Another question already uses the answer key \"{{key}}\". The previous key is still in use."
+      "renameKeyTaken": "Another question already uses the answer key \"{{key}}\". The previous key is still in use.",
+      "lookup": {
+        "title": "Lookup",
+        "help": "The choices are the people on record, worked out for each requester when the form opens.",
+        "entity": "Look up",
+        "entities": {
+          "contact": "Contact",
+          "user": "MSP user"
+        },
+        "scope": "Options come from",
+        "scopes": {
+          "requester-client": "Requester's client",
+          "tenant": "Entire workspace"
+        }
+      },
+      "unsupportedType": "Unsupported field type \"{{type}}\". Remove this field and add it again before publishing."
     },
     "tryIt": {
       "banner": "Answers on this screen go nowhere. Rules and checks behave exactly as they will for a client.",

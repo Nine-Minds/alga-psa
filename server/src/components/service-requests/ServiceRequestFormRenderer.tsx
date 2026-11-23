@@ -17,7 +17,12 @@
 import React from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
-import { FieldInputControl, getFieldType } from '@alga-psa/ui/form-fields';
+import {
+  FieldInputControl,
+  getFieldType,
+  isUnsupportedFieldType,
+  type FieldLookupOption,
+} from '@alga-psa/ui/form-fields';
 import {
   getBasicFormWidthClass,
   groupFormElementsBySection,
@@ -28,6 +33,8 @@ import {
 export interface ServiceRequestFormRendererLabels {
   selectPlaceholder: string;
   datePlaceholder: string;
+  /** Shown instead of an input for a question whose type this build does not support. */
+  unsupportedField?: string;
   /** Appended to a label to mark it required, e.g. "Full name *". */
   requiredMarker?: string;
 }
@@ -37,6 +44,8 @@ export interface ServiceRequestFormRendererProps {
   settings?: BasicFormSettings;
   values: Record<string, unknown>;
   onValueChange: (key: string, value: unknown) => void;
+  /** Server-resolved choices for lookup elements, keyed by element key. */
+  lookupOptions?: Record<string, FieldLookupOption[]>;
   /** Already-localized error text per field key. */
   errors?: Record<string, string>;
   /** When present, a key missing from the set is not rendered at all. */
@@ -102,6 +111,7 @@ export function ServiceRequestFormRenderer({
   settings,
   values,
   onValueChange,
+  lookupOptions,
   errors,
   visibleFieldKeys,
   labels,
@@ -180,6 +190,19 @@ export function ServiceRequestFormRenderer({
       );
     }
 
+    // A type this build has no control for is an inert row, never a text box: it can hold no
+    // answer, the server never stores one, and the builder's preview must not pretend otherwise.
+    if (isUnsupportedFieldType(element.type)) {
+      return (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">{renderLabel(element)}</p>
+          <p id={elementId} role="note" className="text-sm text-destructive">
+            {labels.unsupportedField ?? ''}
+          </p>
+        </div>
+      );
+    }
+
     // An input: label, control, help, error.
     const isCheckbox = element.type === 'checkbox';
     return (
@@ -198,6 +221,11 @@ export function ServiceRequestFormRenderer({
           value={values[key]}
           onChange={(next) => onValueChange(key, next)}
           options={element.options}
+          lookup={
+            element.lookup
+              ? { entity: element.lookup.entity, options: lookupOptions?.[key] ?? [] }
+              : undefined
+          }
           placeholder={element.placeholder}
           required={Boolean(element.required)}
           disabled={disabled}
