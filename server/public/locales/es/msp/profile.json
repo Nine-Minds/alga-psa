@@ -114,7 +114,7 @@
     "sso": {
       "advanced": {
         "title": "Avanzado: enrutamiento con proveedor de identidad personalizado",
-        "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Solo se necesita en instalaciones personalizadas o locales.",
+        "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Es necesario cuando el personal inicia sesión a través de su propio realm de Keycloak o de su propia aplicación de Google o Microsoft.",
         "inertNotice": "No hay ningún proveedor de identidad del inquilino configurado, por lo que las declaraciones de dominio actualmente no tienen efecto. Configure Keycloak arriba, o en la Enterprise Edition las credenciales de su aplicación de Google o Microsoft, y luego reclame aquí su dominio de inicio de sesión."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Conectar un proveedor",
       "description": "Elija un proveedor para finalizar el enlace SSO. Será redirigido a través del flujo de inicio de sesión del proveedor.",
-      "noneConfigured": "No hay proveedores SSO configurados para este entorno. Solicite a su administrador que configure las credenciales de Google o Microsoft.",
-      "noneConfiguredAdmin": "Aún no hay proveedores SSO configurados. Primero configure la aplicación de Google o Microsoft de su organización.",
-      "openProviderSetup": "Configurar un proveedor SSO",
+      "noneConfigured": "No hay proveedores SSO configurados para su organización. Solicite a su administrador que configure uno.",
+      "noneConfiguredAdmin": "Aún no hay proveedores SSO configurados. Use el enlace de configuración de uno de los proveedores de abajo para empezar.",
       "notConfigured": "No configurado",
+      "setUpProvider": "Configurar {{provider}}",
+      "askAdministrator": "Solicite a su administrador que lo configure.",
       "branding": {
         "google": "Continuar con Google",
         "microsoft": "Continuar con Microsoft",
