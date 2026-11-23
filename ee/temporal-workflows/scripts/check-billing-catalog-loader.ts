@@ -15,6 +15,10 @@
  * (FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE=<tenant>), otherwise the decision reads `flag-unavailable`.
  * Exit code: 0 when admitted, 1 when closed, 2 on a usage or runtime error.
  *
+ * It lives in scripts/, outside the worker's src/ tree, because it loads the seat capability resolvers
+ * from @alga-psa/co-managed directly, and the worker's native sources must not import that package
+ * (server/src/test/unit/contract/noCoManagedNativeImports.contract.test.ts). It is not part of the build.
+ *
  * Example against a local review database and Stripe emulator:
  *   env -u STRIPE_CO_MANAGED_USER_PRICE_ID -u STRIPE_ACCOUNT_ID DB_HOST=127.0.0.1 DB_PORT=5826 \
  *     DB_NAME_SERVER=server DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=... \
