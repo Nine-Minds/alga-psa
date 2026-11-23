@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "Esta solicitação já foi enviada com detalhes diferentes. Atualize e comece novamente.",
+        "trialClaimUnavailable": "Este teste já está em uso ou foi iniciado para outro cliente. Atualize e tente novamente.",
+        "trialSponsorNotEligible": "Este espaço de trabalho não é elegível para um teste de Seat. Verifique o plano e o estado de faturação da conta.",
         "invalidSeats": "Informe um número inteiro de lugares, no mínimo 1.",
         "invalidInvitation": "Escolha um contato para convidar.",
         "contactNotFound": "Este contato não está mais disponível. Escolha outro contato.",

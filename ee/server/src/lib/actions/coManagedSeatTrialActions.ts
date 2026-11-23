@@ -16,18 +16,35 @@ import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { sendTeamInvitationEmail } from '@alga-psa/email';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { coManagedBrowserActor } from '../../../../../server/src/lib/co-managed/browserActor';
+import logger from '@alga-psa/core/logger';
+import { refused, type CoManagedRejection } from '../../../../../server/src/lib/actions/coManagedRejection';
+import { readSeatTrialSponsorEligibility } from '../co-managed/seatTrialEligibility';
 import { prepareCoManagedSeatTrial, replaceCoManagedSeatTrialTechnician, resumeCoManagedSeatTrialInvitation, cancelCoManagedSeatTrial } from '../co-managed/seatTrial';
 
 const CAPABILITY = 'co-managed-seat' as const;
 
+/**
+ * Runs a trial mutation so that a refusal the screen can name comes back as `{ rejected, errorCode }`
+ * (a thrown error reaches the browser redacted), every failure is logged with its cause, and an
+ * unknown error still throws.
+ */
+async function refusing<T>(action: string, work: () => Promise<T>): Promise<T | CoManagedRejection> {
+  try { return await work(); }
+  catch (error) {
+    logger.error(`co-managed seat trial: ${action} failed`, error);
+    return refused(error);
+  }
+}
+
 function withTrialIntake<TArgs extends unknown[], TResult>(
-  action: (user: IUserWithRoles, context: AuthContext, ...args: TArgs) => Promise<TResult>,
+  action: string,
+  work: (user: IUserWithRoles, context: AuthContext, ...args: TArgs) => Promise<TResult>,
 ) {
-  return withAuth(async (user, context, ...args: TArgs) => {
+  return withAuth((user, context, ...args: TArgs) => refusing(action, async () => {
     await requireCapabilityForAction(CAPABILITY, context.tenant, 'admits');
     if (!await isCoManagedPurchaseSurfaceOpen(context.tenant)) throw new Error('Trial intake is closed');
-    return action(user, context, ...args);
-  });
+    return work(user, context, ...args);
+  }));
 }
 
 async function authorize(user: { user_id: string; user_type?: string }, tenant: string, clientId: string) {
@@ -57,10 +74,13 @@ async function deliver(user: { user_id: string; first_name?: string | null; last
       invitedByName: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username || '',
       inviteLink: link.toString(), expirationTime: '24 hours', tenant });
     return { delivered: result !== false };
-  } catch { return { delivered: false }; }
+  } catch (error) {
+    logger.error('co-managed seat trial: invitation delivery failed', error);
+    return { delivered: false };
+  }
 }
 
-export const prepareCoManagedSeatTrialAction = withTrialIntake(async (user, { tenant }, input: {
+export const prepareCoManagedSeatTrialAction = withTrialIntake('prepare', async (user, { tenant }, input: {
   clientId: string; contactId: string; operationId: string; boards: Array<{ boardId: string; canCreate: boolean }>;
 }) => {
   await admitCoManagedSponsor(tenant);
@@ -81,13 +101,13 @@ async function pilotClient(tenant: string, trialId: string) {
   return { knex, clientId: pilot.client_id as string, allocationId: pilot.allocation_id as string };
 }
 
-export const resumeCoManagedSeatTrialAction = withTrialIntake(async (user, { tenant }, trialId: string) => {
+export const resumeCoManagedSeatTrialAction = withTrialIntake('resume', async (user, { tenant }, trialId: string) => {
   const { clientId, allocationId } = await pilotClient(tenant, trialId);
   const knex = await authorize(user, tenant, clientId);
   return { resent: true, ...(await deliver(user, tenant, await resumeCoManagedSeatTrialInvitation(knex, { tenant, trialId, allocationId }))) };
 });
 
-export const replaceCoManagedSeatTrialTechnicianAction = withTrialIntake(async (user, { tenant }, input: { trialId: string; contactId: string }) => {
+export const replaceCoManagedSeatTrialTechnicianAction = withTrialIntake('replace', async (user, { tenant }, input: { trialId: string; contactId: string }) => {
   const { clientId, allocationId } = await pilotClient(tenant, input.trialId);
   const knex = await authorize(user, tenant, clientId);
   const result = await replaceCoManagedSeatTrialTechnician(knex, {
@@ -96,11 +116,11 @@ export const replaceCoManagedSeatTrialTechnicianAction = withTrialIntake(async (
   return { replaced: true, ...(await deliver(user, tenant, result.invitation)) };
 });
 
-export const cancelCoManagedSeatTrialAction = withAuth(async (user, { tenant }, trialId: string) => {
+export const cancelCoManagedSeatTrialAction = withAuth((user, { tenant }, trialId: string) => refusing('cancel', async () => {
   const { clientId, allocationId, knex } = await pilotClient(tenant, trialId);
   await authorize(user, tenant, clientId);
   return cancelCoManagedSeatTrial(knex, { tenant, trialId, allocationId });
-});
+}));
 
 /** Commercial discovery reveals no client identity without operational scope. */
 export const getSeatTrialOfferAction = withAuth(async (user, { tenant }, clientId?: string) => {
@@ -109,8 +129,9 @@ export const getSeatTrialOfferAction = withAuth(async (user, { tenant }, clientI
   const { knex } = await createTenantKnex(tenant);
   const db = tenantDb(knex, tenant);
   const pilot = await db.table('co_managed_seat_trials').first();
+  // The same rule prepare enforces, so the invite button is never offered to a sponsor prepare would refuse.
   const intake = (await admits(CAPABILITY, tenant)).admitted && await isCoManagedPurchaseSurfaceOpen(tenant) &&
-    Boolean(await db.table('co_managed_trial_sponsors').where('base_until', '>', knex.fn.now()).first('tenant'));
+    (await readSeatTrialSponsorEligibility(knex, tenant)).eligible;
   if (!pilot && !intake) return null;
   if (intake) await admitCoManagedSponsor(tenant, knex);
   const canOperate = await hasPermission(user, 'co_management', 'manage') && await hasPermission(user, 'client', 'read');

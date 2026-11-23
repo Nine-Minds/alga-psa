@@ -453,6 +453,8 @@
       },
       "error": {
         "operationConflict": "To żądanie zostało już wysłane z innymi danymi. Odśwież i zacznij od nowa.",
+        "trialClaimUnavailable": "Ten okres próbny jest już używany lub został rozpoczęty dla innego klienta. Odśwież i spróbuj ponownie.",
+        "trialSponsorNotEligible": "Ten obszar roboczy nie kwalifikuje się do okresu próbnego Seat. Sprawdź plan i status rozliczeń konta.",
         "invalidSeats": "Wpisz liczbę całkowitą stanowisk, co najmniej 1.",
         "invalidInvitation": "Wybierz kontakt do zaproszenia.",
         "contactNotFound": "Ten kontakt nie jest już dostępny. Wybierz inny kontakt.",

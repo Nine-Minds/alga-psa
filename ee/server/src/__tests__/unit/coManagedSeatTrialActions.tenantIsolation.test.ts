@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CoManagedSeatInvitationError } from '@alga-psa/co-managed';
 
 const mocks = vi.hoisted(() => ({
   intake: vi.fn(), permission: vi.fn(), prepare: vi.fn(), replace: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
-  createTenantKnex: vi.fn(), tenantDb: vi.fn(), permits: vi.fn(), capability: vi.fn(),
+  createTenantKnex: vi.fn(), logError: vi.fn(), tenantDb: vi.fn(), permits: vi.fn(), capability: vi.fn(),
   user: { user_id: 'admin-good', user_type: 'internal', tenant: 'sponsor-good' },
 }));
 
@@ -18,12 +19,14 @@ vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
   createClientScopeContext: async () => ({ permits: (...args: any[]) => mocks.permits(...args) }),
 }));
 vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: mocks.capability }));
-vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.intake }));
+vi.mock('@alga-psa/licensing', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/licensing')>(), isCoManagedPurchaseSurfaceOpen: mocks.intake }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { error: mocks.logError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 vi.mock('../../../../../server/src/lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({ refreshSeatTrialBase: vi.fn() }) }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: vi.fn() }));
 vi.mock('../../../../../server/src/lib/co-managed/browserActor', () => ({ coManagedBrowserActor: vi.fn(async () => undefined) }));
 vi.mock('../../lib/co-managed/seatTrial', () => ({
+  readCoManagedSeatTrialAdmission: vi.fn(),
   prepareCoManagedSeatTrial: (...args: any[]) => mocks.prepare(...args),
   replaceCoManagedSeatTrialTechnician: (...args: any[]) => mocks.replace(...args),
   resumeCoManagedSeatTrialInvitation: (...args: any[]) => mocks.resume(...args),
@@ -96,5 +99,44 @@ describe('co-managed Seat trial action tenant binding', () => {
     mocks.intake.mockResolvedValue(false);
     await expect(prepareCoManagedSeatTrialAction(request)).rejects.toThrow('intake is closed');
     expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+
+  // A thrown error reaches the browser redacted, so a refusal the screen can name returns as data.
+  describe('named refusals', () => {
+    // The real class lives in the mocked module, so build the same shape: refused() recognises it by name.
+    const trialError = (code: string) => Object.assign(new Error(code), { name: 'CoManagedSeatTrialError', code });
+    const request = { clientId: 'client-good', operationId: 'operation', contactId: 'contact', boards: [] };
+
+    it.each(['SPONSOR_NOT_ELIGIBLE', 'TRIAL_CLAIM_UNAVAILABLE', 'OPERATION_CONFLICT'])('returns %s as a rejection and logs the cause', async code => {
+      const { prepareCoManagedSeatTrialAction } = await import('../../lib/actions/coManagedSeatTrialActions');
+      const cause = trialError(code);
+      mocks.prepare.mockRejectedValue(cause);
+      await expect(prepareCoManagedSeatTrialAction(request)).resolves.toEqual({ rejected: true, errorCode: code });
+      expect(mocks.logError).toHaveBeenCalledWith('co-managed seat trial: prepare failed', cause);
+    });
+
+    it('returns a mapped invitation refusal from the replace action', async () => {
+      const { replaceCoManagedSeatTrialTechnicianAction } = await import('../../lib/actions/coManagedSeatTrialActions');
+      mocks.replace.mockRejectedValue(new CoManagedSeatInvitationError('EMAIL_IN_USE'));
+      await expect(replaceCoManagedSeatTrialTechnicianAction({ trialId: 'trial-good', contactId: 'contact-new' }))
+        .resolves.toEqual({ rejected: true, errorCode: 'EMAIL_IN_USE' });
+      expect(mocks.logError).toHaveBeenCalledWith('co-managed seat trial: replace failed', expect.any(CoManagedSeatInvitationError));
+    });
+
+    it('names the refusal for resume and cancel too', async () => {
+      const { resumeCoManagedSeatTrialAction, cancelCoManagedSeatTrialAction } = await import('../../lib/actions/coManagedSeatTrialActions');
+      mocks.resume.mockRejectedValue(trialError('TRIAL_CLAIM_UNAVAILABLE'));
+      mocks.cancel.mockRejectedValue(trialError('TRIAL_CLAIM_UNAVAILABLE'));
+      await expect(resumeCoManagedSeatTrialAction('trial-good')).resolves.toEqual({ rejected: true, errorCode: 'TRIAL_CLAIM_UNAVAILABLE' });
+      await expect(cancelCoManagedSeatTrialAction('trial-good')).resolves.toEqual({ rejected: true, errorCode: 'TRIAL_CLAIM_UNAVAILABLE' });
+    });
+
+    it('logs and still throws an error nobody named', async () => {
+      const { prepareCoManagedSeatTrialAction } = await import('../../lib/actions/coManagedSeatTrialActions');
+      const cause = Object.assign(new Error('complex joins are only supported when all distributed tables are co-located'), { code: '0A000' });
+      mocks.prepare.mockRejectedValue(cause);
+      await expect(prepareCoManagedSeatTrialAction(request)).rejects.toBe(cause);
+      expect(mocks.logError).toHaveBeenCalledWith('co-managed seat trial: prepare failed', cause);
+    });
   });
 });

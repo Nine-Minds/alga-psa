@@ -7,9 +7,9 @@ import { requireCapabilityEitherMode, requireCapabilityForAction } from '@alga-p
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { sendTeamInvitationEmail } from '@alga-psa/email';
 import type { Knex } from 'knex';
-import { CoManagedAdmissionError, resizeCoManagedSeatAllocation } from '@alga-psa/licensing';
+import { resizeCoManagedSeatAllocation } from '@alga-psa/licensing';
 import {
-  CoManagedSeatArrangementError, CoManagedSeatInvitationError, coManagedSeatCommitmentCounter,
+  CoManagedSeatArrangementError, coManagedSeatCommitmentCounter,
   createCoManagedSeatArrangement, getCoManagedClientOverview, inviteCoManagedSeatTechnician,
   mergeCoManagedOverviewEntries, readCoManagedSeatAdminOptions, readCoManagedSeatContactChoices, readCoManagedSeatArrangementPanel,
   readCoManagedSeatEnableState, readCoManagedSeatOverviewRows, refreshCoManagedSeatInvitation,
@@ -27,6 +27,7 @@ import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/sim
 import { runAuthorizationBundleSimulationAction } from '@enterprise/lib/actions/auth/authorizationBundleActions';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
+import { refused } from './coManagedRejection';
 
 /**
  * Server actions behind the seat shape's administration: the chooser and panel on a client's
@@ -41,13 +42,6 @@ import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
  */
 
 const SEAT = 'co-managed-seat' as const;
-
-export type CoManagedSeatRejection = { rejected: true; errorCode: string };
-const refused = (error: unknown): CoManagedSeatRejection => {
-  if (error instanceof CoManagedSeatArrangementError || error instanceof CoManagedSeatInvitationError ||
-      error instanceof CoManagedAdmissionError) return { rejected: true, errorCode: error.code };
-  throw error;
-};
 
 type SeatUser = { user_id: string; user_type?: string; first_name?: string | null; last_name?: string | null; username?: string };
 

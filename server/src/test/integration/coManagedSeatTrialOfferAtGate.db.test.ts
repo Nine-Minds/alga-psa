@@ -138,6 +138,17 @@ describeDb('co-managed Seat trial resolves the offer at the gate (database catal
     expect(prepared).toMatchObject({ trialId: expect.any(String) });
     expect(await holder.db('co_managed_seat_trials').where({ tenant }).first()).toMatchObject({ state: 'pending' });
 
+    // One eligibility rule: a sponsor prepare would refuse is not offered the invite either. Capability and catalog
+    // still admit it; only the sponsor's own entitlement (an admin grant, not hosted) makes it ineligible.
+    const ineligible = await sponsorFixture();
+    await holder.db('co_managed_entitlements').insert({ tenant: ineligible.tenant, source: 'admin_grant', source_reference: 'grant_' + ineligible.tenant,
+      capacity: 3, verified_at: new Date(), valid_until: new Date(Date.now() + 86_400_000) });
+    expect((await admits('co-managed-seat', ineligible.tenant)).admitted).toBe(true);
+    expect(await getSeatTrialOfferAction()).toBeNull();
+    await expect(prepareCoManagedSeatTrialAction({ clientId: ineligible.clientId, contactId: ineligible.contactId, operationId: randomUUID(), boards: [] }))
+      .resolves.toEqual({ rejected: true, errorCode: 'SPONSOR_NOT_ELIGIBLE' });
+    expect(await holder.db('co_managed_seat_trials').where({ tenant: ineligible.tenant })).toHaveLength(0);
+
     // Remove the catalog. A second eligible sponsor (the first now holds a trial entitlement) is refused.
     await holder.db('stripe_offer_catalog_settings').delete();
     await holder.db('stripe_offer_versions').delete();
