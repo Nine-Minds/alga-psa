@@ -1199,6 +1199,33 @@ and deletes them again. It is not wired into CI — it needs a built, started se
 user — so it stays a hand-run check beside the unit test. The test boards and the temporary API key
 it needed were removed from the slot afterwards.
 
+**8. The board type switch, driven in the browser on the slot.** Signed in headless, Settings →
+Ticketing → Boards, both directions:
+
+- *Custom → ITIL* on a board with five open tickets. The summary said: "Nothing on the board is
+  rewritten. These keep a priority the board will no longer offer, and need attention: 5 open
+  tickets, 0 inbound email defaults, 0 ticket templates, 0 recurring schedules" and "This board has
+  no SLA policy, so new tickets get no due dates." The database agreed on every count before the
+  confirm (5 open tickets, no templates, no defaults, no schedules). After the switch the board is
+  `itil`/`itil` with 38 categories (its own three plus the standard 35), an ITIL default priority,
+  no SLA policy (D1: a switch never assigns one) and its five tickets untouched — the ticket list
+  shows them still on their old custom priority, which is R5/D3.
+- *ITIL → custom* on a board with no tickets. The summary named the board's policy by its effect,
+  not its name alone: "Policy 'ITIL Standard' has no targets for the priorities this board will
+  use, so new tickets get no due dates." After the switch the board is `custom`/`custom`, keeps its
+  SLA assignment (nothing is reassigned) and keeps its category rows; the board opens and lists
+  normally.
+
+Seen and not fixed: after a switch the editor marks "Priorities & statuses" and "Display &
+behaviour" as *Unsaved*, because the form still holds the values from before the switch while the
+board row has moved on. Saving from there cannot produce a mixed board — the update refuses a kind
+change — so this is cosmetic; it is noted rather than fixed in this card.
+
+Both runs were interrupted twice by the slot's shared Postgres answering "sorry, too many clients
+already" (the cluster sat at 188–199 of 200 connections, most of them other worktrees'); the same
+failure the previous browser check recorded. Re-running after releasing this slot's idle
+connections succeeded. That is slot capacity, not this branch.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no
