@@ -2156,7 +2156,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             saveDisabled={saveDisabled}
           >
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50/60 p-3">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
               <div>
                 <Label htmlFor="is_pinned">
                   {t('ticketing.boards.appearance.pinLabel', 'Pin to the tickets screen')}
@@ -2179,7 +2179,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               <>
                 <div>
                   <Label>{t('ticketing.boards.appearance.preview', 'Preview')}</Label>
-                  <div className="mt-1 overflow-hidden rounded-md border border-gray-200 bg-white">
+                  <div className="mt-1 overflow-hidden rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
                     {/* Reuses BoardHeader at reduced scale rather than
                         re-implementing the layout, so the preview cannot drift
                         from the real header. The rows are placeholder bars, not
@@ -2206,16 +2206,16 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     <div className="space-y-1.5 px-3 py-2">
                       {[0, 1, 2].map((row) => (
                         <div key={row} className="flex items-center gap-2">
-                          <div className="h-2 flex-1 rounded bg-gray-100" />
-                          <div className="h-2 w-12 rounded bg-gray-100" />
-                          <div className="h-2 w-12 rounded bg-gray-100" />
+                          <div className="h-2 flex-1 rounded bg-[rgb(var(--color-border-100))]" />
+                          <div className="h-2 w-12 rounded bg-[rgb(var(--color-border-100))]" />
+                          <div className="h-2 w-12 rounded bg-[rgb(var(--color-border-100))]" />
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-md border border-gray-200 p-3">
+                <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
                   <Label>{t('ticketing.boards.appearance.savedView', 'Saved view')}</Label>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {describeBoardSavedView(

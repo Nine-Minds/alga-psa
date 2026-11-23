@@ -2173,5 +2173,14 @@
     ],
     "implemented": true,
     "description": "The guard reports a read of priorities or categories in every call shape: a builder method, from(), a helper with leading arguments, the join family, an aliased leftJoin, a helper ending in Join, a callable connection and a multi-line call; a compared string is not a read and a stale allow-list entry is reported"
+  },
+  {
+    "id": "T242",
+    "commitGroup": "category-rules",
+    "featureIds": [
+      "F054"
+    ],
+    "implemented": true,
+    "description": "The category picker badges a copy of a standard category (standard_category_id) and not a board’s own row that still carries the old is_from_itil_standard flag, for a parent and for a child"
   }
 ]

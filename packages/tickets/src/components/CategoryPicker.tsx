@@ -110,7 +110,10 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
 
     // Transform into tree structure with selected and excluded states
     const categoryOptions = parentCategories.map((parent: ITicketCategory): TreeSelectOption<CategoryType> => ({
-      label: parent.is_from_itil_standard ? (
+      // The badge marks a copy of a standard category, which is what `standard_category_id`
+      // says (D9). `is_from_itil_standard` is the priority flag's name and is set on rows that are
+      // not standard copies at all.
+      label: parent.standard_category_id ? (
         <span className="flex items-center gap-1">
           {parent.category_name}
           <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">
@@ -123,7 +126,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       selected: selectedCategories.includes(parent.category_id),
       excluded: excludedCategories.includes(parent.category_id),
       children: childrenMap.get(parent.category_id)?.map((child: ITicketCategory): TreeSelectOption<CategoryType> => ({
-        label: child.is_from_itil_standard ? (
+        label: child.standard_category_id ? (
           <span className="flex items-center gap-1">
             {child.category_name}
             <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded">
