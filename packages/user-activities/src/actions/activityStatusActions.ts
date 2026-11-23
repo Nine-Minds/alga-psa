@@ -16,6 +16,7 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '@shared/lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { prepareTicketFieldPatch } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -388,6 +389,36 @@ export const getActivityStatusOptions = withAuth(async (
 });
 
 /**
+ * R3/R5/R6 for the inline priority picker: the chosen priority has to fit the ticket's board, and
+ * the picker's user sees the refusal. The shared patch rule answers it, so the Activities grid
+ * applies the same rule as the ticket form — including D5, which clears Impact and Urgency when a
+ * priority is changed directly on an assessed ITIL ticket. Nothing else about the ticket is
+ * touched (R5).
+ */
+async function resolveTicketPriorityWrite(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  priorityId: string
+): Promise<{ priority_id?: string | null; itil_impact?: number | null; itil_urgency?: number | null }> {
+  const ticket = await tenantDb(trx, tenant).table('tickets')
+    .where({ ticket_id: ticketId })
+    .first('board_id', 'priority_id', 'itil_impact', 'itil_urgency');
+  if (!ticket) {
+    throw new Error('Ticket not found');
+  }
+
+  const patch: { priority_id?: string | null; itil_impact?: number | null; itil_urgency?: number | null } = {
+    priority_id: priorityId,
+  };
+  const [problem] = await prepareTicketFieldPatch(trx, tenant, ticket, patch, 'refuse');
+  if (problem) {
+    throw new Error(problem.message);
+  }
+  return patch;
+}
+
+/**
  * Server action to update the priority of an activity
  *
  * @param activityId The ID of the activity to update
@@ -425,7 +456,7 @@ export const updateActivityPriority = withAuth(async (
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
             .update({
-              priority_id: ticketPriority.priority_id,
+              ...(await resolveTicketPriorityWrite(trx, tenant, activityId, ticketPriority.priority_id)),
               ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
@@ -514,7 +545,7 @@ export const updateActivityPriorityById = withAuth(async (
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
             .update({
-              priority_id: priorityId,
+              ...(await resolveTicketPriorityWrite(trx, tenant, activityId, priorityId)),
               ...ticketUpdateStamp(trx, user.user_id),
             });
           break;

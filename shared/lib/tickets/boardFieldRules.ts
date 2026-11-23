@@ -815,6 +815,111 @@ export async function prepareTicketCreateFields(
   };
 }
 
+export interface TicketFieldPatchState extends TicketBoardFieldState {
+  itil_impact?: number | null;
+  itil_urgency?: number | null;
+}
+
+/**
+ * R2, R4, R5 and R6 for an update, in one place: resolves `priority_id`, `itil_impact`,
+ * `itil_urgency`, `category_id` and `subcategory_id` **in the patch** and returns the problems
+ * that are left.
+ *
+ * Only what the patch touches is looked at (R5), so a ticket whose stored priority or category
+ * already breaks a rule still saves a change to any other field (D3). A key that re-sends the
+ * stored value touches nothing — the ticket form posts every field it holds.
+ *
+ * The board moves:
+ * - the effective priority must fit the destination; on a destination with the tenant's own
+ *   priorities Impact and Urgency are cleared (F088);
+ * - a standard category becomes the destination's copy of the same standard category, so a move
+ *   between two ITIL boards keeps the category by meaning (F089);
+ * - a category that cannot be translated and was not named by the patch is cleared, because it
+ *   belongs to the board the ticket is leaving (F089).
+ *
+ * A category the patch itself names and that does not belong to the board is refused (or dropped,
+ * with `policy: 'fallback'`): that one the caller chose.
+ */
+export async function prepareTicketFieldPatch<T extends TicketFieldPatchState>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  current: TicketFieldPatchState,
+  patch: T,
+  policy: BoardFieldPolicy = 'refuse'
+): Promise<BoardFieldProblem[]> {
+  const same = (left: unknown, right: unknown) => (left ?? null) === (right ?? null);
+  const touches = (key: keyof TicketFieldPatchState) =>
+    key in patch && patch[key] !== undefined && !same(patch[key], current[key]);
+
+  const boardChanged = touches('board_id');
+  const priorityTouched = touches('priority_id') || touches('itil_impact') || touches('itil_urgency');
+  const categoryTouched = touches('category_id') || touches('subcategory_id');
+  if (!boardChanged && !priorityTouched && !categoryTouched) return [];
+
+  const effective = <K extends keyof TicketFieldPatchState>(key: K): TicketFieldPatchState[K] =>
+    key in patch && patch[key] !== undefined ? (patch[key] as TicketFieldPatchState[K]) : current[key];
+  const boardId = effective('board_id') ?? null;
+  const problems: BoardFieldProblem[] = [];
+
+  if (boardChanged || priorityTouched) {
+    const resolved = await resolveTicketPriorityFields(conn, tenant, {
+      boardId,
+      ...('priority_id' in patch && patch.priority_id !== undefined ? { priorityId: patch.priority_id } : {}),
+      ...('itil_impact' in patch ? { itilImpact: patch.itil_impact } : {}),
+      ...('itil_urgency' in patch ? { itilUrgency: patch.itil_urgency } : {}),
+      current,
+      policy,
+    });
+    problems.push(...resolved.problems);
+    if (resolved.problems.length === 0) {
+      // Write a field only when the answer differs from the stored value (or the patch named it),
+      // so an unrelated edit's patch stays as small as it arrived.
+      if (!same(resolved.priority_id, current.priority_id) || patch.priority_id !== undefined) {
+        patch.priority_id = resolved.priority_id;
+      }
+      if (!same(resolved.itil_impact, current.itil_impact) || 'itil_impact' in patch) {
+        patch.itil_impact = resolved.itil_impact;
+      }
+      if (!same(resolved.itil_urgency, current.itil_urgency) || 'itil_urgency' in patch) {
+        patch.itil_urgency = resolved.itil_urgency;
+      }
+    }
+  }
+
+  if (boardChanged || categoryTouched) {
+    const translated = await translateStandardCategoryPairForBoard(
+      conn,
+      tenant,
+      boardId,
+      effective('category_id'),
+      effective('subcategory_id')
+    );
+    const categoryProblems = await findBoardFieldProblems(conn, tenant, {
+      boardId,
+      categoryId: translated.categoryId,
+      subcategoryId: translated.subcategoryId,
+    });
+
+    const keep = categoryProblems.length === 0;
+    // A move the patch did not pair with a category leaves the old board's category behind: it is
+    // cleared, not refused, because nobody chose it for this board (F089).
+    if (!keep && categoryTouched && policy === 'refuse') {
+      problems.push(...categoryProblems);
+    } else {
+      const nextCategoryId = keep ? translated.categoryId : null;
+      const nextSubcategoryId = keep ? translated.subcategoryId : null;
+      if (!same(nextCategoryId, current.category_id) || 'category_id' in patch) {
+        patch.category_id = nextCategoryId;
+      }
+      if (!same(nextSubcategoryId, current.subcategory_id) || 'subcategory_id' in patch) {
+        patch.subcategory_id = nextSubcategoryId;
+      }
+    }
+  }
+
+  return problems;
+}
+
 /** {@link prepareTicketCreateFields}, raising the first problem instead of returning it. */
 export async function prepareTicketCreateFieldsOrThrow(
   conn: Knex | Knex.Transaction,

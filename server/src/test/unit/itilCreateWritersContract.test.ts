@@ -179,7 +179,8 @@ describe('ITIL create writers wiring', () => {
 
   it('T150: the REST create answers a refused board field with 400 against that field', () => {
     const service = source('server/src/lib/api/services/TicketService.ts');
-    expect(service).toContain("import { isBoardFieldRuleError } from '@alga-psa/shared/lib/tickets/boardFieldRules'");
+    expect(service).toContain('isBoardFieldRuleError');
+    expect(service).toContain("from '@alga-psa/shared/lib/tickets/boardFieldRules'");
     const mapper = service.slice(
       service.indexOf('export function throwTicketModelCreateApiError('),
       service.indexOf('function applyDefaultContactPhoneJoin(')

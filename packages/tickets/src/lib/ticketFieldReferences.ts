@@ -6,11 +6,13 @@ import {
   describePriorityBoardKindMismatch,
   findBoardFieldProblems,
   findTicketPatchBoardFieldProblems,
+  prepareTicketFieldPatch,
   resolveTicketPriorityFields,
   type BoardFieldPolicy,
   type BoardFieldProblem,
   type ResolveTicketPriorityInput,
   type ResolvedTicketPriorityFields,
+  type TicketFieldPatchState,
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 
 /**
@@ -94,7 +96,7 @@ export class PriorityBoardTypeError extends TicketBoardFieldError {
 /**
  * R4/R6 for an interactive write: {@link resolveTicketPriorityFields} with `policy: 'refuse'`,
  * turning the first problem into a thrown field error. Create paths pass the submitted values;
- * update paths go through {@link resolveTicketPriorityPatch}.
+ * update paths go through {@link prepareTicketFieldPatchOrThrow}.
  */
 export async function resolveTicketPriorityFieldsOrThrow(
   conn: Knex | Knex.Transaction,
@@ -107,59 +109,21 @@ export async function resolveTicketPriorityFieldsOrThrow(
   return resolved;
 }
 
-/** The keys a patch must carry for the priority rule to run again (R5). */
-type TicketPriorityPatch = {
-  board_id?: string | null;
-  priority_id?: string | null;
-  itil_impact?: number | null;
-  itil_urgency?: number | null;
-};
-
 /**
- * R4/R5/R6 for an update: resolves `priority_id`, `itil_impact` and `itil_urgency` in place when the
- * patch touches one of them or moves the ticket to another board, and leaves the patch untouched
- * otherwise — so an unrelated edit still saves on a ticket whose stored pair already breaks R3 (D3).
- *
- * Writes Impact and Urgency only when their effective value differs from the stored one, so a patch
- * that never mentioned them stays minimal unless D5 has to clear them.
+ * R2/R4/R5/R6 for an update: {@link prepareTicketFieldPatch} with the caller's policy, raising the
+ * first problem as a field error. The patch is resolved in place — priority, Impact, Urgency,
+ * category and subcategory — and a patch that touches none of them is left exactly as it arrived,
+ * so an unrelated edit still saves on a ticket whose stored values already break a rule (D3).
  */
-export async function resolveTicketPriorityPatch<T extends TicketPriorityPatch>(
+export async function prepareTicketFieldPatchOrThrow<T extends TicketFieldPatchState>(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  current: { board_id?: string | null; priority_id?: string | null; itil_impact?: number | null; itil_urgency?: number | null },
+  current: TicketFieldPatchState,
   patch: T,
   policy: BoardFieldPolicy = 'refuse'
 ): Promise<void> {
-  // R5 is about a *change*: a patch that re-sends the stored board, priority or assessment touches
-  // nothing, so a legacy ticket whose pair already mismatches keeps saving (the ticket detail form
-  // posts every field it holds).
-  const same = (left: unknown, right: unknown) => (left ?? null) === (right ?? null);
-  const touchesBoard = patch.board_id !== undefined && !same(patch.board_id, current.board_id);
-  const touchesPriority = patch.priority_id !== undefined && !same(patch.priority_id, current.priority_id);
-  const touchesImpact = 'itil_impact' in patch && !same(patch.itil_impact, current.itil_impact);
-  const touchesUrgency = 'itil_urgency' in patch && !same(patch.itil_urgency, current.itil_urgency);
-  if (!touchesBoard && !touchesPriority && !touchesImpact && !touchesUrgency) return;
-
-  const resolved = await resolveTicketPriorityFields(conn, tenant, {
-    boardId: patch.board_id !== undefined ? patch.board_id : current.board_id,
-    ...(patch.priority_id !== undefined ? { priorityId: patch.priority_id } : {}),
-    ...('itil_impact' in patch ? { itilImpact: patch.itil_impact } : {}),
-    ...('itil_urgency' in patch ? { itilUrgency: patch.itil_urgency } : {}),
-    current,
-    policy,
-  });
-  const [problem] = resolved.problems;
+  const [problem] = await prepareTicketFieldPatch(conn, tenant, current, patch, policy);
   if (problem) throw new TicketBoardFieldError(problem);
-
-  if ((resolved.priority_id ?? null) !== (current.priority_id ?? null) || patch.priority_id !== undefined) {
-    patch.priority_id = resolved.priority_id;
-  }
-  if ((resolved.itil_impact ?? null) !== (current.itil_impact ?? null) || 'itil_impact' in patch) {
-    patch.itil_impact = resolved.itil_impact;
-  }
-  if ((resolved.itil_urgency ?? null) !== (current.itil_urgency ?? null) || 'itil_urgency' in patch) {
-    patch.itil_urgency = resolved.itil_urgency;
-  }
 }
 
 /**

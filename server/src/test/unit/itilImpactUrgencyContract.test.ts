@@ -53,8 +53,10 @@ describe('ITIL Impact × Urgency wiring', () => {
   it('T122: the four former lookup sites now call the shared rule', () => {
     const sites: Array<[string, string]> = [
       ['packages/tickets/src/actions/ticketActions.ts', 'resolveTicketPriorityFieldsOrThrow'],
-      ['packages/tickets/src/actions/ticketActions.ts', 'resolveTicketPriorityPatch'],
-      ['packages/tickets/src/actions/optimizedTicketActions.ts', 'resolveTicketPriorityPatch'],
+      // The patch helper was widened to the whole field group by the `writers-update` group, so
+      // the symbol these two sites call is now `prepareTicketFieldPatchOrThrow`.
+      ['packages/tickets/src/actions/ticketActions.ts', 'prepareTicketFieldPatchOrThrow'],
+      ['packages/tickets/src/actions/optimizedTicketActions.ts', 'prepareTicketFieldPatchOrThrow'],
       [
         'server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider.ts',
         'resolveTicketPriorityFields',

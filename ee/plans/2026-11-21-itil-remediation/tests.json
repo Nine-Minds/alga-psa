@@ -1396,7 +1396,7 @@
     "featureIds": [
       "F082"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "prepareTicketFieldPatch returns the patch unchanged when it touches none of board, priority, Impact, Urgency, category or subcategory"
   },
   {
@@ -1405,7 +1405,7 @@
     "featureIds": [
       "F083"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Both MSP update functions refuse a category from another board"
   },
   {
@@ -1414,7 +1414,7 @@
     "featureIds": [
       "F084"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST update with a subcategory that is not a child of the category returns 400"
   },
   {
@@ -1423,7 +1423,7 @@
     "featureIds": [
       "F084"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST update with a priority only on an assessed ITIL ticket clears Impact and Urgency"
   },
   {
@@ -1432,7 +1432,7 @@
     "featureIds": [
       "F085"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow tickets.update_fields with a wrong-family priority fails with a field error"
   },
   {
@@ -1441,7 +1441,7 @@
     "featureIds": [
       "F085"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound webhook update that changes the board without a fitting priority is refused"
   },
   {
@@ -1450,7 +1450,7 @@
     "featureIds": [
       "F086"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Activities inline priority update with a wrong-family priority is refused, for both action variants"
   },
   {
@@ -1459,7 +1459,7 @@
     "featureIds": [
       "F087"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Bundle sync leaves the priority of a child on a board of the other family and updates a child on a board of the same family"
   },
   {
@@ -1468,7 +1468,7 @@
     "featureIds": [
       "F088"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Moving a ticket from an ITIL to a non-ITIL board without a priority is refused; with a fitting priority it saves and clears Impact and Urgency"
   },
   {
@@ -1477,7 +1477,7 @@
     "featureIds": [
       "F088"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Bulk move across families reports each refused ticket and moves none of them"
   },
   {
@@ -1486,7 +1486,7 @@
     "featureIds": [
       "F089"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Moving a ticket between two ITIL boards keeps the same category and subcategory by name, with the destination board's ids"
   },
   {
@@ -1495,7 +1495,7 @@
     "featureIds": [
       "F089"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Moving a ticket between two non-ITIL boards without a category in the patch clears category and subcategory"
   },
   {
@@ -1504,7 +1504,7 @@
     "featureIds": [
       "F090"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket with a wrong-family priority saves a title, status, assignee and description change through MSP, REST and workflow update"
   },
   {
@@ -1513,7 +1513,7 @@
     "featureIds": [
       "F090"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket with a category from another board saves the same changes"
   },
   {
@@ -1522,7 +1522,7 @@
     "featureIds": [
       "F091"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow tickets.update_fields with a fixed standard category sets the ticket's own board's copy on tickets of two different ITIL boards"
   },
   {
@@ -1531,7 +1531,7 @@
     "featureIds": [
       "F091"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST update with another ITIL board's standard category stores this board's copy"
   },
   {

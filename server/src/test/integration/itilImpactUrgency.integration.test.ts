@@ -2,7 +2,7 @@
  * T119–T132 — F061–F067 of `ee/plans/2026-11-21-itil-remediation` (`impact-urgency`).
  *
  * The Impact × Urgency rule (R4) and the D5 clearing as the MSP create and update paths now apply
- * them: through `resolveTicketPriorityFieldsOrThrow` for a create and `resolveTicketPriorityPatch`
+ * them: through `resolveTicketPriorityFieldsOrThrow` for a create and `prepareTicketFieldPatchOrThrow`
  * for a patch, both of which delegate to the shared rules module. The wiring — that each named
  * writer calls them and that no `P{n} -` name lookup is left — is pinned by
  * `server/src/test/unit/itilImpactUrgencyContract.test.ts`; this file is the behaviour.
@@ -37,7 +37,7 @@ import {
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import {
   resolveTicketPriorityFieldsOrThrow,
-  resolveTicketPriorityPatch,
+  prepareTicketFieldPatchOrThrow,
   TicketBoardFieldError,
 } from '../../../../packages/tickets/src/lib/ticketFieldReferences';
 
@@ -298,7 +298,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       };
 
       const patch: Record<string, unknown> = { itil_impact: 1 };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, patch, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, patch, 'refuse');
 
       // Impact 1 × stored Urgency 3 is level 2.
       expect(patch).toMatchObject({ priority_id: fixture.itilPriorityIds[2], itil_impact: 1 });
@@ -315,7 +315,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       };
 
       const patch: Record<string, unknown> = { priority_id: fixture.itilPriorityIds[5] };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, patch, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, patch, 'refuse');
 
       // The chosen priority stands, and the pair that computed another one is gone: the ticket is
       // "Not assessed" rather than carrying values nobody chose.
@@ -336,7 +336,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       };
 
       const patch: Record<string, unknown> = { priority_id: fixture.itilPriorityIds[4] };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, patch, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, patch, 'refuse');
 
       expect(patch).toEqual({ priority_id: fixture.itilPriorityIds[4] });
     }, HOOK_TIMEOUT);
@@ -351,7 +351,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       };
 
       const patch: Record<string, unknown> = { itil_impact: 2, itil_urgency: 1 };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, patch, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, patch, 'refuse');
 
       // Impact 2 × Urgency 1 is level 2.
       expect(patch).toMatchObject({
@@ -372,7 +372,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       };
 
       const patch: Record<string, unknown> = { title: 'Renamed' };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, patch, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, patch, 'refuse');
 
       expect(patch).toEqual({ title: 'Renamed' });
 
@@ -384,7 +384,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
         itil_impact: 4,
         itil_urgency: 4,
       };
-      await resolveTicketPriorityPatch(db, fixture.tenantId, current, resend, 'refuse');
+      await prepareTicketFieldPatchOrThrow(db, fixture.tenantId, current, resend, 'refuse');
       expect(resend).toEqual({
         board_id: fixture.itilBoardId,
         priority_id: fixture.ownPriorityIds[0],
@@ -422,7 +422,7 @@ describe('ITIL Impact × Urgency (integration)', () => {
       expect(Object.keys(resolved).sort()).toEqual(['itil_impact', 'itil_urgency', 'priority_id', 'problems']);
 
       const patch: Record<string, unknown> = { priority_id: fixture.itilPriorityIds[2] };
-      await resolveTicketPriorityPatch(
+      await prepareTicketFieldPatchOrThrow(
         db,
         fixture.tenantId,
         { board_id: fixture.itilBoardId, priority_id: fixture.itilPriorityIds[3] },

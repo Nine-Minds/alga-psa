@@ -291,14 +291,16 @@ describe('ticketActions moveTicketsToBoard', () => {
 
     expect(getDefaultStatusIdMock).toHaveBeenCalledWith('tenant-1', expect.anything(), 'board-dest');
     expect(result).toEqual({ movedIds: ['ticket-1'], failed: [] });
+    // The move sends the board and the status only. What happens to the category is the shared
+    // board field rule's decision inside the update: cleared on a move that cannot translate it,
+    // and kept by meaning between two ITIL boards
+    // (ee/plans/2026-11-21-itil-remediation, F089; proven by T166 of itilUpdateWriters).
     expect(updateTicketWithCacheMock).toHaveBeenCalledWith(
       'ticket-1',
-      expect.objectContaining({
+      {
         board_id: 'board-dest',
         status_id: 'status-default',
-        category_id: null,
-        subcategory_id: null,
-      }),
+      },
       {},
     );
   });

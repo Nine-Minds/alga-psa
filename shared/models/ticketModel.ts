@@ -35,6 +35,7 @@ import { resolveContactLocationId, shouldResolveContactLocation } from './contac
 import {
   BoardFieldRuleError,
   prepareTicketCreateFields,
+  prepareTicketFieldPatch,
   type BoardFieldPolicy,
 } from '../lib/tickets/boardFieldRules';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
@@ -1534,6 +1535,20 @@ export class TicketModel {
         }
       }
     }
+
+    // R2/R4/R5/R6 for an update, applied in the model so the paths with no funnel of their own —
+    // workflow `tickets.update_fields` and the inbound webhook update — are covered too. Only what
+    // the patch touches is checked, so an unrelated edit still saves on a ticket whose stored
+    // values already break a rule (D3).
+    const patchProblems = await prepareTicketFieldPatch(
+      trx,
+      tenant,
+      currentTicket,
+      updateData,
+      validationOptions.boardFieldPolicy ?? 'refuse'
+    );
+    const [patchProblem] = patchProblems;
+    if (patchProblem) throw new BoardFieldRuleError(patchProblem);
 
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.

@@ -734,7 +734,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "prepareTicketFieldPatch in the shared module validates and normalises the priority, Impact, Urgency, category and subcategory of an update patch against the current ticket"
   },
   {
@@ -743,7 +743,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "MSP updateTicket and updateTicketInTransaction call prepareTicketFieldPatch before writing"
   },
   {
@@ -752,7 +752,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST v1 ticket update calls prepareTicketFieldPatch, including the subcategory-to-category check it lacks today"
   },
   {
@@ -761,7 +761,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.updateTicket calls prepareTicketFieldPatch, covering workflow tickets.update_fields and inbound webhook update"
   },
   {
@@ -770,7 +770,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Both Activities inline priority updates check the priority against the ticket's board"
   },
   {
@@ -779,7 +779,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Bundle sync does not copy the master's priority onto a child whose board has the other priority family"
   },
   {
@@ -788,7 +788,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A board move requires a priority that fits the destination when the families differ, and clears Impact and Urgency when the destination has the tenant's own priorities"
   },
   {
@@ -797,7 +797,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A board move between two ITIL boards maps the category and subcategory to the destination's copy of the same standard category; any other board move without a category in the patch clears them"
   },
   {
@@ -806,7 +806,7 @@
     "prdRefs": [
       "R5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket whose stored priority or category does not fit its board saves changes to title, status, assignee and description"
   },
   {
@@ -815,7 +815,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every update path translates a standard category of another board to the ticket's board's copy before the category check"
   },
   {

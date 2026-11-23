@@ -58,11 +58,11 @@ import {
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { findPriorityBoardTypeProblem } from '@alga-psa/tickets/lib/ticketFieldReferences';
 import {
-  findPriorityBoardTypeProblem,
-  findTicketUpdatePriorityBoardTypeProblem,
-} from '@alga-psa/tickets/lib/ticketFieldReferences';
-import { isBoardFieldRuleError } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+  isBoardFieldRuleError,
+  prepareTicketFieldPatch,
+} from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import {
   BundleConcurrentModificationError,
@@ -2300,15 +2300,22 @@ export class TicketService extends BaseService<ITicket> {
         ]);
       }
 
-      // Priority family must match the board's priority_type; checked only when this patch changes either.
-      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(
+      // R2/R4/R5/R6 through the one shared rule: the priority's family must fit the board, Impact
+      // and Urgency decide it on an ITIL board (and a direct priority change clears them, D5), and
+      // the category must be the board's own — another ITIL board's copy of a standard category is
+      // translated to this board's. Checked only where this patch touches those fields or the
+      // board, so an unrelated API edit still saves on a ticket that already breaks a rule (D3).
+      const fieldProblems = await prepareTicketFieldPatch(
         trx,
         context.tenant,
         currentTicket,
-        cleanedData as { board_id?: string | null; priority_id?: string | null }
+        cleanedData as Record<string, unknown>,
       );
-      if (priorityProblem) {
-        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
+      if (fieldProblems.length > 0) {
+        throw new ValidationError(
+          'Validation failed',
+          fieldProblems.map((problem) => ({ path: [problem.field], message: problem.message })),
+        );
       }
 
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {

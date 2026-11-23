@@ -270,7 +270,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'tickets', tenant)");
     // Priorities are no longer read here: the Impact × Urgency and family rules live in the shared
     // board-field rules module, which scopes every read through `tenantDb(conn, tenant)`.
-    expect(section).toContain('resolveTicketPriorityPatch(trx, tenant,');
+    expect(section).toContain('prepareTicketFieldPatchOrThrow(trx, tenant,');
     expect(section).not.toContain("tenantScopedTable(trx, 'priorities', tenant)");
     expect(
       fs.readFileSync(path.resolve(__dirname, '../../../../shared/lib/tickets/boardFieldRules.ts'), 'utf8')

@@ -72,7 +72,7 @@ import {
 import { Knex } from 'knex';
 import { runGatedPreloads, gatedPreload } from '../lib/ticketPreloads';
 import { NATIVE_TICKET_CAPABILITIES, type TicketCapabilities } from '../lib/ticketDataSource';
-import { resolveTicketPriorityPatch } from '../lib/ticketFieldReferences';
+import { prepareTicketFieldPatchOrThrow } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { checkMultiplePermissions, hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -3044,11 +3044,12 @@ export async function updateTicketInTransaction(
       updateData.subcategory_id = null;
     }
 
-    // R4/R5/R6 in one place, as in ticketActions: Impact × Urgency decides the priority on a board
-    // that uses ITIL priorities (by level, D8), a direct priority change clears a stored assessment
-    // (D5), one value without the other is refused, and the family must fit the board. Runs only
-    // when the patch touches a priority field or the board (D3).
-    await resolveTicketPriorityPatch(trx, tenant, currentTicket, updateData, 'refuse');
+    // R2/R4/R5/R6 in one place, as in ticketActions: Impact × Urgency decides the priority on a
+    // board that uses ITIL priorities (by level, D8), a direct priority change clears a stored
+    // assessment (D5), one value without the other is refused, the family must fit the board, and
+    // the category must be the board's own copy. Runs only when the patch touches one of those
+    // fields or the board (D3).
+    await prepareTicketFieldPatchOrThrow(trx, tenant, currentTicket, updateData, 'refuse');
 
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&

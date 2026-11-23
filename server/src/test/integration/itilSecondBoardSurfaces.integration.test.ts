@@ -39,12 +39,19 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+// Probes call server actions outside a request, where `revalidatePath` has no store.
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}));
+
 import { tenantDb } from '@alga-psa/db';
 import {
   defaultPriorityForBoard,
   findBoardFieldProblems,
   listPrioritiesForBoard,
   prepareTicketCreateFields,
+  prepareTicketFieldPatch,
   resolveTicketPriorityFields,
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -366,7 +373,7 @@ const SURFACES: Surface[] = [
     commitGroup: 'impact-urgency',
     claims: ['MSP create and update'],
     probe: async (db, fixture) => {
-      const { resolveTicketPriorityFieldsOrThrow, resolveTicketPriorityPatch } = await import(
+      const { resolveTicketPriorityFieldsOrThrow, prepareTicketFieldPatchOrThrow } = await import(
         '../../../../packages/tickets/src/lib/ticketFieldReferences'
       );
 
@@ -393,7 +400,7 @@ const SURFACES: Surface[] = [
 
       // An update that only moves the priority clears the assessment (D5).
       const patch: Record<string, unknown> = { priority_id: fixture.itilPriorityIds[4] };
-      await resolveTicketPriorityPatch(
+      await prepareTicketFieldPatchOrThrow(
         db,
         fixture.tenantId,
         {
@@ -660,31 +667,109 @@ const SURFACES: Surface[] = [
     surface: 'REST v1 ticket update',
     commitGroup: 'writers-update',
     claims: ['update'],
-    expectedFail: 'TicketService.updateTicket checks the priority family but not the subcategory',
+    probe: async (db, fixture) => {
+      const standardIds = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo]);
+      const ticketId = await insertProbeTicket(db, fixture, fixture.boards.itilTwo);
+      const current = { board_id: fixture.boards.itilTwo, priority_id: fixture.itilPriorityIds[3] };
+
+      // The subcategory check the REST update used to lack, on the second ITIL board.
+      const mismatched: Record<string, unknown> = {
+        category_id: fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardIds[0]],
+        subcategory_id: fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardIds[1]],
+      };
+      const problems = await prepareTicketFieldPatch(db, fixture.tenantId, current, mismatched);
+      expect(problems.map((problem) => problem.field)).toContain('subcategory_id');
+
+      // And the board's own standard category is accepted there.
+      const accepted: Record<string, unknown> = {
+        category_id: fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardIds[0]],
+      };
+      expect(await prepareTicketFieldPatch(db, fixture.tenantId, current, accepted)).toEqual([]);
+      expect(ticketId).toBeTruthy();
+    },
   },
   {
     surface: 'Workflow `tickets.update_fields`',
     commitGroup: 'writers-update',
     claims: ['Workflow `tickets.update_fields`'],
-    expectedFail: 'TicketModel.updateTicket applies no board field rule',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne])[0];
+      // The action holds one board's category id. On a ticket of the second ITIL board that id is
+      // translated to the board's own copy instead of being refused (R2).
+      const patch: Record<string, unknown> = {
+        category_id: fixture.itilCategoryIdsByBoard[fixture.boards.itilOne][standardId],
+      };
+      const problems = await prepareTicketFieldPatch(
+        db,
+        fixture.tenantId,
+        { board_id: fixture.boards.itilTwo, priority_id: fixture.itilPriorityIds[3] },
+        patch
+      );
+      expect(problems).toEqual([]);
+      expect(patch.category_id).toBe(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId]);
+    },
   },
   {
     surface: 'Inbound webhook update',
     commitGroup: 'writers-update',
     claims: ['Inbound webhook update'],
-    expectedFail: 'the webhook update path applies no board field rule',
+    probe: async (db, fixture) => {
+      // A webhook update that names a priority of the tenant's own family for a ticket on the
+      // second ITIL board is refused: the caller sees the error (R6).
+      const problems = await prepareTicketFieldPatch(
+        db,
+        fixture.tenantId,
+        { board_id: fixture.boards.itilTwo, priority_id: fixture.itilPriorityIds[3] },
+        { priority_id: fixture.ownPriorityIds[0] }
+      );
+      expect(problems.map((problem) => problem.field)).toEqual(['priority_id']);
+      expect(problems[0].message).toContain('ITIL Two');
+    },
   },
   {
     surface: 'Activities inline priority picker',
     commitGroup: 'writers-update',
     claims: ['Activities inline priority', 'Activities inline picker'],
-    expectedFail: 'InlinePriorityPicker offers every priority and the write is unchecked',
+    probe: async (db, fixture) => {
+      const ticketId = await insertProbeTicket(db, fixture, fixture.boards.itilTwo);
+      const { updateActivityPriorityById } = await import(
+        '../../../../packages/user-activities/src/actions/activityStatusActions'
+      );
+      const { ActivityType } = await import('../../../../packages/types/src/interfaces/activity.interfaces');
+
+      // The write is checked against the ticket's board, so the grid cannot store a priority the
+      // board does not use — and a fitting one still saves.
+      await expect(
+        updateActivityPriorityById(ticketId, ActivityType.TICKET, fixture.ownPriorityIds[0])
+      ).rejects.toThrow(/ITIL Two/);
+      await updateActivityPriorityById(ticketId, ActivityType.TICKET, fixture.itilPriorityIds[1]);
+      const stored = await tenantDb(db, fixture.tenantId)
+        .table('tickets')
+        .where({ ticket_id: ticketId })
+        .first('priority_id');
+      expect(stored.priority_id).toBe(fixture.itilPriorityIds[1]);
+    },
   },
   {
     surface: 'Bundle sync',
     commitGroup: 'writers-update',
     claims: ['Bundle sync'],
-    expectedFail: 'the mirrored child takes the parent’s priority whatever its own board uses',
+    probe: async (db, fixture) => {
+      // Sync mirrors the master's priority only onto children whose board uses the same family. A
+      // child on the second ITIL board takes an ITIL priority; one on the tenant's own board keeps
+      // its own.
+      await expect(
+        findBoardFieldProblems(db, fixture.tenantId, {
+          boardId: fixture.boards.itilTwo,
+          priorityId: fixture.itilPriorityIds[1],
+        })
+      ).resolves.toEqual([]);
+      const refused = await findBoardFieldProblems(db, fixture.tenantId, {
+        boardId: fixture.boards.own,
+        priorityId: fixture.itilPriorityIds[1],
+      });
+      expect(refused.map((problem) => problem.field)).toEqual(['priority_id']);
+    },
   },
   {
     surface: 'Create ticket from asset (MSP)',

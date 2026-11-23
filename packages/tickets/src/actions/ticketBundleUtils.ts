@@ -5,6 +5,7 @@ import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import { findBoardFieldProblems } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -1163,6 +1164,35 @@ interface DerivedBundleChildRow {
   propagation_id: string | null;
 }
 
+/**
+ * R3/R6 for bundle sync: the children whose board uses the other priority family. They keep their
+ * own priority — the master's would not fit their board — and every other mirrored field still
+ * applies to them. Nothing is refused: the master's edit is about the master.
+ */
+async function childIdsRefusingPriority(
+  trx: Knex.Transaction,
+  tenant: string,
+  childIds: string[],
+  priorityId: unknown
+): Promise<Set<string>> {
+  const refusing = new Set<string>();
+  if (typeof priorityId !== 'string' || !priorityId || childIds.length === 0) return refusing;
+
+  const rows = await tenantScopedTable(trx, 'tickets', tenant)
+    .whereIn('ticket_id', childIds)
+    .select('ticket_id', 'board_id');
+  const fitsByBoard = new Map<string, boolean>();
+  for (const row of rows as Array<{ ticket_id: string; board_id: string | null }>) {
+    if (!row.board_id) continue;
+    if (!fitsByBoard.has(row.board_id)) {
+      const problems = await findBoardFieldProblems(trx, tenant, { boardId: row.board_id, priorityId });
+      fitsByBoard.set(row.board_id, problems.length === 0);
+    }
+    if (!fitsByBoard.get(row.board_id)) refusing.add(row.ticket_id);
+  }
+  return refusing;
+}
+
 /** Records the assignee change of each child whose assignee a propagated write actually changed. */
 async function recordChildAssigneeChanges(
   trx: Knex.Transaction,
@@ -1442,13 +1472,18 @@ export async function propagateBundleMasterStatus(
     // a non-boundary master change; stamping the master's (open) status onto it
     // would make the next close preview classify it as open, so a later
     // propagated reopen would reopen a ticket closed independently.
+    const priorityRefusedBy = await childIdsRefusingPriority(
+      trx,
+      ctx.tenant,
+      childRows.map((child: Record<string, unknown>) => child.ticket_id as string),
+      propagateFields.priority_id
+    );
     const fieldsForChild = (child: Record<string, unknown>): Record<string, unknown> => {
-      if (!child.is_closed) return propagateFields;
       const fields = { ...propagateFields };
-      delete fields.status_id;
+      if (child.is_closed) delete fields.status_id;
+      if (priorityRefusedBy.has(child.ticket_id as string)) delete fields.priority_id;
       return fields;
     };
-    const closedFields = fieldsForChild({ is_closed: true });
 
     const childPublishes = childRows
       .map((child: Record<string, unknown>) => ({
@@ -1458,12 +1493,17 @@ export async function propagateBundleMasterStatus(
       .filter((publish: { ticketId: string; updatedFields: string[] }) => publish.updatedFields.length > 0);
 
     const updatedAt = nowIso();
-    const openChildIds = childRows
-      .filter((child: Record<string, unknown>) => !child.is_closed)
-      .map((child: Record<string, unknown>) => child.ticket_id as string);
-    const closedChildIds = childRows
-      .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
-      .map((child: Record<string, unknown>) => child.ticket_id as string);
+    // Children that end up with the same set of fields share one UPDATE: open or closed, and
+    // taking the master's priority or keeping their own.
+    const writeGroups = new Map<string, { fields: Record<string, unknown>; ids: string[] }>();
+    for (const child of childRows as Array<Record<string, unknown>>) {
+      const fields = fieldsForChild(child);
+      if (Object.keys(fields).length === 0) continue;
+      const key = Object.keys(fields).sort().join(',');
+      const group = writeGroups.get(key) ?? { fields, ids: [] };
+      group.ids.push(child.ticket_id as string);
+      writeGroups.set(key, group);
+    }
 
     const childSnapshots = new Map<string, Awaited<ReturnType<typeof captureTicketTransitionSnapshot>>>();
     for (const child of childRows as Array<Record<string, unknown>>) {
@@ -1473,21 +1513,16 @@ export async function propagateBundleMasterStatus(
       );
     }
 
-    if (openChildIds.length > 0) {
+    for (const group of writeGroups.values()) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
-        .whereIn('ticket_id', openChildIds)
+        .whereIn('ticket_id', group.ids)
         // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
-          ...propagateFields,
-          ...ticketStatusClockPatch(trx, propagateFields.status_id as string | null | undefined),
+          ...group.fields,
+          ...ticketStatusClockPatch(trx, group.fields.status_id as string | null | undefined),
           updated_by: ctx.user.user_id,
           updated_at: updatedAt,
         });
-    }
-    if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
-      await tenantScopedTable(trx, 'tickets', ctx.tenant)
-        .whereIn('ticket_id', closedChildIds)
-        .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
     }
     await recordChildAssigneeChanges(trx, ctx.tenant, childRows, propagateFields);
 
@@ -1561,11 +1596,24 @@ export async function propagateBundleMasterStatus(
   if (Object.prototype.hasOwnProperty.call(updateData, 'priority_id')) {
     propagate.priority_id = updateData.priority_id;
   }
+  const priorityRefusedBy = await childIdsRefusingPriority(
+    trx,
+    ctx.tenant,
+    affectedChildIds,
+    propagate.priority_id
+  );
+  const propagateWithoutPriority = { ...propagate };
+  delete propagateWithoutPriority.priority_id;
+  const propagateForChild = (childId: string): Record<string, unknown> =>
+    priorityRefusedBy.has(childId) ? propagateWithoutPriority : propagate;
 
   const childPublishes = affected
     .map((child) => ({
       ticketId: child.ticket_id,
-      updatedFields: diffTicketFields(child as unknown as Record<string, unknown>, propagate),
+      updatedFields: diffTicketFields(
+        child as unknown as Record<string, unknown>,
+        propagateForChild(child.ticket_id)
+      ),
     }))
     .filter((publish) => publish.updatedFields.length > 0);
 
@@ -1574,10 +1622,16 @@ export async function propagateBundleMasterStatus(
     propagateSnapshots.set(childId, await captureTicketTransitionSnapshot(trx, ctx.tenant, childId));
   }
 
-  await tenantScopedTable(trx, 'tickets', ctx.tenant)
-    .whereIn('ticket_id', affectedChildIds)
-    // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
-    .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
+  for (const [fields, ids] of [
+    [propagate, affectedChildIds.filter((childId) => !priorityRefusedBy.has(childId))],
+    [propagateWithoutPriority, affectedChildIds.filter((childId) => priorityRefusedBy.has(childId))],
+  ] as Array<[Record<string, unknown>, string[]]>) {
+    if (ids.length === 0) continue;
+    await tenantScopedTable(trx, 'tickets', ctx.tenant)
+      .whereIn('ticket_id', ids)
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+      .update({ ...fields, ...ticketStatusClockPatch(trx, fields.status_id as string | null | undefined) });
+  }
   await recordChildAssigneeChanges(trx, ctx.tenant, affected, propagate);
 
   for (const before of propagateSnapshots.values()) {

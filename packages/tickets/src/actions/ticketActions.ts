@@ -77,7 +77,7 @@ import {
   findPriorityBoardTypeProblem,
   PriorityBoardTypeError,
   resolveTicketPriorityFieldsOrThrow,
-  resolveTicketPriorityPatch,
+  prepareTicketFieldPatchOrThrow,
 } from '../lib/ticketFieldReferences';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
@@ -175,7 +175,9 @@ export async function registerSlaCancellation(fn: (tenantId: string, ticketId: s
 // Reported as a bare string rather than returned as a payload, so withAuth's
 // boundary never sees the messageKey. Localize before flattening.
 async function ticketBulkFailureMessage(error: unknown, fallback: string): Promise<string> {
-  const expected = ticketActionErrorFrom(error);
+  // A bulk step can rethrow the field error an inner action already returned (a refused priority
+  // or category), so an action-error shape is reported as itself rather than as the fallback.
+  const expected = isTicketActionError(error) ? error : ticketActionErrorFrom(error);
   if (expected) {
     const candidate = (await localizeActionError(expected)) as unknown as {
       actionError?: unknown;
@@ -1583,12 +1585,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updateData.due_date = null;
       }
 
-      // R4/R5/R6 in one place: Impact × Urgency decides the priority on a board that uses ITIL
+      // R2/R4/R5/R6 in one place: Impact × Urgency decides the priority on a board that uses ITIL
       // priorities (found by level, D8), a direct priority change clears a stored assessment (D5),
-      // one value without the other is refused, and the priority's family must fit the board. Runs
-      // only when the patch touches a priority field or the board, so an unrelated edit still saves
-      // on a legacy ticket whose stored pair already mismatches (D3).
-      await resolveTicketPriorityPatch(trx, tenant, currentTicket, updateData, 'refuse');
+      // one value without the other is refused, the priority's family must fit the board, and the
+      // category must be the board's — another ITIL board's copy of a standard category is
+      // translated to this board's. Runs only when the patch touches one of those fields or the
+      // board, so an unrelated edit still saves on a legacy ticket whose stored values already
+      // mismatch (D3).
+      await prepareTicketFieldPatchOrThrow(trx, tenant, currentTicket, updateData, 'refuse');
 
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
@@ -2631,17 +2635,22 @@ export const moveTicketsToBoard = withAuth(async (
         throw new Error('Ticket not found');
       }
 
+      // The category is not cleared here: the shared patch rule decides it. A move between two
+      // ITIL boards keeps the category by meaning (the destination board's copy of the same
+      // standard category, R2/F089); any other move clears it, because it belonged to the board
+      // the ticket is leaving. A ticket whose priority does not fit the destination is refused and
+      // reported for that ticket alone (R6).
       const updateData: Partial<ITicket> = {
         board_id: destinationBoardId,
         status_id: resolvedStatusId,
       };
 
-      if (currentTicket.board_id !== destinationBoardId) {
-        updateData.category_id = null;
-        updateData.subcategory_id = null;
+      // A refusal comes back as a returned field error, not a throw: report it for this ticket
+      // instead of counting it as moved (R6).
+      const result = await updateTicketWithCache(ticketId, updateData, options);
+      if (isTicketActionError(result)) {
+        throw result;
       }
-
-      await updateTicketWithCache(ticketId, updateData, options);
 
       movedIds.push(ticketId);
     } catch (error: unknown) {

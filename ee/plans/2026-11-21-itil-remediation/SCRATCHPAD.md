@@ -502,6 +502,54 @@ REST create and create-from-asset; `server/src/test/integration/itilCreateWriter
   because port 5472 is closed in this worktree. Both are environment limits, not this group's.
   Everything else named above was run against this slot's database (`test_itil_mc15`).
 
+### Commit group 9 — `writers-update` (done)
+
+Landed: `prepareTicketFieldPatch` in the shared module and `prepareTicketFieldPatchOrThrow` in
+`packages/tickets`; both MSP update functions, the REST update, `TicketModel.updateTicket`, both
+Activities inline priority writes, both bundle sync write sites and the bulk board move routed
+through it; `server/src/test/integration/itilUpdateWriters.integration.test.ts` (17 cases),
+`server/src/test/unit/itilUpdateWritersContract.test.ts` (8 cases) and the five `writers-update`
+surface probes.
+
+- **`resolveTicketPriorityPatch` became `prepareTicketFieldPatchOrThrow`.** Group 7's patch helper
+  covered the priority half; F082 asks for one function over the whole field group, so the helper
+  was widened rather than joined by a second one with an overlapping contract. The two group-7
+  tests that named it (`itilImpactUrgencyContract`, `optimizedTicketActions.tenantScopedAuth`) and
+  the group-7 behaviour suite were updated to the new symbol; the signature is unchanged.
+- **A board move clears a category the patch did not name; it does not refuse it.** R5 says a
+  check looks at what a change touches, and a move does touch the category — but nobody *chose*
+  the old board's category for the new board, so refusing would make a move impossible to perform
+  without also picking a category. Between two ITIL boards the category survives as the
+  destination's copy of the same standard row (F089). A category the patch itself names is
+  refused, because that one the caller chose.
+- **The bulk move stopped clearing the category itself.** `moveTicketsToBoard` set
+  `category_id: null` on every board change; the rule now decides, so an ITIL→ITIL bulk move keeps
+  the category by meaning. `ticketActions.moveToBoard.test.ts` asserted the nulls in the patch and
+  now asserts the patch the action really sends, with a pointer to the rule and to T166.
+- **The bulk move also reported a refusal as a success.** `updateTicketWithCache` *returns* a field
+  error rather than throwing, and the move ignored the result, so a refused ticket landed in
+  `movedIds`. It now rethrows it, and `ticketBulkFailureMessage` reports an already-formed action
+  error as itself instead of the generic fallback — without that, T164's refusals would all read
+  "Failed to move ticket".
+- **The Activities inline picker clears the assessment, not only checks the family.** Both writes
+  now spread the resolved patch (priority, Impact, Urgency) into the UPDATE, so a direct priority
+  change on an assessed ITIL ticket clears the pair there exactly as on the ticket form (D5).
+- **Bundle sync writes children in groups.** The legacy mirror built one field set for open
+  children and one for closed; it now builds one per child (closed children keep their status,
+  children on a board of the other priority family keep their priority) and groups the children
+  that end up with the same set into one UPDATE. The boundary path writes two groups for the same
+  reason. The published `updatedFields` are diffed against the set each child actually received.
+- **`findTicketUpdatePriorityBoardTypeProblem` has no production caller left.** The REST update was
+  the last one. It stays exported because `priorityBoardType.integration.test.ts` is the suite that
+  proves the PR #3880 behaviour did not change; `cleanup` can take it.
+- Run against this slot's database: `itilUpdateWriters` 17/17, `itilUpdateWritersContract` 8/8,
+  `itilSecondBoardSurfaces` 32 covered + 12 todos, `itilImpactUrgency` 12/12,
+  `itilCreateWriters` 21/21, all 65 files of `packages/tickets/src/actions` (530 tests) and the
+  bundle contract suites. Not this group's: five `packages/user-activities` files fail to resolve
+  `@alga-psa/core/capability` through `packages/db/src/lib/seatTicketWork.ts` (a package-build
+  gap, no file of this card involved), two `src/test/unit/api/*.db.test.ts` files need port 5472,
+  and `microsoftEmailSetupCallback.test.ts` has two `warn`-count assertions unrelated to tickets.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -519,7 +567,7 @@ REST create and create-from-asset; `server/src/test/integration/itilCreateWriter
 
 ### Groups not started
 
-Commit groups 9–16 (`writers-update` through `docs`) are untouched: their features and tests are
+Commit groups 10–16 (`priority-pickers` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 
