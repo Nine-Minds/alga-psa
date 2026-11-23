@@ -156,6 +156,40 @@ function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boole
   return fields.has('from') && fields.has('sent') && fields.has('to') && fields.has('subject');
 }
 
+/** How many lines a provider attribution may wrap over before it stops looking like one. */
+const MAX_WRAPPED_HEADER_LINES = 3;
+
+/**
+ * Gmail wraps a long `On <date> <Name> <addr> wrote:` attribution over two or three lines, so the
+ * single-line `providerReplyHeaders` patterns miss it. Treat such a run as an attribution only
+ * when quoted content follows it, which keeps authored sentences that merely open with "On"
+ * (and happen to sit above an "… wrote:" line) intact.
+ */
+function isWrappedProviderReplyHeader(lines: string[], startIndex: number): boolean {
+  if (!/^on\b/i.test(lines[startIndex].trim())) {
+    return false;
+  }
+
+  const endIndex = Math.min(lines.length, startIndex + MAX_WRAPPED_HEADER_LINES);
+  for (let i = startIndex + 1; i < endIndex; i += 1) {
+    const line = lines[i].trim();
+    if (!line) {
+      return false;
+    }
+    if (!/wrote:$/i.test(line)) {
+      continue;
+    }
+    for (let next = i + 1; next < lines.length; next += 1) {
+      const candidate = lines[next].trim();
+      if (!candidate) continue;
+      return candidate.startsWith('>');
+    }
+    return false;
+  }
+
+  return false;
+}
+
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
 const htmlTokenAttributeRegex = /data-alga-reply-token="(?<token>[^"]+)"/i;
 const htmlTicketAttributeRegex = /data-alga-ticket-id="(?<ticket>[^"]+)"/i;
@@ -528,6 +562,12 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
       break;
     }
 
+    if (isWrappedProviderReplyHeader(lines, i)) {
+      matched = line;
+      heuristic = 'provider-header';
+      break;
+    }
+
     if (line.startsWith('>')) {
       removedQuoted = true;
       continue;
@@ -730,11 +770,16 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   let strategy: ReplyParsingStrategy = textBoundary || trimmedHtmlResult?.matched ? 'custom-boundary' : 'fallback';
   let confidence: ReplyParseConfidence = strategy === 'custom-boundary' ? 'high' : 'low';
 
-  if (!textBoundary) {
-    const providerTrim = stripProviderHeaders(trimmedText, mergedConfig);
-    if (providerTrim.heuristic) {
-      trimmedText = providerTrim.text;
-      appliedHeuristics.push(providerTrim.heuristic);
+  // The explicit Alga boundary can sit several quote levels down (a reply to one's own reply
+  // quotes a notification that is itself quoted), so the text above it still holds provider
+  // attributions and quoted lines. Strip those too, but when the boundary already matched keep
+  // the result only if authored text survives: an empty reply above the boundary must stay
+  // empty, and ambiguous mail keeps preserving too much.
+  const providerTrim = stripProviderHeaders(trimmedText, mergedConfig);
+  if (providerTrim.heuristic && (!textBoundary || providerTrim.text.trim())) {
+    trimmedText = providerTrim.text;
+    appliedHeuristics.push(providerTrim.heuristic);
+    if (!textBoundary) {
       strategy = providerTrim.heuristic === 'provider-header' ? 'provider-header' : 'quoted-block';
       confidence = confidence === 'high' ? 'high' : 'medium';
     }
@@ -801,13 +846,19 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
     // Safety net: if the blockquote cut removed a much larger share of the message than
     // the text heuristics did, the cut was likely a false positive — prefer the text
     // result so future misfires leak quoted history instead of destroying content.
+    //
+    // Compare like with like: the text side may still carry a quote level the HTML trim
+    // already removed, so measure against the text with provider attributions and quoted
+    // lines stripped. Otherwise a short reply above a long quote always trips the ratio.
     if (sanitizedHtml && appliedHeuristics.includes('html-blockquote-trim')) {
       const htmlVisibleLength = htmlToVisibleText(sanitizedHtml).replace(/\s+/g, ' ').trim().length;
-      const textLength = trimmedText.replace(/\s+/g, ' ').trim().length;
+      const baselineText = stripProviderHeaders(trimmedText, mergedConfig).text;
+      const textLength = baselineText.replace(/\s+/g, ' ').trim().length;
       if (textLength > 0 && htmlVisibleLength < textLength * 0.5) {
         warnings.push(
           'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
         );
+        appliedHeuristics.push('html-trim-rejected');
         sanitizedHtml = undefined;
       }
     }

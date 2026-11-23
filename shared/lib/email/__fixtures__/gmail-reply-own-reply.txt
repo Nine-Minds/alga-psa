@@ -1,0 +1,44 @@
+Thursday afternoon works for us. Please go ahead and book it.
+
+On Mon, Nov 17, 2026 at 8:42 AM Jane Client <
+jane.client@example.test> wrote:
+
+> Thanks for the detail. I checked with our office manager and the two
+> laptops are still sealed in the shipping box, so nobody has powered them on
+> yet. Tell us what you need from our side before the install day.
+>
+> On Mon, Nov 17, 2026 at 7:15 AM MSP Support <support@msp.test> wrote:
+>
+>> [ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11
+>> ticketId=7c1d9f20-5e84-4c11-9b3a-6d2f8ab41c57
+>> commentId=2f6b4d18-91ac-4e73-bd25-0ac7f1e3b984]
+>> --- Please reply above this line ---
+>>
+>> --- Please reply above this line ---
+>>
+>> NEW COMMENT ADDED
+>>
+>> Laptop deployment for the new hires
+>>
+>> Ticket alga-2026-0003353
+>> Status In Progress
+>> Priority Medium
+>>
+>> Comment from Dana Tech
+>>
+>> Here is where the deployment stands this morning.
+>>
+>> 1. Image the two new laptops with the standard build
+>> 2. Enroll both machines in Intune before delivery
+>>
+>> The full runbook is at https://docs.example.test/runbooks/laptop-imaging if
+>> you want to follow along.
+>
+>
+> --
+> Jane Client
+> Office Manager | Example Co
+
+--
+Jane Client
+Office Manager | Example Co
