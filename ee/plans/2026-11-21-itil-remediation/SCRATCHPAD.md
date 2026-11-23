@@ -947,6 +947,33 @@ with `priority_type = category_type = 'itil'`, 35 categories of its own all carr
 `is_itil_standard` policy, which holds five targets. No product code was touched for either
 condition: a deployment boots once with the code it ships and runs its migrations with it.
 
+### The stale assessment the browser check saw after Save Changes (group 7, F063/F067)
+
+The browser check saved Impact 3 × Urgency 3 from the "All fields" drawer and the form came back
+empty, on the old priority, "Not assessed"; a reload showed the saved values. The write was never
+the problem — the screen was. `TicketDetails` merges what it *sent* into its ticket
+(`setTicket(prev => ({ ...prev, ...changes }))`) and keeps Impact and Urgency in two pieces of state
+of its own, and an ITIL write is the one case where the server settles fields the screen never sent:
+Impact × Urgency derives the priority (R4) and a direct priority change clears the pair (D5). So the
+merge is wrong by construction for exactly these fields.
+
+The file already had this exact rule for a board/client move, with the reason written out
+(`movesTicket` → `refreshTicketSnapshot`, which re-reads the row and is the only place
+`itilImpact`/`itilUrgency` are set from the server). The fix extends that rule rather than inventing
+a second mechanism: `settlesItilFields(fields, hasAssessment)` is true for `itil_impact`,
+`itil_urgency`, and for `priority_id` when the ticket *has* an assessment to clear — so a non-ITIL
+priority change still costs one write and no read. It is applied at both batch-save call sites, in
+`handleItilFieldChange` (the per-field ITIL write, which derives the priority on its own) and in
+`handleSelectChange` (the hero's priority picker, D5).
+
+- No new feature or test entry: this is the screen half of T123 and T132, which the integration
+  suite proved on the database side. `TicketDetails.itilAssessmentSave.test.tsx` adds four cases at
+  the screen; three of them fail on the commit before this one (`'2'` instead of `''` for a cleared
+  Impact, `priority-1` instead of `priority-2` for the derived priority), the fourth pins that an
+  unassessed priority change performs no extra read.
+- Not changed: the optimistic merge itself, and nothing in the shared resolver. The resolver was
+  already right (4992355838) — the screen simply never asked what it had decided.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no

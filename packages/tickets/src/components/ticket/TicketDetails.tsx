@@ -143,6 +143,18 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 const movesTicket = (fields: Iterable<string>): boolean =>
     [...fields].some((field) => field === 'client_id' || field === 'board_id');
 
+/**
+ * An ITIL write the server settles in the same statement: Impact and Urgency derive the priority
+ * (R4), and a direct priority change clears an assessment the ticket already carries (D5). The
+ * screen's own merge of what it sent would keep showing the old priority, or an assessment that
+ * no longer exists, so such a save is followed by a re-read.
+ */
+const settlesItilFields = (fields: Iterable<string>, hasAssessment: boolean): boolean =>
+    [...fields].some((field) =>
+        field === 'itil_impact'
+        || field === 'itil_urgency'
+        || (field === 'priority_id' && hasAssessment));
+
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -1519,6 +1531,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
     const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
+    // Only an assessed ticket has an assessment for a direct priority change to clear (D5).
+    const hasItilAssessment = Boolean(itilImpact || itilUrgency);
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
@@ -1957,6 +1971,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // stamps updated_at/updated_by itself; browsers never send them.
                 setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
                 setUpdatedByUser(localActor);
+                // D5: a direct priority change clears Impact and Urgency, so re-read the ticket
+                // instead of leaving the screen on the assessment the write has just cleared.
+                if (settlesItilFields([field as string], hasItilAssessment)) {
+                    await refreshTicketSnapshot([field as string]);
+                }
                 onSaved?.();
             }
         } catch (error) {
@@ -2863,6 +2882,9 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            // R4: the server derives the priority from Impact × Urgency in the same write, so the
+            // screen re-reads rather than keep showing the priority the ticket held before.
+            await refreshTicketSnapshot([field]);
             onSaved?.();
 
             if (field === 'itil_impact') {
@@ -2940,7 +2962,10 @@ const handleClose = () => {
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
                 // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
-                if (movesTicket(Object.keys(changes))) {
+                if (
+                    movesTicket(Object.keys(changes))
+                    || settlesItilFields(Object.keys(changes), hasItilAssessment)
+                ) {
                     await refreshTicketSnapshot(Object.keys(changes));
                 }
                 onSaved?.();
@@ -2973,7 +2998,10 @@ const handleClose = () => {
                 setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
                 // LEVERAGE: friction ticket-save-echo — the update action returns 'success', not the row it wrote, so fields the server settled must be re-read
-                if (movesTicket(Object.keys(ticketChanges))) {
+                if (
+                    movesTicket(Object.keys(ticketChanges))
+                    || settlesItilFields(Object.keys(ticketChanges), hasItilAssessment)
+                ) {
                     await refreshTicketSnapshot(Object.keys(ticketChanges));
                 }
                 for (const [field, value] of itilEntries) {
@@ -2999,6 +3027,7 @@ const handleClose = () => {
         confirmBundlePropagation,
         handleItilFieldChange,
         handleSelectChange,
+        hasItilAssessment,
         localActor,
         onBatchTicketUpdate,
         refreshTicketSnapshot,
