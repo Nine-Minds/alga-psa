@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 const fromPath = vi.hoisted(() => vi.fn());
 vi.mock('pdf2pic', () => ({ fromPath }));
 
-import { renderPdfPages } from './pdfPageRender';
+const missing = vi.hoisted(() => ({ value: false }));
+vi.mock('./graphicsMagickProbe', async (orig) => ({
+  ...(await orig<typeof import('./graphicsMagickProbe')>()),
+  isGraphicsMagickMissing: vi.fn(async () => missing.value),
+}));
+
+import { PdfRendererMissingError, renderPdfPages } from './pdfPageRender';
 
 const convert = (impl: (page: number) => Promise<unknown>) => fromPath.mockReturnValue((page: number) => impl(page));
 
@@ -32,6 +38,22 @@ describe('renderPdfPages', () => {
   it('rejects when nothing was produced', async () => {
     convert(async () => ({}));
     await expect(renderPdfPages('/tmp/x.pdf', [1], { dpi: 72, maxEdgePx: 100, timeoutMs: 100, saveDir: '/tmp' })).rejects.toThrow('Failed to render PDF page');
+  });
+});
+
+describe('missing renderer diagnostics', () => {
+  it('names GraphicsMagick when the render fails and gm is not installed (error or hang)', async () => {
+    missing.value = true;
+    try {
+      convert(async () => {
+        throw new Error('spawn gm ENOENT');
+      });
+      await expect(renderPdfPages('/tmp/x.pdf', [1], { dpi: 72, maxEdgePx: 100, timeoutMs: 100, saveDir: '/tmp' })).rejects.toThrow(PdfRendererMissingError);
+      convert(() => new Promise(() => undefined));
+      await expect(renderPdfPages('/tmp/x.pdf', [1], { dpi: 72, maxEdgePx: 100, timeoutMs: 20, saveDir: '/tmp' })).rejects.toThrow(/GraphicsMagick \(gm\) is not installed/);
+    } finally {
+      missing.value = false;
+    }
   });
 });
 

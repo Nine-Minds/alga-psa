@@ -101,4 +101,15 @@ describe('pdf producer', () => {
     expect(r.omitted.map((o) => o.reason)).toEqual(['page_render_failed', 'page_render_failed']);
     expect(r.next).toBeNull();
   });
+
+  it('names the missing renderer in the page label when gm is not installed', async () => {
+    const { PdfRendererMissingError } = await import('../graphicsMagickProbe');
+    const r = await readAttachmentContent([fileSource('scan.pdf', 'application/pdf', F.scannedPdf())], { docIndex: 0, unitIndex: 0 }, DEFAULT_BUDGET, {
+      renderPdfPages: async () => {
+        throw new PdfRendererMissingError();
+      },
+    });
+    expect((r.blocks[2] as { text: string }).text).toContain('GraphicsMagick (gm) is not installed');
+    expect(r.omitted.map((o) => o.reason)).toEqual(['page_render_failed', 'page_render_failed']);
+  });
 });

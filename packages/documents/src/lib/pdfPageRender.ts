@@ -1,5 +1,8 @@
 import { fromPath } from 'pdf2pic';
 import { v4 as uuidv4 } from 'uuid';
+import { isGraphicsMagickMissing, PdfRendererMissingError } from './graphicsMagickProbe';
+
+export { PdfRendererMissingError };
 
 /**
  * Renders PDF pages to raster images through pdf2pic (GraphicsMagick + Ghostscript).
@@ -41,13 +44,21 @@ async function renderOne(pdfPath: string, page: number, opts: PdfPageRenderOptio
   });
   // pdf2pic cannot be aborted, so the race only frees the caller.
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const rendered = await Promise.race([
-    converter(page, { responseType: 'buffer' }),
-    new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(() => reject(new Error(`PDF render timed out after ${opts.timeoutMs}ms`)), opts.timeoutMs);
-    }),
-  ]).finally(() => clearTimeout(timer));
+  let rendered: Awaited<ReturnType<typeof converter>> | undefined;
+  try {
+    rendered = await Promise.race([
+      converter(page, { responseType: 'buffer' }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`PDF render timed out after ${opts.timeoutMs}ms`)), opts.timeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
+  } catch (error) {
+    // Any failure: say specifically when the cause is a missing renderer instead of a generic error or timeout.
+    if (await isGraphicsMagickMissing()) throw new PdfRendererMissingError();
+    throw error;
+  }
   if (!rendered || !rendered.buffer) {
+    if (await isGraphicsMagickMissing()) throw new PdfRendererMissingError();
     throw new Error('Failed to render PDF page');
   }
   return { page, buffer: rendered.buffer as Buffer };
