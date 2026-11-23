@@ -147,7 +147,8 @@
       "viewDetails": "Visa detaljer",
       "editAsset": "Redigera tillgång",
       "createTicket": "Skapa ärende",
-      "refreshData": "Uppdatera data"
+      "refreshData": "Uppdatera data",
+      "fullAdd": "Fullständig registrering"
     },
     "table": {
       "name": "Namn",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Skanna inventarienummer",
+    "help": "Skanna en utskriven etikett med en streckkodsläsare eller ange inventarienumret exakt som det är utskrivet. Den matchande mottagningsposten öppnas.",
     "input": "Skanna eller ange ett inventarienummer",
     "loading": "Söker…",
     "find": "Hitta tillgång",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Mottagning med etikett först",
-    "title": "Starta mottagning med etikett först",
     "help": "Skapa en beständig tillgångspost med minimala uppgifter och skriv ut två exemplar av etiketten. Skanna något av exemplaren senare för att slutföra samma post.",
     "client": "Kund",
     "clientRequired": "Välj en kund för att fortsätta.",
     "createFailed": "Det gick inte att skapa mottagningsposten.",
     "name": "Kort beskrivning (valfritt)",
     "creating": "Skapar…",
-    "createPrint": "Skapa och skriv ut paret"
+    "createPrint": "Skapa och skriv ut paret",
+    "modePrint": "Skriv ut nya etiketter",
+    "modeResume": "Återuppta från etikett"
   }
 }

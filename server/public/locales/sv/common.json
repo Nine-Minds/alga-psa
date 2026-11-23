@@ -156,6 +156,7 @@
   },
   "pickers": {
     "addNewClient": "Lägg till ny kund",
+    "clientsSelectedCount": "{{count}} kunder",
     "addNewContact": "Lägg till ny kontakt",
     "loadingUsers": "Läser in användare…",
     "errorLoadingUsers": "Det gick inte att läsa in användare",
@@ -1684,6 +1685,7 @@
       "printing": "Förbereder…",
       "print": "Skriv ut",
       "reason": "Orsak",
+      "sizeMismatch": "Den här layouten är mindre än etiketten som mallen är utformad för. Skriv ut i mallens egen storlek istället.",
       "skipFailures": "Hoppa över dessa och skriv ut resten",
       "skipped_one": "{{count}} post hoppades över eftersom den inte kunde öppnas.",
       "skipped_other": "{{count}} poster hoppades över eftersom de inte kunde öppnas.",
@@ -1694,6 +1696,9 @@
       "useTemplate": "Använd {{template}}",
       "copiesPerAsset": "Exemplar per tillgång",
       "adjacentCopies": "Exemplaren för varje tillgång skrivs ut tillsammans."
+    },
+    "layout": {
+      "template-preferred": "Använd mallens storlek"
     }
   },
   "deleteEntity": {
@@ -2299,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "{{count}} taggar till: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Fokusläge",
+      "exit": "Avsluta fokusläge"
+    }
   }
 }

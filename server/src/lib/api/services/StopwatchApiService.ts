@@ -18,7 +18,7 @@ import {
   updateSessionDraft,
   type StopwatchSessionView,
 } from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
-import { publishPersistedTimeEntryEvents, type PersistedTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
+import { assertTimeEntryCreateInScope, publishPersistedTimeEntryEvents, type PersistedTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import { timeSheetActionErrorFrom } from '@alga-psa/scheduling/actions/timeSheetActionErrors';
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -149,14 +149,20 @@ export class StopwatchApiService extends BaseService<never> {
   async start(data: StartStopwatchData, context: ServiceContext): Promise<StopwatchSessionView> {
     const db = await this.getDbForContext(context);
     try {
-      return await db.transaction((trx) =>
-        startSession(trx, context.tenant, context.userId, {
+      return await db.transaction(async (trx) => {
+        // The session becomes a time entry: refuse a work item the caller could not log time on (a seat
+        // technician's out-of-scope ticket or unshared project), as the log path does.
+        await assertTimeEntryCreateInScope(trx, context.tenant, context.user as IUser, context.userId, {
+          work_item_type: data.work_item_type,
+          work_item_id: data.work_item_id,
+        });
+        return startSession(trx, context.tenant, context.userId, {
           workItemType: data.work_item_type,
           workItemId: data.work_item_id,
           serviceId: data.service_id ?? null,
           notes: data.notes,
-        }),
-      );
+        });
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }

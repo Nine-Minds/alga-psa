@@ -167,7 +167,7 @@ export async function matchingRuleTemplateIds(
   if (!rules.length) return [];
   const schema = createTicketQuerySchema();
   const fragments = rules.map((rule) => compilePredicateFragment(
-    schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't' }
+    schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't', tenant }
   ));
   const row = await db.table('tickets as t').where('t.ticket_id', ticketId)
     .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`])))

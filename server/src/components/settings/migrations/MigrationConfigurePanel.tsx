@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import {
   getMigrationConfigurationOptions,
@@ -140,10 +141,9 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     () => (options?.assetTypes ?? []).map((assetType) => ({ value: assetType.slug, label: assetType.name })),
     [options]
   );
-  const clientOptions = useMemo(
-    () => (options?.clients ?? []).map((client) => ({ value: client.id, label: client.name })),
-    [options]
-  );
+  // Default clients are picked by server search; the panel never loads the tenant's client list.
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const userOptions = useMemo(
     () => (options?.users ?? []).map((user) => ({ value: user.id, label: user.name })),
     [options]
@@ -250,12 +250,16 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               <Label htmlFor="amp-config-default-requester-select">
                 {t('importExport.migration.configure.tickets.defaultRequester', { defaultValue: 'Default requester client' })} <span className="text-destructive">*</span>
               </Label>
-              <CustomSelect
+              <ClientPicker
                 id="amp-config-default-requester-select"
-                options={clientOptions}
-                value={defaultRequesterClientId}
-                onValueChange={setDefaultRequesterClientId}
+                selectedClientId={defaultRequesterClientId || null}
+                onSelect={(clientId) => setDefaultRequesterClientId(clientId ?? '')}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
                 placeholder={t('importExport.migration.configure.clientPlaceholder', { defaultValue: 'Select a client' })}
+                className="w-full"
               />
               <p className="text-xs text-muted-foreground">
                 {t('importExport.migration.configure.tickets.defaultRequesterHelp', { defaultValue: "Used when a ticket's organization cannot be resolved." })}
@@ -378,14 +382,29 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
           <h4 className="text-sm font-semibold text-foreground">{t('importExport.migration.configure.general.title', { defaultValue: 'General' })}</h4>
           <div className="max-w-md space-y-2">
             <Label htmlFor="amp-config-default-client-select">{t('importExport.migration.configure.general.defaultClient', { defaultValue: 'Default client for orphaned records' })}</Label>
-            <CustomSelect
-              id="amp-config-default-client-select"
-              options={clientOptions}
-              value={defaultClientId}
-              onValueChange={setDefaultClientId}
-              placeholder={t('importExport.migration.configure.clientPlaceholder', { defaultValue: 'Select a client' })}
-              allowClear
-            />
+            <div className="flex items-center gap-2">
+              <ClientPicker
+                id="amp-config-default-client-select"
+                selectedClientId={defaultClientId || null}
+                onSelect={(clientId) => setDefaultClientId(clientId ?? '')}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                placeholder={t('importExport.migration.configure.clientPlaceholder', { defaultValue: 'Select a client' })}
+                className="w-full"
+              />
+              {defaultClientId && (
+                <Button
+                  id="amp-config-default-client-clear"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDefaultClientId('')}
+                >
+                  {t('importExport.migration.configure.general.clearDefaultClient', { defaultValue: 'Clear' })}
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {t('importExport.migration.configure.general.defaultClientHelp', { defaultValue: 'Contacts and assets whose organization cannot be resolved are attached to this client.' })}
             </p>

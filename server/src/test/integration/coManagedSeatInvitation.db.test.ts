@@ -188,6 +188,7 @@ describeDb('inviting a seat technician against the allocation', { shuffle: false
     const arrangement = await arrange(sponsor, 3);
     const otherTenant = await createTenant(db, `Other MSP ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });
     const pending = (tenant: string, email: string, expiresAt: Date) => db('user_invitations').insert({ tenant, email,
+      email_normalized: email.trim().toLowerCase(),
       first_name: 'Team', last_name: 'Member', role_id: randomUUID(), token: randomUUID(), expires_at: expiresAt });
     const [here, there, lapsed] = [address('here'), address('there'), address('lapsed')];
     await pending(sponsor, here, new Date(Date.now() + DAY));

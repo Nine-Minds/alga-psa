@@ -94,7 +94,13 @@ function dateOnlyToIsoUtc(dateOnly: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function TicketsListScreen({ navigation, route }: Props) {
+export type TicketsListScreenProps = Props & {
+  /** Split layout: the list reports a tap instead of pushing the detail screen. */
+  onSelectTicket?: (ticketId: string) => void;
+  selectedTicketId?: string | null;
+};
+
+export function TicketsListScreen({ navigation, route, onSelectTicket, selectedTicketId }: TicketsListScreenProps) {
   const { t } = useTranslation("tickets");
   const { t: tClients } = useTranslation("clients");
   const { t: tContacts } = useTranslation("contacts");
@@ -216,7 +222,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
     }
   }, [searchInput, search]);
 
-  const apiFilters = useMemo(() => {
+  const computedApiFilters = useMemo(() => {
     if (!session) return undefined;
     const out: Record<string, unknown> = {};
     const statusIds = filters.statusNames.length > 0
@@ -253,6 +259,15 @@ export function TicketsListScreen({ navigation, route }: Props) {
 
     return withContactFilter(withClientFilter(withTagsFilter(out, filters.tags), clientFilterId), contactFilterId);
   }, [clientFilterId, contactFilterId, filters, session, statusOptions]);
+
+  // Keep the filter object's identity stable while its content is unchanged
+  // (e.g. statusOptions arriving), so loadPage and the initial-load effect
+  // don't refetch the list and stats on mount.
+  const apiFiltersKey = computedApiFilters ? JSON.stringify(computedApiFilters) : undefined;
+  const apiFilters = useMemo<Record<string, unknown> | undefined>(
+    () => (apiFiltersKey ? JSON.parse(apiFiltersKey) : undefined),
+    [apiFiltersKey],
+  );
 
   const clearClientFilter = useCallback(() => {
     navigation.setParams({ clientId: undefined, clientName: undefined });
@@ -470,16 +485,22 @@ export function TicketsListScreen({ navigation, route }: Props) {
 
   const onPressTicket = useCallback(
     (ticketId: string) => {
+      if (onSelectTicket) {
+        onSelectTicket(ticketId);
+        return;
+      }
       navigation.navigate("TicketDetail", { ticketId });
     },
-    [navigation],
+    [navigation, onSelectTicket],
   );
 
   const keyExtractor = useCallback((item: TicketListItem) => item.ticket_id, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: TicketListItem }) => <TicketRow item={item} onPressTicket={onPressTicket} />,
-    [onPressTicket],
+    ({ item }: { item: TicketListItem }) => (
+      <TicketRow item={item} onPressTicket={onPressTicket} selected={item.ticket_id === selectedTicketId} />
+    ),
+    [onPressTicket, selectedTicketId],
   );
 
   const clientFilterChip = clientFilterId ? (
@@ -768,7 +789,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
             <View style={{ paddingVertical: theme.spacing.lg, alignItems: "center" }}>
               <ActivityIndicator color={theme.colors.primary} />
             </View>
-          ) : null
+          ) : undefined
         }
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
@@ -906,6 +927,7 @@ function QuickFilters({
   );
 }
 
+// LEVERAGE: pattern filter-chip — same pill as ui/components/FilterChip; switch when this row is next touched
 function QuickChip({ theme, label, onPress }: { theme: Theme; label: string; onPress: () => void }) {
   return (
     <Pressable
@@ -1453,9 +1475,11 @@ function OptionRow<T extends string | number | null>({
 const TicketRow = memo(function TicketRow({
   item,
   onPressTicket,
+  selected = false,
 }: {
   item: TicketListItem;
   onPressTicket: (ticketId: string) => void;
+  selected?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const theme = useTheme();
@@ -1486,12 +1510,13 @@ const TicketRow = memo(function TicketRow({
       accessibilityRole="button"
       accessibilityLabel={t("list.ticketAccessibility", { number: item.ticket_number, title: item.title })}
       style={({ pressed }) => ({
-        padding: theme.spacing.md,
+        // Selected rows (split layout) thicken the border inward so rows never shift.
+        padding: theme.spacing.md - (selected ? 1 : 0),
         marginBottom: theme.spacing.sm,
         borderRadius: theme.borderRadius.lg,
         backgroundColor: theme.colors.card,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: selected ? 2 : 1,
+        borderColor: selected ? theme.colors.primary : theme.colors.border,
         opacity: pressed ? 0.96 : 1,
       })}
     >

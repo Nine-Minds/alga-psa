@@ -80,7 +80,9 @@ describe('sendEventEmail replyContext.issueReplyToken', () => {
     const sent = sendEmail.mock.calls[0][0];
     const token = sent.replyContext.conversationToken;
     expect(token).toEqual(expect.any(String));
-    expect(sent.templateProcessor.html).toContain(`ALGA-REPLY-TOKEN ${token}`);
+    expect(sent.templateProcessor.html).toContain(`data-alga-reply-token="${token}"`);
+    expect(sent.templateProcessor.html).not.toContain(`ALGA-REPLY-TOKEN ${token}`);
+    expect(sent.templateProcessor.text).toContain(`[ALGA-REPLY-TOKEN ${token}`);
     expect(sent.templateProcessor.text).toContain('Please reply above this line');
     expect(inserts).toContain('email_reply_tokens');
   });
@@ -90,7 +92,8 @@ describe('sendEventEmail replyContext.issueReplyToken', () => {
 
     const sent = sendEmail.mock.calls[0][0];
     expect(sent.replyContext.conversationToken).toEqual(expect.any(String));
-    expect(sent.templateProcessor.html).toContain('ALGA-REPLY-TOKEN');
+    expect(sent.templateProcessor.html).toContain('data-alga-reply-token=');
+    expect(sent.templateProcessor.html).not.toContain('ALGA-REPLY-TOKEN');
     expect(inserts).toContain('email_reply_tokens');
   });
 

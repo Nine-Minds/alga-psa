@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { principalKindOfSubject, type AuthorizationSubject } from '@alga-psa/authorization/kernel';
 import {
   mayHoldApiCredentials,
+  principalKindAdmitsCredential,
   principalMemberColumns,
   principalMembershipExpression,
   resolvePrincipalKind,
@@ -26,8 +27,12 @@ const liveFacts = {
 describe('the seat resolver declares a principal kind', () => {
   beforeAll(() => registerCoManagedSeatAuthority());
 
-  it('names the kind the registry holds a surface for, and refuses API credentials', () => {
-    expect(coManagedSeatResolver.principalKind).toEqual({ kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused' });
+  it('names the kind the registry holds a surface for, and refuses API credentials but the mobile session', () => {
+    expect(coManagedSeatResolver.principalKind).toEqual({
+      kind: CO_MANAGED_SEAT_PRINCIPAL_KIND,
+      apiCredentials: 'refused',
+      credentialPurposes: ['mobile_session'],
+    });
     expect(CO_MANAGED_SEAT_PRINCIPAL_KIND).toBe(CO_MANAGED_SEAT_SURFACE);
     expect(Object.keys(SURFACE_KINDS)).toContain(CO_MANAGED_SEAT_PRINCIPAL_KIND);
   });
@@ -48,6 +53,30 @@ describe('the seat resolver declares a principal kind', () => {
   it('leaves an ordinary MSP user, with or without facts of the tenant, an ordinary principal', () => {
     expect(principalKindOfSubject(subject())).toBeNull();
     expect(principalKindOfSubject(subject({ [CO_MANAGED_SEAT_RESOLVER_ID]: { ...liveFacts, assignments: [] } }))).toBeNull();
+  });
+});
+
+describe('which credentials a seat principal may hold', () => {
+  const seat = coManagedSeatResolver.principalKind!;
+  const key = `pk.${CO_MANAGED_SEAT_PRINCIPAL_KIND}.${'a'.repeat(64)}`;
+
+  it('admits a mobile session key only, and only one carrying the seat prefix', () => {
+    expect(principalKindAdmitsCredential(seat, { purpose: 'mobile_session' })).toBe(true);
+    expect(principalKindAdmitsCredential(seat, { purpose: 'mobile_session', plaintext: key })).toBe(true);
+    expect(principalKindAdmitsCredential(seat, { purpose: 'mobile_session', plaintext: 'a'.repeat(64) })).toBe(false);
+    expect(principalKindAdmitsCredential(seat, { purpose: 'mobile_session', plaintext: `pk.other_kind.${'a'.repeat(64)}` })).toBe(false);
+  });
+
+  it('refuses every other purpose, and a credential with no purpose', () => {
+    for (const purpose of ['general', 'mcp_user', null, undefined]) {
+      expect(principalKindAdmitsCredential(seat, { purpose, plaintext: key })).toBe(false);
+    }
+    expect(principalKindAdmitsCredential(seat)).toBe(false);
+  });
+
+  it('admits anything for an ordinary principal', () => {
+    expect(principalKindAdmitsCredential(null)).toBe(true);
+    expect(principalKindAdmitsCredential(null, { purpose: 'general', plaintext: 'a'.repeat(64) })).toBe(true);
   });
 });
 

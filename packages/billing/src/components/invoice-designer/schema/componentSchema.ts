@@ -338,6 +338,47 @@ const VALUE_TYPOGRAPHY_INSPECTOR: DesignerInspectorSchema = {
   panels: [createTypographyPanel('value-typography', 'Value Text')],
 };
 
+/**
+ * Document kinds that print onto pages, so pagination is meaningful. Work tags
+ * are fixed-size labels whose sheets are composed by the label batch pipeline.
+ */
+const PAGE_DOCUMENT_KINDS = ['invoice', 'quote', 'sales-order', 'staging-manifest', 'rma-return-slip'] as const;
+
+/**
+ * Forced breaks and keep-together bands, the two pagination rules an author
+ * reaches for when a quote has to read as a cover page, a pricing page and a
+ * signature page. Unchecking removes the property so the document's own flow
+ * decides again.
+ */
+const PAGINATION_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'pagination',
+      title: 'Pagination',
+      tab: 'layout',
+      visibleWhen: { kind: 'documentKindIn', kinds: PAGE_DOCUMENT_KINDS },
+      fields: [
+        {
+          kind: 'boolean',
+          id: 'breakBefore',
+          domId: 'designer-pagination-start-new-page',
+          label: 'Start on a new page',
+          path: 'style.breakBefore',
+          checkedValue: 'page',
+        },
+        {
+          kind: 'boolean',
+          id: 'breakInside',
+          domId: 'designer-pagination-keep-together',
+          label: 'Keep together on one page',
+          path: 'style.breakInside',
+          checkedValue: 'avoid',
+        },
+      ],
+    },
+  ],
+};
+
 const SECTION_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -781,7 +822,7 @@ const TOTALS_ROWS_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
-export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
+const BASE_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
     type: 'document',
     label: 'Document',
@@ -847,6 +888,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'action-button',
         'divider',
         'spacer',
+        'page-break',
       ],
       allowedParents: ['document'],
     },
@@ -894,6 +936,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
       ],
       allowedParents: ['page'],
     },
@@ -928,6 +971,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
         'container',
       ],
       allowedParents: ['section'],
@@ -1376,13 +1420,67 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
         'container',
       ],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: CONTAINER_INSPECTOR,
   },
+  'page-break': {
+    type: 'page-break',
+    label: 'Page Break',
+    description: 'Starts the next block on a new page.',
+    category: 'Structure',
+    defaults: {
+      // Zero height: the break is an instruction, not content. The canvas draws
+      // its own marker band; the document gets nothing but the break itself.
+      size: { width: 320, height: 24 },
+      style: { breakAfter: 'page' },
+      metadata: {},
+    },
+    hierarchy: {
+      allowedChildren: [],
+      allowedParents: ['page', 'column', 'container', 'section'],
+    },
+    inspector: COMMON_INSPECTOR,
+  },
 };
+
+/**
+ * The document root is the page sequence itself and the Page Break block is a
+ * forced break already; everything else an author can place on a page can open
+ * one or ask to stay whole.
+ */
+const UNPAGINATED_COMPONENT_TYPES: ReadonlySet<DesignerComponentType> = new Set(['document', 'page-break']);
+
+/**
+ * Pagination belongs on every block, not only on containers: authors reach for
+ * it on the block they want on its own page — a line-items table as readily as
+ * a section — and wrapping that block in a container first is not an answer.
+ *
+ * It is deliberately not filtered by block type. What decides whether a forced
+ * break is honoured is the PARENT's layout, not the child's kind: a block in a
+ * column stack fragments, a block among a row's items has its break swallowed
+ * (measured in real Chromium — see pageBreaks.pdf.test.ts). A label in a
+ * column can open a page; the same label inside a totals row cannot. Offering
+ * the toggle by type would therefore both hide it where it works and show it
+ * where it does not, so every block is offered it and the parent decides.
+ */
+const withPaginationPanel = (
+  schemas: Record<DesignerComponentType, DesignerComponentSchema>
+): Record<DesignerComponentType, DesignerComponentSchema> =>
+  Object.fromEntries(
+    Object.entries(schemas).map(([type, schema]) => [
+      type,
+      UNPAGINATED_COMPONENT_TYPES.has(type as DesignerComponentType)
+        ? schema
+        : { ...schema, inspector: mergeInspectorSchemas(schema.inspector, PAGINATION_INSPECTOR) },
+    ])
+  ) as Record<DesignerComponentType, DesignerComponentSchema>;
+
+export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> =
+  withPaginationPanel(BASE_COMPONENT_SCHEMAS);
 
 export const getComponentSchema = (type: DesignerComponentType): DesignerComponentSchema =>
   DESIGNER_COMPONENT_SCHEMAS[type];

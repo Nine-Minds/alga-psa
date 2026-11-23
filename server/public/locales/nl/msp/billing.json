@@ -526,7 +526,8 @@
   "templateRenderer": {
     "loading": "Sjabloonvoorbeeld laden...",
     "errorPrefix": "Fout:",
-    "empty": "Selecteer een factuur en een sjabloon om een ​​voorbeeld te bekijken."
+    "empty": "Selecteer een factuur en een sjabloon om een ​​voorbeeld te bekijken.",
+    "frameTitle": "Factuurvoorbeeld"
   },
   "templateDesigner": {
     "propertyEditor": {

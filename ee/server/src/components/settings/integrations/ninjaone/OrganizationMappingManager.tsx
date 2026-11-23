@@ -25,10 +25,12 @@ import {
   updateNinjaOneOrganizationMapping,
   syncNinjaOneOrganizations,
 } from '../../../../lib/actions/integrations/ninjaoneActions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds, useClientNames } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 
@@ -49,7 +51,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
-  const [companies, setCompanies] = useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +64,16 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const [mappingsResult, companiesResult, contactsResult] = await Promise.all([
+      const [mappingsResult, contactsResult] = await Promise.all([
         getNinjaOneOrganizationMappings(),
-        getAllClients(false), // Only active clients
         getAllContacts('active'),
       ]);
+      const mappedClients = await lookupClientsByIds(
+        searchClientsForPicker,
+        mappingsResult.map((m) => m.client_id).filter((id): id is string => !!id),
+      );
       setMappings(mappingsResult);
-      setCompanies(companiesResult);
+      setKnownClients(mappedClients);
       setContacts(contactsResult ?? []);
     } catch (err) {
       console.error('Failed to load NinjaOne organization mappings:', err);
@@ -118,6 +124,9 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
   // FR-G4: re-pointing an organization moves its devices, so confirm first.
   const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
 
   const handleCompanyChangeConfirmed = async (mappingId: string, companyId: string | null) => {
     setSavingMappingId(mappingId);
@@ -308,7 +317,8 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
             <ClientPicker
               id={`ninjaone-company-picker-${mapping.mapping_id}`}
-              clients={companies}
+              searchClients={searchClientsForPicker}
+              knownClients={knownClients}
               selectedClientId={mapping.client_id ?? null}
               onSelect={(clientId) => {
                 if (isSaving) return;
@@ -423,7 +433,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     <>
     <RmmOrganizationClientChangeDialog
       mappingId={pendingClientChange?.mappingId ?? null}
-      pendingClientName={companies.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      pendingClientName={pendingClientName}
       isOpen={Boolean(pendingClientChange)}
       onCancel={() => setPendingClientChange(null)}
       onConfirm={() => {
@@ -548,7 +558,6 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         if (quickAddContactFor) handleDefaultContactChange(quickAddContactFor.mappingId, newContact.contact_name_id);
         setQuickAddContactFor(null);
       },
-      clients: companies,
       selectedClientId: quickAddContactFor?.clientId ?? null,
     })}
     </>

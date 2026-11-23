@@ -1,0 +1,5 @@
+[
+  {"id":"T001","description":"Unit: identifier derivation returns the whole number for ALGA-2026-0002826, TIC0002826, and strips a leading # and surrounding whitespace","group":"Unit","featureIds":["F001"],"implemented":true},
+  {"id":"T002","description":"Unit: compiled search SQL uses exact identifier match for a full hyphenated number and no widening LIKE on a partial chunk","group":"Unit","featureIds":["F002"],"implemented":true},
+  {"id":"T003","description":"DB integration: with several tickets sharing a date prefix, a full-number query returns only that ticket; a prefix-only query still returns the group","group":"DB-backed","featureIds":["F001","F002","F003"],"implemented":true}
+]

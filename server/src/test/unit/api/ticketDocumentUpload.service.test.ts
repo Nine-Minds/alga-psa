@@ -247,6 +247,34 @@ describe('TicketService.uploadTicketDocument', () => {
     await expect(service.uploadTicketDocument(ticketId, file, context)).resolves.toMatchObject({ document_id: 'doc-2' });
   });
 
+  it('passes isClientVisible and the caller as the permission subject to the upload core', async () => {
+    const service = new TicketService();
+    const insertedDocuments: Record<string, unknown>[] = [];
+    withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) =>
+      callback((table: string) => ({
+        insert: vi.fn(async (record: Record<string, unknown>) => { if (table === 'documents') insertedDocuments.push(record); }),
+        where: vi.fn(() => ({ first: vi.fn().mockResolvedValue(null) })),
+      })),
+    );
+    const knex = vi.fn((table: string) => {
+      if (table === 'tickets') return createSelectBuilder({ ticket_id: ticketId });
+      if (table === 'document_folders') return createSelectBuilder(null);
+      if (table === 'document_types') return createTypeBuilder(null);
+      if (table === 'shared_document_types') return createTypeBuilder({ type_id: 'shared-pdf' });
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getDocumentById').mockResolvedValue({ document_id: 'doc-3', is_client_visible: true });
+
+    const file = new File([Buffer.from('hello')], 'report.pdf', { type: 'application/pdf' });
+    // No user on the context: the core refuses client-visible (fail closed) before storing anything.
+    await expect(service.uploadTicketDocument(ticketId, file, context, { isClientVisible: true })).rejects.toMatchObject({ name: 'ForbiddenError' });
+    expect(uploadFileMock).not.toHaveBeenCalled();
+    // The default stays internal.
+    await service.uploadTicketDocument(ticketId, file, context);
+    expect(insertedDocuments[0]).not.toHaveProperty('is_client_visible');
+  });
+
   it('T015: rejects uploads that omit the file payload', async () => {
     const service = new TicketService();
     const knex = vi.fn((table: string) => {

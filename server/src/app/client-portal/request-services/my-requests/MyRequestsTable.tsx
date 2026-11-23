@@ -6,6 +6,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { ServiceRequestTicketLink } from '../ServiceRequestTicketLink';
 import { getSubmissionStatusPresentation } from '../submissionStatusPresentation';
 
 export interface MyRequestsTableRow {
@@ -25,6 +26,8 @@ interface MyRequestsTableLabels {
   noTicket: string;
   details: string;
   view: string;
+  /** Link text when a ticket exists but its number is unavailable. */
+  viewTicket: string;
   unknownDate: string;
   statuses: {
     pending: string;
@@ -83,12 +86,11 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
             return <span className="text-[rgb(var(--color-text-500))]">{labels.noTicket}</span>;
           }
           return (
-            <Link
-              href={`/client-portal/tickets/${row.created_ticket_id}`}
-              className="text-[rgb(var(--color-primary-600))] hover:underline"
-            >
-              {row.ticket_number ? `#${row.ticket_number}` : labels.view}
-            </Link>
+            <ServiceRequestTicketLink
+              ticketId={row.created_ticket_id}
+              ticketNumber={row.ticket_number}
+              labels={{ viewTicket: labels.viewTicket }}
+            />
           );
         },
       },

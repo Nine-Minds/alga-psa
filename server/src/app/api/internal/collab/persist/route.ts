@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import * as Y from 'yjs';
 import { yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
-import { persistCollabSnapshot } from '@alga-psa/documents/lib/collabPersistence';
+import { authorizeCollabWriter, persistCollabSnapshot } from '@alga-psa/documents/lib/collabPersistence';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -24,20 +24,25 @@ export async function POST(req: NextRequest) {
     return json({ error: 'Invalid API key' }, 401);
   }
 
-  let body: { tenantId?: string; documentId?: string; update?: string };
+  let body: { tenantId?: string; documentId?: string; update?: string; credential?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { tenantId, documentId, update } = body;
-  if (!tenantId || !documentId || !update) {
-    return json({ error: 'Missing required fields: tenantId, documentId, update' }, 400);
+  const { tenantId, documentId, update, credential } = body;
+  if (!tenantId || !documentId || !update || !credential) {
+    return json({ error: 'Missing required fields: tenantId, documentId, update, credential' }, 400);
   }
 
   const ydoc = new Y.Doc();
   try {
+    const authorization = await authorizeCollabWriter(tenantId, documentId, credential);
+    if (!authorization.allowed) {
+      return json({ success: false, permissionDenied: true, message: authorization.message }, 403);
+    }
+
     Y.applyUpdate(ydoc, new Uint8Array(Buffer.from(update, 'base64')));
     const fragment = ydoc.getXmlFragment('prosemirror');
 
@@ -48,11 +53,12 @@ export async function POST(req: NextRequest) {
     }
 
     const prosemirrorJson = yXmlFragmentToProsemirrorJSON(fragment);
-    const result = await persistCollabSnapshot(tenantId, documentId, prosemirrorJson);
+    const result = await persistCollabSnapshot(tenantId, documentId, prosemirrorJson, credential);
 
     if (!result.success) {
-      // Document not found is expected/benign (e.g. deleted while editing).
-      return json(result, result.message === 'Document not found.' ? 404 : 500);
+      if (result.permissionDenied) return json(result, 403);
+      // Missing/deleted content is expected/benign (e.g. document removed while editing).
+      return json(result, result.message?.includes('not found') ? 404 : 500);
     }
     return json({ success: true }, 200);
   } catch (error) {

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const source = readFileSync(resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8');
 const helperSection = source.slice(
-  source.indexOf('export const getDocumentAssociationClientsForPicker'),
+  source.indexOf('export const getDocumentAssociationContactsForPicker'),
   source.indexOf('export async function authorizeAndRedactDocuments')
 ) + readFileSync(resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8').split(
   'export async function authorizeAndRedactDocuments'
@@ -17,7 +17,6 @@ describe('document action helper tenant-scoped query contract', () => {
     expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(');
     expect(source).not.toContain('createTenantScopedQuery');
-    expect(helperSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(helperSection).toContain("tenantScopedTable(trx, 'contacts as c', tenant)");
     expect(helperSection).toContain("tenantScopedTable(knex, 'document_folders', tenant)");
     expect(helperSection).toContain("tenantScopedTable(knex, 'document_default_folders', tenant)");

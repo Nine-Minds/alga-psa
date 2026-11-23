@@ -11,7 +11,8 @@
       "oneTime": "Eenmalig",
       "other": "Overig",
       "quarterly": "Per kwartaal",
-      "semiAnnually": "Halfjaarlijks"
+      "semiAnnually": "Halfjaarlijks",
+      "weekly": "Wekelijks"
     },
     "cadenceTotal": "Totaal {{cadence}}",
     "currency": "Valuta",
@@ -29,6 +30,7 @@
     "invoiceTitle": "FACTUUR",
     "issueDate": "Factuurdatum",
     "locationSubtotal": "Subtotaal locatie",
+    "unassignedLocation": "Hele offerte",
     "monthly": "Maandelijks",
     "monthlyItems": "Maandelijkse regels",
     "monthlyTotal": "Maandtotaal",
@@ -140,7 +142,9 @@
     "replacementSerial": "Serienummer vervanging",
     "shipping": "Verzending",
     "returnBy": "Retour vóór",
-    "returnShipTo": "Retour verzenden naar"
+    "returnShipTo": "Retour verzenden naar",
+    "yes": "Ja",
+    "no": "Nee"
   },
   "errors": {
     "permissions": {

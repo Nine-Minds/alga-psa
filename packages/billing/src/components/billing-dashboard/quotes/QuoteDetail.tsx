@@ -22,6 +22,7 @@ import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { QuoteDecisionLine, emailLinkDecisionForActivity } from './QuoteDecisionLine';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, markQuoteAccepted, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
@@ -189,7 +190,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
   const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string; documentHtml?: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -810,13 +811,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     try {
       setIsPreviewLoading2(true);
       setError(null);
-      const result = await renderQuotePreview(quote.quote_id);
+      // Drawn as the pages it prints as, so a layout with page breaks is read as sheets.
+      const result = await renderQuotePreview(quote.quote_id, undefined, { paginate: true });
 
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
       }
 
-      setPreviewHtml(result as { html: string; css: string });
+      setPreviewHtml(result as { html: string; css: string; documentHtml?: string });
       setIsPreviewOpen(true);
     } catch (actionError) {
       setError(
@@ -1603,7 +1605,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         )}
       >
         <DialogContent>
-          {previewHtml ? (
+          {previewHtml?.documentHtml ? (
+            <PreviewSheetFrame
+              html={previewHtml.documentHtml}
+              title={t('quotePreview.title', { defaultValue: 'Quote Preview' })}
+              zoomMode="fit"
+              automationId="quote-detail-preview-pages"
+            />
+          ) : previewHtml ? (
+            // A single roll beats no preview when the chunking pass could not run.
             <div className="rounded border border-border p-4 bg-white text-black" style={{ colorScheme: 'light' }}>
               <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
               <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />

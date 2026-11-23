@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  collectElementVisibilityRules,
   computeVisibleFieldKeys,
   evaluateVisibilityRule,
+  parseElementVisibilityRules,
   parseVisibilityRules,
   resolveVisibilitySourceValue,
   validateVisibilityRules,
@@ -129,5 +131,80 @@ describe('computeVisibleFieldKeys', () => {
     expect(computeVisibleFieldKeys(fields, rules, { a: true }, ctx)).toEqual(['a', 'c']);
     const boolRules: VisibilityRule[] = [{ fieldKey: 'b', source: 'a', operator: 'equals', value: true }];
     expect(computeVisibleFieldKeys(fields, boolRules, { a: true }, ctx)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('element-owned rules', () => {
+  it('drops malformed visibleWhen entries and keeps the rest', () => {
+    expect(
+      parseElementVisibilityRules([
+        { source: ' needs_laptop ', operator: 'is-true' },
+        { source: 'dept', operator: 'nope' },
+        { source: '   ', operator: 'equals', value: 'x' },
+        'not an object',
+        { source: 'dept', operator: 'equals', value: 'sales' },
+      ])
+    ).toEqual([
+      { source: 'needs_laptop', operator: 'is-true' },
+      { source: 'dept', operator: 'equals', value: 'sales' },
+    ]);
+  });
+
+  it('flattens every element rule into evaluator form', () => {
+    expect(
+      collectElementVisibilityRules([
+        { key: 'needs_laptop', type: 'checkbox' },
+        { key: 'hardware', type: 'section', visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }] },
+        { key: 'nokey_element', visibleWhen: 'garbage' },
+      ])
+    ).toEqual([{ fieldKey: 'hardware', source: 'needs_laptop', operator: 'is-true' }]);
+  });
+});
+
+describe('a hidden section hides the questions it owns', () => {
+  const onboarding = [
+    { key: 'needs_laptop', type: 'checkbox' },
+    { key: 'hardware', type: 'section' },
+    { key: 'laptop_model', type: 'radio' },
+    { key: 'peripherals', type: 'multi-select' },
+    { key: 'anything_else', type: 'section' },
+    { key: 'notes', type: 'long-text' },
+  ];
+  const rules: VisibilityRule[] = [
+    { fieldKey: 'hardware', source: 'needs_laptop', operator: 'is-true' },
+  ];
+
+  it('hides the section and its members while the box is unticked', () => {
+    expect(computeVisibleFieldKeys(onboarding, rules, { needs_laptop: false }, ctx)).toEqual([
+      'needs_laptop',
+      'anything_else',
+      'notes',
+    ]);
+  });
+
+  it('brings all of them back once it is ticked', () => {
+    expect(computeVisibleFieldKeys(onboarding, rules, { needs_laptop: true }, ctx)).toEqual([
+      'needs_laptop',
+      'hardware',
+      'laptop_model',
+      'peripherals',
+      'anything_else',
+      'notes',
+    ]);
+  });
+
+  it('counts an answer inside a hidden section as empty for later rules', () => {
+    const chained: VisibilityRule[] = [
+      ...rules,
+      { fieldKey: 'notes', source: 'laptop_model', operator: 'has-value' },
+    ];
+    expect(
+      computeVisibleFieldKeys(
+        onboarding,
+        chained,
+        { needs_laptop: false, laptop_model: 'macbook_air_13' },
+        ctx
+      )
+    ).toEqual(['needs_laptop', 'anything_else']);
   });
 });

@@ -69,6 +69,10 @@ COPY ./packages/ ./packages/
 RUN test -f /app/packages/core/dist/index.js \
     && test -f /app/packages/db/dist/index.js
 
+# The paginated invoice/quote preview reads this file off disk at runtime; without
+# it the preview silently falls back to one unpaginated roll.
+RUN test -f /app/node_modules/pagedjs/dist/paged.polyfill.min.js
+
 # Copy pre-built Next.js artifacts (must exist locally with EE features)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
 COPY --chown=1000:1000 ./server/.next ./server/.next

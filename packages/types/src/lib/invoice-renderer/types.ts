@@ -284,6 +284,12 @@ export interface WasmInvoiceViewModel {
 export interface RenderOutput {
   html: string;
   css: string;
+  /**
+   * The same render as a full HTML document, drawn as the pages it prints as (one sheet per
+   * printed page, chunked by the engine that prints it). Only produced for callers that ask
+   * to paginate; a caller that shows the fragment inline never pays for the headless pass.
+   */
+  documentHtml?: string;
 }
 
 // --- Layout Data Structure (Returned by Wasm) ---

@@ -1225,11 +1225,23 @@
           "viewDetails": "Ver detalles"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contacto con error",
+          "contactsFailed_other": "{{count}} contactos con error",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "y {{count}} más",
           "noResults": "No se registraron resultados de inquilino.",
+          "noticeHeading": "Notas",
+          "stages": {
+            "create": "creación",
+            "link": "vinculación",
+            "match": "coincidencia"
+          },
           "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
+          "summaryFailed": "Contactos con errores: {{count}}",
           "summarySkipped": "Resultados de aprovisionamiento omitidos: {{count}}",
           "tenantHeader": "Inquilino {{tenant}} · {{status}}",
-          "unknownTenant": "desconocido"
+          "unknownTenant": "desconocido",
+          "userUnknown": "usuario desconocido"
         },
         "empty": "Aún no se encontraron ejecuciones de sincronización.",
         "errors": {

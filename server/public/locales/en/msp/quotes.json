@@ -333,6 +333,16 @@
       "addLocation": "+ Add location",
       "fromTemplate": "+ From template"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remove this location?",
+        "message": "This location still has {{count}} line item(s). Choose what happens to them.",
+        "moveOption": "Move these items to {{location}}",
+        "ungroupOption": "Keep these items and stop grouping by location",
+        "deleteOption": "Delete these items",
+        "confirm": "Remove location"
+      }
+    },
     "clientFacing": {
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
@@ -588,10 +598,13 @@
       "groupHeading": "Location {{index}}",
       "pickerPlaceholder": "Select a location",
       "unassigned": "Items without a location are listed here until one is chosen.",
+      "quoteWide": "Quote-wide",
+      "quoteWideHint": "Discounts apply across the quote, so they are not tied to a location.",
       "removeGroup": "Remove location",
       "subtotal": "Location subtotal",
       "addLocationButton": "+ Add location",
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
+      "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
     }
   },
@@ -783,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Back to Layouts",
+      "back": "Back to Quote Layouts",
       "rerun": "Re-run",
       "saveLayout": "Save Layout"
     },
@@ -792,8 +805,6 @@
       "copyOf": "Copy of {{name}}",
       "standardTemplate": "Standard Template"
     },
-    "title": "Quote Layout Editor",
-    "description": "Design the quote layout using the visual editor, then preview with sample data.",
     "errors": {
       "exportAst": "Failed to export template AST from visual workspace: {{message}}",
       "load": "Failed to load quote template editor",
@@ -806,16 +817,13 @@
       "quoteDetailLoad": "Failed to load quote details."
     },
     "fields": {
-      "layoutDetails": "Layout Details",
+      "created": "Created {{time}}",
+      "notSaved": "Not saved yet",
+      "savedAt": "Saved {{time}}",
       "templateName": "Template Name",
       "version": "Version"
     },
-    "footer": {
-      "created": "Created:",
-      "lastUpdated": "Last Updated:"
-    },
     "headings": {
-      "editLayout": "Edit Quote Layout",
       "newLayout": "New Quote Layout"
     },
     "placeholders": {
@@ -837,7 +845,14 @@
       "noQuotesFound": "No quotes found.",
       "selectQuote": "Select Quote",
       "selectQuoteHint": "Select a quote to preview data-bound output.",
-      "loadingQuoteDetails": "Loading quote details..."
+      "loadingQuoteDetails": "Loading quote details...",
+      "frameTitle": "Quote preview",
+      "zoom": {
+        "fit": "Fit",
+        "actual": "100%",
+        "label": "Preview zoom",
+        "fitWithScale": "Fit ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Render",
@@ -852,6 +867,9 @@
       "preview": "Preview",
       "transforms": "Transforms",
       "visual": "Visual"
+    },
+    "titles": {
+      "edit": "Edit Layout: {{name}}"
     }
   },
   "templatesPage": {

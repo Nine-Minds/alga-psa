@@ -65,7 +65,7 @@ import { useActivityFilterState } from '../hooks/useActivityFilterState';
 import { DEFAULT_TABLE_TYPES } from './constants';
 
 const emptyOptions = {
-  priorities: [], clients: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
+  priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
 };
 
 function Harness({ focus = false, onViewAll = vi.fn() }: { focus?: boolean; onViewAll?: any }) {

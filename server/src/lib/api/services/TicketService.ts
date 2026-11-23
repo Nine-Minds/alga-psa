@@ -1550,7 +1550,12 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext, commentAttachmentDraft = false): Promise<IDocument> {
+  async uploadTicketDocument(
+    ticketId: string,
+    file: File,
+    context: ServiceContext,
+    { commentAttachmentDraft = false, isClientVisible = false }: { commentAttachmentDraft?: boolean; isClientVisible?: boolean } = {},
+  ): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1586,7 +1591,8 @@ export class TicketService extends BaseService<ITicket> {
         body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
-      options: { commentAttachmentDraft },
+      options: { commentAttachmentDraft, isClientVisible },
+      permissionContext: context,
       loadDocument: (documentId) => this.getDocumentById(documentId, context),
     });
   }
@@ -1999,6 +2005,7 @@ export class TicketService extends BaseService<ITicket> {
           subcategory_id: data.subcategory_id,
           entered_by: context.userId,
           assigned_to: data.assigned_to,
+          assigned_team_id: data.assigned_team_id,
           priority_id: data.priority_id,
           severity_id: data.severity_id,
           urgency_id: data.urgency_id,

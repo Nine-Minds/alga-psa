@@ -197,8 +197,9 @@ export type { ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTempl
 export { renderRegisteredDocumentPdf } from './registeredDocumentPdfService';
 export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
 export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
-export { LabelLayoutError } from '../lib/label-batch/layout';
-export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';
+export { LabelLayoutError, resolveCommonTemplatePageSize } from '../lib/label-batch/layout';
+export type { LabelBatchLayout, LabelLayoutErrorCode, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';
+export { getStandardLabelTemplateAstByCode } from '../lib/label-template-ast/standardTemplates';
 
 export {
   submitQuoteLinkDecision,

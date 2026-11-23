@@ -11,7 +11,8 @@
       "oneTime": "〖Ȯƞḗ-ŧīḿḗ ····〗",
       "other": "〖Ȯŧħḗř ··〗",
       "quarterly": "〖Ɋŭȧřŧḗřŀẏ ····〗",
-      "semiAnnually": "〖Şḗḿī-ȧƞƞŭȧŀŀẏ ······〗"
+      "semiAnnually": "〖Şḗḿī-ȧƞƞŭȧŀŀẏ ······〗",
+      "weekly": "〖Ẇḗḗķŀẏ ···〗"
     },
     "cadenceTotal": "〖{{cadence}} Ŧȯŧȧŀ ·······〗",
     "currency": "〖Ƈŭřřḗƞƈẏ ····〗",
@@ -29,6 +30,7 @@
     "invoiceTitle": "〖ĪȠṼȮĪƇḖ ···〗",
     "issueDate": "〖Īşşŭḗ Ḓȧŧḗ ····〗",
     "locationSubtotal": "〖Ŀȯƈȧŧīȯƞ Şŭƀŧȯŧȧŀ ·······〗",
+    "unassignedLocation": "〖Ɋŭȯŧḗ-ẇīḓḗ ····〗",
     "monthly": "〖Ḿȯƞŧħŀẏ ···〗",
     "monthlyItems": "〖Ḿȯƞŧħŀẏ Īŧḗḿş ······〗",
     "monthlyTotal": "〖Ḿȯƞŧħŀẏ Ŧȯŧȧŀ ······〗",
@@ -140,7 +142,9 @@
     "replacementSerial": "〖Řḗƥŀȧƈḗḿḗƞŧ şḗřīȧŀ ········〗",
     "shipping": "〖Şħīƥƥīƞɠ ····〗",
     "returnBy": "〖Řḗŧŭřƞ ƀẏ ····〗",
-    "returnShipTo": "〖Řḗŧŭřƞ şħīƥ ŧȯ ······〗"
+    "returnShipTo": "〖Řḗŧŭřƞ şħīƥ ŧȯ ······〗",
+    "yes": "〖Ẏḗş ··〗",
+    "no": "〖Ƞȯ ·〗"
   },
   "errors": {
     "permissions": {

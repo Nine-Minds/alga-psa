@@ -135,7 +135,7 @@ function scopedAssets(
     clientColumn: 'assets.client_id',
     contactColumn: 'assets.contact_name_id',
     // FR-E7 / FR-E7b: a shared-workspace member is visible to its users.
-    sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+    sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
   });
 }
 

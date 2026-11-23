@@ -15,6 +15,7 @@ import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
+import { htmlToVisibleText } from '@shared/lib/email/replyParser';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
@@ -221,6 +222,61 @@ function projectSponsorEmailContext(context: Record<string, unknown>, redactions
   return { ticket: safeTicket, comment: safeComment, ...(context.recipient ? { recipient: context.recipient } : {}) };
 }
 
+const PREHEADER_MAX_CHARS = 140;
+const HIDDEN_STYLE = 'display:none;max-height:0;overflow:hidden;';
+/**
+ * Invisible padding after the preheader excerpt. Mail clients build the preview from all text in
+ * order, hidden or not, so without it the preview reads the excerpt and then the same opening
+ * lines again from the visible body. The filler fills the preview width so the body is not reached.
+ */
+const PREHEADER_FILLER = '&zwnj;&nbsp;'.repeat(90);
+
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '\u00b7', copy: '\u00a9',
+  ndash: '\u2013', mdash: '\u2014', hellip: '\u2026',
+};
+
+/** htmlToVisibleText leaves most named entities encoded; decode them so escaping below is not double. */
+function decodeEntities(value: string): string {
+  return value.replace(/&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z]+));/g, (match, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()] ?? match;
+    const code = dec ? parseInt(dec, 10) : parseInt(hex, 16);
+    return Number.isFinite(code) && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+  });
+}
+
+/**
+ * Inbox-preview excerpt: the first two non-empty lines of the rendered body,
+ * whitespace-collapsed and cut on a word boundary. Built only from rendered output
+ * (projection/suppression have already run), never from template variables.
+ */
+function buildPreheaderText(html: string, text: string): string {
+  // htmlToVisibleText keeps block line breaks (so "first two lines" is meaningful) and drops
+  // <style>/<script>; <head>/<title> text is dropped here. `text` is one collapsed line, so it
+  // is only a fallback.
+  const visible = htmlToVisibleText(html.replace(/<head\b[\s\S]*?<\/head>/gi, ' ').replace(/<title\b[\s\S]*?<\/title>/gi, ' '));
+  const source = visible.trim() ? visible : text;
+  const joined = decodeEntities(source)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' ');
+  if (joined.length <= PREHEADER_MAX_CHARS) return joined;
+  const cut = joined.slice(0, PREHEADER_MAX_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd();
+}
+
 function applyReplyMarkers(
   html: string,
   text: string,
@@ -237,13 +293,30 @@ function applyReplyMarkers(
     .join(' ');
 
   const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
-  const tokenString = footerLines[0];
 
-  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">${tokenString}</div>`;
-  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
+  // Token and boundary carry attributes only: any text in them would become the inbox preview.
+  // The token is also in the text part's bottom lines and the outbound Message-ID headers.
+  const hiddenToken = `<div ${attrs} style="${HIDDEN_STYLE}"></div>`;
+  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="${HIDDEN_STYLE}"></div>`;
+  const preheaderText = buildPreheaderText(html, text);
+  const hiddenPreheader = preheaderText
+    ? `<div data-alga-preheader="true" style="${HIDDEN_STYLE}">${escapeHtmlText(preheaderText)}<span>${PREHEADER_FILLER}</span></div>`
+    : '';
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
-  const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
+  const hiddenBlock = `${hiddenPreheader}${hiddenToken}${hiddenBoundary}`;
+
+  // Full documents (wrapEmailLayout): hidden block right after <body …> so it precedes all
+  // content, banner just before the last </body> so it stays inside the card document.
+  // Fragments: prepend the block, append the banner.
+  const bodyOpen = /<body\b[^>]*>/i.exec(html);
+  const withHidden = bodyOpen
+    ? `${html.slice(0, bodyOpen.index + bodyOpen[0].length)}${hiddenBlock}${html.slice(bodyOpen.index + bodyOpen[0].length)}`
+    : `${hiddenBlock}${html}`;
+  const bodyCloseIndex = withHidden.toLowerCase().lastIndexOf('</body>');
+  const augmentedHtml = bodyCloseIndex >= 0
+    ? `${withHidden.slice(0, bodyCloseIndex)}${visibleBanner}${withHidden.slice(bodyCloseIndex)}`
+    : `${withHidden}${visibleBanner}`;
 
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
@@ -317,6 +390,37 @@ export function resolveDeliveryClaim(
   return null;
 }
 
+/** The locale an event email is rendered in; exported so callers can format values to match. */
+export async function resolveEventEmailLocale(
+  params: Pick<SendEmailParams, 'tenantId' | 'to' | 'locale' | 'recipientUserId' | 'recipientClientId'>,
+): Promise<SupportedLocale> {
+  if (params.locale) {
+    logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: params.locale });
+    return params.locale;
+  }
+
+  // Get recipient information for locale resolution
+  const baseInfo = params.recipientUserId
+    ? { email: params.to, userId: params.recipientUserId }
+    : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
+
+  // Merge in clientId if provided (for contacts without user accounts yet)
+  const recipientInfo = {
+    ...baseInfo,
+    ...(params.recipientClientId && { clientId: params.recipientClientId })
+  };
+
+  const recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+  logger.debug('[SendEventEmail] Resolved recipient locale:', {
+    locale: recipientLocale,
+    email: params.to,
+    userId: recipientInfo.userId,
+    userType: recipientInfo.userType,
+    clientId: recipientInfo.clientId
+  });
+  return recipientLocale;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     let sponsorRedactions: readonly string[] | null = null;
@@ -342,31 +446,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Resolve recipient locale for language-aware email templates
-    let recipientLocale: SupportedLocale;
-    if (params.locale) {
-      recipientLocale = params.locale;
-      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
-    } else {
-      // Get recipient information for locale resolution
-      const baseInfo = params.recipientUserId
-        ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
-
-      // Merge in clientId if provided (for contacts without user accounts yet)
-      const recipientInfo = {
-        ...baseInfo,
-        ...(params.recipientClientId && { clientId: params.recipientClientId })
-      };
-
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId,
-        userType: recipientInfo.userType,
-        clientId: recipientInfo.clientId
-      });
-    }
+    const recipientLocale = await resolveEventEmailLocale(params);
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);

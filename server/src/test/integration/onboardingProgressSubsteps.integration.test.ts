@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+
 // getOnboardingProgressAction lives in @alga-psa/onboarding and reads through
 // @alga-psa/db (getConnection + tenantDb), @alga-psa/tenancy/server, and the
 // @enterprise stubs — mock those seams (the pre-modularization server/src and

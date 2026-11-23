@@ -11,7 +11,8 @@
       "oneTime": "Único",
       "other": "Outro",
       "quarterly": "Trimestral",
-      "semiAnnually": "Semestral"
+      "semiAnnually": "Semestral",
+      "weekly": "Semanal"
     },
     "cadenceTotal": "Total {{cadence}}",
     "currency": "Moeda",
@@ -29,6 +30,7 @@
     "invoiceTitle": "FATURA",
     "issueDate": "Data de emissão",
     "locationSubtotal": "Subtotal do local",
+    "unassignedLocation": "Toda a cotação",
     "monthly": "Mensal",
     "monthlyItems": "Itens mensais",
     "monthlyTotal": "Total mensal",
@@ -140,7 +142,9 @@
     "replacementSerial": "Número de série da substituição",
     "shipping": "Envio",
     "returnBy": "Devolver até",
-    "returnShipTo": "Enviar devolução para"
+    "returnShipTo": "Enviar devolução para",
+    "yes": "Sim",
+    "no": "Não"
   },
   "errors": {
     "permissions": {

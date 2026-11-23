@@ -14,6 +14,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Link2, Paperclip, X } from 'lucide-react';
 import { createClientTicket, finalizeClientTicketDescription } from '@alga-psa/client-portal/actions';
 import { getClientTicketFormData, getClientTicketPrioritiesForBoard } from '@alga-psa/tickets/actions/ticketFormActions';
+import { getBoardDefaultPriorityId } from '@alga-psa/tickets/lib/boardDefaultPriority';
 import { IPriority, IBoard, ITicket } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -97,6 +98,7 @@ export function ClientAddTicket({
   const [boardId, setBoardId] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const priorityRequestRef = useRef(0);
   const { data: session } = useSession();
   const userId = session?.user?.id;
 
@@ -125,11 +127,15 @@ export function ClientAddTicket({
         const formData = await getClientTicketFormData();
         const portalBoards = formData.boards as IBoard[] | undefined;
         const mappedBoards = portalBoards || [];
+        const loadedPriorities = (formData.priorities as IPriority[] | undefined) ?? [];
         setBoards(mappedBoards);
-        setPriorities(formData.priorities as IPriority[]);
+        setPriorities(loadedPriorities);
         // The loader orders the tenant default first and loads its priorities.
         const preselected = mappedBoards.find((board) => board.is_default) ?? mappedBoards[0];
         setBoardId(preselected?.board_id ?? '');
+        // Clients cannot judge priority levels (an ITIL board reads "P1 - Critical"
+        // ... "P5 - Planning"), so the board's own default answers for them.
+        setPriorityId(getBoardDefaultPriorityId(preselected, loadedPriorities));
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -146,13 +152,26 @@ export function ClientAddTicket({
   const handleBoardChange = async (nextBoardId: string) => {
     setBoardId(nextBoardId);
     if (!nextBoardId || nextBoardId === boardId) return;
-    // Boards can carry different priority types, so the priority list follows the board.
-    setPriorityId('');
+    // Boards can carry different priority types, so the priority list and the
+    // preselected default both follow the board. Rapid switching can resolve out
+    // of order, so only the latest request may write either of them.
+    const requestId = priorityRequestRef.current + 1;
+    priorityRequestRef.current = requestId;
     try {
-      setPriorities(await getClientTicketPrioritiesForBoard(nextBoardId));
+      const nextPriorities = await getClientTicketPrioritiesForBoard(nextBoardId);
+      if (priorityRequestRef.current !== requestId) return;
+      setPriorities(nextPriorities);
+      setPriorityId(
+        getBoardDefaultPriorityId(
+          boards.find((board) => board.board_id === nextBoardId),
+          nextPriorities
+        )
+      );
     } catch (error) {
       console.error('Error fetching priorities for board:', error);
+      if (priorityRequestRef.current !== requestId) return;
       setPriorities([]);
+      setPriorityId('');
     }
   };
 
@@ -166,7 +185,13 @@ export function ClientAddTicket({
     setTitle('');
     setDescriptionContent(parseTicketRichTextContent(''));
     setDescriptionEditorInstanceKey((prev) => prev + 1);
-    setPriorityId('');
+    // Back to the current board's default rather than to an empty required field.
+    setPriorityId(
+      getBoardDefaultPriorityId(
+        boards.find((board) => board.board_id === boardId),
+        priorities
+      )
+    );
     setAttachments([]);
     setError(null);
     setHasAttemptedSubmit(false);

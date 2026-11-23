@@ -510,8 +510,6 @@
     "po": {
       "amountLabel": "PO Amount (Optional)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.",
-      "noteLabel": "Note:",
       "numberLabel": "PO Number *",
       "numberPlaceholder": "e.g., PO-2024-12345",
       "requirePurchaseOrder": "Require Purchase Order",
@@ -1442,6 +1440,8 @@
       "client": "Client context",
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
+      "pickClient": "Select a client",
+      "specificClient": "A specific client",
       "title": "Template simulation"
     },
     "pricing": {
