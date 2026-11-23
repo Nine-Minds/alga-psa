@@ -46,6 +46,11 @@ interface ClientTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
+  /**
+   * R9: the category list shows a standard category once across ITIL boards, so a ticket can
+   * carry another board's copy of a listed row; the aliases let the row's label resolve.
+   */
+  initialCategoryAliases?: Readonly<Record<string, string>>;
   initialTags?: ITag[];
   initialUsers?: IUser[];
 }
@@ -74,6 +79,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialStatuses = [],
   initialPriorities = [],
   initialCategories = [],
+  initialCategoryAliases,
   initialTags = [],
   initialUsers = []
 }) => {
@@ -311,6 +317,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
+      categoryAliases: initialCategoryAliases,
       boards: initialBoards,
       displaySettings: clientDisplaySettings,
       onTicketClick: handleTicketClick,
@@ -329,7 +336,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       }
       const width = CLIENT_LIST_COLUMN_WIDTHS[columnId];
       return width ? { ...column, width } : column;
-    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale, dateFormat]);
+    }), [initialCategories, initialCategoryAliases, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale, dateFormat]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {

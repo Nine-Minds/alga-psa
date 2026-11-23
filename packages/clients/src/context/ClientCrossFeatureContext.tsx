@@ -65,6 +65,12 @@ export interface ClientTicketsRenderProps {
   initialStatuses?: any[];
   initialPriorities?: any[];
   initialCategories?: ITicketCategory[];
+  /**
+   * R9: the category list shows a standard category once across ITIL boards, so a ticket can carry
+   * another board's copy of a listed row. Maps that copy to the one in `initialCategories` so the
+   * row's label resolves instead of reading "Unknown Category".
+   */
+  initialCategoryAliases?: Readonly<Record<string, string>>;
   initialTags?: ITag[];
   initialUsers?: IUser[];
 }
@@ -82,6 +88,8 @@ export interface ContactTicketsRenderProps {
   initialStatuses?: any[];
   initialPriorities?: any[];
   initialCategories?: ITicketCategory[];
+  /** See `ClientTicketsRenderProps.initialCategoryAliases`. */
+  initialCategoryAliases?: Readonly<Record<string, string>>;
   initialTags?: ITag[];
   initialUsers?: IUser[];
 }

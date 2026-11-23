@@ -52,6 +52,11 @@ interface ContactTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
+  /**
+   * R9: the category list shows a standard category once across ITIL boards, so a ticket can
+   * carry another board's copy of a listed row; the aliases let the row's label resolve.
+   */
+  initialCategoryAliases?: Readonly<Record<string, string>>;
   initialTags?: ITag[];
   initialUsers?: IUser[];
 }
@@ -82,6 +87,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialStatuses = [],
   initialPriorities = [],
   initialCategories = [],
+  initialCategoryAliases,
   initialTags = [],
   initialUsers = []
 }) => {
@@ -304,6 +310,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
+      categoryAliases: initialCategoryAliases,
       boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
@@ -313,7 +320,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       onClientClick: handleClientClick,
       locale,
       dateFormat,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale, dateFormat]);
+    }), [initialCategories, initialCategoryAliases, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale, dateFormat]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

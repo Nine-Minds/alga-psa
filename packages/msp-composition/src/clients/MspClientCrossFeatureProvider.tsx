@@ -128,6 +128,7 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
         initialStatuses={props.initialStatuses}
         initialPriorities={props.initialPriorities}
         initialCategories={props.initialCategories}
+        initialCategoryAliases={props.initialCategoryAliases}
         initialTags={props.initialTags}
         initialUsers={props.initialUsers}
       />
@@ -146,6 +147,7 @@ export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegra
         initialStatuses={props.initialStatuses}
         initialPriorities={props.initialPriorities}
         initialCategories={props.initialCategories}
+        initialCategoryAliases={props.initialCategoryAliases}
         initialTags={props.initialTags}
         initialUsers={props.initialUsers}
       />

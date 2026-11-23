@@ -53,6 +53,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
         initialStatuses={props.initialStatuses}
         initialPriorities={props.initialPriorities}
         initialCategories={props.initialCategories}
+        initialCategoryAliases={props.initialCategoryAliases}
         initialTags={props.initialTags}
         initialUsers={props.initialUsers}
       />
@@ -71,6 +72,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
         initialStatuses={props.initialStatuses}
         initialPriorities={props.initialPriorities}
         initialCategories={props.initialCategories}
+        initialCategoryAliases={props.initialCategoryAliases}
         initialTags={props.initialTags}
         initialUsers={props.initialUsers}
       />

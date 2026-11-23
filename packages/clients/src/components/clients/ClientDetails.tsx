@@ -248,6 +248,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     priorityOptions: SelectOption[];
     boardOptions: IBoard[];
     categories: ITicketCategory[];
+    // R9: the list carries a standard category once, so a ticket can hold another ITIL board's
+    // copy of it; the aliases map that copy to the listed one.
+    categoryAliases?: Readonly<Record<string, string>>;
     tags?: ITag[];
     users?: IUser[];
   } | null>(null);
@@ -775,6 +778,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           priorityOptions: options.priorityOptions,
           boardOptions: options.boardOptions,
           categories: options.categories,
+          categoryAliases: (options as { categoryAliases?: Record<string, string> }).categoryAliases,
           tags: options.tags,
           users: options.users
         });
@@ -1405,6 +1409,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               initialStatuses: ticketFormOptions.statusOptions,
               initialPriorities: ticketFormOptions.priorityOptions,
               initialCategories: ticketFormOptions.categories,
+              initialCategoryAliases: ticketFormOptions.categoryAliases,
               initialTags: ticketFormOptions.tags || [],
               initialUsers: ticketFormOptions.users || [],
             })
