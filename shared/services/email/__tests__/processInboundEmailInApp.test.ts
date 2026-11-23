@@ -126,6 +126,20 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
 }));
 
+// Rule evaluation is passed through to the real implementation unless a test seeds an outcome
+// (forwarded-sender matrix row 2).
+const ruleOutcomeOverride: { value: any } = { value: undefined };
+vi.mock('../inboundEmailRules', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../inboundEmailRules')>();
+  return {
+    ...actual,
+    evaluateInboundEmailRules: (...args: any[]) =>
+      ruleOutcomeOverride.value
+        ? Promise.resolve({ outcome: ruleOutcomeOverride.value, trace: [] })
+        : (actual.evaluateInboundEmailRules as any)(...args),
+  };
+});
+
 vi.mock('../processInboundEmailArtifacts', () => ({
   processInboundEmailArtifactsBestEffort: (...args: any[]) =>
     processInboundEmailArtifactsBestEffortMock(...args),
@@ -139,6 +153,8 @@ describe('processInboundEmailInApp', () => {
     reopenPolicyRows.board = undefined;
     reopenPolicyRows.status = undefined;
     emailSendingLogsState.row = undefined;
+    ruleOutcomeOverride.value = undefined;
+    delete process.env.INBOUND_RESOLVE_FORWARDED_SENDER;
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
@@ -1552,5 +1568,197 @@ describe('processInboundEmailInApp', () => {
     expect(result.diagnostics?.notificationLoop?.evidence.tokenHashMatched).toBe(false);
     expect(result.outcome).not.toBe('skipped');
     expect(createTicketFromEmailMock).toHaveBeenCalled();
+  });
+
+  describe('forwarded-sender attribution (new-ticket path)', () => {
+    const TECH_AUTH = { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' };
+    const technician = {
+      contact_id: '',
+      client_id: '',
+      user_id: 'tech-user-1',
+      user_type: 'internal',
+      email: 'tom@nineminds.com',
+      name: 'Tom Technician',
+    };
+    const clientContact = {
+      contact_id: 'contact-dana',
+      client_id: 'client-a',
+      user_id: undefined,
+      email: 'dana@client-a.example',
+      name: 'Dana Whitfield',
+      client_name: 'Client A',
+    };
+    const forwardText = (from = 'Dana Whitfield <dana@client-a.example>') => [
+      'Please open a ticket for this.',
+      '',
+      `From: ${from}`,
+      'Sent: Tuesday, November 18, 2025 9:14 AM',
+      'To: Tom Technician <tom@nineminds.com>',
+      'Subject: VPN keeps dropping',
+      '',
+      'Hello Tom, the VPN has dropped three times today.',
+    ].join('\n');
+    const techEmail = (overrides: Partial<EmailMessageDetails> = {}) =>
+      buildEmailData({
+        from: { email: 'tom@nineminds.com', name: 'Tom Technician' },
+        headers: TECH_AUTH,
+        body: { text: forwardText(), html: undefined },
+        ...overrides,
+      });
+    const lookupBy = (map: Record<string, unknown>) =>
+      findContactByEmailMock.mockImplementation(async (email: string) => map[email.toLowerCase()] ?? null);
+
+    const run = async (emailData: EmailMessageDetails) => {
+      const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+      return processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'provider-1', emailData });
+    };
+    const expectTodaysRouting = () => {
+      expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ client_id: 'default-client-id', contact_id: undefined }),
+        'tenant-1'
+      );
+      expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ author_type: 'internal', author_id: 'tech-user-1' }),
+        'tenant-1'
+      );
+    };
+
+    it('row 1: internal forwarder + contact original sender files under the contact/client, technician stays author', async () => {
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+      const result = await run(techEmail());
+
+      expect(result.outcome).toBe('created');
+      expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ client_id: 'client-a', contact_id: 'contact-dana' }),
+        'tenant-1'
+      );
+      expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ author_type: 'internal', author_id: 'tech-user-1', contact_id: undefined }),
+        'tenant-1'
+      );
+      const attributed = info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_attributed');
+      expect(attributed?.[1]).toMatchObject({
+        tenantId: 'tenant-1', source: 'text-block', original_contact_id: 'contact-dana',
+        client_id: 'client-a', forwarder_user_id: 'tech-user-1',
+      });
+      expect(JSON.stringify(attributed)).not.toContain('dana@client-a.example');
+      info.mockRestore();
+    });
+
+    it('row 2: a rule-assigned client wins over the forwarded contact', async () => {
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      ruleOutcomeOverride.value = {
+        kind: 'assign_client', ruleId: 'rule-1', ruleName: 'Route', clientId: 'client-b', matchSource: 'rule_extraction', matchedBy: 'x',
+      };
+      findValidClientPrimaryContactIdMock.mockResolvedValue('contact-b-primary');
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+      await run(techEmail());
+
+      expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ client_id: 'client-b', contact_id: 'contact-b-primary' }),
+        'tenant-1'
+      );
+      expect(info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_not_applied')?.[1])
+        .toMatchObject({ reason: 'rule-assigned-client' });
+      expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
+      info.mockRestore();
+    });
+
+    it('row 3: original sender with no contact match leaves today\'s behaviour', async () => {
+      lookupBy({ 'tom@nineminds.com': technician });
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+      await run(techEmail());
+      expectTodaysRouting();
+      expect(info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_not_applied')?.[1])
+        .toMatchObject({ reason: 'no-contact-match' });
+      info.mockRestore();
+    });
+
+    it('row 4: original sender who is an internal user is never promoted', async () => {
+      lookupBy({
+        'tom@nineminds.com': technician,
+        'dana@client-a.example': { ...technician, user_id: 'other-user', email: 'dana@client-a.example' },
+      });
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+      await run(techEmail());
+      expectTodaysRouting();
+      expect(info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_not_applied')?.[1])
+        .toMatchObject({ reason: 'internal-match' });
+      info.mockRestore();
+    });
+
+    it('row 5: a contact forwarding keeps the forwarder as the contact', async () => {
+      lookupBy({
+        'client@example.com': { ...clientContact, contact_id: 'contact-forwarder', client_id: 'client-f' },
+        'dana@client-a.example': clientContact,
+      });
+      await run(buildEmailData({ body: { text: forwardText(), html: undefined } }));
+      expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ client_id: 'client-f', contact_id: 'contact-forwarder' }),
+        'tenant-1'
+      );
+      expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
+    });
+
+    it('row 6: an internal From that fails the gate gets no forward attribution and still logs the auth failure', async () => {
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await run(techEmail({ headers: {} }));
+
+      expect(warn.mock.calls.some((c) => c[0] === 'SECURITY_EVENT inbound_email_internal_sender_auth_failed')).toBe(true);
+      // The audit write is attempted (it fails in this table-restricted mock, which is swallowed).
+      expect(error.mock.calls.some((c) => String(c[0]).includes('Failed to persist inbound sender-auth security event'))).toBe(true);
+      expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
+      expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ client_id: 'default-client-id', contact_id: undefined }),
+        'tenant-1'
+      );
+      warn.mockRestore();
+      error.mockRestore();
+    });
+
+    it('row 7: two candidate addresses in the block leave today\'s behaviour', async () => {
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+      await run(techEmail({
+        body: { text: forwardText('Dana <dana@client-a.example>; Eve <eve@client-b.example>'), html: undefined },
+      }));
+      expectTodaysRouting();
+      expect(info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_not_applied')?.[1])
+        .toMatchObject({ reason: 'ambiguous' });
+      info.mockRestore();
+    });
+
+    it('row 8: a forward into an existing thread keeps the thread path', async () => {
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-thread-1' });
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+      const result = await run(techEmail({ threadId: 'thread-1', inReplyTo: 'parent', references: ['parent'] }));
+
+      expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-thread-1' });
+      expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+      expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ ticket_id: 'ticket-thread-1', author_type: 'internal', author_id: 'tech-user-1' }),
+        'tenant-1'
+      );
+      expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
+      expect(info.mock.calls.find((c) => c[0] === 'inbound_email_forwarded_sender_not_applied')?.[1])
+        .toMatchObject({ reason: 'thread-path' });
+      info.mockRestore();
+    });
+
+    it('kill switch: INBOUND_RESOLVE_FORWARDED_SENDER=false turns row 1 back into today\'s behaviour', async () => {
+      process.env.INBOUND_RESOLVE_FORWARDED_SENDER = 'false';
+      lookupBy({ 'tom@nineminds.com': technician, 'dana@client-a.example': clientContact });
+      await run(techEmail());
+      expectTodaysRouting();
+      expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
+    });
   });
 });

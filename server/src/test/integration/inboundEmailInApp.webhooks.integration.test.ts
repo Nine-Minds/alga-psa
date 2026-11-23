@@ -3082,6 +3082,164 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  // Forwarded-sender attribution (plan 2026-11-23-inbound-forwarded-sender-attribution §7).
+  async function seedForwardFixture(label: string) {
+    const providerId = uuidv4();
+    const mailbox = `support-fwd-${label}-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+    cleanup.push(async () => {
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    await tenantTable('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `Forward Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('clients').where({ client_id: contactClientId }).delete();
+    });
+
+    const contactEmail = `fwd-original-${uuidv4().slice(0, 6)}@example.com`;
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Dana Whitfield',
+      email: contactEmail,
+      client_id: contactClientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+
+    // Gmail-shaped forward of the client's message.
+    const forwardText = [
+      'Please open a ticket for this one.',
+      '',
+      '---------- Forwarded message ---------',
+      `From: Dana Whitfield <${contactEmail}>`,
+      'Date: Tue, Nov 18, 2025 at 9:14 AM',
+      'Subject: VPN keeps dropping',
+      `To: Tom Technician <tom@msp.example>`,
+      '',
+      'Hello Tom, the VPN has dropped three times today.',
+    ].join('\n');
+
+    return { providerId, mailbox, contactClientId, contactEmail, contactId, forwardText };
+  }
+
+  it('Forwarded sender (Microsoft intra-org): technician forward of a client message files under the client with the technician as internal author', async () => {
+    const fx = await seedForwardFixture('ms');
+
+    const technicianId = uuidv4();
+    const technicianEmail = `fwd-tech-${uuidv4().slice(0, 6)}@example.com`;
+    await tenantTable('users').insert({
+      user_id: technicianId,
+      tenant: tenantId,
+      username: `fwd-tech-${technicianId.slice(0, 8)}`,
+      email: technicianEmail,
+      first_name: 'Tom',
+      last_name: 'Technician',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: technicianId }).delete();
+    });
+
+    const subject = `Fwd: VPN keeps dropping ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId: fx.providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId: fx.providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: technicianEmail, name: 'Tom Technician' },
+        to: [{ email: fx.mailbox, name: 'Support' }],
+        subject,
+        body: { text: fx.forwardText, html: undefined },
+        attachments: [],
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets').where({ title: subject }).first<any>();
+    expect(ticket).toBeDefined();
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+    expect(ticket.client_id).toBe(fx.contactClientId);
+    expect(ticket.contact_name_id).toBe(fx.contactId);
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('internal');
+    expect(comments[0].user_id).toBe(technicianId);
+    expect(comments[0].contact_id ?? null).toBeNull();
+  });
+
+  it('Forwarded sender (row 5): a contact forwarding a message quoting another client stays the forwarder', async () => {
+    const fx = await seedForwardFixture('g');
+
+    // The forwarder is a contact of the seeded default client, not an internal user.
+    const forwarderEmail = `fwd-contact-${uuidv4().slice(0, 6)}@example.com`;
+    const forwarderContactId = await seedClientContactSender(forwarderEmail, 'Forwarding Contact');
+
+    const subject = `Fwd: contact forward ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId: fx.providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId: fx.providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: forwarderEmail, name: 'Forwarding Contact' },
+        to: [{ email: fx.mailbox, name: 'Support' }],
+        subject,
+        body: { text: fx.forwardText, html: undefined },
+        attachments: [],
+        headers: dkimPassHeaders(forwarderEmail),
+      } as any,
+    });
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets').where({ title: subject }).first<any>();
+    expect(ticket).toBeDefined();
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+    expect(ticket.client_id).toBe(clientId);
+    expect(ticket.client_id).not.toBe(fx.contactClientId);
+    expect(ticket.contact_name_id).toBe(forwarderContactId);
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('client');
+    expect(comments[0].contact_id).toBe(forwarderContactId);
+  });
+
   it('Contact match (Google): the Exchange internal-auth stamp alone does not authorize contact attribution', async () => {
     const providerId = uuidv4();
     const mailbox = `support-g-intraorg-${uuidv4().slice(0, 6)}@example.com`;
