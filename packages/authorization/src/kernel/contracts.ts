@@ -146,7 +146,8 @@ export type RelationshipTemplateKey =
   | 'same_team'
   | 'selected_boards'
   | 'selected_records'
-  | 'contact_visibility';
+  | 'contact_visibility'
+  | 'readable_via_published_parent';
 
 export interface RelationshipRule {
   template: RelationshipTemplateKey;

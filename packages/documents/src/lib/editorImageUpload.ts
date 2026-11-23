@@ -128,13 +128,11 @@ export function createInlineImageFilename(params: {
  * Inline images are always stored client-visible: publishing an article flips
  * the article document's visibility, never that of the images embedded in it.
  *
- * This clears the client-visibility gate in authorizeAndRedactDocuments, but it
- * is not on its own enough for a client-portal reader. That helper also runs the
- * built-in relationship rules (`own` / `same_client`), and an inline image has
- * no client association at all, so /api/documents/view still answers 403 for
- * client users. A KB article is readable by every client, which the relationship
- * kernel has no template for; giving embedded media a client-facing scope needs
- * its own decision and is not made here.
+ * This clears the client-visibility gate in authorizeAndRedactDocuments. Client-portal
+ * readers pass the relationship rules through `readable_via_published_parent`
+ * (shared/lib/documentAuthorization.ts): an image whose `document` association points
+ * at a published client/public KB article is readable, computed per request. An image
+ * with no such parent stays refused (it has no client association of its own).
  */
 export async function uploadEditorImage(
   file: File,
