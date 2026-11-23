@@ -804,7 +804,7 @@ const SURFACES: Surface[] = [
       // The dialog filters the list it fetched by the selected board's kind, so every value it
       // offers on the second ITIL board passes the server's own check.
       const { filterPrioritiesForBoard } = await import(
-        '../../../../packages/tickets/src/lib/boardDefaultPriority'
+        '@alga-psa/shared/lib/tickets/boardPriorityOptions'
       );
       const all = await tenantDb(db, fixture.tenantId)
         .table('priorities')

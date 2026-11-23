@@ -238,6 +238,7 @@ is created and no breach notification is emitted.
 | File | What it is |
 |---|---|
 | `shared/lib/tickets/boardFieldRules.ts` | The rules: `listPrioritiesForBoard()`, `listCategoriesForBoard()`, `findBoardFieldProblems()`, `translateStandardCategoryForBoard()`, `defaultPriorityForBoard()`, `resolveTicketPriorityFields()`, `prepareTicketCreateFields()`, `prepareTicketFieldPatch()`. |
+| `shared/lib/tickets/boardPriorityOptions.ts` | The client half: `filterPrioritiesForBoard()` and the board default a picker shows. Re-exported as `@alga-psa/tickets/lib/boardDefaultPriority`. |
 | `shared/lib/itil/priorityMatrix.ts` | The Impact × Urgency matrix and its labels. |
 | `shared/lib/sla/itilSlaDefaults.ts` | Policy name, targets, escalation points, notification thresholds. |
 | `shared/models/ticketModel.ts` | The create funnel: the rules are applied before the row is built. |

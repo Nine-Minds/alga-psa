@@ -22,7 +22,9 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { filterPrioritiesForBoard } from '@alga-psa/tickets/lib/boardDefaultPriority';
+// The one client-side board/priority rule. Taken from shared, not from @alga-psa/tickets: tickets
+// depends on this package through inventory, so importing it here would close a build cycle.
+import { filterPrioritiesForBoard } from '@alga-psa/shared/lib/tickets/boardPriorityOptions';
 
 interface CreateTicketFromAssetButtonProps {
     asset: Asset;

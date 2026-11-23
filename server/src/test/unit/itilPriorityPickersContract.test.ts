@@ -17,6 +17,28 @@ function source(relativePath: string): string {
   return fs.readFileSync(path.resolve(REPO_ROOT, relativePath), 'utf8');
 }
 
+/** Every `@alga-psa/*` package imported anywhere under a source tree — the build graph's edges. */
+function importedPackages(relativeDir: string): string[] {
+  const found = new Set<string>();
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!/\.tsx?$/.test(entry.name)) continue;
+      const text = fs.readFileSync(full, 'utf8');
+      for (const match of text.matchAll(/(?:from|import|require\()\s*['"](@alga-psa\/[^'"/]+)/g)) {
+        found.add(match[1]);
+      }
+    }
+  };
+  walk(path.resolve(REPO_ROOT, relativeDir));
+  return [...found].sort();
+}
+
 /** Files that render or configure a ticket priority list. */
 const PICKER_FILES = [
   'packages/tickets/src/components/QuickAddTicket.tsx',
@@ -103,6 +125,10 @@ describe('ITIL priority picker wiring', () => {
 
     const asset = source('packages/assets/src/components/CreateTicketFromAssetButton.tsx');
     expect(asset).toContain('boards.find((candidate) => candidate.board_id === board)?.priority_type');
+    // @alga-psa/tickets depends on assets through inventory, so the dialog reaches the one helper
+    // through shared. Importing the tickets copy closes a build cycle and nx refuses the build.
+    expect(asset).toContain("from '@alga-psa/shared/lib/tickets/boardPriorityOptions'");
+    expect(importedPackages('packages/assets/src')).not.toContain('@alga-psa/tickets');
   });
 
   it('T178: the Activities inline picker asks for the ticket board’s priorities', () => {

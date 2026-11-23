@@ -193,7 +193,9 @@ matrix instead of holding a second copy; the PR #3880 helpers in `ticketFieldRef
   priority — and differ only at the end: the client helper falls back once more to "the first priority in the
   list" so a `<Select>` is never empty, while the server returns `null`, as R7 says ("otherwise none"). The client
   helper is folded into the one filter helper in the `priority-pickers` group; until then it stays as the client
-  half and must be changed with the server half.
+  half and must be changed with the server half. Since the build fix below it lives in
+  `shared/lib/tickets/boardPriorityOptions.ts`, with `packages/tickets/src/lib/boardDefaultPriority.ts` left as a
+  re-export, so the pickers below `@alga-psa/tickets` in the build graph can reach it.
 - **New field problems carry no `messageKey` yet.** `findBoardFieldProblems` reports existence, item-type,
   category-ownership and Impact/Urgency problems as plain English `message`s, the way
   `findTicketFieldReferenceProblems` already reports its own. Only the two family-mismatch messages (which
@@ -553,7 +555,8 @@ surface probes.
 ### Commit group 10 — `priority-pickers` (done)
 
 Landed: `filterPrioritiesForBoard` / `priorityFitsBoardKind` in
-`packages/tickets/src/lib/boardDefaultPriority.ts`, used by Quick Add, ticket detail, the hero,
+`shared/lib/tickets/boardPriorityOptions.ts` (re-exported at
+`packages/tickets/src/lib/boardDefaultPriority.ts`), used by Quick Add, ticket detail, the hero,
 Boards settings, the CSV import dialog, the surveys trigger form, the service-request editor, the
 from-asset dialog and the Huntress screen; the family and the board's kind carried on
 `TicketFieldOptions` and both workflow designer pickers narrowing by the fixed board; the
@@ -856,6 +859,21 @@ behind. None changes a decision; all three are in the last commit.
   before it bootstrapped with `runSeeds: false`. It now runs `85_itil_priorities.cjs` and
   `86_itil_categories.cjs` itself, in the file order knex would use, inside a transaction it rolls
   back — so it tests the ordering the fix is about and leaves the database as it found it.
+
+### After the groups — the build cycle the from-asset picker closed
+
+`npx nx build @alga-psa/tickets` refused to run: `@alga-psa/tickets -> @alga-psa/inventory ->
+@alga-psa/assets -> @alga-psa/tickets`. The first two edges were already there; the third was
+`priority-pickers` giving the create-ticket-from-asset dialog the one client helper by importing
+`@alga-psa/tickets/lib/boardDefaultPriority` from `packages/assets`. `--nxIgnoreCycles` only hides
+it, so the helper moved down instead, to `shared/lib/tickets/boardPriorityOptions.ts` (new entry in
+`shared/tsup.config.ts` and in the `exports` map), next to the server half it has to agree with.
+`packages/tickets/src/lib/boardDefaultPriority.ts` is now a re-export, the way
+`packages/tickets/src/actions/externalLinks/externalLinkPersistence.ts` already re-exports its
+shared implementation, so no other picker changed. `packages/assets` imports the shared path and
+T177 holds the rule: the dialog reaches the helper through shared and nothing under
+`packages/assets/src` imports `@alga-psa/tickets` at all. Nothing else in the plan changed — the
+rule, its behaviour and its tests are the same ones, at a lower address.
 
 ### Groups
 

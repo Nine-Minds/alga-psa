@@ -43,6 +43,7 @@ export default defineConfig({
     'services/tickets/ticketSlaStageEvents': 'services/tickets/ticketSlaStageEvents.ts',
     'lib/itil/priorityMatrix': 'lib/itil/priorityMatrix.ts',
     'lib/tickets/boardFieldRules': 'lib/tickets/boardFieldRules.ts',
+    'lib/tickets/boardPriorityOptions': 'lib/tickets/boardPriorityOptions.ts',
     'lib/tickets/standardCategoryFilterOptions': 'lib/tickets/standardCategoryFilterOptions.ts',
     'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',
     'workflow/index': 'workflow/index.ts',
