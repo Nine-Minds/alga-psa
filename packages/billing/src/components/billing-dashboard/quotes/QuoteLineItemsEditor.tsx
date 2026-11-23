@@ -278,6 +278,9 @@ const isQuoteWideGroup = (group: LocationGroupEntry<DraftQuoteItem>): boolean =>
   && group.items.length > 0
   && group.items.every((item) => item.is_discount);
 
+const LOOKUP_RETRY_INITIAL_DELAY_MS = 1000;
+const LOOKUP_RETRY_MAX_DELAY_MS = 30000;
+
 const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
   currencyCode,
@@ -324,9 +327,24 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   // even if the quote lines changed meanwhile; dropping them would leave their ids
   // marked as requested and therefore never fetched again.
   const isMountedRef = useRef(true);
+
+  // A failed lookup releases its ids and schedules ONE retry timer. When it fires it
+  // bumps `lookupRetryNonce`, which re-runs the lookup effect even though the set of
+  // service ids (`catalogBackedServiceKey`) is unchanged. Backoff doubles per
+  // consecutive failure (1s, 2s, 4s ... capped at 30s) and resets after a success.
+  const [lookupRetryNonce, setLookupRetryNonce] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelayRef = useRef(LOOKUP_RETRY_INITIAL_DELAY_MS);
+
   useEffect(() => {
     isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -334,13 +352,27 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     const missing = ids.filter((id) => !requestedServiceIds.current.has(id));
     if (missing.length === 0) return;
     missing.forEach((id) => requestedServiceIds.current.add(id));
+
+    // Release the ids and, unless a retry is already pending, schedule one.
+    const failLookup = () => {
+      missing.forEach((id) => requestedServiceIds.current.delete(id));
+      if (!isMountedRef.current || retryTimerRef.current !== null) return;
+      const delay = retryDelayRef.current;
+      retryDelayRef.current = Math.min(delay * 2, LOOKUP_RETRY_MAX_DELAY_MS);
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        if (isMountedRef.current) setLookupRetryNonce((n) => n + 1);
+      }, delay);
+    };
+
     getServiceCatalogDescriptions(missing)
       .then((result) => {
         if (!isMountedRef.current) return;
         if (!result || typeof result !== 'object') {
-          missing.forEach((id) => requestedServiceIds.current.delete(id));
+          failLookup();
           return;
         }
+        retryDelayRef.current = LOOKUP_RETRY_INITIAL_DELAY_MS;
         setCurrentDescriptions((prev) => ({ ...prev, ...result }));
         const gone: Record<string, true> = {};
         for (const id of missing) {
@@ -348,11 +380,8 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         }
         if (Object.keys(gone).length > 0) setGoneServiceIds((prev) => ({ ...prev, ...gone }));
       })
-      .catch(() => {
-        // Let a later render retry; until then the refresh button stays disabled.
-        missing.forEach((id) => requestedServiceIds.current.delete(id));
-      });
-  }, [catalogBackedServiceKey]);
+      .catch(failLookup);
+  }, [catalogBackedServiceKey, lookupRetryNonce]);
 
   const renderProductDescription = (item: DraftQuoteItem) => {
     if (item.is_discount) return null;

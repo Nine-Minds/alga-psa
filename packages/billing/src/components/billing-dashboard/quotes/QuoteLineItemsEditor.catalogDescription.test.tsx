@@ -270,4 +270,82 @@ describe('QuoteLineItemsEditor product description (alga-2026-0002804)', () => {
         .toBe('Product no longer in the catalog');
     });
   });
+
+  describe('lookup failure recovers by itself', () => {
+    const caption = (id = 'catalog-1') => document.getElementById(`quote-line-product-description-edited-${id}`);
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+    const flush = async (ms = 0) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
+
+    const failures: Array<[string, () => Promise<unknown>]> = [
+      ['a rejected request', () => Promise.reject(new Error('network'))],
+      ['a non-object result', () => Promise.resolve(undefined)],
+    ];
+
+    it.each(failures)('retries after %s without a remount or a change of service ids', async (_name, fail) => {
+      actionMocks.getServiceCatalogDescriptions
+        .mockImplementationOnce(fail)
+        .mockResolvedValue({ 'svc-1': PRODUCT_TEXT });
+      const original = catalogLine({ catalog_description: 'Edited wording', catalog_description_edited: true });
+      const utils = render(<QuoteLineItemsEditor items={[original]} currencyCode="USD" onChange={vi.fn()} />);
+      const marker = textArea();
+      await flush();
+
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+      expect(refreshButton()?.disabled).toBe(true);
+      expect(caption()).toBeNull();
+
+      // A quantity edit does not change the service ids and must not itself retry.
+      utils.rerender(<QuoteLineItemsEditor items={[{ ...original, quantity: 3 }]} currencyCode="USD" onChange={vi.fn()} />);
+      await flush();
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+
+      await flush(1000);
+
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(2);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenLastCalledWith(['svc-1']);
+      expect(refreshButton()?.disabled).toBe(false);
+      expect(caption()?.textContent).toBe('Edited for this quote');
+      expect(textArea()).toBe(marker); // same DOM node: not remounted
+    });
+
+    it('backs off exponentially across repeated failures and stops once it succeeds', async () => {
+      actionMocks.getServiceCatalogDescriptions
+        .mockRejectedValueOnce(new Error('1'))
+        .mockRejectedValueOnce(new Error('2'))
+        .mockResolvedValue({ 'svc-1': PRODUCT_TEXT });
+      render(<QuoteLineItemsEditor items={[catalogLine({ catalog_description: 'Edited', catalog_description_edited: true })]} currencyCode="USD" onChange={vi.fn()} />);
+      await flush();
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+
+      await flush(999);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+      await flush(1);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(2);
+
+      await flush(1999);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(2);
+      await flush(1);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(3);
+      expect(refreshButton()?.disabled).toBe(false);
+
+      await flush(60000);
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not call again or warn about state updates when unmounted with a retry pending', async () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      actionMocks.getServiceCatalogDescriptions.mockRejectedValue(new Error('down'));
+      const utils = render(<QuoteLineItemsEditor items={[catalogLine()]} currencyCode="USD" onChange={vi.fn()} />);
+      await flush();
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+
+      utils.unmount();
+      await flush(120000);
+
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+  });
 });
