@@ -85,6 +85,21 @@ export async function initializeApp() {
       logger.error('Failed to register the SLA integration:', error);
     }
 
+    // The one board create, for the callers that cannot import the tickets package: the
+    // reference-data board import creates a board through this registration rather than inserting
+    // one of its own (F111).
+    try {
+      const { registerBoardLifecycle } = await import('@alga-psa/tickets/services/registerBoardLifecycle');
+      registerBoardLifecycle();
+      const { isBoardCreatorRegistered } = await import('@alga-psa/reference-data/lib/boardCreator');
+      if (!isBoardCreatorRegistered()) {
+        logger.error('Board create is not registered; the reference-data board import will refuse');
+      }
+      logger.info('Board lifecycle registered');
+    } catch (error) {
+      logger.error('Failed to register the board lifecycle:', error);
+    }
+
     // Admin notifications for quarantined inbound email. The quarantine row is
     // persisted by the shared code regardless; this hook only notifies.
     try {

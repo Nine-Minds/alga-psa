@@ -1075,6 +1075,13 @@ export const configureTicketing = withAuth(async (
               status_type: 'ticket',
               created_at: new Date()
             });
+          } else if (status.is_default) {
+            // The board create already wrote this status (F111). The defaults were cleared just
+            // above, so the one the wizard marked has to be named again or the board would end up
+            // with no open default status.
+            await tenantScopedTable('statuses')
+              .where({ status_id: existingStatus.status_id, board_id: boardId })
+              .update({ is_default: true });
           }
         }
       }

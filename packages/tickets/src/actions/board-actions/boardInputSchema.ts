@@ -86,5 +86,15 @@ export const updateBoardInputSchema = z
   .strict()
   .transform(withoutDroppedColumns);
 
+/**
+ * The keys a create accepts. A caller that assembled a row elsewhere (the reference-data import,
+ * which maps a standard board onto a tenant row) narrows it to these before parsing, so the strict
+ * schema judges the board's own columns and not the bookkeeping around them.
+ */
+export const CREATE_BOARD_INPUT_KEYS = Object.freeze([
+  ...Object.keys(writableBoardColumns),
+  'copy_ticket_statuses_from_board_id',
+] as const);
+
 export type ParsedCreateBoardInput = z.infer<typeof createBoardInputSchema>;
 export type ParsedUpdateBoardInput = z.infer<typeof updateBoardInputSchema>;

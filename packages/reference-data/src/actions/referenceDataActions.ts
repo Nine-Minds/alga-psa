@@ -7,7 +7,7 @@ import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { defaultPriorityForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import { requireBoardCreator } from '../lib/boardCreator';
 import { BOARD_PERMISSION_DENIED, evaluateBoardMutationPolicy } from '@alga-psa/auth/boardPolicy';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -20,10 +20,6 @@ interface ReferenceDataConfig {
   targetTable: string;
   mapFields: (sourceData: any, tenantId: string, userId: string, options?: any) => any;
   conflictCheck?: (data: any, tenantId: string, trx?: Knex.Transaction) => Promise<boolean>;
-}
-
-function normalizeBoolean(value: unknown): boolean {
-  return value === true || value === 'true';
 }
 
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
@@ -39,50 +35,6 @@ function referenceDataDeleteErrorMessage(error: unknown): string {
   }
 
   return 'Failed to delete reference data item';
-}
-
-async function seedBoardTicketStatusesFromStandards(
-  trx: Knex.Transaction,
-  tenant: string,
-  boardId: string,
-  userId: string
-): Promise<number> {
-  const existingStatus = await tenantScopedTable(trx, 'statuses', tenant)
-    .where({ board_id: boardId, status_type: 'ticket' })
-    .first('status_id');
-
-  if (existingStatus) {
-    return 0;
-  }
-
-  const standardStatuses = await tenantDb(trx, tenant).table('standard_statuses')
-    .where({ item_type: 'ticket' })
-    .orderBy('display_order', 'asc')
-    .orderBy('name', 'asc');
-
-  if (standardStatuses.length === 0) {
-    return 0;
-  }
-
-  const columns = await tenantScopedTable(trx, 'statuses', tenant).columnInfo();
-  const hasColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(columns, columnName);
-
-  await tenantDb(trx, tenant).table('statuses').insert(standardStatuses.map((status: any) => ({
-    tenant,
-    board_id: boardId,
-    name: status.name,
-    status_type: 'ticket',
-    order_number: status.display_order,
-    is_closed: normalizeBoolean(status.is_closed),
-    is_default: normalizeBoolean(status.is_default),
-    created_by: userId,
-    ...(hasColumn('item_type') ? { item_type: 'ticket' } : {}),
-    ...(hasColumn('standard_status_id') ? { standard_status_id: status.standard_status_id } : {}),
-    ...(hasColumn('created_at') ? { created_at: new Date().toISOString() } : {}),
-    ...(hasColumn('updated_at') ? { updated_at: new Date().toISOString() } : {})
-  })));
-
-  return standardStatuses.length;
 }
 
 const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
@@ -248,6 +200,11 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       display_order: source.display_order,
       is_inactive: source.is_inactive || false,
       is_default: source.is_default || false,
+      // R1/F111: the standard board's kind comes with it, so an imported ITIL board is an ITIL
+      // board — with its priorities, its own copy of the standard categories and its SLA policy —
+      // instead of a custom board wearing a standard board's name.
+      category_type: source.category_type || 'custom',
+      priority_type: source.priority_type || 'custom',
       tenant: tenantId
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
@@ -617,38 +574,18 @@ export const importReferenceData = withAuth(async (
         }
       }
       
-	      const [savedItem] = await tenantDb(trx, tenant).table(config.targetTable)
-	        .insert(mappedData)
-	        .returning('*');
+	      // F111: an imported board is created by the one board create, registered with this package
+	      // at startup (`@alga-psa/tickets/services/registerBoardLifecycle`), so it comes out the
+	      // same as a board made in settings — kind check, statuses, default priority (R7), and an
+	      // ITIL board's own category set and SLA policy. Everything else is inserted here.
+	      const savedItem = dataType === 'boards'
+	        ? await requireBoardCreator()(trx, tenant, { userId: user.user_id, userType: user.user_type }, mappedData as any)
+	        : (await tenantDb(trx, tenant).table(config.targetTable)
+	            .insert(mappedData)
+	            .returning('*'))[0];
 
-	      if (dataType === 'boards') {
-	        await seedBoardTicketStatusesFromStandards(trx, tenant, savedItem.board_id, user.user_id);
-	        // R7/F111: an imported board gets a default priority, as one created in settings does,
-	        // so Quick Add on it is not empty. The board create itself lives in
-	        // `@alga-psa/tickets/services/boardLifecycle`, which this package cannot import (tickets
-	        // already depends on reference-data), so the rule is taken from the shared module both
-	        // of them use. A standard board carries no ITIL kind, so there is no ITIL setup to run.
-	        const defaultPriorityId = await defaultPriorityForBoard(trx, tenant, savedItem.board_id);
-	        if (defaultPriorityId) {
-	          await tenantDb(trx, tenant).table('boards')
-	            .where({ board_id: savedItem.board_id })
-	            .update({ default_priority_id: defaultPriorityId });
-	          savedItem.default_priority_id = defaultPriorityId;
-	        }
-	      }
-
-	      if (dataType === 'boards') {
-	        await publishEvent({
-	          eventType: 'BOARD_CREATED',
-	          payload: {
-	            tenantId: tenant,
-	            boardId: savedItem.board_id,
-	            userId: user.user_id,
-	            changes: { after: savedItem },
-	            timestamp: new Date().toISOString(),
-	          },
-	        });
-	      } else if (dataType === 'categories') {
+	      // BOARD_CREATED is published by the board create itself, with the row as it is after setup.
+	      if (dataType === 'categories') {
 	        await publishEvent({
 	          eventType: 'CATEGORY_CREATED',
 	          payload: {

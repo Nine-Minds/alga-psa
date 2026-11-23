@@ -1148,6 +1148,30 @@ after the migration they would show one entry per ITIL board:
 Both now de-duplicate through `dedupeStandardCategoriesForFilter`. They are recorded as additions
 to the feature list in the PRD's deviations section.
 
+**5. One board create, for the reference-data import too (F111).** The import inserted its own
+board because `@alga-psa/tickets` depends on `@alga-psa/reference-data` and the dependency cannot
+run the other way. It now goes through a registry the way the SLA hooks do:
+`packages/reference-data/src/lib/boardCreator.ts` holds the creator on `globalThis`,
+`packages/tickets/src/services/registerBoardLifecycle.ts` registers `createBoardCore` with it, and
+`server/src/lib/initializeApp.ts` calls that at startup beside the SLA registration. An import with
+no registration refuses (the row is skipped with the reason) instead of inserting a board of its
+own.
+
+Two things the direct insert had been getting wrong, now gone with it: the standard board's
+`category_type`/`priority_type` were never mapped, so importing a standard ITIL board produced a
+custom board; and `BOARD_CREATED` was published twice for an imported board (once by the import,
+once by the create). T194 is now a behaviour test in
+`server/src/test/integration/itilBoardLifecycle.integration.test.ts`: it imports a standard ITIL
+board and checks the kind, the ITIL default priority, the seeded statuses, the board's own copy of
+the standard categories, the SLA policy and the single event — and that the import refuses with no
+creator registered. The contract test keeps only the structure (reference-data must not import the
+tickets package; `initializeApp` must register).
+
+A regression of the earlier onboarding change surfaced here: the wizard clears the board's default
+statuses before its own loop, and since the board create now writes those statuses first, the loop
+found them "already there" and left the board with no open default. The loop names the wizard's
+default again when the status already exists.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no

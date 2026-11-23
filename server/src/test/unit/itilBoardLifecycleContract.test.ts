@@ -87,18 +87,24 @@ describe('ITIL board lifecycle wiring', () => {
     expect(create).toContain('changes: { after: createdBoard }');
   });
 
-  it('T194: the reference-data import and the onboarding wizard produce a usable board', () => {
-    // Onboarding can call the core (it already depends on the tickets package).
+  it('T194: no caller creates a board of its own — structure only', () => {
+    // What the board import actually produces is driven in
+    // `src/test/integration/itilBoardLifecycle.integration.test.ts`; this keeps the two imports
+    // that make one create possible from drifting back apart.
+
+    // Onboarding can call the core directly (it already depends on the tickets package).
     const onboarding = source('packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts');
     expect(onboarding).toContain("import { createBoardCore } from '@alga-psa/tickets/services/boardLifecycle'");
     expect(onboarding).toContain('const createdBoard = await createBoardCore(');
 
     // The reference-data import cannot: `tickets` depends on `reference-data`, so a direct call
-    // would be a cycle (the package says so itself at its board delete). It takes R7 from the
-    // shared rules module both sides use instead.
+    // would be a cycle. The create is registered with it at startup instead (F111), and this
+    // package must still not import the tickets package.
     const referenceData = source('packages/reference-data/src/actions/referenceDataActions.ts');
-    expect(referenceData).toContain("import { defaultPriorityForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules'");
-    expect(referenceData).toContain('defaultPriorityForBoard(trx, tenant, savedItem.board_id)');
+    expect(referenceData).toContain("import { requireBoardCreator } from '../lib/boardCreator'");
     expect(referenceData).not.toContain("from '@alga-psa/tickets");
+    expect(source('server/src/lib/initializeApp.ts')).toContain(
+      "await import('@alga-psa/tickets/services/registerBoardLifecycle')"
+    );
   });
 });

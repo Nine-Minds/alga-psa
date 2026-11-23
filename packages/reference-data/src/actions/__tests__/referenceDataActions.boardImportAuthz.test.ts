@@ -49,10 +49,18 @@ vi.mock('@alga-psa/core/server', () => ({ deleteEntityWithValidation: vi.fn() })
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(async () => undefined) }));
 
 import { importReferenceData } from '../referenceDataActions';
+import { clearBoardCreatorForTest, registerBoardCreator } from '../../lib/boardCreator';
 
 beforeEach(() => {
   vi.clearAllMocks();
   inserts.length = 0;
+  // F111: a board is created by the one registered create, which startup wires to the tickets
+  // package. Here it only records the call, so the policy cases can show nothing is created.
+  clearBoardCreatorForTest();
+  registerBoardCreator(async (_trx, _tenant, _actor, board) => {
+    inserts.push({ table: 'boards', payload: board });
+    return { board_id: 'imported-board', ...board };
+  });
   state.user = { user_id: 'u1', user_type: 'internal', tenant: 't1' };
   hasPermissionMock.mockImplementation(async () => state.allowed);
   state.allowed = true;

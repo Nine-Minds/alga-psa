@@ -52,6 +52,9 @@ import {
   isBoardLifecycleError,
   updateBoardCore,
 } from '../../../../packages/tickets/src/services/boardLifecycle';
+import { registerBoardLifecycle } from '../../../../packages/tickets/src/services/registerBoardLifecycle';
+import { clearBoardCreatorForTest } from '../../../../packages/reference-data/src/lib/boardCreator';
+import { importReferenceData } from '../../../../packages/reference-data/src/actions/referenceDataActions';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   cleanupItilSecondBoardFixture,
@@ -394,6 +397,62 @@ describe('ITIL board lifecycle (integration)', () => {
       expect(
         (await tt('categories').where({ board_id: fixture.boards.itilTwo }).whereNotNull('standard_category_id')).length
       ).toBeGreaterThan(0);
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('the reference-data board import (F111)', () => {
+    it('T194: an imported board is the same as a created one, through the one board create', async () => {
+      await withFixture();
+      const standardBoardId = randomUUID();
+      const boardName = `Imported ITIL ${standardBoardId.slice(0, 8)}`;
+      await db('standard_boards').insert({
+        id: standardBoardId,
+        board_name: boardName,
+        description: 'A standard ITIL board',
+        display_order: 97,
+        is_inactive: false,
+        is_default: false,
+        category_type: 'itil',
+        priority_type: 'itil',
+      });
+
+      try {
+        // Without the registration there is no second create to fall back on: the import refuses.
+        clearBoardCreatorForTest();
+        const refused = await importReferenceData('boards', [standardBoardId]);
+        expect(refused.imported).toHaveLength(0);
+        expect(refused.skipped[0]?.reason).toContain('No board create is registered');
+        expect(await tt('boards').where({ board_name: boardName }).first()).toBeUndefined();
+
+        registerBoardLifecycle();
+        const result = await importReferenceData('boards', [standardBoardId]);
+        expect(result.skipped).toHaveLength(0);
+        const imported = await tt('boards').where({ board_name: boardName }).first();
+        expect(imported).toBeDefined();
+
+        // Everything a board created in settings gets: its kind, its statuses, an ITIL default
+        // priority (R7), its own copy of the standard categories (D9) and the ITIL SLA policy.
+        expect(imported.priority_type).toBe('itil');
+        expect(imported.category_type).toBe('itil');
+        expect(imported.default_priority_id).toBe(fixture.itilPriorityIds[3]);
+        expect(imported.sla_policy_id).not.toBeNull();
+        expect(
+          (await tt('statuses').where({ board_id: imported.board_id, status_type: 'ticket' })).length
+        ).toBeGreaterThan(0);
+        const standardCount = Number(
+          (await db('standard_categories').where({ is_itil_standard: true }).count('* as n').first() as any).n
+        );
+        const categories = await tt('categories').where({ board_id: imported.board_id });
+        expect(categories).toHaveLength(standardCount);
+        expect(categories.every((row: any) => row.standard_category_id)).toBe(true);
+
+        // One BOARD_CREATED, published by the create itself with the row as it is after setup.
+        const created = publishedRef.events.filter((event) => event.eventType === 'BOARD_CREATED');
+        expect(created).toHaveLength(1);
+        expect(created[0].payload.changes.after.default_priority_id).toBe(fixture.itilPriorityIds[3]);
+      } finally {
+        await db('standard_boards').where({ id: standardBoardId }).del();
+      }
     }, HOOK_TIMEOUT);
   });
 });
