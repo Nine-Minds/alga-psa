@@ -4,7 +4,7 @@ import CoManagedSeatTrial from './CoManagedSeatTrial';
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
-import CoManagedSeatExplainer from '@/components/co-managed/CoManagedSeatExplainer';
+import CoManagedPoolExplainer from '@/components/co-managed/CoManagedPoolExplainer';
 import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
 
 /**
@@ -20,5 +20,5 @@ export default function CoManagedPurchasePool({ clientsHref }: { clientsHref?: s
     window.addEventListener(CO_MANAGED_ACCESS_CHANGED, refresh);
     return () => window.removeEventListener(CO_MANAGED_ACCESS_CHANGED, refresh);
   }, [router]);
-  return <><CoManagedSeatTrial /><CoManagedPoolEditor showTotals explainer={<CoManagedSeatExplainer />} clientsHref={clientsHref} /></>;
+  return <><CoManagedSeatTrial /><CoManagedPoolEditor showTotals explainer={<CoManagedPoolExplainer />} clientsHref={clientsHref} /></>;
 }

@@ -10,7 +10,7 @@ const STEPS = ['buy', 'enable', 'signIn'] as const;
  * content with no state: a surface composes it beside the quantity control (the sponsor overview does;
  * Account Management does not).
  */
-export default function CoManagedSeatExplainer() {
+export default function CoManagedPoolExplainer() {
   const { t } = useTranslation('msp/licensing');
   return (
     <div id="co-managed-seat-explainer" className="space-y-4">

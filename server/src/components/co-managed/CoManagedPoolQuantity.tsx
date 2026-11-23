@@ -16,7 +16,7 @@ import type { CoManagedUnitPrice } from './useCoManagedUnitPrice';
  * says about the change (adding, removing, old → new, price difference) derives from the two. With no
  * seats purchased there is no "old" to compare to, so the row prices the purchase instead.
  */
-export default function CoManagedSeatQuantity({ idPrefix = 'co-managed', purchased, quantity, onQuantityChange, min, max, busy, price, onReview }: {
+export default function CoManagedPoolQuantity({ idPrefix = 'co-managed', purchased, quantity, onQuantityChange, min, max, busy, price, onReview }: {
   idPrefix?: string;
   purchased: number;
   quantity: number;

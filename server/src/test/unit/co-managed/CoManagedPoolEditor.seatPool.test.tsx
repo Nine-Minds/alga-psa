@@ -25,7 +25,7 @@ vi.mock('@enterprise/components/co-managed/CoManagedCheckout', () => ({ default:
 vi.mock('@/components/co-managed/accessRefresh', () => ({ announceCoManagedAccessChanged: actions.announce, CO_MANAGED_ACCESS_CHANGED: 'x' }));
 
 import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
-import CoManagedSeatExplainer from '@/components/co-managed/CoManagedSeatExplainer';
+import CoManagedPoolExplainer from '@/components/co-managed/CoManagedPoolExplainer';
 
 const purchase = (over: Record<string, unknown> = {}) => ({
   pending: null, awaitingVerification: null, minimumQuantity: 1, canPurchase: true, canResume: false, reason: 'available', ...over });
@@ -231,7 +231,7 @@ describe('naming', () => {
       expect(JSON.parse(file).coManaged).toBeDefined();
       expect(JSON.stringify(JSON.parse(file).coManaged)).not.toMatch(forbidden);
     }
-    for (const name of ['CoManagedPoolEditor', 'CoManagedSeatQuantity', 'CoManagedSeatExplainer', 'CoManagedPurchaseReview']) {
+    for (const name of ['CoManagedPoolEditor', 'CoManagedPoolQuantity', 'CoManagedPoolExplainer', 'CoManagedPurchaseReview']) {
       expect(readFileSync(resolve(process.cwd(), `src/components/co-managed/${name}.tsx`), 'utf8')).not.toMatch(forbidden);
     }
   });
@@ -239,7 +239,7 @@ describe('naming', () => {
 
 describe('explainer and page copy', () => {
   it('lists the three numbered steps and who needs a seat', () => {
-    render(<CoManagedSeatExplainer />);
+    render(<CoManagedPoolExplainer />);
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByText('coManaged.howItWorks.title')).toBeInTheDocument();
     expect(screen.getByText('coManaged.whoNeedsSeat.label')).toBeInTheDocument();

@@ -11,7 +11,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CoManagedPurchaseReview, { coManagedPurchaseErrorMessage } from './CoManagedPurchaseReview';
 import { useCoManagedPurchaseController } from './useCoManagedPurchaseController';
 import { announceCoManagedAccessChanged } from './accessRefresh';
-import CoManagedSeatQuantity from './CoManagedSeatQuantity';
+import CoManagedPoolQuantity from './CoManagedPoolQuantity';
 import { useCoManagedUnitPrice } from './useCoManagedUnitPrice';
 
 const GHOST_ACTION = 'inline-flex items-center gap-0.5 text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap';
@@ -73,7 +73,7 @@ export default function CoManagedPoolEditor({ showTotals = false, className, ref
       <Button id="co-managed-resume-purchase" disabled={busy} onClick={() => void confirmPurchase(state.purchase.pending?.quantity)}>
         {t('coManaged.resumePurchase')}
       </Button>
-    </div> : state.purchase.canPurchase ? <CoManagedSeatQuantity purchased={state.capacity} quantity={quantity} onQuantityChange={setQuantity}
+    </div> : state.purchase.canPurchase ? <CoManagedPoolQuantity purchased={state.capacity} quantity={quantity} onQuantityChange={setQuantity}
       min={state.purchase.minimumQuantity} max={100000} busy={busy} price={price} onReview={() => void review(quantity)} />
       : reason === 'awaiting_verification' && state.purchase.awaitingVerification ? <div id="co-managed-awaiting-verification" role="status" className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">{t('coManaged.awaitingVerification', { count: state.purchase.awaitingVerification.quantity,
