@@ -33,7 +33,15 @@ export interface DeliveryLedger {
   reclaimable?: readonly ('pending' | 'failed')[];
 }
 
-export type DeliveryKey = Record<string, string>;
+/**
+ * Key values are canonicalized to strings by `qualify`: strings pass through unchanged (existing ledgers),
+ * a Date becomes ISO-8601 UTC (`toISOString`), a finite integer becomes its decimal form. Anything else is rejected.
+ * Timestamp and integer key columns (e.g. schedule reminders) can therefore be passed as `Date` / `number`
+ * without every caller re-deriving the canonical form; the canonical string matches the PK on both
+ * `onConflict` and `where`.
+ */
+export type DeliveryKeyValue = string | number | Date;
+export type DeliveryKey = Record<string, DeliveryKeyValue>;
 export type DeliveryFinishState = 'sent' | 'failed' | 'sending';
 
 export const COMMENT_EMAIL_LEDGER: DeliveryLedger = {
@@ -42,11 +50,18 @@ export const COMMENT_EMAIL_LEDGER: DeliveryLedger = {
   normalized: ['recipient'],
 };
 
+function canonicalKeyValue(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.length > 0 ? value : undefined;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  if (typeof value === 'number') return Number.isSafeInteger(value) ? String(value) : undefined;
+  return undefined;
+}
+
 function qualify(ledger: DeliveryLedger, tenant: string, key: DeliveryKey): Record<string, string> {
   const out: Record<string, string> = { tenant };
   for (const column of ledger.keyColumns) {
-    const value = key[column];
-    if (typeof value !== 'string' || value.length === 0) throw new Error(`delivery ledger key is missing ${column}`);
+    const value = canonicalKeyValue(key[column]);
+    if (value === undefined) throw new Error(`delivery ledger key is missing ${column}`);
     out[column] = ledger.normalized?.includes(column) ? value.trim().toLowerCase() : value;
   }
   return out;
@@ -124,3 +139,30 @@ export const CO_MANAGED_LEDGER: DeliveryLedger = {
   // Routing rows are written `pending` when the transition commits and delivered later (or by recovery).
   reclaimable: ['pending', 'failed'],
 };
+
+/**
+ * Schedule entry reminders: one delivery per (entry, occurrence start, user, lead). `entry_id` is the master entry
+ * for recurring series. `occurrence_start` is timestamptz and `lead_minutes` an integer; build keys with
+ * `scheduleReminderKey` so both are canonical (ISO-8601 UTC, decimal).
+ */
+export const SCHEDULE_REMINDER_LEDGER: DeliveryLedger = {
+  table: 'schedule_entry_reminder_deliveries',
+  keyColumns: ['entry_id', 'occurrence_start', 'user_id', 'lead_minutes'],
+};
+
+export function scheduleReminderKey(parts: {
+  entryId: string;
+  occurrenceStart: Date | string;
+  userId: string;
+  leadMinutes: number;
+}): DeliveryKey {
+  const start = parts.occurrenceStart instanceof Date ? parts.occurrenceStart : new Date(parts.occurrenceStart);
+  if (Number.isNaN(start.getTime())) throw new Error('delivery ledger key is missing occurrence_start');
+  if (!Number.isSafeInteger(parts.leadMinutes) || parts.leadMinutes < 0) throw new Error('delivery ledger key is missing lead_minutes');
+  return {
+    entry_id: parts.entryId,
+    occurrence_start: start.toISOString(),
+    user_id: parts.userId,
+    lead_minutes: String(parts.leadMinutes),
+  };
+}

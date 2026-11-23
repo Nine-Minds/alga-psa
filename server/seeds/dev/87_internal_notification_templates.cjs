@@ -19,6 +19,8 @@ const { TEMPLATES: systemTemplates } = require('../../migrations/utils/templates
 const { TEMPLATES: appointmentTemplates } = require('../../migrations/utils/templates/internal/appointments.cjs');
 const { TEMPLATES: slaTemplates } = require('../../migrations/utils/templates/internal/sla.cjs');
 
+const { ALL_SCHEDULE_REMINDER_TEMPLATES: scheduleReminderTemplates } = require('../../migrations/utils/templates/internal/scheduleEntryReminder.cjs');
+
 const ALL_TEMPLATES = [
   ...ticketTemplates,
   ...projectTemplates,
@@ -26,6 +28,7 @@ const ALL_TEMPLATES = [
   ...systemTemplates,
   ...appointmentTemplates,
   ...slaTemplates,
+  ...scheduleReminderTemplates,
 ];
 
 exports.ALL_TEMPLATES = ALL_TEMPLATES;

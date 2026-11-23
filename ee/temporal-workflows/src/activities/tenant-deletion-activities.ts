@@ -528,6 +528,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_command_receipts',
   // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
   'co_management_deliveries',
+  // Schedule reminder ledger: soft ids only (entry/user), leaf.
+  'schedule_entry_reminder_deliveries',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
