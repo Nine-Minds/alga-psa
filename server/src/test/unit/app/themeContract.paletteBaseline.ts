@@ -625,7 +625,7 @@ export const PALETTE_BASELINE = new Map<string, number>([
   ['packages/tickets/src/components/TicketListSkeleton.tsx', 10],
   ['packages/tickets/src/components/TicketViewMenu.tsx', 3],
   ['packages/tickets/src/components/TicketingDashboard.tsx', 26],
-  ['packages/tickets/src/components/settings/BoardsSettings.tsx', 191],
+  ['packages/tickets/src/components/settings/BoardsSettings.tsx', 184],
   ['packages/tickets/src/components/settings/CategoriesSettings.tsx', 17],
   ['packages/tickets/src/components/settings/DisplaySettings.tsx', 6],
   ['packages/tickets/src/components/templates/TicketTemplateEditor.tsx', 2],
