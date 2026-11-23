@@ -164,7 +164,7 @@
   {
     "id": "T017",
     "description": "Browser: /msp/schedule?entryId= opens the schedule on the entry date with the entry open",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

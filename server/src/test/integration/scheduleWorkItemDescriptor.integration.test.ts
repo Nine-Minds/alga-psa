@@ -48,7 +48,8 @@ describe('describeScheduleWorkItems (T001)', () => {
       return statusId;
     };
 
-    // Tickets: open and closed (through the status), plus one closed only through the denormalized flag.
+    // Tickets: open; closed through both the flag and the status; closed only through its status (flag false);
+    // closed only through the denormalized flag (status still open).
     const ticketOpenStatus = await mkStatus('ticket', 'Open', false);
     const ticketClosedStatus = await mkStatus('ticket', 'Closed', true);
     const mkTicket = async (name: string, statusId: string, isClosed = false) => {
@@ -59,6 +60,8 @@ describe('describeScheduleWorkItems (T001)', () => {
     };
     await mkTicket('ticketOpen', ticketOpenStatus);
     await mkTicket('ticketClosed', ticketClosedStatus, true);
+    await mkTicket('ticketClosedByStatusOnly', ticketClosedStatus, false);
+    await mkTicket('ticketClosedByFlagOnly', ticketOpenStatus, true);
 
     // Interactions: with ticket, without ticket, closed.
     const interactionOpen = await mkStatus('interaction', 'Planned', false);
@@ -108,7 +111,7 @@ describe('describeScheduleWorkItems (T001)', () => {
     await mkTask('taskOpen', openMapping);
     await mkTask('taskClosed', closedMapping);
 
-    // Opportunity steps: current and done.
+    // Opportunity steps: every status in the CHECK (planned | current | done | skipped).
     const opportunityId = id('opportunity');
     const client = await db('clients').where({ tenant, client_id: clientId }).first('default_currency_code');
     await db('opportunities').insert({
@@ -122,8 +125,10 @@ describe('describeScheduleWorkItems (T001)', () => {
     };
     await mkStep('stepCurrent', 'current');
     await mkStep('stepDone', 'done');
+    await mkStep('stepPlanned', 'planned');
+    await mkStep('stepSkipped', 'skipped');
 
-    // Appointment requests: approved and pending.
+    // Appointment requests: every status in the CHECK (pending | approved | declined | cancelled).
     const serviceId = randomUUID();
     const serviceTypeId = randomUUID();
     await db('service_types').insert({
@@ -142,6 +147,8 @@ describe('describeScheduleWorkItems (T001)', () => {
     };
     await mkRequest('requestApproved', 'approved');
     await mkRequest('requestPending', 'pending');
+    await mkRequest('requestDeclined', 'declined');
+    await mkRequest('requestCancelled', 'cancelled');
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -165,6 +172,8 @@ describe('describeScheduleWorkItems (T001)', () => {
     const result = await describeScheduleWorkItems(ctx.db, tenant, [
       ref('ticket', 'ticketOpen'),
       ref('ticket', 'ticketClosed'),
+      ref('ticket', 'ticketClosedByStatusOnly'),
+      ref('ticket', 'ticketClosedByFlagOnly'),
       ref('interaction', 'interactionWithTicket', entryRef),
       ref('interaction', 'interactionNoTicket', entryRef),
       ref('interaction', 'interactionClosed', entryRef),
@@ -172,8 +181,12 @@ describe('describeScheduleWorkItems (T001)', () => {
       ref('project_task', 'taskClosed'),
       ref('opportunity_step', 'stepCurrent'),
       ref('opportunity_step', 'stepDone'),
+      ref('opportunity_step', 'stepPlanned'),
+      ref('opportunity_step', 'stepSkipped'),
       ref('appointment_request', 'requestApproved'),
       ref('appointment_request', 'requestPending'),
+      ref('appointment_request', 'requestDeclined'),
+      ref('appointment_request', 'requestCancelled'),
       { work_item_type: 'ad_hoc', work_item_id: null, entry_id: entryId, entry_title: 'Lunch', occurrence },
     ]);
 
@@ -184,6 +197,9 @@ describe('describeScheduleWorkItems (T001)', () => {
     expect(ticketOpen.title).toContain('Title ticketOpen');
     expect(ticketOpen.done).toBe(false);
     expect(found(result, 'ticket', 'ticketClosed').done).toBe(true);
+    // Either signal alone closes the ticket.
+    expect(found(result, 'ticket', 'ticketClosedByStatusOnly').done).toBe(true);
+    expect(found(result, 'ticket', 'ticketClosedByFlagOnly').done).toBe(true);
 
     // Interaction on a ticket: the ticket page, ticketId set, label is the interaction type name.
     const withTicket = found(result, 'interaction', 'interactionWithTicket');
@@ -210,12 +226,18 @@ describe('describeScheduleWorkItems (T001)', () => {
     expect(stepCurrent.link).toBe(`/msp/opportunities/${ids.opportunity}`);
     expect(stepCurrent.done).toBe(false);
     expect(found(result, 'opportunity_step', 'stepDone').done).toBe(true);
+    expect(found(result, 'opportunity_step', 'stepPlanned').done).toBe(false);
+    // A skipped step needs no reminder: it counts as done.
+    expect(found(result, 'opportunity_step', 'stepSkipped').done).toBe(true);
 
     const approved = found(result, 'appointment_request', 'requestApproved');
     expect(approved.link).toBe(`/msp/schedule?requestId=${ids.requestApproved}`);
     expect(approved.done).toBe(false);
     expect(approved.title).toBe('Onsite visit');
+    // Only an approved request is still live work; pending, declined and cancelled all count as done.
     expect(found(result, 'appointment_request', 'requestPending').done).toBe(true);
+    expect(found(result, 'appointment_request', 'requestDeclined').done).toBe(true);
+    expect(found(result, 'appointment_request', 'requestCancelled').done).toBe(true);
 
     const adHoc = result.get(scheduleWorkItemKey('ad_hoc', null, entryId)) as FoundScheduleWorkItem;
     expect(adHoc.missing).toBe(false);
