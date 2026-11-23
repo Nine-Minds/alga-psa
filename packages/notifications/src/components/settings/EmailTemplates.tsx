@@ -392,6 +392,9 @@ export function EmailTemplates() {
     {
       title: t('notifications.emailTemplatesUi.columns.name', 'Name'),
       dataIndex: 'name',
+      // The name carries the template's status and any missing-variable warning; Subject is the
+      // column that gives way (it truncates with a tooltip).
+      width: '35%',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') {
           const isExpanded = expandedCategories.has(record.name);
@@ -472,7 +475,9 @@ export function EmailTemplates() {
     {
       title: t('notifications.emailTemplatesUi.columns.actions', 'Actions'),
       dataIndex: 'id',
-      width: '15%',
+      // Cells are single-line, so the column must fit its widest row: Edit, Reset to standard
+      // and Use Standard on a customized template. A percentage clipped their labels.
+      width: '23rem',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') {
           return (
