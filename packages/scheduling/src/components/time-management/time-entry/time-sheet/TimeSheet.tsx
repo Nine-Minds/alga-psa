@@ -851,12 +851,7 @@ export function TimeSheet({
 
     const handleAddComment = async (comment: string) => {
         try {
-            const addedComment = await addCommentToTimeSheet(
-                timeSheet.id,
-                timeSheet.user_id,
-                comment,
-                false
-            );
+            const addedComment = await addCommentToTimeSheet(timeSheet.id, comment);
             if (isActionMessageError(addedComment) || isActionPermissionError(addedComment)) {
                 toast.error(getErrorMessage(addedComment));
                 return;

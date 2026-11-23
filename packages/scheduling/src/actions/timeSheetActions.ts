@@ -194,21 +194,21 @@ export const addCommentToTimeSheet = withAuth(async (
   user,
   { tenant },
   timeSheetId: string,
-  userId: string,
-  comment: string,
-  isApprover: boolean
+  comment: string
 ): Promise<ITimeSheetComment | TimeSheetActionError> => {
-  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.comment(ctx, timeSheetId, userId, comment, isApprover));
-  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
 
-    // Fetch the timesheet to check ownership
-    const timeSheet = await scopedDb.table('time_sheets')
-      .where({ id: timeSheetId })
-      .first();
+    // Resolve the subject from the owning source. Providers must derive this
+    // from their authoritative sheet record; caller input contains only an id.
+    const sourceSubject = await delegateToTimeSource(
+      { tenant, userId: user.user_id },
+      (source, ctx) => source.sheets.commentSubject(ctx, timeSheetId)
+    );
+    const timeSheet = sourceSubject.handled
+      ? sourceSubject.value
+      : await scopedDb.table('time_sheets').where({ id: timeSheetId }).first();
 
     if (!timeSheet) {
       throw new Error('Time sheet not found');
@@ -224,12 +224,36 @@ export const addCommentToTimeSheet = withAuth(async (
     if (!isOwner) {
       await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
     }
+
+    // A comment may be allowed by the existing delegation rule without the
+    // actor being authorized to leave an approver-labelled audit record.
+    let isApprover = false;
+    if (!isOwner) {
+      try {
+        await assertCanApproveSubject(user, tenant, timeSheet.user_id, db);
+        isApprover = true;
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.startsWith('Permission denied:')) {
+          throw error;
+        }
+      }
+    }
+    const commenter = { user_id: user.user_id, is_approver: isApprover };
+
+    // Time-source seam receives only server-derived attribution after the same
+    // ownership, delegation, and approval checks used for native sheets.
+    const delegated = await delegateToTimeSource(
+      { tenant, userId: user.user_id },
+      (source, ctx) => source.sheets.comment(ctx, timeSheetId, comment, commenter)
+    );
+    if (delegated.handled) return delegated.value;
+
     const [newComment] = await scopedDb.table('time_sheet_comments')
       .insert({
         time_sheet_id: timeSheetId,
-        user_id: userId,
+        user_id: commenter.user_id,
         comment: comment,
-        is_approver: isApprover,
+        is_approver: commenter.is_approver,
         created_at: db.fn.now(),
         tenant: tenant
       })
