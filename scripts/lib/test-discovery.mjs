@@ -48,6 +48,7 @@ export function isApplianceNodeTest(file) {
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
   if (lane === 'temporal-database') return file === 'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts' || file === 'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts' || /^ee\/temporal-workflows\/src\/db\/__tests__\/(product-upgrade-operations|tenant-setup-idempotency)\.integration\.test\.ts$/.test(file);
+  // LEVERAGE: pattern lane-membership-twice — temporal-engine membership is also listed in ee/temporal-workflows/vitest.engine.config.ts; a new test must be added to both.
   if (lane === 'temporal-engine') {
     if (file === 'ee/temporal-workflows/src/__tests__/e2e/email-only.e2e.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/production-index.engine.test.ts') return true;
@@ -57,7 +58,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts') return true;
     return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'
       || file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
-      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|tenant-creation-portal-access|sla-ticket-workflow|managed-email-domain-workflow|invoice-autopay-workflow|autopay-reconcile-workflow)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|tenant-creation-portal-access|tenant-creation-stripe-checkout-merge|sla-ticket-workflow|managed-email-domain-workflow|invoice-autopay-workflow|autopay-reconcile-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
     if ([

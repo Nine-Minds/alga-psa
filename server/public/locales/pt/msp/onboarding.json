@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Endereço da empresa",
-      "description": "Preenchido com os seus dados de faturação — reveja e corrija se necessário. Este endereço aparece nas suas faturas e orçamentos.",
+      "description": "Este endereço aparece nas suas faturas e orçamentos.",
+      "prefilledFromBilling": "Alguns destes valores foram preenchidos com os seus dados de faturação. Reveja-os.",
       "fields": {
         "addressLine1": {
           "label": "Endereço linha 1",

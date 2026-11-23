@@ -7,6 +7,7 @@ export default {
   test: {
     ...base.test,
     globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],
+    // LEVERAGE: pattern lane-membership-twice — scripts/lib/test-discovery.mjs (isAdditionalWorkspaceTest, temporal-engine) restates this list; keep both in sync.
     include: [
       'src/test-utils/time-skipping-server.test.ts',
       'src/__tests__/e2e/email-only.e2e.test.ts',
@@ -18,6 +19,7 @@ export default {
       'src/workflows/__tests__/trial-payment-reminder-workflow.test.ts',
       'src/workflows/__tests__/tenant-creation-appliance.test.ts',
       'src/workflows/__tests__/tenant-creation-portal-access.test.ts',
+      'src/workflows/__tests__/tenant-creation-stripe-checkout-merge.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.integration.test.ts',
       'src/workflows/__tests__/managed-email-domain-workflow.test.ts',
