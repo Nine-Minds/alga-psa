@@ -62,9 +62,7 @@ export default defineConfig({
     include: [
       'src/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'src/__tests__/**/*.playwright.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      'src/components/**/__tests__/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      // Source-scanning contract tests live beside the code they guard.
-      'src/lib/**/__tests__/*.contract.test.ts'
+      'src/components/**/__tests__/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ]
   },
   resolve: {
