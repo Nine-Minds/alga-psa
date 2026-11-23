@@ -505,8 +505,7 @@
         "save": "Enregistrer les valeurs par défaut du transfert"
       },
       "client": {
-        "seatArrangement": "Accord de postes",
-        "summary": "Accord de postes : {{used}} sur {{count}} postes utilisés"
+        "seatArrangement": "Accord de postes"
       },
       "technicians": {
         "sent": "Invitation envoyée.",
@@ -606,8 +605,6 @@
     },
     "client": {
       "awaitingAcceptance": "L'administrateur client doit accepter avant que l'accès soit accordé.",
-      "chooseRelationship": "Choisir la relation",
-      "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
       "endedOn": "Terminée le {{date}}",
       "failedHint": "La configuration n'est pas terminée. Les postes restent réservés ; réessayez pour la poursuivre ou annulez la configuration.",
       "forClient": "Informatique cogérée pour {{name}}",
@@ -624,7 +621,6 @@
       "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
       "tab": "Informatique cogérée",
       "viewDetails": "Voir les détails",
-      "viewHistory": "Voir l'historique",
       "workspace": "Espace de travail client",
       "seatUsage": "{{used}} sur {{count}} postes de technicien",
       "seatAllocation": "{{count}} postes de technicien alloués"

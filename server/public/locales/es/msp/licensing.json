@@ -505,8 +505,7 @@
         "save": "Guardar valores de traspaso"
       },
       "client": {
-        "seatArrangement": "Acuerdo de puestos",
-        "summary": "Acuerdo de puestos: {{used}} de {{count}} puestos en uso"
+        "seatArrangement": "Acuerdo de puestos"
       },
       "technicians": {
         "sent": "Invitación enviada.",
@@ -606,8 +605,6 @@
     },
     "client": {
       "awaitingAcceptance": "El administrador del cliente debe aceptar antes de conceder el acceso.",
-      "chooseRelationship": "Elegir relación",
-      "endedHint": "Esta relación ha finalizado. El historial retenido y los archivos siguen disponibles.",
       "endedOn": "Finalizó el {{date}}",
       "failedHint": "La configuración no terminó. Los puestos siguen reservados; reintente para continuarla o cancele la configuración.",
       "forClient": "TI cogestionada para {{name}}",
@@ -624,7 +621,6 @@
       "setupHint": "Habilite TI cogestionada desde este cliente para reservar técnicos del cliente e invitar a un administrador.",
       "tab": "TI cogestionada",
       "viewDetails": "Ver detalles",
-      "viewHistory": "Ver historial",
       "workspace": "Espacio de trabajo del cliente",
       "seatUsage": "{{used}} de {{count}} puestos de técnico",
       "seatAllocation": "{{count}} puestos de técnico asignados"
