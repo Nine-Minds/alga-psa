@@ -1063,10 +1063,8 @@ describe('billing catalog context loader registration (co-managed-offer-context-
   const EE_GATE_ENTRY_POINTS = [
     { file: 'ee/server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
     { file: 'server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
-    // KNOWN GAP: ee/temporal-workflows/src/worker.ts is not listed. surfaceProbe imports StripeService, which
-    // does not typecheck under the worker's strict tsconfig (18 errors, tsconfig.build.json follows the import)
-    // and has never been in the worker's runtime graph. Until that is resolved the worker's co-managed-seat
-    // decisions use the legacy env fallback. Add the worker here once it registers the loader.
+    // The Temporal worker registers through a worker-safe module (it must not import StripeService).
+    { file: 'ee/temporal-workflows/src/worker.ts', importPath: '@ee/lib/stripe/offerCatalog/workerRegistration' },
   ] as const;
 
   const importsModule = (source: string, importPath: string): boolean => {
@@ -1089,6 +1087,15 @@ describe('billing catalog context loader registration (co-managed-offer-context-
   it('the matcher bites when the import is missing', () => {
     expect(importsModule(`export async function register() { await import('@/lib/initializeApp'); }`, '@enterprise/lib/stripe/offerCatalog/surfaceProbe')).toBe(false);
     expect(importsModule(`import "@ee/lib/stripe/offerCatalog/surfaceProbe";`, '@ee/lib/stripe/offerCatalog/surfaceProbe')).toBe(true);
+  });
+
+  it('the worker registration registers the loader and stays out of StripeService and Next', () => {
+    const source = readFileSync(join(REPO, 'ee/server/src/lib/stripe/offerCatalog/workerRegistration.ts'), 'utf8');
+    expect(source).toMatch(/^registerBillingCatalogContextLoader\(loadWorkerBillingCatalogContext\);$/m);
+    expect(source).not.toMatch(/from ['"][^'"]*(StripeService|next\/)/);
+    // The worker's fail-open import sits inside a try block, like the write-admission install.
+    expect(readFileSync(join(REPO, 'ee/temporal-workflows/src/worker.ts'), 'utf8'))
+      .toMatch(/try \{\s*await import\('@ee\/lib\/stripe\/offerCatalog\/workerRegistration'\);\s*\} catch/);
   });
 
   it('EE surfaceProbe registers the loader and the CE alias registers nothing', () => {

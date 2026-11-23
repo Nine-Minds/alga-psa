@@ -37,22 +37,13 @@ import { dispatchPaymentEvent } from './paymentEventRegistry';
 import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
 import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, PortalFulfillmentRetryableError, portalPurchaseIdOfEvent, reconcilePortalPurchase } from './coManagedFulfillment';
 import {
-  CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, createOfferCatalog, createScopeResolver,
-  stripeLivemodeFromSecretKey, type CatalogOperator, type OfferCatalog, type ResolvedOffer,
+  CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, type CatalogOperator, type OfferCatalog, type ResolvedOffer,
 } from './offerCatalog';
+import { createBillingOfferCatalog, resolveStripeSecretKey } from './offerCatalog/catalogFactory';
 
 /** The one supported co-managed seat cadence. A new cadence is a new catalog identity, not a flag. */
 const CO_MANAGED_SEAT_INTERVAL = 'month' as const;
 
-async function loadConfiguredBillingAccount(db: Knex, livemode: boolean): Promise<string | undefined> {
-  try {
-    const row = await db('stripe_offer_catalog_settings').where({ livemode }).first('stripe_account');
-    return row?.stripe_account;
-  } catch (error) {
-    if ((error as { code?: string }).code === '42P01') return undefined;
-    throw error;
-  }
-}
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -129,10 +120,7 @@ async function getStripeConfig() {
 
   // Get secrets using the secret provider system (supports env, filesystem, vault)
   // Try secret provider first, fall back to environment variables
-  let secretKey = await secretProvider.getAppSecret('stripe_secret_key');
-  if (!secretKey && process.env.STRIPE_SECRET_KEY) {
-    secretKey = process.env.STRIPE_SECRET_KEY;
-  }
+  const secretKey = await resolveStripeSecretKey();
 
   let webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
   if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
@@ -1718,13 +1706,7 @@ export class StripeService {
     if (!this.offerCatalogInstance) {
       const { getAdminConnection } = await import('@alga-psa/db/admin');
       const db = await getAdminConnection();
-      this.offerCatalogInstance = createOfferCatalog({
-        db, stripe: this.stripe, subscriptions: this.stripe.subscriptions,
-        livemode: () => stripeLivemodeFromSecretKey(this.config.secretKey),
-        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, (livemode, connection = db) => {
-          return loadConfiguredBillingAccount(connection, livemode);
-        }),
-      });
+      this.offerCatalogInstance = createBillingOfferCatalog({ db, stripe: this.stripe, secretKey: this.config.secretKey });
     }
     return this.offerCatalogInstance;
   }

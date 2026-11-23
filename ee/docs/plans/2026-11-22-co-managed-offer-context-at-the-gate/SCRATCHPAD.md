@@ -65,11 +65,16 @@
 - **`currentBillingCatalogContext()` is now async.** Its only readers were the gate and two tests.
 - **Registered from:** `ee/server/src/instrumentation.ts` and `server/src/instrumentation.ts` (`@enterprise/...surfaceProbe`;
   the CE alias is a no-op, so CE keeps the env fallback). Registration runs before `initializeApp`.
-- **F007 not done.** `ee/temporal-workflows/src/worker.ts` cannot import `surfaceProbe` today: it pulls
-  `StripeService.ts` into the worker's `tsc -p tsconfig.build.json` graph, which reports 18 strict-mode type errors
-  (e.g. `Record<string, any>` not assignable to `StripeSubscription`), and StripeService has never been in the
-  worker's runtime graph. The worker keeps the legacy env fallback. Follow-up: make StripeService clean under the
-  worker tsconfig, or extract an OfferCatalog factory that does not need it, then register in `worker.ts` and add
-  it to the contract test list. T005 therefore covers the two server entries only and stays unimplemented.
+- **Temporal worker (F007).** `worker.ts` `main()` imports `@ee/lib/stripe/offerCatalog/workerRegistration` next to the
+  write-admission install, fail-open (logged, boot continues, gate keeps the env fallback). `surfaceProbe` imports
+  StripeService, which does not typecheck under the worker's strict tsconfig, so the loader was split:
+  `catalogContext.ts` (`loadBillingCatalogContextFrom(getCatalog)`, logging), `catalogFactory.ts` (the one
+  `createBillingOfferCatalog` composition, also used by `StripeService.getOfferCatalog()`, plus
+  `resolveStripeSecretKey`, also used by `getStripeConfig`), `surfaceProbe.ts` (server: passes StripeService's
+  catalog) and `workerRegistration.ts` (worker: builds a Stripe client from the same key resolution and override,
+  opens a fresh admin connection per load, holds no instance). Registration lives in `main()`, so importing
+  `worker.ts` alone does not register; the contract test checks the try-guarded import. Also added
+  `@alga-psa/tenancy/server/*` to the worker tsconfig paths: `verify-alias-rewrites` failed on
+  `analyticsSettings.js` before this change, so `build:ts` could not pass at all.
 - **Other processes.** `services/email-service` and `services/workflow-worker` register `co-managed-seat` but alias
   `@enterprise` to the CE stub (`packages/ee`), so they have no EE catalog and keep the env fallback. Not wired.
