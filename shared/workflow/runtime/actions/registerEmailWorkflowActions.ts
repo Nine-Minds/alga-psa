@@ -124,12 +124,17 @@ const inboundTicketDefaultsSchema = z.object({
 function buildCommentPayload(parsedEmail: any, emailData: any) {
   const sanitizedHtml = parsedEmail?.sanitizedHtml;
   const sanitizedText = parsedEmail?.sanitizedText;
-  const content = sanitizedHtml || sanitizedText || emailData?.body?.html || emailData?.body?.text || '';
+  // A successful parse owns the body: an undefined sanitizedHtml means the parser's safety net
+  // rejected its own HTML trim, so the comment comes from the parsed text. Falling back to the
+  // raw body there would store the whole quoted history (alga-2026-0003353).
+  const rawHtml = parsedEmail ? undefined : emailData?.body?.html;
+  const rawText = parsedEmail ? undefined : emailData?.body?.text;
+  const content = sanitizedHtml || sanitizedText || rawHtml || rawText || '';
   const format = sanitizedHtml
     ? 'html'
     : sanitizedText
       ? 'text'
-      : emailData?.body?.html
+      : rawHtml
         ? 'html'
         : 'text';
   const metadata = parsedEmail?.metadata;

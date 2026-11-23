@@ -1,7 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
 import { parseEmailReply } from '../../../lib/email/replyParser';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const readEmailFixture = (file: string) =>
+  fs.readFileSync(path.join(__dirname, '..', '..', '..', 'lib', 'email', '__fixtures__', file), 'utf8');
+
+/** Non-empty visible text of each stored BlockNote block, inline links included. */
+function blockTexts(blocks: any[]): string[] {
+  const inlineText = (node: any): string =>
+    typeof node?.text === 'string' ? node.text : (node?.content ?? []).map(inlineText).join('');
+  return blocks
+    .map((block) => (block?.content ?? []).map(inlineText).join('').trim())
+    .filter(Boolean);
+}
 
 /** Same algorithm as BaseEmailService.logEmailSendResult / notificationLoopDetection.ts. */
 function replyTokenHash(token: string): string {
@@ -1554,5 +1570,85 @@ describe('processInboundEmailInApp', () => {
     expect(result.diagnostics?.notificationLoop?.evidence.tokenHashMatched).toBe(false);
     expect(result.outcome).not.toBe('skipped');
     expect(createTicketFromEmailMock).toHaveBeenCalled();
+  });
+
+  // alga-2026-0003353: the parser's safety net hands back the text result when it rejects its
+  // own HTML trim. The comment must then be built from that text, never from the original body,
+  // which still carries every level of quoted history.
+  describe('safety-net rejection of the HTML trim', () => {
+    const AUTHORED = 'Thursday afternoon works for us. Please go ahead and book it.';
+    const QUOTED_HISTORY = [
+      'ALGA-REPLY-TOKEN',
+      'Please reply above this line',
+      'still sealed in the shipping box',
+      'Comment from Dana Tech',
+      'Enroll both machines in Intune before delivery',
+      'runbooks/laptop-imaging',
+    ];
+
+    const storedCommentContent = async (emailId: string): Promise<string> => {
+      findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-own-reply' });
+      let content = '';
+      createCommentFromEmailMock.mockImplementation(async (data: any) => {
+        content = String(data.content ?? '');
+        return 'comment-own-reply';
+      });
+
+      const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+      const result = await processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: buildEmailData({
+          id: emailId,
+          from: { email: 'jane.client@example.test', name: 'Jane Client' },
+          body: {
+            text: readEmailFixture('gmail-reply-own-reply.txt'),
+            html: readEmailFixture('gmail-reply-own-reply.html'),
+          },
+        }),
+      });
+
+      expect(result).toMatchObject({ outcome: 'replied', ticketId: 'ticket-own-reply' });
+      expect(createCommentFromEmailMock).toHaveBeenCalledTimes(1);
+      return content;
+    };
+
+    it('builds the comment from the text result, not the original HTML', async () => {
+      parseEmailReplyBodyMock.mockResolvedValue({
+        sanitizedText: AUTHORED,
+        sanitizedHtml: undefined,
+        confidence: 'high',
+        strategy: 'custom-boundary',
+        appliedHeuristics: ['token-strip', 'explicit-boundary', 'html-blockquote-trim', 'html-trim-rejected'],
+        warnings: [
+          'HTML blockquote trim removed significantly more content than text heuristics; using text result.',
+        ],
+        tokens: { conversationToken: 'OWNREPLY-TOKEN-11', ticketId: 'ticket-own-reply' },
+      });
+
+      const content = await storedCommentContent('email-safety-net-rejected-1');
+
+      expect(content).toContain(AUTHORED);
+      for (const leaked of QUOTED_HISTORY) {
+        expect(content).not.toContain(leaked);
+      }
+    });
+
+    it('stores only the authored reply for the real Gmail reply-to-own-reply mail', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+
+      const content = await storedCommentContent('email-own-reply-end-to-end-1');
+
+      expect(content).toContain(AUTHORED);
+      for (const leaked of QUOTED_HISTORY) {
+        expect(content).not.toContain(leaked);
+      }
+      // The comment the reporter saw was 65 blocks of thread. All that is left here is the
+      // authored line and the attribution ahead of the cut quote (existing parser behaviour).
+      const texts = blockTexts(JSON.parse(content));
+      expect(texts[0]).toBe(AUTHORED);
+      expect(texts).toHaveLength(2);
+      expect(texts[1]).toMatch(/^On Mon, .*wrote:$/);
+    });
   });
 });

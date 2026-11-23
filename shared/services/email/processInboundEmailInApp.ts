@@ -405,6 +405,23 @@ function stripAutomatedReplyMarkers(text: string): string {
     .trim();
 }
 
+/**
+ * Body a comment is built from. A successful parse owns the result: an undefined
+ * `sanitizedHtml` means the parser's safety net rejected its own HTML trim, so the comment
+ * must come from `sanitizedText`. Falling back to the raw body there would store the whole
+ * quoted history the parser had just removed (alga-2026-0003353). The raw body stays the
+ * fallback only when parsing threw and there is no parse result at all.
+ */
+function replyBodyForComment(
+  parsedEmail: any,
+  emailData: EmailMessageDetails,
+): { html?: string; text?: string } {
+  if (parsedEmail) {
+    return { html: parsedEmail.sanitizedHtml, text: parsedEmail.sanitizedText };
+  }
+  return { html: emailData.body?.html, text: emailData.body?.text };
+}
+
 function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDetails): boolean {
   const candidateText =
     parsedEmail?.sanitizedText ??
@@ -416,7 +433,7 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
   // HTML-only mail has no sanitizedText in the reply parser. Use its existing
   // HTML text projection, without reviving quoted HTML when a text part exists.
   if (emailData.body?.text?.trim()) return false;
-  return stripAutomatedReplyMarkers(htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).length > 0;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(replyBodyForComment(parsedEmail, emailData).html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
@@ -1472,8 +1489,7 @@ export async function processInboundEmailInApp(
 
     const oneOffRecipients = await loadTicketOneOffRecipients(tenantId, params.ticketId);
 
-    const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
-    const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
+    const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData);
     const blocks = await blocksFromEmailBody({
       html: parsedHtml,
       text: parsedText,
@@ -1983,7 +1999,8 @@ export async function processInboundEmailInApp(
           // participant, never through the native writer, so the audience is stamped on the thread.
           const writer = await coManagedInboundCommentSeam.resolve(tenantId);
           if (!writer) throw new InboundRetryLaterError('co-managed inbound writer is not available in this process; leaving the message to retry');
-          const text = (parsedEmail?.sanitizedText ?? emailData.body?.text ?? htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).trim();
+          const commentBody = replyBodyForComment(parsedEmail, emailData);
+          const text = (commentBody.text ?? htmlToVisibleText(commentBody.html ?? '')).trim();
           const written = await writer.write({
             tenant: tenantId,
             ticketId: admission.ticketId,
@@ -2435,8 +2452,7 @@ export async function processInboundEmailInApp(
     }
   }
 
-  const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
-  const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
+  const { html: parsedHtml, text: parsedText } = replyBodyForComment(parsedEmail, emailData);
   const blocks = await blocksFromEmailBody({
     html: parsedHtml,
     text: parsedText,
