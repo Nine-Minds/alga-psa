@@ -637,7 +637,8 @@
         "down": "Down",
         "remove": "Remove",
         "addStatus": "Add Status",
-        "back": "Back to Boards"
+        "back": "Back to Boards",
+        "changeBoardType": "Change board type"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Default board for client portal tickets",
           "help": "New tickets submitted from the client portal land on this board. Only one board can be the default."
+        },
+        "boardType": {
+          "label": "Board type",
+          "itil": "Standard ITIL categories and priorities",
+          "custom": "This workspace's own categories and priorities",
+          "mixed": "Categories: {{categories}}. Priorities: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Import with different name:",
         "importWithOrder": "Import with order {{order}}",
         "importWithResolutions": "Import with Resolutions",
-        "removesIntro": "Deleting this board will also remove:"
+        "removesIntro": "Deleting this board will also remove:",
+        "changeBoardTypeTitle": "Change board type",
+        "changeBoardTypeConfirm": "Change board type",
+        "changeBoardTypeToItil": "Board “{{board}}” will use the standard ITIL categories and priorities.",
+        "changeBoardTypeToCustom": "Board “{{board}}” will use this workspace’s own categories and priorities.",
+        "changeBoardTypeKeeps": "Nothing on the board is rewritten. These keep a priority the board will no longer offer, and need attention:",
+        "changeBoardTypeTickets": "{{count}} open tickets",
+        "changeBoardTypeInboundDefaults": "{{count}} inbound email defaults",
+        "changeBoardTypeTemplates": "{{count}} ticket templates",
+        "changeBoardTypeSchedules": "{{count}} recurring schedules",
+        "changeBoardTypeSlaNone": "This board has no SLA policy, so new tickets get no due dates.",
+        "changeBoardTypeSlaNoTargets": "Policy “{{policy}}” has no targets for the priorities this board will use, so new tickets get no due dates.",
+        "changeBoardTypeSlaOk": "Policy “{{policy}}” stays assigned to this board."
       },
       "importTable": {
         "active": "Active"

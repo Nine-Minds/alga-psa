@@ -13,6 +13,8 @@ import {
   updateBoard,
   deleteBoard,
   clearBoardDefaultView,
+  getBoardTypeSwitchSummary,
+  switchBoardType,
 } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import BoardHeader from '../BoardHeader';
 import { TICKET_COLUMNS, resolveTicketColumnVisibility, type TicketListColumnKey } from '@alga-psa/tickets/lib';
@@ -33,6 +35,7 @@ import {
   saveBoardNotificationSettings,
 } from '../../actions/board-actions/boardNotificationActions';
 import type { BoardListStats } from '../../actions/board-actions/boardActions';
+import type { BoardTypeSwitchSummary } from '../../services/boardLifecycle';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
@@ -725,6 +728,15 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
   // State for ITIL Info Modal
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
+  // F119: changing an existing board's kind is its own action, with a summary of what will no
+  // longer fit. Nothing on the board is rewritten by it (D3/D6), so the summary is a warning list.
+  const [boardTypeSwitch, setBoardTypeSwitch] = useState<{
+    kind: 'custom' | 'itil';
+    summary: BoardTypeSwitchSummary | null;
+    loading: boolean;
+    error: string | null;
+    switching: boolean;
+  } | null>(null);
   const [selectedImportBoards, setSelectedImportBoards] = useState<string[]>([]);
   const [importBoardItilSettings, setImportBoardItilSettings] = useState<Record<string, boolean>>({});
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
@@ -1535,6 +1547,39 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
   };
 
+  const openBoardTypeSwitch = async (board: IBoard) => {
+    const kind: 'custom' | 'itil' =
+      board.category_type === 'itil' && board.priority_type === 'itil' ? 'custom' : 'itil';
+    setBoardTypeSwitch({ kind, summary: null, loading: true, error: null, switching: false });
+    const result = await getBoardTypeSwitchSummary(board.board_id as string, kind);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      setBoardTypeSwitch({ kind, summary: null, loading: false, error: getErrorMessage(result), switching: false });
+      return;
+    }
+    setBoardTypeSwitch({ kind, summary: result as BoardTypeSwitchSummary, loading: false, error: null, switching: false });
+  };
+
+  const confirmBoardTypeSwitch = async () => {
+    if (!boardTypeSwitch?.summary) return;
+    setBoardTypeSwitch({ ...boardTypeSwitch, switching: true });
+    const result = await switchBoardType(boardTypeSwitch.summary.boardId, boardTypeSwitch.kind);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      setBoardTypeSwitch({ ...boardTypeSwitch, switching: false, error: getErrorMessage(result) });
+      return;
+    }
+    setBoardTypeSwitch(null);
+    const updated = result as IBoard;
+    setFormData((previous) => ({
+      ...previous,
+      category_type: updated.category_type as PriorityType,
+      priority_type: updated.priority_type as PriorityType,
+      default_priority_id: updated.default_priority_id ?? '',
+      is_itil_compliant: updated.category_type === 'itil' && updated.priority_type === 'itil',
+    }));
+    setEditingBoard(updated);
+    await fetchBoards();
+  };
+
   const closeEditor = () => {
     setShowAddEditDialog(false);
     setEditingBoard(null);
@@ -1890,6 +1935,54 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         validationResult={deleteValidation}
         isValidating={false}
         isDeleting={false}
+      />
+
+      <ConfirmationDialog
+        id="board-change-type-dialog"
+        isOpen={!!boardTypeSwitch}
+        onClose={() => setBoardTypeSwitch(null)}
+        onConfirm={confirmBoardTypeSwitch}
+        isConfirming={boardTypeSwitch?.switching === true}
+        title={t('ticketing.boards.dialog.changeBoardTypeTitle')}
+        confirmLabel={t('ticketing.boards.dialog.changeBoardTypeConfirm')}
+        message={
+          boardTypeSwitch?.loading
+            ? t('common.loading', { defaultValue: 'Loading...' })
+            : boardTypeSwitch?.error
+              ? boardTypeSwitch.error
+              : boardTypeSwitch?.summary
+                ? (
+                  <div className="space-y-2" id="board-change-type-summary">
+                    <p>
+                      {t(
+                        boardTypeSwitch.kind === 'itil'
+                          ? 'ticketing.boards.dialog.changeBoardTypeToItil'
+                          : 'ticketing.boards.dialog.changeBoardTypeToCustom',
+                        { board: boardTypeSwitch.summary.boardName }
+                      )}
+                    </p>
+                    <p>{t('ticketing.boards.dialog.changeBoardTypeKeeps')}</p>
+                    <ul className="list-disc pl-5">
+                      <li>{t('ticketing.boards.dialog.changeBoardTypeTickets', { count: boardTypeSwitch.summary.openTickets })}</li>
+                      <li>{t('ticketing.boards.dialog.changeBoardTypeInboundDefaults', { count: boardTypeSwitch.summary.inboundDefaults })}</li>
+                      <li>{t('ticketing.boards.dialog.changeBoardTypeTemplates', { count: boardTypeSwitch.summary.templates })}</li>
+                      <li>{t('ticketing.boards.dialog.changeBoardTypeSchedules', { count: boardTypeSwitch.summary.schedules })}</li>
+                    </ul>
+                    <p id="board-change-type-sla">
+                      {boardTypeSwitch.summary.sla.state === 'none'
+                        ? t('ticketing.boards.dialog.changeBoardTypeSlaNone')
+                        : boardTypeSwitch.summary.sla.state === 'no-targets'
+                          ? t('ticketing.boards.dialog.changeBoardTypeSlaNoTargets', {
+                              policy: boardTypeSwitch.summary.sla.policyName ?? '',
+                            })
+                          : t('ticketing.boards.dialog.changeBoardTypeSlaOk', {
+                              policy: boardTypeSwitch.summary.sla.policyName ?? '',
+                            })}
+                    </p>
+                  </div>
+                )
+                : ''
+        }
       />
 
       <ConfirmationDialog
@@ -3118,6 +3211,55 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     checked={formData.is_itil_compliant}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_itil_compliant: checked })}
                   />
+                </div>
+              )}
+
+              {/* An existing board's kind is changed through its own action, not by editing a
+                  field: the switch has consequences the admin is shown first (F119). A legacy
+                  board whose two kinds differ shows both, read-only. */}
+              {editingBoard && (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Label>{t('ticketing.boards.fields.boardType.label')}</Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowItilInfoModal(true)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title={t('ticketing.boards.itilInfo.tooltip')}
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p id="board-type-current" className="text-xs text-muted-foreground mt-1">
+                      {formData.category_type === formData.priority_type
+                        ? t(
+                            formData.priority_type === 'itil'
+                              ? 'ticketing.boards.fields.boardType.itil'
+                              : 'ticketing.boards.fields.boardType.custom'
+                          )
+                        : t('ticketing.boards.fields.boardType.mixed', {
+                            categories: t(
+                              formData.category_type === 'itil'
+                                ? 'ticketing.boards.fields.boardType.itil'
+                                : 'ticketing.boards.fields.boardType.custom'
+                            ),
+                            priorities: t(
+                              formData.priority_type === 'itil'
+                                ? 'ticketing.boards.fields.boardType.itil'
+                                : 'ticketing.boards.fields.boardType.custom'
+                            ),
+                          })}
+                    </p>
+                  </div>
+                  <Button
+                    id="board-change-type-button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void openBoardTypeSwitch(editingBoard)}
+                  >
+                    {t('ticketing.boards.actions.changeBoardType')}
+                  </Button>
                 </div>
               )}
             </div>

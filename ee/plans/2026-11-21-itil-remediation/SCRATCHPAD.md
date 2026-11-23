@@ -645,6 +645,48 @@ as it is after setup; the onboarding wizard's board going through the create;
   `itilCategoryBoardRules` 55/55, all 171 test files of `packages/tickets/src/{actions,lib}`
   (1,462 tests), `packages/onboarding` 12/12 and `packages/reference-data` 36/36.
 
+### Commit group 12 — `board-type-switch` (done)
+
+Landed: `summariseBoardTypeSwitch` and `switchBoardTypeCore` in the lifecycle service; the
+`getBoardTypeSwitchSummary` and `switchBoardType` actions behind the board mutation guard; the
+board update delegating a kind change to the switch; the read-only board type and the
+`board-change-type-button` + confirmation in `BoardsSettings`; the strings in every locale;
+`server/src/test/integration/itilBoardTypeSwitch.integration.test.ts` (12 cases),
+`server/src/test/unit/itilBoardTypeSwitchContract.test.ts` (5 cases),
+`packages/tickets/src/components/settings/BoardsSettings.boardTypeSwitch.test.tsx` (2 cases) and
+the surface probe.
+
+- **The switch is not `handleItilConfiguration`.** That function also assigns the ITIL SLA policy,
+  which D1/D6 forbid on a switch, so the switch calls the two seeding steps directly and never
+  touches `sla_policy_id`. It also drops `cleanupUnusedItilStandards`: priorities are tenant-wide
+  (another board may use them) and categories belong to their board (D9), so a switch away from
+  ITIL deletes nothing — T201 is the test that says so.
+- **A switch to the tenant's own kind writes no category at all.** The standard copies keep their
+  `standard_category_id` and their flag; what makes them editable is the board's kind, because
+  every lock the `category-rules` group added reads `boards.category_type` (R2). Keeping the link
+  is also what lets a switch back re-use the same rows instead of inserting a second set.
+- **The summary counts rows whose stored priority will not fit afterwards** — open tickets,
+  inbound defaults, templates and recurring definitions — and states the board's SLA after the
+  switch from `boards.sla_policy_id` and its targets' families. Nothing in it is a count of what
+  will be changed: the switch changes none of them (D3).
+- **The board update now delegates.** `updateBoardCore` ran `handleItilConfiguration` and
+  `cleanupUnusedItilStandards` itself on a kind change; it now calls `switchBoardTypeCore` with
+  `publish: false` (it publishes its own `BOARD_UPDATED` for the whole patch) and re-reads the row,
+  because the switch re-settles the default priority. So a REST `PUT` with a changed kind runs the
+  switch, which is F120.
+- **The dialog renders in its own test file.** Every `BoardsSettings` suite carries its own mock
+  preamble; this one copies it and un-stubs `ConfirmationDialog`, because the summary and its two
+  buttons are the thing under test. The harness's `Button` mock maps `id` to `data-testid`, which
+  is why the test looks the button up that way.
+- **Two Italian and Dutch glossary rules** rejected the first draft of the strings: `board` must be
+  `bacheca` in Italian and `bord` in Dutch, and `{{count}} open tickets` is identical in English
+  and Dutch, which the audit counts as untranslated. Both fixed; `npm run test:i18n` and
+  `npm run i18n:audit` pass with the pseudo-locales regenerated.
+- Run against this slot's database: `itilBoardTypeSwitch` 12/12, `itilBoardTypeSwitchContract` 5/5,
+  `BoardsSettings.boardTypeSwitch` 2/2, `itilSecondBoardSurfaces` 43 covered + 1 todo (`sla`),
+  `itilBoardLifecycle` 11/11, `itilBoardDeletionCleanup` 5/5 and the 10 test files of
+  `packages/tickets/src/{components/settings,actions/board-actions}`.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -662,7 +704,7 @@ as it is after setup; the onboarding wizard's board going through the create;
 
 ### Groups not started
 
-Commit groups 12–16 (`board-type-switch` through `docs`) are untouched: their features and tests are
+Commit groups 13–16 (`sla` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

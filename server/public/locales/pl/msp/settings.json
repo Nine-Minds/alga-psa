@@ -637,7 +637,8 @@
         "down": "W dół",
         "remove": "Usuń",
         "addStatus": "Dodaj status",
-        "back": "Powrót do Tablic"
+        "back": "Powrót do Tablic",
+        "changeBoardType": "Zmień typ tablicy"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
           "help": "Nowe zgłoszenia przesłane z portalu klienta trafiają na tę tablicę. Tylko jedna tablica może być domyślna."
+        },
+        "boardType": {
+          "label": "Typ tablicy",
+          "itil": "Standardowe kategorie i priorytety ITIL",
+          "custom": "Własne kategorie i priorytety tego obszaru roboczego",
+          "mixed": "Kategorie: {{categories}}. Priorytety: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importuj z inną nazwą:",
         "importWithOrder": "Importuj z kolejnością {{order}}",
         "importWithResolutions": "Importuj z rozwiązaniami",
-        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
+        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:",
+        "changeBoardTypeTitle": "Zmień typ tablicy",
+        "changeBoardTypeConfirm": "Zmień typ tablicy",
+        "changeBoardTypeToItil": "Tablica „{{board}}” będzie używać standardowych kategorii i priorytetów ITIL.",
+        "changeBoardTypeToCustom": "Tablica „{{board}}” będzie używać własnych kategorii i priorytetów tego obszaru roboczego.",
+        "changeBoardTypeKeeps": "Nic na tablicy nie zostaje nadpisane. Poniższe elementy zachowują priorytet, którego tablica nie będzie już oferować, i wymagają uwagi:",
+        "changeBoardTypeTickets": "otwarte zgłoszenia: {{count}}",
+        "changeBoardTypeInboundDefaults": "domyślne ustawienia poczty przychodzącej: {{count}}",
+        "changeBoardTypeTemplates": "szablony zgłoszeń: {{count}}",
+        "changeBoardTypeSchedules": "harmonogramy cykliczne: {{count}}",
+        "changeBoardTypeSlaNone": "Ta tablica nie ma zasady SLA, więc nowe zgłoszenia nie otrzymują terminów.",
+        "changeBoardTypeSlaNoTargets": "Zasada „{{policy}}” nie ma celów dla priorytetów, których będzie używać ta tablica, więc nowe zgłoszenia nie otrzymują terminów.",
+        "changeBoardTypeSlaOk": "Zasada „{{policy}}” pozostaje przypisana do tej tablicy."
       },
       "importTable": {
         "active": "Aktywna"

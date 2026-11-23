@@ -964,7 +964,39 @@ const SURFACES: Surface[] = [
     surface: 'Board type switch',
     commitGroup: 'board-type-switch',
     claims: [],
-    expectedFail: 'a board’s kind cannot be changed from the UI at all',
+    probe: async (db, fixture) => {
+      const { summariseBoardTypeSwitch, switchBoardTypeCore } = await import(
+        '../../../../packages/tickets/src/services/boardLifecycle'
+      );
+      const tt = (table: string) => tenantDb(db, fixture.tenantId).table(table);
+      const standardCount = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne]).length;
+
+      // The second ITIL board can be switched away and back, and its own copy of the standard set
+      // survives both moves: nothing is deleted, and nothing is duplicated.
+      const summary = await summariseBoardTypeSwitch(db, fixture.tenantId, fixture.boards.itilTwo, 'custom');
+      expect(summary).toMatchObject({ boardName: 'ITIL Two', from: 'itil', to: 'custom', mixed: false });
+
+      await db.transaction((trx) =>
+        switchBoardTypeCore(trx, fixture.tenantId, { userId: fixture.userId }, fixture.boards.itilTwo, 'custom')
+      );
+      expect(
+        (await tt('boards').where({ board_id: fixture.boards.itilTwo }).first('category_type')).category_type
+      ).toBe('custom');
+      expect(
+        (await tt('categories').where({ board_id: fixture.boards.itilTwo }).whereNotNull('standard_category_id')).length
+      ).toBe(standardCount);
+
+      await db.transaction((trx) =>
+        switchBoardTypeCore(trx, fixture.tenantId, { userId: fixture.userId }, fixture.boards.itilTwo, 'itil')
+      );
+      expect(
+        (await tt('categories').where({ board_id: fixture.boards.itilTwo }).whereNotNull('standard_category_id')).length
+      ).toBe(standardCount);
+      // And the first ITIL board was never involved.
+      expect(
+        (await tt('categories').where({ board_id: fixture.boards.itilOne }).whereNotNull('standard_category_id')).length
+      ).toBe(standardCount);
+    },
   },
   {
     surface: 'ITIL SLA policy for a new board',

@@ -1013,7 +1013,7 @@
     "prdRefs": [
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "switchBoardType sets both kinds of a board to ITIL or to the tenant's own, behind the ticket_settings permission"
   },
   {
@@ -1022,7 +1022,7 @@
     "prdRefs": [
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching to ITIL ensures the tenant's ITIL priorities, gives the board its standard categories and resets its default priority to a fitting one; categories already on the board stay"
   },
   {
@@ -1031,7 +1031,7 @@
     "prdRefs": [
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching to the tenant's own kind keeps the board's categories as ordinary editable categories and resets its default priority to a fitting one"
   },
   {
@@ -1040,7 +1040,7 @@
     "prdRefs": [
       "D3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A switch changes no ticket, inbound default, template, schedule or SLA assignment"
   },
   {
@@ -1049,7 +1049,7 @@
     "prdRefs": [
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A pre-switch summary counts the open tickets, inbound defaults, templates and schedules on the board whose priority will not fit, and states the board's SLA after the switch: no policy, or a policy with no targets for the priorities the board will use"
   },
   {
@@ -1058,7 +1058,7 @@
     "prdRefs": [
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching to the tenant's own kind is refused with a message when the tenant has no ticket priorities of its own"
   },
   {
@@ -1067,7 +1067,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Boards settings edit dialog has a Change board type action with a confirmation showing the summary; a legacy mixed board shows both kinds read-only"
   },
   {
@@ -1076,7 +1076,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board update no longer changes kinds on its own; a REST PUT with a changed kind runs the switch"
   },
   {
@@ -1085,7 +1085,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "New board-type strings use translation keys in every locale; new controls have kebab-case ids"
   },
   {

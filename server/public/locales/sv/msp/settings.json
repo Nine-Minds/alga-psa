@@ -637,7 +637,8 @@
         "down": "Ner",
         "remove": "Ta bort",
         "addStatus": "Lägg till status",
-        "back": "Tillbaka till tavlor"
+        "back": "Tillbaka till tavlor",
+        "changeBoardType": "Ändra tavltyp"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Standardtavla för ärenden från kundportalen",
           "help": "Nya ärenden som skickas in från kundportalen hamnar på denna tavla. Endast en tavla kan vara standard."
+        },
+        "boardType": {
+          "label": "Tavltyp",
+          "itil": "Standardkategorier och -prioriteringar enligt ITIL",
+          "custom": "Arbetsytans egna kategorier och prioriteringar",
+          "mixed": "Kategorier: {{categories}}. Prioriteringar: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importera med ett annat namn:",
         "importWithOrder": "Importera med ordning {{order}}",
         "importWithResolutions": "Importera med lösta konflikter",
-        "removesIntro": "Om du raderar den här tavlan tas även följande bort:"
+        "removesIntro": "Om du raderar den här tavlan tas även följande bort:",
+        "changeBoardTypeTitle": "Ändra tavltyp",
+        "changeBoardTypeConfirm": "Ändra tavltyp",
+        "changeBoardTypeToItil": "Tavlan ”{{board}}” kommer att använda ITIL:s standardkategorier och -prioriteringar.",
+        "changeBoardTypeToCustom": "Tavlan ”{{board}}” kommer att använda arbetsytans egna kategorier och prioriteringar.",
+        "changeBoardTypeKeeps": "Inget på tavlan skrivs om. Följande behåller en prioritering som tavlan inte längre erbjuder och behöver ses över:",
+        "changeBoardTypeTickets": "{{count}} öppna ärenden",
+        "changeBoardTypeInboundDefaults": "{{count}} standardvärden för inkommande e-post",
+        "changeBoardTypeTemplates": "{{count}} ärendemallar",
+        "changeBoardTypeSchedules": "{{count}} återkommande scheman",
+        "changeBoardTypeSlaNone": "Tavlan har ingen SLA-policy, så nya ärenden får inga förfallodatum.",
+        "changeBoardTypeSlaNoTargets": "Policyn ”{{policy}}” har inga mål för de prioriteringar tavlan kommer att använda, så nya ärenden får inga förfallodatum.",
+        "changeBoardTypeSlaOk": "Policyn ”{{policy}}” är fortfarande kopplad till tavlan."
       },
       "importTable": {
         "active": "Aktiv"

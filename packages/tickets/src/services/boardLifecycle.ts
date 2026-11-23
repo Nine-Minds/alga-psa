@@ -21,6 +21,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   boardFieldKind,
   defaultPriorityForBoardRow,
+  listPrioritiesForKind,
   type BoardFieldKind,
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import {
@@ -594,26 +595,17 @@ export async function updateBoardCore(
     .update(boardUpdateData)
     .returning('*')) as IBoard[];
 
-  // Handle ITIL type changes
-  const categoryTypeChanged = boardData.category_type && boardData.category_type !== currentBoard.category_type;
-  const priorityTypeChanged = boardData.priority_type && boardData.priority_type !== currentBoard.priority_type;
-
-  if (categoryTypeChanged || priorityTypeChanged) {
-    // If switching to ITIL, copy the standards
-    await ItilStandardsService.handleItilConfiguration(
-      trx,
-      tenant,
-      actor.userId,
-      boardId,
-      boardData.category_type || currentBoard.category_type,
-      boardData.priority_type || currentBoard.priority_type
-    );
-
-    // If switching away from ITIL, clean up unused standards
-    if ((categoryTypeChanged && currentBoard.category_type === 'itil') ||
-        (priorityTypeChanged && currentBoard.priority_type === 'itil')) {
-      await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
-    }
+  // F120: a kind change is a board type switch, not a field edit. `switchBoardTypeCore` owns what
+  // it means — the ITIL rows, the board's default priority, and the fact that no ticket, setting
+  // or SLA assignment moves with it (D6) — and the update runs it rather than copying and
+  // cleaning up standards on the side.
+  const kindChanged =
+    (boardData.category_type !== undefined
+      && boardFieldKind(boardData.category_type) !== boardFieldKind(currentBoard.category_type))
+    || (boardData.priority_type !== undefined
+      && boardFieldKind(boardData.priority_type) !== boardFieldKind(currentBoard.priority_type));
+  if (kindChanged) {
+    await switchBoardTypeCore(trx, tenant, actor, boardId, nextPriorityKind, { publish: false });
   }
 
   if (ticketStatuses) {
@@ -626,18 +618,24 @@ export async function updateBoardCore(
     );
   }
 
+  // A kind change re-settles the board's default priority, so the row the caller gets back is the
+  // one in the database, not the one the UPDATE returned.
+  const savedBoard = kindChanged
+    ? (((await tenantScopedTable<IBoard>('boards').where({ board_id: boardId }).first()) ?? updatedBoard) as IBoard)
+    : updatedBoard;
+
   await publishEvent({
     eventType: 'BOARD_UPDATED',
     payload: {
       tenantId: tenant,
       boardId,
       userId: actor.userId,
-      changes: { after: updatedBoard },
+      changes: { after: savedBoard },
       timestamp: new Date().toISOString(),
     },
   });
 
-  return normalizeBoardStopwatchSetting(updatedBoard);
+  return normalizeBoardStopwatchSetting(savedBoard);
 }
 
 export interface DeleteBoardResult {
@@ -1084,4 +1082,209 @@ export async function deleteBoardCore(
         }${itilCleanupMessage}`
       : `Board deleted.${itilCleanupMessage}`
   };
+}
+
+/** What a board's two kinds will be after a switch. */
+export type BoardTypeSwitchKind = BoardFieldKind;
+
+export interface BoardTypeSwitchSla {
+  /** `none` — the board has no SLA policy; `no-targets` — its policy has none for the new family. */
+  state: 'none' | 'no-targets' | 'ok';
+  policyName?: string;
+}
+
+export interface BoardTypeSwitchSummary {
+  boardId: string;
+  boardName: string;
+  from: BoardTypeSwitchKind;
+  to: BoardTypeSwitchKind;
+  /** True when the board's two kinds differ today (D4): the switch also repairs that. */
+  mixed: boolean;
+  /** Rows on this board whose stored priority will not fit the board after the switch. */
+  openTickets: number;
+  inboundDefaults: number;
+  templates: number;
+  schedules: number;
+  sla: BoardTypeSwitchSla;
+}
+
+export const NO_OWN_PRIORITIES_MESSAGE =
+  'This tenant has no ticket priorities of its own, so a board cannot be switched away from the ITIL priorities. Create a priority first.';
+
+/** The family a priority must have for a board of this kind (R3). */
+function itilFamilyFor(kind: BoardTypeSwitchKind): boolean {
+  return kind === 'itil';
+}
+
+async function countRowsWithUnfittingPriority(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+  boardId: string,
+  kind: BoardTypeSwitchKind,
+  decorate?: (query: Knex.QueryBuilder) => void
+): Promise<number> {
+  const scoped = tenantDb(trx, tenant);
+  const query = scoped.table(`${table} as subject`).where('subject.board_id', boardId);
+  scoped.tenantJoin(query, 'priorities as p', 'p.priority_id', 'subject.priority_id');
+  query.where((builder) => {
+    if (itilFamilyFor(kind)) {
+      builder.where('p.is_from_itil_standard', false).orWhereNull('p.is_from_itil_standard');
+    } else {
+      builder.where('p.is_from_itil_standard', true);
+    }
+  });
+  decorate?.(query);
+  const row = await query.count('* as count').first();
+  return Number((row as { count?: string | number } | undefined)?.count ?? 0);
+}
+
+/**
+ * F117: what an admin is told before confirming. Every count is "rows on this board whose stored
+ * priority will not fit the board afterwards" — the switch changes none of them (D3/F116), so the
+ * numbers say what will need attention, not what will be rewritten.
+ *
+ * The SLA line follows D6: a switch assigns no policy, so the board keeps whatever it has, and the
+ * summary says whether that policy has any target for the priorities the board will use.
+ */
+export async function summariseBoardTypeSwitch(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  kind: BoardTypeSwitchKind
+): Promise<BoardTypeSwitchSummary> {
+  const board = await tenantDb(trx, tenant)
+    .table('boards')
+    .where({ board_id: boardId })
+    .first('board_id', 'board_name', 'category_type', 'priority_type', 'sla_policy_id');
+  if (!board) {
+    throw new BoardLifecycleError('Board not found');
+  }
+
+  const [openTickets, inboundDefaults, templates, schedules] = await Promise.all([
+    countRowsWithUnfittingPriority(trx, tenant, 'tickets', boardId, kind, (query) => {
+      query.where((builder) => {
+        builder.where('subject.is_closed', false).orWhereNull('subject.is_closed');
+      });
+    }),
+    countRowsWithUnfittingPriority(trx, tenant, 'inbound_ticket_defaults', boardId, kind),
+    countRowsWithUnfittingPriority(trx, tenant, 'ticket_templates', boardId, kind),
+    countRowsWithUnfittingPriority(trx, tenant, 'recurring_ticket_definitions', boardId, kind),
+  ]);
+
+  let sla: BoardTypeSwitchSla = { state: 'none' };
+  if (board.sla_policy_id) {
+    const policy = await tenantDb(trx, tenant)
+      .table('sla_policies')
+      .where({ sla_policy_id: board.sla_policy_id })
+      .first('policy_name');
+    const scoped = tenantDb(trx, tenant);
+    const targets = scoped.table('sla_policy_targets as t').where('t.sla_policy_id', board.sla_policy_id);
+    scoped.tenantJoin(targets, 'priorities as p', 'p.priority_id', 't.priority_id');
+    const fitting = await targets
+      .where('p.is_from_itil_standard', itilFamilyFor(kind))
+      .count('* as count')
+      .first();
+    sla = {
+      state: Number((fitting as { count?: string | number } | undefined)?.count ?? 0) > 0 ? 'ok' : 'no-targets',
+      policyName: (policy as { policy_name?: string } | undefined)?.policy_name,
+    };
+  }
+
+  return {
+    boardId,
+    boardName: board.board_name,
+    from: boardFieldKind(board.priority_type),
+    to: kind,
+    mixed: boardFieldKind(board.category_type) !== boardFieldKind(board.priority_type),
+    openTickets,
+    inboundDefaults,
+    templates,
+    schedules,
+    sla,
+  };
+}
+
+/**
+ * F113–F116: set both of a board's kinds to `kind`.
+ *
+ * Switching to ITIL makes sure the tenant has the ITIL priorities and gives the board its own copy
+ * of the standard categories; switching the other way leaves the board's categories exactly where
+ * they are — they simply become editable, because the lock reads the board's kind (R2) — and
+ * deletes no priority, because priorities are tenant-wide and another board may still use them.
+ *
+ * Nothing else moves: no ticket, inbound default, template, schedule or SLA assignment is touched
+ * (D3/D6). Only the board's default priority is re-settled, because a board must be able to offer
+ * one (R7).
+ */
+export async function switchBoardTypeCore(
+  trx: Knex.Transaction,
+  tenant: string,
+  actor: BoardLifecycleActor,
+  boardId: string,
+  kind: BoardTypeSwitchKind,
+  options: { publish?: boolean } = {}
+): Promise<IBoard> {
+  const board = await tenantDb(trx, tenant)
+    .table<IBoard>('boards')
+    .where({ board_id: boardId })
+    .first();
+  if (!board) {
+    throw new BoardLifecycleError('Board not found');
+  }
+
+  if (kind === 'custom') {
+    // F118: a board must have priorities to offer. The ITIL ones stay (another board may use
+    // them), but they are not this board's family any more.
+    const own = await listPrioritiesForKind(trx, tenant, 'custom', 'ticket');
+    if (own.length === 0) {
+      throw new BoardLifecycleError(NO_OWN_PRIORITIES_MESSAGE);
+    }
+  } else {
+    // The tenant's ITIL priorities, then this board's own copy of the standard categories. No SLA
+    // policy is created or assigned: that happens only when an ITIL board is created (D1/D6).
+    await ItilStandardsService.copyItilPrioritiesToTenant(trx, tenant, actor.userId);
+    await ItilStandardsService.copyItilCategoriesToTenant(trx, tenant, actor.userId, boardId);
+  }
+
+  await tenantDb(trx, tenant)
+    .table('boards')
+    .where({ board_id: boardId })
+    .update({ category_type: kind, priority_type: kind });
+
+  // R7 on the board's new kind. A stored default of the other family would otherwise be handed to
+  // every create on this board.
+  const defaultPriorityId = await defaultPriorityForBoardRow(trx, tenant, {
+    board_id: boardId,
+    board_name: board.board_name ?? '',
+    priority_type: kind,
+    default_priority_id: board.default_priority_id ?? null,
+  });
+  if ((defaultPriorityId ?? null) !== (board.default_priority_id ?? null)) {
+    await tenantDb(trx, tenant)
+      .table('boards')
+      .where({ board_id: boardId })
+      .update({ default_priority_id: defaultPriorityId });
+  }
+
+  const switched = (await tenantDb(trx, tenant)
+    .table<IBoard>('boards')
+    .where({ board_id: boardId })
+    .first()) as IBoard;
+
+  // The board update publishes its own BOARD_UPDATED for the whole patch, so it asks for silence.
+  if (options.publish !== false) {
+    await publishEvent({
+      eventType: 'BOARD_UPDATED',
+      payload: {
+        tenantId: tenant,
+        boardId,
+        userId: actor.userId,
+        changes: { after: switched },
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  return normalizeBoardStopwatchSetting(switched);
 }

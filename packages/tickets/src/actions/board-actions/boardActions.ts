@@ -11,7 +11,10 @@ import {
   createBoardCore,
   deleteBoardCore,
   isBoardLifecycleError,
+  summariseBoardTypeSwitch,
+  switchBoardTypeCore,
   updateBoardCore,
+  type BoardTypeSwitchSummary,
   type DeleteBoardResult,
 } from '../../services/boardLifecycle';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -375,6 +378,73 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   }
   return true;
 }
+
+/**
+ * F113/F117: change a board's kind, and the summary an admin sees before confirming it.
+ *
+ * Both are behind the same guard as any other board mutation (an internal principal with
+ * `ticket_settings:update`). The summary reads nothing but counts; the switch itself changes no
+ * ticket, setting or SLA assignment (D3/D6) — see `switchBoardTypeCore`.
+ */
+export const getBoardTypeSwitchSummary = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  kind: 'custom' | 'itil'
+): Promise<BoardTypeSwitchSummary | BoardActionError> => {
+  const { knex: db } = await createTenantKnex();
+
+  const guard = await boardMutationGuard(user, 'update', {}, db);
+  if (guard.ok === false) {
+    return guard.error;
+  }
+
+  try {
+    return await withTransaction(db, (trx: Knex.Transaction) =>
+      summariseBoardTypeSwitch(trx, tenant, boardId, kind)
+    );
+  } catch (error) {
+    if (isBoardLifecycleError(error)) {
+      return actionError(error.message);
+    }
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error summarising a board type switch:', error);
+    throw error;
+  }
+});
+
+export const switchBoardType = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  kind: 'custom' | 'itil'
+): Promise<IBoard | BoardActionError> => {
+  const { knex: db } = await createTenantKnex();
+
+  const guard = await boardMutationGuard(user, 'update', {}, db);
+  if (guard.ok === false) {
+    return guard.error;
+  }
+
+  try {
+    return await withTransaction(db, (trx: Knex.Transaction) =>
+      switchBoardTypeCore(trx, tenant, { userId: user.user_id }, boardId, kind)
+    );
+  } catch (error) {
+    if (isBoardLifecycleError(error)) {
+      return actionError(error.message);
+    }
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error switching a board type:', error);
+    throw error;
+  }
+});
 
 export const updateBoard = withAuth(async (user, { tenant }, boardId: string, rawBoardData: UpdateBoardInput): Promise<IBoard | BoardActionError> => {
   const { knex: db } = await createTenantKnex();

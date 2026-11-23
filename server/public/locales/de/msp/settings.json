@@ -637,7 +637,8 @@
         "down": "Nach unten",
         "remove": "Entfernen",
         "addStatus": "Status hinzufügen",
-        "back": "Zurück zu Boards"
+        "back": "Zurück zu Boards",
+        "changeBoardType": "Board-Typ ändern"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Standard-Board für Tickets aus dem Kundenportal",
           "help": "Neue Tickets, die über das Kundenportal eingereicht werden, landen auf diesem Board. Nur ein Board kann das Standard-Board sein."
+        },
+        "boardType": {
+          "label": "Board-Typ",
+          "itil": "Standardmäßige ITIL-Kategorien und -Prioritäten",
+          "custom": "Eigene Kategorien und Prioritäten dieses Arbeitsbereichs",
+          "mixed": "Kategorien: {{categories}}. Prioritäten: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Mit anderem Namen importieren:",
         "importWithOrder": "Mit Reihenfolge {{order}} importieren",
         "importWithResolutions": "Mit Auflösungen importieren",
-        "removesIntro": "Beim Löschen dieses Boards wird außerdem Folgendes entfernt:"
+        "removesIntro": "Beim Löschen dieses Boards wird außerdem Folgendes entfernt:",
+        "changeBoardTypeTitle": "Board-Typ ändern",
+        "changeBoardTypeConfirm": "Board-Typ ändern",
+        "changeBoardTypeToItil": "Board „{{board}}“ verwendet künftig die standardmäßigen ITIL-Kategorien und -Prioritäten.",
+        "changeBoardTypeToCustom": "Board „{{board}}“ verwendet künftig die eigenen Kategorien und Prioritäten dieses Arbeitsbereichs.",
+        "changeBoardTypeKeeps": "Auf dem Board wird nichts überschrieben. Folgende Einträge behalten eine Priorität, die das Board nicht mehr anbietet, und erfordern Aufmerksamkeit:",
+        "changeBoardTypeTickets": "{{count}} offene Tickets",
+        "changeBoardTypeInboundDefaults": "{{count}} Standardwerte für eingehende E-Mails",
+        "changeBoardTypeTemplates": "{{count}} Ticketvorlagen",
+        "changeBoardTypeSchedules": "{{count}} wiederkehrende Zeitpläne",
+        "changeBoardTypeSlaNone": "Dieses Board hat keine SLA-Richtlinie, daher erhalten neue Tickets keine Fälligkeitstermine.",
+        "changeBoardTypeSlaNoTargets": "Die Richtlinie „{{policy}}“ hat keine Ziele für die Prioritäten dieses Boards, daher erhalten neue Tickets keine Fälligkeitstermine.",
+        "changeBoardTypeSlaOk": "Die Richtlinie „{{policy}}“ bleibt diesem Board zugewiesen."
       },
       "importTable": {
         "active": "Aktiv"

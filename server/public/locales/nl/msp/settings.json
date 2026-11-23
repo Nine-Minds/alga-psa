@@ -637,7 +637,8 @@
         "down": "Omlaag",
         "remove": "Verwijderen",
         "addStatus": "Status toevoegen",
-        "back": "Terug naar Borden"
+        "back": "Terug naar Borden",
+        "changeBoardType": "Bordtype wijzigen"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Standaardbord voor tickets uit klantportaal",
           "help": "Nieuwe tickets die via het klantportaal worden ingediend, komen op dit bord terecht. Slechts één bord kan het standaardbord zijn."
+        },
+        "boardType": {
+          "label": "Bordtype",
+          "itil": "Standaard ITIL-categorieën en -prioriteiten",
+          "custom": "Eigen categorieën en prioriteiten van deze werkruimte",
+          "mixed": "Categorieën: {{categories}}. Prioriteiten: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importeren met een andere naam:",
         "importWithOrder": "Importeren met volgorde {{order}}",
         "importWithResolutions": "Importeren met oplossingen",
-        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:",
+        "changeBoardTypeTitle": "Bordtype wijzigen",
+        "changeBoardTypeConfirm": "Bordtype wijzigen",
+        "changeBoardTypeToItil": "Bord “{{board}}” gaat de standaard ITIL-categorieën en -prioriteiten gebruiken.",
+        "changeBoardTypeToCustom": "Bord “{{board}}” gaat de eigen categorieën en prioriteiten van deze werkruimte gebruiken.",
+        "changeBoardTypeKeeps": "Er wordt niets op het bord overschreven. Deze behouden een prioriteit die het bord niet meer aanbiedt en vragen aandacht:",
+        "changeBoardTypeTickets": "{{count}} openstaande tickets",
+        "changeBoardTypeInboundDefaults": "{{count}} standaardwaarden voor inkomende e-mail",
+        "changeBoardTypeTemplates": "{{count}} ticketsjablonen",
+        "changeBoardTypeSchedules": "{{count}} terugkerende planningen",
+        "changeBoardTypeSlaNone": "Dit bord heeft geen SLA-beleid, dus nieuwe tickets krijgen geen vervaldatum.",
+        "changeBoardTypeSlaNoTargets": "Beleid “{{policy}}” heeft geen doelen voor de prioriteiten die dit bord gaat gebruiken, dus nieuwe tickets krijgen geen vervaldatum.",
+        "changeBoardTypeSlaOk": "Beleid “{{policy}}” blijft aan dit bord toegewezen."
       },
       "importTable": {
         "active": "Actief"

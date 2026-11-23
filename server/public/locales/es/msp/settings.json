@@ -637,7 +637,8 @@
         "down": "Bajar",
         "remove": "Eliminar",
         "addStatus": "Agregar estado",
-        "back": "Volver a Tableros"
+        "back": "Volver a Tableros",
+        "changeBoardType": "Cambiar el tipo de tablero"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
           "help": "Los nuevos tickets enviados desde el portal del cliente se asignan a este tablero. Solo un tablero puede ser el predeterminado."
+        },
+        "boardType": {
+          "label": "Tipo de tablero",
+          "itil": "Categorías y prioridades ITIL estándar",
+          "custom": "Categorías y prioridades propias de este espacio de trabajo",
+          "mixed": "Categorías: {{categories}}. Prioridades: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importar con un nombre diferente:",
         "importWithOrder": "Importar con orden {{order}}",
         "importWithResolutions": "Importar con resoluciones",
-        "removesIntro": "Al eliminar este tablero también se eliminará lo siguiente:"
+        "removesIntro": "Al eliminar este tablero también se eliminará lo siguiente:",
+        "changeBoardTypeTitle": "Cambiar el tipo de tablero",
+        "changeBoardTypeConfirm": "Cambiar el tipo de tablero",
+        "changeBoardTypeToItil": "El tablero «{{board}}» usará las categorías y prioridades ITIL estándar.",
+        "changeBoardTypeToCustom": "El tablero «{{board}}» usará las categorías y prioridades propias de este espacio de trabajo.",
+        "changeBoardTypeKeeps": "No se reescribe nada del tablero. Estos elementos conservan una prioridad que el tablero ya no ofrecerá y requieren su atención:",
+        "changeBoardTypeTickets": "{{count}} tickets abiertos",
+        "changeBoardTypeInboundDefaults": "{{count}} valores predeterminados de correo entrante",
+        "changeBoardTypeTemplates": "{{count}} plantillas de ticket",
+        "changeBoardTypeSchedules": "{{count}} programaciones recurrentes",
+        "changeBoardTypeSlaNone": "Este tablero no tiene política de SLA, por lo que los tickets nuevos no reciben fechas de vencimiento.",
+        "changeBoardTypeSlaNoTargets": "La política «{{policy}}» no tiene objetivos para las prioridades que usará este tablero, por lo que los tickets nuevos no reciben fechas de vencimiento.",
+        "changeBoardTypeSlaOk": "La política «{{policy}}» sigue asignada a este tablero."
       },
       "importTable": {
         "active": "Activo"

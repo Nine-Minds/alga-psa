@@ -1774,7 +1774,7 @@
     "featureIds": [
       "F113"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "switchBoardType is refused without the ticket_settings permission"
   },
   {
@@ -1783,7 +1783,7 @@
     "featureIds": [
       "F114"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching a non-ITIL board to ITIL gives it 35 standard categories, keeps its own categories and sets an ITIL default priority"
   },
   {
@@ -1792,7 +1792,7 @@
     "featureIds": [
       "F114"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching to ITIL in a tenant with no ITIL priorities creates the five"
   },
   {
@@ -1801,7 +1801,7 @@
     "featureIds": [
       "F115"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching an ITIL board to the tenant's own kind leaves its categories editable and sets an own default priority"
   },
   {
@@ -1810,7 +1810,7 @@
     "featureIds": [
       "F115"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching the only ITIL board to the tenant's own kind deletes no priority and no category"
   },
   {
@@ -1819,7 +1819,7 @@
     "featureIds": [
       "F116"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After a switch in either direction, every ticket, inbound default, template and schedule on the board is unchanged"
   },
   {
@@ -1828,7 +1828,7 @@
     "featureIds": [
       "F116"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After a switch to ITIL, the board's sla_policy_id is unchanged"
   },
   {
@@ -1837,7 +1837,7 @@
     "featureIds": [
       "F117"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The summary counts match the open tickets, inbound defaults, templates and schedules whose priority will not fit"
   },
   {
@@ -1846,7 +1846,7 @@
     "featureIds": [
       "F118"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching to the tenant's own kind in a tenant with only ITIL ticket priorities is refused with the message"
   },
   {
@@ -1855,7 +1855,7 @@
     "featureIds": [
       "F119"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The confirmation shows the summary and switches only on confirm; cancel changes nothing"
   },
   {
@@ -1864,7 +1864,7 @@
     "featureIds": [
       "F119"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A legacy mixed board shows both kinds read-only and offers the switch"
   },
   {
@@ -1873,7 +1873,7 @@
     "featureIds": [
       "F120"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "PUT /api/v1/boards with a changed kind runs the switch; with an unchanged kind it does not touch categories or priorities"
   },
   {
@@ -1882,7 +1882,7 @@
     "featureIds": [
       "F121"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every new board-type key exists in every locale and passes the glossary checks"
   },
   {
@@ -1891,7 +1891,7 @@
     "featureIds": [
       "F117"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching an ITIL board with the ITIL policy to the tenant's own kind: the summary says the policy has no targets for the tenant's own priorities and new tickets get no due dates"
   },
   {
@@ -1900,7 +1900,7 @@
     "featureIds": [
       "F117"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching a board without an SLA policy to ITIL: the summary says the board has no SLA policy"
   },
   {
@@ -1909,7 +1909,7 @@
     "featureIds": [
       "F117"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Switching a board whose policy has targets for the new kind: the summary shows no SLA warning"
   },
   {

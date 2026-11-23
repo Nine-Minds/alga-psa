@@ -637,7 +637,8 @@
         "down": "Giù",
         "remove": "Rimuovi",
         "addStatus": "Aggiungi stato",
-        "back": "Torna alle Bacheche"
+        "back": "Torna alle Bacheche",
+        "changeBoardType": "Cambia tipo di bacheca"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Bacheca predefinita per i ticket del portale clienti",
           "help": "I nuovi ticket inviati dal portale clienti vengono assegnati a questa bacheca. Solo una bacheca può essere quella predefinita."
+        },
+        "boardType": {
+          "label": "Tipo di bacheca",
+          "itil": "Categorie e priorità ITIL standard",
+          "custom": "Categorie e priorità proprie di questo spazio di lavoro",
+          "mixed": "Categorie: {{categories}}. Priorità: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importa con un nome diverso:",
         "importWithOrder": "Importa con ordine {{order}}",
         "importWithResolutions": "Importa con risoluzioni",
-        "removesIntro": "L’eliminazione di questa bacheca rimuoverà anche:"
+        "removesIntro": "L’eliminazione di questa bacheca rimuoverà anche:",
+        "changeBoardTypeTitle": "Cambia tipo di bacheca",
+        "changeBoardTypeConfirm": "Cambia tipo di bacheca",
+        "changeBoardTypeToItil": "La bacheca «{{board}}» userà le categorie e le priorità ITIL standard.",
+        "changeBoardTypeToCustom": "La bacheca «{{board}}» userà le categorie e le priorità proprie di questo spazio di lavoro.",
+        "changeBoardTypeKeeps": "Nulla sulla bacheca viene riscritto. Questi elementi mantengono una priorità che la bacheca non offrirà più e richiedono attenzione:",
+        "changeBoardTypeTickets": "{{count}} ticket aperti",
+        "changeBoardTypeInboundDefaults": "{{count}} impostazioni predefinite per le e-mail in arrivo",
+        "changeBoardTypeTemplates": "{{count}} modelli di ticket",
+        "changeBoardTypeSchedules": "{{count}} pianificazioni ricorrenti",
+        "changeBoardTypeSlaNone": "Questa bacheca non ha una policy SLA, quindi i nuovi ticket non ricevono scadenze.",
+        "changeBoardTypeSlaNoTargets": "La policy «{{policy}}» non ha obiettivi per le priorità che questa bacheca userà, quindi i nuovi ticket non ricevono scadenze.",
+        "changeBoardTypeSlaOk": "La policy «{{policy}}» resta assegnata a questa bacheca."
       },
       "importTable": {
         "active": "Attivo"

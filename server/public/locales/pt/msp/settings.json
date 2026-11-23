@@ -637,7 +637,8 @@
         "down": "Abaixo",
         "remove": "Remover",
         "addStatus": "Adicionar status",
-        "back": "Voltar para Quadros"
+        "back": "Voltar para Quadros",
+        "changeBoardType": "Alterar o tipo de quadro"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
           "help": "Novos tickets enviados pelo portal do cliente são atribuídos a este quadro. Apenas um quadro pode ser o padrão."
+        },
+        "boardType": {
+          "label": "Tipo de quadro",
+          "itil": "Categorias e prioridades ITIL padrão",
+          "custom": "Categorias e prioridades próprias deste espaço de trabalho",
+          "mixed": "Categorias: {{categories}}. Prioridades: {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importar com nome diferente:",
         "importWithOrder": "Importar com pedido {{order}}",
         "importWithResolutions": "Importar com resoluções",
-        "removesIntro": "Excluir este quadro também remove:"
+        "removesIntro": "Excluir este quadro também remove:",
+        "changeBoardTypeTitle": "Alterar o tipo de quadro",
+        "changeBoardTypeConfirm": "Alterar o tipo de quadro",
+        "changeBoardTypeToItil": "O quadro “{{board}}” passará a usar as categorias e prioridades ITIL padrão.",
+        "changeBoardTypeToCustom": "O quadro “{{board}}” passará a usar as categorias e prioridades próprias deste espaço de trabalho.",
+        "changeBoardTypeKeeps": "Nada no quadro é reescrito. Estes mantêm uma prioridade que o quadro deixará de oferecer e precisam de atenção:",
+        "changeBoardTypeTickets": "{{count}} tickets abertos",
+        "changeBoardTypeInboundDefaults": "{{count}} padrões de e-mail recebido",
+        "changeBoardTypeTemplates": "{{count}} modelos de ticket",
+        "changeBoardTypeSchedules": "{{count}} agendamentos recorrentes",
+        "changeBoardTypeSlaNone": "Este quadro não tem política de SLA, por isso os novos tickets não recebem prazos.",
+        "changeBoardTypeSlaNoTargets": "A política “{{policy}}” não tem metas para as prioridades que este quadro passará a usar, por isso os novos tickets não recebem prazos.",
+        "changeBoardTypeSlaOk": "A política “{{policy}}” continua atribuída a este quadro."
       },
       "importTable": {
         "active": "Ativo"

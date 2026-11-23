@@ -637,7 +637,8 @@
         "down": "Descendre",
         "remove": "Supprimer",
         "addStatus": "Ajouter un statut",
-        "back": "Retour aux Tableaux"
+        "back": "Retour aux Tableaux",
+        "changeBoardType": "Changer le type de tableau"
       },
       "fields": {
         "boardName": {
@@ -726,6 +727,12 @@
         "defaultBoard": {
           "label": "Tableau par défaut pour les tickets du portail client",
           "help": "Les nouveaux tickets soumis depuis le portail client sont ajoutés à ce tableau. Un seul tableau peut être défini par défaut."
+        },
+        "boardType": {
+          "label": "Type de tableau",
+          "itil": "Catégories et priorités ITIL standard",
+          "custom": "Catégories et priorités propres à cet espace de travail",
+          "mixed": "Catégories : {{categories}}. Priorités : {{priorities}}."
         }
       },
       "dialog": {
@@ -749,7 +756,19 @@
         "importNewName": "Importer avec un nom différent :",
         "importWithOrder": "Importer avec l'ordre {{order}}",
         "importWithResolutions": "Importer avec résolutions",
-        "removesIntro": "La suppression de ce tableau supprimera également :"
+        "removesIntro": "La suppression de ce tableau supprimera également :",
+        "changeBoardTypeTitle": "Changer le type de tableau",
+        "changeBoardTypeConfirm": "Changer le type de tableau",
+        "changeBoardTypeToItil": "Le tableau « {{board}} » utilisera les catégories et priorités ITIL standard.",
+        "changeBoardTypeToCustom": "Le tableau « {{board}} » utilisera les catégories et priorités propres à cet espace de travail.",
+        "changeBoardTypeKeeps": "Rien n'est réécrit sur le tableau. Les éléments suivants conservent une priorité que le tableau n'proposera plus et demandent votre attention :",
+        "changeBoardTypeTickets": "{{count}} tickets ouverts",
+        "changeBoardTypeInboundDefaults": "{{count}} valeurs par défaut des courriels entrants",
+        "changeBoardTypeTemplates": "{{count}} modèles de ticket",
+        "changeBoardTypeSchedules": "{{count}} planifications récurrentes",
+        "changeBoardTypeSlaNone": "Ce tableau n'a pas de politique de SLA : les nouveaux tickets n'ont donc pas d'échéance.",
+        "changeBoardTypeSlaNoTargets": "La politique « {{policy}} » n'a aucune cible pour les priorités que ce tableau utilisera : les nouveaux tickets n'ont donc pas d'échéance.",
+        "changeBoardTypeSlaOk": "La politique « {{policy}} » reste affectée à ce tableau."
       },
       "importTable": {
         "active": "Actif"
