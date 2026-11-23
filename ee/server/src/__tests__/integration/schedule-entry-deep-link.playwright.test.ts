@@ -80,6 +80,9 @@ test.describe('Schedule entry deep link', () => {
       // A deleted/unknown entry: the page still loads normally and nothing is left open.
       await page.goto(`${BASE_URL}/msp/schedule?entryId=${uuidv4()}`, { waitUntil: 'networkidle' });
       await expect(page.getByRole('heading', { name: 'Schedule' })).toBeVisible();
+      // The user is told why, the calendar finishes loading, and no entry dialog opens.
+      await expect(page.getByText('That schedule entry could not be opened.', { exact: false })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('Loading schedule...')).toHaveCount(0, { timeout: 30_000 });
       await expect(page.locator('#title')).toHaveCount(0);
     } finally {
       if (tenantId) {
