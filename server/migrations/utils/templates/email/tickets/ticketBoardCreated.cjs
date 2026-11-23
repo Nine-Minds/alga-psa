@@ -14,6 +14,7 @@ const SUBTYPE_NAME = 'Board Ticket Created';
 
 // The Description box carries the HTML rendition (sanitised in the subscriber) so
 // table descriptions render as tables. buildText keeps the text rendition.
+// LEVERAGE: pattern email-desc-html-override — same HTML-body-only override as ticketCreated.cjs getTemplate().
 const COPY = Object.fromEntries(Object.entries(BASE_COPY).map(([lang, copy]) => [
   lang,
   { ...copy, descriptionVar: '{{{ticket.descriptionHtml}}}' },

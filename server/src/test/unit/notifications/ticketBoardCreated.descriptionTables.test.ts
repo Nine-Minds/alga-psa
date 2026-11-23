@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import Handlebars from 'handlebars';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
@@ -30,6 +31,36 @@ const require = createRequire(import.meta.url);
 const migrations = '../../../../migrations/utils/templates/email/tickets';
 const { getTemplate: boardTemplate } = require(`${migrations}/ticketBoardCreated.cjs`);
 const { getTemplate: clientTemplate } = require(`${migrations}/ticketCreatedClient.cjs`);
+const { getTemplate: createdTemplate, COPY: createdCopy } = require(`${migrations}/ticketCreated.cjs`);
+const { getTemplate: statusEnteredTemplate } = require(`${migrations}/ticketBoardStatusEntered.cjs`);
+
+// sha256 of JSON([subject, htmlContent, textContent]) per language, rendered from HEAD 0790384d
+// (before the ticket-created change). These templates must not move.
+const digest = (tr: any) => createHash('sha256').update(JSON.stringify([tr.subject, tr.htmlContent, tr.textContent])).digest('hex');
+const BASELINE: Record<string, Record<string, string>> = {
+  "ticketCreatedClient": {
+    "en": "90d6e9694d0d27fab123397c3c702844069208362027c837739c3ca2ae39ff3b",
+    "fr": "990f9185c14b2011c26eb7f79707badf993cb196318417807e746efab11e7df1",
+    "es": "ce3967b8944f977967d6d45975445ed30b39750b3ac3b511f5ab85e2aece8636",
+    "de": "67214414f6f62e82918ab11555b089e969656a9845a6b15ec237dcba028ee84e",
+    "nl": "80e6c91417a2c4543455fab1d3124f79df41ca78be30817d437725ab14f46642",
+    "it": "adb7fd3a90302620d4d86673922f72379b27158ec0f3e993c930a1c0dc41e996",
+    "pl": "6e3fa237d00a1eb40346d649dbdd588a454e770c7853af8fe907f8e63a2806e6",
+    "pt": "967c3ebc9b29e8798544152780320b8d0f7940e6948fe6f6773e3eaddc757bd3",
+    "sv": "916f78d0373382b0015a6e09787c3ae99c84b6418a198dfaa457214800d2155b"
+  },
+  "ticketBoardStatusEntered": {
+    "en": "87c5e8024cfb7ac4e8045d1fd2a575c4427b2bd23da83802ccf986965d61c207",
+    "fr": "23e47d77a326a53a584ce4e09d00c9237747e064ae011515f680fde9954e36a8",
+    "es": "95bd8291d31096e286b099c3a5dabe81b6e6de3f5f8c4ab69b29522d79965928",
+    "de": "5736cbaceed43c67b3d28a22d3217389dcd63cfb678fc38dad09be6590360271",
+    "nl": "9ce907a85545243abd6c16cba3c15ce8e98453a9c3a97de9e507a500f8206c73",
+    "it": "e5e38311425d9ef70479c785b5fcef9228e06d7256c5ee3cea445489f78268a8",
+    "pl": "73b01de4373b77497fcd04c0ef1b4fc09bc63e706984a6dad62ba3c8a634736d",
+    "pt": "b0e0f26bec816c551947e379866b4e88082f1d1daaf3e40183bb999b980ebec1",
+    "sv": "34c9be53c7732d74413c65cce52430f5c8dc68b27ed15fb5274c48814da113c5"
+  }
+};
 
 const NAGIOS_STYLE_HTML = `<html><body>
 <p>***** Nagios *****</p>
@@ -100,10 +131,52 @@ describe('ticket-board-created template', () => {
     }
   });
 
-  it('client ticket-created output is unchanged (still the text rendition)', () => {
-    for (const tr of clientTemplate().translations) {
+  it('client ticket-created output is byte-for-byte unchanged (still the text rendition)', () => {
+    const translations = clientTemplate().translations;
+    expect(translations.map((t: any) => t.language).sort()).toEqual(Object.keys(BASELINE.ticketCreatedClient).sort());
+    for (const tr of translations) {
       expect(tr.htmlContent).not.toContain('descriptionHtml');
+      expect(digest(tr)).toBe(BASELINE.ticketCreatedClient[tr.language]);
     }
+  });
+
+  it('ticket-board-status-entered output is unchanged (still the text rendition)', () => {
+    const translations = statusEnteredTemplate().translations;
+    expect(translations.map((t: any) => t.language).sort()).toEqual(Object.keys(BASELINE.ticketBoardStatusEntered).sort());
+    for (const tr of translations) {
+      expect(digest(tr)).toBe(BASELINE.ticketBoardStatusEntered[tr.language]);
+    }
+  });
+});
+
+describe('ticket-created template (internal rendering)', () => {
+  it('covers every COPY language; HTML body uses descriptionHtml, text part keeps description', () => {
+    const translations = createdTemplate().translations;
+    expect(translations.map((t: any) => t.language).sort()).toEqual(Object.keys(createdCopy).sort());
+    for (const tr of translations) {
+      expect(tr.htmlContent).toContain('{{{ticket.descriptionHtml}}}');
+      expect(tr.htmlContent).not.toContain('{{{ticket.description}}}');
+      expect(tr.textContent).toContain('{{{ticket.description}}}');
+      expect(tr.textContent).not.toContain('descriptionHtml');
+    }
+  });
+
+  it('exported COPY is untouched (text-based) so board-created and status-entered text stay text', () => {
+    for (const copy of Object.values<any>(createdCopy)) {
+      expect(copy.descriptionVar).toBe('{{{ticket.description}}}');
+    }
+  });
+
+  it('renders a table description as <table>/<td>, a plain one as before, an empty one as the escaped fallback', () => {
+    const t = en(createdTemplate());
+    const table = { title: 'x', description: '| Host | stadium-fw01 |', descriptionHtml: '<table><tbody><tr><td>Host</td><td>stadium-fw01</td></tr></tbody></table>' };
+    const html = render(t.htmlContent, table);
+    expect(html.slice(html.indexOf('Description'))).toContain('<td>stadium-fw01</td>');
+    expect(html).not.toContain('| Host |');
+    expect(render(t.textContent, table)).toContain('| Host | stadium-fw01 |');
+    expect(render(t.htmlContent, { title: 'x', description: 'hello', descriptionHtml: '<p>hello</p>' })).toContain('<p>hello</p>');
+    expect(render(t.htmlContent, { title: 'x', description: 'No description provided.', descriptionHtml: '<p>No description provided.</p>' }))
+      .toContain('<p>No description provided.</p>');
   });
 });
 
