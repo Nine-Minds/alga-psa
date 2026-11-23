@@ -1927,6 +1927,10 @@
       "shippedVendor": "Wysłano do dostawcy",
       "returnedTo": "Zwrócono klientowi ({{counterparty}})",
       "returned": "Zwrócono klientowi",
+      "sealed": "Zapieczętowano: {{box}}",
+      "unsealed": "Ponownie otwarto karton: {{box}}",
+      "installedAtClient": "Zainstalowano u klienta",
+      "aBox": "karton przygotowawczy",
       "updated": "Zaktualizowano szczegóły przechowania",
       "fields": {
         "purpose": "cel",

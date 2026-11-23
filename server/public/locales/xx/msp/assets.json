@@ -1925,6 +1925,10 @@
       "shippedVendor": "⟦Şħīƥƥḗḓ ŧȯ ṽḗƞḓȯř⟧",
       "returnedTo": "⟦Řḗŧŭřƞḗḓ ŧȯ ƈŀīḗƞŧ ({{counterparty}})⟧",
       "returned": "⟦Řḗŧŭřƞḗḓ ŧȯ ƈŀīḗƞŧ⟧",
+      "sealed": "⟦Şḗȧŀḗḓ īƞ {{box}}⟧",
+      "unsealed": "⟦Ɓȯẋ řḗȯƥḗƞḗḓ: {{box}}⟧",
+      "installedAtClient": "⟦Īƞşŧȧŀŀḗḓ ȧŧ ƈŀīḗƞŧ şīŧḗ⟧",
+      "aBox": "⟦ȧ şŧȧɠīƞɠ ƀȯẋ⟧",
       "updated": "⟦Ƈŭşŧȯḓẏ ḓḗŧȧīŀş ŭƥḓȧŧḗḓ⟧",
       "fields": {
         "purpose": "⟦ƥŭřƥȯşḗ⟧",

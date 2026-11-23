@@ -1925,6 +1925,10 @@
       "shippedVendor": "Expédié au fournisseur",
       "returnedTo": "Restitué au client ({{counterparty}})",
       "returned": "Restitué au client",
+      "sealed": "Scellé dans {{box}}",
+      "unsealed": "Boîte rouverte : {{box}}",
+      "installedAtClient": "Installé chez le client",
+      "aBox": "une boîte de préparation",
       "updated": "Détails de garde mis à jour",
       "fields": {
         "purpose": "objet",
