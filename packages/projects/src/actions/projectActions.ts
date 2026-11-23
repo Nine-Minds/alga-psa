@@ -684,6 +684,39 @@ export const searchProjectListIds = withAuth(async (
             ?::text AS raw,
             ?::text AS identifier
         ),
+        indexed_candidates AS (
+          SELECT si.*
+          FROM ${searchIndex.sql}
+          CROSS JOIN q
+          WHERE si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND si.object_type = 'project'
+                AND EXISTS (
+                  SELECT 1
+                  FROM ${projects.sql}
+                  WHERE p.tenant = si.tenant
+                    AND p.project_id = si.object_id::uuid
+                    AND (
+                      lower(coalesce(p.project_number, '')) = q.identifier
+                      OR lower(coalesce(p.project_number, '')) LIKE q.identifier || '%'
+                    )
+                )
+              )
+            )
+        ),
         searchable AS (
           SELECT
             si.*,
@@ -692,7 +725,7 @@ export const searchProjectListIds = withAuth(async (
             ${effectiveTitle.sql} AS effective_title,
             ${effectiveSubtitle.sql} AS effective_subtitle,
             ${effectiveBody.sql} AS effective_body
-          FROM ${searchIndex.sql}
+          FROM indexed_candidates si
           LEFT JOIN ${indexedTasks.sql} ON indexed_task.tenant = si.tenant
             AND si.object_type = 'project_task' AND indexed_task.task_id = si.object_id::uuid
           LEFT JOIN ${indexedPhases.sql} ON indexed_phase.tenant = si.tenant
@@ -751,10 +784,17 @@ export const searchProjectListIds = withAuth(async (
       prefixTsquery,
       rawSearch,
       identifier,
+      ...searchIndex.bindings,
+      [...PROJECT_LIST_SEARCH_TYPES],
+      ['project:read'],
+      user.user_id,
+      isInternalUser,
+      user.user_id,
+      ...clientScopeBindings,
+      ...projects.bindings,
       ...effectiveTitle.bindings,
       ...effectiveSubtitle.bindings,
       ...effectiveBody.bindings,
-      ...searchIndex.bindings,
       ...indexedTasks.bindings,
       ...indexedPhases.bindings,
       ...projectTaskCommentJoin.bindings,

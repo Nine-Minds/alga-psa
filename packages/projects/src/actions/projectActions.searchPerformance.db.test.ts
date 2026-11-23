@@ -61,6 +61,7 @@ const INDEX_ENTRIES_PER_PROJECT = 4;
 const MEASURED_REPETITIONS = 3;
 const WARMUP_REPETITIONS = 1;
 const STORED_VECTOR_BASELINE_REVISION = '0b01336f9631253be710c2fae29dff06ec2d156f';
+const FIXTURE_SOURCE_TIMESTAMP = new Date('2026-01-01T00:00:00.000Z');
 const SEARCH_TERMS = {
   common: 'commonamber',
   rare: 'rarezircon',
@@ -120,14 +121,17 @@ async function seedSearchCorpus(): Promise<void> {
     projects.push({
       tenant, project_id: projectId, project_name: projectName, client_id: clientId,
       status: statusId, wbs_code: `B${String(index).padStart(6, '0')}`, project_number: projectNumber,
+      created_at: FIXTURE_SOURCE_TIMESTAMP, updated_at: FIXTURE_SOURCE_TIMESTAMP,
     });
     phases.push({
       tenant, phase_id: phaseId, project_id: projectId, phase_name: `Planning phase ${index}`,
       status: 'open', order_number: 1, wbs_code: `B${String(index).padStart(6, '0')}.1`,
+      created_at: FIXTURE_SOURCE_TIMESTAMP, updated_at: FIXTURE_SOURCE_TIMESTAMP,
     });
     tasks.push({
       tenant, task_id: taskId, phase_id: phaseId, task_name: `Review task ${index}`,
       description: `Routine task description ${index}`, wbs_code: `B${String(index).padStart(6, '0')}.1.1`,
+      created_at: FIXTURE_SOURCE_TIMESTAMP, updated_at: FIXTURE_SOURCE_TIMESTAMP,
     });
     const indexRows = [
       { object_type: 'project', object_id: projectId, parent_type: null, parent_id: null, title: projectName, subtitle: null, body: 'Project body content' },
@@ -142,7 +146,7 @@ async function seedSearchCorpus(): Promise<void> {
         visible_to_user_ids: [], visible_to_roles: [], is_internal_only: false, is_private: false,
         client_scope_id: clientId, required_permission: 'project:read',
         search_vector: knex.raw("setweight(to_tsvector('english', ?), 'A')", [text]),
-        source_updated_at: new Date('2026-01-01T00:00:00.000Z'),
+        source_updated_at: FIXTURE_SOURCE_TIMESTAMP,
       });
     }
   }

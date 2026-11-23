@@ -96,7 +96,7 @@ describe('project list search respects effective redacted fields', () => {
     await testState.trx('project_tasks').insert({ tenant, task_id: taskId, phase_id: phaseId, task_name: 'Review shipment', description: 'Needlewood visible task notes', wbs_code: 'task-1' });
     await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: name, body: `Notes for ${name}`, metadata: { identifier: 'Nacre-9162' } });
     await addIndexEntry({ type: 'project_phase', id: phaseId, parentId: projectId, title: `Planning for ${name}`, subtitle: name });
-    await addIndexEntry({ type: 'project_task', id: taskId, parentId: projectId, title: `Review ${name}`, subtitle: name });
+    await addIndexEntry({ type: 'project_task', id: taskId, parentId: projectId, title: `Review ${name}`, subtitle: name, body: 'Needlewood visible task notes' });
     await addIndexEntry({ type: 'project_task_comment', id: randomUUID(), parentId: taskId, title: `Review ${name}`, subtitle: name, body: `Comment copied ${name}` });
     testState.decisions.set(projectId, { allowed: true, redactedFields: ['projects.project_name'] });
 
