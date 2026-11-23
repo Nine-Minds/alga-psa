@@ -151,6 +151,9 @@ export default function AddClientItemsDialog({ isOpen, onClose, onAdded, project
                 onChange={(event) => setQuantity(Math.floor(Number(event.target.value)))}
               />
             </div>
+            <p className="col-span-3 text-xs text-muted-foreground" id="staging-client-items-custody-note">
+              {st('clientItemNote', 'Items described in free text are tracked on this project only. They are not assets, so they do not enter equipment custody and will not appear in the custody queue. Pick a client asset instead to track it.')}
+            </p>
           </div>
         )}
         <div className="space-y-2">

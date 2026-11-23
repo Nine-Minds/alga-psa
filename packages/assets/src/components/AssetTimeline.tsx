@@ -7,6 +7,8 @@ import {
   Boxes,
   ClipboardCheck,
   History,
+  Lock,
+  LockOpen,
   PackageCheck,
   PackageOpen,
   Truck,
@@ -120,6 +122,8 @@ export function describeAssetHistoryEntry(
       handed_off: UserRoundCog,
       shipped: Truck,
       returned: PackageCheck,
+      sealed: Lock,
+      unsealed: LockOpen,
       updated: Pencil,
     };
     return { title: custody.title, detail: custody.detail, icon: icon[custody.kind], tone: custody.tone };

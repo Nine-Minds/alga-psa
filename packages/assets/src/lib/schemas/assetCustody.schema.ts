@@ -104,6 +104,9 @@ const eventCommon = {
   document_ids: z.array(uuid).max(20).default([]),
 };
 
+/** Close reasons a `returned` event may carry; the other reasons have their own paths. */
+export const RETURNED_CLOSE_REASONS = ['returned_to_client', 'installed_at_client'] as const;
+
 export const custodyEventInputSchema = z.discriminatedUnion('event_type', [
   z.object({
     event_type: z.literal('moved'),
@@ -127,8 +130,13 @@ export const custodyEventInputSchema = z.discriminatedUnion('event_type', [
   z.object({
     event_type: z.literal('returned'),
     counterparty: optionalText(255),
+    /** Why the episode ends. Defaults to `returned_to_client`; staging install passes `installed_at_client`. */
+    close_reason: z.enum(RETURNED_CLOSE_REASONS).optional(),
     ...eventCommon,
   }),
+  // Staging box sealed / reopened: a custody fact, not a move (design D4). No position change.
+  z.object({ event_type: z.literal('sealed'), ...eventCommon }),
+  z.object({ event_type: z.literal('unsealed'), ...eventCommon }),
 ]);
 export type CustodyEventInput = z.infer<typeof custodyEventInputSchema>;
 

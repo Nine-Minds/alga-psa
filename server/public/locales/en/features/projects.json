@@ -2203,6 +2203,7 @@
       "submit": "Reserve"
     },
     "clientItems": {
+      "clientItemNote": "Items described in free text are tracked on this project only. They are not assets, so they do not enter equipment custody and will not appear in the custody queue. Pick a client asset instead to track it.",
       "chooseAsset": "Choose an asset.",
       "describeItem": "Describe the item.",
       "failed": "Could not add the item.",
@@ -2264,6 +2265,14 @@
     "releaseAll": "Release all reserved and staged",
     "keepClaims": "Keep them",
     "packAction": "Pack",
+    "custody": {
+      "inCustody": "In custody at {{place}}",
+      "inOffice": "In custody in the office",
+      "withVendor": "In custody: with the vendor",
+      "notInCustody": "Not in custody",
+      "viewAsset": "Open the asset to see its custody history"
+    },
+    "clientItemNote": "Items described in free text are tracked on this project only. They are not assets, so they do not enter equipment custody and will not appear in the custody queue. Pick a client asset instead to track it.",
     "errors": {
       "notFound": "Project not found",
       "permission": {
@@ -2272,6 +2281,7 @@
         "inventory": "You need inventory access to choose stock units.",
         "billing": "You need billing access to install items into a project.",
         "asset": "You need asset access to link client assets.",
+        "assetUpdate": "You need permission to update assets to move client equipment through custody.",
         "inventoryStock": "You need inventory access to see stock levels."
       }
     }

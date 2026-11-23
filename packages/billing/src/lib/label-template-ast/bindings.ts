@@ -26,6 +26,8 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   sequenceLine: { id: 'sequenceLine', kind: 'value', path: 'display.sequenceLine', fallback: '' },
   sequenceNumber: { id: 'sequenceNumber', kind: 'value', path: 'sequence.n', fallback: '' },
   sequenceTotal: { id: 'sequenceTotal', kind: 'value', path: 'sequence.total', fallback: '' },
+  // Staging box label: "Contains client-owned equipment (n)"; empty for all-MSP boxes.
+  ownershipNote: { id: 'ownershipNote', kind: 'value', path: 'ownershipNote', fallback: '' },
   // RMA work tag (C5): bench lines the generic fields have no slot for.
   rmaStatus: { id: 'rmaStatus', kind: 'value', path: 'rma.statusLabel', fallback: '' },
   rmaReturnBy: { id: 'rmaReturnBy', kind: 'value', path: 'display.rmaReturnByLine', fallback: '' },

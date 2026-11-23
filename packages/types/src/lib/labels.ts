@@ -90,6 +90,11 @@ export interface LabelViewModel {
    */
   sequence?: { n: number; total: number } | null;
   /**
+   * Staging box label only: "Contains client-owned equipment (n)" when any member of the box is a client line.
+   * A snapshot at print time, like every printed label. Null for all-MSP boxes and every other label class.
+   */
+  ownershipNote?: string | null;
+  /**
    * RMA work tag only (C5). `identifier` is the RMA number, `title` the asset (or product) name, `detail` the
    * "vendor / reference" line, `secondaryIdentifier` + `serialSuffix` the asset tag and serial suffix.
    * Only what the tag needs on the bench: no reason text, no cost, no free-text notes.

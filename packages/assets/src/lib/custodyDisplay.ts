@@ -39,7 +39,7 @@ const str = (value: unknown): string | null => (typeof value === 'string' && val
 export interface CustodyHistoryDescription {
   title: string;
   detail?: string;
-  kind: 'received' | 'moved' | 'handed_off' | 'shipped' | 'returned' | 'updated';
+  kind: 'received' | 'moved' | 'handed_off' | 'shipped' | 'returned' | 'sealed' | 'unsealed' | 'updated';
   tone: 'good' | 'info' | 'warn' | 'neutral';
 }
 
@@ -140,7 +140,28 @@ export function describeCustodyHistory(
           : t('assetTimeline.custody.shippedVendor', { defaultValue: 'Shipped to vendor' }),
         detail,
       };
+    case 'custody_sealed':
+    case 'custody_unsealed': {
+      const sealed = entry.change_type === 'custody_sealed';
+      const box = str(c.to_bin) ?? str(c.from_bin);
+      return {
+        kind: sealed ? 'sealed' : 'unsealed',
+        tone: 'info',
+        title: sealed
+          ? t('assetTimeline.custody.sealed', { defaultValue: 'Sealed in {{box}}', box: box ?? t('assetTimeline.custody.aBox', { defaultValue: 'a staging box' }) })
+          : t('assetTimeline.custody.unsealed', { defaultValue: 'Box reopened: {{box}}', box: box ?? t('assetTimeline.custody.aBox', { defaultValue: 'a staging box' }) }),
+        detail,
+      };
+    }
     case 'custody_returned':
+      if (str(c.close_reason) === 'installed_at_client') {
+        return {
+          kind: 'returned',
+          tone: 'good',
+          title: t('assetTimeline.custody.installedAtClient', { defaultValue: 'Installed at client site' }),
+          detail,
+        };
+      }
       return {
         kind: 'returned',
         tone: 'good',

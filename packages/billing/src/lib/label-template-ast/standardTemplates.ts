@@ -225,6 +225,7 @@ const buildStagingContainerLabel = (): TemplateAst =>
       text('client', 'clientName', { ...lines(1, 12, 1.15), fontWeight: 700 }),
       text('project', 'title', lines(1, 11, 1.2)),
       text('task', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      text('ownership', 'ownershipNote', { ...lines(1, 9, 1.2), fontWeight: 700 }),
       text('box-position', 'sequenceLine', { fontSize: '20px', fontWeight: 800, lineHeight: 1.1 }),
       identifier('box-identifier', 13),
     ],

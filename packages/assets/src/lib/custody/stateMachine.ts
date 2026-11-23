@@ -3,7 +3,7 @@ import type { CustodyEventType, CustodyState } from '@alga-psa/types';
 /**
  * The custody state machine, pure (design D4).
  *
- *   in_office   --moved / handed_off--> in_office
+ *   in_office   --moved / handed_off / sealed / unsealed--> in_office
  *   in_office   --shipped-->            with_vendor
  *   with_vendor --received-->           in_office
  *   in_office | with_vendor --returned--> closed
@@ -12,7 +12,7 @@ import type { CustodyEventType, CustodyState } from '@alga-psa/types';
  * Everything else is refused.
  */
 const TRANSITIONS: Record<CustodyState, Partial<Record<CustodyEventType, CustodyState>>> = {
-  in_office: { moved: 'in_office', handed_off: 'in_office', shipped: 'with_vendor', returned: 'closed' },
+  in_office: { moved: 'in_office', handed_off: 'in_office', sealed: 'in_office', unsealed: 'in_office', shipped: 'with_vendor', returned: 'closed' },
   with_vendor: { received: 'in_office', returned: 'closed' },
   closed: {},
 };

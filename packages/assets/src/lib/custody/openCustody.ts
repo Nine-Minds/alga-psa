@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { IAssetCustody, IAssetCustodyEvent } from '@alga-psa/types';
+import { HELD_BY_MSP_STATUS, type IAssetCustody, type IAssetCustodyEvent } from '@alga-psa/types';
 import type { OpenCustodyInput } from '../schemas/assetCustody.schema';
 import { CustodyError } from './errors';
 import { writeCustodyHistory } from './history';
@@ -25,6 +25,8 @@ export interface OpenCustodyResult {
   custody: IAssetCustody;
   event: IAssetCustodyEvent;
   assetClientId: string;
+  /** Set when `assets.status` changed (active -> held_by_msp), for the post-commit ASSET_UPDATED publish. */
+  assetStatusChange: { assetId: string; before: string; after: string } | null;
 }
 
 export async function openCustody(
@@ -38,7 +40,7 @@ export async function openCustody(
   const asset = await db
     .table('assets')
     .where({ asset_id: input.asset_id })
-    .select('asset_id', 'client_id', 'asset_tag', 'name')
+    .select('asset_id', 'client_id', 'asset_tag', 'name', 'status')
     .first();
   if (!asset) throw new CustodyError('asset_not_found', 'Asset not found.');
 
@@ -152,6 +154,14 @@ export async function openCustody(
     })
     .returning('*');
 
+  // An ordinary `active` asset becomes `held_by_msp` while in custody (matching ticket intake; a `returned`
+  // event restores `active`). Any other status (retired, lost, ...) is someone else's decision: left alone.
+  let assetStatusChange: OpenCustodyResult['assetStatusChange'] = null;
+  if (asset.status === 'active') {
+    await db.table('assets').where({ asset_id: input.asset_id }).update({ status: HELD_BY_MSP_STATUS, updated_at: now });
+    assetStatusChange = { assetId: input.asset_id, before: 'active', after: HELD_BY_MSP_STATUS };
+  }
+
   await writeCustodyHistory(trx, tenant, {
     assetId: input.asset_id,
     actorUserId,
@@ -171,5 +181,5 @@ export async function openCustody(
     },
   });
 
-  return { custody: mapCustodyRow(inserted), event: mapEventRow(event), assetClientId: asset.client_id };
+  return { custody: mapCustodyRow(inserted), event: mapEventRow(event), assetClientId: asset.client_id, assetStatusChange };
 }

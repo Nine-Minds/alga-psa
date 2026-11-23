@@ -71,7 +71,7 @@ async function associateCustodyDocuments(trx: Knex.Transaction, tenant: string, 
  * existence is never revealed.
  */
 
-async function publishAssetStatusChange(
+export async function publishAssetStatusChange(
   tenant: string,
   actorUserId: string,
   change: { assetId: string; before: string; after: string } | null,
@@ -112,6 +112,7 @@ export async function openCustodyService(knex: Knex, tenant: string, user: Asset
     eventType: 'received',
     occurredAt: result.event.occurred_at,
   });
+  await publishAssetStatusChange(tenant, user.user_id, result.assetStatusChange, result.event.occurred_at);
   return result;
 }
 
@@ -156,6 +157,7 @@ export async function publishEquipmentReceived(tenant: string, user: AssetAuthUs
     }
   }
   await publishCustodyChanged({ tenant, actorUserId: user.user_id, custody: result.custody, eventType: 'received', occurredAt: at });
+  await publishAssetStatusChange(tenant, user.user_id, result.assetStatusChange ?? null, at);
 }
 
 export async function recordCustodyEventService(

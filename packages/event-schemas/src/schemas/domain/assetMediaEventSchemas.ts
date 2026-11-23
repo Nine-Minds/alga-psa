@@ -59,7 +59,7 @@ export const assetWarrantyExpiringEventPayloadSchema = BaseDomainEventPayloadSch
 
 export type AssetWarrantyExpiringEventPayload = z.infer<typeof assetWarrantyExpiringEventPayloadSchema>;
 
-export const ASSET_CUSTODY_EVENT_TYPES = ['received', 'moved', 'handed_off', 'shipped', 'returned'] as const;
+export const ASSET_CUSTODY_EVENT_TYPES = ['received', 'moved', 'handed_off', 'shipped', 'returned', 'sealed', 'unsealed'] as const;
 
 export const assetCustodyChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   assetId: assetIdSchema,

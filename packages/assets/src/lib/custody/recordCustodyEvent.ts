@@ -24,7 +24,8 @@ import {
 
 /**
  * Record one physical step on an open episode (design D2): moved, handed_off, shipped, received
- * (back from the vendor) or returned. Inserts exactly one append-only event, updates the episode, and
+ * (back from the vendor), sealed / unsealed (staging box) or returned (closing as `returned_to_client`, or the
+ * `close_reason` the caller names, e.g. `installed_at_client`). Inserts exactly one append-only event, updates the episode, and
  * writes one asset_history row, all in the caller's transaction.
  *
  * On `returned`, an asset whose status is still `held_by_msp` moves to `active`; any other status is
@@ -120,6 +121,10 @@ export async function recordCustodyEvent(
       Object.assign(patch, { location_id: null, bin: null, holder_user_id: null, next_action_party: 'vendor' satisfies CustodyNextActionParty });
       break;
     }
+    case 'sealed':
+    case 'unsealed':
+      // Position is unchanged (in_office -> in_office); the event itself is the fact.
+      break;
     case 'received': {
       await loadLocation(trx, tenant, input.location_id);
       const holder = await loadHolder(trx, tenant, input.holder_user_id ?? actorUserId);
@@ -136,7 +141,7 @@ export async function recordCustodyEvent(
     }
     case 'returned': {
       counterparty = input.counterparty;
-      Object.assign(patch, { closed_at: occurredAt, closed_by: actorUserId, close_reason: 'returned_to_client' });
+      Object.assign(patch, { closed_at: occurredAt, closed_by: actorUserId, close_reason: input.close_reason ?? 'returned_to_client' });
       toLocationId = null;
       toBin = null;
       toHolderId = null;
@@ -192,6 +197,7 @@ export async function recordCustodyEvent(
       purpose: current.purpose,
       ticket_id: current.ticket_id,
       ticket_number: ticketNumber,
+      ...(input.event_type === 'returned' ? { close_reason: input.close_reason ?? 'returned_to_client' } : {}),
     },
   });
 
