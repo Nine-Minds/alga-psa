@@ -62,6 +62,9 @@ describe('buildTicketSearchPredicate', () => {
 
   it.each([
     'TICKET-ALGA-2026-0002826',
+    'TICKET -ALGA-2026-0002826',
+    'TICKET- ALGA-2026-0002826',
+    'TICKET - ALGA-2026-0002826',
     'TICKETALGA20260002826',
   ])('preserves the hyphenated TICKET prefix for %j', (query) => {
     const results = [ticketAlgaNumber, algaNumber].filter(buildTicketSearchPredicate(query));

@@ -1,27 +1,9 @@
 import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-// Inspect after all separators: hyphenated TICKET prefixes are identifiers, while
-// whitespace-separated "Ticket ALGA…" is a label.
-const LEADING_TICKET_PREFIX = /^ticket([\s-]*)/i;
+// "Ticket #ALGA…" and "Ticket ALGA…" use an email label. A digit or hyphen
+// after optional whitespace belongs to the TICKET identifier itself.
+const LEADING_TICKET_LABEL = /^ticket(?=$|#|\s+[^\s\d-])/i;
 const SEPARATORS = /[\s-]+/g;
-
-function stripLeadingTicketLabel(value: string): string {
-  const match = LEADING_TICKET_PREFIX.exec(value);
-  if (!match) return value;
-
-  const nextCharacter = value[match[0].length];
-  const hasSeparators = match[1].length > 0;
-  const hyphenatedAlphaPrefix = match[1].startsWith('-') && /^[a-z]/i.test(nextCharacter ?? '');
-  if (
-    nextCharacter === '#' ||
-    nextCharacter === undefined ||
-    (hasSeparators && !/\d/.test(nextCharacter) && !hyphenatedAlphaPrefix)
-  ) {
-    return value.slice(match[0].length);
-  }
-
-  return value;
-}
 
 export interface TicketSearchQuery {
   /** The query trimmed of surrounding whitespace; use for title/status/priority matching. */
@@ -39,7 +21,7 @@ export function compactTicketReference(value: string): string {
 
 export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
-  const reference = compactTicketReference(cleanSearchIdentifierQuery(stripLeadingTicketLabel(text)));
+  const reference = compactTicketReference(cleanSearchIdentifierQuery(text.replace(LEADING_TICKET_LABEL, '')));
   return { text, reference };
 }
 
