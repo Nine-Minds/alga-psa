@@ -13,6 +13,7 @@
  */
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+import { forgetBillingCatalogRequest, memoiseInBillingCatalogRequest } from '@alga-psa/licensing/billing-catalog-scope';
 import {
   CO_MANAGED_SEAT_OFFER_KEY, LEGACY_ENV_BINDINGS, OfferPublishError, OfferUnavailableError,
   type BillingInterval, type CatalogDeps, type EnvLike, type CatalogOperator, type CatalogScope, type ClassifiedPrice,
@@ -526,8 +527,22 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return reviewCandidate(db, await deps.scope(db), offerKey, interval, priceId, { productId, requireActive: true });
   }
 
-  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
-    requireSellableOffer, inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
+  /**
+   * NEW-SALE selection is read once per request: inside a billing catalog request scope (every server action,
+   * the co-managed root render) the first resolution's Stripe price read is shared by the gate's context load
+   * and by every display, preview and purchase path in that request. No scope (a Temporal activity, a
+   * script) resolves per call, as before. Nothing outlives the request.
+   */
+  const resolveCurrentOfferOncePerRequest = (offerKey: string, interval: BillingInterval): Promise<ResolvedOffer> =>
+    memoiseInBillingCatalogRequest(`offer-catalog:current-offer:${offerKey}:${interval}`, () => resolveCurrentOffer(offerKey, interval));
+  /** A write makes the request's memoised reads stale; later reads in the same request see the new state. */
+  const thenForget = <A extends unknown[], R>(write: (...args: A) => Promise<R>) => async (...args: A): Promise<R> => {
+    try { return await write(...args); } finally { forgetBillingCatalogRequest(); }
+  };
+
+  return { resolveCurrentOffer: resolveCurrentOfferOncePerRequest, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
+    requireSellableOffer, inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice,
+    setAccountSetting: thenForget(setAccountSetting), publishBinding: thenForget(publishBinding), pauseSales: thenForget(pauseSales), scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

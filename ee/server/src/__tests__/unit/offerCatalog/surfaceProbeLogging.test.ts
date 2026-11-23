@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ loggerError: vi.fn(), getCatalog: vi.fn() }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: mocks.loggerError } }));
-vi.mock('@alga-psa/licensing', () => ({ runWithBillingCatalogContext: (_context: unknown, work: () => unknown) => work() }));
+vi.mock('@alga-psa/licensing', () => ({ hasBillingCatalogScope: () => false, registerBillingCatalogContextLoader: vi.fn(), runWithBillingCatalogContext: (_context: unknown, work: () => unknown) => work() }));
 vi.mock('../../../lib/stripe/StripeService', () => ({ getStripeService: () => ({ getOfferCatalog: mocks.getCatalog }) }));
 
 import { loadBillingCatalogContext } from '../../../lib/stripe/offerCatalog/surfaceProbe';
