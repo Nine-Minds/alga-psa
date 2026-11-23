@@ -150,6 +150,11 @@ temporal:
 # routes with.
 correlationPathsJson: ""
 
+# Exact deployment-owned IMAP hosts/IPs allowed to resolve privately. Empty
+# keeps private IMAP destinations denied.
+imap:
+  privateTargetAllowlist: ""
+
 # Development Pod Configuration
 devPod:
   enabled: false

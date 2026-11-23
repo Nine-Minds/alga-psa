@@ -77,6 +77,11 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
     setDocError(null);
     getBlockContent(docId)
       .then((content) => {
+        if (isDocumentActionError(content)) {
+          setDocError(getErrorMessage(content));
+          setActiveDocumentId(null);
+          return;
+        }
         if (!content) {
           setDocError('Document not found. Check the ID and try again.');
           setActiveDocumentId(null);

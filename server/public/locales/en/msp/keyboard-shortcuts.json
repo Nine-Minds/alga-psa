@@ -396,6 +396,12 @@
         "label": "Show link hints in new tab",
         "description": "Show keyboard hints and open links in a new tab when possible."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Toggle focus mode",
+        "description": "Expand the layout editor to the full window, or return to the normal layout."
+      }
     }
   },
   "platform": {

@@ -16,6 +16,15 @@ export type {
 } from './DesignerPaletteItem';
 export { DesignerSaveStatus, getDesignerSaveState, describeSavedAgo } from './DesignerSaveStatus';
 export type { DesignerSaveState } from './DesignerSaveStatus';
+export {
+  DesignerFocusSurface,
+  useDesignerFocusState,
+  useOptionalDesignerFocusState,
+  DESIGNER_FOCUS_SURFACE_FOCUSED_CLASSES,
+} from './DesignerFocusSurface';
+export type { DesignerFocusSurfaceProps, DesignerFocusState } from './DesignerFocusSurface';
+export { DesignerFocusToggle } from './DesignerFocusToggle';
+export type { DesignerFocusToggleProps } from './DesignerFocusToggle';
 export * from './designerDraftBackup';
 export * from './designerSidebarSizing';
 export * from './designerHistory';

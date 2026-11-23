@@ -22,6 +22,8 @@ import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 import { assertMspPermission } from '../lib/authHelpers';
 import {
   actionError,
+  isActionMessageError,
+  isActionPermissionError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -36,6 +38,9 @@ export interface ClientNoteContent {
 type ClientNoteActionError = ActionMessageError | ActionPermissionError;
 
 function clientNoteActionErrorFrom(error: unknown): ClientNoteActionError | null {
+  if (isActionPermissionError(error) || isActionMessageError(error)) {
+    return error as ClientNoteActionError;
+  }
   if (!(error instanceof Error)) {
     return null;
   }
@@ -130,6 +135,7 @@ export const getClientNoteContent = withAuth(async (
 
     // Get the block content
     const blockContent = await getBlockContent(client.notes_document_id);
+    if (isActionPermissionError(blockContent) || isActionMessageError(blockContent)) return blockContent as ClientNoteActionError;
 
     let parsedBlockData: unknown | null = null;
     if (blockContent?.block_data) {
@@ -191,23 +197,26 @@ export const saveClientNote = withAuth(async (
 
     if (client.notes_document_id) {
       // Update existing document
-      await updateBlockContent(client.notes_document_id, {
+      const updateResult = await updateBlockContent(client.notes_document_id, {
         block_data: blockData,
         user_id: user.user_id,
       });
+      if (isActionPermissionError(updateResult) || isActionMessageError(updateResult)) return updateResult as ClientNoteActionError;
 
       await publishNoteDocumentUpdated(tenant, client.notes_document_id, user.user_id);
 
       return { document_id: client.notes_document_id };
     } else {
       // Create new document and link to client
-      const { document_id } = await createBlockDocument({
+      const createResult = await createBlockDocument({
         document_name: `${client.client_name} Notes`,
         user_id: user.user_id,
         block_data: blockData,
         entityId: clientId,
         entityType: 'client',
       });
+      if (isActionPermissionError(createResult) || isActionMessageError(createResult)) return createResult as ClientNoteActionError;
+      const { document_id } = createResult;
 
       // Update client with notes_document_id
       await tenantDb(knex, tenant).table('clients')

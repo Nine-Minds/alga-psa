@@ -14,6 +14,7 @@ vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
 }));
 vi.mock('@alga-psa/core/capability', () => ({ admits: mocks.admits }));
 vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, getLicenseStateRow: mocks.license }));
+vi.mock('../../lib/stripe/offerCatalog/surfaceProbe', () => ({ withBillingCatalogContext: (work: () => unknown) => work() }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async (tenant: string) => ({ knex: { tenant, fn: { now: () => new Date() } } }),
   tenantDb: (_knex: unknown, tenant: string) => ({

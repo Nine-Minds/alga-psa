@@ -1204,7 +1204,9 @@
       "send_one": "Enviar correo electrónico {{count}}",
       "send_other": "Enviar correos electrónicos {{count}}",
       "sending_one": "Enviando factura {{count}}...",
-      "sending_other": "Enviando facturas {{count}}..."
+      "sending_other": "Enviando facturas {{count}}...",
+      "schedule": "Programar",
+      "scheduling": "Programando..."
     },
     "toasts": {
       "noValidRecipients": "No se encontraron destinatarios válidos",
@@ -1212,11 +1214,13 @@
       "sentSuccess_other": "Facturas {{count}} enviadas exitosamente",
       "sentFailure_one": "No se pudo enviar la factura {{count}}",
       "sentFailure_other": "No se pudieron enviar facturas {{count}}",
-      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló"
+      "sentPartial": "{{successCount}} enviado, {{failureCount}} falló",
+      "scheduled": "Correo de factura programado"
     },
     "errors": {
       "loadRecipients": "No se pudo cargar la información del destinatario",
-      "sendFailed": "No se pudieron enviar correos electrónicos"
+      "sendFailed": "No se pudieron enviar correos electrónicos",
+      "scheduleFailed": "No se pudo programar el correo de la factura"
     }
   },
   "generateTab": {
@@ -1826,7 +1830,9 @@
           "actual": "100 %",
           "label": "Zoom de la vista previa",
           "fitWithScale": "Ajustar ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Vista previa de la factura"
       },
       "tabs": {
         "design": "Diseño",
@@ -1922,6 +1928,10 @@
       "spacer": {
         "label": "Espaciador",
         "description": "Espacio vacío para ajustar el diseño."
+      },
+      "page-break": {
+        "label": "Salto de página",
+        "description": "Inicia el siguiente bloque en una página nueva."
       },
       "container": {
         "label": "Contenedor caja",
@@ -2245,6 +2255,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginación",
+          "fields": {
+            "breakBefore": {
+              "label": "Comenzar en una página nueva"
+            },
+            "breakInside": {
+              "label": "Mantener junto en una sola página"
+            }
+          }
         }
       }
     },
@@ -2358,6 +2379,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Adjuntos",
       "spacerLabel": "Espaciador",
+      "pageBreakLabel": "Salto de página",
+      "pageBreakBefore": "Comienza en una página nueva",
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
@@ -2840,29 +2863,24 @@
     "editor": {
       "titles": {
         "create": "Nuevo diseño de {{type}}",
-        "edit": "Editar diseño de {{type}}"
-      },
-      "description": "Diseñe el formato de {{type}} con el editor visual y luego obtenga una vista previa con datos de ejemplo.",
-      "errorTitle": "Editor de diseños de {{type}}",
-      "sections": {
-        "details": "Detalles del diseño"
+        "edit": "Editar diseño: {{name}}"
       },
       "fields": {
-        "version": "Versión",
+        "created": "Creado {{time}}",
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
-        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
+        "notSaved": "Aún no guardado",
+        "savedAt": "Guardado {{time}}",
+        "version": "Versión"
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
       },
       "actions": {
-        "back": "Volver a los diseños",
+        "back": "Volver a diseños de {{type}}",
+        "labelSettings": "Ajustes de etiqueta",
         "save": "Guardar diseño"
-      },
-      "labels": {
-        "created": "Creado: {{date}}",
-        "lastUpdated": "Última actualización: {{date}}"
       },
       "preview": {
         "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",
@@ -2927,10 +2945,12 @@
     },
     "permissions": {
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
+      "invoiceFinalize": "Permiso denegado: se requiere permiso para finalizar facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
       "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
-      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas",
+      "invoiceSend": "Permiso denegado: se requiere permiso para enviar facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",

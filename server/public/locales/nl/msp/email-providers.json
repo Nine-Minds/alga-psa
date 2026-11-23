@@ -418,6 +418,7 @@
         "oauthStatus": "OAuth-status",
         "connected": "Aangesloten",
         "notConnected": "Niet verbonden",
+        "reauthorizationRequired": "Opnieuw autoriseren vereist",
         "reconnectOauth": "Maak opnieuw verbinding met OAuth",
         "authorizeUrl": "Autoriseer URL",
         "tokenUrl": "Token-URL",
@@ -574,6 +575,7 @@
       "statusLabel": "OAuth-status",
       "connected": "Verbonden",
       "notConnected": "Niet verbonden",
+      "reauthorizationRequired": "Opnieuw autoriseren vereist",
       "authorizing": "Autoriseren...",
       "reconnect": "Maak opnieuw verbinding met OAuth"
     },
@@ -1130,7 +1132,8 @@
       "ticketingFromDomainMismatch": "Het afzenderadres voor tickets moet het geconfigureerde uitgaande domein gebruiken",
       "refreshFailed": "Kan de bijgewerkte instellingen niet ophalen",
       "updateFailed": "Kan de e-mailinstellingen niet bijwerken",
-      "mailboxesLoadFailed": "Kan de Microsoft 365-postvakken niet laden"
+      "mailboxesLoadFailed": "Kan de Microsoft 365-postvakken niet laden",
+      "secretRequiredAfterConnectionChange": "Voer het wachtwoord voor {{provider}} opnieuw in: het serveradres of de aanmeldgegevens zijn gewijzigd."
     },
     "inboundRules": {
       "notFound": "Regel voor inkomende e-mail niet gevonden",

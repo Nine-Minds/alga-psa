@@ -1,16 +1,16 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withAuth, type AuthContext } from '@alga-psa/auth';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
+import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
+import { actionError, type ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
+import { mergeTenantSettingsJson } from '../../server/tenantSettingsStore';
 import {
   DASHBOARD_WELCOME_SETTINGS_KEY,
   resolveDashboardWelcome,
   type DashboardWelcomeSettings,
 } from '../../lib/dashboardWelcome';
-import { updateTenantSettings } from './tenantSettingsActions';
 
 /**
  * Deliberately not part of the theme action: the theme is Enterprise-only and
@@ -26,18 +26,18 @@ export const getDashboardWelcomeSettingsAction = withAuth(async (
 });
 
 export const setDashboardWelcomeUseCompanyNameAction = withAuth(async (
-  _user: IUserWithRoles,
-  _ctx: AuthContext,
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
   useCompanyName: boolean
-): Promise<void | ActionPermissionError> => {
-  const permissions = await getCurrentUserPermissions();
-  if (!permissions.includes('settings:update')) {
+): Promise<void | ActionPermissionError | ActionMessageError> => {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update'))) {
     return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
   }
+  if (typeof useCompanyName !== 'boolean') return actionError('Invalid dashboard welcome setting.');
 
   // The only field under this key, so replacing the object wholesale is the
   // merge the shallow settings update already performs.
-  await updateTenantSettings({
-    [DASHBOARD_WELCOME_SETTINGS_KEY]: { useCompanyName: useCompanyName === true },
+  await mergeTenantSettingsJson(tenant, {
+    [DASHBOARD_WELCOME_SETTINGS_KEY]: { useCompanyName },
   });
 });

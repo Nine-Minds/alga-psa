@@ -11,7 +11,7 @@ import {
   STANDARD_QUOTE_TEMPLATE_ASTS,
   getStandardQuoteTemplateAstByCode,
 } from '../../../lib/quote-template-ast/standardTemplates';
-import { exportImportExportAst, roundTripAst } from './workspaceAst.roundtrip.helpers';
+import { exportImportExportAst, findNodeById, roundTripAst } from './workspaceAst.roundtrip.helpers';
 
 const invoiceTemplateCases = [
   ['standard-bundle-quantities', ['invoice-number', 'line-items', 'totals']],
@@ -28,6 +28,31 @@ const quoteTemplateCases = [
   ['standard-quote-grouped', ['cadence-bands', 'cadence-band-items', 'cadence-optional-bands', 'terms-section', 'signature-block']],
   ['standard-quote-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals', 'signature-block']],
 ] as const;
+
+const BREAK_STYLE_KEYS = ['breakInside', 'breakAfter', 'breakBefore'] as const;
+
+type NodeBreakStyles = { id: string; breaks: Record<string, unknown> };
+
+/** Keep-together / forced-break rules authored on a template's own nodes. */
+const collectNodeBreakStyles = (node: TemplateNode): NodeBreakStyles[] => {
+  const collected: NodeBreakStyles[] = [];
+  const inline = (node.style?.inline ?? {}) as Record<string, unknown>;
+  const breaks = BREAK_STYLE_KEYS.reduce<Record<string, unknown>>((acc, key) => {
+    if (inline[key] !== undefined) {
+      acc[key] = inline[key];
+    }
+    return acc;
+  }, {});
+  if (node.id && Object.keys(breaks).length > 0) {
+    collected.push({ id: node.id, breaks });
+  }
+  if ('children' in node && Array.isArray(node.children)) {
+    node.children.forEach((child) => {
+      collected.push(...collectNodeBreakStyles(child));
+    });
+  }
+  return collected;
+};
 
 const collectNodeIds = (node: TemplateNode): string[] => {
   const ids: string[] = [];
@@ -70,6 +95,17 @@ const assertStandardTemplateRegression = (
     expect(roundTrippedNodeIds).toContain(nodeId);
   });
 
+  // Pagination rules are authored style, not decoration: dropping them on save
+  // lets pricing bands split across pages again.
+  collectNodeBreakStyles(source.layout).forEach(({ id, breaks }) => {
+    const roundTrippedNode = findNodeById(roundTripped.layout, id);
+    expect(roundTrippedNode, `node ${id} must survive the designer round trip`).toBeTruthy();
+    expect(
+      (roundTrippedNode?.style?.inline ?? {}) as Record<string, unknown>,
+      `pagination rules on ${id} must survive a designer save`
+    ).toMatchObject(breaks);
+  });
+
   expect(exportImportExportAst(source)).toEqual(roundTripped);
 };
 
@@ -88,6 +124,21 @@ describe('workspaceAst standard template regression coverage', () => {
     if (!source) return;
 
     assertStandardTemplateRegression(source, criticalNodeIds);
+  });
+
+  it('keeps the grouped quote cadence bands unsplittable after a designer save', () => {
+    const source = getStandardQuoteTemplateAstByCode('standard-quote-grouped')!;
+    const authored = collectNodeBreakStyles(source.layout);
+    // Guards the regression assertion above against a template that quietly
+    // stops carrying pagination rules.
+    expect(authored.length).toBeGreaterThan(0);
+
+    const roundTripped = roundTripAst(source);
+    const bandHeader = findNodeById(roundTripped.layout, 'cadence-band-header');
+    expect((bandHeader?.style?.inline ?? {}) as Record<string, unknown>).toMatchObject({
+      breakInside: 'avoid',
+      breakAfter: 'avoid',
+    });
   });
 
   it('covers every shipped standard invoice and quote template code', () => {

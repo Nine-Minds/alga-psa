@@ -38,6 +38,8 @@ secretsProvider:
     tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
 
 imap:
+  # Exact deployment-owned host/IP entries. Empty keeps private targets denied.
+  privateTargetAllowlist: ""
   providerRefreshMs: 60000
   pollIntervalMs: 30000
   leaseTtlMs: 120000

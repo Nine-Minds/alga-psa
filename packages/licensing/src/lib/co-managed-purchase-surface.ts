@@ -1,5 +1,6 @@
 import { capabilityFeatureFlag, forcedValue } from '@alga-psa/core/capability';
 import { isFeatureFlagEnabled } from '@alga-psa/core/features';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 export type CoManagedPurchaseBlockedReason =
   | 'customer_unverified'
@@ -15,16 +16,39 @@ export type CoManagedPurchaseBlockedReason =
  * with no sellable current version reports false (fail closed). Without a probe (CE, or EE before
  * the catalog module loads) only the legacy environment binding can open the surface.
  */
-export type CoManagedOfferAvailability = () => Promise<boolean>;
-let offerAvailability: CoManagedOfferAvailability | undefined;
+export interface BillingCatalogContext {
+  mode: 'test' | 'live';
+  stripeAccount: string | null;
+  priceId: string | null;
+  source: 'database' | 'environment' | 'unconfigured';
+  sellable: boolean;
+}
 
-export function registerCoManagedOfferAvailability(probe: CoManagedOfferAvailability | undefined): void {
-  offerAvailability = probe;
+const billingCatalogContextKey = Symbol.for('@alga-psa/licensing/billing-catalog-context');
+const sharedGlobal = globalThis as typeof globalThis & { [billingCatalogContextKey]?: AsyncLocalStorage<BillingCatalogContext> };
+// Node can include licensing in more than one server bundle. A global symbol keeps each bundle's
+// ALS accessor on the same request store while preserving request isolation under concurrency.
+const billingCatalogContext = sharedGlobal[billingCatalogContextKey] ??= new AsyncLocalStorage<BillingCatalogContext>();
+
+/** Establish catalog identity for one independent request entry point. */
+export function runWithBillingCatalogContext<T>(context: BillingCatalogContext, work: () => T): T {
+  return billingCatalogContext.run(context, work);
+}
+
+/** The one pure decision used by every surface and purchase path. */
+export function resolveCoManagedPurchaseAvailability(context: BillingCatalogContext): boolean {
+  return context.sellable && Boolean(context.priceId && context.stripeAccount);
+}
+
+export function currentBillingCatalogContext(): BillingCatalogContext | undefined {
+  return billingCatalogContext.getStore();
 }
 
 async function offerConfigured(): Promise<boolean> {
-  if (!offerAvailability) return Boolean(process.env.STRIPE_CO_MANAGED_USER_PRICE_ID); // legacy, unmanaged only
-  try { return await offerAvailability(); } catch { return false; }
+  const context = currentBillingCatalogContext();
+  if (context) return resolveCoManagedPurchaseAvailability(context);
+  // CE and older deployments keep the legacy bootstrap behavior until an EE request loader exists.
+  return Boolean(process.env.STRIPE_CO_MANAGED_USER_PRICE_ID);
 }
 
 /** Release and kill-switch gate shared by purchase actions; it does not classify offer availability. */

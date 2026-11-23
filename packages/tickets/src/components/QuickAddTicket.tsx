@@ -44,6 +44,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
+import { getBoardDefaultPriorityId } from '../lib/boardDefaultPriority';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -142,36 +143,6 @@ const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | n
     statusesWithDefault[0] ||
     null
   );
-};
-
-const getDefaultPriorityId = (availablePriorities: IPriority[], priorityType?: 'custom' | 'itil'): string => {
-  if (!availablePriorities.length) return '';
-
-  if (priorityType === 'itil') {
-    const itilPriorities = availablePriorities.filter(priority => priority.is_from_itil_standard);
-    const mediumItilPriority = itilPriorities.find(priority => priority.itil_priority_level === 3);
-    return mediumItilPriority?.priority_id || itilPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
-  }
-
-  const customPriorities = availablePriorities.filter(priority => !priority.is_from_itil_standard);
-  return customPriorities[0]?.priority_id || availablePriorities[0]?.priority_id || '';
-};
-
-const getBoardDefaultPriorityId = (board: IBoard | undefined, availablePriorities: IPriority[]): string => {
-  if (!availablePriorities.length) return '';
-
-  const boardDefault = board?.default_priority_id || '';
-  if (boardDefault) {
-    const match = availablePriorities.find(p => p.priority_id === boardDefault);
-    if (match) {
-      // Guard against misconfiguration: only use ITIL defaults for ITIL boards and vice versa.
-      const priorityType = board?.priority_type || 'custom';
-      if (priorityType === 'itil' && match.is_from_itil_standard) return boardDefault;
-      if (priorityType !== 'itil' && !match.is_from_itil_standard) return boardDefault;
-    }
-  }
-
-  return getDefaultPriorityId(availablePriorities, board?.priority_type);
 };
 
 interface QuickAddTicketProps {

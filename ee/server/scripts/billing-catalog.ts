@@ -5,6 +5,8 @@
  * and database, after proving you are a platform operator, so this needs no Stripe or DB access.
  *
  *   npm run billing-catalog -- inspect
+ *   npm run billing-catalog -- inspect-account
+ *   npm run billing-catalog -- set-account --account=acct_... --price=price_... --expect-account=<id|none> --expect-price=<id|none> --confirm-switch
  *   npm run billing-catalog -- inventory                       # pre-cutover: report unmapped prices
  *   npm run billing-catalog -- seed [--historical=price_a,price_b] [--product=prod_x] --confirm
  *   npm run billing-catalog -- publish --price=price_new [--product=prod_x]          # dry run: review only
@@ -20,7 +22,7 @@
  */
 async function main(): Promise<number> {
   const [command, ...args] = process.argv.slice(2);
-  if (!command || command === '--help') { console.log('Usage: billing-catalog inspect|inventory|seed|publish|restore|pause|retry-fulfillments [flags] (see the file header)'); return 0; }
+  if (!command || command === '--help') { console.log('Usage: billing-catalog inspect|inspect-account|set-account|inventory|seed|publish|restore|pause|retry-fulfillments [flags] (see the file header)'); return 0; }
   const base = process.env.ALGA_PSA_URL;
   const apiKey = process.env.ALGA_OPERATOR_API_KEY;
   if (!base || !apiKey) throw new Error('Set ALGA_PSA_URL and ALGA_OPERATOR_API_KEY (a master-tenant API key).');

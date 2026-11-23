@@ -1167,7 +1167,9 @@
       "send_one": "Skicka {{count}} e-postmeddelande",
       "send_other": "Skicka {{count}} e-postmeddelanden",
       "sending_one": "Skickar {{count}} faktura…",
-      "sending_other": "Skickar {{count}} fakturor…"
+      "sending_other": "Skickar {{count}} fakturor…",
+      "schedule": "Schemalägg",
+      "scheduling": "Schemalägger..."
     },
     "toasts": {
       "noValidRecipients": "Inga giltiga mottagare hittades",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "{{count}} fakturor har skickats",
       "sentFailure_one": "Det gick inte att skicka {{count}} faktura",
       "sentFailure_other": "Det gick inte att skicka {{count}} fakturor",
-      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades"
+      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades",
+      "scheduled": "Fakturamejl schemalagt"
     },
     "errors": {
       "loadRecipients": "Det gick inte att läsa in mottagaruppgifterna",
-      "sendFailed": "Det gick inte att skicka e-postmeddelandena"
+      "sendFailed": "Det gick inte att skicka e-postmeddelandena",
+      "scheduleFailed": "Det gick inte att schemalägga fakturamejlet"
     }
   },
   "generateTab": {
@@ -1789,7 +1793,9 @@
           "actual": "100 %",
           "label": "Förhandsgranskningszoom",
           "fitWithScale": "Anpassa ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Sida {{page}} av {{total}}",
+        "frameTitle": "Förhandsgranskning av faktura"
       },
       "tabs": {
         "design": "Design",
@@ -1885,6 +1891,10 @@
       "spacer": {
         "label": "Avståndselement",
         "description": "Tomt utrymme för layoutjustering."
+      },
+      "page-break": {
+        "label": "Sidbrytning",
+        "description": "Startar nästa block på en ny sida."
       },
       "container": {
         "label": "Rutbehållare",
@@ -2208,6 +2218,17 @@
               "label": "Färg"
             }
           }
+        },
+        "pagination": {
+          "title": "Sidbrytning",
+          "fields": {
+            "breakBefore": {
+              "label": "Börja på en ny sida"
+            },
+            "breakInside": {
+              "label": "Håll ihop på en sida"
+            }
+          }
         }
       }
     },
@@ -2321,6 +2342,8 @@
       "signatureLabel": "Underskrift",
       "attachmentsLabel": "Bilagor",
       "spacerLabel": "Avståndselement",
+      "pageBreakLabel": "Sidbrytning",
+      "pageBreakBefore": "Börjar på en ny sida",
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
@@ -2803,29 +2826,24 @@
     "editor": {
       "titles": {
         "create": "Ny layout ({{type}})",
-        "edit": "Redigera layout ({{type}})"
-      },
-      "description": "Utforma layouten för dokumenttypen {{type}} i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
-      "errorTitle": "Layoutredigerare ({{type}})",
-      "sections": {
-        "details": "Layoutdetaljer"
+        "edit": "Redigera layout: {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Skapad {{time}}",
         "labelClass": "Etikettklass",
         "labelFields": "Fält som visas på etiketten",
-        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid.",
+        "notSaved": "Inte sparad än",
+        "savedAt": "Sparad {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
       },
       "actions": {
-        "back": "Tillbaka till layouter",
+        "back": "Tillbaka till layouter ({{type}})",
+        "labelSettings": "Etikettinställningar",
         "save": "Spara layout"
-      },
-      "labels": {
-        "created": "Skapad: {{date}}",
-        "lastUpdated": "Senast uppdaterad: {{date}}"
       },
       "preview": {
         "sampleNote": "Renderad med representativa exempeldata för dokumenttypen {{type}}.",
@@ -2860,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
+      "invoiceFinalize": "Åtkomst nekad: behörighet att fastställa fakturor krävs",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
       "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",
-      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs"
+      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs",
+      "invoiceSend": "Åtkomst nekad: behörighet att skicka fakturor krävs"
     },
     "invoice": {
       "notFound": "Fakturan hittades inte",

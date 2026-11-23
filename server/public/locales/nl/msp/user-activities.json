@@ -124,6 +124,7 @@
       "dismissError": "Taak kon niet worden afgewezen: {{message}}"
     },
     "retryLater": "Probeer het later opnieuw.",
+    "tryAgain": "Opnieuw proberen",
     "adHoc": {
       "endBeforeStart": "De eindtijd moet na de starttijd liggen.",
       "fields": {
