@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUser, getSession, hasPermission } from '@alga-psa/auth';
 import { requireCapabilityForPage } from '@alga-psa/core/capability/server';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
@@ -47,8 +47,11 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
   if (access.trial && !access.operational) return <CoManagedSeatTrial />;
   if (!access.served) notFound();
   const clientId = (await searchParams)?.clientId;
+  // The pool's "free to allocate" line links to Clients only for an actor who may open them.
+  const currentUser = access.commercial ? await getCurrentUser() : null;
+  const canOpenClients = Boolean(currentUser && await hasPermission(currentUser, 'client', 'read'));
   // When both paths apply, the existing overview carries the pool in place of its capacity line.
   return <CoManagedOverview
     initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined}
-    purchasePool={access.commercial ? <CoManagedPurchasePool /> : access.trial ? <CoManagedSeatTrial /> : undefined} />;
+    purchasePool={access.commercial ? <CoManagedPurchasePool clientsHref={canOpenClients ? '/msp/clients' : undefined} /> : access.trial ? <CoManagedSeatTrial /> : undefined} />;
 }

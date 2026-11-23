@@ -283,11 +283,16 @@ export function createPersistentFleetStore(
   tenant: string,
   options: { knex?: Knex; legacyMode?: UniFiCredentialMode } = {}
 ): UniFiFleetStore {
-  let knexPromise: Promise<Knex> | null = null;
-  const getKnex = () => (knexPromise ??= options.knex ? Promise.resolve(options.knex) : getAdminConnection());
+  // Resolved per operation: the admin pool can be rebuilt after a connection reset, so it is never held here.
+  // LEVERAGE: pattern resolve-admin-pool-per-op — same shape as StripeService.getOfferCatalog's resolver.
+  const getKnex = async (): Promise<Knex> => options.knex ?? getAdminConnection();
+  // Caches the integration ID (a value), not a pool.
   let integrationIdPromise: Promise<string | null> | null = null;
   const getIntegrationId = async () =>
-    (integrationIdPromise ??= getKnex().then((knex) => findUniFiIntegrationId(knex, tenant)));
+    (integrationIdPromise ??= getKnex().then((knex) => findUniFiIntegrationId(knex, tenant)).catch((error) => {
+      integrationIdPromise = null;
+      throw error;
+    }));
 
   return {
     async listCredentials() {

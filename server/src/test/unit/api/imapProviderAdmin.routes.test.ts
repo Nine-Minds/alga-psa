@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { createImapOAuthState, type ImapOAuthState } from '@/utils/email/imapOAuthState';
 
 const mocks = vi.hoisted(() => ({
   user: null as any,
@@ -13,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   secretWrites: [] as Array<[string, string]>,
   posts: [] as string[],
   tokenBodies: [] as URLSearchParams[],
+  persistedState: null as ImapOAuthState | null,
+  callbackToken: '',
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: () => mocks.user }));
@@ -41,6 +44,12 @@ vi.mock('@alga-psa/db', () => ({
               refresh_token: null,
             },
         update: async (changes: any) => { mocks.writes.push(`${name}:${JSON.stringify(changes)}`); return 1; },
+        insert: async (row: any) => { mocks.persistedState = row.state; return 1; },
+        delete: () => {
+          const state = mocks.persistedState;
+          mocks.persistedState = null;
+          return { returning: async () => state ? [{ state }] : [] };
+        },
       };
       return query;
     },
@@ -53,19 +62,22 @@ vi.mock('@/lib/productAccess', () => ({
 }));
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
-    getAppSecret: async () => 'https://app.example.test',
+    getAppSecret: async (name: string) => name === 'NEXT_PUBLIC_BASE_URL' ? 'https://app.example.test' : 'test-signing-key',
     getTenantSecret: async (_tenant: string, name: string) => { mocks.secretReads.push(name); return 'refresh-secret'; },
     setTenantSecret: async (_tenant: string, name: string, value: string) => { mocks.secretWrites.push([name, value]); },
   }),
 }));
-vi.mock('axios', () => ({ default: { post: async (url: string, body: URLSearchParams) => {
-  mocks.posts.push(url);
-  mocks.tokenBodies.push(body);
-  if (mocks.clientSecret && body.get('client_secret') !== mocks.clientSecret) {
-    throw new Error('invalid_client: client secret required');
-  }
-  return { data: mocks.tokenResponse };
-} } }));
+vi.mock('@alga-psa/core/net/safeFetch', () => ({
+  assertPublicHttpsUrl: async () => {},
+  postSafeOutboundForm: async (url: string, body: URLSearchParams) => {
+    mocks.posts.push(url);
+    mocks.tokenBodies.push(body);
+    if (mocks.clientSecret && body.get('client_secret') !== mocks.clientSecret) {
+      throw new Error('invalid_client: client secret required');
+    }
+    return { data: mocks.tokenResponse };
+  },
+}));
 vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', () => ({
   isImapOauthCredentialIssuerBound: (config: any) => config.oauth_credentials_token_url === config.oauth_token_url,
   getImapOauthSecretNames: () => ({ clientSecret: 'scoped-client', refreshToken: 'scoped-refresh' }),
@@ -73,10 +85,6 @@ vi.mock('@alga-psa/shared/services/email/imapOutboundTarget', () => ({
 }));
 
 const admin = { user_id: 'admin-1', tenant: 'tenant-1', user_type: 'internal' };
-const callbackState = Buffer.from(JSON.stringify({
-  tenant: 'tenant-1', userId: 'different-user', providerId: 'provider-1',
-  redirectUri: 'https://app.example.test/callback', timestamp: Date.now(), nonce: 'nonce',
-})).toString('base64');
 
 function request(path: string, method: 'GET' | 'POST' = 'POST', body?: unknown) {
   const url = path.startsWith('http') ? path : `http://localhost${path}`;
@@ -87,7 +95,7 @@ function request(path: string, method: 'GET' | 'POST' = 'POST', body?: unknown) 
 }
 
 describe('IMAP provider route administration boundary', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mocks.user = admin;
     mocks.permission = false;
@@ -100,13 +108,21 @@ describe('IMAP provider route administration boundary', () => {
     mocks.secretWrites.length = 0;
     mocks.posts.length = 0;
     mocks.tokenBodies.length = 0;
+    const { state, token } = await createImapOAuthState({
+      tenant: admin.tenant,
+      userId: admin.user_id,
+      providerId: 'provider-1',
+      redirectUri: 'https://app.example.test/callback',
+    });
+    mocks.persistedState = state;
+    mocks.callbackToken = token;
   });
 
   const cases = [
     ['resync', () => import('@/app/api/email/imap/resync/route').then((m) => m.POST(request('/api/email/imap/resync', 'POST', { providerId: 'provider-1' })))],
     ['reconnect', () => import('@/app/api/email/imap/reconnect/route').then((m) => m.POST(request('/api/email/imap/reconnect', 'POST', { providerId: 'provider-1' })))],
     ['initiate', () => import('@/app/api/email/oauth/imap/initiate/route').then((m) => m.POST(request('/api/email/oauth/imap/initiate', 'POST', { providerId: 'provider-1' })))],
-    ['callback', () => import('@/app/api/email/oauth/imap/callback/route').then((m) => m.GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET')))],
+    ['callback', () => import('@/app/api/email/oauth/imap/callback/route').then((m) => m.GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(mocks.callbackToken)}`, 'GET')))],
   ] as const;
 
   it.each(cases)('%s rejects anonymous, client, and low-privilege callers before side effects', async (_name, invoke) => {
@@ -147,9 +163,11 @@ describe('IMAP provider route administration boundary', () => {
     mocks.issuerBound = false;
     const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
 
-    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET'));
+    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(mocks.callbackToken)}`, 'GET'));
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'IMAP OAuth did not return a refresh token. Reauthorize the mailbox with offline access.' });
+    expect(mocks.posts).toEqual(['https://auth.example.test/token']);
     expect(mocks.secretReads).toEqual([]);
     expect(mocks.secretWrites).toEqual([]);
     expect(mocks.writes).toEqual([]);
@@ -162,7 +180,7 @@ describe('IMAP provider route administration boundary', () => {
     mocks.tokenResponse = { access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 300 };
     const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
 
-    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(callbackState)}`, 'GET'));
+    const response = await GET(request(`http://localhost/api/email/oauth/imap/callback?code=code&state=${encodeURIComponent(mocks.callbackToken)}`, 'GET'));
 
     expect(response.status).toBe(307);
     expect(mocks.tokenBodies[0].get('client_secret')).toBe('fresh-client-secret');

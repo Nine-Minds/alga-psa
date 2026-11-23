@@ -48,7 +48,7 @@ function fixture() {
   const unmigrated: any = () => ({ where: () => ({ first: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); },
     distinct: () => ({ pluck: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); } }),
     select: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); } }) });
-  service.offerCatalogInstance = createOfferCatalog({ db: unmigrated, scope: async () => ({ stripeAccount: 'acct_test', livemode: false }),
+  service.offerCatalogInstance = createOfferCatalog({ db: async () => unmigrated, scope: async () => ({ stripeAccount: 'acct_test', livemode: false }),
     stripe: { prices: { retrieve: (id: string) => service.stripe.prices.retrieve(id) } } as any, env: { STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_co' } });
   service.stripe = {
     prices: { retrieve: vi.fn().mockResolvedValue(price) },

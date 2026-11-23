@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -10,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   recordWebhookDeliveryMode: vi.fn(),
   imapConstructed: vi.fn(),
   imapConnect: vi.fn(),
-  axiosPost: vi.fn(),
+  request: vi.fn(),
   dnsLookup: vi.fn(),
   getTenantSecret: vi.fn(),
   operations: [] as string[],
@@ -22,7 +23,17 @@ vi.mock('imapflow', () => ({
     return { connect: (...args: unknown[]) => mocks.imapConnect(...args), logout: vi.fn(), close: vi.fn() };
   }),
 }));
-vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
+vi.mock('undici', async (importOriginal) => ({
+  ...await importOriginal<typeof import('undici')>(),
+  Agent: class {
+    constructor(public options: any) {}
+    close = async () => undefined;
+  },
+  request: mocks.request,
+}));
+vi.mock('node:dns', () => ({
+  default: { promises: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) } },
+}));
 vi.mock('node:dns/promises', () => ({
   default: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) },
   lookup: (...args: unknown[]) => mocks.dnsLookup(...args),
@@ -160,8 +171,11 @@ describe('EmailProviderLifecycleService', () => {
     mocks.imapConstructed.mockReset();
     mocks.imapConnect.mockReset();
     mocks.imapConnect.mockResolvedValue(undefined);
-    mocks.axiosPost.mockReset();
-    mocks.axiosPost.mockResolvedValue({ data: { access_token: 'recovered-access-token', expires_in: 3600 } });
+    mocks.request.mockReset();
+    mocks.request.mockImplementation(async () => ({
+      statusCode: 200, headers: {},
+      body: Readable.from([Buffer.from(JSON.stringify({ access_token: 'recovered-access-token', expires_in: 3600 }))]),
+    }));
     mocks.dnsLookup.mockReset();
     mocks.dnsLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
     mocks.getTenantSecret.mockReset();
@@ -256,14 +270,17 @@ describe('EmailProviderLifecycleService', () => {
     expect(result).toMatchObject({ resumed: true, reconciliation: { status: 'started', queuedMessages: 0 } });
     expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.refreshToken);
     expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.clientSecret);
-    expect(mocks.axiosPost).toHaveBeenCalledWith(
-      tokenUrl,
-      expect.any(URLSearchParams),
-      expect.objectContaining({ maxRedirects: 0, proxy: false })
+    expect(mocks.request).toHaveBeenCalledWith(
+      new URL(tokenUrl),
+      expect.objectContaining({ method: 'POST', body: expect.any(String) })
     );
-    const [requestOptions] = mocks.axiosPost.mock.calls[0].slice(2);
+    const requestOptions = mocks.request.mock.calls[0][1];
+    const form = new URLSearchParams(requestOptions.body);
+    expect(form.get('refresh_token')).toBe('endpoint-scoped-secret');
+    expect(form.get('client_secret')).toBe('endpoint-scoped-secret');
+    mocks.dnsLookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
     const pinnedRequest = await new Promise((resolve, reject) =>
-      requestOptions.httpsAgent.options.lookup('oauth.example.test', { all: true },
+      requestOptions.dispatcher.options.connect.lookup('oauth.example.test', { all: true },
         (error: Error | null, addresses: unknown) => error ? reject(error) : resolve(addresses))
     );
     expect(pinnedRequest).toEqual([{ address: '93.184.216.34', family: 4 }]);

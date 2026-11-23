@@ -492,8 +492,10 @@ describe('BentoHero unsaved change model', () => {
     });
 
     const trigger = await screen.findByTestId('bento-hero-category-select');
-    expect(trigger.querySelector('strong')).toHaveTextContent('Magical Artifacts');
-    expect(trigger).toHaveTextContent('Other Enchanted Item');
+    await waitFor(() => {
+      expect(trigger.querySelector('strong')).toHaveTextContent('Magical Artifacts');
+      expect(trigger).toHaveTextContent('Other Enchanted Item');
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Enchanted Accessories' }));
     fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));

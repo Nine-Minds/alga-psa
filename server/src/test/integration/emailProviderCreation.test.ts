@@ -9,9 +9,10 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import process from 'node:process';
+import { Readable } from 'node:stream';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import axios from 'axios';
+import { request as outboundRequest } from 'undici';
 import { ImapFlow } from 'imapflow';
 import { NextRequest } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -31,9 +32,27 @@ vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: async () => {},
   isProductAccessError: () => false,
 }));
-vi.mock('axios', () => ({ default: { post: vi.fn() } }));
+vi.mock('undici', async (importOriginal) => ({
+  ...await importOriginal<typeof import('undici')>(),
+  request: vi.fn(),
+}));
 // Keep URL validation real while resolving fixture-only DNS names without
 // depending on public DNS. HTTP and IMAP transports remain mocked below.
+// Core safeFetch uses dns.promises; the shared IMAP policy imports the
+// promises module directly, so both entry points need the fixture resolver.
+vi.mock('node:dns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:dns')>();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      promises: {
+        ...actual.default.promises,
+        lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]),
+      },
+    },
+  };
+});
 vi.mock('node:dns/promises', () => ({
   default: { lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) },
 }));
@@ -103,6 +122,14 @@ function googleConfig(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function tokenResponse(tokens: Record<string, unknown>) {
+  return {
+    statusCode: 200,
+    headers: { 'content-type': 'application/json' },
+    body: Readable.from([Buffer.from(JSON.stringify(tokens))]),
+  } as Awaited<ReturnType<typeof outboundRequest>>;
+}
+
 describe('Email Provider Creation', () => {
 
   beforeAll(async () => {
@@ -158,6 +185,7 @@ describe('Email Provider Creation', () => {
     delete process.env[microsoftProfileSecretEnvKey];
     await tenantTable('google_email_provider_config').delete();
     await tenantTable('microsoft_email_provider_config').delete();
+    await tenantTable('imap_oauth_states').delete();
     await tenantTable('email_providers').delete();
     await tenantTable('microsoft_profile_consumer_bindings').delete();
     await tenantTable('microsoft_profiles').delete();
@@ -477,7 +505,7 @@ describe('Email Provider Creation', () => {
   });
 
   describe('IMAP OAuth issuer binding', () => {
-    it('authorizes a new confidential client and reauthorizes it after an endpoint change without using old fallbacks', async () => {
+    it('authorizes and reauthorizes a confidential client with single-use state and without old fallbacks', async () => {
       const issuerA = 'https://93.184.216.34/issuer-a/token';
       const issuerB = 'https://93.184.216.34/issuer-b/token';
       const original = {
@@ -486,6 +514,7 @@ describe('Email Provider Creation', () => {
         imapConfig: {
           host: '93.184.216.34', port: 993, secure: true, auth_type: 'oauth2',
           username: 'imap-confidential@example.test', oauth_token_url: issuerA,
+          oauth_authorize_url: 'https://issuer.example.test/authorize',
           oauth_client_id: 'confidential-client', oauth_client_secret: 'initial-client-secret',
         },
       };
@@ -499,12 +528,8 @@ describe('Email Provider Creation', () => {
       const secretNames = [...new Set(names.flatMap((name) => [name.clientSecret, name.refreshToken]))];
       const environmentKeys = secretNames.map((name) => `TENANT_${testTenant}_${name}`);
       const { GET } = await import('@/app/api/email/oauth/imap/callback/route');
-      const callback = () => {
-        const state = Buffer.from(JSON.stringify({
-          tenant: testTenant, userId: 'admin-1', providerId,
-          redirectUri: 'https://app.example.test/api/email/oauth/imap/callback',
-          timestamp: Date.now(), nonce: 'test-nonce',
-        })).toString('base64');
+      const { POST } = await import('@/app/api/email/oauth/imap/initiate/route');
+      const callback = (state: string) => {
         return GET(new NextRequest(`https://app.example.test/api/email/oauth/imap/callback?code=fresh-code&state=${encodeURIComponent(state)}`));
       };
 
@@ -535,18 +560,42 @@ describe('Email Provider Creation', () => {
             expect(pending.oauth_client_secret).toBe(clientSecret);
             expect(pending.oauth_credentials_token_url).toBeNull();
             expect(pending.refresh_token).toBeNull();
+            // Use the public initiation route so signing and nonce persistence
+            // are exercised together with the callback against real Postgres.
+            const initiated = await POST(new NextRequest('https://app.example.test/api/email/oauth/imap/initiate', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ providerId }),
+            }));
+            expect(initiated.status).toBe(200);
+            const { state, authUrl } = await initiated.json();
+            expect(new URL(authUrl).searchParams.get('state')).toBe(state);
+            const persistedStates = await tenantTable<any>('imap_oauth_states').select('*');
+            expect(persistedStates).toHaveLength(1);
+            expect(persistedStates[0].state).toMatchObject({ tenant: testTenant, providerId, userId: 'admin-1' });
             getSecretSpy.mockClear();
-            vi.mocked(axios.post).mockClear();
-            vi.mocked(axios.post).mockImplementation(async (_url, body) => {
-              if ((body as URLSearchParams).get('client_secret') !== clientSecret) {
+            vi.mocked(outboundRequest).mockClear();
+            vi.mocked(outboundRequest).mockImplementation(async (_url, options) => {
+              if (new URLSearchParams(options?.body as string).get('client_secret') !== clientSecret) {
                 throw new Error('invalid_client: client secret required');
               }
-              return { data: { access_token: 'fresh-access', refresh_token: refreshToken, expires_in: 3600 } } as any;
+              return tokenResponse({ access_token: 'fresh-access', refresh_token: refreshToken, expires_in: 3600 });
             });
 
-            expect((await callback()).status).toBe(307);
+            // Two deliveries of the same callback may race. Only the request
+            // that atomically consumes the persisted nonce may exchange tokens.
+            const responses = await Promise.all([callback(state), callback(state)]);
+            expect(responses.map((response) => response.status).sort()).toEqual([307, 400]);
+            const rejected = responses.find((response) => response.status === 400)!;
+            expect(await rejected.json()).toEqual({ error: 'OAuth state expired or already used' });
             expect(getSecretSpy).not.toHaveBeenCalled();
-            expect(vi.mocked(axios.post)).toHaveBeenCalledWith(endpoint, expect.any(URLSearchParams), expect.objectContaining({ maxRedirects: 0, proxy: false }));
+            expect(vi.mocked(outboundRequest)).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(outboundRequest)).toHaveBeenCalledWith(new URL(endpoint), expect.objectContaining({
+              method: 'POST',
+              dispatcher: expect.anything(),
+              headers: expect.objectContaining({ 'content-type': 'application/x-www-form-urlencoded' }),
+            }));
+            expect(await tenantTable('imap_oauth_states').select('*')).toHaveLength(0);
             const authorized = await tenantTable<any>('imap_email_provider_config').where({ email_provider_id: providerId }).first();
             expect(authorized.oauth_credentials_token_url).toBe(endpoint);
             expect(authorized.oauth_credentials_secret_version).toBe(1);
@@ -730,7 +779,7 @@ describe('Email Provider Creation', () => {
       let oldRefreshKey: string | undefined;
       let oldClientSecretKey: string | undefined;
       let providerId: string | undefined;
-      vi.mocked(axios.post).mockClear();
+      vi.mocked(outboundRequest).mockClear();
 
       try {
         const original = {
@@ -768,7 +817,7 @@ describe('Email Provider Creation', () => {
 
         const result = await testEmailProviderConnection(providerId);
         expect(result).toMatchObject({ success: false, errorCode: 'missing_config' });
-        expect(vi.mocked(axios.post)).not.toHaveBeenCalled();
+        expect(vi.mocked(outboundRequest)).not.toHaveBeenCalled();
 
         // Reauthorizing the new issuer switches to endpoint-scoped secret
         // names, so the still-readable legacy environment values stay inert.
@@ -783,11 +832,11 @@ describe('Email Provider Creation', () => {
             token_expires_at: undefined,
           },
         } as any, true);
-        vi.mocked(axios.post).mockResolvedValue({ data: { access_token: 'new-access-token', expires_in: 3600 } } as any);
+        vi.mocked(outboundRequest).mockResolvedValue(tokenResponse({ access_token: 'new-access-token', expires_in: 3600 }));
         const reauthorized = await testEmailProviderConnection(providerId);
         expect(reauthorized).toMatchObject({ success: false, errorCode: 'connection_failed' });
-        expect(vi.mocked(axios.post)).toHaveBeenCalledTimes(1);
-        const tokenBody = vi.mocked(axios.post).mock.calls[0][1] as URLSearchParams;
+        expect(vi.mocked(outboundRequest)).toHaveBeenCalledTimes(1);
+        const tokenBody = new URLSearchParams(vi.mocked(outboundRequest).mock.calls[0][1]?.body as string);
         expect(tokenBody.get('refresh_token')).toBe('new-refresh-token');
         expect(tokenBody.get('client_secret')).toBe('new-client-secret');
       } finally {
@@ -811,7 +860,7 @@ describe('Email Provider Creation', () => {
       const issuerB = 'https://issuer-b.example.test/token';
       let providerId: string | undefined;
       const environmentKeys: string[] = [];
-      vi.mocked(axios.post).mockClear();
+      vi.mocked(outboundRequest).mockClear();
 
       try {
         const original = {
@@ -863,7 +912,7 @@ describe('Email Provider Creation', () => {
 
           expect(result).toMatchObject({ success: false, errorCode: 'missing_config' });
           expect(getSecretSpy).not.toHaveBeenCalled();
-          expect(vi.mocked(axios.post)).not.toHaveBeenCalled();
+          expect(vi.mocked(outboundRequest)).not.toHaveBeenCalled();
           getSecretSpy.mockRestore();
         }
       } finally {
@@ -878,7 +927,7 @@ describe('Email Provider Creation', () => {
 
     it('does not connect to a prohibited host when updating an auth-paused IMAP provider', async () => {
       vi.mocked(ImapFlow).mockClear();
-      vi.mocked(axios.post).mockClear();
+      vi.mocked(outboundRequest).mockClear();
       const data = {
         tenant: testTenant,
         providerType: 'imap' as const,
@@ -902,7 +951,7 @@ describe('Email Provider Creation', () => {
 
       expect(updated.setupError).toMatch(/blocked private address/);
       expect(vi.mocked(ImapFlow)).not.toHaveBeenCalled();
-      expect(vi.mocked(axios.post)).not.toHaveBeenCalled();
+      expect(vi.mocked(outboundRequest)).not.toHaveBeenCalled();
     });
   });
 });

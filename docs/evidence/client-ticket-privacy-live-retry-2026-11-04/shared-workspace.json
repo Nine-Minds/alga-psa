@@ -1,0 +1,9 @@
+{
+  "revision": "75acf2e3556473abedcc1d024ccb657a9dad1d6a",
+  "route": "/client-portal/tickets/29930000-0000-4000-8000-0000000000b7",
+  "identity": "Dorothy Gale, tenant-scoped client portal session; ordinary permissions",
+  "temporarySetup": "Created a temporary shared_workspace asset group with a new temporary asset, associated it to another contact's open ticket for the same client, and assigned Dorothy as a group user. No existing ticket/user permissions were changed.",
+  "ui": {"ticketVisibleInList":true,"ticketDetailReadable":true,"readOnlyNoticeVisible":true,"commentComposerAbsent":true},
+  "serverEnforcement": {"method":"Replayed captured authenticated addClientTicketComment Next Server Action with the shared-workspace ticket ID","httpStatus":200,"actionError":"Ticket introuvable ou accès refusé","denialProbeCommentPersisted":false},
+  "cleanup": {"asset":"deleted","assetGroup":"deleted","groupMembership":"deleted","contactAssignment":"deleted","ticketAssociation":"deleted","originalDorothyPasswordHash":"restored and compared equal to saved hash","rolesOrPrivilegesChanged":false}
+}

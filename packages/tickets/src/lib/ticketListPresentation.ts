@@ -90,7 +90,7 @@ export function daysUntil(due: Date, now: Date): number {
 // list) translates such an id to the kept representative before the lookup,
 // the same way a stored filter value is translated rather than dropped.
 export function formatCategoryLabel(
-  record: ITicketListItem,
+  record: Pick<ITicketListItem, 'category_id' | 'subcategory_id'>,
   categories: ITicketCategory[],
   aliases: Readonly<Record<string, string>> = {}
 ): string {

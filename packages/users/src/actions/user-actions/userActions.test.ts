@@ -14,6 +14,12 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+const assertCoManagedSeatCapacityMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/licensing')>(),
+  assertCoManagedSeatCapacity: assertCoManagedSeatCapacityMock,
+}));
 const userGetMock = vi.hoisted(() => vi.fn());
 const uploadEntityImageMock = vi.hoisted(() => vi.fn());
 const deleteEntityImageMock = vi.hoisted(() => vi.fn());
@@ -238,7 +244,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
 function createUpdateTenantDb(current: { email: string; user_type?: 'internal' | 'client' }) {
   const updatedRow = { user_id: 'user-1', email: 'updated@example.com' };
 
-  return ((table: string) => {
+  const trx: any = ((table: string) => {
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
@@ -246,7 +252,7 @@ function createUpdateTenantDb(current: { email: string; user_type?: 'internal' |
             first: async () =>
               Array.isArray(fields[0])
                 ? updatedRow
-                : { email: current.email, user_type: current.user_type ?? 'internal' },
+                : { email: current.email, user_type: current.user_type ?? 'internal', is_inactive: false },
           }),
         }),
       };
@@ -262,6 +268,9 @@ function createUpdateTenantDb(current: { email: string; user_type?: 'internal' |
 
     throw new Error(`Unexpected tenant table ${table}`);
   }) as any;
+  trx.isTransaction = true;
+  trx.raw = vi.fn(async () => ({ rows: [] }));
+  return trx;
 }
 
 describe('addUser', () => {
@@ -279,6 +288,7 @@ describe('addUser', () => {
     isInReportsToChainMock.mockReset();
     publishWorkflowEventMock.mockReset();
     modelGetUserRolesMock.mockReset();
+    assertCoManagedSeatCapacityMock.mockReset();
 
     publishWorkflowEventMock.mockResolvedValue(undefined);
     modelGetUserRolesMock.mockResolvedValue([]);
@@ -292,6 +302,7 @@ describe('addUser', () => {
       email: 'updated@example.com',
     });
     isInReportsToChainMock.mockResolvedValue(false);
+    assertCoManagedSeatCapacityMock.mockResolvedValue(undefined);
 
     withTransactionMock.mockImplementation(async (db: any, callback: (trx: any) => Promise<any>) => callback(db));
     getAdminConnectionMock.mockResolvedValue(createAdminDb());
@@ -387,8 +398,9 @@ describe('addUser', () => {
   });
 
   it('normalizes updated email addresses to lowercase before saving', async () => {
+    const trx = createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' });
     createTenantKnexMock.mockResolvedValue({
-      knex: createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' }),
+      knex: trx,
     });
 
     const updateUser = await loadUpdateUser();
@@ -412,6 +424,10 @@ describe('addUser', () => {
         email: 'updated@example.com',
       },
     });
+    expect(trx.raw).toHaveBeenCalledWith('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
+      'internal_user_seats', 'tenant-1',
+    ]);
+    expect(assertCoManagedSeatCapacityMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1');
   });
 
   // Regression for PR #2356: editing reports_to (or any field) re-submits the

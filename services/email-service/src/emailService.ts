@@ -694,14 +694,27 @@ class ImapFolderListener {
   }
 
   private async refreshAccessToken(): Promise<void> {
+    const db = await getAdminConnection();
     try {
-      const db = await getAdminConnection();
       await refreshImapAccessToken({ provider: this.provider, db });
-    } catch (error: any) {
-      const msg = error?.response?.data?.error || error?.message || 'OAuth token refresh failed';
-      await this.updateProviderStatus('error', msg);
-      throw error;
+    } catch {
+      // Transport/IdP errors can include form data or response bodies.
+      await this.updateProviderStatus('error', 'OAuth token refresh failed');
+      throw new Error('OAuth token refresh failed');
     }
+
+    logger.info('[IMAP] Refreshed OAuth access token', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+    });
+    stateLog('oauth_refresh', {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+      listenerId: this.listenerId,
+      expiresAt: this.provider.token_expires_at,
+    });
   }
 
   private isTokenExpired(): boolean {

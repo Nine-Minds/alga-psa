@@ -568,12 +568,12 @@
     "portableExport": {
       "title": "Exportar espacio de trabajo",
       "description": "Descargue un archivo portátil y cifrado con los registros y archivos de su espacio de trabajo.",
-      "recovery": "Guarde la frase de contraseña de recuperación en un lugar seguro. Sin ella, no se puede abrir el archivo.",
-      "connections": "El archivo contiene los registros de su espacio de trabajo y los archivos almacenados en él. Los registros y asociaciones de documentos, así como el historial de tiempo, programación, reuniones y conversaciones, aún no se incluyen y llegarán en una versión posterior. No se incluyen datos de facturación, datos privados del MSP ni secretos de integración.",
+      "recovery": "Guarde la frase de contraseña de recuperación en un lugar seguro. Sin ella, el archivo no se puede abrir.",
+      "connections": "El archivo contiene los registros de su espacio de trabajo y los archivos almacenados en él. Los registros y asociaciones de documentos, así como el historial de tiempo, agenda, reuniones y conversaciones, aún no se incluyen y llegarán en una versión posterior. No se incluyen la facturación, los datos privados del MSP ni los secretos de integración.",
       "passphrase": "Frase de contraseña de recuperación",
       "confirmPassphrase": "Confirmar frase de contraseña de recuperación",
       "download": "Preparar y descargar archivo",
-      "requested": "Su solicitud se abre en una pestaña nueva. La preparación puede tardar unos minutos; el navegador descargará el archivo cuando esté listo.",
+      "requested": "Su solicitud se abre en una pestaña nueva. La preparación puede tardar unos minutos; su navegador descargará el archivo cuando esté listo.",
       "loadError": "No puede exportar este espacio de trabajo con su acceso actual.",
       "lengthError": "Use una frase de contraseña de entre 16 y 1024 bytes UTF-8.",
       "matchError": "Las frases de contraseña de recuperación deben coincidir.",
@@ -629,7 +629,7 @@
       "seatUsage": "{{used}} de {{count}} puestos de técnico",
       "seatAllocation": "{{count}} puestos de técnico asignados"
     },
-    "description": "Gestione los puestos de técnico disponibles para los espacios de trabajo de sus clientes.",
+    "description": "La cogestión de TI permite que el personal de TI de un cliente trabaje junto a su equipo en AlgaPSA, en los mismos tickets y con acceso limitado a su empresa. Cada técnico del cliente usa un puesto de un grupo que usted compra aquí.",
     "directory": {
       "empty": "No hay espacios de trabajo cogestionados disponibles para administrar.",
       "prompt": "Seleccione el espacio de trabajo cogestionado que desea administrar."
@@ -639,7 +639,7 @@
       "descriptionWith": "{{name}} ya no tiene acceso. El historial del trabajo compartido se conserva en modo de solo lectura.",
       "title": "TI cogestionada finalizada el {{date}}"
     },
-    "loading": "Cargando la capacidad de puestos de cliente…",
+    "loading": "Cargando la capacidad de puestos de cogestión…",
     "overview": {
       "shape": "Modalidad",
       "state": "Estado",
@@ -720,15 +720,15 @@
       "description": "Este espacio de trabajo no está disponible en este momento. Póngase en contacto con su proveedor de TI si esperaba usarlo.",
       "title": "TI cogestionada no está disponible"
     },
-    "capacity": "Puestos comprados",
+    "capacity": "Comprados",
     "allocated": "Asignados a clientes",
-    "available": "Puestos disponibles",
-    "seatPool": "Puestos de técnico para clientes",
-    "seatDescription": "Asigne puestos de este grupo compartido. Los solicitantes son gratuitos y sus técnicos del MSP no usan puestos de clientes.",
+    "available": "Disponibles",
+    "seatPool": "Puestos de cogestión",
+    "seatDescription": "Solo los técnicos de sus clientes necesitan un puesto. Los solicitantes y sus propios técnicos no.",
     "quantity": "Total de puestos en su grupo",
     "reviewPurchase": "Revisar compra",
     "resumePurchase": "Reanudar compra",
-    "confirmTitle": "Revisar la compra de puestos para clientes",
+    "confirmTitle": "Revisar la compra de puestos de cogestión",
     "monthlyTotal_one": "{{count}} puesto · {{amount}} al mes",
     "monthlyTotal_other": "{{count}} puestos · {{amount}} al mes",
     "dueNow": "Importe estimado a pagar ahora: {{amount}}",
@@ -736,7 +736,7 @@
     "checkoutTitle": "Completar la compra de puestos",
     "manageLicense": "Administrar su licencia autoalojada",
     "proRequired": "Se requiere una suscripción Pro de PSA para patrocinar espacios de trabajo de clientes.",
-    "loadError": "No se pudo cargar la capacidad de puestos de clientes. Inténtelo de nuevo.",
+    "loadError": "No se pudo cargar la capacidad de puestos de cogestión. Inténtelo de nuevo.",
     "purchaseError": "No se pudo completar la compra de puestos. Puede reanudarla con seguridad.",
     "termsChanged": "El precio cambió después de que revisara la compra. Revise las condiciones actualizadas antes de confirmar.",
     "offerUnavailable": "La compra de nuevas plazas no está disponible temporalmente. No se realizó ningún cargo.",
@@ -751,9 +751,6 @@
     "awaitingVerification_one": "Su compra de {{count}} puesto está pendiente de verificación del pago. El puesto aparecerá aquí cuando se confirme el pago.",
     "awaitingVerification_other": "Su compra de {{count}} puestos está pendiente de verificación del pago. Los puestos aparecerán aquí cuando se confirme el pago.",
     "refreshStatus": "Actualizar estado",
-    "purchaseOnly": {
-      "intro": "Compre aquí un conjunto de puestos de cogestión. Después de la compra, asigne puestos a los clientes desde cada ficha de cliente."
-    },
     "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
     "billingCustomerUnlinked": "No se pudo verificar una cuenta de facturación de Stripe para este espacio de trabajo. Contacte con soporte para vincularla.",
     "proSubscriptionRequired": "Las plazas de gestión conjunta requieren una suscripción Pro vigente. Revise su suscripción en Gestión de la cuenta.",
@@ -976,21 +973,6 @@
       "settings": "Gestionar políticas de SLA",
       "mappingFor": "La prioridad del cliente {{name}} corresponde a",
       "unmapped": "Sin asignar"
-    },
-    "portableExport": {
-      "title": "Exportar espacio de trabajo",
-      "description": "Descargue un archivo portátil y cifrado con los registros y archivos de su espacio de trabajo.",
-      "recovery": "Guarde la frase de contraseña de recuperación en un lugar seguro. Sin ella, el archivo no se puede abrir.",
-      "connections": "El archivo contiene los registros de su espacio de trabajo y los archivos almacenados en él. Los registros y asociaciones de documentos, así como el historial de tiempo, agenda, reuniones y conversaciones, aún no se incluyen y llegarán en una versión posterior. No se incluyen la facturación, los datos privados del MSP ni los secretos de integración.",
-      "passphrase": "Frase de contraseña de recuperación",
-      "confirmPassphrase": "Confirmar frase de contraseña de recuperación",
-      "download": "Preparar y descargar archivo",
-      "requested": "Su solicitud se abre en una pestaña nueva. La preparación puede tardar unos minutos; su navegador descargará el archivo cuando esté listo.",
-      "loadError": "No puede exportar este espacio de trabajo con su acceso actual.",
-      "lengthError": "Use una frase de contraseña de entre 16 y 1024 bytes UTF-8.",
-      "matchError": "Las frases de contraseña de recuperación deben coincidir.",
-      "unavailable": "La exportación del espacio de trabajo no está disponible en esta edición.",
-      "loading": "Cargando…"
     },
     "section": {
       "title": "Cogestión",
@@ -1275,6 +1257,49 @@
       "reviewSeatChange": "Revisar cambio de puestos",
       "billingError": "No se pudo abrir la facturación. Actualiza el estado e inténtalo de nuevo.",
       "purchaseUnconfigured": "Las compras no están configuradas para esta implementación."
+    },
+    "howMany": "¿Cuántos puestos quiere?",
+    "noSeatsYet": "Todavía no tiene puestos.",
+    "perMonth": "al mes",
+    "priceBreakdown_one": "{{count}} puesto × {{unit}}",
+    "priceBreakdown_other": "{{count}} puestos × {{unit}}",
+    "reviewHint": "No se cobra nada hasta que confirme en el siguiente paso.",
+    "changeTitle": "Cambiar el número de puestos",
+    "adding_one": "Añadiendo {{count}} puesto",
+    "adding_other": "Añadiendo {{count}} puestos",
+    "removing_one": "Quitando {{count}} puesto",
+    "removing_other": "Quitando {{count}} puestos",
+    "fromTo": "{{from}} → {{to}} puestos",
+    "monthlyWithDifference": "{{total}} al mes ({{difference}})",
+    "reviewChange": "Revisar cambio",
+    "manageBilling": "Gestionar la facturación",
+    "freeToAllocate_one": "{{count}} puesto está libre para asignar. Abra la ficha de un cliente para asignarlo.",
+    "freeToAllocate_other": "{{count}} puestos están libres para asignar. Abra la ficha de un cliente para asignarlos.",
+    "noneFree": "Todos los puestos están asignados. Añada puestos más abajo o libere uno de un cliente.",
+    "goToClients": "Ir a Clientes",
+    "belowAllocated_one": "No puede bajar de {{count}} puesto: está asignado a un cliente. Libérelo primero de ese cliente.",
+    "belowAllocated_other": "No puede bajar de {{count}} puestos: están asignados a clientes. Libere primero puestos de un cliente.",
+    "decreaseSeats": "Reducir puestos",
+    "increaseSeats": "Aumentar puestos",
+    "usage": "{{allocated}} de {{purchased}} puestos asignados",
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "buy": {
+        "title": "Compre puestos",
+        "body": "Los puestos van a un único grupo compartido para todo su MSP. Cambie el número cuando quiera."
+      },
+      "enable": {
+        "title": "Active la cogestión para un cliente",
+        "body": "Abra la ficha del cliente y elija cuántos puestos recibe."
+      },
+      "signIn": {
+        "title": "Sus técnicos inician sesión",
+        "body": "Cada técnico del cliente usa un puesto y solo ve el trabajo de su propia empresa."
+      }
+    },
+    "whoNeedsSeat": {
+      "label": "¿Quién necesita un puesto?",
+      "answer": "Solo los técnicos de sus clientes. Quienes solo envían tickets no pagan, y sus propios técnicos están cubiertos por sus licencias de AlgaPSA."
     }
   },
   "common": {

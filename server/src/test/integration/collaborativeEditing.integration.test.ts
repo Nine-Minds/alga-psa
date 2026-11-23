@@ -478,6 +478,8 @@ describe('Collaborative Editing — Integration Tests', () => {
 
   describe('Hocuspocus synchronization and persistence', () => {
     let service: Hocuspocus;
+    let persistence: CollabPersistenceExtension;
+    const authentications = new Set<Promise<unknown>>();
     let http: HttpServer;
     let url: string;
     let apiUrl: string;
@@ -525,16 +527,19 @@ describe('Collaborative Editing — Integration Tests', () => {
       // Resolve the service's own locked server version, not a test replacement.
       const requireService = createRequire(new URL('../../../../hocuspocus/package.json', import.meta.url));
       const { Hocuspocus } = await import(pathToFileURL(requireService.resolve('@hocuspocus/server')).href);
+      persistence = new CollabPersistenceExtension({ apiUrl, authorizationUrl: authApiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY });
       service = new Hocuspocus({
         address: '127.0.0.1', port: 0, quiet: true,
         debounce: 20, maxDebounce: 100,
-        extensions: [new CollabPersistenceExtension({ apiUrl, authorizationUrl: authApiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY })],
+        extensions: [persistence],
         onAuthenticate: async ({ documentName, token }: { documentName: string; token: string }) => {
           const admission = validateDocumentRoomToken(documentName, token);
-          const authorized = await fetch(authApiUrl, {
+          const authorization = fetch(authApiUrl, {
             method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
             body: JSON.stringify({ tenantId: admission.tenantId, documentId: admission.documentId, credential: token }),
           });
+          authentications.add(authorization);
+          const authorized = await authorization.finally(() => authentications.delete(authorization));
           if (!authorized.ok) throw new Error('Document update authorization denied');
           return { ...admission, documentRoomToken: token };
         },
@@ -552,18 +557,36 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     afterEach(async () => {
-      for (const stop of renewalStops) stop();
-      renewalStops.clear();
-      for (const provider of providers) provider.destroy();
-      for (const document of documents) document.destroy();
-      providers.clear(); documents.clear();
-      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
-      await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
-      await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
-      expect(transportErrors).toEqual([]);
-      expect(requests.every(request => expectedStatuses.includes(request.status))).toBe(true);
-      requests.length = 0;
+      try {
+        for (const stop of renewalStops) stop();
+        renewalStops.clear();
+        for (const provider of providers) provider.destroy();
+        for (const document of documents) document.destroy();
+        providers.clear(); documents.clear();
+        await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+        await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
+        await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
+        await quiesce();
+        expect(transportErrors).toEqual([]);
+        expect(requests.every(request => expectedStatuses.includes(request.status))).toBe(true);
+      } finally {
+        // A failed test must not leak its traffic into the next one.
+        requests.length = 0;
+        transportErrors.length = 0;
+      }
     });
+
+    // Room eviction is not a persistence barrier: Hocuspocus unloads a room
+    // while an already-running store or authorization request is in flight.
+    async function quiesce() {
+      while (authentications.size > 0) await Promise.allSettled([...authentications]);
+      await persistence.settled();
+    }
+
+    async function evicted(room: string) {
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await quiesce();
+    }
 
     afterAll(async () => {
       await service?.destroy();
@@ -650,7 +673,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       write(first.document, 'Persisted content');
       await expect.poll(() => first.provider.hasUnsyncedChanges, { timeout: 5000 }).toBe(false);
       first.provider.destroy(); providers.delete(first.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text).toBe('Persisted content');
       expect(requests.some(request => request.status === 200)).toBe(true);
 
@@ -750,7 +773,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       write(owner.document, 'Only the authorized writer can change this room');
       await expect.poll(() => owner.provider.hasUnsyncedChanges).toBe(false);
       owner.provider.destroy(); providers.delete(owner.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       expect((await saved(documentId)).content[0].content[0].text)
         .toBe('Only the authorized writer can change this room');
       expect(requests.some(request => request.status === 403)).toBe(true);
@@ -778,7 +801,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       await expect.poll(() => connectionClosed || requests.some(request => request.status === 403), { timeout: 5000 })
         .toBe(true);
       editor.provider.destroy(); providers.delete(editor.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
 
       const storedAfterDenial = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: documentId }).first();
@@ -795,7 +818,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       write(recovered.document, 'Editing recovers after access returns');
       await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
       recovered.provider.destroy(); providers.delete(recovered.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       expect((await saved(documentId)).content[0].content[0].text)
         .toBe('Editing recovers after access returns');
     });
@@ -862,7 +885,7 @@ describe('Collaborative Editing — Integration Tests', () => {
         .toBe('Editing continues after the original credential expires');
 
       editor.provider.destroy(); providers.delete(editor.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
         .toBe('Editing continues after the original credential expires');
       expect(requests.some(request => request.path.endsWith('/persist') && request.status === 200)).toBe(true);
@@ -920,7 +943,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       });
       expect(persistenceResponse.status).toBe(403);
       editor.provider.destroy(); providers.delete(editor.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
         .toMatchObject({ block_data: activeSnapshot.block_data, updated_at: activeSnapshot.updated_at });
       expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
@@ -933,7 +956,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       write(recovered.document, 'Editing recovers after reactivation');
       await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
       recovered.provider.destroy(); providers.delete(recovered.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       expect((await saved(documentId)).content[0].content[0].text).toBe('Editing recovers after reactivation');
       await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
     });

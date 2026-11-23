@@ -113,6 +113,8 @@ interface BentoHeroProps {
   onOpenAllFields: () => void;
   // Tags
   tags?: ITag[];
+  /** Server answer for the "My group" chip; see ActivityGroupControlRenderProps.initialOnMyList. */
+  initialOnMyActivityList?: boolean | null;
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
@@ -203,6 +205,7 @@ export function BentoHero({
   workflowLocked,
   onOpenAllFields,
   tags,
+  initialOnMyActivityList,
   onTagsChange,
   heroMeta,
   moreActions,
@@ -1047,6 +1050,7 @@ export function BentoHero({
                 // Built from SAVED state (props), not unsaved hero edits. Same id resolution as
                 // TicketDetails' additionalAgentsForInfo, so the key matches TicketInfo's.
                 assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.additional_user_id || a.assigned_to)),
+                initialOnMyList: initialOnMyActivityList,
               })}
             </div>
           ) : null}
