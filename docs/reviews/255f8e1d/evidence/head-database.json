@@ -1,0 +1,169 @@
+{
+  "comments": [
+    {
+      "comment_id": "90a7751a-3e90-4cf2-97bd-94a0b3eee44f",
+      "note": "[{\"id\":\"c2c0b4e3-e14b-484b-b5df-0ffae5d715e1\",\"type\":\"paragraph\",\"props\":{\"backgroundColor\":\"default\",\"textColor\":\"default\",\"textAlignment\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"SECURITY-REVIEW-d17622-CONTROL: permitted comment stays useful.\",\"styles\":{}}],\"children\":[]}]",
+      "created_at": "2026-11-04T23:28:17.865Z",
+      "thread_id": "90a7751a-3e90-4cf2-97bd-94a0b3eee44f"
+    },
+    {
+      "comment_id": "515aa1fa-4061-4848-95f3-f437f32d11ff",
+      "note": "[{\"id\":\"9ad8ef77-0383-4d6b-903c-1b800f34af4c\",\"type\":\"paragraph\",\"props\":{\"backgroundColor\":\"default\",\"textColor\":\"default\",\"textAlignment\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"SECURITY-REVIEW-d17622: authorized shared conversation only.\",\"styles\":{}}],\"children\":[]}]",
+      "created_at": "2026-11-04T23:27:11.204Z",
+      "thread_id": "515aa1fa-4061-4848-95f3-f437f32d11ff"
+    },
+    {
+      "comment_id": "7e6e5893-784d-4e2c-b7dc-4f85210f48ab",
+      "note": "[{\"id\":\"2dbfe008-50f4-4e5c-8fc8-cdcfc2a5978a\",\"type\":\"paragraph\",\"props\":{\"backgroundColor\":\"default\",\"textColor\":\"default\",\"textAlignment\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"SECURITY-SMOKE-1940: unrestricted control comment.\",\"styles\":{}}],\"children\":[]}]",
+      "created_at": "2026-11-04T19:39:46.189Z",
+      "thread_id": "7e6e5893-784d-4e2c-b7dc-4f85210f48ab"
+    }
+  ],
+  "notifications": [
+    {
+      "internal_notification_id": "564d4260-46bd-45e8-84ce-51d30cbeccce",
+      "tenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "user_id": "395c61f9-6cb1-52df-944d-5829636e2136",
+      "template_name": "co-managed-escalation-received",
+      "language_code": "en",
+      "title": "A team member escalated ticket #Shared ticket",
+      "message": " escalated \"Shared ticket\" to you.",
+      "type": "info",
+      "category": "co-managed",
+      "link": "/msp/co-managed",
+      "metadata": null,
+      "is_read": false,
+      "read_at": null,
+      "deleted_at": null,
+      "delivery_status": "pending",
+      "delivery_attempts": 0,
+      "last_delivery_attempt": null,
+      "delivery_error": null,
+      "created_at": "2026-11-04T23:28:45.236Z",
+      "updated_at": "2026-11-04T23:28:45.236Z",
+      "priority": "normal"
+    },
+    {
+      "internal_notification_id": "98f28f8c-b2c0-4a5d-a24b-18f9f8df0915",
+      "tenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "user_id": "395c61f9-6cb1-52df-944d-5829636e2136",
+      "template_name": "ticket-comment-added",
+      "language_code": "en",
+      "title": "New Comment",
+      "message": "Customer Admin commented on ticket #NOTIFY-001: \"SECURITY-REVIEW-d17622-CONTROL: permitted comment stays useful.\"",
+      "type": "info",
+      "category": "tickets",
+      "link": "/msp/co-managed",
+      "metadata": {
+        "comment": {
+          "id": "90a7751a-3e90-4cf2-97bd-94a0b3eee44f",
+          "text": "SECURITY-REVIEW-d17622-CONTROL: permitted comment stays useful.",
+          "author": "Customer Admin",
+          "authorId": "c1aa0b50-d026-5f7d-95e0-9cac66672bd1",
+          "isInternal": false
+        },
+        "ticketId": "ea90c3fe-1e02-572f-b8b8-dc43cd9af134",
+        "ticketNumber": "NOTIFY-001"
+      },
+      "is_read": false,
+      "read_at": null,
+      "deleted_at": null,
+      "delivery_status": "pending",
+      "delivery_attempts": 0,
+      "last_delivery_attempt": null,
+      "delivery_error": null,
+      "created_at": "2026-11-04T23:28:18.411Z",
+      "updated_at": "2026-11-04T23:28:18.411Z",
+      "priority": "normal"
+    },
+    {
+      "internal_notification_id": "9eeebd4d-53ed-4830-a443-a18cd8acfb20",
+      "tenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "user_id": "340aa261-3f33-5eb2-8e56-36dfb1e4a02e",
+      "template_name": "ticket-comment-added",
+      "language_code": "en",
+      "title": "New Comment",
+      "message": "Customer Admin commented on ticket #Shared ticket: \"\"",
+      "type": "info",
+      "category": "tickets",
+      "link": "/msp/co-managed",
+      "metadata": {
+        "comment": {
+          "id": "515aa1fa-4061-4848-95f3-f437f32d11ff",
+          "text": "",
+          "author": "Customer Admin",
+          "authorId": "c1aa0b50-d026-5f7d-95e0-9cac66672bd1",
+          "isInternal": false
+        },
+        "ticketId": "ea90c3fe-1e02-572f-b8b8-dc43cd9af134",
+        "ticketNumber": "Shared ticket"
+      },
+      "is_read": false,
+      "read_at": null,
+      "deleted_at": null,
+      "delivery_status": "pending",
+      "delivery_attempts": 0,
+      "last_delivery_attempt": null,
+      "delivery_error": null,
+      "created_at": "2026-11-04T23:27:11.993Z",
+      "updated_at": "2026-11-04T23:27:11.993Z",
+      "priority": "normal"
+    },
+    {
+      "internal_notification_id": "15bd1191-eb7f-46b2-b1bc-3cf12df632c5",
+      "tenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "user_id": "395c61f9-6cb1-52df-944d-5829636e2136",
+      "template_name": "co-managed-escalation-received",
+      "language_code": "en",
+      "title": "A team member escalated ticket #Shared ticket",
+      "message": " escalated \"Shared ticket\" to you.",
+      "type": "info",
+      "category": "co-managed",
+      "link": "/msp/co-managed",
+      "metadata": null,
+      "is_read": false,
+      "read_at": null,
+      "deleted_at": null,
+      "delivery_status": "pending",
+      "delivery_attempts": 0,
+      "last_delivery_attempt": null,
+      "delivery_error": null,
+      "created_at": "2026-11-04T19:43:00.605Z",
+      "updated_at": "2026-11-04T19:43:00.605Z",
+      "priority": "normal"
+    },
+    {
+      "internal_notification_id": "aadf1031-1169-4231-b65a-4d287ebdd9fe",
+      "tenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "user_id": "395c61f9-6cb1-52df-944d-5829636e2136",
+      "template_name": "ticket-comment-added",
+      "language_code": "en",
+      "title": "New Comment",
+      "message": "Customer Admin commented on ticket #NOTIFY-001: \"SECURITY-SMOKE-1940: unrestricted control comment.\"",
+      "type": "info",
+      "category": "tickets",
+      "link": "/msp/co-managed",
+      "metadata": {
+        "comment": {
+          "id": "7e6e5893-784d-4e2c-b7dc-4f85210f48ab",
+          "text": "SECURITY-SMOKE-1940: unrestricted control comment.",
+          "author": "Customer Admin",
+          "authorId": "c1aa0b50-d026-5f7d-95e0-9cac66672bd1",
+          "isInternal": false
+        },
+        "ticketId": "ea90c3fe-1e02-572f-b8b8-dc43cd9af134",
+        "ticketNumber": "NOTIFY-001"
+      },
+      "is_read": false,
+      "read_at": null,
+      "deleted_at": null,
+      "delivery_status": "pending",
+      "delivery_attempts": 0,
+      "last_delivery_attempt": null,
+      "delivery_error": null,
+      "created_at": "2026-11-04T19:39:46.872Z",
+      "updated_at": "2026-11-04T19:39:46.872Z",
+      "priority": "normal"
+    }
+  ]
+}

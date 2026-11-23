@@ -1,0 +1,128 @@
+{
+  "at": "2026-11-04T23:27:45.012Z",
+  "streams": [
+    {
+      "key": "alga-psa:security-2-findings-in-deliveryprovider-ts:event-stream:security-2-findings-in-deliveryprovider-ts:global:TICKET_COMMENT_ADDED",
+      "groups": [
+        [
+          "name",
+          "security-2-findings-in-deliveryprovider-ts",
+          "consumers",
+          2,
+          "pending",
+          0,
+          "last-delivered-id",
+          "1793834831261-0",
+          "entries-read",
+          4,
+          "lag",
+          0
+        ]
+      ],
+      "consumers": [
+        [
+          "name",
+          "consumer-4118487",
+          "pending",
+          0,
+          "idle",
+          13367996,
+          "inactive",
+          13678780
+        ],
+        [
+          "name",
+          "consumer-641721",
+          "pending",
+          0,
+          "idle",
+          2707,
+          "inactive",
+          33750
+        ]
+      ]
+    },
+    {
+      "key": "alga-psa:security-2-findings-in-deliveryprovider-ts:event-stream:security-2-findings-in-deliveryprovider-ts:internal-notifications:TICKET_COMMENT_ADDED",
+      "groups": [
+        [
+          "name",
+          "security-2-findings-in-deliveryprovider-ts",
+          "consumers",
+          2,
+          "pending",
+          0,
+          "last-delivered-id",
+          "1793834831265-0",
+          "entries-read",
+          4,
+          "lag",
+          0
+        ]
+      ],
+      "consumers": [
+        [
+          "name",
+          "consumer-4118487",
+          "pending",
+          0,
+          "idle",
+          13367996,
+          "inactive",
+          13678665
+        ],
+        [
+          "name",
+          "consumer-641721",
+          "pending",
+          0,
+          "idle",
+          2707,
+          "inactive",
+          33577
+        ]
+      ]
+    },
+    {
+      "key": "alga-psa:security-2-findings-in-deliveryprovider-ts:event-stream:security-2-findings-in-deliveryprovider-ts:emailservice::v7:TICKET_COMMENT_ADDED",
+      "groups": [
+        [
+          "name",
+          "security-2-findings-in-deliveryprovider-ts",
+          "consumers",
+          2,
+          "pending",
+          0,
+          "last-delivered-id",
+          "1793834831267-0",
+          "entries-read",
+          4,
+          "lag",
+          0
+        ]
+      ],
+      "consumers": [
+        [
+          "name",
+          "consumer-4118487",
+          "pending",
+          0,
+          "idle",
+          13367997,
+          "inactive",
+          13678666
+        ],
+        [
+          "name",
+          "consumer-641721",
+          "pending",
+          0,
+          "idle",
+          2708,
+          "inactive",
+          33578
+        ]
+      ]
+    }
+  ]
+}

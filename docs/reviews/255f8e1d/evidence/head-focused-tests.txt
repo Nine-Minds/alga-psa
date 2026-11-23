@@ -1,0 +1,12 @@
+
+> @alga-psa/co-managed@0.1.0 test
+> vitest run --run src/__tests__/routingDeliveryReauth.test.ts src/__tests__/sharedWorkProjection.test.ts
+
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-2-findings-in-deliveryprovider-ts/packages/co-managed
+
+
+ Test Files  2 passed (2)
+      Tests  51 passed (51)
+   Start at  18:26:05
+   Duration  1.20s (transform 719ms, setup 0ms, import 1.62s, tests 17ms, environment 0ms)

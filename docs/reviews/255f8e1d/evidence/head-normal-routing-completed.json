@@ -1,0 +1,26 @@
+[
+  {
+    "tenant": "96d5fbd6-c264-51a1-98cd-2c9e480cd959",
+    "delivery_kind": "routing_email",
+    "source_id": "e3a9ae99-2850-4427-85ea-8d57091cc2db",
+    "recipient": "cm.notification.visible@notification.test",
+    "recipient_kind": "msp_user",
+    "state": "sent",
+    "attempts": 1,
+    "next_attempt_at": null,
+    "last_error": null,
+    "error_code": null,
+    "requires_reconciliation": false,
+    "payload": {
+      "event": "escalation_received",
+      "ticketId": "ea90c3fe-1e02-572f-b8b8-dc43cd9af134",
+      "actorName": "ROUTING-CANARY-ACTOR-1943",
+      "principalId": "395c61f9-6cb1-52df-944d-5829636e2136",
+      "sponsorTenant": "6f14cc2a-866f-51c1-9ce2-d55ca488b1f1",
+      "relationshipId": "66cb6b8e-062f-5fd0-a48f-6092b7d5c05c",
+      "actorOrganization": "ROUTING-CANARY-ORG-1943"
+    },
+    "created_at": "2026-11-04T23:30:27.861Z",
+    "updated_at": "2026-11-04T23:30:28.130Z"
+  }
+]

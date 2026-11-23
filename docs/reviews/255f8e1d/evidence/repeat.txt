@@ -1,0 +1,32 @@
+Run from /home/robert/alga-copies/feature-security-2-findings-in-deliveryprovider-ts
+Evidence scripts directory: /home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence
+
+Baseline verify:
+npm run fixtures:co-managed -- --only notification --verify
+
+To select unrestricted control before posting a second UI comment:
+node <evidence>/db-runner.cjs <evidence>/select-control.js
+
+The following scoped scripts are included beside this file. These commands modify only the dedicated notification fixture's sponsor SMTP setting and routing ledger. Use one scenario at a time and restore it before another.
+
+Normal routing:
+node <evidence>/db-runner.cjs <evidence>/routing-normal.js
+node <evidence>/db-runner.cjs <evidence>/routing-publish.js
+node <evidence>/db-runner.cjs <evidence>/routing-status.js
+
+Failure and recovery:
+node <evidence>/db-runner.cjs <evidence>/routing-fail.js
+node <evidence>/db-runner.cjs <evidence>/routing-publish.js
+node <evidence>/db-runner.cjs <evidence>/routing-status.js  # expect failed, attempts=1
+node <evidence>/db-runner.cjs <evidence>/routing-tighten.js
+node <evidence>/db-runner.cjs <evidence>/routing-publish.js
+node <evidence>/db-runner.cjs <evidence>/routing-status.js  # expect sent, attempts=2
+Always restore after either routing scenario: node <evidence>/db-runner.cjs <evidence>/restore.js
+These scripts overwrite /tmp/delivery-route-backup.json; finish and restore one scenario before beginning another.
+
+Full fixture-owned reset (invalidates fixture sessions and removes demonstration records):
+npm run fixtures:co-managed -- --only notification --reset
+NOTIFICATION_SMTP_PORT=3025 npm run fixtures:co-managed -- --only notification
+npm run fixtures:co-managed -- --only notification --verify
+Do not reset GreenMail globally; other fixture mailboxes share the emulator.
+Do not start the application for this evidence repair. A separately authorized live-validation step may use the card-managed dev-server service after confirming its current service policy.

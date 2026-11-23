@@ -1,0 +1,15 @@
+{
+  "key": "alga-psa:security-2-findings-in-deliveryprovider-ts:event-stream:security-2-findings-in-deliveryprovider-ts:global:CO_MANAGED_ESCALATION_RECEIVED",
+  "event": {
+    "id": "04893730-0521-422d-a4fa-f058f7fd3e2b",
+    "eventType": "CO_MANAGED_ESCALATION_RECEIVED",
+    "timestamp": "2026-11-04T23:28:45.087Z",
+    "payload": {
+      "tenantId": "96d5fbd6-c264-51a1-98cd-2c9e480cd959",
+      "ticketId": "ea90c3fe-1e02-572f-b8b8-dc43cd9af134",
+      "relationshipId": "66cb6b8e-062f-5fd0-a48f-6092b7d5c05c",
+      "operationId": "cc658985-1411-4c26-a0e9-01524dadc3a3"
+    }
+  },
+  "redisId": "1793834925088-0"
+}

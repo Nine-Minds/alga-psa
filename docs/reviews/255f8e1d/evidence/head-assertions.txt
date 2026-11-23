@@ -1,0 +1,2 @@
+PASS at d17622d44fc011c45061041f61d221e113223e6b: persisted Shared IT comment; restricted SMTP text and HTML omit canary/title; unrestricted SMTP retains both; restricted persisted in-app preview empty; retry SMTP omits combined home/relationship fields and uses normalized current address; old mailbox count unchanged; captured-address ledger sent after 2 attempts.
+Active consumer-641721 cwd matches this checkout/server; consumer-4118487 no longer exists.
