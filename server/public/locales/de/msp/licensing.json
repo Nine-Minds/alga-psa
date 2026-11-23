@@ -552,10 +552,10 @@
         "unavailable": "Nicht aufgeführt, weil inaktiv, ohne E-Mail-Adresse oder bereits mit Platz oder Einladung: {{count}}."
       },
       "trial": {
-        "available": "Oben ist eine kostenlose 15-Tage-Testphase verfügbar. Cogemanagte Plätze können jederzeit hinzugefügt werden.",
-        "pending": "Eine Einladung zur 15-Tage-Testphase wartet auf den Techniker. Cogemanagte Plätze können jederzeit hinzugefügt werden.",
-        "active": "Die 15-Tage-Testphase läuft. Fügen Sie cogemanagte Plätze hinzu, um den Techniker danach zu behalten.",
-        "ended": "Die 15-Tage-Testphase ist beendet. Fügen Sie cogemanagte Plätze hinzu, um den Techniker zu behalten."
+        "available": "Oben ist eine kostenlose 15-Tage-Testphase verfügbar. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
+        "pending": "Eine Einladung zur 15-Tage-Testphase wartet auf den Techniker. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
+        "active": "Die 15-Tage-Testphase läuft. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker danach zu behalten.",
+        "ended": "Die 15-Tage-Testphase ist beendet. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker zu behalten."
       },
       "chooser": {
         "seat": "Platz",
@@ -565,8 +565,8 @@
         "description": "Wählen Sie, wie das IT-Team dieses Kunden mit Ihnen zusammenarbeitet.",
         "shape": "Co-Managed-Form",
         "pool": "{{available}} von {{purchased}} Plätzen verfügbar. {{allocated}} zugewiesen.",
-        "poolEmpty": "Noch keine cogemanagten Plätze.",
-        "seatHintAfterTrial": "Fügen Sie cogemanagte Plätze hinzu, um den Techniker nach der 15-Tage-Testphase zu behalten.",
+        "poolEmpty": "Noch keine Co-Managed-Plätze.",
+        "seatHintAfterTrial": "Fügen Sie Co-Managed-Plätze hinzu, um den Techniker nach der 15-Tage-Testphase zu behalten.",
         "seatHintTrialCovers": "Der Testplatz deckt diesen Techniker bis {{date}} ab. Kaufen Sie einen Platz, um ihn zu behalten."
       },
       "states": {

@@ -552,10 +552,10 @@
         "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
       },
       "trial": {
-        "available": "Qui sopra è disponibile una prova gratuita di 15 giorni. I posti cogestiti possono essere aggiunti in qualsiasi momento.",
-        "pending": "Un invito alla prova di 15 giorni è in attesa del tecnico. I posti cogestiti possono essere aggiunti in qualsiasi momento.",
-        "active": "La prova di 15 giorni è in corso. Aggiungi posti cogestiti per mantenere il tecnico in seguito.",
-        "ended": "La prova di 15 giorni è terminata. Aggiungi posti cogestiti per mantenere il tecnico."
+        "available": "Qui sopra è disponibile una prova gratuita di 15 giorni. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
+        "pending": "Un invito alla prova di 15 giorni è in attesa del tecnico. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
+        "active": "La prova di 15 giorni è in corso. Aggiungi postazioni in co-gestione per mantenere il tecnico in seguito.",
+        "ended": "La prova di 15 giorni è terminata. Aggiungi postazioni in co-gestione per mantenere il tecnico."
       },
       "chooser": {
         "seat": "Postazione",
@@ -565,9 +565,9 @@
         "description": "Scegli come il team IT di questo cliente lavora con te.",
         "shape": "Formula cogestita",
         "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate.",
-        "poolEmpty": "Ancora nessun posto cogestito.",
-        "seatHintAfterTrial": "Aggiungi posti cogestiti per mantenere il tecnico dopo la prova di 15 giorni.",
-        "seatHintTrialCovers": "Il posto di prova copre questo tecnico fino al {{date}}. Acquista un posto per mantenerlo."
+        "poolEmpty": "Ancora nessuna postazione in co-gestione.",
+        "seatHintAfterTrial": "Aggiungi postazioni in co-gestione per mantenere il tecnico dopo la prova di 15 giorni.",
+        "seatHintTrialCovers": "La postazione di prova copre questo tecnico fino al {{date}}. Acquista una postazione per mantenerlo."
       },
       "states": {
         "active": "Attivo",
