@@ -114,7 +114,7 @@
     "sso": {
       "advanced": {
         "title": "Geavanceerd: aangepaste routering van identiteitsaanbieders",
-        "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Alleen nodig bij aangepaste of lokale installaties.",
+        "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Vereist wanneer medewerkers zich aanmelden via uw eigen Keycloak-realm of uw eigen Google- of Microsoft-applicatie.",
         "inertNotice": "Er is geen tenantidentiteitsaanbieder geconfigureerd, waardoor domeinclaims momenteel geen effect hebben. Configureer hierboven Keycloak, of in de Enterprise Edition uw Google-/Microsoft-app-referenties, en claim daarna hier uw aanmelddomein."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Een provider koppelen",
       "description": "Kies een provider om de SSO-koppeling te voltooien. U wordt doorgestuurd via de aanmeldingsflow van de provider.",
-      "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor deze omgeving. Vraag uw beheerder om Google- of Microsoft-inloggegevens te configureren.",
-      "noneConfiguredAdmin": "Er zijn nog geen SSO-providers geconfigureerd. Stel eerst de Google- of Microsoft-applicatie van uw organisatie in.",
-      "openProviderSetup": "Een SSO-provider instellen",
+      "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor uw organisatie. Vraag uw beheerder om er een in te stellen.",
+      "noneConfiguredAdmin": "Er zijn nog geen SSO-providers geconfigureerd. Gebruik de instellink bij een van de providers hieronder om te beginnen.",
       "notConfigured": "Niet geconfigureerd",
+      "setUpProvider": "{{provider}} instellen",
+      "askAdministrator": "Vraag uw beheerder om dit in te stellen.",
       "branding": {
         "google": "Doorgaan met Google",
         "microsoft": "Doorgaan met Microsoft",

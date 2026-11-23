@@ -114,7 +114,7 @@
     "sso": {
       "advanced": {
         "title": "Avançado: roteamento de provedor de identidade personalizado",
-        "description": "Direcione o login único do MSP ao seu próprio provedor de identidade usando domínios de login verificados. Necessário apenas em instalações personalizadas ou locais.",
+        "description": "Direcione o login único do MSP ao seu próprio provedor de identidade usando domínios de login verificados. Necessário quando a equipe faz login pelo seu próprio realm do Keycloak ou pelo seu próprio aplicativo do Google ou da Microsoft.",
         "inertNotice": "Nenhum provedor de identidade do tenant está configurado, então as declarações de domínio não têm efeito no momento. Configure o Keycloak acima ou, na Enterprise Edition, as credenciais do seu aplicativo Google / Microsoft, e depois reivindique aqui o domínio de login da equipe."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Conecte um provedor",
       "description": "Escolha um provedor para finalizar o link SSO. Você será redirecionado pelo fluxo de login do provedor.",
-      "noneConfigured": "Nenhum provedor de SSO está configurado para este ambiente. Peça ao seu administrador para configurar as credenciais do Google ou da Microsoft.",
-      "noneConfiguredAdmin": "Nenhum provedor de SSO foi configurado ainda. Primeiro configure o aplicativo do Google ou da Microsoft da sua organização.",
-      "openProviderSetup": "Configurar um provedor de SSO",
+      "noneConfigured": "Nenhum provedor de SSO está configurado para a sua organização. Peça ao seu administrador para configurar um.",
+      "noneConfiguredAdmin": "Nenhum provedor de SSO foi configurado ainda. Use o link de configuração em um dos provedores abaixo para começar.",
       "notConfigured": "Não configurado",
+      "setUpProvider": "Configurar {{provider}}",
+      "askAdministrator": "Peça ao seu administrador para configurá-lo.",
       "branding": {
         "google": "Continuar com o Google",
         "microsoft": "Continuar com a Microsoft",
