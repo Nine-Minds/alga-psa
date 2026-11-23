@@ -54,6 +54,7 @@ export default defineConfig({
       // ../packages/**), but this package's own `npm test` target is a separate
       // CI job — listing them here keeps both invocations covering the seam
       // instead of silently reporting "No test files found".
+      'src/actions/documentTemplateActions.worksheetPreview.test.ts',
       'src/actions/documentTemplateActions.tenantBranding.test.ts',
       'src/actions/finalizeInvoice.authorization.test.ts',
       'src/actions/voidInvoiceActions.test.ts',

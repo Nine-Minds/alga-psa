@@ -112,6 +112,11 @@ so an on-screen preview is authoritative about what the client receives:
 | Quote preview | `renderQuotePreview` (`quoteActions.ts` → `PDFGenerationService.renderQuotePreview`) | `resolveRenderLocale({ quoteId })` |
 | Designer preview (sample data) | `runAuthoritativeTemplatePreview` / `…InvoiceTemplatePreview` / `…QuoteTemplatePreview` | the language picked in the designer |
 
+Ticket work-tag worksheets are printed by an MSP user rather than issued as
+recipient-specific documents. Their standard labels and generated CPU core
+counts use the printing user's server-resolved application locale. Asset names,
+models and ticket descriptions remain as entered.
+
 `renderTemplateAstHtmlDocument` also emits `<html lang="…">` for the locale it
 rendered in.
 
