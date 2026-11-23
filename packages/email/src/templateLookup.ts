@@ -18,15 +18,20 @@ export interface EmailTemplateRow extends Partial<DerivedProvenance> {
  */
 export type EmailTemplateSource = 'tenant' | 'system' | 'tenant-derived';
 
-/** One template name in one table: the recipient's language, then English, then a legacy row with no language. */
+/**
+ * One template name in one table: the recipient's language, then English, then a legacy row with
+ * no language. Without a locale only the legacy no-language row is considered.
+ */
 async function findTemplateRow(
   templates: () => Knex.QueryBuilder<any, any>,
   name: string,
-  locale: string,
+  locale: string | undefined,
 ): Promise<EmailTemplateRow | undefined> {
-  const localized = await templates().where({ name, language_code: locale }).first();
-  if (localized) return localized;
-  if (locale !== 'en') {
+  if (locale) {
+    const localized = await templates().where({ name, language_code: locale }).first();
+    if (localized) return localized;
+  }
+  if (locale && locale !== 'en') {
     const english = await templates().where({ name, language_code: 'en' }).first();
     if (english) return english;
   }
@@ -69,7 +74,7 @@ async function deriveFromSystem(db: TenantDb, own: EmailTemplateRow): Promise<Em
 export async function lookupEmailTemplate(
   db: TenantDb,
   name: string,
-  locale: string,
+  locale: string | undefined,
 ): Promise<{ source: EmailTemplateSource; template: EmailTemplateRow } | null> {
   // Both tables are read through the tenant facade the caller built with tenantDb().
   const own = await findTemplateRow(() => db.table('tenant_email_templates'), name, locale);

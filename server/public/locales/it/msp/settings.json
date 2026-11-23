@@ -1927,6 +1927,12 @@
         "htmlContent": "Contenuto HTML",
         "textContent": "Contenuto testuale"
       },
+      "resetToStandard": {
+        "title": "Ripristinare il modello standard?",
+        "message": "Le modifiche a questo modello saranno sostituite dal modello standard con il tuo marchio. Questa azione non può essere annullata.",
+        "error": "Questo modello non è stato ripristinato e contiene ancora le tue modifiche. Riprova oppure scegli Usa standard per tornare al modello standard.",
+        "errorNoPalette": "Questo modello non è stato ripristinato perché non è salvata alcuna palette del marchio. Applica prima il branding delle e-mail oppure scegli Usa standard per tornare al modello standard."
+      },
       "actions": {
         "collapse": "Comprimi",
         "expand": "Espandi",

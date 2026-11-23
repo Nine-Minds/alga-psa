@@ -19,6 +19,7 @@ import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
 import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/localeConfig';
 import { resolveEmailLocale } from '../emailLocaleResolver';
+import { lookupEmailTemplate } from '../templateLookup';
 import Handlebars from 'handlebars';
 import { applyFromNameOverride } from '../senderIdentity';
 import { TenantEmailService } from '../TenantEmailService';
@@ -177,63 +178,15 @@ export class SystemEmailService extends BaseEmailService {
     // With tenant context, check tenant and system templates
     try {
       const knex = await getConnection(tenantId);
-      const tenantTemplatesQuery = () => tenantDb(knex, tenantId).table('tenant_email_templates');
-      const systemTemplatesQuery = () => tenantDb(knex, tenantId).table('system_email_templates');
-
-      // Try tenant-specific template in requested language
-      const tenantTemplate = await tenantTemplatesQuery()
-        .where({ name: templateName, language_code: locale })
-        .first();
-
-      if (tenantTemplate) {
+      // The shared resolver: tenant row (locale, English), then system; a branded row nobody edited
+      // is served as the current system template in the tenant's brand.
+      const found = await lookupEmailTemplate(tenantDb(knex, tenantId), templateName, locale);
+      if (found) {
         return {
-          subject: tenantTemplate.subject,
-          html: tenantTemplate.html_content,
-          text: tenantTemplate.text_content
+          subject: found.template.subject ?? '',
+          html: found.template.html_content,
+          text: found.template.text_content ?? ''
         };
-      }
-
-      // Fallback to English for tenant
-      if (locale !== 'en') {
-        const tenantTemplateEn = await tenantTemplatesQuery()
-          .where({ name: templateName, language_code: 'en' })
-          .first();
-
-        if (tenantTemplateEn) {
-          return {
-            subject: tenantTemplateEn.subject,
-            html: tenantTemplateEn.html_content,
-            text: tenantTemplateEn.text_content
-          };
-        }
-      }
-
-      // Try system template in requested language
-      const systemTemplate = await systemTemplatesQuery()
-        .where({ name: templateName, language_code: locale })
-        .first();
-
-      if (systemTemplate) {
-        return {
-          subject: systemTemplate.subject,
-          html: systemTemplate.html_content,
-          text: systemTemplate.text_content
-        };
-      }
-
-      // Fallback to English for system
-      if (locale !== 'en') {
-        const systemTemplateEn = await systemTemplatesQuery()
-          .where({ name: templateName, language_code: 'en' })
-          .first();
-
-        if (systemTemplateEn) {
-          return {
-            subject: systemTemplateEn.subject,
-            html: systemTemplateEn.html_content,
-            text: systemTemplateEn.text_content
-          };
-        }
       }
     } catch (error) {
       console.error('Error fetching template from database:', error);

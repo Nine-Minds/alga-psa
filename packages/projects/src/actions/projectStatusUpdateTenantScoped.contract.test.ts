@@ -12,7 +12,7 @@ describe('project status update tenant-scoped query contract', () => {
     expect(source).toContain("scopedDb.table('time_entries as te')");
     expect(source).toContain("scopedDb.table('project_phases')");
     expect(source).toContain('const db = tenantDb(knex, tenant);');
-    expect(source).toContain('db.table(table)');
+    expect(source).toContain('lookupEmailTemplate(db, TEMPLATE_NAME, locale)');
 
     expect(source).not.toContain("knex('projects')");
     expect(source).not.toContain("knex('contacts')");
@@ -48,10 +48,11 @@ describe('project status update tenant-scoped query contract', () => {
   });
 
   it('falls back tenant → system template and refuses to send without one', () => {
-    expect(source).toContain("['tenant_email_templates', locale]");
-    expect(source).toContain("['tenant_email_templates', 'en']");
-    expect(source).toContain("['system_email_templates', locale]");
-    expect(source).toContain("['system_email_templates', 'en']");
+    // Tenant (locale, English) then system, and a branded row nobody edited as the current system
+    // template, are the shared resolver's job; this action keeps no private copy of the lookup.
+    expect(source).toContain("from '@alga-psa/email/templateLookup'");
+    expect(source).toContain('lookupEmailTemplate(db, TEMPLATE_NAME, locale)');
+    expect(source).not.toContain("'tenant_email_templates'");
     expect(source).toContain("'projects:errors.statusUpdate.templateMissing'");
   });
 

@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { lookupEmailTemplate } from '../templateLookup';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -144,15 +145,10 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     const { tenantId, locales } = params;
 
     if (tenantId) {
-      for (const language of locales) {
-        const tenantTemplate = await this.tenantTemplatesQuery(tenantId)
-          .where({ name: this.templateName, language_code: language })
-          .first();
-
-        if (tenantTemplate) {
-          return tenantTemplate;
-        }
-      }
+      // The shared resolver: tenant row (locale, English), then system; a branded row nobody edited
+      // is served as the current system template in the tenant's brand.
+      const found = await lookupEmailTemplate(tenantDb(this.knex, tenantId), this.templateName, locales[0]);
+      return (found?.template as EmailTemplateRecord | undefined) ?? null;
     }
 
     for (const language of locales) {

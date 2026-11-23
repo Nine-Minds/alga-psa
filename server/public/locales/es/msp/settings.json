@@ -1927,6 +1927,12 @@
         "htmlContent": "Contenido HTML",
         "textContent": "Contenido de texto"
       },
+      "resetToStandard": {
+        "title": "¿Restablecer a la plantilla estándar?",
+        "message": "Sus cambios en esta plantilla se sustituirán por la plantilla estándar con su marca. Esta acción no se puede deshacer.",
+        "error": "Esta plantilla no se restableció y conserva sus cambios. Inténtelo de nuevo o elija Usar estándar para volver a la plantilla estándar.",
+        "errorNoPalette": "Esta plantilla no se restableció porque no hay una paleta de marca guardada. Aplique primero la marca de correo o elija Usar estándar para volver a la plantilla estándar."
+      },
       "actions": {
         "collapse": "Contraer",
         "expand": "Expandir",

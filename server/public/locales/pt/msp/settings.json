@@ -1927,6 +1927,12 @@
         "htmlContent": "Conteúdo HTML",
         "textContent": "Conteúdo de texto"
       },
+      "resetToStandard": {
+        "title": "Repor o modelo padrão?",
+        "message": "As suas alterações a este modelo serão substituídas pelo modelo padrão com a sua marca. Esta ação não pode ser anulada.",
+        "error": "Este modelo não foi reposto e mantém as suas alterações. Tente novamente ou escolha Usar padrão para voltar ao modelo padrão.",
+        "errorNoPalette": "Este modelo não foi reposto porque não há uma paleta de marca guardada. Aplique primeiro a marca dos e-mails ou escolha Usar padrão para voltar ao modelo padrão."
+      },
       "actions": {
         "collapse": "Recolher",
         "expand": "Expandir",

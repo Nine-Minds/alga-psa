@@ -8,6 +8,8 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
@@ -116,6 +118,10 @@ export function EmailTemplates() {
   const [isVariableReferenceOpen, setIsVariableReferenceOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [brandingStatus, setBrandingStatus] = useState<EmailBrandingStatus | null>(null);
+  // The template a "Reset to standard" click is waiting on a confirmation for, and the outcome of the last reset.
+  const [resetCandidate, setResetCandidate] = useState<{ name: string; language: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Language filter state - empty means show all languages
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
@@ -247,16 +253,32 @@ export function EmailTemplates() {
   };
 
   // Rebuilds one template from the standard one in the tenant's palette, edits and all, and
-  // ties it to the standard template again so it follows it from here on.
-  const handleResetToStandard = async (name: string, language: string) => {
+  // ties it to the standard template again so it follows it from here on. Runs only after the
+  // tenant confirmed, because it replaces their edits.
+  const handleResetToStandard = async ({ name, language }: { name: string; language: string }) => {
+    const noPalette = t(
+      'notifications.emailTemplatesUi.resetToStandard.errorNoPalette',
+      "This template wasn't reset because no brand palette is saved. Apply email branding first, or choose Use Standard to switch back to the standard template."
+    );
+    const failedGeneric = t(
+      'notifications.emailTemplatesUi.resetToStandard.error',
+      "This template wasn't reset and still has your edits. Try again, or choose Use Standard to switch back to the standard template."
+    );
+    setResetError(null);
+    setIsResetting(true);
     try {
       const result = await applyEmailBrandingAction({ names: [name], languages: [language], overwrite: [name] });
       if (result.failed.length > 0) {
         console.error("Failed to reset template to standard:", result.failed);
+        setResetError(failedGeneric);
       }
       await refreshTemplates();
     } catch (error) {
       console.error("Failed to reset template to standard:", error);
+      setResetError(/palette/i.test(getErrorMessage(error)) ? noPalette : failedGeneric);
+    } finally {
+      setIsResetting(false);
+      setResetCandidate(null);
     }
   };
 
@@ -491,7 +513,10 @@ export function EmailTemplates() {
                   id={`reset-to-standard-${tplRecord.systemTemplate.id}`}
                   variant="outline"
                   size="sm"
-                  onClick={() => handleResetToStandard(tplRecord.systemTemplate.name, tplRecord.systemTemplate.language_code)}
+                  onClick={() => {
+                    setResetError(null);
+                    setResetCandidate({ name: tplRecord.systemTemplate.name, language: tplRecord.systemTemplate.language_code });
+                  }}
                 >
                   {t('notifications.emailTemplatesUi.actions.resetToStandard', 'Reset to standard')}
                 </Button>
@@ -607,6 +632,27 @@ export function EmailTemplates() {
           </DropdownMenu>
         </div>
       </div>
+
+      {resetError && (
+        <Alert id="email-template-reset-error" variant="destructive">
+          <AlertDescription>{resetError}</AlertDescription>
+        </Alert>
+      )}
+
+      <ConfirmationDialog
+        id="confirm-reset-to-standard"
+        isOpen={resetCandidate !== null}
+        onClose={() => setResetCandidate(null)}
+        onConfirm={() => resetCandidate ? handleResetToStandard(resetCandidate) : undefined}
+        isConfirming={isResetting}
+        title={t('notifications.emailTemplatesUi.resetToStandard.title', 'Reset to standard template?')}
+        message={t(
+          'notifications.emailTemplatesUi.resetToStandard.message',
+          'Your edits to this template will be replaced by the standard template in your brand. This cannot be undone.'
+        )}
+        confirmLabel={t('notifications.emailTemplatesUi.actions.resetToStandard', 'Reset to standard')}
+        cancelLabel={t('notifications.emailTemplatesUi.actions.cancel', 'Cancel')}
+      />
 
       <DataTable
         id="email-templates-table"

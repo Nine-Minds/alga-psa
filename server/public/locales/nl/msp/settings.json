@@ -1927,6 +1927,12 @@
         "htmlContent": "HTML-inhoud",
         "textContent": "Tekstinhoud"
       },
+      "resetToStandard": {
+        "title": "Terugzetten naar de standaardsjabloon?",
+        "message": "Uw wijzigingen in deze sjabloon worden vervangen door de standaardsjabloon in uw huisstijl. Dit kan niet ongedaan worden gemaakt.",
+        "error": "Deze sjabloon is niet teruggezet en bevat nog uw wijzigingen. Probeer het opnieuw of kies Standaard gebruiken om terug te gaan naar de standaardsjabloon.",
+        "errorNoPalette": "Deze sjabloon is niet teruggezet omdat er geen huisstijlpalet is opgeslagen. Pas eerst de e-mailhuisstijl toe of kies Standaard gebruiken om terug te gaan naar de standaardsjabloon."
+      },
       "actions": {
         "collapse": "Inklappen",
         "expand": "Uitklappen",

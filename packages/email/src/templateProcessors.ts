@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import Handlebars from 'handlebars';
+import { lookupEmailTemplate } from './templateLookup';
 import { SupportedLocale } from './lib/localeConfig';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
@@ -136,30 +137,9 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     let template: any = null;
 
     if (tenantId) {
-      logger.debug(`[DatabaseTemplateProcessor] Looking for tenant template '${this.templateName}' with locale '${locale}' for tenant '${tenantId}'`);
-      template = await this.tenantTemplatesQuery(tenantId)
-        .where({ name: this.templateName, language_code: locale })
-        .first();
-
-      logger.debug(`[DatabaseTemplateProcessor] Tenant template found:`, template ? {
-        name: template.name,
-        language_code: template.language_code,
-        subject: template.subject
-      } : 'null');
-
-      // If requested language not found, fall back to English for tenant templates
-      if (!template && locale !== 'en') {
-        logger.debug(`[DatabaseTemplateProcessor] Tenant template not found for locale '${locale}', trying English`);
-        template = await this.tenantTemplatesQuery(tenantId)
-          .where({ name: this.templateName, language_code: 'en' })
-          .first();
-
-        logger.debug(`[DatabaseTemplateProcessor] English tenant template:`, template ? {
-          name: template.name,
-          language_code: template.language_code,
-          subject: template.subject
-        } : 'null');
-      }
+      // The shared resolver: tenant row (locale, English) first, a branded row nobody edited as the
+      // current system template in the tenant's brand, then the system template.
+      template = (await lookupEmailTemplate(tenantDb(this.knex, tenantId), this.templateName, locale))?.template ?? null;
     }
 
     // Fall back to system template if no tenant template

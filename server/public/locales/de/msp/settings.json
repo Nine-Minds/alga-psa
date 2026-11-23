@@ -1927,6 +1927,12 @@
         "htmlContent": "HTML-Inhalt",
         "textContent": "Textinhalt"
       },
+      "resetToStandard": {
+        "title": "Auf Standardvorlage zurücksetzen?",
+        "message": "Ihre Änderungen an dieser Vorlage werden durch die Standardvorlage in Ihrer Marke ersetzt. Dies kann nicht rückgängig gemacht werden.",
+        "error": "Diese Vorlage wurde nicht zurückgesetzt und enthält weiterhin Ihre Änderungen. Versuchen Sie es erneut oder wählen Sie „Standard verwenden“, um zur Standardvorlage zurückzukehren.",
+        "errorNoPalette": "Diese Vorlage wurde nicht zurückgesetzt, weil keine Markenpalette gespeichert ist. Wenden Sie zuerst das E-Mail-Branding an oder wählen Sie „Standard verwenden“, um zur Standardvorlage zurückzukehren."
+      },
       "actions": {
         "collapse": "Einklappen",
         "expand": "Erweitern",

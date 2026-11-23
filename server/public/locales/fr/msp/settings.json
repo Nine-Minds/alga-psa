@@ -1927,6 +1927,12 @@
         "htmlContent": "Contenu HTML",
         "textContent": "Contenu texte"
       },
+      "resetToStandard": {
+        "title": "Rétablir le modèle standard ?",
+        "message": "Vos modifications de ce modèle seront remplacées par le modèle standard à votre marque. Cette action est irréversible.",
+        "error": "Ce modèle n'a pas été rétabli et conserve vos modifications. Réessayez ou choisissez Utiliser le standard pour revenir au modèle standard.",
+        "errorNoPalette": "Ce modèle n'a pas été rétabli car aucune palette de marque n'est enregistrée. Appliquez d'abord l'image de marque des e-mails ou choisissez Utiliser le standard pour revenir au modèle standard."
+      },
       "actions": {
         "collapse": "Réduire",
         "expand": "Développer",

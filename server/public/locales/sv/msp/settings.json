@@ -1927,6 +1927,12 @@
         "htmlContent": "HTML-innehåll",
         "textContent": "Textinnehåll"
       },
+      "resetToStandard": {
+        "title": "Återställ till standardmallen?",
+        "message": "Dina ändringar i den här mallen ersätts av standardmallen i ditt varumärke. Det går inte att ångra.",
+        "error": "Mallen återställdes inte och har kvar dina ändringar. Försök igen eller välj Använd standard för att gå tillbaka till standardmallen.",
+        "errorNoPalette": "Mallen återställdes inte eftersom ingen varumärkespalett är sparad. Använd först e-postprofileringen eller välj Använd standard för att gå tillbaka till standardmallen."
+      },
       "actions": {
         "collapse": "Fäll ihop",
         "expand": "Expandera",
