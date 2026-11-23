@@ -129,6 +129,52 @@ describe('project list search respects effective redacted fields', () => {
     expect(await searchProjectListIds('Alder')).not.toContain(renamedId);
   });
 
+  it('keeps visible project membership stable when a hidden value appears only in a websearch exclusion', async () => {
+    const projectId = await makeProject('PublicMatter', 'PRJ-9172');
+    await testState.trx('projects').where({ tenant, project_id: projectId }).update({ description: 'HarborVault' });
+    await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: 'PublicMatter', body: 'HarborVault' });
+    testState.decisions.set(projectId, { allowed: true, redactedFields: ['projects.description'] });
+
+    const withoutHiddenExclusion = await searchProjectListIds('PublicMatter -DifferentVault -CompletelyAbsentWord');
+    const withHiddenExclusion = await searchProjectListIds('PublicMatter -HarborVault -CompletelyAbsentWord');
+    expect(withoutHiddenExclusion).toContain(projectId);
+    expect(withHiddenExclusion).toEqual(withoutHiddenExclusion);
+  });
+
+  it('masks indexed child fields and child-resource wildcards before search matching', async () => {
+    const projectId = await makeProject('Visible child search parent', 'PRJ-9173');
+    const phaseId = randomUUID();
+    const taskId = randomUUID();
+    await testState.trx('project_phases').insert({
+      tenant, phase_id: phaseId, project_id: projectId, phase_name: 'MoonGalleon',
+      description: 'IodineCanister', status: 'open', order_number: 1, wbs_code: 'phase-private',
+    });
+    await testState.trx('project_tasks').insert({
+      tenant, task_id: taskId, phase_id: phaseId, task_name: 'CobaltNightingale',
+      description: 'ZitherMonolith', wbs_code: 'task-private',
+    });
+    await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: 'Visible child search parent' });
+    await addIndexEntry({ type: 'project_phase', id: phaseId, parentId: projectId, title: 'MoonGalleon', subtitle: 'Visible child search parent', body: 'IodineCanister' });
+    await addIndexEntry({ type: 'project_task', id: taskId, parentId: projectId, title: 'CobaltNightingale', subtitle: 'Visible child search parent', body: 'ZitherMonolith' });
+    await addIndexEntry({ type: 'project_task_comment', id: randomUUID(), parentId: taskId, title: 'CobaltNightingale', subtitle: 'Visible child search parent', body: 'MarzipanTelescope' });
+
+    const redactionCases = [
+      ['project_phases.phase_name', 'MoonGalleon'],
+      ['project_phases.description', 'IodineCanister'],
+      ['project_tasks.task_name', 'CobaltNightingale'],
+      ['project_tasks.description', 'ZitherMonolith'],
+      ['project_task_comments.body', 'MarzipanTelescope'],
+      ['project_phases.*', 'IodineCanister'],
+      ['project_tasks.*', 'ZitherMonolith'],
+      ['project_task_comments.*', 'MarzipanTelescope'],
+    ] as const;
+
+    for (const [redactedField, query] of redactionCases) {
+      testState.decisions.set(projectId, { allowed: true, redactedFields: [redactedField] });
+      expect(await searchProjectListIds(query), `redaction ${redactedField} must hide ${query}`).not.toContain(projectId);
+    }
+  });
+
   it('keeps visible project numbers and child text searchable, while excluding denied and wholly redacted projects', async () => {
     const visibleId = await makeProject('Visible rollout', 'PRJ-9163');
     const deniedId = await makeProject('Denied rollout', 'PRJ-9164');

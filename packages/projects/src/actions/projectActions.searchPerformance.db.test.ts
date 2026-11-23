@@ -17,7 +17,7 @@ const benchmarkState = vi.hoisted(() => ({
   tenant: '',
   user: { user_id: '', user_type: 'internal', roles: [] as unknown[] } as Record<string, unknown>,
   captureSearchQuery: false,
-  capturedSearchQuery: null as null | { sql: string; bindings: unknown[] },
+  capturedSearchQueries: [] as Array<{ sql: string; bindings: unknown[] }>,
 }));
 
 vi.mock('@alga-psa/db', async () => ({
@@ -29,7 +29,7 @@ vi.mock('@alga-psa/db', async () => ({
         if (property === 'raw') {
           return (sql: string, bindings?: unknown[], ...args: unknown[]) => {
             if (benchmarkState.captureSearchQuery && sql.includes('WITH q AS')) {
-              benchmarkState.capturedSearchQuery = { sql, bindings: bindings ?? [] };
+              benchmarkState.capturedSearchQueries.push({ sql, bindings: bindings ?? [] });
             }
             return target.raw(sql, bindings, ...args);
           };
@@ -60,7 +60,6 @@ const PROJECT_COUNT = Number(process.env.PROJECT_SEARCH_BENCHMARK_PROJECTS || 25
 const INDEX_ENTRIES_PER_PROJECT = 4;
 const MEASURED_REPETITIONS = 3;
 const WARMUP_REPETITIONS = 1;
-const STORED_VECTOR_BASELINE_REVISION = '0b01336f9631253be710c2fae29dff06ec2d156f';
 const FIXTURE_SOURCE_TIMESTAMP = new Date('2026-01-01T00:00:00.000Z');
 const SEARCH_TERMS = {
   common: 'commonamber',
@@ -163,7 +162,10 @@ async function prepareRealAuthorizationPolicy(): Promise<{ bundleId: string; rev
   await upsertBundleRule(benchmarkState.trx, {
     tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
     resourceType: 'project', action: 'read', templateKey: 'selected_clients',
-    config: { selectedClientIds: [allowedClientId] },
+    config: {
+      selectedClientIds: [allowedClientId],
+      redactedFields: ['projects.description', 'project_tasks.description'],
+    },
   });
   await publishBundleRevision(benchmarkState.trx, { tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId });
   await createBundleAssignment(benchmarkState.trx, { tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: userId });
@@ -187,7 +189,8 @@ async function runBenchmark(): Promise<Record<string, unknown>> {
   const decisionCounts = {
     allowed: allowedCount,
     denied: decisions.length - allowedCount,
-    redacted: decisions.filter((decision) => decision.redactedFields.length > 0).length,
+    redactedAllowed: decisions.filter((decision) => decision.allowed && decision.redactedFields.length > 0).length,
+    redactedDenied: decisions.filter((decision) => !decision.allowed && decision.redactedFields.length > 0).length,
   };
 
   const queries: Record<string, Record<string, unknown>> = {};
@@ -196,41 +199,50 @@ async function runBenchmark(): Promise<Record<string, unknown>> {
     const actionMs: number[] = [];
     const resultCounts: number[] = [];
     const databaseMs: number[] = [];
+    const databaseStatementMs: Record<string, number[]> = {};
     const plans: unknown[] = [];
     benchmarkState.captureSearchQuery = true;
 
     for (let repetition = 0; repetition < WARMUP_REPETITIONS + MEASURED_REPETITIONS; repetition += 1) {
-      benchmarkState.capturedSearchQuery = null;
+      benchmarkState.capturedSearchQueries = [];
       const measured = await time(() => searchProjectListIds(term));
-      if (!benchmarkState.capturedSearchQuery) throw new Error('Could not capture the actual project search SQL at the transaction raw-query boundary.');
+      if (benchmarkState.capturedSearchQueries.length === 0) throw new Error('Could not capture the actual project search SQL at the transaction raw-query boundary.');
       if (repetition >= WARMUP_REPETITIONS) {
         actionMs.push(measured.milliseconds);
         resultCounts.push(measured.result.length);
       }
     }
 
-    const actualQuery = benchmarkState.capturedSearchQuery;
-    if (!actualQuery) throw new Error('Could not capture the actual project search SQL from Knex query events.');
-    const sql = actualQuery.sql;
-    const bindings = actualQuery.bindings;
-    const explain = await benchmarkState.trx.raw(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql}`, bindings);
-    plans.push(explain.rows[0]['QUERY PLAN']);
+    const actualQueries = benchmarkState.capturedSearchQueries;
+    if (actualQueries.length === 0) throw new Error('Could not capture the actual project search SQL from the transaction raw-query boundary.');
+    const statements = actualQueries.map((query, index) => ({
+      label: query.sql.includes('has_exclusion') ? 'candidateLookup'
+        : query.sql.includes('searchable_with_vector') ? 'projectedMatch'
+          : 'baselineSearch',
+      index,
+      ...query,
+    }));
+    for (const statement of statements) {
+      const explain = await benchmarkState.trx.raw(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${statement.sql}`, statement.bindings);
+      plans.push({ statement: statement.label, queryIndex: statement.index, plan: explain.rows[0]['QUERY PLAN'] });
+      databaseStatementMs[`${statement.label}_${statement.index}`] = [];
+    }
     for (let repetition = 0; repetition < MEASURED_REPETITIONS; repetition += 1) {
-      const databaseRun = await time(() => benchmarkState.trx.raw(sql, bindings));
-      databaseMs.push(databaseRun.milliseconds);
+      let combinedDatabaseMs = 0;
+      for (const statement of statements) {
+        const databaseRun = await time(() => benchmarkState.trx.raw(statement.sql, statement.bindings));
+        databaseStatementMs[`${statement.label}_${statement.index}`].push(databaseRun.milliseconds);
+        combinedDatabaseMs += databaseRun.milliseconds;
+      }
+      databaseMs.push(combinedDatabaseMs);
     }
     queries[kind] = {
       actionMs,
-      baselineAuthorizationAdjustedMs: revision === STORED_VECTOR_BASELINE_REVISION
-        ? actionMs.map((elapsed, index) => elapsed + authorizationSweepMs[index])
-        : null,
       databaseMs,
+      databaseStatementMs,
       plans,
       resultCounts,
       actionMedianMs: median(actionMs),
-      baselineAuthorizationAdjustedMedianMs: revision === STORED_VECTOR_BASELINE_REVISION
-        ? median(actionMs.map((elapsed, index) => elapsed + authorizationSweepMs[index]))
-        : null,
       databaseMedianMs: median(databaseMs),
       returnedProjectCount: resultCounts.at(-1),
     };
@@ -251,13 +263,15 @@ async function runBenchmark(): Promise<Record<string, unknown>> {
     tenant,
     authorization: {
       evaluation: 'createProjectReadAuthorizer + real kernel + builtin provider + database-backed bundle provider',
-      policy: { resource: 'project', action: 'read', template: 'selected_clients', allowedClientId, deniedClientId, bundleId: activeBundle.bundleId, revisionId: activeBundle.revisionId },
+      policy: {
+        resource: 'project', action: 'read', template: 'selected_clients', allowedClientId, deniedClientId,
+        redactedFields: ['projects.description', 'project_tasks.description'],
+        bundleId: activeBundle.bundleId, revisionId: activeBundle.revisionId,
+      },
       projectDecisionCounts: decisionCounts,
       separateSweepMs: authorizationSweepMs,
       separateSweepMedianMs: median(authorizationSweepMs),
-      baselineActionNote: revision === STORED_VECTOR_BASELINE_REVISION
-        ? 'The stored-vector baseline lacks record-level project authorization. Its fair full-action comparison adds the separately measured real authorization sweep to each baseline action timing; baseline result IDs are not used as correctness evidence.'
-        : null,
+      fullTenantSweepIsDiagnosticOnly: true,
     },
     warmCache: { actionWarmupsPerTerm: WARMUP_REPETITIONS, measuredActionRepetitionsPerTerm: MEASURED_REPETITIONS, databaseCache: 'PostgreSQL shared buffers and host page cache warmed by the warmup action; no restart between repetitions' },
     searches: queries,
@@ -288,7 +302,7 @@ describe('project list search performance benchmark (isolated disposable Postgre
     benchmarkState.tenant = tenant;
     benchmarkState.user = { user_id: userId, user_type: 'internal', roles: [] };
     benchmarkState.captureSearchQuery = false;
-    benchmarkState.capturedSearchQuery = null;
+    benchmarkState.capturedSearchQueries = [];
     deniedClientId = randomUUID();
     await benchmarkState.trx('clients').insert({
       tenant, client_id: deniedClientId, client_name: 'Search benchmark denied client',
@@ -306,7 +320,12 @@ describe('project list search performance benchmark (isolated disposable Postgre
   it('records authorization, SQL, and total action timings plus real plans for common, rare, and no-match searches', async () => {
     const result = await runBenchmark();
     expect(result.authorization).toMatchObject({
-      projectDecisionCounts: { allowed: PROJECT_COUNT / 2, denied: PROJECT_COUNT / 2, redacted: 0 },
+      projectDecisionCounts: {
+        allowed: PROJECT_COUNT / 2,
+        denied: PROJECT_COUNT / 2,
+        redactedAllowed: PROJECT_COUNT / 2,
+        redactedDenied: PROJECT_COUNT / 2,
+      },
     });
     expect(result.searches).toHaveProperty('common');
     expect(result.searches).toHaveProperty('rare');

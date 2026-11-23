@@ -45,6 +45,24 @@ export function isWholeProjectRedacted(redactedFields: readonly string[]): boole
   return redactedFields.some((field) => field === '*' || field === 'projects.*' || field === 'project.*');
 }
 
+/** Applies the same field and wildcard aliases used by child-write checks to a read projection. */
+export function isProjectChildFieldRedacted(
+  redactedFields: readonly string[],
+  resource: 'project_phases' | 'project_tasks' | 'project_task_comments',
+  field: string,
+): boolean {
+  const childResource = resource.endsWith('ies')
+    ? `${resource.slice(0, -3)}y`
+    : resource.endsWith('s')
+      ? resource.slice(0, -1)
+      : resource;
+  const candidates = [field, `${resource}.${field}`, `${childResource}.${field}`];
+  return redactedFields.some((redacted) =>
+    redacted === '*' || redacted === `${resource}.*` || redacted === `${childResource}.*` ||
+    candidates.some((candidate) => isProjectFieldRedacted([redacted], candidate)),
+  );
+}
+
 export function assertProjectFieldsWritable(redactedFields: readonly string[], fields: readonly string[]): void {
   const hidden = fields.filter((field) => {
     const related = [field];
@@ -73,6 +91,9 @@ export function assertProjectChildFieldsWritable(
         ? resource.slice(0, -1)
         : resource;
   const hidden = fields.filter((field) => {
+    if (resource === 'project_phases' || resource === 'project_tasks') {
+      return isProjectChildFieldRedacted(redactedFields, resource, field);
+    }
     const candidates = [field, `${resource}.${field}`, `${childResource}.${field}`];
     return redactedFields.some((redacted) =>
       redacted === '*' || redacted === `${resource}.*` || redacted === `${childResource}.*` ||
