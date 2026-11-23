@@ -7,7 +7,11 @@ import { join } from 'node:path';
 import type { Knex } from 'knex';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { seedLabelWorld, type LabelWorld } from './labelsFixtures';
-import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
+import { authorizeAndRedactDocuments, canAuthorizeDocumentAssociation } from '@shared/lib/documentAuthorization';
+import { createBlockDocument } from '@alga-psa/block-content/actions/blockContentActions';
+import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
+import { updateDocument } from '@alga-psa/documents/actions/documentActions';
+import { updateDocumentContent } from '@alga-psa/documents/actions/documentContentActions';
 
 const session = vi.hoisted(() => ({ user: null as any, db: null as any, tenant: '' }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => session.user }));
@@ -43,7 +47,15 @@ describe('asset-associated document authorization', () => {
     const permission_id = randomUUID();
     await db('permissions').insert({ tenant: world.tenant, permission_id, resource: 'document', action: 'read', msp: true, client: false });
     const roleId = (await db('user_roles').where({ tenant: world.tenant, user_id: world.tech.user_id }).first()).role_id;
-    await db('role_permissions').insert({ tenant: world.tenant, role_id: roleId, permission_id });
+    const createPermissionId = randomUUID();
+    await db('permissions').insert({ tenant: world.tenant, permission_id: createPermissionId, resource: 'document', action: 'create', msp: true, client: false });
+    const updatePermissionId = randomUUID();
+    await db('permissions').insert({ tenant: world.tenant, permission_id: updatePermissionId, resource: 'document', action: 'update', msp: true, client: false });
+    await db('role_permissions').insert([
+      { tenant: world.tenant, role_id: roleId, permission_id },
+      { tenant: world.tenant, role_id: roleId, permission_id: createPermissionId },
+      { tenant: world.tenant, role_id: roleId, permission_id: updatePermissionId },
+    ]);
     const document_id = randomUUID();
     await db('documents').insert({ tenant: world.tenant, document_id, document_name: 'private condition', user_id: world.tech.user_id, created_by: world.tech.user_id, is_client_visible: false });
     await db('document_associations').insert([
@@ -60,6 +72,14 @@ describe('asset-associated document authorization', () => {
     await db('documents').where({ tenant: world.tenant, document_id }).update({
       file_id: fileIds[0], thumbnail_file_id: fileIds[1], preview_file_id: fileIds[2], mime_type: 'image/png',
     });
+    await db('document_block_content').insert({
+      tenant: world.tenant,
+      document_id,
+      content_id: randomUUID(),
+      block_data: JSON.stringify({ body: 'private block document payload' }),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
     doc = await db('documents').where({ tenant: world.tenant, document_id }).first();
   }, 180_000);
   afterAll(async () => { await db?.destroy(); rmSync(dir, { recursive: true, force: true }); });
@@ -70,6 +90,89 @@ describe('asset-associated document authorization', () => {
   });
   it('refuses a user without asset access', async () => {
     expect(await read(world.noPerm)).toEqual([]);
+  });
+  it('denies block document content when a record-level asset boundary rejects the document', async () => {
+    const invoke = () => getBlockContent(doc.document_id);
+
+    session.user = world.tech;
+    const allowed = await invoke();
+    expect(allowed).toMatchObject({ block_data: { body: 'private block document payload' } });
+
+    session.user = world.restricted;
+    try {
+      const denied = await invoke();
+      expect(denied).toMatchObject({
+        permissionError: 'Permission denied: Cannot read documents',
+        messageKey: 'documents:errors.permissions.read',
+      });
+    } finally {
+      session.user = world.tech;
+    }
+  });
+  it('denies redacted content replacements before persistence and resumes editing when redaction is removed', async () => {
+    const invokeUpdate = (block_data: unknown) => updateBlockContent(doc.document_id, {
+      block_data, user_id: randomUUID(),
+    });
+
+    session.user = world.tech;
+    const initialRead = await getBlockContent(doc.document_id);
+    expect(initialRead).toMatchObject({ block_data: { body: 'private block document payload' } });
+    const initialContent = await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).first();
+    const initialMetadata = await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
+      .select('document_name', 'updated_at', 'edited_by').first();
+    const legacyContent = { id: randomUUID(), tenant: world.tenant, document_id: doc.document_id,
+      content: 'private legacy content', created_by_id: world.tech.user_id, updated_by_id: world.tech.user_id };
+    await db('document_content').insert(legacyContent);
+
+    const bundles = await import('@alga-psa/authorization/bundles/service');
+    const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+      { id: 'redact-content', resource: 'document', action: 'read', constraintKey: 'hide_content', redactedFields: ['content'] },
+    ] as any);
+    let missingDocumentId: string | undefined;
+    try {
+      expect(await getBlockContent(doc.document_id)).toBeNull();
+      const deniedMetadataUpdate = await updateDocument(doc.document_id, { document_name: 'hidden content overwritten' });
+      expect(deniedMetadataUpdate).toMatchObject({ permissionError: expect.any(String) });
+      expect(await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
+        .select('document_name', 'updated_at', 'edited_by').first())
+        .toEqual(initialMetadata);
+      const deniedLegacyContentUpdate = await updateDocumentContent(doc.document_id, {
+        content: 'hidden legacy content overwritten', updated_by_id: world.tech.user_id,
+      });
+      expect(deniedLegacyContentUpdate).toMatchObject({ permissionError: expect.any(String) });
+      expect(await db('document_content').where({ tenant: world.tenant, document_id: doc.document_id }).first())
+        .toMatchObject({ ...legacyContent, content: 'private legacy content' });
+      for (const block_data of ['', { body: 'replacement payload' }]) {
+        const denied = await invokeUpdate(block_data);
+        expect(denied).toMatchObject({ permissionError: expect.any(String) });
+        expect(await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).first())
+          .toMatchObject({ block_data: initialContent.block_data, updated_at: initialContent.updated_at, version_id: initialContent.version_id });
+        expect(await db('documents').where({ tenant: world.tenant, document_id: doc.document_id })
+          .select('document_name', 'updated_at', 'edited_by').first()).toEqual(initialMetadata);
+      }
+
+      missingDocumentId = randomUUID();
+      await db('documents').insert({ tenant: world.tenant, document_id: missingDocumentId, document_name: 'missing content',
+        content: '', user_id: world.tech.user_id, created_by: world.tech.user_id, is_client_visible: false });
+      const missingResult = await updateBlockContent(missingDocumentId, { block_data: { body: 'no insert' }, user_id: world.tech.user_id });
+      expect(missingResult).toMatchObject({ permissionError: expect.any(String) });
+      expect(await db('document_block_content').where({ tenant: world.tenant, document_id: missingDocumentId })).toHaveLength(0);
+
+      rulesSpy.mockResolvedValue([] as any);
+      const restored = await invokeUpdate({ body: 'authorized replacement' });
+      expect(restored).toMatchObject({ block_data: { body: 'authorized replacement' } });
+      expect(await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).first())
+        .toMatchObject({ block_data: { body: 'authorized replacement' } });
+    } finally {
+      rulesSpy.mockRestore();
+      await db('document_content').where({ tenant: world.tenant, document_id: doc.document_id }).del();
+      if (missingDocumentId) await db('documents').where({ tenant: world.tenant, document_id: missingDocumentId }).del();
+      await db('document_block_content').where({ tenant: world.tenant, document_id: doc.document_id }).update({
+        block_data: initialContent.block_data, version_id: initialContent.version_id, updated_at: initialContent.updated_at,
+      });
+      await db('documents').where({ tenant: world.tenant, document_id: doc.document_id }).update(initialMetadata);
+      session.user = world.tech;
+    }
   });
   it('honours a verified mailbox grant for a roleless recipient but never for an asset-linked document', async () => {
     // Callers own document RBAC; a verified recipient has no roles, only the lifecycle grant.
@@ -105,6 +208,35 @@ describe('asset-associated document authorization', () => {
   });
   it('refuses the real asset bundle record denial even with both permissions and ticket association', async () => {
     expect(await read(world.restricted)).toEqual([]);
+  });
+  it('creates a document with an authorized association through the real PostgreSQL preflight', async () => {
+    session.user = world.tech;
+    const result = await createBlockDocument({
+      document_name: 'Authorized association preflight',
+      user_id: randomUUID(),
+      block_data: { type: 'doc', content: [] },
+      entityId: world.tickets.a1,
+      entityType: 'ticket',
+    });
+
+    expect(result).toMatchObject({ document_id: expect.any(String), content_id: expect.any(String) });
+    if (!('document_id' in result)) throw new Error('Authorized document creation returned a permission error');
+    const document = await db('documents').where({ tenant: world.tenant, document_id: result.document_id }).first();
+    const content = await db('document_block_content').where({ tenant: world.tenant, document_id: result.document_id }).first();
+    const association = await db('document_associations').where({ tenant: world.tenant, document_id: result.document_id }).first();
+    expect(document).toMatchObject({ created_by: world.tech.user_id, user_id: world.tech.user_id });
+    expect(content).toBeDefined();
+    expect(association).toMatchObject({ entity_id: world.tickets.a1, entity_type: 'ticket' });
+  });
+  it('preflights client relationships and asset access against real PostgreSQL records', async () => {
+    const clientViewer = { ...world.tech, user_type: 'client', clientId: world.clientA } as any;
+    const authorize = (user: any, entityId: string, entityType: string) => db.transaction(trx =>
+      canAuthorizeDocumentAssociation(trx, world.tenant, user, entityId, entityType));
+
+    expect(await authorize(clientViewer, world.tickets.a1, 'ticket')).toBe(true);
+    expect(await authorize(clientViewer, world.tickets.b1, 'ticket')).toBe(false);
+    expect(await authorize(world.tech, world.assets.a1, 'asset')).toBe(true);
+    expect(await authorize(world.restricted, world.assets.b1, 'asset')).toBe(false);
   });
   it('serves the authenticated helper URLs through their handlers and refuses a narrowed asset', async () => {
     const { getDocumentThumbnailUrl, getDocumentPreviewUrl } = await import('@alga-psa/documents/actions/documentActions');

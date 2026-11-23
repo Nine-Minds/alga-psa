@@ -2,7 +2,7 @@
 
 import Team from '../../models/team';
 import { USER_RESPONSE_FIELD_NAMES, sanitizeUserForResponse } from '@alga-psa/types';
-import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
+import type { DeletionValidationResult, IRole, ITeam, IUser, IUserWithRoles, SafeApiUser } from '@alga-psa/types';
 import { assertSeatTechnicianWrite, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -10,16 +10,18 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { teamActionErrorFrom, type TeamActionError } from './teamActionErrors';
 
-export type TeamMutationResult = ITeam | ActionMessageError | ActionPermissionError;
-export type TeamReadResult = ITeam | TeamActionError;
-export type TeamsReadResult = ITeam[] | TeamActionError;
+export type SafeTeamMember = SafeApiUser & { role: 'member' | 'lead' };
+export type SafeTeam = Omit<ITeam, 'members'> & { members: SafeTeamMember[] };
+export type TeamMutationResult = SafeTeam | ActionMessageError | ActionPermissionError;
+export type TeamReadResult = SafeTeam | TeamActionError;
+export type TeamsReadResult = SafeTeam[] | TeamActionError;
 export type TeamsBasicReadResult = Omit<ITeam, 'members'>[] | TeamActionError;
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
   tenant: string,
   members: Array<{ user_id: string; role: 'member' | 'lead' }>,
-): Promise<ITeamMember[]> {
+): Promise<SafeTeamMember[]> {
   if (members.length === 0) {
     return [];
   }
@@ -40,8 +42,14 @@ async function getUsersWithRoles(
   const rolesByUser = new Map<string, IRole[]>();
   for (const row of roles as any[]) {
     const userId = row.user_id as string;
-    const role: IRole = { ...(row as any) };
-    delete (role as any).user_id;
+    const role: IRole = {
+      role_id: row.role_id,
+      role_name: row.role_name,
+      description: row.description,
+      msp: row.msp,
+      client: row.client,
+      tenant: row.tenant,
+    };
     const list = rolesByUser.get(userId) ?? [];
     list.push(role);
     rolesByUser.set(userId, list);
@@ -52,7 +60,7 @@ async function getUsersWithRoles(
   // Credential columns are never fetched (allow-list projection above) and the sanitizer is the
   // belt-and-braces strip on the way out, so team members can never carry hashed_password etc.
   return users.map((user) => ({
-    ...sanitizeUserForResponse(user as Record<string, unknown>),
+    ...sanitizeUserForResponse(user as unknown as Record<string, unknown>),
     roles: rolesByUser.get(user.user_id) ?? [],
     role: roleByUser.get(user.user_id) ?? 'member',
   }));
@@ -152,7 +160,7 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
 });
 
 // Internal helper function for getting team by ID (used by other actions within the same withAuth context)
-async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): Promise<ITeam> {
+async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): Promise<SafeTeam> {
   const team = await Team.get(knex, tenant, teamId);
   if (!team) {
     throw new Error('Team not found');
@@ -325,7 +333,7 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<TeamsReadResu
 
   try {
     const teams = await Team.getAll(knex, tenant);
-    const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
+    const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<SafeTeam> => {
       const memberEntries = await Team.getMembers(knex, tenant, team.team_id);
       const members = await getUsersWithRoles(knex, tenant, memberEntries);
       return { ...team, members };

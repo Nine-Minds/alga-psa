@@ -5,13 +5,18 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { admits } from '@alga-psa/core/capability';
-import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, isCoManagedPurchaseSurfaceOpen, readCoManagedFirstPurchasePhase } from '@alga-psa/licensing';
 import { isEnterpriseEdition } from '../features';
 import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement,
   getCoManagedClientOverview as readCoManagedClientOverview } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
+async function withBillingCatalogContext<T>(work: () => Promise<T>): Promise<T> {
+  if (!isEnterpriseEdition()) return work();
+  const { withBillingCatalogContext: run } = await import('@enterprise/lib/stripe/offerCatalog/surfaceProbe');
+  return run(work);
+}
 
 // Enabling and management actions gate on `admits` (flag AND entitlement) before
 // touching the database. The two overview reads (seat capacity and the client
@@ -40,9 +45,13 @@ export const getCoManagedBillingState = withAuth(async (user, { tenant }) => {
 
 export interface CoManagedPurchaseAvailability {
   pending: { operationId: string; quantity: number; state: string } | null;
+  /** First purchase completed at the provider but not yet verified as paid capacity. */
+  awaitingVerification: { operationId: string; quantity: number } | null;
+  /** Smallest pool total the editor may propose: 1 for a first purchase, else the allocated seats. */
+  minimumQuantity: number;
   canPurchase: boolean;
   canResume: boolean;
-  reason: 'available' | 'self_host_license' | 'ineligible' | 'no_permission' | 'implementation_unavailable' | 'pending';
+  reason: 'available' | 'self_host_license' | 'ineligible' | 'no_permission' | 'implementation_unavailable' | 'pending' | 'awaiting_verification';
 }
 
 /**
@@ -54,8 +63,9 @@ export interface CoManagedPurchaseAvailability {
  */
 export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
   if (user.user_type !== 'internal') throw new Error('Permission denied');
-  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) return null;
   if (!await hasPermission(user, 'account_management', 'read')) throw new Error('Permission denied');
+  return withBillingCatalogContext(async () => {
+  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) return null;
   const { knex } = await createTenantKnex(tenant);
   const scoped = tenantDb(knex, tenant);
   const owner = await scoped.table('tenants').first('product_code', 'plan');
@@ -68,13 +78,19 @@ export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
     .whereIn('state', ['preparing', 'checkout', 'payment_failed']).select('operation_id', 'quantity', 'state').first();
   const implementationAvailable = isEnterpriseEdition();
   const eligible = owner.plan === 'pro';
+  // Persisted purchase + entitlement state only; a checkout return or browser callback never reaches here.
+  const first = await readCoManagedFirstPurchasePhase(knex, tenant);
+  const awaiting = first.phase === 'awaiting_verification' ? { operationId: first.operationId, quantity: first.quantity } : null;
   const reason: CoManagedPurchaseAvailability['reason'] = selfHosted ? 'self_host_license'
     : !eligible ? 'ineligible' : !purchaser ? 'no_permission' : !implementationAvailable ? 'implementation_unavailable'
-      : pending ? 'pending' : 'available';
+      : pending ? 'pending' : awaiting ? 'awaiting_verification' : 'available';
   const availability: CoManagedPurchaseAvailability = {
     pending: pending ? { operationId: pending.operation_id, quantity: Number(pending.quantity), state: pending.state } : null,
+    awaitingVerification: awaiting,
+    minimumQuantity: first.phase === 'established' ? state.allocated : Math.max(1, state.allocated),
     canPurchase: reason === 'available', canResume: reason === 'pending', reason };
   return { ...state, selfHosted, purchase: availability };
+  });
 });
 
 export const getCoManagedProvisioningOptions = withAuth(async (user, { tenant }, search: string = '', selectedClientId?: string) => {

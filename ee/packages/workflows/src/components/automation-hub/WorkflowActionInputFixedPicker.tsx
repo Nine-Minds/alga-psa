@@ -6,6 +6,7 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { ClientPickerSearchFn } from '@alga-psa/ui/components/AsyncClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
@@ -14,7 +15,6 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-c
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
 import type {
   IBoard,
-  IClient,
   IContact,
   IUser,
   ITeam,
@@ -117,7 +117,6 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   statuses: [],
   priorities: [],
   categories: [],
-  clients: [],
   users: [],
   locations: [],
 };
@@ -127,6 +126,8 @@ export type WorkflowPickerActions = {
   getContactsByClient: (clientId: string) => Promise<IContact[]>;
   getAvailableStatuses: (boardId: string) => Promise<{ statuses: TicketFieldOptions['statuses'] }>;
   getTicketFieldOptions: () => Promise<{ options: TicketFieldOptions }>;
+  /** Server-side client search, injected by the host (this package may not import @alga-psa/clients). */
+  searchClients: ClientPickerSearchFn;
   getTicketById: (ticketId: string) => Promise<{
     ticket_id?: string;
     ticket_number?: string | null;
@@ -311,13 +312,6 @@ const toBoards = (ticketOptions: TicketFieldOptions | null): IBoard[] =>
     is_inactive: false,
   } as IBoard));
 
-const toClients = (ticketOptions: TicketFieldOptions | null): IClient[] =>
-  (ticketOptions?.clients ?? []).map((client) => ({
-    client_id: client.id,
-    client_name: client.name,
-    is_inactive: false,
-  } as IClient));
-
 const mapTicketFieldOptions = (
   kind: string,
   ticketOptions: TicketFieldOptions | null
@@ -331,11 +325,6 @@ const mapTicketFieldOptions = (
       return ticketOptions.boards.map((board) => ({
         value: board.id,
         label: board.name,
-      }));
-    case 'client':
-      return ticketOptions.clients.map((client) => ({
-        value: client.id,
-        label: client.name,
       }));
     case 'ticket-status':
       return ticketOptions.statuses.map((status) => ({
@@ -644,6 +633,9 @@ const loadWorkflowPickerData = async (
         })),
       };
     }
+    case 'client':
+      // Clients are searched on the server by the picker itself; there is nothing to preload.
+      return EMPTY_PICKER_DATA;
     default:
       return {
         ...EMPTY_PICKER_DATA,
@@ -805,11 +797,10 @@ const renderDedicatedPicker = ({
       );
     }
     case 'client': {
-      const clients = toClients(data.ticketOptions);
       return (
         <ClientPicker
           id={`${idPrefix}-literal-picker`}
-          clients={clients}
+          searchClients={actions.searchClients}
           selectedClientId={value}
           onSelect={(nextValue) => onChange(nextValue)}
           filterState="active"

@@ -3,6 +3,14 @@
  * These types are used by both CE (stubs) and EE (real implementations)
  */
 
+/** Canonical order of the SSO providers the platform supports. Pure: safe for client and policy code. */
+export const SSO_PROVIDER_IDS = ['google', 'azure-ad', 'keycloak'] as const;
+export type SsoProviderId = (typeof SSO_PROVIDER_IDS)[number];
+
+export function isSupportedProvider(provider: string): provider is SsoProviderId {
+  return (SSO_PROVIDER_IDS as readonly string[]).includes(provider);
+}
+
 export type OAuthLinkProvider = 'google' | 'microsoft' | 'keycloak';
 export type EnterpriseOAuthProvider = 'google' | 'microsoft' | 'keycloak';
 

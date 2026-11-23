@@ -24,6 +24,8 @@
  * exactly as before this module existed.
  */
 
+import { SSO_PROVIDER_IDS, isSupportedProvider, type SsoProviderId } from './sso/types';
+
 export interface TenantAuthPolicy {
   requireSsoForInternalUsers: boolean;
   require2faForInternalUsers: boolean;
@@ -34,6 +36,12 @@ export interface TenantAuthPolicy {
   passwordBreakGlassUserIds: string[];
   /** ISO timestamp: internal password sessions issued before this are revoked. */
   passwordAuthDisabledAt: string | null;
+  /**
+   * SSO providers the client portal sign-in offers. `null` = every provider that
+   * can sign in for the tenant (the behaviour before this setting existed);
+   * an array is exactly those providers, `[]` meaning none.
+   */
+  clientPortalSsoProviders: SsoProviderId[] | null;
 }
 
 export const DEFAULT_TENANT_AUTH_POLICY: Readonly<TenantAuthPolicy> = Object.freeze({
@@ -43,7 +51,13 @@ export const DEFAULT_TENANT_AUTH_POLICY: Readonly<TenantAuthPolicy> = Object.fre
   allowKnownDevice2faSkip: false,
   passwordBreakGlassUserIds: [],
   passwordAuthDisabledAt: null,
+  clientPortalSsoProviders: null,
 });
+
+/** Supported ids only, deduplicated, in canonical provider order. */
+function canonicalProviderList(values: readonly unknown[]): SsoProviderId[] {
+  return SSO_PROVIDER_IDS.filter((id) => values.includes(id));
+}
 
 /** Reads the policy out of the tenant `settings` JSON (the `sso` blob). Tolerates anything. */
 export function normalizeTenantAuthPolicy(tenantSettings: unknown): TenantAuthPolicy {
@@ -76,7 +90,19 @@ export function normalizeTenantAuthPolicy(tenantSettings: unknown): TenantAuthPo
     allowKnownDevice2faSkip: raw.allowKnownDevice2faSkip === true,
     passwordBreakGlassUserIds: ids,
     passwordAuthDisabledAt: disabledAt,
+    clientPortalSsoProviders: Array.isArray(raw.clientPortalSsoProviders)
+      ? canonicalProviderList(raw.clientPortalSsoProviders)
+      : null,
   };
+}
+
+/** The providers the client portal offers: `available` narrowed by the tenant's list, in canonical order. */
+export function offeredClientPortalSsoProviders(
+  available: readonly SsoProviderId[],
+  policy: Pick<TenantAuthPolicy, 'clientPortalSsoProviders'>,
+): SsoProviderId[] {
+  const list = policy.clientPortalSsoProviders;
+  return canonicalProviderList(available).filter((id) => list === null || list.includes(id));
 }
 
 export type PolicyUserType = 'internal' | 'client';
@@ -278,7 +304,8 @@ export function isValidBreakGlassCandidate(candidate: BreakGlassCandidate): bool
 export type PolicyGuardErrorCode =
   | 'sso_provider_required'
   | 'break_glass_required'
-  | 'break_glass_invalid_user';
+  | 'break_glass_invalid_user'
+  | 'client_portal_sso_provider_invalid';
 
 export interface PolicyGuardInput {
   next: TenantAuthPolicy;
@@ -288,6 +315,11 @@ export interface PolicyGuardInput {
   hasConfiguredSsoProvider: boolean;
   /** Candidate records for every id in `next.passwordBreakGlassUserIds` that could be found. */
   breakGlassCandidates: BreakGlassCandidate[];
+  /**
+   * The raw client-portal provider list as requested, before normalization drops
+   * unknown ids. Supply it so unsupported ids are rejected rather than silently lost.
+   */
+  requestedClientPortalSsoProviders?: readonly string[] | null;
 }
 
 export interface PolicyGuardResult {
@@ -329,12 +361,19 @@ export function validatePolicyChange(input: PolicyGuardInput): PolicyGuardResult
   const prunedBreakGlassUserIds = ineligible.filter((id) => stored.has(id));
   const newlyInvalid = ineligible.filter((id) => !stored.has(id));
 
+  const clientPortalListInvalid = (input.requestedClientPortalSsoProviders ?? []).some(
+    (id) => typeof id !== 'string' || !isSupportedProvider(id),
+  );
+
   const turningOff =
     !input.next.requireSsoForInternalUsers && Boolean(input.previous?.requireSsoForInternalUsers);
   if (turningOff) {
     // Never block an OFF transition: drop everything ineligible.
+    if (clientPortalListInvalid) {
+      errors.push('client_portal_sso_provider_invalid');
+    }
     return {
-      ok: true,
+      ok: errors.length === 0,
       errors,
       invalidBreakGlassUserIds: [],
       breakGlassUserIds,
@@ -342,6 +381,9 @@ export function validatePolicyChange(input: PolicyGuardInput): PolicyGuardResult
     };
   }
 
+  if (clientPortalListInvalid) {
+    errors.push('client_portal_sso_provider_invalid');
+  }
   if (newlyInvalid.length > 0) {
     errors.push('break_glass_invalid_user');
   }
@@ -385,6 +427,12 @@ export function applyPolicyChange(
       new Set(requested.passwordBreakGlassUserIds ?? previous.passwordBreakGlassUserIds),
     ),
     passwordAuthDisabledAt: previous.passwordAuthDisabledAt,
+    clientPortalSsoProviders:
+      requested.clientPortalSsoProviders === undefined
+        ? previous.clientPortalSsoProviders
+        : requested.clientPortalSsoProviders === null
+          ? null
+          : canonicalProviderList(requested.clientPortalSsoProviders),
   };
   if (next.requireSsoForInternalUsers && !previous.requireSsoForInternalUsers) {
     next.passwordAuthDisabledAt = now.toISOString();

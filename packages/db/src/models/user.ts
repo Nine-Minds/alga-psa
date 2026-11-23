@@ -5,9 +5,12 @@ import type {
   IRole,
   IUserRole,
   IUserWithRoles,
+  AllowlistedUserField,
+  PublicUserWithRoles,
+  PublicUser,
   IRoleWithPermissions,
 } from '@alga-psa/types';
-import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
+import { INTERACTIVE_USER_TYPES, USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
@@ -82,10 +85,10 @@ const User = {
     knexOrTrx: Knex | Knex.Transaction,
     includeInactive = false,
     options: { includeNonInteractive?: boolean } = {}
-  ): Promise<IUser[]> => {
+  ): Promise<Pick<IUser, AllowlistedUserField>[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
+      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select(...USER_RESPONSE_FIELD_NAMES);
       // Non-interactive principals (e.g. service) are never part of the default user list.
       if (!options.includeNonInteractive) {
         query = query.whereIn('user_type', [...INTERACTIVE_USER_TYPES]);
@@ -299,11 +302,11 @@ const User = {
     }
   },
 
-  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
+  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<PublicUserWithRoles | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
-        .select('*')
+      const user = await tenantDb(knexOrTrx, tenant).table<PublicUser>('users')
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_id', user_id)
         .first();
       if (user) {

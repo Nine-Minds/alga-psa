@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Général",
           "defaultClient": "Client par défaut pour les enregistrements orphelins",
-          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client."
+          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client.",
+          "clearDefaultClient": "Effacer"
         },
         "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider par rapport aux enregistrements préparés.",
         "saving": "Enregistrement…",
@@ -4244,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Politique de connexion",
-    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter avec un mot de passe. Ces règles sont appliquées côté serveur.",
+    "description": "Définissez comment le personnel et les utilisateurs du portail client peuvent se connecter, avec un mot de passe ou l’authentification unique. Ces règles sont appliquées côté serveur.",
     "requireSso": {
       "title": "Exiger l’authentification unique pour le personnel du MSP",
       "body": "Les utilisateurs internes doivent se connecter avec Google, Microsoft ou votre fournisseur Keycloak. La connexion par mot de passe et la réinitialisation du mot de passe sont bloquées, sauf pour les administrateurs d’urgence ci-dessous.",
@@ -4276,10 +4277,21 @@
         "not_found": "L'utilisateur n'existe plus."
       }
     },
+    "clientPortalSso": {
+      "title": "Options de connexion du portail client",
+      "body": "Choisissez les fournisseurs d’authentification unique affichés sur la page de connexion du portail client. Seuls les fournisseurs avec lesquels votre organisation peut se connecter sont listés. La connexion par mot de passe n’est pas modifiée.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Aucun fournisseur d’authentification unique n’est configuré pour votre organisation. Configurez-en un dans les paramètres d’authentification unique pour le proposer sur le portail client."
+    },
     "guard": {
       "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",
       "break_glass_required": "Sélectionnez au moins un administrateur d’urgence avant d’exiger l’authentification unique.",
-      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée."
+      "break_glass_invalid_user": "Les utilisateurs d’urgence doivent être des administrateurs actifs avec l’authentification à deux facteurs activée.",
+      "client_portal_sso_provider_invalid": "Choisissez uniquement des fournisseurs d’authentification unique pris en charge."
     },
     "errors": {
       "load": "Impossible de charger la politique de connexion.",
@@ -4613,7 +4625,6 @@
       "title": "Numérotation des actifs",
       "description": "Une séquence unique pour le locataire est formatée avec le préfixe de chaque client. L’aperçu et l’impression n’attribuent aucun numéro. Les numéros attribués puis abandonnés laissent des trous et ne sont jamais réutilisés.",
       "clientPrefixes": "Préfixes des clients",
-      "noPrefix": "Aucun préfixe",
       "prefixSaved": "Préfixe du client enregistré",
       "uniquenessEnabled": "L’unicité des étiquettes d’actifs est activée",
       "legacyAudit": "Audit des étiquettes existantes",
@@ -4627,7 +4638,25 @@
       "continuationReview": "L’examen des données existantes a analysé {{scanned}} étiquettes enregistrées ; {{numeric}} ont un suffixe numérique. Le suffixe le plus élevé est {{maximum}} ; examinez une valeur de départ de {{next}}. Il s’agit d’une simple recommandation. Saisissez et enregistrez ci-dessus la valeur de continuation approuvée ; cet examen ne consomme aucune valeur de la séquence.",
       "continuationExamples": "Exemples : {{examples}}",
       "blankTag": "(étiquette vide)",
-      "normalizedTag": "Normalisée : {{tag}}"
+      "normalizedTag": "Normalisée : {{tag}}",
+      "loadFailed": "Impossible de charger les paramètres de numérotation des actifs",
+      "readOnly": "Vous pouvez consulter la numérotation des actifs. Pour la modifier, vous devez avoir l'autorisation de mettre à jour les paramètres système.",
+      "columns": {
+        "client": "Client",
+        "prefix": "Préfixe"
+      },
+      "addPrefix": "Ajouter un préfixe",
+      "addPrefixTitle": "Ajouter un préfixe client",
+      "editPrefixTitle": "Modifier le préfixe client",
+      "prefixHelp": "Jusqu’à 10 lettres, chiffres ou tirets.",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer le préfixe ?",
+      "removeMessage": "Supprimer le préfixe de {{client}} ? Les nouveaux numéros d’actif de ce client n’auront pas de préfixe. Les étiquettes existantes ne sont pas modifiées.",
+      "prefixRemoved": "Préfixe client supprimé",
+      "noPrefixes": "Aucun préfixe client pour l’instant.",
+      "openMenu": "Ouvrir le menu",
+      "inactive": "Inactif"
     }
   }
 }

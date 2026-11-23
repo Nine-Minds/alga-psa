@@ -205,6 +205,18 @@ test('migration forwarding must execute in Temporal readiness', () => {
   assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
 });
 
+test('Entra tenant sync result recording executes in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/entra-sync-record-tenant-result.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const readinessConfig = readFileSync(new URL('../../ee/temporal-workflows/vitest.readiness.config.ts', import.meta.url), 'utf8');
+  assert.match(readinessConfig, /'src\/activities\/__tests__\/entra-sync-record-tenant-result\.test\.ts'/);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+  assert.equal(inspect({ candidates, collections: [{ runner: 'temporal-readiness', status: 'passed', files: [{ file: `/repo/${file}` }] }] }).status, 'passed');
+});
+
 test('quote acceptance finalization forwarding executes in Temporal readiness', () => {
   const file = 'ee/temporal-workflows/src/activities/__tests__/quote-acceptance-finalization-forwarding.test.ts';
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);

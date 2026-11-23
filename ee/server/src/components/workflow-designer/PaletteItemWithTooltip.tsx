@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import type { DraggableProvided } from '@hello-pangea/dnd';
-import { createPortal } from 'react-dom';
+import {
+  DesignerPaletteTile,
+  PaletteLayoutContext,
+} from '@alga-psa/ui/components/designer';
 
-/** 'grid' shows compact tiles; 'list' (search results) shows full names on one row each. */
-export const PaletteLayoutContext = React.createContext<'grid' | 'list'>('grid');
+export { PaletteLayoutContext };
 
 export type PaletteTooltipItem = {
   id: string;
@@ -19,66 +21,7 @@ export type PaletteTooltipItem = {
   tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
 };
 
-const PaletteTooltip: React.FC<{
-  label: string;
-  description: string;
-  triggerRef: React.RefObject<HTMLDivElement | null>;
-  isHovered: boolean;
-}> = ({ label, description, triggerRef, isHovered }) => {
-  const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (isHovered && triggerRef.current) {
-      timeoutRef.current = setTimeout(() => {
-        if (triggerRef.current) {
-          const rect = triggerRef.current.getBoundingClientRect();
-          setPosition({
-            top: rect.top + rect.height / 2,
-            left: rect.right + 8,
-          });
-          setVisible(true);
-        }
-      }, 500);
-    } else {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      setVisible(false);
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [isHovered, triggerRef]);
-
-  if (!visible || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed px-2.5 py-1.5 rounded-md shadow-lg bg-gray-900 text-white text-xs whitespace-nowrap pointer-events-none"
-      style={{
-        top: position.top,
-        left: position.left,
-        transform: 'translateY(-50%)',
-        zIndex: 99999,
-      }}
-    >
-      <div className="font-medium">{label}</div>
-      <div className="text-gray-400 text-[10px]">{description}</div>
-      <div
-        className="absolute border-4 border-transparent border-r-gray-900"
-        style={{ right: '100%', top: '50%', transform: 'translateY(-50%)' }}
-      />
-    </div>,
-    document.body
-  );
-};
-
+/** The shared palette tile, bound to @hello-pangea/dnd's prop bags and the workflow ids. */
 export const PaletteItemWithTooltip: React.FC<{
   item: PaletteTooltipItem;
   icon: React.ReactNode;
@@ -86,72 +29,18 @@ export const PaletteItemWithTooltip: React.FC<{
   provided: DraggableProvided;
   disabled?: boolean;
   onClick: () => void;
-}> = ({ item, icon, isDragging, provided, disabled = false, onClick }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const layout = React.useContext(PaletteLayoutContext);
-  const isList = layout === 'list';
-
-  return (
-    <div
-      ref={(node) => {
-        provided.innerRef(node);
-        (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-      }}
-      {...provided.draggableProps}
-      {...(disabled ? {} : provided.dragHandleProps)}
-      className={`
-        group relative flex w-full rounded-lg border transition-all duration-150
-        ${isList
-          ? 'min-h-[2.5rem] flex-row items-center gap-2 px-2 py-1.5 text-left'
-          : 'min-h-[3.25rem] flex-col items-center justify-center gap-1 px-1 py-1.5 text-center'}
-        ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab'}
-        ${isDragging
-          ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 dark:bg-primary-500/20 dark:border-primary-400 z-50'
-          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-[rgb(var(--color-border-200))] dark:hover:border-[rgb(var(--color-border-300))] dark:hover:bg-[rgb(var(--color-background))]'
-        }
-      `}
-      id={`workflow-designer-add-${item.id}`}
-      data-testid={`palette-item-${item.id}`}
-      role="button"
-      aria-disabled={disabled}
-      aria-label={item.label}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (disabled) return;
-        onClick();
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <span className="flex h-5 w-5 items-center justify-center text-gray-500 group-hover:text-gray-700 dark:text-[rgb(var(--color-text-500))] dark:group-hover:text-[rgb(var(--color-text-700))]">
-        {icon}
-      </span>
-      {isList ? (
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-medium leading-tight text-[rgb(var(--color-text-800))] break-words">
-            {item.label}
-          </span>
-          {item.description && (
-            <span className="block truncate text-[10px] leading-tight text-[rgb(var(--color-text-500))]" title={item.description}>
-              {item.description}
-            </span>
-          )}
-        </span>
-      ) : (
-        <span
-          className="w-full truncate text-[10px] font-medium leading-tight text-gray-600 group-hover:text-gray-800 dark:text-[rgb(var(--color-text-600))] dark:group-hover:text-[rgb(var(--color-text-800))]"
-          title={item.label}
-        >
-          {item.label}
-        </span>
-      )}
-      <PaletteTooltip
-        label={item.label}
-        description={item.description}
-        triggerRef={triggerRef}
-        isHovered={isHovered && !isDragging && !isList}
-      />
-    </div>
-  );
-};
+}> = ({ item, icon, isDragging, provided, disabled = false, onClick }) => (
+  <DesignerPaletteTile
+    item={item}
+    elementId={`workflow-designer-add-${item.id}`}
+    icon={icon}
+    isDragging={isDragging}
+    disabled={disabled}
+    onClick={onClick}
+    drag={{
+      innerRef: provided.innerRef as (node: HTMLDivElement | null) => void,
+      containerProps: provided.draggableProps as unknown as Record<string, unknown>,
+      handleProps: provided.dragHandleProps as unknown as Record<string, unknown> | null,
+    }}
+  />
+);

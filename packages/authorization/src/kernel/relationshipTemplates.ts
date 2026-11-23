@@ -97,8 +97,12 @@ export interface RelationshipSqlAdapter {
   applyAssignedUsers(builder: Knex.QueryBuilder, userIds: string[]): void;
   /** Optional relationship-backed ownership mapping for resources without a scalar owner column. */
   applyOwnerUsers?(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Compatibility hook for adapters that expose one owner at a time. */
+  applyOwner?(builder: Knex.QueryBuilder, userId: string): void;
   /** Optional relationship-backed team mapping for resources without a scalar team column. */
   applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
+  /** Optional relationship-backed board mapping for resources without a scalar board column. */
+  applyBoards?(builder: Knex.QueryBuilder, boardIds: string[]): void;
   /**
    * Narrow `builder` to rows whose client is in `clientIds`, for resources with no
    * `clientColumn` (the polymorphic tables; see `polymorphicClientsHook`). Used only
@@ -177,6 +181,8 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     compileSql: (builder, ctx) => {
       if (ctx.adapter.applyOwnerUsers) {
         ctx.adapter.applyOwnerUsers(builder, [ctx.subject.userId]);
+      } else if (ctx.adapter.applyOwner) {
+        ctx.adapter.applyOwner(builder, ctx.subject.userId);
       } else if (ctx.adapter.ownerColumn) {
         builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
       } else {
@@ -206,6 +212,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     compileSql: (builder, ctx) => {
       builder.where(function ownOrAssigned(this: Knex.QueryBuilder) {
         if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(this, ctx.subject.userId);
         else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
         else deny(this);
         this.orWhere(function orAssigned(this: Knex.QueryBuilder) {
@@ -220,6 +227,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     compileSql: (builder, ctx) => {
       builder.where(function ownOrManaged(this: Knex.QueryBuilder) {
         if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(this, ctx.subject.userId);
         else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
         else deny(this);
         this.orWhere(function orManaged(this: Knex.QueryBuilder) {
@@ -307,8 +315,14 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.boardId && input.selectedBoardIds?.includes(input.record.boardId)),
     compileSql: (builder, ctx) => {
-      if (!ctx.adapter.boardColumn) { deny(builder); return; }
-      whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      if (ctx.adapter.applyBoards) {
+        if (!ctx.selectedBoardIds?.length) deny(builder);
+        else ctx.adapter.applyBoards(builder, ctx.selectedBoardIds);
+      } else if (ctx.adapter.boardColumn) {
+        whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      } else {
+        deny(builder);
+      }
     },
   },
   // The record itself is on an explicit list (a project shared with a seat arrangement, say). An empty list

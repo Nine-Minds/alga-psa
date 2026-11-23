@@ -30,7 +30,7 @@ const forbiddenKnex = new Proxy((() => undefined) as (...args: unknown[]) => unk
 function setup(priceId: string | null = PRICE) {
   const sync = vi.fn(async () => undefined);
   const finalizeCheckout = vi.fn(async () => undefined);
-  return { sync, finalizeCheckout, handlers: createCoManagedPaymentHandlers({ priceId: () => priceId ?? undefined, sync, finalizeCheckout }) };
+  return { sync, finalizeCheckout, handlers: createCoManagedPaymentHandlers({ recognizedPrices: () => priceId ?? undefined, refreshRecognition: async () => Boolean(priceId), sync, finalizeCheckout }) };
 }
 
 /** The REAL `serves` decides, fed by a participation resolver: no hand-built decision objects. */
@@ -105,7 +105,7 @@ describe('payment-event registry: independent upgrade (L8b)', () => {
   const plain = event('checkout.session.completed', { id: 'cs_3', metadata: { tenant_id: 't' } });
   const withUpgrade = (applied = true) => {
     const upgradePayment = vi.fn(async () => applied);
-    const handlers = createCoManagedPaymentHandlers({ priceId: () => undefined, sync: async () => undefined, finalizeCheckout: async () => undefined, upgradePayment });
+    const handlers = createCoManagedPaymentHandlers({ recognizedPrices: () => undefined, refreshRecognition: async () => false, sync: async () => undefined, finalizeCheckout: async () => undefined, upgradePayment });
     return { upgradePayment, handlers };
   };
   /** Stands in for StripeService's MSP licence handlers: anything left unconsumed would reach it. */

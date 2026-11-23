@@ -2,13 +2,14 @@ import type { Knex } from 'knex';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { isCoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
-import { getCoManagedSharedWorkSummary } from './sharedWorkRead';
+import { getCoManagedSharedWorkSummary, visibleCoManagedOrganizationName } from './sharedWorkRead';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
   lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { lockCoManagedCustomerPolicy } from './policy';
+import { shapeConversationAuthor } from './ticketConversation';
 
 function ticketOnly(resource: CoManagedSharedResource): void {
   if (!resource || resource.kind !== 'ticket') throw new CoManagedSharedWorkError();
@@ -39,6 +40,7 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
       if (!(isCoManagedLifecycleError(error)) && !(error instanceof CoManagedSharedWorkError)) throw error;
     }
     const summary = await getCoManagedSharedWorkSummary(trx, actor, inputResource);
+    const redactions = await readTicket(trx, actor, inputResource, async context => context.redactedFields);
     // LEVERAGE: friction ticket-sla-display — the SLA display read (L6b) joins the screen state here.
     const resource = summary.resource, customer = tenantDb(trx, resource.tenant);
     const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
@@ -50,8 +52,8 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
     const live = relationship.state === 'active' && !relationship.ended_at;
     const sponsor = live ? tenantDb(trx, relationship.sponsor_tenant) : null;
     const side = actor.tenant === resource.tenant ? 'customer' as const : 'sponsor' as const;
-    const customerName = (await customer.table('tenants').first('client_name')).client_name as string;
-    const sponsorName = sponsor ? (await sponsor.table('tenants').first('client_name')).client_name as string : null;
+    const customerName = visibleCoManagedOrganizationName((await customer.table('tenants').first('client_name')).client_name, redactions);
+    const sponsorName = sponsor ? visibleCoManagedOrganizationName((await sponsor.table('tenants').first('client_name')).client_name, redactions) : null;
     const destination = sponsor ? await sponsor.table('boards').where({ board_id: relationship.escalation_board_id, is_inactive: false }).first('board_name') : undefined;
     const canWrite = (await getCoManagedOperationalState(trx, resource.tenant)).canWrite;
     const workRevisionVisible = typeof summary.fields.work_revision === 'number';
@@ -71,7 +73,8 @@ export interface CoManagedHandoffHistoryItem {
   transition: 'escalated' | 'handed_back' | 'access_revoked';
   occurredAt: string;
   note?: string;
-  author?: { tenant: string; userId: string; name: string; organization: string };
+  author?: { tenant: string; userId: string; name: string; organization: string } |
+    { tenant: string; referenceId: string; side: 'customer' | 'sponsor'; name: string; organization: string };
 }
 /** This reader admits only the explicitly shared IT handoff journal. It does
  * not union legacy comments, requester replies, or organization-private notes. */
@@ -89,13 +92,24 @@ export async function getCoManagedTicketHandoffHistory(db: Knex, actor: CoManage
     if (beforeRevision !== undefined) query.where('revision', '<', beforeRevision);
     const rows = await query.select('operation_id', 'revision', 'transition', 'occurred_at', 'note',
       'actor_tenant', 'actor_user_id', 'actor_name', 'actor_organization');
-    const items = rows.slice(0, 25).map(row => ({ operationId: row.operation_id, revision: row.revision,
-      transition: row.transition, occurredAt: iso(row.occurred_at),
-      ...(!hidden(['note', 'notes', 'comments', 'description']) ? { note: row.note } : {}),
-      ...(!hidden(['actor', 'author', 'actor_tenant', 'actor_user_id', 'actor_name', 'actor_organization']) ? {
-        author: { tenant: row.actor_tenant, userId: row.actor_user_id, name: row.actor_name, organization: row.actor_organization },
-      } : {}),
-    }));
+    const items = rows.slice(0, 25).map(row => {
+      // Use the same viewer-relative projection as ticket conversation authors.
+      // In particular, never serialize actor_user_id for the other tenant.
+      const projectedAuthor = shapeConversationAuthor({ store_tenant: context.resource.tenant, actor_tenant: row.actor_tenant,
+        actor_kind: 'user', actor_id: row.actor_user_id, actor_reference_id: null,
+        actor_display_name: row.actor_name, actor_organization_name: row.actor_organization }, context.actor.tenant);
+      return { operationId: row.operation_id, revision: row.revision,
+        transition: row.transition, occurredAt: iso(row.occurred_at),
+        ...(!hidden(['note', 'notes', 'comments', 'description']) ? { note: row.note } : {}),
+        ...(!hidden(['actor', 'author', 'actor_tenant', 'actor_user_id', 'actor_name', 'actor_organization']) ? {
+          author: projectedAuthor.id !== null
+            ? { tenant: projectedAuthor.tenant, userId: projectedAuthor.id, name: projectedAuthor.displayName ?? '', organization: projectedAuthor.organizationName ?? '' }
+            : { tenant: projectedAuthor.tenant, referenceId: projectedAuthor.referenceId!,
+              side: (projectedAuthor.tenant === context.resource.tenant ? 'customer' : 'sponsor') as 'customer' | 'sponsor',
+              name: projectedAuthor.displayName ?? '', organization: projectedAuthor.organizationName ?? '' },
+        } : {}),
+      };
+    });
     await assertCoManagedSessionUnexpired(context.trx, { ...context.actor, kind: 'session', sessionId: context.sessionId });
     return { items, nextBeforeRevision: rows.length > 25 ? items.at(-1)!.revision : null };
   });

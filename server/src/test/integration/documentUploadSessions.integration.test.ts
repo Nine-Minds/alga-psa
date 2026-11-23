@@ -43,6 +43,14 @@ vi.mock('@alga-psa/auth/rbac', () => ({
     checks.map((check) => ({ ...check, granted: !auth.denied.has(`${check.resource}:${check.action}`) })),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async (_user: unknown, resource: string, action: string) => !auth.denied.has(`${resource}:${action}`) }));
+// LEVERAGE: pattern test-rbac-forwarding — auth and authorization fixtures must share one permission policy.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: async (...args: Parameters<typeof import('@alga-psa/authorization/rbac').hasPermission>) => {
+    const { hasPermission } = await import('@alga-psa/auth');
+    return hasPermission(args[0] as import('@alga-psa/types').IUser, args[1], args[2], args[3]);
+  },
+}));
 
 import { tenantDb } from '@alga-psa/db';
 import { CreateBucketCommand, ListMultipartUploadsCommand, S3Client } from '@aws-sdk/client-s3';
@@ -375,6 +383,23 @@ describe.each<Provider>(['s3', 'local'])('resumable document uploads (%s storage
     expect(plain.response.status).toBe(403);
     expect(plain.json.error.message).toBe('Permission denied: Cannot create documents');
     expect(await sessionCount()).toBe(before); // a denial opens no provider session and stores no row
+  });
+
+  it('requires target update permission even when document creation is allowed', async () => {
+    const before = await tenantDb(db, fx.tenant).table('document_upload_sessions').select('session_id');
+    auth.denied.add('ticket:update');
+
+    const denied = await create(13 * MiB);
+
+    expect(denied.response.status).toBe(403);
+    expect(denied.json.error.code).toBe('FORBIDDEN');
+    expect(await tenantDb(db, fx.tenant).table('document_upload_sessions').select('session_id')).toEqual(before);
+
+    auth.denied.clear();
+    const allowed = await create(13 * MiB);
+    expect(allowed.response.status).toBe(201);
+    expect(await row(allowed.json.sessionId)).toMatchObject({ status: 'active', entity_id: fx.ticket });
+    expect((await abort(allowed.json.sessionId)).status).toBe(204);
   });
 
   it('completes into a ticket document with its association, queuing previews once', async () => {

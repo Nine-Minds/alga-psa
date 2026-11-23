@@ -37,8 +37,11 @@ import { getRmmIntegrationIdByProvider } from '../../../actions/integrations/rmm
 import type { TacticalRmmAuthMode } from '../../../lib/rmm/tacticalrmm/shared';
 import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
 import { RmmDeviceSyncSettings } from './RmmDeviceSyncSettings';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
-import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
+import { getIntegrationContacts } from '../../../actions/clientLookupActions';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
+import { lookupClientsByIds, useClientNames } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 function getActionFailureMessage(result: { error?: string } | null | undefined, fallback: string): string {
@@ -84,11 +87,12 @@ export function TacticalRmmIntegrationSettings() {
 
   const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
   const [orgMappings, setOrgMappings] = React.useState<NonNullable<Awaited<ReturnType<typeof listTacticalRmmOrganizationMappings>>['mappings']>>([]);
-  const [clients, setClients] = React.useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server through the shell's searcher.
+  const { searchClients } = useClientPickerSearch();
+  const [knownClients, setKnownClients] = React.useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = React.useState<IContact[]>([]);
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = React.useState<{ mappingId: string; clientId: string } | null>(null);
-  const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [webhookInfo, setWebhookInfo] = React.useState<Awaited<ReturnType<typeof getTacticalRmmWebhookInfo>>['webhook'] | null>(null);
@@ -128,8 +132,17 @@ export function TacticalRmmIntegrationSettings() {
       setError(getActionFailureMessage(res, t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' })));
       return;
     }
-    setOrgMappings(res.mappings || []);
-  }, [t]);
+    const mappings = res.mappings || [];
+    if (searchClients) {
+      setKnownClients(
+        await lookupClientsByIds(
+          searchClients,
+          mappings.map((m) => m.client_id).filter((id): id is string => !!id),
+        ),
+      );
+    }
+    setOrgMappings(mappings);
+  }, [t, searchClients]);
 
   React.useEffect(() => {
     load();
@@ -151,19 +164,10 @@ export function TacticalRmmIntegrationSettings() {
 
   React.useEffect(() => {
     const run = async () => {
-      setClientsLoading(true);
       try {
-        const [clientsData, contactsData] = await Promise.all([
-          getIntegrationClients(true),
-          getIntegrationContacts(false),
-        ]);
-        setClients(clientsData as any);
-        setContacts((contactsData as any) ?? []);
+        setContacts(((await getIntegrationContacts(false)) as any) ?? []);
       } catch (e) {
-        setClients([]);
         setContacts([]);
-      } finally {
-        setClientsLoading(false);
       }
     };
     void run();
@@ -336,6 +340,9 @@ export function TacticalRmmIntegrationSettings() {
 
   // FR-G4: re-pointing an organization moves its devices, so confirm first.
   const [pendingClientChange, setPendingClientChange] = React.useState<{ mappingId: string; clientId: string | null } | null>(null);
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClients, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
 
   const handleClientChange = (mappingId: string, clientId: string | null) => {
     const current = orgMappings.find((m) => m.mapping_id === mappingId);
@@ -421,16 +428,14 @@ export function TacticalRmmIntegrationSettings() {
       render: (_v, m) => (
         <ClientPicker
           id={`tacticalrmm-org-client-picker-${m.mapping_id}`}
-          clients={clients}
+          knownClients={knownClients}
           selectedClientId={m.client_id || null}
           onSelect={(clientId) => handleClientChange(m.mapping_id, clientId)}
           filterState={clientFilterState}
           onFilterStateChange={setClientFilterState}
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
-          placeholder={clientsLoading
-            ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
-            : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
+          placeholder={t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
           fitContent
           triggerVariant="outline"
           triggerSize="sm"
@@ -504,7 +509,7 @@ export function TacticalRmmIntegrationSettings() {
     <>
     <RmmOrganizationClientChangeDialog
       mappingId={pendingClientChange?.mappingId ?? null}
-      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      pendingClientName={pendingClientName}
       isOpen={Boolean(pendingClientChange)}
       onCancel={() => setPendingClientChange(null)}
       onConfirm={() => {
@@ -1033,7 +1038,6 @@ export function TacticalRmmIntegrationSettings() {
         }
         setQuickAddContactFor(null);
       },
-      clients,
       selectedClientId: quickAddContactFor?.clientId ?? null,
     })}
     </>

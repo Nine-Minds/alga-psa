@@ -214,7 +214,7 @@ export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWo
     // Without a conversation: no comments, and nothing to react to.
     comments: group('comments', { findCommentsByTicketId: none, findCommentById: nothing, getCommentsReactionsBatch: async () => ({ reactions: {}, userNames: {} }), ...conversationReads }),
     people: group('people', { findUserById: nothing, getAllUsers: none, getAllActiveContacts: none, getContactByContactNameId: nothing,
-      getContactsByClient: none, getClientById: nothing, getAllClients: none, getClientLocations: none, getClientBillingProfiles: none }),
+      getContactsByClient: none, getClientById: nothing, getClientLocations: none, getClientBillingProfiles: none }),
     resources: group('resources', { getTicketResources: none, getTeamById: nothing, getTeams: none }),
     options: group('options', { getTicketStatuses: none, getAllPriorities: none, getTicketCategories: none, getTicketCategoriesByBoard: none }),
     bundles: group('bundles'),

@@ -40,12 +40,12 @@
     },
     {
       "name": "comment.edit",
-      "statements": 13,
+      "statements": 14,
       "locks": 2
     },
     {
       "name": "comment.delete",
-      "statements": 12,
+      "statements": 13,
       "locks": 0
     },
     {
@@ -95,7 +95,7 @@
     }
   ],
   "totals": {
-    "statements": 503,
+    "statements": 505,
     "locks": 17
   },
   "denylist": [

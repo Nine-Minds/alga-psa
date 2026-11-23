@@ -418,6 +418,7 @@
         "oauthStatus": "OAuth Status",
         "connected": "Connected",
         "notConnected": "Not connected",
+        "reauthorizationRequired": "Reauthorization required",
         "reconnectOauth": "Reconnect OAuth",
         "authorizeUrl": "Authorize URL",
         "tokenUrl": "Token URL",
@@ -574,6 +575,7 @@
       "statusLabel": "OAuth Status",
       "connected": "Connected",
       "notConnected": "Not connected",
+      "reauthorizationRequired": "Reauthorization required",
       "authorizing": "Authorizing...",
       "reconnect": "Reconnect OAuth"
     },
@@ -1084,6 +1086,7 @@
       "noClient": "No client matched",
       "outcome": {
         "assignClient": "Ticket assigned to client \"{{client}}\"",
+        "matchedClient": "the matched client",
         "fallback": "No client matched — ticket routed to the fallback destination",
         "none": "Rule did not resolve — normal processing continues",
         "setDestination": "Ticket routed to the selected destination",
@@ -1123,6 +1126,7 @@
       "mailboxReconnect": "Reconnect the selected Microsoft 365 mailbox before using it for outbound email",
       "ticketIdentityMustMatchMailbox": "Ticket email identity must use the selected Microsoft 365 mailbox ({{mailbox}}). Update the Ticket emails address before saving.",
       "providerFromAddressInvalid": "The {{provider}} From address must be a valid email address",
+      "secretRequiredAfterConnectionChange": "Re-enter the password for {{provider}}: the server address or sign-in details changed.",
       "ticketingFromInvalid": "Ticketing From address must be a valid email address",
       "outboundDomainInvalid": "Outbound sending domain must be a valid domain (e.g. example.com)",
       "outboundDomainRequired": "Configure an outbound domain before choosing a ticketing From address",

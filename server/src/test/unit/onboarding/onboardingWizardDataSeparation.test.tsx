@@ -6,6 +6,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+
 import { ClientInfoStep } from '../../../../../packages/onboarding/src/components/steps/ClientInfoStep';
 import { AddClientStep } from '../../../../../packages/onboarding/src/components/steps/AddClientStep';
 import type { WizardData } from '@alga-psa/types';

@@ -26,7 +26,8 @@ const TextEditor = dynamic<any>(() => import('@alga-psa/ui/editor').then((mod) =
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
-import { getInteractionById, getAllClients, getAllContacts, getClientById } from '@alga-psa/clients/actions';
+import { getInteractionById, getAllContacts, getClientById } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { addInteraction, updateInteraction, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
@@ -41,7 +42,6 @@ import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { clampDuration, durationFromRange } from '../../lib/durationHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -119,7 +119,6 @@ export function QuickAddInteraction({
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -365,9 +364,6 @@ export function QuickAddInteraction({
 
         // Edit mode and standalone creation both need entity pickers.
         if (isEditMode || isStandaloneCreate) {
-          const clientsList = await getAllClients();
-          setClients(clientsList);
-          
           // Get all contacts - the ContactPicker will filter by client internally
           const allContacts = await getAllContacts();
           setContacts(allContacts);
@@ -1162,7 +1158,7 @@ export function QuickAddInteraction({
                       </label>
                       <ClientPicker
                         id={`${id}-client-picker`}
-                        clients={clients}
+                        searchClients={searchClientsForPicker}
                         onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
@@ -1255,7 +1251,7 @@ export function QuickAddInteraction({
                       <label className="text-sm font-medium">{t('interactions.quickAdd.fields.clientShort', { defaultValue: 'Client' })}</label>
                       <ClientPicker
                         id={`${id}-client-picker`}
-                        clients={clients}
+                        searchClients={searchClientsForPicker}
                         onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
@@ -1303,22 +1299,12 @@ export function QuickAddInteraction({
                   setSelectedContactId(newContact.contact_name_id);
                   setIsQuickAddContactOpen(false);
                 }}
-                clients={clients}
                 selectedClientId={selectedClientId}
               />
               <QuickAddClient
                 open={isQuickAddClientOpen}
                 onOpenChange={setIsQuickAddClientOpen}
                 onClientAdded={(newClient) => {
-                  setClients((currentClients) => {
-                    const existingIndex = currentClients.findIndex(
-                      (client) => client.client_id === newClient.client_id,
-                    );
-                    if (existingIndex === -1) return [...currentClients, newClient];
-                    const nextClients = [...currentClients];
-                    nextClients[existingIndex] = newClient;
-                    return nextClients;
-                  });
                   handleClientSelect(newClient.client_id);
                 }}
                 skipSuccessDialog

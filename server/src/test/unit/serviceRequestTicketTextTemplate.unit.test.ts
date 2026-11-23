@@ -77,6 +77,114 @@ describe('renderServiceRequestTemplate', () => {
   });
 });
 
+describe('v2 schema in ticket text', () => {
+  // Display blocks carry keys but no answer, so they can never stand in for one.
+  const v2Schema = {
+    fields: [
+      { key: 'intro', type: 'text', label: 'Read this first' },
+      { key: 'lead_time', type: 'callout', label: 'Five working days' },
+      { key: 'rule', type: 'divider', label: '' },
+      { key: 'employee', type: 'section', label: 'Employee' },
+      { key: 'full_name', type: 'short-text', label: 'Full name' },
+      {
+        key: 'shift',
+        type: 'radio',
+        label: 'Shift',
+        options: [{ value: 'am', label: 'Morning' }, { value: 'pm', label: 'Afternoon' }],
+      },
+      {
+        key: 'apps',
+        type: 'multi-select',
+        label: 'Apps',
+        options: [
+          { value: 'crm', label: 'CRM' },
+          { value: 'vpn', label: 'VPN' },
+          { value: 'erp', label: 'ERP' },
+        ],
+      },
+      { key: 'seats', type: 'number', label: 'Seats' },
+      { key: 'work_email', type: 'email', label: 'Work email' },
+      { key: 'desk_phone', type: 'phone', label: 'Desk phone' },
+      { key: 'profile', type: 'url', label: 'Profile' },
+      { key: 'starts_at', type: 'date-time', label: 'Starts at' },
+    ],
+  };
+  const renderV2 = (template: string, payload: Record<string, unknown>) =>
+    renderServiceRequestTemplate(template, { formSchema: v2Schema, payload, format: en });
+
+  it('offers no display block as a placeholder', () => {
+    expect(getServiceRequestTemplateFields(v2Schema).map((field) => field.key)).toEqual([
+      'full_name',
+      'shift',
+      'apps',
+      'seats',
+      'work_email',
+      'desk_phone',
+      'profile',
+      'starts_at',
+    ]);
+    expect(
+      findUnknownServiceRequestTemplateTokens('{{intro}} {{employee}} {{full_name}}', v2Schema)
+    ).toEqual(['intro', 'employee']);
+  });
+
+  it('renders every input type sensibly in a subject', () => {
+    expect(renderV2('{{shift}}', { shift: 'pm' })).toBe('Afternoon');
+    expect(renderV2('{{shift}}', { shift: 'night' })).toBe('night');
+    expect(renderV2('{{apps}}', { apps: ['crm', 'erp'] })).toBe('CRM, ERP');
+    expect(renderV2('{{apps}}', { apps: [] })).toBe('');
+    expect(renderV2('{{seats}}', { seats: '3' })).toBe('3');
+    expect(renderV2('{{work_email}}', { work_email: 'jane@example.com' })).toBe('jane@example.com');
+    expect(renderV2('{{desk_phone}}', { desk_phone: '+46 70 123 45 67' })).toBe('+46 70 123 45 67');
+    expect(renderV2('{{profile}}', { profile: 'https://example.com/jane' })).toBe(
+      'https://example.com/jane'
+    );
+    expect(renderV2('{{starts_at}}', { starts_at: '2026-03-02' })).toBe('March 2, 2026');
+    // What the date-time picker actually stores is a full instant, not YYYY-MM-DD: it must read
+    // as a date and a time, never as a raw ISO timestamp.
+    expect(renderV2('{{starts_at}}', { starts_at: '2026-03-02T14:30:00.000Z' })).toBe(
+      'March 2, 2026 at 2:30 PM UTC'
+    );
+    // Not a date at all: shown verbatim rather than dropped.
+    expect(renderV2('{{starts_at}}', { starts_at: 'as soon as possible' })).toBe(
+      'as soon as possible'
+    );
+  });
+
+  it('renders choice labels and section groups in the description', () => {
+    const blocks = JSON.parse(
+      buildTicketDescription(
+        {
+          formSchema: v2Schema,
+          payload: { full_name: 'Jane Doe', shift: 'am', apps: ['vpn', 'crm'], seats: '2' },
+          format: en,
+        },
+        {}
+      )
+    );
+    const read = (block: any) =>
+      block.type === 'table'
+        ? {
+            table: block.content.rows.map((row: any) =>
+              row.cells.map((cell: any) => cell[0].text)
+            ),
+          }
+        : { heading: block.content[0].text };
+
+    expect(blocks.map(read)).toEqual([
+      { heading: 'Employee' },
+      {
+        table: [
+          ['Full name', 'Jane Doe'],
+          ['Shift', 'Morning'],
+          ['Apps', 'VPN, CRM'],
+          ['Seats', '2'],
+        ],
+      },
+    ]);
+  });
+});
+
 describe('template fields and unknown tokens', () => {
   it('lists insertable fields in form order without file uploads', () => {
     expect(getServiceRequestTemplateFields(formSchema).map((field) => field.key)).toEqual([
