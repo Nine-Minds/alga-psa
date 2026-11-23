@@ -2202,6 +2202,7 @@
       "submit": "Reservera"
     },
     "clientItems": {
+      "clientItemNote": "Artiklar som beskrivs i fritext spåras bara i det här projektet. De är inte tillgångar, så de hamnar inte i utrustningsförvaringen och visas inte i förvaringskön. Välj i stället en av kundens tillgångar för att spåra den.",
       "chooseAsset": "Välj en tillgång.",
       "describeItem": "Beskriv artikeln.",
       "failed": "Det gick inte att lägga till artikeln.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Frigör alla reserverade och förberedda",
     "keepClaims": "Behåll dem",
     "packAction": "Packa",
+    "custody": {
+      "inCustody": "I förvar på {{place}}",
+      "inOffice": "I förvar på kontoret",
+      "withVendor": "I förvar: hos leverantören",
+      "notInCustody": "Inte i förvar",
+      "viewAsset": "Öppna tillgången för att se förvaringshistoriken"
+    },
+    "clientItemNote": "Artiklar som beskrivs i fritext spåras bara i det här projektet. De är inte tillgångar, så de hamnar inte i utrustningsförvaringen och visas inte i förvaringskön. Välj i stället en av kundens tillgångar för att spåra den.",
     "errors": {
       "notFound": "Projektet hittades inte",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Du behöver lagertillgång för att välja lagerenheter.",
         "billing": "Du behöver faktureringsåtkomst för att installera artiklar i ett projekt.",
         "asset": "Du behöver tillgångsåtkomst för att länka kundens tillgångar.",
+        "assetUpdate": "Du behöver behörighet att uppdatera tillgångar för att hantera kundens utrustning i förvaring.",
         "inventoryStock": "Du behöver lagertillgång för att se lagernivåer."
       }
     }

@@ -2202,6 +2202,7 @@
       "submit": "Reservieren"
     },
     "clientItems": {
+      "clientItemNote": "Als Freitext beschriebene Artikel werden nur in diesem Projekt erfasst. Sie sind keine Assets, kommen daher nicht in die Geräteverwahrung und erscheinen nicht in der Verwahrungsliste. Wählen Sie stattdessen ein Asset des Kunden, um es nachzuverfolgen.",
       "chooseAsset": "Wählen Sie ein Asset aus.",
       "describeItem": "Beschreiben Sie den Artikel.",
       "failed": "Der Artikel konnte nicht hinzugefügt werden.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Alle reservierten und bereitgestellten freigeben",
     "keepClaims": "Behalten",
     "packAction": "Packen",
+    "custody": {
+      "inCustody": "In Verwahrung: {{place}}",
+      "inOffice": "In Verwahrung im Büro",
+      "withVendor": "In Verwahrung: beim Lieferanten",
+      "notInCustody": "Nicht in Verwahrung",
+      "viewAsset": "Asset öffnen, um den Verwahrungsverlauf zu sehen"
+    },
+    "clientItemNote": "Als Freitext beschriebene Artikel werden nur in diesem Projekt erfasst. Sie sind keine Assets, kommen daher nicht in die Geräteverwahrung und erscheinen nicht in der Verwahrungsliste. Wählen Sie stattdessen ein Asset des Kunden, um es nachzuverfolgen.",
     "errors": {
       "notFound": "Projekt nicht gefunden",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Sie benötigen Inventarzugriff, um Lagereinheiten auszuwählen.",
         "billing": "Sie benötigen Abrechnungszugriff, um Artikel in ein Projekt einzubauen.",
         "asset": "Sie benötigen Asset-Zugriff, um Kunden-Assets zu verknüpfen.",
+        "assetUpdate": "Sie benötigen die Berechtigung zum Bearbeiten von Assets, um Kundengeräte durch die Verwahrung zu führen.",
         "inventoryStock": "Sie benötigen Inventarzugriff, um Lagerbestände einzusehen."
       }
     }

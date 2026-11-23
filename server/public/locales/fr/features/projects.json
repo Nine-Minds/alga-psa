@@ -2202,6 +2202,7 @@
       "submit": "Réserver"
     },
     "clientItems": {
+      "clientItemNote": "Les articles décrits en texte libre sont suivis uniquement sur ce projet. Ce ne sont pas des actifs : ils n'entrent pas dans la garde des équipements et n'apparaissent pas dans la file de garde. Choisissez plutôt un actif du client pour le suivre.",
       "chooseAsset": "Choisissez un actif.",
       "describeItem": "Décrivez l'article.",
       "failed": "Impossible d'ajouter l'article.",
@@ -2263,6 +2264,14 @@
     "releaseAll": "Libérer tous les réservés et préparés",
     "keepClaims": "Les conserver",
     "packAction": "Emballer",
+    "custody": {
+      "inCustody": "Sous garde à {{place}}",
+      "inOffice": "Sous garde au bureau",
+      "withVendor": "Sous garde : chez le fournisseur",
+      "notInCustody": "Pas sous garde",
+      "viewAsset": "Ouvrir l'actif pour voir son historique de garde"
+    },
+    "clientItemNote": "Les articles décrits en texte libre sont suivis uniquement sur ce projet. Ce ne sont pas des actifs : ils n'entrent pas dans la garde des équipements et n'apparaissent pas dans la file de garde. Choisissez plutôt un actif du client pour le suivre.",
     "errors": {
       "notFound": "Projet introuvable",
       "permission": {
@@ -2271,6 +2280,7 @@
         "inventory": "Vous avez besoin d'un accès à l'inventaire pour choisir des unités de stock.",
         "billing": "Vous avez besoin d'un accès à la facturation pour installer des articles dans un projet.",
         "asset": "Vous avez besoin d'un accès aux actifs pour lier des actifs du client.",
+        "assetUpdate": "Vous devez avoir le droit de modifier les actifs pour faire passer l'équipement du client par la garde.",
         "inventoryStock": "Vous avez besoin d'un accès à l'inventaire pour voir les niveaux de stock."
       }
     }
