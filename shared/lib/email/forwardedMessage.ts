@@ -136,7 +136,8 @@ async function senderFromNestedMessages(
     if (!attachment.content) continue;
     try {
       const parsed = await simpleParser(Buffer.from(attachment.content, 'base64'), INBOUND_MIME_PARSE_OPTIONS);
-      const values = parsed.from?.value ?? [];
+      // Typed explicitly: packages that compile this file without mailparser's types see `parsed` as any.
+      const values: Array<{ address?: string; name?: string }> = parsed.from?.value ?? [];
       const distinct = new Set(values.map((v) => (v.address ?? '').toLowerCase()).filter(Boolean));
       if (distinct.size === 1) {
         const address = values.find((v) => v.address)!;
