@@ -87,7 +87,7 @@ When a technician forwards a client's email to the helpdesk mailbox, the ticket 
 * **Inbound rules win.** If an inbound email rule assigns a client, that client is used.
 * **Existing threads are unchanged.** A forward into an existing ticket thread keeps that ticket's client.
 
-The original sender is read from a forwarded `message/rfc822` attachment, or from the first forward header block in the plain-text body (Outlook, Gmail, Apple Mail, including German and French labels). HTML-only forwards are not attributed. Set `INBOUND_RESOLVE_FORWARDED_SENDER=false` to turn the feature off.
+The original sender is read from a forwarded `message/rfc822` attachment, or from the first forward header block in the message's plain text (Outlook, Gmail, Apple Mail, including German and French labels). For Microsoft 365 and IMAP mailboxes, a message with only an HTML body is read through the plain text the MIME parser derives from that HTML, so an HTML-only forward is attributed in the same way. For Gmail mailboxes, an HTML-only forward and a forward sent as an attachment are not attributed: the ticket is created as it would be without this feature. Set `INBOUND_RESOLVE_FORWARDED_SENDER=false` to turn the feature off.
 
 ## Workflow events published
 
