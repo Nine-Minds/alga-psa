@@ -1,6 +1,7 @@
 import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-// Inspect after all separators: "TICKET - 2026" is an identifier, while "Ticket ALGA…" is a label.
+// Inspect after all separators: hyphenated TICKET prefixes are identifiers, while
+// whitespace-separated "Ticket ALGA…" is a label.
 const LEADING_TICKET_PREFIX = /^ticket([\s-]*)/i;
 const SEPARATORS = /[\s-]+/g;
 
@@ -10,7 +11,12 @@ function stripLeadingTicketLabel(value: string): string {
 
   const nextCharacter = value[match[0].length];
   const hasSeparators = match[1].length > 0;
-  if (nextCharacter === '#' || nextCharacter === undefined || (hasSeparators && !/\d/.test(nextCharacter))) {
+  const hyphenatedAlphaPrefix = match[1].startsWith('-') && /^[a-z]/i.test(nextCharacter ?? '');
+  if (
+    nextCharacter === '#' ||
+    nextCharacter === undefined ||
+    (hasSeparators && !/\d/.test(nextCharacter) && !hyphenatedAlphaPrefix)
+  ) {
     return value.slice(match[0].length);
   }
 

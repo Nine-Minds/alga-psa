@@ -27,6 +27,8 @@ describe('ticketReferenceSearch', () => {
 
   it('preserves Ticket when it is part of the identifier', () => {
     expect(matches('#TICKET-2026-0002826', 'TICKET-2026-0002826')).toBe(true);
+    expect(matches('TICKET-ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826')).toBe(true);
+    expect(matches('TICKETALGA20260002826', 'TICKET-ALGA-2026-0002826')).toBe(true);
     expect(matches('TICKET 2026 0002826', 'TICKET-2026-0002826')).toBe(true);
     expect(matches('TICKET  2026 0002826', 'TICKET-2026-0002826')).toBe(true);
     expect(matches('TICKET - 2026 - 0002826', 'TICKET-2026-0002826')).toBe(true);

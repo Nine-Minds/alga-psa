@@ -20,6 +20,10 @@ const algaNumber = {
   ...ticketPrefixNumber,
   ticket_number: 'ALGA-2026-0002826',
 };
+const ticketAlgaNumber = {
+  ...ticketPrefixNumber,
+  ticket_number: 'TICKET-ALGA-2026-0002826',
+};
 
 describe('buildTicketSearchPredicate', () => {
   it.each([
@@ -54,5 +58,13 @@ describe('buildTicketSearchPredicate', () => {
   ])('returns exact ticket numbers for %j', (query, expectedNumbers) => {
     const results = [ticketPrefixNumber, algaNumber].filter(buildTicketSearchPredicate(query));
     expect(results.map(({ ticket_number }) => ticket_number)).toEqual(expectedNumbers);
+  });
+
+  it.each([
+    'TICKET-ALGA-2026-0002826',
+    'TICKETALGA20260002826',
+  ])('preserves the hyphenated TICKET prefix for %j', (query) => {
+    const results = [ticketAlgaNumber, algaNumber].filter(buildTicketSearchPredicate(query));
+    expect(results.map(({ ticket_number }) => ticket_number)).toEqual(['TICKET-ALGA-2026-0002826']);
   });
 });
