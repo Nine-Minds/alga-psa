@@ -397,10 +397,11 @@ export function EmailTemplates() {
           const tplRecord = record as TemplateRow;
           return (
             <div className="flex items-center pl-8">
-              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
-              <div>
+              <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground mr-2" />
+              {/* The table cell is single-line by default; the status and warning lines must wrap, or the variable name is cut off. */}
+              <div className="min-w-0">
                 <span className="font-medium text-gray-700">{tplRecord.displayName}</span>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 whitespace-normal">
                   {tplRecord.tenantTemplate?.derived
                     ? t('notifications.emailTemplatesUi.list.followsStandard', 'Standard template in your brand — follows Alga updates')
                     : tplRecord.isCustom
@@ -410,7 +411,7 @@ export function EmailTemplates() {
                 {!!tplRecord.tenantTemplate?.missingVariables?.length && (
                   <div
                     id={`missing-variables-${tplRecord.systemTemplate.id}`}
-                    className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]"
+                    className="mt-1 text-xs whitespace-normal text-[rgb(var(--badge-warning-text))]"
                   >
                     {t('notifications.emailTemplatesUi.list.missingVariables', {
                       defaultValue: "The standard template now uses {{variables}}. Your edited copy doesn't.",
