@@ -1,9 +1,21 @@
 import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-// A whitespace-separated numeric segment means TICKET is the identifier prefix (for example,
-// "TICKET 2026 0002826"), while "Ticket ALGA…" and "Ticket #ALGA…" use it as a label.
-const LEADING_TICKET_LABEL = /^ticket(?=#|$|\s+(?!\d))/i;
+// Inspect after all separators: "TICKET - 2026" is an identifier, while "Ticket ALGA…" is a label.
+const LEADING_TICKET_PREFIX = /^ticket([\s-]*)/i;
 const SEPARATORS = /[\s-]+/g;
+
+function stripLeadingTicketLabel(value: string): string {
+  const match = LEADING_TICKET_PREFIX.exec(value);
+  if (!match) return value;
+
+  const nextCharacter = value[match[0].length];
+  const hasSeparators = match[1].length > 0;
+  if (nextCharacter === '#' || nextCharacter === undefined || (hasSeparators && !/\d/.test(nextCharacter))) {
+    return value.slice(match[0].length);
+  }
+
+  return value;
+}
 
 export interface TicketSearchQuery {
   /** The query trimmed of surrounding whitespace; use for title/status/priority matching. */
@@ -21,7 +33,7 @@ export function compactTicketReference(value: string): string {
 
 export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
-  const reference = compactTicketReference(cleanSearchIdentifierQuery(text.replace(LEADING_TICKET_LABEL, '')));
+  const reference = compactTicketReference(cleanSearchIdentifierQuery(stripLeadingTicketLabel(text)));
   return { text, reference };
 }
 
