@@ -89,7 +89,8 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 2 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 6 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 97 },
+  // +2 (card 23c57327): useSeatTrialOffer.ts (the one trial-offer reader) and CoManagedSeatTrialSection.tsx.
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 99 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -136,7 +137,8 @@ export const SEAT_UI_FAMILIES: readonly SeatUiFamily[] = [
 export const EXPECTED_SEAT_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'seat-client-integration': { glob: 'server/src/components/co-managed/CoManagedClientIntegration.tsx', files: 1 },
   'seat-shape-chooser': { glob: 'server/src/components/co-managed/CoManagedShapeChooser.tsx', files: 1 },
-  'seat-components': { glob: 'server/src/components/co-managed/CoManagedSeat*', files: 9 },
+  // +1 (card 23c57327): CoManagedSeatTrialSection.tsx, mounted only by the co-managed page under its server-side trial gate.
+  'seat-components': { glob: 'server/src/components/co-managed/CoManagedSeat*', files: 10 },
   'seat-arrangement-end': { glob: 'server/src/components/co-managed/CoManagedSeatArrangementEnd.tsx', files: 1 },
   'seat-overview': { glob: 'server/src/components/co-managed/CoManagedOverview.tsx', files: 1 },
   'seat-combined-overview': { glob: 'server/src/components/co-managed/CoManagedCombinedOverview.tsx', files: 1 },
