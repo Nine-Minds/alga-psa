@@ -93,15 +93,29 @@ const editorMocks = vi.hoisted(() => ({
 
 vi.mock('../DocumentEditor', async () => {
   const React = await import('react');
+  const { updateBlockContent } = await import('../../actions/documentBlockContentActions');
   return {
-    DocumentEditor: ({ editorRef, hideSaveButton }: any) => {
+    // Stands in for DocumentEditor's controller: saves the editor JSON and
+    // rejects on an action error (the real one is covered in
+    // DocumentEditor.controller.test.tsx).
+    DocumentEditor: ({ documentId, userId, controllerRef, hideSaveButton }: any) => {
       React.useEffect(() => {
         editorMocks.mounts += 1;
-        if (editorRef) editorRef.current = { isDestroyed: false, getJSON: () => editorMocks.fallbackJson };
+        if (controllerRef) {
+          controllerRef.current = {
+            save: async () => {
+              const result: any = await updateBlockContent(documentId, {
+                block_data: JSON.stringify(editorMocks.fallbackJson),
+                user_id: userId,
+              });
+              if (result && 'actionError' in result) throw new Error(result.actionError);
+            },
+          };
+        }
         return () => {
-          if (editorRef) editorRef.current = null;
+          if (controllerRef) controllerRef.current = null;
         };
-      }, [editorRef]);
+      }, [controllerRef]);
       return (
         <div data-testid="document-editor">
           Document Editor
@@ -378,7 +392,7 @@ describe('KBArticleEditor', () => {
       expect(updateArticle).not.toHaveBeenCalled();
     });
 
-    it('fallback: persists getJSON via updateBlockContent, then updates metadata; no save-document-button', async () => {
+    it('fallback: saves content through the DocumentEditor controller, then updates metadata; no save-document-button', async () => {
       const { updateArticle } = await import('../../actions/kbArticleActions');
       const { updateBlockContent } = await import('../../actions/documentBlockContentActions');
       const { syncCollabSnapshot } = await import('../../actions/collaborativeEditingActions');

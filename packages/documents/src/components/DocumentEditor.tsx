@@ -40,11 +40,29 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './DocumentEditor.module.css';
 
+/**
+ * Lets a host that hides the built-in Save button (hideSaveButton) save through
+ * the editor itself, so the editor's own unsaved-changes registration stays true
+ * to what is actually persisted.
+ */
+export interface DocumentEditorController {
+  /**
+   * Persists the current content. On success clears the unsaved-changes state
+   * (unless the user kept typing while the save was in flight); on failure
+   * rejects and leaves it set.
+   */
+  save: () => Promise<void>;
+}
+
+class DocumentContentSaveError extends Error {}
+
 interface DocumentEditorProps {
   documentId: string;
   userId: string;
   placeholder?: string;
   editorRef?: React.MutableRefObject<Editor | null>;
+  /** Receives a controller for saving from outside (see DocumentEditorController). */
+  controllerRef?: React.MutableRefObject<DocumentEditorController | null>;
   onContentChange?: (content: Record<string, any>) => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
   hideSaveButton?: boolean;
@@ -62,6 +80,7 @@ export function DocumentEditor({
   userId,
   placeholder,
   editorRef,
+  controllerRef,
   onContentChange,
   onUnsavedChangesChange,
   hideSaveButton = false,
@@ -75,6 +94,9 @@ export function DocumentEditor({
   const [editorReady, setEditorReady] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const contentLoadedRef = useRef(false);
+  // Bumped on every tracked edit, so a save only clears the unsaved state when
+  // nothing changed between taking the snapshot and the server confirming it.
+  const editRevisionRef = useRef(0);
 
   // Register unsaved changes for navigation protection
   useRegisterUnsavedChanges(`document-editor-${documentId}`, hasUnsavedChanges);
@@ -176,6 +198,7 @@ export function DocumentEditor({
     onUpdate: () => {
       // Only track changes after initial content has been loaded
       if (contentLoadedRef.current) {
+        editRevisionRef.current += 1;
         setHasUnsavedChanges(true);
         onUnsavedChangesChange?.(true);
         if (editor) {
@@ -243,32 +266,54 @@ export function DocumentEditor({
     }
   }, [documentId, editor]);
 
+  // Persist the current content. Throws on failure; clears the unsaved state on
+  // success. Shared by the built-in Save button and DocumentEditorController.
+  const onUnsavedChangesChangeRef = useRef(onUnsavedChangesChange);
+  onUnsavedChangesChangeRef.current = onUnsavedChangesChange;
+  const persistContent = useCallback(async () => {
+    if (!editor || editor.isDestroyed) {
+      throw new DocumentContentSaveError('Editor is not ready');
+    }
+    const revision = editRevisionRef.current;
+    const result = await updateBlockContent(documentId, {
+      block_data: JSON.stringify(editor.getJSON()),
+      user_id: userId,
+    });
+    if (isDocumentActionError(result)) {
+      throw new DocumentContentSaveError(getErrorMessage(result));
+    }
+    if (editRevisionRef.current === revision) {
+      setHasUnsavedChanges(false);
+      onUnsavedChangesChangeRef.current?.(false);
+    }
+  }, [editor, documentId, userId]);
+
   // Save the document content
   const handleSave = async () => {
     if (!editor || editor.isDestroyed) return;
 
     try {
       setIsSaving(true);
-      // Get the current editor content as JSON
-      const content = editor.getJSON();
-
-      const result = await updateBlockContent(documentId, {
-        block_data: JSON.stringify(content),
-        user_id: userId
-      });
-      if (isDocumentActionError(result)) {
-        setError(getErrorMessage(result));
+      await persistContent();
+    } catch (err) {
+      if (err instanceof DocumentContentSaveError) {
+        setError(err.message);
         return;
       }
-      setHasUnsavedChanges(false);
-      onUnsavedChangesChange?.(false);
-    } catch (err) {
       console.error('Failed to save document:', err);
       setError(t('messages.saveFailed', { defaultValue: 'Failed to save document' }));
     } finally {
       setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!controllerRef) return;
+    controllerRef.current = { save: persistContent };
+    return () => {
+      controllerRef.current = null;
+    };
+  }, [controllerRef, persistContent]);
 
   useEffect(() => {
     if (!editorRef) return;

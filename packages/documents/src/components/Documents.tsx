@@ -1094,6 +1094,7 @@ const Documents = ({
         }
       }
 
+      // LEVERAGE: pattern editor-json-to-block-content — could save through DocumentEditorController like KBArticleEditor's fallback path
       const content = fallbackEditorRef.current?.getJSON()
         || fallbackContent
         || { type: 'doc', content: [{ type: 'paragraph' }] };

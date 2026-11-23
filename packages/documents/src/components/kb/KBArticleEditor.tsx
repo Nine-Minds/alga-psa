@@ -35,8 +35,7 @@ import {
 } from 'lucide-react';
 import { CollaborativeEditor } from '../CollaborativeEditor';
 import type { CollaborativeEditorHandle } from '../CollaborativeEditor';
-import type { Editor } from '@tiptap/react';
-import { DocumentEditor } from '../DocumentEditor';
+import { DocumentEditor, type DocumentEditorController } from '../DocumentEditor';
 import { syncCollabSnapshot } from '../../actions/collaborativeEditingActions';
 import { updateBlockContent } from '../../actions/documentBlockContentActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -117,8 +116,9 @@ export default function KBArticleEditor({
   // flush + preview refresh.
   const collabEditorRef = useRef<CollaborativeEditorHandle | null>(null);
   const isSavingContentRef = useRef(false);
-  // Fallback-mode editor instance (DocumentEditor publishes it via editorRef).
-  const fallbackEditorRef = useRef<Editor | null>(null);
+  // Fallback-mode save handle. Saving through DocumentEditor (not by writing
+  // its JSON directly) clears its unsaved-changes registration on success.
+  const fallbackEditorControllerRef = useRef<DocumentEditorController | null>(null);
   // True while the metadata form has unsaved edits. A ref (not state) so
   // loadArticle('refresh') can read it without becoming a dependency, which
   // would re-trigger the initial-load effect.
@@ -220,18 +220,11 @@ export default function KBArticleEditor({
   // abort before touching metadata.
   const flushContent = async (docId: string): Promise<void> => {
     if (isFallbackMode) {
-      const editor = fallbackEditorRef.current;
-      if (!editor || editor.isDestroyed) {
+      const controller = fallbackEditorControllerRef.current;
+      if (!controller) {
         throw new Error('Editor is not ready');
       }
-      // LEVERAGE: pattern editor-json-to-block-content — same getJSON -> updateBlockContent shape as DocumentEditor.handleSave and the collab fallback below
-      const contentResult = await updateBlockContent(docId, {
-        block_data: JSON.stringify(editor.getJSON()),
-        user_id: userId,
-      });
-      if (isDocumentActionError(contentResult)) {
-        throw new Error(getErrorMessage(contentResult));
-      }
+      await controller.save();
       return;
     }
 
@@ -240,6 +233,7 @@ export default function KBArticleEditor({
     const result = await syncCollabSnapshot(docId);
     if (!result || !('success' in result) || !result.success) {
       // Fallback: write the client-side editor JSON directly.
+      // LEVERAGE: pattern editor-json-to-block-content — same getJSON -> updateBlockContent shape as DocumentEditor's persistContent and Documents.tsx's fallback save
       const json = collabEditorRef.current?.getJSON();
       if (!json) {
         const message =
@@ -508,7 +502,7 @@ export default function KBArticleEditor({
             userId={userId}
             initialContent={article.block_data ?? null}
             imageNamePrefix={article.slug}
-            editorRef={fallbackEditorRef}
+            controllerRef={fallbackEditorControllerRef}
             hideSaveButton
           />
         ) : (
