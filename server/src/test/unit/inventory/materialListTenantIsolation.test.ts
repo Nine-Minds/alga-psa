@@ -47,8 +47,9 @@ describe('material list tenant isolation', () => {
     expect(sql).toContain(`where "m"."tenant" = ? and "m"."${parentColumn}" = ?`);
     expect(sql).toContain('left join "service_catalog" as "sc" on "m"."service_id" = "sc"."service_id" and "sc"."tenant" = "m"."tenant"');
     expect(sql).toContain('left join "product_inventory_settings" as "pis" on "m"."service_id" = "pis"."service_id" and "pis"."tenant" = "m"."tenant"');
-    expect(sql).toMatch(/WHERE sm\.tenant = m\.tenant AND sm\.source_doc_type = \?/);
-    expect(bindings).toEqual([sourceType, 'tenant-1', 'parent-1']);
+    // Citus rejects the correlated EXISTS unless the subquery binds the tenant literally.
+    expect(sql).toMatch(/WHERE sm\.tenant = \? AND sm\.tenant = m\.tenant AND sm\.source_doc_type = \?/);
+    expect(bindings).toEqual(['tenant-1', sourceType, 'tenant-1', 'parent-1']);
     if (type === 'project') {
       expect(sql).toContain('left join "project_staging_lines" as "psl" on "m"."project_material_id" = "psl"."project_material_id" and "psl"."tenant" = "m"."tenant"');
     }

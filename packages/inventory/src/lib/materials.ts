@@ -161,11 +161,13 @@ export async function listMaterials(
         'sc.sku as sku',
         'sc.cost as catalog_unit_cost',
         'sc.cost_currency as catalog_cost_currency',
+        // Citus only plans this correlated EXISTS when the subquery is pinned to the
+        // tenant shard by a literal parameter, not just the correlation to m.tenant.
         trx.raw(`(COALESCE(pis.is_serialized, false) OR EXISTS (
           SELECT 1 FROM stock_movements sm
-          WHERE sm.tenant = m.tenant AND sm.source_doc_type = ?
+          WHERE sm.tenant = ? AND sm.tenant = m.tenant AND sm.source_doc_type = ?
             AND sm.source_doc_id = m.?? AND sm.unit_id IS NOT NULL
-        )) as is_serialized`, [cfg.sourceDocType, cfg.pk]),
+        )) as is_serialized`, [tenant, cfg.sourceDocType, cfg.pk]),
       )
       .orderBy('m.created_at', 'desc');
     scoped.tenantJoin(query, 'service_catalog as sc', 'm.service_id', 'sc.service_id', { type: 'left' });
