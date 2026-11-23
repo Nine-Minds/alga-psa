@@ -36,6 +36,20 @@ describe('ticketReferenceSearch', () => {
     expect(matches('TICKET-2026-0002826', 'ALGA-2026-0002826')).toBe(false);
   });
 
+  it('keeps the literal TICKET prefix alongside the email-label interpretation', () => {
+    const query = parseTicketSearchQuery('TICKET ALGA 2026 0002826');
+    expect(query.literalReference).toBe('ticketalga20260002826');
+    expect(ticketNumberMatchesQuery('TICKET-ALGA-2026-0002826', query)).toBe(true);
+    expect(matches('Ticket ALGA-2026-0002826', 'ALGA-2026-0002826')).toBe(true);
+  });
+
+  it('matches a complete labeled email reference exactly, while retaining partial matches', () => {
+    const query = parseTicketSearchQuery('Ticket #ALGA-2026-0002826');
+    expect(ticketNumberMatchesQuery('ALGA-2026-0002826', query)).toBe(true);
+    expect(ticketNumberMatchesQuery('TICKET-ALGA-2026-0002826', query)).toBe(false);
+    expect(matches('2826', 'ALGA-2026-0002826')).toBe(true);
+  });
+
   it('does not match a different number or an empty reference', () => {
     expect(matches('ALGA-2026-0009999')).toBe(false);
     expect(matches('Ticket #')).toBe(false);

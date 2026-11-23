@@ -67,13 +67,33 @@ describe('buildTicketSearchPredicate', () => {
   });
 
   it.each([
+    'TICKET ALGA 2026 0002826',
     'TICKET-ALGA-2026-0002826',
+    'TICKETALGA20260002826',
+  ])('matches a loaded literal TICKET-prefixed number for %j', (query) => {
+    const results = [ticketAlgaNumber].filter(buildTicketSearchPredicate(query));
+    expect(results.map(({ ticket_number }) => ticket_number)).toEqual(['TICKET-ALGA-2026-0002826']);
+  });
+
+  it.each([
     'TICKET -ALGA-2026-0002826',
     'TICKET- ALGA-2026-0002826',
     'TICKET - ALGA-2026-0002826',
-    'TICKETALGA20260002826',
-  ])('preserves the hyphenated TICKET prefix for %j', (query) => {
-    const results = [ticketAlgaNumber, algaNumber].filter(buildTicketSearchPredicate(query));
+  ])('preserves separators around the literal TICKET prefix for %j', (query) => {
+    const results = [ticketAlgaNumber].filter(buildTicketSearchPredicate(query));
     expect(results.map(({ ticket_number }) => ticket_number)).toEqual(['TICKET-ALGA-2026-0002826']);
+  });
+
+  it('returns only the exact ALGA number for a full labeled reference and both numbers for its suffix', () => {
+    const overlappingNumbers = [
+      { title: 'No matching title', ticket_number: 'ALGA-2026-0002826', status_name: 'No matching status', priority_name: 'No matching priority' },
+      { title: 'No matching title', ticket_number: 'TICKET-ALGA-2026-0002826', status_name: 'No matching status', priority_name: 'No matching priority' },
+    ];
+    const run = (query: string) => overlappingNumbers
+      .filter(buildTicketSearchPredicate(query))
+      .map(({ ticket_number }) => ticket_number);
+
+    expect(run('Ticket #ALGA-2026-0002826')).toEqual(['ALGA-2026-0002826']);
+    expect(run('2826')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
   });
 });

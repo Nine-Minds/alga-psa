@@ -9,10 +9,14 @@ export interface TicketSearchQuery {
   /** The query trimmed of surrounding whitespace; use for title/status/priority matching. */
   text: string;
   /**
-   * The query as a ticket reference: leading "Ticket"/"#" removed, hyphens and spaces removed,
-   * lowercased. Empty when nothing is left to compare.
+   * The query as an email-labeled ticket reference: leading "Ticket"/"#" removed, separators
+   * removed, and lowercased. Empty when nothing is left to compare.
    */
   reference: string;
+  /** The literal query as a ticket number, with leading # and separators removed. */
+  literalReference: string;
+  /** A complete email reference should match the stored number exactly. */
+  exactReference: boolean;
 }
 
 export function compactTicketReference(value: string): string {
@@ -21,15 +25,21 @@ export function compactTicketReference(value: string): string {
 
 export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
-  const reference = compactTicketReference(cleanSearchIdentifierQuery(text.replace(LEADING_TICKET_LABEL, '')));
-  return { text, reference };
+  const cleaned = cleanSearchIdentifierQuery(text);
+  const reference = compactTicketReference(cleanSearchIdentifierQuery(cleaned.replace(LEADING_TICKET_LABEL, '')));
+  const literalReference = compactTicketReference(cleaned);
+  const hasEmailLabel = /^ticket\s*#/i.test(cleaned) || /^#/i.test(cleaned);
+  const exactReference = hasEmailLabel && /^[a-z]+\d{4,}$/i.test(reference);
+  return { text, reference, literalReference, exactReference };
 }
 
-/** Substring match on the separator-insensitive form, so "2826" finds "ALGA-2026-0002826". */
+/** Separator-insensitive number matching; complete email references match exactly, short queries by substring. */
 export function ticketNumberMatchesQuery(
   ticketNumber: string | null | undefined,
   query: TicketSearchQuery
 ): boolean {
-  if (!ticketNumber || !query.reference) return false;
-  return compactTicketReference(ticketNumber).includes(query.reference);
+  if (!ticketNumber || (!query.reference && !query.literalReference)) return false;
+  const number = compactTicketReference(ticketNumber);
+  if (query.exactReference) return number === query.reference;
+  return [query.literalReference, query.reference].some((reference) => reference && number.includes(reference));
 }
