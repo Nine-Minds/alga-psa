@@ -8,7 +8,8 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import { isLicensedUserType } from '@alga-psa/types';
 import {
-  brandDecorator,
+  decoratorFor,
+  resolveBrandDecoration,
   classifyTenantTemplate,
   deriveTemplate,
   copiedFromSystemRowFor,
@@ -35,7 +36,7 @@ import {
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
 } from '../../lib/emailBranding';
-import { NO_DERIVED_PROVENANCE, isUntouchedDerivation, stampDerivedTemplate, type DerivedProvenance } from '@alga-psa/email/derivedTemplates';
+import { NO_DERIVED_PROVENANCE, isUntouchedDerivation, stampDerivedTemplate, type DerivedProvenance, type StoredBrandDecoration } from '@alga-psa/email/derivedTemplates';
 import { TICKET_EMAIL_TEMPLATES_COPIED_FROM } from '../../lib/templateVariables/ticketEmailAudience';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
@@ -98,6 +99,7 @@ interface TemplateRowShape {
   category?: string;
   derived_from_system_id?: number | null;
   derived_palette?: EmailPaletteTokens | null;
+  derived_decoration?: StoredBrandDecoration | null;
   derived_snapshot_hash?: string | null;
 }
 
@@ -119,7 +121,7 @@ function withDerivedRowsResolved<T extends { tenantTemplates: TemplateRowShape[]
     tenantTemplates: rows.tenantTemplates.map((row) => {
       const systemRow = systemByKey.get(rowKey(row.name, row.language_code));
       if (!systemRow || !isUntouchedDerivation(row)) return row;
-      return { ...row, ...deriveTemplate(systemRow, appliedPalette ?? row.derived_palette!) };
+      return { ...row, ...deriveTemplate(systemRow, appliedPalette ?? row.derived_palette!, decoratorFor(row.derived_decoration)) };
     }),
   };
 }
@@ -294,7 +296,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     name,
     language,
     overwrite,
-    decorate: brandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    decorate: decoratorFor(resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target)),
     copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
@@ -328,7 +330,9 @@ export const applyEmailBrandingAction = withAuth(async (
   });
 
   const target = resolveEmailPalette(context.palette);
-  const decorate = brandDecorator(context.palette, context.settings.branding, isEnterprise, target);
+  // One decision, used twice: the options decorate what is written and are recorded on the row.
+  const decoration = resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target);
+  const decorate = decoratorFor(decoration);
   const plan = planEmailBrandingApply({
     systemRows: context.systemTemplates,
     tenantRows: context.tenantTemplates,
@@ -347,7 +351,7 @@ export const applyEmailBrandingAction = withAuth(async (
     systemRow: TemplateRowShape | undefined,
     content: { subject: string; html_content: string; text_content: string },
   ): DerivedProvenance => (
-    systemRow ? stampDerivedTemplate(content, systemRow, target, decorate) : NO_DERIVED_PROVENANCE
+    systemRow ? stampDerivedTemplate(content, systemRow, target, decoration) : NO_DERIVED_PROVENANCE
   );
 
   const written: EmailBrandingApplyResult['written'] = [];
@@ -365,7 +369,7 @@ export const applyEmailBrandingAction = withAuth(async (
         for (const batch of chunked(inserts, INSERT_BATCH_SIZE)) {
           await tenantScopedTable(trx, "tenant_email_templates", tenant).insert(batch.map((insert) => {
             const content = { subject: insert.subject, html_content: insert.html, text_content: insert.text };
-            const { derived_from_system_id, derived_palette, derived_snapshot_hash } = provenanceFor(
+            const { derived_from_system_id, derived_palette, derived_decoration, derived_snapshot_hash } = provenanceFor(
               systemByKey.get(rowKey(insert.name, insert.language)),
               content,
             );
@@ -377,6 +381,7 @@ export const applyEmailBrandingAction = withAuth(async (
               system_template_id: insert.systemTemplateId,
               derived_from_system_id,
               derived_palette,
+              derived_decoration,
               derived_snapshot_hash,
               created_at: now,
               updated_at: now,
@@ -404,6 +409,7 @@ export const applyEmailBrandingAction = withAuth(async (
               ...(update.text !== undefined || derived ? { text_content: update.text ?? existing?.text_content } : {}),
               derived_from_system_id: provenance.derived_from_system_id,
               derived_palette: provenance.derived_palette,
+              derived_decoration: provenance.derived_decoration,
               derived_snapshot_hash: provenance.derived_snapshot_hash,
               updated_at: now,
             });

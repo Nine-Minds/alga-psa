@@ -4,8 +4,8 @@
  * Tenant rows the branding tool wrote before provenance existed are frozen copies of a system body
  * of their day. For each tenant row without provenance this tries the current system body and the
  * checked-in catalogue of prior bodies, renders each candidate exactly the way the apply flow
- * wrote it (palette, then brand decoration) and compares it with the row, brand assets normalised
- * away. Only an exact match is stamped; from then on the resolver serves the row as the *current*
+ * wrote it (palette, then the brand decoration read off the row itself) and compares it with the
+ * row byte for byte. Only an exact match is stamped, together with the decoration found; from then on the resolver serves the row as the *current*
  * system template in the tenant's brand. A row that matches nothing is somebody's edit and is left
  * exactly as it is.
  *
@@ -20,15 +20,15 @@
 import type { Knex } from 'knex';
 import { tenantDb, type TenantDb } from '@alga-psa/db';
 import { applyEmailPalette } from './branding/applyEmailPalette';
-import { withoutBrandAssets } from './branding/classifyTenantTemplate';
+import { decorateBrandedHtml, readBrandDecoration } from './branding/brandAssets';
 import { STOCK_EMAIL_PALETTE } from './branding/stockPalette';
 import type { EmailPaletteTokens } from './branding/types';
 import {
   templateSnapshotHash,
-  tenantBrandDecorator,
+  normalizeDecoration,
   readTenantBrand,
   type DerivedProvenance,
-  type TenantBrand,
+  type StoredBrandDecoration,
 } from './derivedTemplates';
 import { PRIOR_SYSTEM_BODIES, type PriorSystemBody } from './priorSystemBodies.generated';
 
@@ -53,34 +53,35 @@ export interface BackfillMatch {
   /** Which body matched: the current one, or the label of a prior one. */
   matchedBody: 'current' | string;
   palette: EmailPaletteTokens;
+  /** The decoration the row itself carries; recorded so the resolver replays exactly it. */
+  decoration: StoredBrandDecoration;
 }
 
 /**
  * Does this untouched-looking row equal some known system body, written by the apply flow?
- * Subject and plain text must match exactly; the HTML is compared after brand assets (logo,
- * attribution, gradient fallback) are normalised away, as the classifier does.
+ * The decoration is read off the row (logo tag and alt, attribution present or not), the
+ * candidate is rebuilt with it, and the HTML must match **byte for byte**: no normalisation.
+ * Whatever the resolver will later serve for this row is then the stored row's own brand
+ * assets with the system body's current content, and a row whose decoration cannot be
+ * reproduced exactly matches nothing and is left as it is.
  */
 export function matchDerivedRow(
   row: BackfillTenantRow,
   systemRow: BackfillSystemRow,
   priorBodies: readonly PriorSystemBody[],
   palettes: readonly EmailPaletteTokens[],
-  brand: TenantBrand,
 ): BackfillMatch | null {
   const candidates: Array<{ label: 'current' | string; body: PriorSystemBody }> = [
     { label: 'current', body: { label: 'current', ...pickContent(systemRow) } },
     ...priorBodies.map((body) => ({ label: body.label, body })),
   ];
+  const decoration = normalizeDecoration(readBrandDecoration(row.html_content));
 
   for (const palette of palettes) {
     for (const { label, body } of candidates) {
       if (body.subject !== row.subject || body.text_content !== row.text_content) continue;
-      const decorate = tenantBrandDecorator(brand, palette);
-      const rendered = applyEmailPalette(body.html_content, STOCK_EMAIL_PALETTE, palette);
-      const expected = decorate ? decorate(rendered) : rendered;
-      if (withoutBrandAssets(row.html_content) === withoutBrandAssets(expected)) {
-        return { systemRow, matchedBody: label, palette };
-      }
+      const expected = decorateBrandedHtml(applyEmailPalette(body.html_content, STOCK_EMAIL_PALETTE, palette), decoration);
+      if (row.html_content === expected) return { systemRow, matchedBody: label, palette, decoration };
     }
   }
   return null;
@@ -144,7 +145,9 @@ export async function backfillDerivedTemplatesForTenant(
       return;
     }
 
-    const rows = await db.table('tenant_email_templates').whereNull('derived_snapshot_hash') as BackfillTenantRow[];
+    // No provenance yet, or stamped before the decoration was recorded (those never serve as derived).
+    const rows = await db.table('tenant_email_templates')
+      .where((q: Knex.QueryBuilder) => q.whereNull('derived_snapshot_hash').orWhereNull('derived_decoration')) as BackfillTenantRow[];
     const systemRows = await db.table('system_email_templates') as BackfillSystemRow[];
     const systemByKey = new Map(systemRows.map((row) => [`${row.name}::${row.language_code}`, row]));
     const brand = await readTenantBrand(db);
@@ -157,17 +160,18 @@ export async function backfillDerivedTemplatesForTenant(
       summary.considered += 1;
 
       const match = matchDerivedRow(
-        row, systemRow, PRIOR_SYSTEM_BODIES[row.name]?.[row.language_code!] ?? [], palettes, brand,
+        row, systemRow, PRIOR_SYSTEM_BODIES[row.name]?.[row.language_code!] ?? [], palettes,
       );
       if (!match) {
         summary.unmatched += 1;
         continue;
       }
 
-      // The hash covers the row exactly as it stands; the decoration is brand assets the resolver re-applies.
+      // The hash covers the row exactly as it stands; the decoration is the one found on the row.
       const provenance: DerivedProvenance = {
         derived_from_system_id: match.systemRow.id,
         derived_palette: match.palette,
+        derived_decoration: match.decoration,
         derived_snapshot_hash: templateSnapshotHash(row),
       };
       summary.stamped.push({ name: row.name, language: row.language_code!, matchedBody: match.matchedBody });

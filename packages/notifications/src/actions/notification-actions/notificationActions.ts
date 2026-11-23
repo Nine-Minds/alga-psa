@@ -25,7 +25,7 @@ import {
   isUntouchedDerivation,
   readTenantBrand,
   stampDerivedTemplate,
-  tenantBrandDecorator,
+  tenantBrandDecoration,
 } from '@alga-psa/email/derivedTemplates';
 import {
   notificationActionErrorFrom,
@@ -155,7 +155,6 @@ export const getTemplatesAction = withAuth(async (
     // What the list, the editor and the preview show is what is sent: an untouched derived row
     // reads as the current standard template in the tenant's brand, and a row the tenant owns is
     // checked against the standard template for variables it no longer uses.
-    const brand = await readTenantBrand(db);
     const systemByKey = new Map<string, SystemEmailTemplate>(
       systemTemplates.map((row: SystemEmailTemplate): [string, SystemEmailTemplate] => [`${row.name}::${row.language_code}`, row]),
     );
@@ -163,7 +162,7 @@ export const getTemplatesAction = withAuth(async (
       const systemRow = systemByKey.get(`${row.name}::${row.language_code}`);
       if (!systemRow) return { ...row, derived: false, missingVariables: [] };
       if (isUntouchedDerivation(row)) {
-        return { ...row, ...derivedContentFor(row, systemRow, brand), derived: true, missingVariables: [] };
+        return { ...row, ...derivedContentFor(row, systemRow), derived: true, missingVariables: [] };
       }
       return {
         ...row,
@@ -196,7 +195,7 @@ export const createTenantTemplateAction = withAuth(async (
     const content = { ...template, ...NO_DERIVED_PROVENANCE };
     if (!systemTemplate) return content;
     const brand = await readTenantBrand(tenantDb(trx, tenant));
-    return stampDerivedTemplate(content, systemTemplate, STOCK_EMAIL_PALETTE, tenantBrandDecorator(brand, STOCK_EMAIL_PALETTE));
+    return stampDerivedTemplate(content, systemTemplate, STOCK_EMAIL_PALETTE, tenantBrandDecoration(brand, STOCK_EMAIL_PALETTE));
   });
 
   const notificationService = getEmailNotificationService();
@@ -242,7 +241,7 @@ export const cloneSystemTemplateAction = withAuth(async (
       };
 
       // An untouched clone is the standard template: it follows it until the tenant edits it.
-      const stamped = stampDerivedTemplate(template, systemTemplate, target, tenantBrandDecorator(brand, target));
+      const stamped = stampDerivedTemplate(template, systemTemplate, target, tenantBrandDecoration(brand, target));
 
       const notificationService = getEmailNotificationService();
       const created = await notificationService.createTenantTemplate(tenant, stamped);
@@ -616,7 +615,7 @@ export const sendTestEmailAction = withAuth(async (
         .where({ name: template.name, language_code: template.language_code })
         .first();
       if (systemRow) {
-        template = { ...template, ...derivedContentFor(template, systemRow, await readTenantBrand(tenantDb(trx, tenant))) };
+        template = { ...template, ...derivedContentFor(template, systemRow) };
       }
     }
 

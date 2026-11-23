@@ -37,7 +37,7 @@ const SETTINGS_WRITABLE_COLUMNS = ['is_enabled', 'default_dont_notify_customer',
 // (cleared on every tenant edit), and a payload that names none of them leaves them alone.
 const TEMPLATE_WRITABLE_COLUMNS = [
   'subject', 'html_content', 'text_content', 'language_code',
-  'derived_from_system_id', 'derived_palette', 'derived_snapshot_hash',
+  'derived_from_system_id', 'derived_palette', 'derived_decoration', 'derived_snapshot_hash',
 ] as const;
 
 function pickDefined<T extends object>(source: T, columns: readonly (keyof T & string)[]): Partial<T> {

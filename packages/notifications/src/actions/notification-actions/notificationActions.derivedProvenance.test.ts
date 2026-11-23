@@ -54,6 +54,7 @@ describe('template actions and derived provenance', () => {
       html_content: NEW.html_content,
       derived_from_system_id: 7,
       derived_palette: STOCK_EMAIL_PALETTE,
+      derived_decoration: { hideAttribution: false },
       derived_snapshot_hash: expect.stringMatching(/^[0-9a-f]{64}$/),
     }));
   });
@@ -77,7 +78,7 @@ describe('template actions and derived provenance', () => {
     } as any);
 
     expect(service.createTenantTemplate.mock.calls[0][1]).toMatchObject({
-      derived_from_system_id: null, derived_palette: null, derived_snapshot_hash: null,
+      derived_from_system_id: null, derived_palette: null, derived_decoration: null, derived_snapshot_hash: null,
     });
   });
 
@@ -86,7 +87,7 @@ describe('template actions and derived provenance', () => {
     const actions = await import('./notificationActions');
     await actions.updateTenantTemplateAction(9, { html_content: '<p>edited</p>' });
     expect(service.updateTenantTemplate).toHaveBeenCalledWith(TENANT, 9, {
-      html_content: '<p>edited</p>', derived_from_system_id: null, derived_palette: null, derived_snapshot_hash: null,
+      html_content: '<p>edited</p>', derived_from_system_id: null, derived_palette: null, derived_decoration: null, derived_snapshot_hash: null,
     });
   });
 

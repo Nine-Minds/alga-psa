@@ -3,7 +3,8 @@ import {
   BRAND_LOGO_MARKER,
   STOCK_EMAIL_PALETTE,
   applyEmailPalette,
-  brandDecorator,
+  decoratorFor,
+  resolveBrandDecoration,
   resolveEmailPalette,
 } from '@alga-psa/email/branding';
 import { stampDerivedTemplate } from '@alga-psa/email/derivedTemplates';
@@ -33,7 +34,8 @@ const TARGET = resolveEmailPalette({ primary: '#aa2200', secondary: '#112233' })
 const OLD_BODY = quoteBody('quoteEmail', 'en', false);
 const NEW_BODY = quoteBody('quoteEmail', 'en', true);
 const BRANDING = { logoUrl: '/logo.png', clientName: 'RightPath' };
-const decorate = brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+const decoration = resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+const decorate = decoratorFor(decoration);
 
 function storedDerivedRow() {
   const stored = {
@@ -43,7 +45,7 @@ function storedDerivedRow() {
   };
   return {
     id: 1, tenant: 'tenant-1', name: 'quote-email', language_code: 'en', ...stored,
-    ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, decorate),
+    ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, decoration),
   };
 }
 
@@ -82,7 +84,7 @@ describe('EmailNotificationService.getEffectiveTemplate', () => {
     const row = storedDerivedRow();
     const edited = {
       ...row, html_content: `${row.html_content}<p>our own footer</p>`,
-      derived_from_system_id: null, derived_palette: null, derived_snapshot_hash: null,
+      derived_from_system_id: null, derived_palette: null, derived_decoration: null, derived_snapshot_hash: null,
     };
     seed({ tenant: [edited] });
     const template: any = await (await service()).getEffectiveTemplate('tenant-1', 'quote-email', 'en');

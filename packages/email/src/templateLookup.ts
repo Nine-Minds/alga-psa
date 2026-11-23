@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import type { TenantDb } from '@alga-psa/db';
-import { derivedContentFor, isUntouchedDerivation, readTenantBrand, type DerivedProvenance } from './derivedTemplates';
+import { derivedContentFor, isUntouchedDerivation, type DerivedProvenance } from './derivedTemplates';
 
 export interface EmailTemplateRow extends Partial<DerivedProvenance> {
   id: number | string;
@@ -41,8 +41,8 @@ async function findTemplateRow(
 /**
  * The tenant row as it reads today when it is an untouched derivation of a system
  * template: the system template's current subject, html and text, recolored with
- * the palette stored on the row and decorated with the tenant's brand assets
- * through the very decorator the apply flow uses. Null — meaning "serve the row
+ * the palette stored on the row and decorated with the decoration stored on the row
+ * (never the tenant's current settings). Null — meaning "serve the row
  * itself" — when the row carries no provenance, was edited after stamping, or the
  * system row (in the row's own language) is gone.
  */
@@ -57,7 +57,6 @@ async function deriveFromSystem(db: TenantDb, own: EmailTemplateRow): Promise<Em
   const derived = derivedContentFor(
     own,
     { subject: system.subject, html_content: system.html_content, text_content: system.text_content ?? '' },
-    await readTenantBrand(db),
   );
   return { ...own, ...derived };
 }

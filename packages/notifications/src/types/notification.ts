@@ -1,4 +1,5 @@
 import type { EmailPaletteTokens } from '@alga-psa/email/branding';
+import type { StoredBrandDecoration } from '@alga-psa/email/derivedTemplates';
 
 export interface NotificationSettings {
   id: number;
@@ -42,6 +43,7 @@ export interface TenantEmailTemplate {
   /** Set while the row is an untouched derivation of a system template (see lookupEmailTemplate). */
   derived_from_system_id?: number | null;
   derived_palette?: EmailPaletteTokens | null;
+  derived_decoration?: StoredBrandDecoration | null;
   derived_snapshot_hash?: string | null;
   created_at: string;
   updated_at: string;

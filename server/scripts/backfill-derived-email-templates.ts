@@ -2,14 +2,18 @@
 /**
  * Stamp derived-template provenance on tenant email templates the branding tool wrote before
  * provenance existed (alga-2026-0002820), so they follow the current system template from then on.
- * Rows that are exact renderings of the current system body or a catalogued prior body (palette +
- * brand decoration) are stamped; every other row is left untouched. Counts and the
+ * Rows that are BYTE-EXACT renderings of the current system body or a catalogued prior body (palette,
+ * then the brand decoration read off the row itself: logo tag and alt, attribution present or not) are
+ * stamped, together with that decoration (derived_decoration); every other row is left untouched.
+ * Rows stamped before derived_decoration existed are not served as derived and are re-stamped here. Counts and the
  * (tenant, template, language) triples stamped are printed, never template content.
  *
- * Idempotent: rows that already carry provenance are never read again, and a finished tenant is
+ * Idempotent: rows that already carry provenance and a decoration are never read again, and a finished tenant is
  * marked in tenant_settings (settings.emailTemplateProvenanceBackfill) and skipped on a re-run.
  *
- * Run after the 20261123090000 migration, inside a server pod. Dry run first:
+ * Run after BOTH migrations, inside a server pod:
+ *   20261123090000_add_derived_provenance_to_tenant_email_templates (provenance columns)
+ *   20261123121500_add_derived_decoration_to_tenant_email_templates (derived_decoration) Dry run first:
  *   npx tsx scripts/backfill-derived-email-templates.ts --dry-run [--tenant <id>]
  *   npx tsx scripts/backfill-derived-email-templates.ts [--tenant <id>] [--force]
  *

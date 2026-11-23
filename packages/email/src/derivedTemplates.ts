@@ -3,7 +3,8 @@ import { isEnterprise } from '@alga-psa/core/features';
 import type { TenantDb } from '@alga-psa/db';
 // Specific modules, not the branding barrel: this loads in operator scripts and the send path,
 // which have no use for the barrel's settings-panel helpers (and their transitive imports).
-import { brandDecorator } from './branding/brandDecorator';
+import type { BrandDecorationOptions } from './branding/brandAssets';
+import { decoratorFor, resolveBrandDecoration, type ResolvedBrandDecoration } from './branding/brandDecorator';
 import { deriveTemplate } from './branding/deriveTemplate';
 import { readEmailBrandingPalette } from './branding/readEmailBrandingPalette';
 import type { EmailBrandingPalette, EmailPaletteTokens } from './branding/types';
@@ -17,8 +18,20 @@ import type { EmailBrandingPalette, EmailPaletteTokens } from './branding/types'
 export interface DerivedProvenance {
   derived_from_system_id: number | null;
   derived_palette: EmailPaletteTokens | null;
+  /**
+   * The exact brand decoration (logo variant + alt, attribution) the row was
+   * written with. Part of the derivation's provenance: the resolver replays
+   * this, never the tenant's current settings. Null on a row stamped before it
+   * was recorded; such a row is not served as derived.
+   */
+  derived_decoration: StoredBrandDecoration | null;
   derived_snapshot_hash: string | null;
 }
+
+/** An undecorated derivation (Community, or a stock clone with no brand): explicit, so it is distinguishable from "not recorded". */
+export const NO_BRAND_DECORATION: StoredBrandDecoration = { hideAttribution: false };
+
+export type StoredBrandDecoration = ResolvedBrandDecoration;
 
 export interface SnapshotContent {
   subject: string | null | undefined;
@@ -30,6 +43,7 @@ export interface SnapshotContent {
 export const NO_DERIVED_PROVENANCE: DerivedProvenance = {
   derived_from_system_id: null,
   derived_palette: null,
+  derived_decoration: null,
   derived_snapshot_hash: null,
 };
 
@@ -52,9 +66,11 @@ export function stampDerivedTemplate<R extends SnapshotContent & { subject: stri
   row: R,
   systemRow: { id: number; subject: string; html_content: string; text_content: string },
   palette: EmailPaletteTokens,
-  decorate?: (html: string) => string,
+  decoration?: BrandDecorationOptions,
 ): R & DerivedProvenance {
-  const derived = deriveTemplate(systemRow, palette, decorate);
+  // Verified through the very function the resolver serves with, over the options that get recorded.
+  const recorded = normalizeDecoration(decoration);
+  const derived = deriveTemplate(systemRow, palette, decoratorFor(recorded));
   const isDerivation = derived.subject === row.subject
     && derived.html_content === row.html_content
     && derived.text_content === row.text_content;
@@ -64,7 +80,17 @@ export function stampDerivedTemplate<R extends SnapshotContent & { subject: stri
     ...row,
     derived_from_system_id: systemRow.id,
     derived_palette: palette,
+    derived_decoration: recorded,
     derived_snapshot_hash: templateSnapshotHash(row),
+  };
+}
+
+/** Options as stored: every field decided, no undefined keys (jsonb round-trips exactly). */
+export function normalizeDecoration(decoration: BrandDecorationOptions | null | undefined): StoredBrandDecoration {
+  if (!decoration) return NO_BRAND_DECORATION;
+  return {
+    ...(decoration.logo ? { logo: { variant: decoration.logo.variant, alt: decoration.logo.alt ?? '' } } : {}),
+    hideAttribution: decoration.hideAttribution === true,
   };
 }
 
@@ -82,31 +108,31 @@ export async function readTenantBrand(db: TenantDb): Promise<TenantBrand> {
 
 /**
  * The decoration the tenant's saved brand asks of a template painted with
- * `target`: the same decorator the apply flow builds, from the tenant's own
- * settings. Undefined on Community or when nothing is configured.
+ * `target`, for a WRITER to apply and record. Never for serving: a served
+ * derived row replays its stored `derived_decoration`. Undefined on Community.
  */
-export function tenantBrandDecorator(brand: TenantBrand, target: EmailPaletteTokens): ((html: string) => string) | undefined {
-  return brandDecorator(brand.palette ?? {}, brand.branding, isEnterprise, target);
+export function tenantBrandDecoration(brand: TenantBrand, target: EmailPaletteTokens): ResolvedBrandDecoration | undefined {
+  return resolveBrandDecoration(brand.palette ?? {}, brand.branding, isEnterprise, target);
 }
 
 /**
  * What an untouched derived row reads as today: the current system template in the
- * row's own stored palette, decorated with the tenant's brand. The single
- * derivation shared by the resolver (sends), the settings list and its preview.
+ * row's own stored palette, decorated with the row's own stored decoration. Nothing
+ * here reads the tenant's current settings. The single derivation shared by the
+ * resolver (sends), the settings list and its preview.
  */
 export function derivedContentFor(
-  row: { derived_palette?: EmailPaletteTokens | null },
+  row: { derived_palette?: EmailPaletteTokens | null; derived_decoration?: BrandDecorationOptions | null },
   systemRow: { subject: string; html_content: string; text_content: string },
-  brand: TenantBrand,
 ) {
-  const palette = row.derived_palette!;
-  return deriveTemplate(systemRow, palette, tenantBrandDecorator(brand, palette));
+  return deriveTemplate(systemRow, row.derived_palette!, decoratorFor(row.derived_decoration));
 }
 
 /** A row still serves as a derivation only if nobody changed it since it was stamped. */
 export function isUntouchedDerivation(row: SnapshotContent & Partial<DerivedProvenance>): boolean {
   return row.derived_from_system_id != null
     && !!row.derived_palette
+    && !!row.derived_decoration
     && !!row.derived_snapshot_hash
     && templateSnapshotHash(row) === row.derived_snapshot_hash;
 }

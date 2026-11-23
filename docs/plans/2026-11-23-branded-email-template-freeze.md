@@ -62,15 +62,17 @@ it needs no fan-out across 47 tenants at deploy time.
 
 ### 1. Provenance on the row (schema)
 
-`tenant_email_templates` gains three nullable columns:
+`tenant_email_templates` gains four nullable columns (three in `20261123090000_add_derived_provenance_…`,
+`derived_decoration` in `20261123121500_add_derived_decoration_…`; the backfill must run after both):
 
 | column | meaning |
 | --- | --- |
 | `derived_from_system_id` | `system_email_templates.id` this row was derived from |
 | `derived_palette` (jsonb) | the palette the apply flow used for *this* row |
+| `derived_decoration` (jsonb) | the exact `BrandDecorationOptions` the apply flow used (`{ logo?: { variant, alt }, hideAttribution }`); `{ hideAttribution: false }` for an undecorated row |
 | `derived_snapshot_hash` (text) | sha256 of the row's `subject\0html\0text` **as written** |
 
-The stored palette (not the tenant's current settings) is what makes a derivation reproducible: if
+The stored palette **and decoration** (not the tenant's current settings) are what make a derivation reproducible: if
 the tenant later changes their brand palette without re-applying, the derivation does not silently
 change under them.
 
@@ -89,11 +91,12 @@ own = tenant row (name, locale)
 if own && own.derived_from_system_id && hash(own.subject, own.html, own.text) === own.derived_snapshot_hash
     system = current system row (name, locale)
     if system: return { source: 'tenant-derived',
-                         template: decorate(applyEmailPalette(system.html, STOCK, own.derived_palette), branding),
+                         template: decorateBrandedHtml(applyEmailPalette(system.html, STOCK, own.derived_palette), own.derived_decoration),
                          subject: system.subject, ... }
 return own ?? system      // unchanged behaviour otherwise
 ```
 
+- A row with no recorded `derived_decoration` is **not** served as derived (never decorated from current settings).
 - `decorate` must be the *same composition* the apply flow uses. Today it is `buildBrandDecorator`
   inside a `withAuth` action; extract its pure core to `@alga-psa/email/branding`
   (`brandDecorator(palette, branding, isEnterprise, target)`) and call it from both. `LEVERAGE:
@@ -122,9 +125,12 @@ normalisation and the classifier, which live in TS and cannot be required from a
 for every `(tenant, name, language)` tenant row without provenance, for every **known system body**
 of that template:
 1. render `knownBody` → `decorate(applyEmailPalette(knownBody, STOCK, palette))`
-2. compare with the tenant row after the classifier's existing `withoutBrandAssets` normalisation
-3. on equality, stamp `derived_from_system_id` (current system row), `derived_palette` (tenant's
-   applied palette), `derived_snapshot_hash` (hash of the row as it stands).
+2. read the decoration off the row itself (logo tag variant + alt, attribution present or not) and rebuild
+   with it: `decorateBrandedHtml(applyEmailPalette(knownBody, STOCK, palette), thatDecoration)`
+3. on **byte-exact** equality (no normalisation), stamp `derived_from_system_id` (current system row),
+   `derived_palette` (tenant's applied palette or stock), `derived_decoration` (the decoration found),
+   `derived_snapshot_hash` (hash of the row as it stands). So the served email differs from the stored one
+   only by the system template's content change.
 
 "Known system bodies" = the current system row plus a checked-in catalogue of prior bodies that the
 template modules can still render. They already do this: `quoteEmail.cjs` / `quoteReminder.cjs`

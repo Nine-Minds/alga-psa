@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTemplateSampleData } from '../../lib/templateSampleData';
 
-const NO_PROVENANCE = { derived_from_system_id: null, derived_palette: null, derived_snapshot_hash: null };
+const NO_PROVENANCE = { derived_from_system_id: null, derived_palette: null, derived_decoration: null, derived_snapshot_hash: null };
 const SESSION_TENANT = 'session-tenant';
 const OTHER_TENANT = 'victim-tenant';
 const SESSION_USER = { user_id: 'user-1', user_type: 'internal', tenant: SESSION_TENANT };

@@ -4,6 +4,8 @@ import {
   STOCK_EMAIL_PALETTE,
   applyEmailPalette,
   brandDecorator,
+  decoratorFor,
+  resolveBrandDecoration,
   decorateBrandedHtml,
   isDarkEmailHeader,
   pickBrandLogoVariant,
@@ -43,7 +45,7 @@ function tables(overrides: { system?: any[]; tenant?: any[] } = {}) {
     system_email_templates: overrides.system ?? [{ id: 7, name: 'quote-email', language_code: 'en', ...NEW_BODY }],
     tenant_email_templates: overrides.tenant ?? [{
       id: 1, name: 'quote-email', language_code: 'en', ...stored,
-      ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET)),
+      ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET)),
     }],
     tenant_settings: [{ settings: SETTINGS }],
   };
@@ -99,7 +101,7 @@ describe('lookupEmailTemplate derived rows', () => {
   it('serves the stored row when the system template has no row in the row\'s language', async () => {
     const stored = applied(OLD_BODY);
     const data = tables({
-      tenant: [{ id: 2, name: 'quote-email', language_code: 'fr', ...stored, ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET)) }],
+      tenant: [{ id: 2, name: 'quote-email', language_code: 'fr', ...stored, ...stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET)) }],
     });
     const found = await lookupEmailTemplate(fakeTenantDb(data), 'quote-email', 'fr');
     expect(found?.source).toBe('tenant');
@@ -109,7 +111,7 @@ describe('lookupEmailTemplate derived rows', () => {
   it('derives per language from that language\'s system row', async () => {
     const oldFr = quoteBody('quoteEmail', 'fr', false);
     const newFr = quoteBody('quoteEmail', 'fr', true);
-    const decorate = brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+    const decorate = resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
     const stored = applied(oldFr);
     const data = tables({
       system: [
@@ -130,6 +132,26 @@ describe('lookupEmailTemplate derived rows', () => {
     const found = await lookupEmailTemplate(fakeTenantDb(data), 'quote-email', 'en');
     expect(found!.template.html_content).toContain('#aa2200');
     expect(found!.template.html_content).not.toContain('#00aa00');
+  });
+
+  it('decorates from the row\'s stored decoration, never from the tenant\'s current settings', async () => {
+    const data = tables();
+    // The tenant has since dropped the logo, hidden the attribution and renamed the company.
+    data.tenant_settings[0].settings = { emailBranding: { primary: '#aa2200', secondary: '#112233', hideAttribution: true }, branding: { clientName: 'Renamed' } } as any;
+    const found = await lookupEmailTemplate(fakeTenantDb(data), 'quote-email', 'en');
+    expect(found?.source).toBe('tenant-derived');
+    expect(found!.template.html_content).toBe(applied(NEW_BODY).html_content);
+    expect(found!.template.html_content).toContain(BRAND_LOGO_MARKER);
+    expect(found!.template.html_content).toContain('alt="RightPath"');
+    expect(found!.template.html_content).toContain('Powered by AlgaPSA');
+  });
+
+  it('serves a row stamped without a recorded decoration as the stored row, not as derived', async () => {
+    const data = tables();
+    data.tenant_email_templates[0].derived_decoration = null;
+    const found = await lookupEmailTemplate(fakeTenantDb(data), 'quote-email', 'en');
+    expect(found?.source).toBe('tenant');
+    expect(found!.template.html_content).toBe(data.tenant_email_templates[0].html_content);
   });
 
   it('leaves a row with no provenance exactly as before', async () => {
@@ -154,9 +176,9 @@ describe('lookupEmailTemplate derived rows', () => {
 describe('stampDerivedTemplate', () => {
   it('stamps content that is exactly the derivation, with the hash of what is stored', () => {
     const stored = applied(OLD_BODY);
-    const decorate = brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+    const decorate = resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
     const stamped = stampDerivedTemplate(stored, { id: 7, ...OLD_BODY }, TARGET, decorate);
-    expect(stamped).toMatchObject({ derived_from_system_id: 7, derived_palette: TARGET });
+    expect(stamped).toMatchObject({ derived_from_system_id: 7, derived_palette: TARGET, derived_decoration: decorate });
     expect(stamped.derived_snapshot_hash).toBe(templateSnapshotHash(stored));
   });
 

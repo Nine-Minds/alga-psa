@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   STOCK_EMAIL_PALETTE,
   applyEmailPalette,
-  brandDecorator,
+  decoratorFor,
+  resolveBrandDecoration,
   resolveEmailPalette,
 } from '@alga-psa/email/branding';
 import { stampDerivedTemplate } from '@alga-psa/email/derivedTemplates';
@@ -16,7 +17,8 @@ const { renderResolvedQuoteEmail, resolveQuoteEmail } = await import('../../src/
 
 const TARGET = resolveEmailPalette({ primary: '#aa2200', secondary: '#112233' });
 const BRANDING = { logoUrl: '/logo.png', clientName: 'RightPath' };
-const decorate = brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+const decoration = resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+const decorate = decoratorFor(decoration);
 const OLD = quoteBody('quoteEmail', 'en', false);
 const NEW = quoteBody('quoteEmail', 'en', true);
 
@@ -39,7 +41,7 @@ function install(tenantRows: any[]) {
 
 const derivedOld = () => {
   const row = brandedRow(OLD);
-  return { id: 1, name: 'quote-email', language_code: 'en', ...stampDerivedTemplate(row, { id: 7, ...OLD }, TARGET, decorate) };
+  return { id: 1, name: 'quote-email', language_code: 'en', ...stampDerivedTemplate(row, { id: 7, ...OLD }, TARGET, decoration) };
 };
 
 describe('quote emails resolve branded copies through the shared resolver', () => {

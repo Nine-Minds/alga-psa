@@ -9,7 +9,8 @@ import { lookupEmailTemplate } from '../../lib/notifications/emailTemplateLookup
 import {
   STOCK_EMAIL_PALETTE,
   applyEmailPalette,
-  brandDecorator,
+  decoratorFor,
+  resolveBrandDecoration,
   resolveEmailPalette,
 } from '@alga-psa/email/branding';
 import { backfillDerivedTemplatesForTenant } from '@alga-psa/email/backfillDerivedTemplates';
@@ -94,7 +95,7 @@ describe('email template lookup (integration)', () => {
   describe('branded copies that follow the standard template', () => {
     const TARGET = resolveEmailPalette({ primary: '#aa2200', secondary: '#112233' });
     const BRANDING = { logoUrl: '/api/documents/view/logo', clientName: 'RightPath Consulting' };
-    const decorate = () => brandDecorator({ logo: { variant: 'default' } }, BRANDING, true, TARGET);
+    const decorate = () => decoratorFor(resolveBrandDecoration({ logo: { variant: 'default' } }, BRANDING, true, TARGET));
     const bodyOf = (reviewLink: boolean) => {
       const translation = quoteEmailTemplate({ reviewLink }).translations.find((t: any) => t.language === 'en')!;
       return { subject: translation.subject, html_content: translation.htmlContent, text_content: translation.textContent };

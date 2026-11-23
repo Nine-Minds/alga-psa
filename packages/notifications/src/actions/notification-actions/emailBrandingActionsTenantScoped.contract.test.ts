@@ -89,25 +89,25 @@ describe('apply preview', () => {
     expect(body).toContain('const target = resolveEmailPalette(context.palette)');
     expect(body).toContain('appliedPalette: context.palette.appliedPalette ?? null');
     expect(body).toContain(
-      'decorate: brandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
+      'decorate: decoratorFor(resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target))',
     );
   });
 });
 
 describe('enterprise brand assets', () => {
   it('builds the decorator only on Enterprise', () => {
-    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function brandDecorator'));
+    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function resolveBrandDecoration'));
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     expect(body).toContain('if (!enterprise) return undefined;');
     expect(body).toContain("{ variant, alt: branding?.clientName ?? '' }");
-    expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution })');
+    expect(body).toContain('hideAttribution: palette.hideAttribution === true');
     // The row references the logo by content-id; no URL is ever written into it.
     expect(body).not.toContain('url:');
   });
 
   it('writes the variant that reads on the header the palette paints', () => {
-    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function brandDecorator'));
+    const decorator = decoratorSource.slice(decoratorSource.indexOf('export function resolveBrandDecoration'));
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     // One shared chooser, so the settings preview cannot disagree with it.
@@ -129,11 +129,12 @@ describe('enterprise brand assets', () => {
 
   it('runs the decorator over everything the apply writes', () => {
     const apply = source.slice(source.indexOf('export const applyEmailBrandingAction'));
-    // One decorator feeds both the plan and the provenance check, so a stamped row is exactly what is stored.
+    // One decision feeds the plan, the provenance check and the recorded decoration, so a stamped row is exactly what is stored.
     expect(apply).toContain(
-      'const decorate = brandDecorator(context.palette, context.settings.branding, isEnterprise, target);',
+      'const decoration = resolveBrandDecoration(context.palette, context.settings.branding, isEnterprise, target);',
     );
+    expect(apply).toContain('const decorate = decoratorFor(decoration);');
     expect(apply).toContain('    decorate,\n');
-    expect(apply).toContain('stampDerivedTemplate(content, systemRow, target, decorate)');
+    expect(apply).toContain('stampDerivedTemplate(content, systemRow, target, decoration)');
   });
 });
