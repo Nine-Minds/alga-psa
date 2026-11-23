@@ -88,8 +88,10 @@ No UI change. The trial card (`CoManagedSeatTrial`) already renders when
   `registerBillingCatalogContextLoader(loader)`. `currentBillingCatalogContext()` and
   `isCoManagedPurchaseSurfaceOpen` resolve the context in this order:
   1. The active AsyncLocalStorage store.
-  2. The registered loader. The result is memoised for the rest of the request when a store
-     can be entered, and never across requests.
+  2. The registered loader. Inside an explicit request scope (`runWithBillingCatalogRequest`, opened by
+     `withAuth` and the co-managed root access resolver) the result is shared by every check in that
+     request and never across requests. With no scope the loader runs on every check; nothing is
+     memoised by the gate itself.
   3. Only when no loader is registered (CE, or self-hosted without the EE catalog), the legacy
      env var.
 - **EE registers the loader.** `surfaceProbe.ts` registers `loadBillingCatalogContext` as a side
@@ -97,8 +99,9 @@ No UI change. The trial card (`CoManagedSeatTrial`) already renders when
   or EE bootstrap, and the Temporal worker.
 - **No env fallback when a loader is registered.** If the loader fails, the gate reports "not
   sellable".
-- **The wrapper becomes optional.** `withBillingCatalogContext` stays as a per-request memo, so a
-  request that checks the gate several times loads once. Correctness no longer depends on it.
+- **The wrapper becomes optional.** Correctness no longer depends on it. A request that checks the gate
+  several times loads once because the entry layer (`withAuth`, `resolveCoManagedRootAccess`) opens the
+  lazy request scope; `withBillingCatalogContext` joins an open scope and otherwise loads once and pins.
   The existing callers keep working unchanged.
 - **Same answer everywhere.** The trial callers listed above return the same decision as the
   sidebar for the same tenant, with no code change at those call sites.

@@ -1,5 +1,6 @@
 import { canDiscoverSeatTrial } from '@enterprise/lib/co-managed/seatTrialDiscovery';
 import { cache } from 'react';
+import { runWithBillingCatalogRequest } from '@alga-psa/licensing/billing-catalog-scope';
 import { getCurrentUser } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { serves } from '@alga-psa/core/capability';
@@ -25,7 +26,13 @@ export interface CoManagedRootAccess {
   operational: boolean;
 }
 
-export const resolveCoManagedRootAccess = cache(async (tenant: string): Promise<CoManagedRootAccess> => {
+export const resolveCoManagedRootAccess = cache((tenant: string): Promise<CoManagedRootAccess> =>
+  // The root render is not a server action, so withAuth does not open the catalog scope for it. This is the
+  // one function the layout, page and metadata share (cache() above), so the scope opened here covers every
+  // gate check the render makes: purchase discovery, trial discovery and the capability's eligibility.
+  runWithBillingCatalogRequest(() => resolveRootAccess(tenant)));
+
+async function resolveRootAccess(tenant: string): Promise<CoManagedRootAccess> {
   const [user, servedDecision] = await Promise.all([getCurrentUser(), serves('co-managed', tenant)]);
   const served = servedDecision.served;
   if (!user || (user.tenant && user.tenant !== tenant)) return { commercial: false, served, operational: false };
@@ -35,4 +42,4 @@ export const resolveCoManagedRootAccess = cache(async (tenant: string): Promise<
   ]);
   const trial = !commercial && await canDiscoverSeatTrial(user, tenant);
   return { commercial, served, operational, ...(trial ? { trial } : {}) };
-});
+}

@@ -33,6 +33,10 @@ export interface BillingCatalogContext {
  * one and the next request loads again. Nothing is kept in module state, so an operator's `set-account`
  * is visible to the next request without a restart (PR 4452's no-process-cache property).
  *
+ * `runWithBillingCatalogRequest` opens the same kind of scope without a context: it is lazy, so the first
+ * gate check inside it loads through the registered loader and the rest of the scope reuses the result.
+ * `withAuth`, the co-managed root access resolver and EE's `withBillingCatalogContext` open it.
+ *
  * With no active scope there is no request to memoise into, so the registered loader runs on every check.
  * This module deliberately does NOT lazily `enterWith` a slot to memoise for unwrapped callers: a slot
  * entered from inside a request attaches to whichever async resource is current, and that can be a
@@ -42,15 +46,22 @@ export interface BillingCatalogContext {
  */
 export type BillingCatalogContextLoader = () => Promise<BillingCatalogContext>;
 
+/**
+ * What an explicit scope holds: a context pinned by the caller, or (for a request scope) the pending load
+ * that the first gate check in the scope starts and every later one shares. The holder is created by `run`
+ * and dies with it; it is never attached to a long-lived async resource.
+ */
+interface BillingCatalogScope { context?: BillingCatalogContext | Promise<BillingCatalogContext> }
+
 const billingCatalogContextKey = Symbol.for('@alga-psa/licensing/billing-catalog-context');
 const billingCatalogLoaderKey = Symbol.for('@alga-psa/licensing/billing-catalog-context-loader');
 const sharedGlobal = globalThis as typeof globalThis & {
-  [billingCatalogContextKey]?: AsyncLocalStorage<BillingCatalogContext>;
+  [billingCatalogContextKey]?: AsyncLocalStorage<BillingCatalogScope>;
   [billingCatalogLoaderKey]?: { loader?: BillingCatalogContextLoader };
 };
 // Node can include licensing in more than one server bundle. A global symbol keeps each bundle's
 // ALS accessor and loader registration shared while preserving request isolation under concurrency.
-const billingCatalogContext = sharedGlobal[billingCatalogContextKey] ??= new AsyncLocalStorage<BillingCatalogContext>();
+const billingCatalogContext = sharedGlobal[billingCatalogContextKey] ??= new AsyncLocalStorage<BillingCatalogScope>();
 const loaderRegistry = sharedGlobal[billingCatalogLoaderKey] ??= {};
 
 /**
@@ -64,7 +75,23 @@ export function registerBillingCatalogContextLoader(loader: BillingCatalogContex
 
 /** Establish catalog identity for one independent request entry point. */
 export function runWithBillingCatalogContext<T>(context: BillingCatalogContext, work: () => T): T {
-  return billingCatalogContext.run(context, work);
+  return billingCatalogContext.run({ context }, work);
+}
+
+/**
+ * Open the request scope at an entry point (server action wrapper, page data function). Nothing is loaded
+ * here: the first gate check inside `work` runs the registered loader and the scope shares that one result
+ * with every later check, so an entry point that never reaches the gate costs no catalog call. Joins a
+ * scope that is already open (an outer wrapper owns the request), so nesting never loads twice.
+ */
+export function runWithBillingCatalogRequest<T>(work: () => T): T {
+  if (billingCatalogContext.getStore()) return work();
+  return billingCatalogContext.run({}, work);
+}
+
+/** Is an explicit request scope open? */
+export function hasBillingCatalogScope(): boolean {
+  return billingCatalogContext.getStore() !== undefined;
 }
 
 /** The one pure decision used by every surface and purchase path. */
@@ -80,15 +107,20 @@ const UNSELLABLE: BillingCatalogContext = { mode: 'test', stripeAccount: null, p
  * that throws resolves to an unsellable context rather than rejecting.
  */
 export async function currentBillingCatalogContext(): Promise<BillingCatalogContext | undefined> {
-  const scoped = billingCatalogContext.getStore();
-  if (scoped) return scoped;
+  const scope = billingCatalogContext.getStore();
+  if (scope?.context) return scope.context;
   const loader = loaderRegistry.loader;
   if (!loader) return undefined;
-  try {
-    return await loader();
-  } catch {
-    return UNSELLABLE;
-  }
+  const load = async (): Promise<BillingCatalogContext> => {
+    try {
+      return await loader();
+    } catch {
+      return UNSELLABLE;
+    }
+  };
+  if (!scope) return load();
+  // Concurrent checks in one scope share the pending promise, so they cannot each start a load.
+  return scope.context = load();
 }
 
 async function offerConfigured(): Promise<boolean> {

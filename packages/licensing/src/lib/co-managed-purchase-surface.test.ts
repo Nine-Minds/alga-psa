@@ -6,7 +6,7 @@ vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag.enabled }
 import { AsyncResource } from 'node:async_hooks';
 import {
   currentBillingCatalogContext, isCoManagedPurchaseSurfaceOpen, registerBillingCatalogContextLoader,
-  resolveCoManagedPurchaseAvailability, runWithBillingCatalogContext, type BillingCatalogContext,
+  resolveCoManagedPurchaseAvailability, runWithBillingCatalogContext, runWithBillingCatalogRequest, hasBillingCatalogScope, type BillingCatalogContext,
 } from './co-managed-purchase-surface';
 
 const sellable: BillingCatalogContext = { mode: 'live', stripeAccount: 'acct_live', priceId: 'price_db', source: 'database', sellable: true };
@@ -134,5 +134,64 @@ describe('co-managed purchase surface', () => {
       ]);
       expect([a, b]).toEqual([true, false]);
     });
+
+  describe('lazy request scope (runWithBillingCatalogRequest: the entry-point mechanism)', () => {
+    it('loads once for many sequential and concurrent gate checks, and again for the next request', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      const checks = () => runWithBillingCatalogRequest(async () => {
+        const concurrent = await Promise.all([isCoManagedPurchaseSurfaceOpen('t'), isCoManagedPurchaseSurfaceOpen('t')]);
+        await Promise.resolve();
+        return [...concurrent, await isCoManagedPurchaseSurfaceOpen('t'), (await currentBillingCatalogContext())?.sellable];
+      });
+      expect(await request(checks)).toEqual([true, true, true, true]);
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(await request(checks)).toEqual([true, true, true, true]);
+      expect(loader).toHaveBeenCalledTimes(2);
+    });
+    it('loads nothing when the request never reaches the gate', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      await request(() => runWithBillingCatalogRequest(async () => { expect(hasBillingCatalogScope()).toBe(true); }));
+      expect(loader).not.toHaveBeenCalled();
+    });
+    it('answers the same as a pinned scope and as no scope, including when the loader throws or is unconfigured', async () => {
+      for (const loader of [async () => sellable, async () => unconfigured, async () => { throw new Error('down'); }]) {
+        registerBillingCatalogContextLoader(loader);
+        const bare = await request(() => isCoManagedPurchaseSurfaceOpen('t'));
+        const lazy = await request(() => runWithBillingCatalogRequest(() => isCoManagedPurchaseSurfaceOpen('t')));
+        expect(lazy).toBe(bare);
+      }
+      registerBillingCatalogContextLoader(async () => { throw new Error('down'); });
+      expect(await request(() => runWithBillingCatalogRequest(() => isCoManagedPurchaseSurfaceOpen('t')))).toBe(false); // env var is set
+    });
+    it('keeps the env fallback with no loader registered, inside a scope too', async () => {
+      expect(await request(() => runWithBillingCatalogRequest(() => isCoManagedPurchaseSurfaceOpen('t')))).toBe(true);
+    });
+    it('joins an open scope and defers to an explicit pinned one', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      await request(() => runWithBillingCatalogRequest(() => runWithBillingCatalogRequest(async () => {
+        await isCoManagedPurchaseSurfaceOpen('t');
+        await runWithBillingCatalogRequest(() => isCoManagedPurchaseSurfaceOpen('t'));
+      })));
+      expect(loader).toHaveBeenCalledTimes(1);
+      loader.mockClear();
+      expect(await request(() => runWithBillingCatalogRequest(() => runWithBillingCatalogContext(unconfigured, () => isCoManagedPurchaseSurfaceOpen('t'))))).toBe(false);
+      expect(loader).not.toHaveBeenCalled();
+    });
+    it('does not leak into work outside the scope, and concurrent requests do not share a load', async () => {
+      const loader = vi.fn(async () => sellable);
+      registerBillingCatalogContextLoader(loader);
+      await Promise.all([
+        request(() => runWithBillingCatalogRequest(async () => { await isCoManagedPurchaseSurfaceOpen('t'); await isCoManagedPurchaseSurfaceOpen('t'); })),
+        request(() => runWithBillingCatalogRequest(async () => { await isCoManagedPurchaseSurfaceOpen('t'); await isCoManagedPurchaseSurfaceOpen('t'); })),
+      ]);
+      expect(loader).toHaveBeenCalledTimes(2);
+      expect(hasBillingCatalogScope()).toBe(false);
+      await isCoManagedPurchaseSurfaceOpen('t');
+      expect(loader).toHaveBeenCalledTimes(3);
+    });
+  });
   });
 });

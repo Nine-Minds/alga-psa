@@ -1,4 +1,4 @@
-import { registerBillingCatalogContextLoader, runWithBillingCatalogContext, type BillingCatalogContext } from '@alga-psa/licensing';
+import { hasBillingCatalogScope, registerBillingCatalogContextLoader, runWithBillingCatalogContext, type BillingCatalogContext } from '@alga-psa/licensing';
 import { getStripeService } from '../StripeService';
 import { loadBillingCatalogContextFrom } from './catalogContext';
 
@@ -10,9 +10,12 @@ export const loadBillingCatalogContext = (): Promise<BillingCatalogContext> =>
 
 /**
  * Optional since the gate resolves the context itself. Kept as an explicit request entry point: it loads
- * the context once and pins it for everything `work` awaits, however many gate checks that makes.
+ * the context once and pins it for everything `work` awaits, however many gate checks that makes. Inside an
+ * already-open request scope (withAuth opens one for every server action) it joins that scope instead, so
+ * the request still loads once.
  */
 export async function withBillingCatalogContext<T>(work: () => T | Promise<T>): Promise<T> {
+  if (hasBillingCatalogScope()) return work();
   const context = await loadBillingCatalogContext();
   return runWithBillingCatalogContext(context, work);
 }
