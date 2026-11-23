@@ -115,7 +115,10 @@ import { TicketService } from '../../lib/api/services/TicketService';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { bulkUpdateTicketStatus, updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
-import { updateTicketStatus as portalUpdateTicketStatus } from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
+import {
+  getClientTicketDetails as portalGetClientTicketDetails,
+  updateTicketStatus as portalUpdateTicketStatus,
+} from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
 import {
   createCloseRulesFixture,
   insertTicket,
@@ -742,6 +745,108 @@ describe('ticket close rules', () => {
     } finally {
       userRef.user = mspUser;
     }
+  });
+
+  it('T058: portal child reopen reverts bundle propagation before a later master close', async () => {
+    const masterId = await insertTicket(db, fixture);
+    const childId = await insertTicket(db, fixture, {
+      master_ticket_id: masterId,
+      status_id: fixture.closedStatusId,
+      is_closed: true,
+      closed_at: new Date().toISOString(),
+      closed_by: fixture.userId,
+      attributes: {
+        description: 'Customer-visible description',
+        watch_list: [{ email: 'private-watcher@example.test', entity_id: 'private-watcher-id', source: 'internal-rule' }],
+      },
+      email_metadata: { messageId: 'private-message-id', threadId: 'private-thread-id', ruleId: 'private-rule-id' },
+    });
+    await scopedDb().table('ticket_bundle_settings').insert({
+      tenant: fixture.tenantId,
+      master_ticket_id: masterId,
+      mode: 'sync_updates',
+      reopen_on_child_reply: false,
+    });
+
+    const originalPropagationId = uuidv4();
+    await scopedDb().table('ticket_bundle_status_propagations').insert({
+      tenant: fixture.tenantId,
+      propagation_id: originalPropagationId,
+      master_ticket_id: masterId,
+      child_ticket_id: childId,
+      action: 'close',
+      child_previous_status_id: fixture.openStatusId,
+      propagated_by: fixture.userId,
+      propagated_at: new Date().toISOString(),
+    });
+
+    const portalUserId = uuidv4();
+    const portalEmail = `portal-${portalUserId.slice(0, 8)}@example.com`;
+    await scopedDb().table('users').insert({
+      tenant: fixture.tenantId,
+      user_id: portalUserId,
+      username: `portal-${portalUserId.slice(0, 8)}`,
+      hashed_password: 'not-used',
+      first_name: 'Portal',
+      last_name: 'Customer',
+      email: portalEmail,
+      user_type: 'client',
+      contact_id: fixture.contactId,
+      created_at: db.fn.now(),
+    });
+
+    const mspUser = userRef.user;
+    userRef.user = { user_id: portalUserId, user_type: 'client', email: portalEmail };
+    try {
+      const detail = await portalGetClientTicketDetails(childId);
+      const serializedDetail = JSON.stringify(detail);
+      expect(detail).toMatchObject({
+        attributes: { description: 'Customer-visible description' },
+        has_original_email: true,
+      });
+      for (const field of ['email_metadata', 'master_ticket_id', 'watch_list']) {
+        expect(detail).not.toHaveProperty(field);
+      }
+      for (const secret of [
+        'private-watcher@example.test', 'private-watcher-id', 'internal-rule',
+        'private-message-id', 'private-thread-id', 'private-rule-id', masterId,
+      ]) {
+        expect(serializedDetail).not.toContain(secret);
+      }
+
+      await portalUpdateTicketStatus(childId, fixture.openStatusId);
+
+      const reopened = await scopedDb().table('tickets').where({ ticket_id: childId }).first();
+      expect(reopened.status_id).toBe(fixture.openStatusId);
+      expect(reopened.is_closed).toBe(false);
+      const originalPropagation = await scopedDb().table('ticket_bundle_status_propagations')
+        .where({ propagation_id: originalPropagationId }).first();
+      expect(originalPropagation.reverted_at).toBeTruthy();
+      expect(originalPropagation.reverted_by).toBe(portalUserId);
+    } finally {
+      userRef.user = mspUser;
+    }
+
+    await withTransaction(db, (trx) =>
+      updateTicketInTransaction(
+        trx,
+        userRef.user,
+        fixture.tenantId,
+        masterId,
+        { status_id: fixture.closedStatusId },
+        { propagateToChildren: true },
+      )
+    );
+
+    const closedChild = await scopedDb().table('tickets').where({ ticket_id: childId }).first();
+    expect(closedChild.is_closed).toBe(true);
+    expect(closedChild.status_id).toBe(fixture.closedStatusId);
+    const propagationRows = await scopedDb().table('ticket_bundle_status_propagations')
+      .where({ master_ticket_id: masterId, child_ticket_id: childId });
+    expect(propagationRows).toHaveLength(2);
+    expect(propagationRows.find((row: any) => row.propagation_id === originalPropagationId)?.reverted_at).toBeTruthy();
+    expect(propagationRows.filter((row: any) => row.reverted_at === null)).toHaveLength(1);
+    expect(propagationRows.find((row: any) => row.reverted_at === null)?.propagated_by).toBe(fixture.userId);
   });
 
   it('T046: closing on an ungated board behaves exactly as before', async () => {

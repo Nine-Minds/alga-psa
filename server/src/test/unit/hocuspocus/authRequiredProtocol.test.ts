@@ -4,8 +4,10 @@
  * require an Auth protocol message from EVERY client on EVERY room. Providers
  * that pass the token only as a URL parameter never send that message, so the
  * server's idle-connection timeout closes their sockets with code 4401 and the
- * clients reconnect forever. These tests drive the installed server and the
+ * clients reconnect forever. This test drives the installed server and the
  * real provider over a real WebSocket to pin both halves of the contract.
+ * Document rooms authenticate with their own signed room credential
+ * (startDocumentRoomConnection) and are not exercised here.
  */
 import { describe, expect, it } from 'vitest';
 import jwt from 'jsonwebtoken';
@@ -86,59 +88,6 @@ describe('auth-required protocol contract (production hook wiring)', () => {
         expect(closed?.event?.code).toBe(4401);
         expect(broken.synced).toBe(false);
       } finally { broken.destroy(); }
-    } finally {
-      await server.destroy();
-    }
-  });
-
-  it('document room: the non-empty token option satisfies the handshake while the tenantId URL parameter gates the room', async () => {
-    process.env.HOCUSPOCUS_JWT_SECRET = SECRET;
-    const tenantId = '11111111-1111-4111-8111-111111111111';
-    const documentId = '44444444-4444-4444-8444-444444444444';
-    const userId = '22222222-2222-4222-8222-222222222222';
-    const server = await startServer();
-    const { HocuspocusProvider } = await import('@hocuspocus/provider');
-    const room = `document:${tenantId}:${documentId}`;
-    try {
-      // Fixed shape (CollaborativeEditor / syncCollabSnapshot): the token value
-      // is not verified for document rooms; any non-empty string passes.
-      const fixed = new HocuspocusProvider({
-        url: server.webSocketURL,
-        name: room,
-        token: userId,
-        parameters: { tenantId, userId },
-        preserveConnection: false,
-      });
-      try {
-        await once(fixed, 'authenticated');
-        expect(server.documents.get(room)?.connections.size).toBe(1);
-      } finally { fixed.destroy(); }
-
-      // Broken shape: parameters only. The room gate passes at onConnect, but
-      // the missing Auth message means the socket dies at the idle timeout.
-      const broken = new HocuspocusProvider({
-        url: server.webSocketURL,
-        name: room,
-        parameters: { tenantId, userId },
-        preserveConnection: false,
-      });
-      try {
-        const closed = await once(broken, 'close');
-        expect(closed?.event?.code).toBe(4401);
-      } finally { broken.destroy(); }
-
-      // A wrong tenant in the URL parameter is still rejected at onConnect.
-      const mismatched = new HocuspocusProvider({
-        url: server.webSocketURL,
-        name: room,
-        token: userId,
-        parameters: { tenantId: '99999999-9999-4999-8999-999999999999', userId },
-        preserveConnection: false,
-      });
-      try {
-        const closed = await once(mismatched, 'close');
-        expect(closed?.event?.code).not.toBe(1000);
-      } finally { mismatched.destroy(); }
     } finally {
       await server.destroy();
     }

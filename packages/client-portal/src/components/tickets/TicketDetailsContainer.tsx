@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IStatus, ITicketWithDetails, ProductCode } from '@alga-psa/types';
+import type { IStatus, ProductCode } from '@alga-psa/types';
+import type { ClientTicketDetailResponse } from '../../actions/client-portal-actions/clientTicketProjection';
 import { TicketDetails } from './TicketDetails';
 
 interface TicketDetailsContainerProps {
   ticketId: string;
-  ticketData: ITicketWithDetails;
+  ticketData: ClientTicketDetailResponse;
   statuses: IStatus[];
   productCode?: ProductCode;
 }

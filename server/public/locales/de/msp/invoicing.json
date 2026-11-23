@@ -1167,7 +1167,9 @@
       "send_one": "Senden Sie eine {{count}}-E-Mail",
       "send_other": "Senden Sie {{count}}-E-Mails",
       "sending_one": "{{count}}-Rechnung wird gesendet...",
-      "sending_other": "{{count}}-Rechnungen werden gesendet..."
+      "sending_other": "{{count}}-Rechnungen werden gesendet...",
+      "schedule": "Planen",
+      "scheduling": "Wird geplant..."
     },
     "toasts": {
       "noValidRecipients": "Keine gültigen Empfänger gefunden",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "{{count}}-Rechnungen erfolgreich gesendet",
       "sentFailure_one": "{{count}}-Rechnung konnte nicht gesendet werden",
       "sentFailure_other": "{{count}}-Rechnungen konnten nicht gesendet werden",
-      "sentPartial": "{{successCount}} gesendet, {{failureCount}} fehlgeschlagen"
+      "sentPartial": "{{successCount}} gesendet, {{failureCount}} fehlgeschlagen",
+      "scheduled": "Rechnungs-E-Mail geplant"
     },
     "errors": {
       "loadRecipients": "Empfängerinformationen konnten nicht geladen werden",
-      "sendFailed": "E-Mails konnten nicht gesendet werden"
+      "sendFailed": "E-Mails konnten nicht gesendet werden",
+      "scheduleFailed": "Rechnungs-E-Mail konnte nicht geplant werden"
     }
   },
   "generateTab": {
@@ -2874,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
+      "invoiceFinalize": "Berechtigung verweigert: Finalisierungsberechtigung für Rechnungen erforderlich",
       "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
       "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
       "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden",
-      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich"
+      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich",
+      "invoiceSend": "Zugriff verweigert: Berechtigung zum Senden von Rechnungen erforderlich"
     },
     "invoice": {
       "notFound": "Rechnung nicht gefunden",

@@ -1167,7 +1167,9 @@
       "send_one": "Enviar e-mail {{count}}",
       "send_other": "Enviar e-mails {{count}}",
       "sending_one": "Enviando fatura {{count}}...",
-      "sending_other": "Enviando faturas {{count}}..."
+      "sending_other": "Enviando faturas {{count}}...",
+      "schedule": "Agendar",
+      "scheduling": "Agendando..."
     },
     "toasts": {
       "noValidRecipients": "Nenhum destinatário válido encontrado",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "Faturas {{count}} enviadas com sucesso",
       "sentFailure_one": "Falha ao enviar fatura {{count}}",
       "sentFailure_other": "Falha ao enviar faturas {{count}}",
-      "sentPartial": "{{successCount}} enviado, {{failureCount}} falhou"
+      "sentPartial": "{{successCount}} enviado, {{failureCount}} falhou",
+      "scheduled": "E-mail da fatura agendado"
     },
     "errors": {
       "loadRecipients": "Falha ao carregar informações do destinatário",
-      "sendFailed": "Falha ao enviar e-mails"
+      "sendFailed": "Falha ao enviar e-mails",
+      "scheduleFailed": "Falha ao agendar o e-mail da fatura"
     }
   },
   "generateTab": {
@@ -2874,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
+      "invoiceFinalize": "Permissão negada: é necessária permissão para finalizar faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
       "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",
-      "invoiceRead": "Permissão negada: leitura de faturas necessária"
+      "invoiceRead": "Permissão negada: leitura de faturas necessária",
+      "invoiceSend": "Permissão negada: é necessária permissão para enviar faturas"
     },
     "invoice": {
       "notFound": "Fatura não encontrada",

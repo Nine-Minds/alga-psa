@@ -1,10 +1,11 @@
+import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   hasPermission: vi.fn(),
   lookup: vi.fn(),
-  post: vi.fn(),
+  request: vi.fn(),
   connect: vi.fn(),
   logout: vi.fn(),
   getTenantSecret: vi.fn(),
@@ -16,11 +17,21 @@ const mocks = vi.hoisted(() => ({
   tableCalls: [] as string[],
 }));
 
+vi.mock('node:dns', () => ({
+  default: { promises: { lookup: (...args: unknown[]) => mocks.lookup(...args) } },
+}));
 vi.mock('node:dns/promises', () => ({
   default: { lookup: (...args: unknown[]) => mocks.lookup(...args) },
   lookup: (...args: unknown[]) => mocks.lookup(...args),
 }));
-vi.mock('axios', () => ({ default: { post: mocks.post } }));
+vi.mock('undici', async (importOriginal) => ({
+  ...await importOriginal<typeof import('undici')>(),
+  Agent: class {
+    constructor(public options: any) {}
+    close = async () => undefined;
+  },
+  request: mocks.request,
+}));
 vi.mock('imapflow', () => ({
   ImapFlow: vi.fn(function (this: any, options: Record<string, any>) {
     mocks.imapOptions.push(options);
@@ -73,7 +84,10 @@ beforeEach(() => {
   mocks.createTenantKnex.mockResolvedValue({ knex: { fn: { now: () => new Date() } } });
   mocks.hasPermission.mockResolvedValue(true);
   mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
-  mocks.post.mockResolvedValue({ data: { access_token: 'new-access', expires_in: 3600 } });
+  mocks.request.mockImplementation(async () => ({
+    statusCode: 200, headers: {},
+    body: Readable.from([Buffer.from(JSON.stringify({ access_token: 'new-access', expires_in: 3600 }))]),
+  }));
   mocks.connect.mockResolvedValue(undefined);
   mocks.logout.mockResolvedValue(undefined);
   mocks.getTenantSecret.mockImplementation(async (_tenant: string, key: string) =>
@@ -87,21 +101,24 @@ describe('IMAP outbound target protections', () => {
 
       const result = await testEmailProviderConnection('provider-1');
 
-      expect(result).toEqual({ success: false, error: 'IMAP OAuth token endpoint is not an allowed target.', errorCode: 'missing_config' });
+      expect(result).toEqual({ success: false, error: 'The IMAP OAuth token URL is not allowed. Update the OAuth settings and reconnect the mailbox.', errorCode: 'missing_config' });
       expect(mocks.getTenantSecret).not.toHaveBeenCalled();
-      expect(mocks.post).not.toHaveBeenCalled();
+      expect(mocks.request).not.toHaveBeenCalled();
       expect(mocks.connect).not.toHaveBeenCalled();
     });
 
   it('rejects a DNS name with a private answer before posting credentials', async () => {
-    setupConfig({ oauth_token_url: 'https://token.internal.example/token' });
-    mocks.lookup.mockResolvedValue([{ address: '172.20.4.9', family: 4 }]);
+    const tokenUrl = 'https://token.internal.example/token';
+    setupConfig({ oauth_token_url: tokenUrl, oauth_credentials_token_url: tokenUrl });
+    mocks.lookup.mockImplementation(async (host: string) => [{
+      address: host === 'token.internal.example' ? '172.20.4.9' : '93.184.216.34', family: 4,
+    }]);
     const { testEmailProviderConnection } = await import('./emailProviderActions');
 
     const result = await testEmailProviderConnection('provider-1');
 
     expect(result).toMatchObject({ success: false, errorCode: 'missing_config' });
-    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
     expect(mocks.getTenantSecret).not.toHaveBeenCalled();
   });
 
@@ -112,7 +129,7 @@ describe('IMAP outbound target protections', () => {
     const result = await testEmailProviderConnection('provider-1');
 
     expect(result).toEqual({ success: false, error: 'IMAP server is not an allowed target.', errorCode: 'missing_config' });
-    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
@@ -128,14 +145,33 @@ describe('IMAP outbound target protections', () => {
   });
 
   it('does not follow a token endpoint redirect with credentials', async () => {
-    mocks.post.mockRejectedValue(new Error('Request failed with status code 302'));
+    const body = Readable.from([]);
+    mocks.request.mockResolvedValue({ statusCode: 302, headers: { location: 'https://127.0.0.1/token' }, body });
     const { testEmailProviderConnection } = await import('./emailProviderActions');
 
     const result = await testEmailProviderConnection('provider-1');
 
     expect(result).toMatchObject({ success: false, errorCode: 'oauth_refresh_failed' });
-    expect(mocks.post).toHaveBeenCalledTimes(1);
-    expect(mocks.post).toHaveBeenCalledWith('https://login.example.test/token', expect.any(URLSearchParams), expect.objectContaining({ maxRedirects: 0, proxy: false }));
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expect(mocks.request).toHaveBeenCalledWith(new URL('https://login.example.test/token'), expect.objectContaining({
+      method: 'POST', body: expect.any(String),
+    }));
+    expect(body.destroyed).toBe(true);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it('revalidates DNS before posting if the token host changes after credential lookup', async () => {
+    mocks.getTenantSecret.mockImplementation(async (_tenant: string, key: string) => {
+      mocks.lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+      return key.includes('refresh_token') ? 'refresh-token' : 'client-secret';
+    });
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+
+    const result = await testEmailProviderConnection('provider-1');
+
+    expect(result).toMatchObject({ success: false, errorCode: 'oauth_refresh_failed' });
+    expect(mocks.getTenantSecret).toHaveBeenCalledTimes(2);
+    expect(mocks.request).not.toHaveBeenCalled();
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
@@ -148,9 +184,12 @@ describe('IMAP outbound target protections', () => {
       mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
       const publicResult = await testEmailProviderConnection('provider-1');
       expect(publicResult).toEqual({ success: true });
-      expect(mocks.post).toHaveBeenCalledTimes(1);
+      expect(mocks.request).toHaveBeenCalledTimes(1);
       expect(mocks.connect).toHaveBeenCalledTimes(1);
-      const httpLookup = mocks.post.mock.calls[0][2].httpsAgent.options.lookup;
+      const requestOptions = mocks.request.mock.calls[0][1];
+      expect(new URLSearchParams(requestOptions.body).get('refresh_token')).toBe('refresh-token');
+      expect(new URLSearchParams(requestOptions.body).get('client_secret')).toBe('client-secret');
+      const httpLookup = requestOptions.dispatcher.options.connect.lookup;
       const imapLookup = mocks.imapOptions[0].tls.lookup;
       mocks.lookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
       const resolvePinned = (lookup: Function) => new Promise((resolve, reject) =>

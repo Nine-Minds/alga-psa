@@ -89,6 +89,7 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { getContactAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
@@ -929,7 +930,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         return new Map<string, string | null>();
       }),
       authorContactIds.length > 0
-        ? getEntityImageUrlsBatch('contact', authorContactIds, tenant).catch((imgError) => {
+        ? getContactAvatarUrlsBatchAction(authorContactIds, tenant).catch((imgError) => {
             console.error('Error batch-fetching comment author contact avatar URLs:', imgError);
             return new Map<string, string | null>();
           })
@@ -2257,7 +2258,7 @@ async function enrichTicketListItems(
       ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
     contactIds.size > 0
-      ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
+      ? getContactAvatarUrlsBatchAction(Array.from(contactIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
   ]);
 

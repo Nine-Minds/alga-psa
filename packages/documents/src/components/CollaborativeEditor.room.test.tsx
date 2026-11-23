@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { CollaborativeEditor } from './CollaborativeEditor';
+import { getDocumentRoomToken } from '../actions/collaborativeEditingActions';
 
 const mockOn = vi.fn();
 const mockOff = vi.fn();
@@ -17,6 +18,8 @@ const mockProvider = {
   },
   on: mockOn,
   off: mockOff,
+  setConfiguration: vi.fn(),
+  connect: vi.fn(async () => undefined),
   destroy: mockDestroy,
   status: 'connected',
   synced: true,
@@ -53,8 +56,11 @@ vi.mock('../actions/documentBlockContentActions', () => ({
   getBlockContent: vi.fn(),
   updateBlockContent: vi.fn(),
 }));
+vi.mock('../actions/collaborativeEditingActions', () => ({ getDocumentRoomToken: vi.fn(async () => ({ token: 'signed-token', expiresAt: Date.now() + 100_000 })) }));
 
 describe('CollaborativeEditor room name', () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it('connects to document:<tenantId>:<documentId> room', () => {
     render(
       <CollaborativeEditor
@@ -66,13 +72,27 @@ describe('CollaborativeEditor room name', () => {
     );
 
     expect(createYjsProvider).toHaveBeenCalledWith('document:tenant-abc:doc-123', {
-      // Non-empty token so the provider sends the Auth protocol message the
-      // server requires; document rooms themselves are gated by tenantId.
-      token: 'user-1',
       parameters: {
         tenantId: 'tenant-abc',
         userId: 'user-1',
       },
+      connect: false,
     });
+  });
+
+  it('uses a server-issued credential before connecting to the room', async () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-123"
+        tenantId="tenant-abc"
+        userId="user-1"
+        userName="Test User"
+      />
+    );
+
+    await waitFor(() => expect(mockProvider.setConfiguration).toHaveBeenCalled());
+    expect(mockProvider.setConfiguration).toHaveBeenCalledWith({ token: 'signed-token' });
+    expect(getDocumentRoomToken).toHaveBeenCalledTimes(1);
+    expect(mockProvider.connect).toHaveBeenCalledTimes(1);
   });
 });

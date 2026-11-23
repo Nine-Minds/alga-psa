@@ -29,6 +29,14 @@ export async function assertDocumentUploadAllowed(
   knex: Knex,
   options: DocumentUploadAuthorizationOptions,
 ): Promise<ActionPermissionError | null> {
+  // Keep the draft-specific refusal ahead of the shared target check, which
+  // also requires ticket:update but reports a general document denial.
+  if (options.commentAttachmentDraft &&
+      (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
+       !await canWriteAttachmentTicket(knex, tenant, user.user_id, options.ticketId))) {
+    throw new Error('Permission denied: Cannot attach files to this ticket');
+  }
+
   if (!await canUploadDocument(user, options)) {
     return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
   }
@@ -37,10 +45,6 @@ export async function assertDocumentUploadAllowed(
   }
 
   if (options.commentAttachmentDraft) {
-    if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
-        !await canWriteAttachmentTicket(knex, tenant, user.user_id, options.ticketId)) {
-      throw new Error('Permission denied: Cannot attach files to this ticket');
-    }
     await expireCommentAttachmentDrafts(knex, tenant);
   }
   return null;

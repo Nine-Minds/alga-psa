@@ -1167,7 +1167,9 @@
       "send_one": "Envoyer un e-mail à {{count}}",
       "send_other": "Envoyer des e-mails {{count}}",
       "sending_one": "Envoi de la facture {{count}}...",
-      "sending_other": "Envoi des factures {{count}}..."
+      "sending_other": "Envoi des factures {{count}}...",
+      "schedule": "Programmer",
+      "scheduling": "Programmation..."
     },
     "toasts": {
       "noValidRecipients": "Aucun destinataire valide trouvé",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "Factures {{count}} envoyées avec succès",
       "sentFailure_one": "Échec de l'envoi de la facture {{count}}",
       "sentFailure_other": "Échec de l'envoi des factures {{count}}",
-      "sentPartial": "{{successCount}} envoyé, {{failureCount}} a échoué"
+      "sentPartial": "{{successCount}} envoyé, {{failureCount}} a échoué",
+      "scheduled": "E-mail de facture programmé"
     },
     "errors": {
       "loadRecipients": "Échec du chargement des informations sur le destinataire",
-      "sendFailed": "Échec de l'envoi des e-mails"
+      "sendFailed": "Échec de l'envoi des e-mails",
+      "scheduleFailed": "Échec de la programmation de l’e-mail de facture"
     }
   },
   "generateTab": {
@@ -2874,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceFinalize": "Autorisation refusée : autorisation de finalisation des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
       "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",
-      "invoiceRead": "Autorisation refusée : lecture des factures requise"
+      "invoiceRead": "Autorisation refusée : lecture des factures requise",
+      "invoiceSend": "Autorisation refusée : l’autorisation d’envoyer des factures est requise"
     },
     "invoice": {
       "notFound": "Facture introuvable",

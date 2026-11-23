@@ -1215,7 +1215,9 @@
       "send_few": "Wyślij {{count}} e-maile",
       "send_many": "Wyślij {{count}} e-maili",
       "sending_few": "Wysyłanie {{count}} faktur...",
-      "sending_many": "Wysyłanie {{count}} faktur..."
+      "sending_many": "Wysyłanie {{count}} faktur...",
+      "schedule": "Zaplanuj",
+      "scheduling": "Planowanie..."
     },
     "toasts": {
       "noValidRecipients": "Nie znaleziono prawidłowych odbiorców",
@@ -1227,11 +1229,13 @@
       "sentFailure_few": "Nie udało się wysłać {{count}} faktur",
       "sentFailure_many": "Nie udało się wysłać {{count}} faktur",
       "sentSuccess_few": "{{count}} faktury zostały wysłane pomyślnie",
-      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie"
+      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie",
+      "scheduled": "Zaplanowano wiadomość e-mail z fakturą"
     },
     "errors": {
       "loadRecipients": "Nie udało się załadować informacji o odbiorcy",
-      "sendFailed": "Nie udało się wysłać e-maili"
+      "sendFailed": "Nie udało się wysłać e-maili",
+      "scheduleFailed": "Nie udało się zaplanować wiadomości e-mail z fakturą"
     }
   },
   "generateTab": {
@@ -2926,10 +2930,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceFinalize": "Odmowa uprawnień: wymagane uprawnienie finalizowania faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
       "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",
-      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur"
+      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur",
+      "invoiceSend": "Odmowa dostępu: wymagane jest uprawnienie do wysyłania faktur"
     },
     "invoice": {
       "notFound": "Nie znaleziono faktury",

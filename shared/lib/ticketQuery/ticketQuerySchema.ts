@@ -47,7 +47,7 @@ const COMPUTED_RESOLVERS = (() => {
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
       : { sql: `(${expression.sql}) IS NOT NULL`, bindings: expression.bindings };
-    if ((operator === 'equals' || operator === 'not_equals') && value === null) {
+    if ((operator === 'equals' || operator === 'not_equals') && scalar(value) === null) {
       const present = compare(expression, type, 'is_not_empty', undefined);
       return operator === 'equals' ? { sql: `NOT (${present.sql})`, bindings: present.bindings } : present;
     }
@@ -59,7 +59,7 @@ const COMPUTED_RESOLVERS = (() => {
       sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, scalar(value)],
     };
     if (operator === 'contains' || operator === 'starts_with' || operator === 'ends_with') {
-      const escaped = String(value).replace(/[\\%_]/g, (character) => `\\${character}`);
+      const escaped = String(scalar(value)).replace(/[\\%_]/g, (character) => `\\${character}`);
       const pattern = operator === 'contains' ? `%${escaped}%` : operator === 'starts_with' ? `${escaped}%` : `%${escaped}`;
       return { sql: `COALESCE((${expression.sql}) LIKE ? ESCAPE '\\', FALSE)`, bindings: [...expression.bindings, pattern] };
     }

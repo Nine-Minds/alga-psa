@@ -2,11 +2,33 @@
 
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { createYjsProvider } from '@alga-psa/ui/editor';
+import { getAuthorizedDocumentById } from './documentActions';
+import { isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
+import { DOCUMENT_ROOM_TOKEN_TTL_SECONDS, signDocumentRoomToken } from '@shared/lib/documentRoomToken';
 import { persistCollabSnapshot } from '../lib/collabPersistence';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const SYNC_TIMEOUT_MS = 5000;
+
+export const getDocumentRoomToken = withAuth(async (user, { tenant }, documentId: string) => {
+  if (!await hasPermission(user, 'document', 'read') || !await hasPermission(user, 'document', 'update')) {
+    return permissionError('Permission denied: Cannot edit documents', 'documents:errors.permissions.update');
+  }
+
+  const { knex } = await createTenantKnex();
+  const document = await withTransaction(knex, trx => getAuthorizedDocumentById(trx, tenant, user, documentId));
+  if (!document || isDocumentFieldRedacted(document, 'content')) {
+    return permissionError('Permission denied: Cannot edit redacted document content', 'documents:errors.permissions.update');
+  }
+
+  return {
+    token: signDocumentRoomToken({ tenantId: tenant, documentId, userId: user.user_id }),
+    expiresAt: Date.now() + DOCUMENT_ROOM_TOKEN_TTL_SECONDS * 1000,
+  };
+});
 
 const waitForSync = (provider: HocuspocusProvider, timeoutMs = SYNC_TIMEOUT_MS) => {
   if (provider.synced) {
@@ -31,17 +53,26 @@ const waitForSync = (provider: HocuspocusProvider, timeoutMs = SYNC_TIMEOUT_MS) 
 };
 
 export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: string) => {
+  if (!await hasPermission(user, 'document', 'update')) {
+    return { success: false, message: 'Permission denied: Cannot update documents' };
+  }
+
+  const { knex } = await createTenantKnex();
+  const authorizedDocument = await withTransaction(knex, (trx) =>
+    getAuthorizedDocumentById(trx, tenant, user, documentId)
+  );
+  if (!authorizedDocument || isDocumentFieldRedacted(authorizedDocument, 'content')) {
+    return { success: false, message: 'Permission denied: Cannot update redacted document content' };
+  }
+
   const roomName = `document:${tenant}:${documentId}`;
+  const credential = signDocumentRoomToken({ tenantId: tenant, documentId, userId: user.user_id });
   const { provider, ydoc } = createYjsProvider(roomName, {
-    // The server's onAuthenticate hook makes it wait for an Auth protocol
-    // message, which the provider only sends when `token` is set. Document
-    // rooms are gated by the tenantId URL parameter, so the value itself
-    // is not verified there; any non-empty string satisfies the handshake.
-    token: user.user_id,
     parameters: {
       tenantId: tenant,
       userId: user.user_id,
     },
+    token: credential,
   });
 
   try {
@@ -59,7 +90,7 @@ export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: 
 
     const json = yXmlFragmentToProsemirrorJSON(fragment);
 
-    return await persistCollabSnapshot(tenant, documentId, json);
+    return await persistCollabSnapshot(tenant, documentId, json, credential);
   } catch (error) {
     console.error('[syncCollabSnapshot] Failed to sync snapshot:', error);
     return { success: false, message: 'Snapshot sync failed.' };

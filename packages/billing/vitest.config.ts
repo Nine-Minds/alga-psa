@@ -32,6 +32,8 @@ export default defineConfig({
       'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
+      // Scheduler and immediate invoice email authorization behavior.
+      'src/actions/invoiceJobActions.sender.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
@@ -53,6 +55,8 @@ export default defineConfig({
       // CI job — listing them here keeps both invocations covering the seam
       // instead of silently reporting "No test files found".
       'src/actions/documentTemplateActions.tenantBranding.test.ts',
+      'src/actions/finalizeInvoice.authorization.test.ts',
+      'src/actions/voidInvoiceActions.test.ts',
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',

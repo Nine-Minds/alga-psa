@@ -24,6 +24,7 @@ COPY server/package.json /app/server/package.json
 COPY ee/server/src/ /app/ee/server/src/
 COPY ee/packages/workflows/package.json /app/ee/packages/workflows/package.json
 COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
+COPY ee/temporal-workflows/scripts/verify-oauth-runtime.mjs /app/ee/temporal-workflows/scripts/verify-oauth-runtime.mjs
 COPY tsconfig.base.json /app/tsconfig.base.json
 COPY tsconfig.json /app/tsconfig.json
 
@@ -198,6 +199,8 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # must resolve from the worker image rather than shared/node_modules.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
+RUN cd /app/ee/temporal-workflows && node scripts/verify-oauth-runtime.mjs
+
 # Quote terms must resolve their formatting dependency from the final image,
 # including the prebuilt path where .dockerignore controls which dist files ship.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const { prepareQuoteTermsForDb } = await import('./dist/shared/lib/quoteTerms.js'); const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Terms' }] }]; const result = prepareQuoteTermsForDb({ terms_and_conditions_block: blocks }); if (result.terms_and_conditions !== 'Terms' || JSON.parse(result.terms_and_conditions_block)[0].type !== 'paragraph') throw new Error('quote terms runtime serialization failed')"
@@ -281,6 +284,8 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # Catch missing bare dependencies imported by shared code compiled into the
 # worker's dist tree before the image can be deployed.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
+
+RUN cd /app/ee/temporal-workflows && node scripts/verify-oauth-runtime.mjs
 
 # Quote terms must resolve their formatting dependency from the final image,
 # including the prebuilt path where .dockerignore controls which dist files ship.

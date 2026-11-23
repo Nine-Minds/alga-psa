@@ -7,6 +7,7 @@ import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-
 // instead of built dist output.
 const workspaceAliases = [
   serverOnlyAlias,
+  { find: /^@product\/service-principals\/entry$/, replacement: path.resolve(__dirname, '../product-service-principals/oss/entry.ts') },
   // next-auth's lib/env.js imports the extensionless builtin specifier
   // "next/server"; point it at the real file so a fresh install resolves.
   { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
@@ -90,6 +91,12 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  { find: /^@alga-psa\/authorization$/, replacement: path.resolve(__dirname, '../authorization/src/index.ts') },
+  { find: /^@alga-psa\/authorization\/(.*)$/, replacement: `${path.resolve(__dirname, '../authorization/src')}/$1` },
+  { find: /^@product\/service-principals\/entry$/, replacement: path.resolve(__dirname, '../product-service-principals/oss/entry.ts') },
+  { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+  // The workflow-streams package publishes its runtime entry from dist, which
+  // is not built for focused action tests; resolve its source entry instead.
   serverOnlyAlias,
   { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
   // This workspace package publishes its runtime entry from dist, which Nx's
@@ -155,6 +162,7 @@ export default defineConfig({
             'src/components/DocumentUpload.test.tsx',
             'src/components/Documents.uploadBatch.test.tsx',
             'src/components/Documents.drawer.test.tsx',
+            'src/components/Documents.refreshAfterSave.test.tsx',
             'src/components/DocumentStorageCard.preview.test.tsx',
           ],
           setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],

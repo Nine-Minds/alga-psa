@@ -1,0 +1,16 @@
+{
+  "revision": "75acf2e3556473abedcc1d024ccb657a9dad1d6a",
+  "inspection": "Playwright browser response listener captured text/x-component RSC/action responses while visiting the list and ticket detail routes. Raw bodies were not retained because they contain tenant and session data.",
+  "routes": ["/client-portal/tickets", "/client-portal/tickets/29930000-0000-4000-8000-0000000000a7"],
+  "observations": {
+    "ticketPrivateAttributeMarker": "absent from list and detail responses",
+    "watcherPrivateMarker": "absent from list and detail responses",
+    "emailMetadataPrivateMarker": "absent from list and detail responses",
+    "commentSourceUserContactActorIdentity": "absent from projected conversation records",
+    "privateCommentIdentityFields": "absent from projected conversation records",
+    "authenticatedSessionCredentialHash": "absent after getCurrentUser projection repair",
+    "listTicket": "projected ticket SMK-2993-A present",
+    "detailTicket": "projected ticket SMK-2993-A present; five public comments; no document fixture at final no-document check"
+  },
+  "temporarySentinels": "removed after inspection"
+}

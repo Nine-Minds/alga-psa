@@ -1167,7 +1167,9 @@
       "send_one": "Invia e-mail {{count}}",
       "send_other": "Invia e-mail {{count}}",
       "sending_one": "Invio fattura {{count}}...",
-      "sending_other": "Invio fatture {{count}}..."
+      "sending_other": "Invio fatture {{count}}...",
+      "schedule": "Programma",
+      "scheduling": "Programmazione..."
     },
     "toasts": {
       "noValidRecipients": "Nessun destinatario valido trovato",
@@ -1175,11 +1177,13 @@
       "sentSuccess_other": "Fatture {{count}} inviate con successo",
       "sentFailure_one": "Impossibile inviare la fattura {{count}}",
       "sentFailure_other": "Impossibile inviare fatture {{count}}",
-      "sentPartial": "{{successCount}} inviato, {{failureCount}} non riuscito"
+      "sentPartial": "{{successCount}} inviato, {{failureCount}} non riuscito",
+      "scheduled": "E-mail della fattura programmata"
     },
     "errors": {
       "loadRecipients": "Impossibile caricare le informazioni sul destinatario",
-      "sendFailed": "Impossibile inviare e-mail"
+      "sendFailed": "Impossibile inviare e-mail",
+      "scheduleFailed": "Impossibile programmare l’e-mail della fattura"
     }
   },
   "generateTab": {
@@ -2874,10 +2878,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
+      "invoiceFinalize": "Autorizzazione negata: è richiesta l’autorizzazione per finalizzare le fatture",
       "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
       "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
       "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente",
-      "invoiceRead": "Permesso negato: richiesta lettura fatture"
+      "invoiceRead": "Permesso negato: richiesta lettura fatture",
+      "invoiceSend": "Autorizzazione negata: è necessaria l’autorizzazione per inviare fatture"
     },
     "invoice": {
       "notFound": "Fattura non trovata",
