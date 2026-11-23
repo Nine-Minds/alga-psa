@@ -333,6 +333,24 @@ describe('QuoteLineItemsEditor product description (alga-2026-0002804)', () => {
       expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(3);
     });
 
+    it('does not retry a permission refusal or read its keys as products', async () => {
+      actionMocks.getServiceCatalogDescriptions.mockResolvedValue({
+        permissionError: 'Permission denied: Cannot read quotes',
+        messageKey: 'msp/quotes:errors.permissions.read',
+      });
+      render(<QuoteLineItemsEditor items={[catalogLine({ catalog_description: 'Edited', catalog_description_edited: true })]} currencyCode="USD" onChange={vi.fn()} />);
+      await flush();
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+
+      await flush(120000);
+
+      expect(actionMocks.getServiceCatalogDescriptions).toHaveBeenCalledTimes(1);
+      expect(refreshButton()?.disabled).toBe(true);
+      // Not mistaken for "the product is gone".
+      expect(refreshButton()?.closest('[data-tooltip]')).toBeNull();
+      expect(caption()).toBeNull();
+    });
+
     it('does not call again or warn about state updates when unmounted with a retry pending', async () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       actionMocks.getServiceCatalogDescriptions.mockRejectedValue(new Error('down'));

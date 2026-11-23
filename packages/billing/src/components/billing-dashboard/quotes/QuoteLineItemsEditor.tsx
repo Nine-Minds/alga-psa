@@ -13,6 +13,7 @@ import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Pencil, Info, RotateCcw } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getServiceCatalogDescriptions, type CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import LocationPicker from '../locations/LocationPicker';
@@ -368,6 +369,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     getServiceCatalogDescriptions(missing)
       .then((result) => {
         if (!isMountedRef.current) return;
+        if (isActionPermissionError(result) || isActionMessageError(result)) {
+          // A refusal is an answer, not an outage: retrying will not change it.
+          // Release the ids (a later change of lines may ask again) and leave the
+          // refresh button disabled; never read the error's keys as products.
+          missing.forEach((id) => requestedServiceIds.current.delete(id));
+          return;
+        }
         if (!result || typeof result !== 'object') {
           failLookup();
           return;

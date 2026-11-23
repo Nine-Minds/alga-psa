@@ -408,14 +408,19 @@ export const getServiceCatalogCostInfo = withAuth(async (
  * Current catalog description per product, normalised with the same rule the
  * quote model uses to capture it (trimmed, empty becomes null). Backs the quote
  * editor's "Use current product description" action; the editor then saves the
- * text through the normal line write. Same shape and auth as
- * getServiceCatalogCostInfo. A missing key means the product no longer exists.
+ * text through the normal line write. A missing key means the product no longer
+ * exists. Gated like reading the quote it serves ('billing','read'): whoever may
+ * read a quote may read its lines' current product text.
  */
 export const getServiceCatalogDescriptions = withAuth(async (
-  _user,
+  user,
   { tenant },
   serviceIds: string[]
-): Promise<Record<string, string | null>> => {
+): Promise<Record<string, string | null> | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
+  }
+
   const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
   if (uniqueServiceIds.length === 0) {
     return {};
