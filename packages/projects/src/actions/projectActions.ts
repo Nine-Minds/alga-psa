@@ -623,12 +623,15 @@ export const searchProjectListIds = withAuth(async (
     // authorization to projects the query could return. A websearch exclusion can inspect
     // hidden indexed text before projection, so those queries deliberately fall back to all
     // visible index entries; the effective projected vector below decides membership.
-    const hasExclusion = /(^|\s)-\S/.test(rawSearch);
+    // Detect NOT in PostgreSQL's parsed query so every accepted exclusion syntax is covered.
     const candidateQuery = await trx.raw<{ rows: Array<{ project_id: string }> }>(`
       WITH q AS (
-        SELECT websearch_to_tsquery('english', ?) AS tsq,
-          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-          ?::text AS raw, ?::text AS identifier, ?::boolean AS has_exclusion
+        SELECT parsed_query.*, position('!' in parsed_query.tsq::text) > 0 AS has_exclusion
+        FROM (
+          SELECT websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw, ?::text AS identifier
+        ) parsed_query
       )
       SELECT DISTINCT CASE
         WHEN si.object_type = 'project' THEN si.object_id::text
@@ -665,7 +668,7 @@ export const searchProjectListIds = withAuth(async (
           ))
         )
     `, [
-      rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier, hasExclusion,
+      rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier,
       ...searchIndex.bindings,
       ...projectTaskCommentJoin.bindings,
       ...projectPhaseJoin.bindings,

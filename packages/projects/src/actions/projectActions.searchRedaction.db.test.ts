@@ -129,16 +129,37 @@ describe('project list search respects effective redacted fields', () => {
     expect(await searchProjectListIds('Alder')).not.toContain(renamedId);
   });
 
-  it('keeps visible project membership stable when a hidden value appears only in a websearch exclusion', async () => {
+  it.each([
+    'PublicMatter -SECRET -CompletelyAbsentWord',
+    'PublicMatter(-SECRET)(-CompletelyAbsentWord)',
+    'PublicMatter(-"SECRET")(-"CompletelyAbsentWord")',
+    '(-SECRET)(-CompletelyAbsentWord)',
+  ])('keeps hidden descriptions from affecting exclusion membership: %s', async (query) => {
     const projectId = await makeProject('PublicMatter', 'PRJ-9172');
     await testState.trx('projects').where({ tenant, project_id: projectId }).update({ description: 'HarborVault' });
     await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: 'PublicMatter', body: 'HarborVault' });
     testState.decisions.set(projectId, { allowed: true, redactedFields: ['projects.description'] });
 
-    const withoutHiddenExclusion = await searchProjectListIds('PublicMatter -DifferentVault -CompletelyAbsentWord');
-    const withHiddenExclusion = await searchProjectListIds('PublicMatter -HarborVault -CompletelyAbsentWord');
+    const withoutHiddenExclusion = await searchProjectListIds(query.replace('SECRET', 'DifferentVault'));
+    const withHiddenExclusion = await searchProjectListIds(query.replace('SECRET', 'HarborVault'));
     expect(withoutHiddenExclusion).toContain(projectId);
     expect(withHiddenExclusion).toEqual(withoutHiddenExclusion);
+
+    await testState.trx('projects').where({ tenant, project_id: projectId }).update({ description: 'DifferentVault' });
+    await testState.trx('app_search_index').where({ tenant, object_type: 'project', object_id: projectId }).update({
+      body: 'DifferentVault',
+      search_vector: knex.raw("to_tsvector('english', ?)", ['PublicMatter DifferentVault']),
+    });
+    expect(await searchProjectListIds(query.replace('SECRET', 'HarborVault'))).toEqual(withHiddenExclusion);
+  });
+
+  it('still applies parenthesized exclusions to visible descriptions', async () => {
+    const projectId = await makeProject('PublicMatter', 'PRJ-9174');
+    await testState.trx('projects').where({ tenant, project_id: projectId }).update({ description: 'HarborVault' });
+    await addIndexEntry({ type: 'project', id: projectId, parentId: null, title: 'PublicMatter', body: 'HarborVault' });
+
+    expect(await searchProjectListIds('PublicMatter(-DifferentVault)(-CompletelyAbsentWord)')).toContain(projectId);
+    expect(await searchProjectListIds('PublicMatter(-HarborVault)(-CompletelyAbsentWord)')).not.toContain(projectId);
   });
 
   it('masks indexed child fields and child-resource wildcards before search matching', async () => {
