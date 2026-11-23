@@ -914,6 +914,39 @@ either kind column, so the board is `custom` by column default. The dev seeds co
 board (`86_itil_categories.cjs`, after `85_itil_priorities.cjs`). No finished path leaves an ITIL
 board without its standard set.
 
+### The review slot could not create an ITIL board — a stale runtime and a stale database
+
+The browser check reported that creating a new ITIL board failed with "ITIL board setup needs the
+SLA integration: call registerSlaIntegration() at startup of this runtime." (F123's message) and
+that no board was made. Two slot conditions, both of them state rather than code:
+
+1. **The runtime predated the `sla` group.** The slot's `next dev` process had been up since
+   17:23, the `sla` commit landed at 21:38, and `instrumentation.register()` runs once per process.
+   Its boot therefore came from a build with no registration block at all: the slot log has
+   `Inbound webhook actions bootstrapped` / `Inbound auth-pause notifications registered` /
+   `Inbound quarantine notifications registered` from `initializeApp`, and between the second and
+   the third nothing about SLA — neither `SLA integration registered` nor the
+   `Failed to register the SLA integration` that a broken import would have logged. Restarting the
+   process logs `SLA integration registered` on the first boot, from the same code, unchanged.
+   Note for anyone reading the slot log: `initializeApp` does end in
+   `Failed to initialize application: Credential vault encryption key is not configured` on this
+   clone, but that check runs long after the SLA block (the block is before
+   `validateSecretUniqueness`, and `Scheduled jobs initialized` is logged in between), so it does
+   not keep the hooks from being registered.
+2. **The clone was two migrations behind the branch.** With the hooks registered the create then
+   failed on `select * from "sla_policies" ... "is_itil_standard" = $2 - column "is_itil_standard"
+   does not exist`: `knex_migrations` ended at `20261122120000_itil_categories_per_board.cjs`, so
+   `20261123090000_flag_itil_standard_sla_policy.cjs` (F124) and
+   `20261123093000_drop_board_itil_display_columns.cjs` (F134) had never run on it. `npm run
+   migrate:ee` applied exactly those two as batch 58.
+
+With the slot in line, the flow works end to end: a new ITIL board created from Settings →
+Ticketing → Boards (statuses copied from the existing ITIL board, ITIL Compliant on) is written
+with `priority_type = category_type = 'itil'`, 35 categories of its own all carrying
+`standard_category_id`, the five copied statuses, and `sla_policy_id` pointing at the tenant's
+`is_itil_standard` policy, which holds five targets. No product code was touched for either
+condition: a deployment boots once with the code it ships and runs its migrations with it.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no
