@@ -74,6 +74,17 @@ vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => ({}),
 }));
 
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, id, message, onConfirm, onClose, confirmLabel }: any) =>
+    isOpen ? (
+      <div id={id}>
+        <p>{message}</p>
+        <button type="button" onClick={onConfirm}>{confirmLabel}</button>
+        <button type="button" onClick={onClose}>Cancel</button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: Record<string, unknown>) => {
     let result = String(options?.defaultValue ?? key);
