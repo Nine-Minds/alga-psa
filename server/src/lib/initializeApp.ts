@@ -70,6 +70,21 @@ export async function initializeApp() {
       logger.error('Failed to register inbound auth-pause notifications:', error);
     }
 
+    // SLA integration for the tickets package: the ITIL policy setup a new ITIL board needs, and
+    // the cancellation a closed ticket needs. Registered here rather than from an MSP layout, so a
+    // server action reaches it without any page having rendered (F122).
+    try {
+      const { registerSlaIntegration } = await import(
+        '@alga-psa/msp-composition/tickets/registerSlaIntegration'
+      );
+      registerSlaIntegration();
+      const { assertSlaIntegrationRegistered } = await import('@alga-psa/tickets/lib/slaIntegrationHooks');
+      assertSlaIntegrationRegistered('server/initializeApp');
+      logger.info('SLA integration registered');
+    } catch (error) {
+      logger.error('Failed to register the SLA integration:', error);
+    }
+
     // Admin notifications for quarantined inbound email. The quarantine row is
     // persisted by the shared code regardless; this hook only notifies.
     try {

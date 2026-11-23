@@ -452,8 +452,11 @@ export type BundleAfterCommitPublication = {
 export type BundleChildCloseSnapshot = {
   status_id: string | null;
   response_state: string | null;
-  itil_priority_level: number | null;
   entered_at: string | null;
+  /** The child's own SLA, which decides its resolution stage outcome (F129). */
+  sla_policy_id: string | null;
+  sla_started_at: string | null;
+  sla_resolution_due_at: string | null;
 };
 
 export type ApplyClosedMasterChoiceParams = {
@@ -577,7 +580,10 @@ export async function applyClosedMasterChoice(
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
         ticketId: childTicketId,
-        itilPriorityLevel: snapshot?.itil_priority_level ?? null,
+        // The child's own SLA, as its snapshot carries it (F129): no policy or no due time, no event.
+        slaPolicyId: snapshot?.sla_policy_id ?? null,
+        slaStartedAt: snapshot?.sla_started_at ?? null,
+        slaResolutionDueAt: snapshot?.sla_resolution_due_at ?? null,
         enteredAt: snapshot?.entered_at ?? null,
         closedAt: occurredAt,
       });
@@ -715,7 +721,9 @@ type BundleTicketRow = {
   status_id?: string | null;
   board_id?: string | null;
   response_state?: string | null;
-  itil_priority_level?: number | null;
+  sla_policy_id?: string | null;
+  sla_started_at?: string | null;
+  sla_resolution_due_at?: string | null;
   entered_at?: string | null;
 };
 
@@ -815,8 +823,10 @@ export async function attachChildrenToBundle(
       'priority_id',
       'assigned_to',
       'response_state',
-      'itil_priority_level',
-      'entered_at'
+      'entered_at',
+      'sla_policy_id',
+      'sla_started_at',
+      'sla_resolution_due_at'
     )
     .whereIn('ticket_id', childIds)) as BundleTicketRow[];
   const byId = new Map<string, BundleTicketRow>(children.map((row) => [row.ticket_id, row]));
@@ -965,8 +975,10 @@ export async function attachChildrenToBundle(
           {
             status_id: child?.status_id ?? null,
             response_state: child?.response_state ?? null,
-            itil_priority_level: child?.itil_priority_level ?? null,
             entered_at: child?.entered_at ?? null,
+            sla_policy_id: child?.sla_policy_id ?? null,
+            sla_started_at: child?.sla_started_at ?? null,
+            sla_resolution_due_at: child?.sla_resolution_due_at ?? null,
           },
         ];
       })
@@ -1075,8 +1087,10 @@ export async function changeBundleSettings(
           'priority_id',
           'assigned_to',
           'response_state',
-          'itil_priority_level',
-          'entered_at'
+          'entered_at',
+          'sla_policy_id',
+          'sla_started_at',
+          'sla_resolution_due_at'
         )
         .where({ master_ticket_id: params.masterTicketId })
         .whereNull('closed_at')) as Array<BundleTicketRow & Record<string, any>>;
@@ -1109,7 +1123,9 @@ export async function changeBundleSettings(
                 {
                   status_id: child.status_id ?? null,
                   response_state: child.response_state ?? null,
-                  itil_priority_level: child.itil_priority_level ?? null,
+                  sla_policy_id: child.sla_policy_id ?? null,
+                  sla_started_at: child.sla_started_at ?? null,
+                  sla_resolution_due_at: child.sla_resolution_due_at ?? null,
                   entered_at: child.entered_at ?? null,
                 },
               ])

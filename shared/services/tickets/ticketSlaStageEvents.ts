@@ -1,6 +1,13 @@
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
-import { getSlaTarget } from '../../lib/itil/slaTargets';
 import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
+/**
+ * `TICKET_SLA_STAGE_*` describes the ticket's own SLA: the policy that applies to it, the moment
+ * its clock started and the moment resolution is due. They used to be computed from a hard-coded
+ * table of hours keyed on `tickets.itil_priority_level`, which no create ever wrote — so the
+ * events were both rarely emitted and, when they were, unrelated to the SLA the ticket actually
+ * runs on. A ticket with no SLA emits none (F129 of `ee/plans/2026-11-21-itil-remediation`).
+ */
 
 type IsoString = string;
 
@@ -50,33 +57,32 @@ function toIsoString(value: Date | string | null | undefined): IsoString | undef
   return value;
 }
 
-function addHoursToIso(iso: string, hours: number): IsoString | undefined {
-  const enteredAtMs = Date.parse(iso);
-  if (Number.isNaN(enteredAtMs)) return undefined;
-  return new Date(enteredAtMs + hours * 60 * 60 * 1000).toISOString();
+/** The ticket's own SLA, as the row carries it. */
+export interface TicketSlaFields {
+  /** `tickets.sla_policy_id`: null when no policy applies to this ticket. */
+  slaPolicyId?: string | null;
+  /** `tickets.sla_started_at`: when the clock started. Falls back to the ticket's `entered_at`. */
+  slaStartedAt?: Date | string | null;
+  /** `tickets.sla_resolution_due_at`: when resolution is due. No due time, no stage events. */
+  slaResolutionDueAt?: Date | string | null;
 }
 
-export function buildTicketResolutionSlaStageEnteredEvent(args: {
+export function buildTicketResolutionSlaStageEnteredEvent(args: TicketSlaFields & {
   tenantId: string;
   ticketId: string;
-  itilPriorityLevel?: number | null;
   enteredAt?: Date | string | null;
   /** Extra payload fields (e.g. workflow provenance), merged over the base fields. */
   payloadExtras?: Record<string, unknown>;
 }): WorkflowTicketSlaStageEnteredEvent | null {
-  const enteredAtIso = toIsoString(args.enteredAt);
-  if (!enteredAtIso) return null;
-  if (!args.itilPriorityLevel) return null;
-
-  const targetAt = addHoursToIso(enteredAtIso, getSlaTarget(args.itilPriorityLevel));
+  const enteredAtIso = toIsoString(args.slaStartedAt) ?? toIsoString(args.enteredAt);
+  const targetAt = toIsoString(args.slaResolutionDueAt);
+  if (!enteredAtIso || !targetAt || !args.slaPolicyId) return null;
 
   return {
     eventType: 'TICKET_SLA_STAGE_ENTERED',
     payload: builtWorkflowPayload('TICKET_SLA_STAGE_ENTERED', {
       ticketId: args.ticketId,
-      // Until a first-class SLA policy model exists, use a stable per-tenant identifier
-      // so workflows can still key off a consistent slaPolicyId.
-      slaPolicyId: args.tenantId,
+      slaPolicyId: args.slaPolicyId,
       stage: 'resolution',
       enteredAt: enteredAtIso,
       targetAt,
@@ -86,20 +92,16 @@ export function buildTicketResolutionSlaStageEnteredEvent(args: {
   };
 }
 
-export function buildTicketResolutionSlaStageCompletionEvent(args: {
+export function buildTicketResolutionSlaStageCompletionEvent(args: TicketSlaFields & {
   tenantId: string;
   ticketId: string;
-  itilPriorityLevel?: number | null;
   enteredAt?: Date | string | null;
   closedAt?: Date | string | null;
 }): WorkflowTicketSlaStageCompletionEvent | null {
-  const enteredAtIso = toIsoString(args.enteredAt);
+  const enteredAtIso = toIsoString(args.slaStartedAt) ?? toIsoString(args.enteredAt);
   const closedAtIso = toIsoString(args.closedAt);
-  if (!enteredAtIso || !closedAtIso) return null;
-  if (!args.itilPriorityLevel) return null;
-
-  const targetAt = addHoursToIso(enteredAtIso, getSlaTarget(args.itilPriorityLevel));
-  if (!targetAt) return null;
+  const targetAt = toIsoString(args.slaResolutionDueAt);
+  if (!enteredAtIso || !closedAtIso || !targetAt || !args.slaPolicyId) return null;
 
   const targetAtMs = Date.parse(targetAt);
   const closedAtMs = Date.parse(closedAtIso);
@@ -110,7 +112,7 @@ export function buildTicketResolutionSlaStageCompletionEvent(args: {
       eventType: 'TICKET_SLA_STAGE_MET',
       payload: builtWorkflowPayload('TICKET_SLA_STAGE_MET', {
         ticketId: args.ticketId,
-        slaPolicyId: args.tenantId,
+        slaPolicyId: args.slaPolicyId,
         stage: 'resolution',
         metAt: closedAtIso,
         targetAt,
@@ -123,7 +125,7 @@ export function buildTicketResolutionSlaStageCompletionEvent(args: {
     eventType: 'TICKET_SLA_STAGE_BREACHED',
     payload: builtWorkflowPayload('TICKET_SLA_STAGE_BREACHED', {
       ticketId: args.ticketId,
-      slaPolicyId: args.tenantId,
+      slaPolicyId: args.slaPolicyId,
       stage: 'resolution',
       breachedAt: closedAtIso,
       targetAt,

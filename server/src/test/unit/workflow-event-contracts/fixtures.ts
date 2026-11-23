@@ -25,6 +25,7 @@ export const IDS = {
   board: '88888888-8888-4888-8888-000000000001',
   otherBoard: '88888888-8888-4888-8888-000000000002',
   priority: '99999999-9999-4999-8999-000000000001',
+  slaPolicy: '99999999-9999-4999-8999-000000000009',
   otherPriority: '99999999-9999-4999-8999-000000000002',
   client: 'cccccccc-cccc-4ccc-8ccc-000000000001',
   location: 'cccccccc-cccc-4ccc-8ccc-000000000002',
@@ -102,6 +103,11 @@ export const ticket: ITicket = {
   priority_id: IDS.priority,
   itil_priority_level: 3,
   response_state: null,
+  // The ticket's own SLA: what the resolution stage events are now built from (F129 of
+  // ee/plans/2026-11-21-itil-remediation). EARLIER + 24 hours.
+  sla_policy_id: IDS.slaPolicy,
+  sla_started_at: EARLIER,
+  sla_resolution_due_at: '2026-07-17T09:00:00.000Z',
 };
 
 export const closedTicket: ITicket = {

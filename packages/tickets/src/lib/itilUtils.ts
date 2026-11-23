@@ -1,4 +1,3 @@
-import { ItilPriority, getSlaTarget } from '@alga-psa/shared/lib/itil/slaTargets';
 import {
   ItilImpact,
   ItilUrgency,
@@ -6,47 +5,14 @@ import {
   ItilLabels,
 } from '@alga-psa/shared/lib/itil/priorityMatrix';
 
-export { ItilPriority, getSlaTarget };
-
 // The Impact × Urgency matrix and its labels live in @alga-psa/shared so the rules module,
 // shared/workflow and co-managed can use them without importing the tickets package.
 export { ItilImpact, ItilUrgency, calculateItilPriority, ItilLabels };
 
-/**
- * Check if SLA should be breached based on elapsed time
- * @param priority ITIL priority level
- * @param elapsedHours Hours since ticket creation
- * @returns True if SLA is breached
- */
-export function isSlaBreached(priority: number, elapsedHours: number): boolean {
-  const targetHours = getSlaTarget(priority);
-  return elapsedHours >= targetHours;
-}
+// `isSlaBreached` and `getEscalationLevel` lived here on a hard-coded table of SLA hours that the
+// product never used (nothing outside this file imported them). The table is gone with the stage
+// events' move onto the ticket's real SLA (F129), and so are they.
 
-/**
- * Get escalation level based on elapsed time and priority
- * @param priority ITIL priority level
- * @param elapsedHours Hours since ticket creation
- * @returns Escalation level (0 = no escalation, 1-3 = escalation levels)
- */
-export function getEscalationLevel(priority: number, elapsedHours: number): number {
-  const targetHours = getSlaTarget(priority);
-  const escalationThresholds = {
-    level1: targetHours * 0.7,  // 70% of SLA target
-    level2: targetHours * 0.9,  // 90% of SLA target
-    level3: targetHours * 1.1   // 110% of SLA target (already breached)
-  };
-
-  if (elapsedHours >= escalationThresholds.level3) {
-    return 3;
-  } else if (elapsedHours >= escalationThresholds.level2) {
-    return 2;
-  } else if (elapsedHours >= escalationThresholds.level1) {
-    return 1;
-  }
-  
-  return 0;
-}
 
 /**
  * Standard ITIL incident categories

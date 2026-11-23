@@ -687,6 +687,52 @@ the surface probe.
   `itilBoardLifecycle` 11/11, `itilBoardDeletionCleanup` 5/5 and the 10 test files of
   `packages/tickets/src/{components/settings,actions/board-actions}`.
 
+### Commit group 13 — `sla` (done)
+
+Landed: `packages/tickets/src/lib/slaIntegrationHooks.ts` (both hooks on `globalThis`, with a
+startup assert), registration moved from `WorkspaceRouteLayout` to `initializeApp`, ITIL setup
+failing loudly on a PSA tenant with no hook, the
+`20261123090000_flag_itil_standard_sla_policy.cjs` migration, `sla_policies.is_itil_standard` as
+the way the policy is found in `itilSlaService`, `ItilStandardsService` and `ensureSlaParity`,
+`topUpItilSlaTargets`, `shared/lib/sla/itilSlaDefaults.ts` as the one definition of the targets and
+thresholds, and `TICKET_SLA_STAGE_*` built from the ticket's own SLA with
+`shared/lib/itil/slaTargets.ts` deleted. Tests:
+`server/src/test/integration/itilSlaPolicy.integration.test.ts` (8 cases),
+`server/src/test/unit/itilSlaContract.test.ts` (9 cases),
+`server/migrations/__tests__/itilSlaPolicyFlagMigration.integration.test.ts` (5 cases), the
+rewritten `shared/services/tickets/__tests__/ticketSlaStageEvents.test.ts` (5 cases) and the last
+surface probe.
+
+- **The production-build question is settled, without a production build.** T214 bundles the hooks
+  module twice with esbuild — the artefact-level form of "Next builds separate instances" — and
+  registers through one bundle, reads through the other. Rewriting the store as a module variable
+  makes that test fail (checked), so it is a real proof rather than a restatement.
+- **The stage-entered event moved to where the SLA starts.** The SLA is stamped by the
+  `TICKET_CREATED` subscriber, after the create commits, so at create time a ticket has no policy
+  and no due time: the two create sites could only have guessed them. The subscriber now publishes
+  `TICKET_SLA_STAGE_ENTERED` with the policy and the resolution due time it has just written, and
+  the close paths compare the close time with that same due time. The workflow-event contract
+  catalogue moved its `TICKET_SLA_STAGE_ENTERED` site accordingly, and its ticket fixture gained
+  the three SLA columns.
+- **`isSlaBreached` and `getEscalationLevel` went with `slaTargets.ts`.** They are on the
+  `cleanup` group's dead-code list, but they were the only remaining callers of the deleted table
+  of hours, so they could not outlive it. Nothing outside their own file imported them.
+- **The ITIL setup is now able to fail**, which is what F123 asks for; the `board-lifecycle`
+  group's suites register the hook in their fixture because an ITIL board create on a PSA tenant
+  now refuses without it — the same thing `initializeApp` does at boot.
+- **T227 is pinned, not driven.** Closing a ticket through the action reaches `_cancelSlaFn`'s
+  replacement, `getSlaCancellationHook()`, at both call sites; standing up a full close (bundles,
+  close rules, event bus) adds no coverage of "the hook is reachable", which T214 and T226 prove
+  directly at the module boundary.
+- **No expected-fail rows are left in the surface suite**: all 44 rows are covered, so the empty
+  `it.todo` block is now declared only while something is still pending (vitest errors on an empty
+  `describe`).
+- Run against this slot's database: `itilSlaPolicy` 8/8, `itilSlaContract` 9/9,
+  `itilSlaPolicyFlagMigration` 5/5 (with `TEST_DB_PORT=5432`, as the migration suites wire their
+  own env), `ticketSlaStageEvents` 5/5, `itilSecondBoardSurfaces` 44/44, `itilBoardLifecycle`
+  11/11, `packages/sla` 204/204, `packages/tickets` {actions,lib,services} 1,462 and the 450
+  workflow-event contract cases.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -704,7 +750,7 @@ the surface probe.
 
 ### Groups not started
 
-Commit groups 13–16 (`sla` through `docs`) are untouched: their features and tests are
+Commit groups 14–16 (`cleanup`, `guard`, `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

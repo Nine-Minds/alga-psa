@@ -2,16 +2,23 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
+import {
+  getItilSlaConfigurationHook,
+  registerItilSlaConfigurationHook,
+  type ConfigureItilSlaForBoard,
+} from '../lib/slaIntegrationHooks';
 
-// ITIL SLA configuration is injected by the composition layer to avoid tickets→sla cross-package violation
-let _configureItilSlaForBoardFn: ((trx: Knex.Transaction, tenant: string, boardId: string) => Promise<{ created: boolean }>) | null = null;
-
-export function registerItilSlaConfiguration(fn: (trx: Knex.Transaction, tenant: string, boardId: string) => Promise<{ created: boolean }>): void {
-  _configureItilSlaForBoardFn = fn;
+// ITIL SLA configuration is injected by the composition layer to avoid tickets→sla cross-package
+// violation. The hook lives on `globalThis` (see `lib/slaIntegrationHooks`), because a module
+// variable is not shared between the Next bundle that registers it at startup and the one that
+// runs a server action (F122).
+export function registerItilSlaConfiguration(fn: ConfigureItilSlaForBoard): void {
+  registerItilSlaConfigurationHook(fn);
 }
 
-// Name of the SLA policy auto-created by configureItilSlaForBoard (@alga-psa/sla).
-const ITIL_SLA_POLICY_NAME = 'ITIL Standard';
+// The SLA policy auto-created by configureItilSlaForBoard (@alga-psa/sla) is recognised by its
+// flag, never by its name: a tenant may rename it, and a tenant's own policy may carry that name
+// (F125 of ee/plans/2026-11-21-itil-remediation).
 
 /**
  * Service to manage copying ITIL standards to tenant-specific tables
@@ -186,12 +193,19 @@ export class ItilStandardsService {
       const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
       const { productCode } = resolveProductCode(tenantRow?.product_code);
 
+      const configureItilSlaForBoard = getItilSlaConfigurationHook();
       if (productCode === 'algadesk') {
         console.log(`[ItilStandardsService] Skipping ITIL Standard SLA auto-config for AlgaDesk tenant ${tenant}`);
-      } else if (_configureItilSlaForBoardFn) {
+      } else if (!configureItilSlaForBoard) {
+        // F123: on a PSA tenant the ITIL SLA policy is part of what an ITIL board *is* (D2), so a
+        // runtime with no hook registered must not quietly create a board without one.
+        throw new Error(
+          'ITIL board setup needs the SLA integration: call registerSlaIntegration() at startup of this runtime.'
+        );
+      } else {
         // Auto-create "ITIL Standard" SLA policy and assign to board
         // This creates industry-standard SLA targets for each ITIL priority level
-        const slaResult = await _configureItilSlaForBoardFn(trx, tenant, boardId);
+        const slaResult = await configureItilSlaForBoard(trx, tenant, boardId);
         if (slaResult.created) {
           console.log(`[ItilStandardsService] Auto-created ITIL Standard SLA policy for board ${boardId}`);
         }
@@ -313,7 +327,7 @@ export class ItilStandardsService {
     // targets left; retire it so the tenant isn't left with an empty policy.
     for (const policyId of affectedPolicyIds) {
       const policy = await db.table('sla_policies')
-        .where({ sla_policy_id: policyId, policy_name: ITIL_SLA_POLICY_NAME })
+        .where({ sla_policy_id: policyId, is_itil_standard: true })
         .first();
       if (!policy) continue;
 
@@ -328,7 +342,7 @@ export class ItilStandardsService {
         .count('* as count')
         .first();
       if (Number(clientRefs?.count || 0) > 0) {
-        console.log(`[ItilStandardsService.cleanup] Kept empty ITIL Standard SLA policy ${policyId}: still assigned to client(s)`);
+        console.log(`[ItilStandardsService.cleanup] Kept empty ITIL SLA policy ${policyId}: still assigned to client(s)`);
         continue;
       }
 

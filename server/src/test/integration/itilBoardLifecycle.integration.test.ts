@@ -41,6 +41,11 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
 }));
 
 import { tenantDb } from '@alga-psa/db';
+import { configureItilSlaForBoard } from '../../../../packages/sla/src/services/itilSlaService';
+import {
+  clearSlaIntegrationHooksForTest,
+  registerItilSlaConfigurationHook,
+} from '../../../../packages/tickets/src/lib/slaIntegrationHooks';
 import {
   createBoardCore,
   deleteBoardCore,
@@ -88,11 +93,14 @@ describe('ITIL board lifecycle (integration)', () => {
       await tt('boards').whereIn('board_id', extra).update({ default_priority_id: null, sla_policy_id: null });
       await tt('boards').whereIn('board_id', extra).del();
     }
+    await tt('boards').update({ sla_policy_id: null });
     await tt('sla_policy_targets').del();
+    await tt('sla_notification_thresholds').del();
     await tt('sla_policies').del();
     await cleanupItilSecondBoardFixture(db, fixture.tenantId);
     fixture = undefined as unknown as ItilSecondBoardFixture;
     publishedRef.events = [];
+    clearSlaIntegrationHooksForTest();
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -105,6 +113,8 @@ describe('ITIL board lifecycle (integration)', () => {
     dbRef.tenant = fixture.tenantId;
     userRef.user = { user_id: fixture.userId, user_type: 'internal', tenant: fixture.tenantId };
     publishedRef.events = [];
+    // Creating an ITIL board needs the SLA hook startup registers (F123).
+    registerItilSlaConfigurationHook(configureItilSlaForBoard as never);
   }
 
   async function create(input: Record<string, unknown>) {

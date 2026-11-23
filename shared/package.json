@@ -78,6 +78,7 @@
     "./lib/sla/slaPolicyResolver": "./dist/lib/sla/slaPolicyResolver.js",
     "./lib/sla/holidayRows": "./dist/lib/sla/holidayRows.js",
     "./lib/sla/slaPauseConditions": "./dist/lib/sla/slaPauseConditions.js",
+    "./lib/sla/itilSlaDefaults": "./dist/lib/sla/itilSlaDefaults.js",
     "./lib/itil/priorityMatrix": "./dist/lib/itil/priorityMatrix.js",
     "./lib/itil/priorityMatrix.js": "./dist/lib/itil/priorityMatrix.js",
     "./lib/tickets/boardFieldRules": "./dist/lib/tickets/boardFieldRules.js",

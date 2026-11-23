@@ -3457,7 +3457,10 @@ export async function updateTicketInTransaction(
       const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
         tenantId: tenant,
         ticketId: id,
-        itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, updatedTicket.priority_id ?? currentTicket.priority_id),
+        // The ticket's own SLA decides whether resolution was met (F129).
+        slaPolicyId: updatedTicket.sla_policy_id ?? currentTicket.sla_policy_id ?? null,
+        slaStartedAt: updatedTicket.sla_started_at ?? currentTicket.sla_started_at ?? null,
+        slaResolutionDueAt: updatedTicket.sla_resolution_due_at ?? currentTicket.sla_resolution_due_at ?? null,
         enteredAt: currentTicket.entered_at,
         closedAt: occurredAt,
       });

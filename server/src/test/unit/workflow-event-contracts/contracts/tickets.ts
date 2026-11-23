@@ -838,39 +838,17 @@ export const ticketContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${TICKET_ACTIONS}#addTicket`,
+        // The resolution stage is entered when the SLA starts, which is where the policy and the
+        // due time are known (F129). The create paths no longer guess it.
+        site: 'server/src/lib/eventBus/subscribers/slaSubscriber.ts#handleTicketCreatedEvent',
         build: () =>
           required(
             buildTicketResolutionSlaStageEnteredEvent({
               tenantId: IDS.tenant,
               ticketId: ticket.ticket_id!,
-              itilPriorityLevel: ticket.itil_priority_level,
-              enteredAt: ticket.entered_at,
-            }),
-            'SLA entered'
-          ).payload,
-      },
-      {
-        site: `${TICKET_ACTIONS}#createTicketFromAsset`,
-        build: () =>
-          required(
-            buildTicketResolutionSlaStageEnteredEvent({
-              tenantId: IDS.tenant,
-              ticketId: ticket.ticket_id!,
-              itilPriorityLevel: ticket.itil_priority_level,
-              enteredAt: ticket.entered_at,
-            }),
-            'SLA entered'
-          ).payload,
-      },
-      {
-        site: `shared/services/tickets/createTicketWithSideEffects.ts#createTicketWithSideEffects`,
-        build: () =>
-          required(
-            buildTicketResolutionSlaStageEnteredEvent({
-              tenantId: IDS.tenant,
-              ticketId: ticket.ticket_id!,
-              itilPriorityLevel: ticket.itil_priority_level,
+              slaPolicyId: ticket.sla_policy_id,
+              slaStartedAt: ticket.sla_started_at,
+              slaResolutionDueAt: ticket.sla_resolution_due_at,
               enteredAt: ticket.entered_at,
             }),
             'SLA entered'
@@ -889,7 +867,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed 3h after entry.
               closedAt: '2026-07-16T12:00:00.000Z',
@@ -904,7 +884,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed 3h after entry.
               closedAt: '2026-07-16T12:00:00.000Z',
@@ -919,7 +901,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed 3h after entry.
               closedAt: '2026-07-16T12:00:00.000Z',
@@ -940,7 +924,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed two days after entry.
               closedAt: '2026-07-18T09:00:00.000Z',
@@ -955,7 +941,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed two days after entry.
               closedAt: '2026-07-18T09:00:00.000Z',
@@ -970,7 +958,9 @@ export const ticketContracts = {
             buildTicketResolutionSlaStageCompletionEvent({
               tenantId: IDS.tenant,
               ticketId: closedTicket.ticket_id!,
-              itilPriorityLevel: closedTicket.itil_priority_level,
+              slaPolicyId: closedTicket.sla_policy_id,
+              slaStartedAt: closedTicket.sla_started_at,
+              slaResolutionDueAt: closedTicket.sla_resolution_due_at,
               enteredAt: closedTicket.entered_at,
               // Priority 3 allows 24h; closed two days after entry.
               closedAt: '2026-07-18T09:00:00.000Z',

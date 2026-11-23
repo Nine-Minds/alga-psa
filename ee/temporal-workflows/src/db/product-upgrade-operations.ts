@@ -14,6 +14,14 @@ import {
   type SeedRunLog,
 } from './onboarding-seeds-operations.js';
 import { listProductSeedFiles } from './product-bootstrap-resolver.js';
+// The ITIL policy's defaults are one definition, shared with the board-create path (F127).
+import {
+  ITIL_SLA_ESCALATION_PERCENTS,
+  ITIL_SLA_NOTIFICATION_THRESHOLDS,
+  ITIL_SLA_POLICY_DESCRIPTION,
+  ITIL_SLA_POLICY_NAME,
+  ITIL_SLA_TARGETS,
+} from '@alga-psa/shared/lib/sla/itilSlaDefaults';
 
 // Seed 03 rebuilds role_permissions and would remove every grant from the AlgaDesk Agent role.
 export const PSA_BACKFILL_SEED_EXCLUDES = ['03_role_permissions.cjs'] as const;
@@ -130,54 +138,6 @@ interface PsaRoleGrants {
   client: Record<string, RoleGrant>;
 }
 
-const ITIL_POLICY_NAME = 'ITIL Standard';
-const ITIL_POLICY_DESCRIPTION = 'Industry-standard SLA targets for ITIL priority levels. Auto-created when using ITIL priority mode.';
-const ITIL_SLA_TARGETS: Record<number, {
-  responseTimeMinutes: number;
-  resolutionTimeMinutes: number;
-  is24x7: boolean;
-}> = {
-  1: { responseTimeMinutes: 15, resolutionTimeMinutes: 60, is24x7: true },
-  2: { responseTimeMinutes: 30, resolutionTimeMinutes: 240, is24x7: false },
-  3: { responseTimeMinutes: 60, resolutionTimeMinutes: 1440, is24x7: false },
-  4: { responseTimeMinutes: 240, resolutionTimeMinutes: 4320, is24x7: false },
-  5: { responseTimeMinutes: 480, resolutionTimeMinutes: 10080, is24x7: false },
-};
-
-const SLA_NOTIFICATION_THRESHOLDS = [
-  {
-    threshold_percent: 50,
-    notification_type: 'warning',
-    notify_assignee: true,
-    notify_board_manager: false,
-    notify_escalation_manager: false,
-    channels: ['in_app'],
-  },
-  {
-    threshold_percent: 75,
-    notification_type: 'warning',
-    notify_assignee: true,
-    notify_board_manager: true,
-    notify_escalation_manager: false,
-    channels: ['in_app'],
-  },
-  {
-    threshold_percent: 90,
-    notification_type: 'warning',
-    notify_assignee: true,
-    notify_board_manager: true,
-    notify_escalation_manager: true,
-    channels: ['in_app', 'email'],
-  },
-  {
-    threshold_percent: 100,
-    notification_type: 'breach',
-    notify_assignee: true,
-    notify_board_manager: true,
-    notify_escalation_manager: true,
-    channels: ['in_app', 'email'],
-  },
-] as const;
 
 function resolveOnboardingSeedsRoot(): string {
   const currentFileUrl = import.meta.url;
@@ -574,8 +534,10 @@ export async function ensureSlaParity(
       };
     }
 
+    // F125: the ITIL policy is the flagged one, not the one with that name — a tenant may have
+    // renamed it, and a tenant's own policy may carry the same name.
     let policy = await db.table('sla_policies')
-      .where({ tenant: tenantId, policy_name: ITIL_POLICY_NAME })
+      .where({ tenant: tenantId, is_itil_standard: true })
       .first('sla_policy_id');
     let policyCreated = 0;
     if (!policy) {
@@ -583,8 +545,9 @@ export async function ensureSlaParity(
       await db.table('sla_policies').insert({
         tenant: tenantId,
         sla_policy_id: slaPolicyId,
-        policy_name: ITIL_POLICY_NAME,
-        description: ITIL_POLICY_DESCRIPTION,
+        policy_name: ITIL_SLA_POLICY_NAME,
+        description: ITIL_SLA_POLICY_DESCRIPTION,
+        is_itil_standard: true,
         is_default: false,
         business_hours_schedule_id: null,
       });
@@ -592,7 +555,7 @@ export async function ensureSlaParity(
       policyCreated = 1;
     }
 
-    const thresholdRows = SLA_NOTIFICATION_THRESHOLDS.map(threshold => ({
+    const thresholdRows = ITIL_SLA_NOTIFICATION_THRESHOLDS.map(threshold => ({
       tenant: tenantId,
       threshold_id: randomUUID(),
       sla_policy_id: policy.sla_policy_id,
@@ -631,9 +594,7 @@ export async function ensureSlaParity(
         priority_id: priority.priority_id,
         response_time_minutes: target.responseTimeMinutes,
         resolution_time_minutes: target.resolutionTimeMinutes,
-        escalation_1_percent: 70,
-        escalation_2_percent: 90,
-        escalation_3_percent: 110,
+        ...ITIL_SLA_ESCALATION_PERCENTS,
         is_24x7: target.is24x7,
       });
     }

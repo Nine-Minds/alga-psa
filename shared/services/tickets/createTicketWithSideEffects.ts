@@ -24,7 +24,6 @@ import {
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore, type TicketAdditionalAgentEvent } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
-import { buildTicketResolutionSlaStageEnteredEvent, publishWorkflowTicketSlaStageEvent } from './ticketSlaStageEvents';
 import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
@@ -447,25 +446,9 @@ export async function createTicketWithSideEffects(
     );
   }
 
-  const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
-    // Suppression flags describe notifications; an SLA stage event has none, so only provenance rides along.
-    payloadExtras: provenance,
-    tenantId: tenant,
-    ticketId,
-    itilPriorityLevel: fullTicket.itil_priority_level,
-    enteredAt: fullTicket.entered_at,
-  });
-  if (enteredSlaEvent) {
-    registerAfterCommit(
-      trx,
-      () =>
-        publishWorkflowTicketSlaStageEvent(
-          enteredSlaEvent,
-          eventCtx({ occurredAt: toIso(fullTicket.entered_at) }).ctx,
-        ),
-      `${enteredSlaEvent.eventType} ticket=${ticketId}`,
-    );
-  }
+  // TICKET_SLA_STAGE_ENTERED is published where the SLA starts — the TICKET_CREATED subscriber,
+  // which knows the policy and the resolution due time it just stamped (F129). A ticket has
+  // neither at this point, so there is nothing truthful to publish here.
 
   return { ticketId, ticketNumber: created.ticket_number };
 }

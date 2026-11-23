@@ -1094,7 +1094,7 @@
     "prdRefs": [
       "R8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The SLA hooks (ITIL policy setup and SLA cancellation) are held on globalThis, as ticketListViews does, so every Next bundle sees them; registerSlaIntegration runs from initializeApp and is asserted registered at startup; the call in WorkspaceRouteLayout is removed"
   },
   {
@@ -1103,7 +1103,7 @@
     "prdRefs": [
       "R8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL setup on a PSA tenant fails with an error when the SLA hook is not registered, instead of skipping"
   },
   {
@@ -1112,7 +1112,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Migration adds sla_policies.is_itil_standard, sets it on the existing policy named ITIL Standard, and allows at most one per tenant"
   },
   {
@@ -1121,7 +1121,7 @@
     "prdRefs": [
       "R8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "itilSlaService, the cleanup in ItilStandardsService and ensureSlaParity find the ITIL policy by the flag, not the name"
   },
   {
@@ -1130,7 +1130,7 @@
     "prdRefs": [
       "R8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Creating an ITIL board when the ITIL policy already exists adds targets for ITIL priorities that have none and leaves existing targets unchanged"
   },
   {
@@ -1139,7 +1139,7 @@
     "prdRefs": [
       "R8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "One module in shared holds the ITIL SLA default targets and thresholds; itilSlaService and product-upgrade-operations import it"
   },
   {
@@ -1148,7 +1148,7 @@
     "prdRefs": [
       "D1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Only board creation assigns the ITIL policy; board update, the type switch and migrations never assign a policy"
   },
   {
@@ -1157,7 +1157,7 @@
     "prdRefs": [
       "Problem 5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TICKET_SLA_STAGE events are built from the ticket's SLA start and resolution due time; a ticket without an SLA emits none; shared/lib/itil/slaTargets.ts is deleted"
   },
   {

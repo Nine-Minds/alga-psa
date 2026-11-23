@@ -1918,7 +1918,7 @@
     "featureIds": [
       "F122"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After initializeApp, creating an ITIL board through the server action without rendering any MSP page assigns the ITIL policy"
   },
   {
@@ -1927,7 +1927,7 @@
     "featureIds": [
       "F122"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The same holds in a production build, for the server action and for POST /api/v1/boards"
   },
   {
@@ -1936,7 +1936,7 @@
     "featureIds": [
       "F123"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ITIL setup with no hook registered throws on a PSA tenant and is skipped without error on an AlgaDesk tenant"
   },
   {
@@ -1945,7 +1945,7 @@
     "featureIds": [
       "F124"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The migration flags the policy named ITIL Standard and no other; a second flagged policy in a tenant is rejected"
   },
   {
@@ -1954,7 +1954,7 @@
     "featureIds": [
       "F125"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After the ITIL policy is renamed, creating another ITIL board reuses it and creates no second policy"
   },
   {
@@ -1963,7 +1963,7 @@
     "featureIds": [
       "F125"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A tenant's own unflagged policy named ITIL Standard is not adopted or deleted"
   },
   {
@@ -1972,7 +1972,7 @@
     "featureIds": [
       "F126"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Creating an ITIL board when the policy has no targets for the current ITIL priorities adds five; edited targets keep their values"
   },
   {
@@ -1981,7 +1981,7 @@
     "featureIds": [
       "F127"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "itilSlaService and ensureSlaParity create identical targets and thresholds"
   },
   {
@@ -1990,7 +1990,7 @@
     "featureIds": [
       "F128"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Updating a board, switching its kind and running this plan's migrations leave sla_policy_id unchanged on every board"
   },
   {
@@ -1999,7 +1999,7 @@
     "featureIds": [
       "F128"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A new ITIL board created with an explicit SLA policy keeps that policy"
   },
   {
@@ -2008,7 +2008,7 @@
     "featureIds": [
       "F129"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A ticket with an SLA emits stage-entered with the ticket's resolution due time as the target"
   },
   {
@@ -2017,7 +2017,7 @@
     "featureIds": [
       "F129"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A closed ticket emits met or breached by comparing closed time with its resolution due time"
   },
   {
@@ -2026,7 +2026,7 @@
     "featureIds": [
       "F129"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "An ITIL ticket without an SLA emits no SLA stage event"
   },
   {
@@ -2035,7 +2035,7 @@
     "featureIds": [
       "F122"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A hook registered through one import of the module is visible through a separately loaded instance of the same module"
   },
   {
@@ -2044,7 +2044,7 @@
     "featureIds": [
       "F122"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Closing a ticket through the server action cancels its SLA timer without any MSP page having rendered"
   },
   {

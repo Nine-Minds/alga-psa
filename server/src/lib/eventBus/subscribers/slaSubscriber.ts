@@ -10,6 +10,11 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { registerAfterCommit } from '@alga-psa/db';
+import {
+  buildTicketResolutionSlaStageEnteredEvent,
+  publishWorkflowTicketSlaStageEvent,
+} from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { getEventBus } from '../index';
 import {
   EventSchemas,
@@ -200,6 +205,33 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
 
             if (startResult.success && startResult.sla_policy_id) {
               collected.push(...(startResult.backendActions ?? []));
+
+              // F129: the resolution stage is entered the moment the SLA starts, and the event
+              // carries the ticket's own policy and due time — not a guess from a hard-coded table
+              // of hours. A ticket with no policy (the branch below) emits none.
+              const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+                tenantId,
+                ticketId,
+                slaPolicyId: startResult.sla_policy_id,
+                slaStartedAt: startResult.sla_started_at,
+                slaResolutionDueAt: startResult.sla_resolution_due_at,
+                enteredAt: createdTicket.entered_at,
+              });
+              if (enteredSlaEvent) {
+                registerAfterCommit(trx, () =>
+                  publishWorkflowTicketSlaStageEvent(enteredSlaEvent, {
+                    tenantId,
+                    actor: userId
+                      ? { actorType: 'USER' as const, actorUserId: userId }
+                      : { actorType: 'SYSTEM' as const },
+                    occurredAt:
+                      (startResult.sla_started_at instanceof Date
+                        ? startResult.sla_started_at.toISOString()
+                        : startResult.sla_started_at) ?? new Date().toISOString(),
+                  }),
+                  `${enteredSlaEvent.eventType} ticket=${ticketId}`
+                );
+              }
 
               logger.info('[SlaSubscriber] Started SLA tracking for ticket', {
                 tenantId,

@@ -927,6 +927,13 @@ const SURFACES: Surface[] = [
       const { createBoardCore, deleteBoardCore } = await import(
         '../../../../packages/tickets/src/services/boardLifecycle'
       );
+      // An ITIL board's SLA policy is part of what it is (F123), so the hook startup registers
+      // has to be there — a board create on a PSA tenant refuses without it.
+      const { configureItilSlaForBoard } = await import('../../../../packages/sla/src/services/itilSlaService');
+      const { clearSlaIntegrationHooksForTest, registerItilSlaConfigurationHook } = await import(
+        '../../../../packages/tickets/src/lib/slaIntegrationHooks'
+      );
+      registerItilSlaConfigurationHook(configureItilSlaForBoard as never);
 
       // A second ITIL board created through the one lifecycle: statuses, its own copy of the
       // standard set, and a default priority of the ITIL family — the same rows the first one has.
@@ -958,6 +965,12 @@ const SURFACES: Surface[] = [
       );
       expect(deleted.success).toBe(true);
       expect(await tt('categories').where({ board_id: boardId })).toHaveLength(0);
+
+      await tt('boards').update({ sla_policy_id: null });
+      await tt('sla_policy_targets').del();
+      await tt('sla_notification_thresholds').del();
+      await tt('sla_policies').del();
+      clearSlaIntegrationHooksForTest();
     },
   },
   {
@@ -1002,7 +1015,52 @@ const SURFACES: Surface[] = [
     surface: 'ITIL SLA policy for a new board',
     commitGroup: 'sla',
     claims: [],
-    expectedFail: 'the hook is a module variable registered from an MSP layout, so a server action may never see it',
+    probe: async (db, fixture) => {
+      const { configureItilSlaForBoard } = await import('../../../../packages/sla/src/services/itilSlaService');
+      const { clearSlaIntegrationHooksForTest, registerItilSlaConfigurationHook } = await import(
+        '../../../../packages/tickets/src/lib/slaIntegrationHooks'
+      );
+      const { createBoardCore } = await import('../../../../packages/tickets/src/services/boardLifecycle');
+      const tt = (table: string) => tenantDb(db, fixture.tenantId).table(table);
+
+      // Registered the way startup does — no MSP page has rendered in this process.
+      clearSlaIntegrationHooksForTest();
+      registerItilSlaConfigurationHook(configureItilSlaForBoard as never);
+
+      try {
+        const board = await db.transaction((trx) =>
+          createBoardCore(trx, fixture.tenantId, { userId: fixture.userId }, {
+            board_name: `ITIL SLA ${Date.now()}`,
+            category_type: 'itil',
+            priority_type: 'itil',
+          } as never)
+        );
+        const boardId = board.board_id as string;
+
+        const policy = await tt('sla_policies').where({ is_itil_standard: true }).first('sla_policy_id');
+        expect(policy, 'the ITIL policy was created for the tenant').toBeTruthy();
+        expect(board.sla_policy_id).toBe(policy.sla_policy_id);
+        const targets = await tt('sla_policy_targets')
+          .where({ sla_policy_id: policy.sla_policy_id })
+          .pluck('priority_id');
+        expect(targets.sort()).toEqual(Object.values(fixture.itilPriorityIds).sort());
+
+        // The boards the fixture made keep whatever they had: only a create assigns (D1/D6).
+        const others = await tt('boards').whereNot({ board_id: boardId }).select('board_id', 'sla_policy_id');
+        expect(others.every((row: any) => row.sla_policy_id === null)).toBe(true);
+
+        await tt('categories').where({ board_id: boardId }).whereNotNull('parent_category').del();
+        await tt('categories').where({ board_id: boardId }).del();
+        await tt('statuses').where({ board_id: boardId }).del();
+        await tt('boards').where({ board_id: boardId }).update({ default_priority_id: null, sla_policy_id: null });
+        await tt('boards').where({ board_id: boardId }).del();
+        await tt('sla_policy_targets').del();
+        await tt('sla_notification_thresholds').del();
+        await tt('sla_policies').del();
+      } finally {
+        clearSlaIntegrationHooksForTest();
+      }
+    },
   },
 ];
 
@@ -1174,9 +1232,13 @@ describe('ITIL second-board surfaces (integration)', () => {
     );
   });
 
-  describe('surfaces still waiting for their commit group', () => {
-    for (const surface of pending) {
-      it.todo(`${surface.surface} — ${surface.commitGroup}: ${surface.expectedFail}`);
-    }
-  });
+  // Every row is covered once the last group lands, and an empty `describe` is an error in
+  // vitest — so the block exists only while something is still waiting.
+  if (pending.length > 0) {
+    describe('surfaces still waiting for their commit group', () => {
+      for (const surface of pending) {
+        it.todo(`${surface.surface} — ${surface.commitGroup}: ${surface.expectedFail}`);
+      }
+    });
+  }
 });

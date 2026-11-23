@@ -153,7 +153,6 @@ import { assertAllowedTicketUpdateOptions } from '../lib/ticketUpdateAuthorizati
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
-  buildTicketResolutionSlaStageEnteredEvent,
   publishWorkflowTicketSlaStageEvent,
 } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
@@ -164,12 +163,14 @@ import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErr
 import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 import { addTicketResourceCore, publishTicketResourceEvent } from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { assertBoardAcceptsTickets } from './ticketBoardGuards';
+import { getSlaCancellationHook, registerSlaCancellationHook } from '../lib/slaIntegrationHooks';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-// SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
-let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
-
+// SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package
+// violation. The hook is held on `globalThis` (see `lib/slaIntegrationHooks`): this module is
+// bundled separately for startup code and for server actions, so a module variable registered in
+// one would be invisible in the other (F122).
 export async function registerSlaCancellation(fn: (tenantId: string, ticketId: string) => Promise<void>): Promise<void> {
-  _cancelSlaFn = fn;
+  registerSlaCancellationHook(fn);
 }
 
 // Reported as a bare string rather than returned as a payload, so withAuth's
@@ -554,29 +555,9 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 throw new Error('Created ticket could not be reloaded after insert.');
             }
 
-            const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
-              tenantId: tenant,
-              ticketId: ticketResult.ticket_id,
-              itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, fullTicket.priority_id),
-              enteredAt: fullTicket.entered_at,
-            });
-            if (enteredSlaEvent) {
-              registerAfterCommit(trx, () =>
-                publishWorkflowEvent({
-                  eventType: enteredSlaEvent.eventType,
-                  payload: enteredSlaEvent.payload,
-                  ctx: {
-                    tenantId: tenant,
-                    actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-                    occurredAt: (fullTicket.entered_at instanceof Date
-                      ? fullTicket.entered_at.toISOString()
-                      : fullTicket.entered_at) || new Date().toISOString(),
-                  },
-                  idempotencyKey: enteredSlaEvent.idempotencyKey,
-                }),
-                `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
-              );
-            }
+            // TICKET_SLA_STAGE_ENTERED belongs to the moment the SLA starts: the ticket has no
+            // policy and no due time yet here, and the TICKET_CREATED subscriber publishes it
+            // with the ones it stamps (F129).
 
             return convertDates(fullTicket);
         });
@@ -943,29 +924,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         });
       }
 
-      const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
-        tenantId: tenant,
-        ticketId: ticketResult.ticket_id,
-        itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, fullTicket.priority_id),
-        enteredAt: fullTicket.entered_at,
-      });
-      if (enteredSlaEvent) {
-        registerAfterCommit(trx, () =>
-          publishWorkflowEvent({
-            eventType: enteredSlaEvent.eventType,
-            payload: enteredSlaEvent.payload,
-            ctx: {
-              tenantId: tenant,
-              actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-              occurredAt: (fullTicket.entered_at instanceof Date
-                ? fullTicket.entered_at.toISOString()
-                : fullTicket.entered_at) || new Date().toISOString(),
-            },
-            idempotencyKey: enteredSlaEvent.idempotencyKey,
-          }),
-          `${enteredSlaEvent.eventType} ticket=${ticketResult.ticket_id}`
-        );
-      }
+      // TICKET_SLA_STAGE_ENTERED is published by the TICKET_CREATED subscriber, where the SLA is
+      // started and its due times are known (F129).
 
       // Server-specific: Revalidate cache paths
       revalidatePath('/msp/tickets');
@@ -1991,7 +1951,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
           tenantId: tenant,
           ticketId: id,
-          itilPriorityLevel: await itilPriorityLevelForPriority(trx, tenant, updatedTicket.priority_id ?? currentTicket.priority_id),
+          // The ticket's own SLA decides whether resolution was met: its policy, its start and the
+          // resolution due time the SLA service stamped (F129).
+          slaPolicyId: updatedTicket.sla_policy_id ?? currentTicket.sla_policy_id ?? null,
+          slaStartedAt: updatedTicket.sla_started_at ?? currentTicket.sla_started_at ?? null,
+          slaResolutionDueAt: updatedTicket.sla_resolution_due_at ?? currentTicket.sla_resolution_due_at ?? null,
           enteredAt: currentTicket.entered_at,
           closedAt: occurredAt,
         });
@@ -2478,8 +2442,9 @@ export const deleteTicket = withAuth(async (
 
     if (result.deleted) {
       try {
-        if (_cancelSlaFn) {
-          await _cancelSlaFn(tenant, ticketId);
+        const cancelSla = getSlaCancellationHook();
+        if (cancelSla) {
+          await cancelSla(tenant, ticketId);
         }
       } catch (error) {
         console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
@@ -2535,8 +2500,9 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
       if (result.deleted) {
         try {
-          if (_cancelSlaFn) {
-            await _cancelSlaFn(tenant, ticketId);
+          const cancelSla = getSlaCancellationHook();
+          if (cancelSla) {
+            await cancelSla(tenant, ticketId);
           }
         } catch (error) {
           console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);
