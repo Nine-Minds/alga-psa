@@ -75,3 +75,10 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
     expect(sidebarSource).toContain('!isAlgaDeskPortal && <ClientPortalExtensionsNav');
   });
 });
+
+describe('ClientPortalSidebar Client Settings link', () => {
+  it('is gated only on the shared surfaces resolver', () => {
+    expect(sidebarSource).toContain('resolveClientPortalSettingsSurfaces(permissions).canOpenSettings');
+    expect(sidebarSource).not.toContain('hasClientSettingsAccess');
+  });
+});
