@@ -2026,14 +2026,14 @@ export function QuickAddTicket({
                                 /* A prefill can carry an ITIL priority with no assessment (D5). */
                                 <div className="flex items-center gap-2" id="quick-add-itil-not-assessed">
                                   <div
-                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    className="w-3 h-3 rounded-full border border-border"
                                     style={{ backgroundColor: priorities.find((priority) => priority.priority_id === priorityId)?.color || '#6B7280' }}
                                   />
-                                  <span className="text-gray-900">
+                                  <span className="text-foreground">
                                     {priorities.find((priority) => priority.priority_id === priorityId)?.priority_name
                                       ?? t('itil.notAssessed', 'Not assessed')}
                                   </span>
-                                  <span className="text-sm text-gray-500">({t('itil.notAssessed', 'Not assessed')})</span>
+                                  <span className="text-sm text-muted-foreground">({t('itil.notAssessed', 'Not assessed')})</span>
                                 </div>
                               ) : (
                                 <span className="text-gray-500">{t('itil.calculatePrompt', 'Select Impact and Urgency to calculate priority')}</span>

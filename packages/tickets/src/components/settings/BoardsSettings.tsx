@@ -3225,7 +3225,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                       <button
                         type="button"
                         onClick={() => setShowItilInfoModal(true)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-muted-foreground hover:text-foreground transition-colors"
                         title={t('ticketing.boards.itilInfo.tooltip')}
                       >
                         <HelpCircle className="w-4 h-4" />

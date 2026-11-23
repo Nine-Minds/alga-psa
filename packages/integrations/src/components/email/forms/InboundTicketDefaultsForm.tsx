@@ -551,7 +551,7 @@ export function InboundTicketDefaultsForm({
               })}
             />
             {priorityWarning && (
-              <p id="priority-board-mismatch-warning" className="text-xs text-amber-600 mt-1">
+              <p id="priority-board-mismatch-warning" className="text-xs text-warning mt-1">
                 {priorityWarning}
               </p>
             )}

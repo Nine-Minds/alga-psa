@@ -1737,9 +1737,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       "Not assessed" rather than nothing at all. */}
                   {!calculatedItilPriority && (
                     <div className="col-span-2 flex items-center gap-2 mt-1" id="ticket-itil-not-assessed">
-                      <span className="text-sm text-gray-500">{t('itil.priorityLabel', 'Priority:')}</span>
+                      <span className="text-sm text-muted-foreground">{t('itil.priorityLabel', 'Priority:')}</span>
                       <span className="text-sm font-medium">{storedPriorityOption?.label ?? t('properties.notAvailable', 'N/A')}</span>
-                      <span className="text-sm text-gray-500">({t('itil.notAssessed', 'Not assessed')})</span>
+                      <span className="text-sm text-muted-foreground">({t('itil.notAssessed', 'Not assessed')})</span>
                     </div>
                   )}
                   {/* Calculated ITIL Priority Badge */}
