@@ -50,6 +50,11 @@ export interface TicketScreenBootstrap {
   teams: ITeam[] | null;
   displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean; defaultReplyInternal?: boolean } | null;
   tags: ITag[] | null;
+  /**
+   * Is the ticket on the viewer's own activities list (the personal "My group" chip)? Resolved for the
+   * first paint so the chip does not pop in above the hero form. Absent/null: the control checks on mount.
+   */
+  onMyActivityList?: boolean | null;
   streams: {
     /** Non-comment timeline entries (system/time/alert lanes). */
     timelineEntries: Promise<TicketTimelineEntry[]>;
