@@ -20,6 +20,7 @@ export default defineConfig({
       'src/__tests__/unit/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'src/__tests__/services/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'src/components/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      'src/lib/**/__tests__/*.contract.test.ts',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
     ],
     exclude: [

@@ -43,7 +43,7 @@ export const previewCoManagedSeatsAction = withAuth(async (user, { tenant }, qua
       if (reason) return { kind: 'blocked', reason } as const;
       throw error;
     }
-  });
+  }, tenant);
 });
 
 export const purchaseCoManagedSeatsAction = withAuth(async (user, { tenant }, input: { quantity: number; operationId: string; offerRef?: string }) => {
@@ -59,5 +59,5 @@ export const purchaseCoManagedSeatsAction = withAuth(async (user, { tenant }, in
       if (outcome) return { ...outcome, publishableKey: null };
       throw error;
     }
-  });
+  }, tenant);
 });
