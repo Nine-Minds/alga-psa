@@ -254,6 +254,19 @@ type BoardGuardResult<Input> =
  *   3. input (create/update): strict schema; unknown keys and wrongly typed
  *      values are rejected, and the result is the explicit writable projection.
  */
+/**
+ * The permission half of the guard, named for what it is: the board policy takes its checker as a
+ * value (`evaluateBoardMutationPolicy(user, action, hasPermission)`), so without a name here the
+ * check is invisible to a reader — and to the permission-coverage contract — at every call site.
+ */
+async function checkBoardMutationPermission(
+  user: { user_type?: string } & Record<string, any>,
+  action: BoardMutationAction,
+  trx?: Knex | Knex.Transaction
+) {
+  return evaluateBoardMutationPolicy(user, action, hasPermission, trx);
+}
+
 // LEVERAGE: pattern board-settings-guard — saveBoardDefaultView/clearBoardDefaultView and the board status/notification/close-rule actions repeat the principal+ticket_settings check inline
 async function boardMutationGuard(
   user: { user_type?: string } & Record<string, any>,
@@ -279,7 +292,7 @@ async function boardMutationGuard(
   input?: unknown,
   trx?: Knex | Knex.Transaction
 ): Promise<BoardGuardResult<any>> {
-  const decision = await evaluateBoardMutationPolicy(user, action, hasPermission, trx);
+  const decision = await checkBoardMutationPermission(user, action, trx);
   // Keep explicit discriminant checks: the EE app's tsconfig disables
   // strictNullChecks, where negated booleans do not narrow this union.
   if (decision.allowed === false) {
