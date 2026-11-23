@@ -875,6 +875,45 @@ T177 holds the rule: the dialog reaches the helper through shared and nothing un
 `packages/assets/src` imports `@alga-psa/tickets` at all. Nothing else in the plan changed — the
 rule, its behaviour and its tests are the same ones, at a lower address.
 
+### The review slot's second ITIL board — data left by the half-built state, not a product defect
+
+The browser check kept reporting that a second ITIL board on the review slot listed no category,
+offered only "No Category" in the template picker, and showed nothing on create-from-asset. That
+board was made on the slot *after* the category migration had run and *before* per-board seeding
+existed, so the then-current code did the old thing: it matched the standard set by name, found the
+tenant's own "Hardware" on another board, flagged it, and hung six standard subcategories
+(Desktop/Laptop, Mobile Device, Network Equipment, Printer, Server, Storage) on the new board under
+that foreign parent. The board therefore held six children whose parent was not on it: the picker
+builds its tree from the board's own rows, found no root, and showed an empty list. In a release
+the three category groups ship together, so that window does not exist — the migration gives every
+existing ITIL board its set and every board made afterwards is seeded.
+
+Repaired on the card's own clone only, no product code and no repair job:
+
+1. `ItilStandardsService.copyItilCategoriesToTenant(trx, tenant, actor, boardId)` — the finished
+   per-board seeding, run once for that board, which gave it its own 35 rows, each carrying
+   `standard_category_id`.
+2. Deleted the six leftovers. Nothing referenced them: no ticket, template, recurring definition,
+   inbound default, checklist rule, service-request definition or child category.
+3. Cleared `is_from_itil_standard` on the tenant's own "Hardware", which lives on a board whose
+   `category_type` is `custom`. `itil_category_remap` has no `unflag` row for it, so the migration
+   had left it unflagged and the old seeding re-flagged it minutes later; this is the state the
+   migration leaves.
+
+The board now matches the slot's first ITIL board exactly — 35 rows, 35 linked to a standard row,
+5 roots, no child parented outside the board — and its ticket screen lists Hardware, Software,
+Network, Security and Service Request, each with the ITIL badge.
+
+Audited for a real path with the same ending, as asked: the only writers of `category_type = 'itil'`
+are `createBoardCore` (which calls `ItilStandardsService.handleItilConfiguration`) and
+`switchBoardTypeCore` (which seeds before it flips the columns); `updateBoardCore` delegates a kind
+change to the switch. The three remaining direct inserts into `boards` in product code —
+`shared/models/ticketModel.ts` `findOrCreateBoard`, `shared/services/emailService.ts`
+`createBoardFromEmail` and the co-managed provisioning step in `ee/temporal-workflows` — never set
+either kind column, so the board is `custom` by column default. The dev seeds cover the seeded ITIL
+board (`86_itil_categories.cjs`, after `85_itil_priorities.cjs`). No finished path leaves an ITIL
+board without its standard set.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no
