@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} se añadió pero no se le puede invitar.",
         "unavailable": "No aparecen por estar inactivos, no tener correo o tener ya un puesto o una invitación: {{count}}."
       },
+      "trial": {
+        "available": "Hay una prueba gratuita de 15 días disponible arriba. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "pending": "Una invitación a la prueba de 15 días está esperando al técnico. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "active": "La prueba de 15 días está en curso. Añada puestos cogestionados para conservar al técnico después.",
+        "ended": "La prueba de 15 días ha terminado. Añada puestos cogestionados para conservar al técnico."
+      },
       "chooser": {
         "seat": "Puesto",
         "seatHint": "Los técnicos del cliente trabajan en su PSA, limitados a su empresa.",
@@ -558,7 +564,10 @@
         "workspaceHint": "El equipo de TI del cliente tiene su propio centro de servicio y escala a usted.",
         "description": "Elija cómo trabaja con usted el equipo de TI de este cliente.",
         "shape": "Modalidad cogestionada",
-        "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados."
+        "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados.",
+        "poolEmpty": "Aún no hay puestos cogestionados.",
+        "seatHintAfterTrial": "Añada puestos cogestionados para conservar al técnico después de la prueba de 15 días.",
+        "seatHintTrialCovers": "El puesto de prueba cubre a este técnico hasta el {{date}}. Compre un puesto para conservarlo."
       },
       "states": {
         "active": "Activo",

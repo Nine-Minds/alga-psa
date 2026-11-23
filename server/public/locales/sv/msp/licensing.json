@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} lades till men kan inte bjudas in.",
         "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
+      "trial": {
+        "available": "En kostnadsfri provperiod på 15 dagar finns ovan. Samhanterade platser kan läggas till när som helst.",
+        "pending": "En inbjudan till provperioden på 15 dagar väntar på teknikern. Samhanterade platser kan läggas till när som helst.",
+        "active": "Provperioden på 15 dagar pågår. Lägg till samhanterade platser för att behålla teknikern efteråt.",
+        "ended": "Provperioden på 15 dagar har avslutats. Lägg till samhanterade platser för att behålla teknikern."
+      },
       "chooser": {
         "seat": "Plats",
         "seatHint": "Kundens tekniker arbetar i ert PSA, begränsade till sitt företag.",
@@ -558,7 +564,10 @@
         "workspaceHint": "Kundens IT-team får en egen servicedesk och eskalerar till er.",
         "description": "Välj hur den här kundens IT-team arbetar med er.",
         "shape": "Samhanterad form",
-        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade."
+        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade.",
+        "poolEmpty": "Inga samhanterade platser ännu.",
+        "seatHintAfterTrial": "Lägg till samhanterade platser för att behålla teknikern efter provperioden på 15 dagar.",
+        "seatHintTrialCovers": "Provplatsen täcker den här teknikern till {{date}}. Köp en plats för att behålla dem."
       },
       "states": {
         "active": "Aktiv",

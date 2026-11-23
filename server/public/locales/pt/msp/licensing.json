@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} foi adicionado, mas não pode ser convidado.",
         "unavailable": "Não listados por estarem inativos, sem e-mail ou já com vaga ou convite: {{count}}."
       },
+      "trial": {
+        "available": "Há um teste gratuito de 15 dias disponível acima. Lugares cogeridos podem ser adicionados a qualquer momento.",
+        "pending": "Um convite para o teste de 15 dias está à espera do técnico. Lugares cogeridos podem ser adicionados a qualquer momento.",
+        "active": "O teste de 15 dias está em curso. Adicione lugares cogeridos para manter o técnico depois.",
+        "ended": "O teste de 15 dias terminou. Adicione lugares cogeridos para manter o técnico."
+      },
       "chooser": {
         "seat": "Lugar",
         "seatHint": "Os técnicos do cliente trabalham no seu PSA, limitados à sua empresa.",
@@ -558,7 +564,10 @@
         "workspaceHint": "A equipe de TI do cliente tem o seu próprio service desk e escala para você.",
         "description": "Escolha como a equipe de TI deste cliente trabalha com você.",
         "shape": "Modelo cogerido",
-        "pool": "{{available}} de {{purchased}} lugares disponíveis. {{allocated}} atribuídos."
+        "pool": "{{available}} de {{purchased}} lugares disponíveis. {{allocated}} atribuídos.",
+        "poolEmpty": "Ainda não há lugares cogeridos.",
+        "seatHintAfterTrial": "Adicione lugares cogeridos para manter o técnico após o teste de 15 dias.",
+        "seatHintTrialCovers": "O lugar de teste cobre este técnico até {{date}}. Compre um lugar para o manter."
       },
       "states": {
         "active": "Ativo",

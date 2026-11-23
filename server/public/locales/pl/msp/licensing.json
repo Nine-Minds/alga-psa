@@ -551,6 +551,12 @@
         "addedUnavailable": "Dodano {{name}}, ale nie można go zaprosić.",
         "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
       },
+      "trial": {
+        "available": "Powyżej dostępny jest bezpłatny 15-dniowy okres próbny. Miejsca współzarządzane można dodać w dowolnym momencie.",
+        "pending": "Zaproszenie do 15-dniowego okresu próbnego czeka na technika. Miejsca współzarządzane można dodać w dowolnym momencie.",
+        "active": "15-dniowy okres próbny trwa. Dodaj miejsca współzarządzane, aby zachować technika po jego zakończeniu.",
+        "ended": "15-dniowy okres próbny dobiegł końca. Dodaj miejsca współzarządzane, aby zachować technika."
+      },
       "chooser": {
         "seat": "Stanowisko",
         "seatHint": "Technicy klienta pracują w Twoim PSA, w granicach swojej firmy.",
@@ -558,7 +564,10 @@
         "workspaceHint": "Zespół IT klienta ma własny service desk i eskaluje zgłoszenia do Ciebie.",
         "description": "Wybierz, jak zespół IT tego klienta współpracuje z Tobą.",
         "shape": "Model współzarządzania",
-        "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}."
+        "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}.",
+        "poolEmpty": "Brak jeszcze miejsc współzarządzanych.",
+        "seatHintAfterTrial": "Dodaj miejsca współzarządzane, aby zachować technika po 15-dniowym okresie próbnym.",
+        "seatHintTrialCovers": "Miejsce próbne obejmuje tego technika do {{date}}. Kup miejsce, aby go zachować."
       },
       "states": {
         "active": "Aktywny",

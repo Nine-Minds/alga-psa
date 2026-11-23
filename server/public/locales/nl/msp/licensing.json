@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} is toegevoegd maar kan niet worden uitgenodigd.",
         "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
       },
+      "trial": {
+        "available": "Hierboven is een gratis proefperiode van 15 dagen beschikbaar. Gedeeld beheerde plaatsen kunnen op elk moment worden toegevoegd.",
+        "pending": "Een uitnodiging voor de proefperiode van 15 dagen wacht op de technicus. Gedeeld beheerde plaatsen kunnen op elk moment worden toegevoegd.",
+        "active": "De proefperiode van 15 dagen loopt. Voeg gedeeld beheerde plaatsen toe om de technicus daarna te behouden.",
+        "ended": "De proefperiode van 15 dagen is afgelopen. Voeg gedeeld beheerde plaatsen toe om de technicus te behouden."
+      },
       "chooser": {
         "seat": "Plek",
         "seatHint": "De technici van de klant werken in uw PSA, beperkt tot hun eigen bedrijf.",
@@ -558,7 +564,10 @@
         "workspaceHint": "Het IT-team van de klant krijgt een eigen servicedesk en escaleert naar u.",
         "description": "Kies hoe het IT-team van deze klant met u samenwerkt.",
         "shape": "Co-managed vorm",
-        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen."
+        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen.",
+        "poolEmpty": "Nog geen gedeeld beheerde plaatsen.",
+        "seatHintAfterTrial": "Voeg gedeeld beheerde plaatsen toe om de technicus na de proefperiode van 15 dagen te behouden.",
+        "seatHintTrialCovers": "De proefplaats dekt deze technicus tot {{date}}. Koop een plaats om hem of haar te behouden."
       },
       "states": {
         "active": "Actief",

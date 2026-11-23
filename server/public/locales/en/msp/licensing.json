@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} was added but cannot be invited.",
         "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
       },
+      "trial": {
+        "available": "A free 15-day trial is available above. Co-managed seats can be added at any time.",
+        "pending": "A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.",
+        "active": "The 15-day trial is running. Add co-managed seats to keep the technician afterwards.",
+        "ended": "The 15-day trial has ended. Add co-managed seats to keep the technician."
+      },
       "chooser": {
         "seat": "Seat",
         "seatHint": "The client's technicians work in your PSA, limited to their company.",
@@ -558,7 +564,10 @@
         "workspaceHint": "The client's IT team gets its own service desk and escalates to you.",
         "description": "Choose how this client's IT team works with you.",
         "shape": "Co-managed shape",
-        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated."
+        "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated.",
+        "poolEmpty": "No co-managed seats yet.",
+        "seatHintAfterTrial": "Add co-managed seats to keep the technician after the 15-day trial.",
+        "seatHintTrialCovers": "The trial seat covers this technician until {{date}}. Buy a seat to keep them."
       },
       "states": {
         "active": "Active",

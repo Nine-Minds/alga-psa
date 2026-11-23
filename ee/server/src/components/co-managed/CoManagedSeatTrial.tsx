@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -13,21 +13,23 @@ import CoManagedPurchaseReview from '@/components/co-managed/CoManagedPurchaseRe
 import { useCoManagedPurchaseController } from '@/components/co-managed/useCoManagedPurchaseController';
 import { newCoManagedOperationId } from '@/components/co-managed/coManagedOperationId';
 import { getCoManagedSeatAdminOptions } from '@/lib/actions/coManagedSeatActions';
-import { getSeatTrialOfferAction, prepareCoManagedSeatTrialAction, resumeCoManagedSeatTrialAction,
+import type { SeatTrialOffer } from '@/components/co-managed/useSeatTrialOffer';
+import { prepareCoManagedSeatTrialAction, resumeCoManagedSeatTrialAction,
   replaceCoManagedSeatTrialTechnicianAction, cancelCoManagedSeatTrialAction, reviewSeatTrialConversionAction,
   purchaseSeatForTrialAction, applyPaidSeatToTrialAction, cancelSeatTrialConversionAction } from '../../lib/actions/coManagedSeatTrialActions';
 
-type Offer = Awaited<ReturnType<typeof getSeatTrialOfferAction>>;
 type TrialError = 'boardChoicesFailed' | 'actionFailed';
 type TrialNotice = 'invitationSent' | 'invitationSaved' | 'deliveryFailed' | 'replacementSent' | 'replacementSaved';
 const cutoffFormat: Intl.DateTimeFormatOptions = {
   year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit',
 };
 
-export default function CoManagedSeatTrial({ clientId, onChanged }: { clientId?: string; onChanged?: () => void }) {
+/** Presentational: the offer is read once by `useSeatTrialOffer` (shared with the Enable chooser); this card never fetches it. */
+export default function CoManagedSeatTrial({ offer, onReload, clientId, onChanged }: {
+  offer: SeatTrialOffer | null; onReload: () => Promise<void>; clientId?: string; onChanged?: () => void;
+}) {
   const { t } = useTranslation('msp/licensing');
   const { formatCurrency, formatDate } = useFormatters();
-  const [offer, setOffer] = useState<Offer>(null);
   const [error, setError] = useState<TrialError | null>(null);
   const [busy, setBusy] = useState(false);
   const [contact, setContact] = useState('');
@@ -39,13 +41,6 @@ export default function CoManagedSeatTrial({ clientId, onChanged }: { clientId?:
   const operation = useRef(newCoManagedOperationId());
   const pilot = offer?.pilot;
   const prefix = clientId ? 'client-seat-trial' : 'overview-seat-trial';
-  const load = useCallback(() => getSeatTrialOfferAction(clientId), [clientId]);
-  useEffect(() => {
-    let current = true;
-    setOffer(null);
-    void load().then(next => { if (current) setOffer(next); }).catch(() => { if (current) setOffer(null); });
-    return () => { current = false; };
-  }, [load]);
   useEffect(() => {
     if (!clientId || !offer?.canStart) return;
     let current = true;
@@ -60,7 +55,7 @@ export default function CoManagedSeatTrial({ clientId, onChanged }: { clientId?:
     },
   });
   if (!offer) return null;
-  const refresh = async () => { setOffer(await load()); onChanged?.(); };
+  const refresh = async () => { await onReload(); onChanged?.(); };
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true); setError(null);
     try { await action(); await refresh(); } catch { setError('actionFailed'); }

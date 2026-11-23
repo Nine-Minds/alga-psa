@@ -551,6 +551,12 @@
         "addedUnavailable": "{{name}} a été ajouté mais ne peut pas être invité.",
         "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
+      "trial": {
+        "available": "Un essai gratuit de 15 jours est disponible ci-dessus. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "pending": "Une invitation à l’essai de 15 jours attend le technicien. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "active": "L’essai de 15 jours est en cours. Ajoutez des postes cogérés pour conserver le technicien ensuite.",
+        "ended": "L’essai de 15 jours est terminé. Ajoutez des postes cogérés pour conserver le technicien."
+      },
       "chooser": {
         "seat": "Poste",
         "seatHint": "Les techniciens du client travaillent dans votre PSA, limités à leur entreprise.",
@@ -558,7 +564,10 @@
         "workspaceHint": "L’équipe informatique du client dispose de son propre centre de services et escalade vers vous.",
         "description": "Choisissez comment l’équipe informatique de ce client travaille avec vous.",
         "shape": "Modèle cogéré",
-        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués."
+        "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués.",
+        "poolEmpty": "Aucun poste cogéré pour le moment.",
+        "seatHintAfterTrial": "Ajoutez des postes cogérés pour conserver le technicien après l’essai de 15 jours.",
+        "seatHintTrialCovers": "Le poste d’essai couvre ce technicien jusqu’au {{date}}. Achetez un poste pour le conserver."
       },
       "states": {
         "active": "Actif",

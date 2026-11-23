@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCapability } from '@alga-psa/ui/hooks';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientCoManagedIntegrationProps, ClientCoManagedSlots } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { getCoManagedClientManagement, getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
 import CoManagedClientSummary from './CoManagedClientSummary';
@@ -13,6 +13,8 @@ import CoManagedSeatSummary from './CoManagedSeatSummary';
 import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSeatTrialRecovery';
 import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedShapeChooser from './CoManagedShapeChooser';
+import { useSeatTrialOffer } from './useSeatTrialOffer';
+import { resolveSeatEnableStory } from '@/lib/co-managed/seatEnableStory';
 
 type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
 
@@ -24,6 +26,7 @@ type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
  */
 export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, onOpenTab, children }: ClientCoManagedIntegrationProps) {
   const { t } = useTranslation('msp/licensing');
+  const { formatDate } = useFormatters();
   const { admitted } = useCapability('co-managed');
   // The seat shape is a second capability. With it closed nothing below reads or renders seat state.
   const seatCapability = useCapability('co-managed-seat');
@@ -33,6 +36,8 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [seatState, setSeatState] = useState<CoManagedSeatClientState | null>(null);
   const seatGeneration = useRef(0);
+  // One read of the seat trial offer feeds both the trial card and the Enable chooser, so they tell one story.
+  const { offer: trialOffer, loading: trialLoading, reload: reloadTrial, story: trialStory } = useSeatTrialOffer(clientId);
   const [recoveryClient, setRecoveryClient] = useState<string>();
   useEffect(() => {
     let current = true;
@@ -141,12 +146,15 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
 
 
   const enable = seat?.enable ?? null;
-  const chooser = enable ? (workspace: React.ReactNode) => (
+  // Held back until the trial read settles, so a trial never shows as a red blocker first and a neutral note after.
+  const trialEnds = trialStory === 'active' && trialOffer?.pilot?.deadline ? formatDate(new Date(trialOffer.pilot.deadline)) : undefined;
+  const chooser = enable && !trialLoading ? (workspace: React.ReactNode) => (
     <CoManagedShapeChooser clientId={clientId} idPrefix={idPrefix} enable={enable} workspaceSetup={workspace} purchaseOpen={purchaseOpen}
+      story={resolveSeatEnableStory({ enable, trial: trialStory, purchaseOpen, workspaceOffered: workspace !== null })} trialEnds={trialEnds}
       onEnabled={reloadAll} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
   ) : null;
 
-  const trial = <CoManagedSeatTrial key={clientId} clientId={clientId} onChanged={reloadAll} />;
+  const trial = <CoManagedSeatTrial key={clientId} offer={trialOffer} onReload={reloadTrial} clientId={clientId} onChanged={reloadAll} />;
   const tabLabel = t('coManaged.client.tab', { defaultValue: 'Co-managed IT' });
   const tabBase = {
     id: 'co-managed',

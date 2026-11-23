@@ -12,8 +12,10 @@ import frLicensing from '../../../../../server/public/locales/fr/msp/licensing.j
 
 const mocks = vi.hoisted(() => ({ offer: vi.fn(), reviewSeat: vi.fn(), useSeat: vi.fn(), refresh: vi.fn(), discovery: vi.fn(), editorProps: [] as unknown[],
   hasRecovery: vi.fn(), cancelConversion: vi.fn(), readers: { billing: vi.fn(), overview: vi.fn(), admit: vi.fn(), allocate: vi.fn() } }));
+// The offer is read by the shared hook, which reaches the action through the edition alias.
+vi.mock('@enterprise/lib/actions/coManagedSeatTrialActions', () => ({ getSeatTrialOfferAction: mocks.offer }));
 vi.mock('../../lib/actions/coManagedSeatTrialActions', () => ({
-  getSeatTrialOfferAction: mocks.offer, reviewSeatTrialConversionAction: mocks.reviewSeat, applyPaidSeatToTrialAction: mocks.useSeat,
+  reviewSeatTrialConversionAction: mocks.reviewSeat, applyPaidSeatToTrialAction: mocks.useSeat,
   cancelSeatTrialConversionAction: mocks.cancelConversion,
 }));
 vi.mock('next/navigation', () => {
@@ -35,7 +37,14 @@ vi.mock('@/lib/actions/coManagedSeatActions', () => ({ getCoManagedCombinedOverv
 vi.mock('@/lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: mocks.readers.admit }));
 vi.mock('../../lib/actions/coManagedPurchaseDiscoveryActions', () => ({ getCoManagedPurchaseDiscoveryAction: mocks.discovery }));
 
-import CoManagedSeatTrial from '../../components/co-managed/CoManagedSeatTrial';
+import CoManagedSeatTrialCard from '../../components/co-managed/CoManagedSeatTrial';
+import { useSeatTrialOffer } from '@/components/co-managed/useSeatTrialOffer';
+
+// The card is presentational; the hook is the one reader, as on the page.
+function CoManagedSeatTrial({ clientId }: { clientId?: string }) {
+  const { offer, reload } = useSeatTrialOffer(clientId);
+  return <CoManagedSeatTrialCard offer={offer} onReload={reload} clientId={clientId} />;
+}
 import CoManagedPurchaseOverview from '../../components/co-managed/CoManagedPurchaseOverview';
 import { useCoManagedPurchaseNavigation } from '../../components/co-managed/useCoManagedPurchaseNavigation';
 import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
