@@ -19,7 +19,7 @@ vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
   createClientScopeContext: async () => ({ permits: (...args: any[]) => mocks.permits(...args) }),
 }));
 vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: mocks.capability }));
-vi.mock('@alga-psa/licensing', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/licensing')>(), isCoManagedPurchaseSurfaceOpen: mocks.intake }));
+vi.mock('@alga-psa/licensing', async (importOriginal: () => Promise<typeof import('@alga-psa/licensing')>) => ({ ...await importOriginal(), isCoManagedPurchaseSurfaceOpen: mocks.intake }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { error: mocks.logError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 vi.mock('../../../../../server/src/lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({ refreshSeatTrialBase: vi.fn() }) }));

@@ -176,3 +176,14 @@ A regression to a cross-tenant join fails case 1 on Citus with the production er
 | `unscoped` discovery reads hide a tenant mistake | the same posture as the working users query; the invitation read is passed the row's own `customer_tenant` |
 | Typed error class changes tests that assert message text | update those assertions to codes; the seat panel already treats codes as the contract |
 | Unified rule refuses a tenant that used to work | the rule is exactly prepare's current predicate, so only the offer's *visibility* changes, never prepare's acceptance |
+
+## Citus audit (repair round)
+
+The first audit grepped `leftJoin|innerJoin|joinRaw` and missed a join written as `tenantJoin(..., { tenantPredicate: 'literal' })`. Repair round 1 redid it over `packages/co-managed/src`, `ee/server/src/lib/co-managed`, `ee/server/src/lib/actions/coManaged*`, `server/src/lib/co-managed` and `server/src/lib/actions/coManaged*`.
+
+- `grep -rn tenantPredicate <paths>`: one hit before this round, `ticketQueue.ts` (home `co_managed_ticket_references` left-joined onto owner `tickets`). A real cross-tenant join (0A000 on Citus). Fixed: the home references are read in their own home-scoped query and enter the owner query as an inline `jsonb_to_recordset` relation. No other `tenantPredicate` in the path (the remaining literal joins are in billing and notifications, out of scope, and not cross-tenant on inspection of their names only).
+- `grep -rn tenantJoin <paths>`, receivers compared per file against the base query's scope: every file that uses two scopes (`effortTotals` `owner`/`mspOwner`, `projectTaskConversation` and `ticketConversation` `owner`/`customer`/`home`, `managementPolicy` `context.home`) joins each query only to tables of its own scope's receiver. Each cross-tenant read is a separate query combined with `UNION ALL` or in memory. No hit.
+- `grep -rnE "joinRaw|leftJoin|innerJoin|\.join\(|JOIN "`: raw SQL joins are `timeWorkContext.ts` (`tr.tenant = w.tenant`, same tenant), catalog queries over `pg_*`, and the new `ticketQueue` recordset join. No join on `customer_tenant`/`sponsor_tenant`.
+- `grep` for `customer_tenant|sponsor_tenant|owner_tenant` equated to a tenant column next to `join|on(|andOn`: no hit.
+
+Seat marker (`users.seat_reader`): the only path that binds a user to an assignment is `acceptCoManagedSeatInvitation`; it now inserts the user with `seat_reader: true`. Invite, refresh, revoke-invitation, trial replace/resume/conversion and arrangement end do not write a binding state or `user_id`; revocation clears the marker (unchanged).
