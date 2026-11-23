@@ -25,6 +25,12 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+// The delete the SLA cancellation hangs off is record-authorized; the fixture user carries no
+// roles, and what this suite is about is the hook, not RBAC.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/rbac')>()),
+  hasPermission: vi.fn(async () => true),
+}));
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/event-bus/publishers')>()),
   publishEvent: vi.fn(async () => undefined),
@@ -272,6 +278,40 @@ describe('ITIL SLA policy (integration)', () => {
     expect(board.sla_policy_id).toBe(ownPolicyId);
     // The ITIL policy was still created for the tenant; it was simply not forced onto the board.
     expect(await tt('sla_policies').where({ is_itil_standard: true }).first()).toBeTruthy();
+  }, HOOK_TIMEOUT);
+
+  it('T227: a ticket deleted through the server action cancels its SLA, with no page rendered', async () => {
+    await withFixture();
+    const { deleteTicket, registerSlaCancellation } = await import(
+      '../../../../packages/tickets/src/actions/ticketActions'
+    );
+
+    // Registered the way startup does it, from outside the action's own module.
+    const cancelled: Array<[string, string]> = [];
+    registerSlaCancellation(async (tenantId: string, ticketId: string) => {
+      cancelled.push([tenantId, ticketId]);
+    });
+
+    const ticketId = randomUUID();
+    await tt('tickets').insert({
+      tenant: fixture.tenantId,
+      ticket_id: ticketId,
+      ticket_number: `SLA-${ticketId.slice(0, 8)}`,
+      title: 'Closed and cancelled',
+      client_id: fixture.clientId,
+      board_id: fixture.boards.itilOne,
+      status_id: fixture.statuses.itilOne,
+      priority_id: fixture.itilPriorityIds[3],
+      entered_by: fixture.userId,
+      entered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_closed: false,
+    });
+
+    const { runWithTenant } = await import('@alga-psa/db');
+    const result = await runWithTenant(fixture.tenantId, () => deleteTicket(ticketId));
+    expect(result, JSON.stringify(result)).toMatchObject({ success: true });
+    expect(cancelled).toEqual([[fixture.tenantId, ticketId]]);
   }, HOOK_TIMEOUT);
 
   it('T226: a hook registered through one import is visible through a second instance of the module', async () => {
