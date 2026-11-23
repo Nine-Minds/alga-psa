@@ -281,8 +281,25 @@ tenant is eligible.
 
 ## Capabilities
 
-`@alga-psa/core/capability` is a registry of capability gates. `co-managed` is keyed on
-`release-v2-0-feature`.
+`@alga-psa/core/capability` is a registry of capability gates. `co-managed` and
+`co-managed-seat` are both keyed on `release-v2-0-feature`; each has its own resolvers and
+its own `FORCE_CAPABILITIES` key.
+
+| Capability | Admits (with the flag) | Serves |
+| --- | --- | --- |
+| `co-managed` | an entitlement row | a relationship row (either side), an entitlement row, or a `co_managed` tenant |
+| `co-managed-seat` | a `psa` tenant with an operational pool entitlement row, or an eligible hosted Seat-trial sponsor | any seat arrangement row |
+
+`co-managed-seat` eligibility has a second path for the hosted 15-day Seat trial (EE). A
+`psa` tenant with no operational entitlement row is eligible when it appears in the
+`co_managed_trial_sponsors` view (hosted Pro plan, not suspended, not manually billed, an
+active or trialing base Stripe subscription whose access end is still in the future, and no
+non-hosted entitlement) **and** the co-managed purchase surface is open. The purchase-surface
+check requires a configured offer and reads the `co-managed` key, not `co-managed-seat`:
+`FORCE_CAPABILITIES=co-managed:off` therefore also closes trial eligibility, while
+`co-managed-seat:off` closes the seat shape as usual. The gate only decides whether a trial
+may start; whether a trial-funded technician is served is decided at Seat admission from the
+trial deadline and the base-subscription access end, independent of the flag.
 
 - `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
   Eligibility defaults to false until a resolver is registered.
@@ -320,7 +337,8 @@ while the gate is closed. It accepts no parameters.
 **Kill switch `FORCE_CAPABILITIES`** (server env): comma-separated `key:on|off`, e.g.
 `co-managed:off`. A malformed value on a known key forces that capability off. It overrides
 the flag and resolvers for that capability only; `release-v2-0-feature` and the Timeline are
-unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
+unaffected. Keys are matched whole: `co-managed-seat:off` closes the seat shape for every tenant
+and leaves `co-managed` as it was, and `co-managed:off` does not close `co-managed-seat`. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
 the bootstrap key is absent, and is ignored in production builds.
 
 ## Implementation Details

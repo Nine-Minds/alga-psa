@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import { useState, useTransition, useCallback } from 'react';
 import type { ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,13 @@ interface DeleteAssetButtonProps {
   label?: string;
 }
 
-export default function DeleteAssetButton({
+/** Not rendered at all when the server's seat authority closes asset deletion to the signed-in user. */
+export default function DeleteAssetButton(props: DeleteAssetButtonProps) {
+  const { canDelete } = useAssetSurfaceControls();
+  return canDelete ? <DeleteAssetButtonControl {...props} /> : null;
+}
+
+function DeleteAssetButtonControl({
   assetId,
   assetName,
   variant = 'destructive',

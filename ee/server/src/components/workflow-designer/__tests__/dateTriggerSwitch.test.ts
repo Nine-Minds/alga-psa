@@ -6,11 +6,28 @@ import { DEFAULT_STATUS_AGE_PARAMS } from '@alga-psa/workflows/authoring';
 describe('choosing a date source whose catalog row is picked as an event', () => {
   it('maps the catalog event to its source from the definitions, and nothing else', () => {
     const mapped = dateTriggerSourceDefinitions.filter((d) => 'catalogEventType' in d).map((d) => [d.catalogEventType, d.id]);
-    expect(mapped).toEqual([['TICKET_STATUS_AGE', 'ticket.status_age']]);
+    expect(mapped).toEqual([
+      ['ASSET_MAINTENANCE_DUE', 'asset.maintenance_due'],
+      ['TICKET_STATUS_AGE', 'ticket.status_age'],
+    ]);
     expect(getDateTriggerSourceByCatalogEvent('TICKET_STATUS_AGE')?.id).toBe('ticket.status_age');
     expect(getDateTriggerSourceByCatalogEvent('TICKET_CREATED')).toBeUndefined();
     // Real events that sources also emit as domain events stay ordinary event triggers.
     expect(getDateTriggerSourceByCatalogEvent('CLIENT_ANNIVERSARY_UPCOMING')).toBeUndefined();
+  });
+
+  it('routes maintenance catalog selection to its date source without changing the existing scan timing', () => {
+    const source = getDateTriggerSourceByCatalogEvent('ASSET_MAINTENANCE_DUE')!;
+    expect(source.payloadSchemaRef).toBe('payload.AssetMaintenanceDue.v1');
+    expect(buildDateTriggerForSource(source)).toEqual({
+      type: 'date', source: 'asset.maintenance_due', offsetDays: -30, localTime: '08:00',
+    });
+    expect(buildDateTriggerForSource(source, {
+      type: 'date', source: 'ticket.status_age', offsetDays: -2,
+      localTime: '06:30', timezone: 'UTC', params: { statusName: 'Open', days: 3 },
+    })).toEqual({
+      type: 'date', source: 'asset.maintenance_due', offsetDays: -2, localTime: '06:30', timezone: 'UTC',
+    });
   });
 
   it('builds the date trigger with offset 0, default params and the source schema', () => {
@@ -18,6 +35,13 @@ describe('choosing a date source whose catalog row is picked as an event', () =>
     const trigger = buildDateTriggerForSource(source);
     expect(trigger).toEqual({ type: 'date', source: 'ticket.status_age', offsetDays: 0, localTime: '08:00', params: { ...DEFAULT_STATUS_AGE_PARAMS } });
     expect(source.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
+  });
+
+  it('offers ticket.due_date with an offset, no params, and its payload schema', () => {
+    const dueDate = getDateTriggerSourceDefinition('ticket.due_date')!;
+    expect(dueDate).toMatchObject({ mode: 'window', usesOffset: true, hasParams: false, recurrence: 'once', payloadSchemaRef: 'payload.TicketDueDate.v1' });
+    expect(buildDateTriggerForSource(dueDate, { type: 'date', source: 'contract.end', offsetDays: -60, localTime: '07:00' }))
+      .toMatchObject({ type: 'date', source: 'ticket.due_date', offsetDays: -60, localTime: '07:00' });
   });
 
   it('keeps timing when switching sources and drops params the new source does not take', () => {

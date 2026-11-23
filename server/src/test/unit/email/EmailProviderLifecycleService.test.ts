@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -8,7 +9,37 @@ const mocks = vi.hoisted(() => ({
   gmailRegister: vi.fn(),
   usePollingDelivery: vi.fn(),
   recordWebhookDeliveryMode: vi.fn(),
+  imapConstructed: vi.fn(),
+  imapConnect: vi.fn(),
+  request: vi.fn(),
+  dnsLookup: vi.fn(),
+  getTenantSecret: vi.fn(),
   operations: [] as string[],
+}));
+
+vi.mock('imapflow', () => ({
+  ImapFlow: vi.fn(function ImapFlow(options: unknown) {
+    mocks.imapConstructed(options);
+    return { connect: (...args: unknown[]) => mocks.imapConnect(...args), logout: vi.fn(), close: vi.fn() };
+  }),
+}));
+vi.mock('undici', async (importOriginal) => ({
+  ...await importOriginal<typeof import('undici')>(),
+  Agent: class {
+    constructor(public options: any) {}
+    close = async () => undefined;
+  },
+  request: mocks.request,
+}));
+vi.mock('node:dns', () => ({
+  default: { promises: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) } },
+}));
+vi.mock('node:dns/promises', () => ({
+  default: { lookup: (...args: unknown[]) => mocks.dnsLookup(...args) },
+  lookup: (...args: unknown[]) => mocks.dnsLookup(...args),
+}));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({ getTenantSecret: mocks.getTenantSecret }),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -46,6 +77,7 @@ vi.mock('@alga-psa/shared/services/email/EmailWebhookMaintenanceService', () => 
 }));
 
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
+import { getImapOauthSecretNames } from '@alga-psa/shared/services/email/imapOutboundTarget';
 
 function createState(providerType: 'microsoft' | 'google' | 'imap') {
   const state: any = {
@@ -136,6 +168,18 @@ describe('EmailProviderLifecycleService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.operations.length = 0;
+    mocks.imapConstructed.mockReset();
+    mocks.imapConnect.mockReset();
+    mocks.imapConnect.mockResolvedValue(undefined);
+    mocks.request.mockReset();
+    mocks.request.mockImplementation(async () => ({
+      statusCode: 200, headers: {},
+      body: Readable.from([Buffer.from(JSON.stringify({ access_token: 'recovered-access-token', expires_in: 3600 }))]),
+    }));
+    mocks.dnsLookup.mockReset();
+    mocks.dnsLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    mocks.getTenantSecret.mockReset();
+    mocks.getTenantSecret.mockResolvedValue('endpoint-scoped-secret');
     mocks.graphDelete.mockImplementation(async () => {
       mocks.operations.push('external:graph-delete');
     });
@@ -177,6 +221,81 @@ describe('EmailProviderLifecycleService', () => {
       expect(state[`${providerType === 'microsoft' ? 'microsoft' : 'google'}_email_provider_config`][clearedField])
         .toBeNull();
     }
+  });
+
+  it('keeps an auth-paused IMAP provider paused without connecting to a prohibited host', async () => {
+    const state = createState('imap');
+    state.provider.inbound_paused_at = '2026-07-23T17:00:00.000Z';
+    state.provider.inbound_pause_reason = 'auth_failure';
+    Object.assign(state.imap_email_provider_config, {
+      host: '127.0.0.1', port: 993, secure: true, allow_starttls: false,
+      auth_type: 'password', username: 'support@example.com',
+    });
+
+    const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+      state.provider.id,
+      'tenant-1'
+    );
+
+    expect(result).toMatchObject({ resumed: false, reconnectRequired: true });
+    expect(result.error).toMatch(/blocked private address/);
+    expect(state.provider.inbound_paused_at).toBe('2026-07-23T17:00:00.000Z');
+    expect(mocks.imapConstructed).not.toHaveBeenCalled();
+  });
+
+  it('recovers an OAuth IMAP provider using its scoped secret, normalized identity, and persisted refreshed token', async () => {
+    const state = createState('imap');
+    state.provider.inbound_paused_at = '2026-07-23T17:00:00.000Z';
+    state.provider.inbound_pause_reason = 'auth_failure';
+    const tokenUrl = 'https://oauth.example.test/token';
+    Object.assign(state.imap_email_provider_config, {
+      host: 'imap.example.test', port: 993, secure: true, allow_starttls: false,
+      auth_type: 'oauth2', username: 'support@example.com',
+      oauth_token_url: tokenUrl, oauth_credentials_token_url: tokenUrl,
+      oauth_credentials_secret_version: 1, oauth_client_id: 'imap-client',
+      oauth_client_secret: null, refresh_token: null, access_token: null,
+      token_expires_at: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const expectedSecrets = getImapOauthSecretNames({
+      id: state.provider.id,
+      oauth_token_url: tokenUrl,
+      oauth_credentials_secret_version: 1,
+    });
+    const service = new EmailProviderLifecycleService();
+    vi.spyOn(service as any, 'reconcileImapPausedInterval').mockResolvedValue({ queuedMessages: 0 });
+    vi.spyOn(service as any, 'clearAuthPause').mockResolvedValue(undefined);
+
+    const result = await service.recoverAuthPausedProvider(state.provider.id, 'tenant-1');
+
+    expect(result).toMatchObject({ resumed: true, reconciliation: { status: 'started', queuedMessages: 0 } });
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.refreshToken);
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.clientSecret);
+    expect(mocks.request).toHaveBeenCalledWith(
+      new URL(tokenUrl),
+      expect.objectContaining({ method: 'POST', body: expect.any(String) })
+    );
+    const requestOptions = mocks.request.mock.calls[0][1];
+    const form = new URLSearchParams(requestOptions.body);
+    expect(form.get('refresh_token')).toBe('endpoint-scoped-secret');
+    expect(form.get('client_secret')).toBe('endpoint-scoped-secret');
+    mocks.dnsLookup.mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+    const pinnedRequest = await new Promise((resolve, reject) =>
+      requestOptions.dispatcher.options.connect.lookup('oauth.example.test', { all: true },
+        (error: Error | null, addresses: unknown) => error ? reject(error) : resolve(addresses))
+    );
+    expect(pinnedRequest).toEqual([{ address: '93.184.216.34', family: 4 }]);
+    expect(state.imap_email_provider_config.access_token).toBe('recovered-access-token');
+    expect(mocks.imapConstructed).toHaveBeenCalledWith(expect.objectContaining({
+      host: 'imap.example.test', auth: { user: 'support@example.com', accessToken: 'recovered-access-token', method: 'XOAUTH2' },
+    }));
+    const [imapOptions] = mocks.imapConstructed.mock.calls[0];
+    const pinnedImap = await new Promise((resolve, reject) =>
+      imapOptions.tls.lookup('imap.example.test', { all: true },
+        (error: Error | null, addresses: unknown) => error ? reject(error) : resolve(addresses))
+    );
+    expect(pinnedImap).toEqual([{ address: '93.184.216.34', family: 4 }]);
+    expect(mocks.getTenantSecret).toHaveBeenCalledWith('tenant-1', expectedSecrets.refreshToken);
+    expect(mocks.imapConnect).toHaveBeenCalledTimes(1);
   });
 
   it('T022: keeps the database pause when external teardown fails', async () => {

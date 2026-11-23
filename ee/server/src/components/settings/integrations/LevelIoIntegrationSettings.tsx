@@ -18,8 +18,11 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds, useClientNames } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
 import {
   backfillLevelIoAlerts,
   disconnectLevelIoIntegration,
@@ -70,7 +73,8 @@ export default function LevelIoIntegrationSettings() {
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const [mappings, setMappings] = useState<MappingRow[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const { renderQuickAddContact } = useQuickAddClient();
   const [quickAddContactFor, setQuickAddContactFor] = useState<{ mappingId: string; clientId: string } | null>(null);
@@ -97,17 +101,15 @@ export default function LevelIoIntegrationSettings() {
     if (!background) setIsLoading(true);
     setError(null);
     try {
-      const [settingsResult, mappingResult, webhookResult, summaryResult, contactsResult, clientsResult] = await Promise.all([
+      const [settingsResult, mappingResult, webhookResult, summaryResult, contactsResult] = await Promise.all([
         getLevelIoSettings(),
         listLevelIoOrganizationMappings(),
         getLevelIoWebhookInfo(),
         getLevelIoConnectionSummary(),
         getAllContacts('active'),
-        getAllClients(false),
       ]);
 
       setContacts(contactsResult ?? []);
-      setClients(clientsResult ?? []);
 
       if (!settingsResult.success) {
         setError(settingsResult.error || t('integrations.rmm.levelio.errors.loadSettings', { defaultValue: 'Failed to load Level settings' }));
@@ -124,7 +126,14 @@ export default function LevelIoIntegrationSettings() {
       if (!mappingResult.success) {
         setError((prev) => prev || mappingResult.error || t('integrations.rmm.levelio.errors.loadMappings', { defaultValue: 'Failed to load Level group mappings' }));
       } else {
-        setMappings((mappingResult.mappings || []) as MappingRow[]);
+        const mappingRows = (mappingResult.mappings || []) as MappingRow[];
+        setKnownClients(
+          await lookupClientsByIds(
+            searchClientsForPicker,
+            mappingRows.map((m) => m.client_id).filter((id): id is string => !!id),
+          ),
+        );
+        setMappings(mappingRows);
       }
 
       if (!webhookResult.success) {
@@ -358,6 +367,10 @@ export default function LevelIoIntegrationSettings() {
     handleMappingClientChangeConfirmed(mappingId, clientId);
   };
 
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
+
   const columns: ColumnDefinition<MappingRow>[] = [
     {
       title: t('integrations.rmm.levelio.mappings.group', { defaultValue: 'Level Group' }),
@@ -380,7 +393,8 @@ export default function LevelIoIntegrationSettings() {
       render: (_v, mapping) => (
         <ClientPicker
           id={`levelio-client-picker-${mapping.mapping_id}`}
-          clients={clients}
+          searchClients={searchClientsForPicker}
+          knownClients={knownClients}
           selectedClientId={mapping.client_id ?? null}
           onSelect={(clientId) => handleMappingClientChange(mapping.mapping_id, clientId)}
           filterState="active"
@@ -452,7 +466,7 @@ export default function LevelIoIntegrationSettings() {
     <div className="space-y-6" id="levelio-integration-settings">
       <RmmOrganizationClientChangeDialog
         mappingId={pendingClientChange?.mappingId ?? null}
-        pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+        pendingClientName={pendingClientName}
         isOpen={Boolean(pendingClientChange)}
         onCancel={() => setPendingClientChange(null)}
         onConfirm={() => {
@@ -774,7 +788,6 @@ export default function LevelIoIntegrationSettings() {
           }
           setQuickAddContactFor(null);
         },
-        clients,
         selectedClientId: quickAddContactFor?.clientId ?? null,
       })}
     </div>

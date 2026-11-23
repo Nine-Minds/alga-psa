@@ -8,12 +8,12 @@ const {
   getEntraMappingPreviewMock,
   confirmEntraMappingsMock,
   listEntraMappingGroupsMock,
-  getAllClientsMock,
+  searchClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
   confirmEntraMappingsMock: vi.fn(),
   listEntraMappingGroupsMock: vi.fn(),
-  getAllClientsMock: vi.fn(),
+  searchClientsMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -27,8 +27,8 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   listEntraMappingGroups: listEntraMappingGroupsMock,
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: getAllClientsMock,
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: searchClientsMock,
 }));
 
 vi.mock('@alga-psa/ui/components/Badge', () => ({
@@ -41,21 +41,32 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
+// Clients the mocked picker offers and the mocked searcher returns, set per test.
+let fixtureClients: Array<{ client_id?: string; id?: string; client_name?: string; name?: string }> = [];
+function useClientFixture(clients: typeof fixtureClients) {
+  fixtureClients = clients;
+  searchClientsMock.mockResolvedValue({ clients, total: clients.length });
+}
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
   ClientPicker: ({
     id,
-    clients = [],
+    searchClients,
     selectedClientId,
     onSelect,
     placeholder,
   }: {
     id: string;
-    clients?: Array<{ client_id?: string; id?: string; client_name?: string; name?: string }>;
+    searchClients?: (params: Record<string, unknown>) => Promise<{ clients: Array<{ client_id?: string; id?: string; client_name?: string; name?: string }> }>;
     selectedClientId?: string | null;
     onSelect: (value: string | null) => void;
     placeholder?: string;
-  }) => (
+  }) => {
+    // The picker must be given a server searcher; its options are the per-test fixture.
+    expect(typeof searchClients).toBe('function');
+    const clients = fixtureClients;
+    return (
     <select
       id={id}
       data-testid={`client-picker-${id}`}
@@ -69,12 +80,14 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
         </option>
       ))}
     </select>
-  ),
+    );
+  },
 }));
 
 describe('EntraTenantMappingTable client selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fixtureClients = [];
     confirmEntraMappingsMock.mockResolvedValue({
       success: true,
       data: { confirmedMappings: 1 },
@@ -121,7 +134,7 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-alpha', client_name: 'Alpha MSP' },
       { client_id: 'client-beta', client_name: 'Beta MSP' },
     ]);
@@ -196,7 +209,7 @@ describe('EntraTenantMappingTable client selection', () => {
         unmatched: [],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-one', client_name: 'Client One' },
       { client_id: 'client-two', client_name: 'Client Two' },
     ]);
@@ -233,7 +246,7 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-existing', client_name: 'Existing Client' },
     ]);
 
@@ -248,7 +261,8 @@ describe('EntraTenantMappingTable client selection', () => {
     const reviewedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
     expect(within(reviewedRow).getAllByText('Import as new client').length).toBeGreaterThan(0);
     expect(confirmEntraMappingsMock).not.toHaveBeenCalled();
-    expect(getAllClientsMock).toHaveBeenCalledTimes(1);
+    // No tenant is pre-mapped, so nothing is looked up, and no client list is loaded for the pickers.
+    expect(searchClientsMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Selected Mappings' }));
     await waitFor(() => {
@@ -280,7 +294,7 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-131', client_name: 'Client 131' },
     ]);
     confirmEntraMappingsMock.mockResolvedValue({
@@ -357,7 +371,7 @@ describe('EntraTenantMappingTable client selection', () => {
         unmatched: [],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-auto-65', client_name: 'Auto Client 65' },
       { client_id: 'client-review-65', client_name: 'Review Client 65' },
     ]);
@@ -408,7 +422,7 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock.mockResolvedValue([{ client_id: 'client-22', client_name: 'Client 22' }]);
+    useClientFixture([{ client_id: 'client-22', client_name: 'Client 22' }]);
     listEntraMappingGroupsMock.mockResolvedValue({
       success: true,
       data: {
@@ -486,7 +500,7 @@ describe('EntraTenantMappingTable client selection', () => {
         unmatched: [],
       },
     });
-    getAllClientsMock.mockResolvedValue([
+    useClientFixture([
       { client_id: 'client-saved', client_name: 'Saved Client' },
       { client_id: 'client-other', client_name: 'Other Client' },
     ]);

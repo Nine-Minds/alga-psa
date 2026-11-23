@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { dispatchTicketLifecycle } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { enqueueCoManagedRouting } from './routingOutbox';
@@ -147,15 +148,22 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   const home = tenantDb(trx, actor.tenant);
   const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
   const organization = await home.table('tenants').first('client_name');
+  const displayName = [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim();
+  const username = typeof author?.username === 'string' && !isCoManagedUuid(author.username) ? author.username : '';
   const event = { tenant: resource.tenant, ...key, operation_id: request.operationId, revision, transition,
     request_fingerprint: fingerprint, actor_tenant: actor.tenant, actor_user_id: actor.userId,
-    actor_name: [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.username || actor.userId,
+    actor_name: displayName || username || 'Unknown user',
     actor_organization: organization?.client_name ?? '', note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event); // write-admission: exempt — append-only receipt of the admitted transition
   // Routing notifications (L5): recipients are captured atomically with the receipt as pending ledger rows.
   await enqueueCoManagedRouting(trx, { customerTenant: resource.tenant, sponsorTenant: relationship.sponsor_tenant, relationshipId: resource.relationshipId,
     ticketId: resource.id, operationId: request.operationId, event: transition === 'escalated' ? 'escalation_received' : 'escalation_returned',
     actorName: event.actor_name, actorOrganization: event.actor_organization });
+  // The organization SLA clock follows responsibility: the registered handler runs in this admitted transaction.
+  // Null only for the ticket's first escalation: a non-null value without an obligation means pre-migration work.
+  const priorEscalation: Date | null = work?.first_escalated_at ?? null;
+  await dispatchTicketLifecycle(trx, { kind: 'handoff', tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId,
+    workId, operationId: request.operationId, transition, firstEscalatedAt: priorEscalation ? new Date(priorEscalation).toISOString() : null, occurredAt: new Date(occurredAt).toISOString() });
   await retainCoManagedParticipationEvidence(context, 'ticket_handoff', request.operationId);
   await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);

@@ -14,7 +14,7 @@ describe('CE migrated flow kernel contracts', () => {
     const documentAuthorizationSource = readSource('shared/lib/documentAuthorization.ts');
     const timeSource = readSource('packages/scheduling/src/actions/timeEntryDelegationAuth.ts');
     const projectSource = readSource('packages/projects/src/actions/projectActions.ts');
-    const projectAuthorizationSource = readSource('packages/projects/src/lib/projectReadAuthorization.ts');
+    const projectAuthorizationSource = readSource('packages/authorization/src/projectReadAuthorization.ts');
     const assetSource = readSource('packages/assets/src/actions/assetActions.ts');
     const billingSource = readSource('packages/billing/src/actions/quoteActions.ts');
 

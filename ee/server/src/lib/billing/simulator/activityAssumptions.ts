@@ -613,6 +613,7 @@ async function loadReplayInvoices(
           servicePeriodStart: line.service_period_start ?? null,
           servicePeriodEnd: line.service_period_end ?? null,
           billingTiming: null,
+          isDiscount: charges[index]?.is_discount === true,
         })),
         subtotal,
         tax,

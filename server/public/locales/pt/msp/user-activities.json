@@ -124,6 +124,7 @@
       "dismissError": "Falha ao dispensar tarefa: {{message}}"
     },
     "retryLater": "Por favor, tente novamente mais tarde.",
+    "tryAgain": "Tentar novamente",
     "adHoc": {
       "endBeforeStart": "O horário de término deve ser posterior ao horário de início.",
       "fields": {

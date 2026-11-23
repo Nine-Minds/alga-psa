@@ -1,0 +1,13 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/server
+      Running tests with seed "1793754248790"
+
+Environment file path: /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-validate-priority-type-against-board-recurring-t/.env.localtest
+ ✓ |node| src/test/integration/recurringTicketActions.integration.test.ts (17 tests) 7268ms 127 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  01:04:15
+   Duration  10.45s (transform 4.62s, setup 149ms, import 2.84s, tests 7.27s, environment 0ms)
+

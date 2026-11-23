@@ -14,7 +14,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(a
 vi.mock('../../../../../packages/email/src/features', () => ({ isEnterprise: false }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => ({ transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) })),
   isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => {
     const db = {
@@ -23,6 +23,7 @@ vi.mock('@alga-psa/db', () => ({
         const query: any = {
           where: () => query,
           whereNull: () => query,
+          forUpdate: () => query,
           select: () => table === 'email_sender_addresses' ? runtime.senders : table === 'email_sender_routes' ? runtime.routes : query,
           first: async (column?: string) => {
             if (table === 'boards' && column === 'board_name' && runtime.boardName) return { board_name: runtime.boardName };
@@ -30,6 +31,12 @@ vi.mock('@alga-psa/db', () => ({
             return null;
           },
           insert: async () => 1,
+          update: async (changes: Record<string, unknown>) => {
+            if (table === 'tenant_email_settings' && runtime.settingsRow) {
+              Object.assign(runtime.settingsRow, changes);
+            }
+            return 1;
+          },
         };
         if (table === 'document_associations') return query;
         if (['tenant_companies as tc', 'tenants', 'tenant_email_settings', 'email_sender_addresses', 'email_sender_routes', 'boards', 'email_sending_logs'].includes(table)) return query;

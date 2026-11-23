@@ -69,7 +69,7 @@ import {
   generateTeamsMeetingForApprovedRequest,
 } from '../../../../../packages/scheduling/src/actions/appointmentRequestManagementActions';
 import {
-  addInteraction, getInteractionsPage, updateInteraction, deleteInteraction,
+  addInteraction, getInteractionsPage, getInteractionsForEntity, getRecentInteractions, updateInteraction, deleteInteraction,
 } from '../../../../../packages/clients/src/actions/interactionActions';
 import { getOnlineMeetingForInteraction } from '../../../../../packages/clients/src/actions/onlineMeetingActions';
 
@@ -97,6 +97,9 @@ const cases: Case[] = [
   { name: 'generateTeamsMeetingForApprovedRequest', verb: 'generateAppointmentMeeting', nativeSignals: ['hasPermission'], run: () => (generateTeamsMeetingForApprovedRequest as any)(UUID) },
   { name: 'addInteraction', verb: 'createInteraction', nativeSignals: ['withTransaction'], run: () => (addInteraction as any)(interactionData) },
   { name: 'getInteractionsPage', verb: 'readInteractions', nativeSignals: ['withTransaction'], run: () => (getInteractionsPage as any)({}) },
+  // The client read scope belongs to the native read: no authorization query runs ahead of its transaction.
+  { name: 'getInteractionsForEntity', verb: 'readInteractions', nativeSignals: ['withTransaction'], run: () => (getInteractionsForEntity as any)(UUID, 'client') },
+  { name: 'getRecentInteractions', verb: 'readInteractions', nativeSignals: ['withTransaction'], run: () => (getRecentInteractions as any)({}) },
   { name: 'updateInteraction', verb: 'updateInteraction', nativeSignals: ['withTransaction'], run: () => (updateInteraction as any)(UUID, { title: 'x' }) },
   { name: 'deleteInteraction', verb: 'deleteInteraction', nativeSignals: ['withTransaction'], run: () => (deleteInteraction as any)(UUID) },
   { name: 'getOnlineMeetingForInteraction', verb: 'readInteractionMeeting', nativeSignals: ['OnlineMeetingModel.getByInteractionId'], run: () => (getOnlineMeetingForInteraction as any)(UUID) },
@@ -140,5 +143,16 @@ describe('participating tenant', () => {
     await swallow(run);
     expect(spies[verb]).toHaveBeenCalledTimes(1);
     expect(native.reached).not.toHaveBeenCalled();
+  });
+});
+
+describe('participating tenant, delegated schedule entries', () => {
+  it('getScheduleEntries still masks a non-empty delegated result through the viewer read scope', async () => {
+    registerCapabilityParticipation('co-managed', async ({ tenantIds }) => new Set(tenantIds));
+    spies.readSchedules.mockResolvedValueOnce({ ...hit, entries: [hit.entry] });
+    await swallow(() => (getScheduleEntries as any)(start, end));
+    expect(spies.readSchedules).toHaveBeenCalledTimes(1);
+    // The masking pass opens its transaction; the native permission and calendar checks never run.
+    expect(native.reached.mock.calls.map(([name]) => name)).toEqual(['withTransaction']);
   });
 });

@@ -67,6 +67,9 @@ export function mapTacticalAlertToEvent(
     sourceType: 'tacticalrmm_alert',
     severity: mapTacticalSeverity(alert?.severity ?? alert?.alert_severity),
     message: message || null,
+    // Keep the provider field faithfully even when it duplicates message; a
+    // rule may explicitly target details and replay must see the same value.
+    details: typeof alert?.description === 'string' ? alert.description : null,
     deviceName: alert?.hostname ? String(alert.hostname) : alert?.agent_hostname ? String(alert.agent_hostname) : null,
     externalOrganizationId: alert?.client_id != null ? String(alert.client_id) : null,
     occurredAt: toIso(triggeredAt),

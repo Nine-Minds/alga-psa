@@ -29,8 +29,32 @@ export interface WasmInvoiceLocationGroup {
   total: number;
 }
 
+/**
+ * One service inside a Fixed bundle row, built from the generation-time
+ * snapshot. `unitPrice`/`total` are present only when the rendering template
+ * binds component prices (client-visible data omits the keys otherwise).
+ */
+export interface WasmInvoiceBundleComponent {
+  name: string;
+  quantity: number | null;
+  /** Signed change against the previous billed period; null when unchanged or not compared. */
+  quantityChange: number | null;
+  /** Set when the same service has differing quantities across periods on one invoice. */
+  periodLabelStart?: string | null;
+  periodLabelEnd?: string | null;
+  pricingBasis: 'unit' | 'bundle';
+  /** Unit-basis services only. Minor units. */
+  unitPrice?: number;
+  /** Allocated amount, minor units. */
+  total?: number;
+}
+
 export interface WasmInvoiceLineItem {
   id: string;
+  /** Bundle subtitle (muted second line under the title); Fixed bundles only. */
+  subtitle?: string | null;
+  hasComponents?: boolean;
+  components?: WasmInvoiceBundleComponent[];
   unit_code?: string | null;
   unit_label?: string | null;
   description: string;
@@ -208,9 +232,18 @@ export interface WasmInvoiceViewModel {
     | null;
   clientLogoUrl?: string; // Optional client logo URL - KEEPING FOR NOW, maybe rename/remove later?
   items: WasmInvoiceLineItem[];
+  /** Net subtotal: after discounts and credits, before tax. Unchanged meaning. */
   subtotal: number;
   tax: number;
   total: number;
+  /**
+   * Total of all `isDiscount` lines as a positive magnitude, minor units (same sign
+   * convention as quote `discountTotal`). 0 when there are no discounts.
+   * Identity: `grossSubtotal - discountTotal === subtotal`.
+   */
+  discountTotal?: number;
+  /** Subtotal before discounts: `subtotal + discountTotal`. Equals `subtotal` with no discounts. */
+  grossSubtotal?: number;
   taxSource?: 'internal' | 'external' | 'pending_external';
   notes?: string;
   // Grouped item collections (derived from items, no migration needed)
@@ -251,6 +284,12 @@ export interface WasmInvoiceViewModel {
 export interface RenderOutput {
   html: string;
   css: string;
+  /**
+   * The same render as a full HTML document, drawn as the pages it prints as (one sheet per
+   * printed page, chunked by the engine that prints it). Only produced for callers that ask
+   * to paginate; a caller that shows the fragment inline never pays for the headless pass.
+   */
+  documentHtml?: string;
 }
 
 // --- Layout Data Structure (Returned by Wasm) ---

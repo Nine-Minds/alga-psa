@@ -23,6 +23,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { applyCheckInResult, interpretCheckInResponse } from '@alga-psa/licensing';
 
 const logger = () => Context.current().log;
 
@@ -31,20 +32,15 @@ export type ApplianceCheckInOutcome =
   | 'not_connected' // self-host but no connected credential/url — no-op
   | 'refreshed' // server returned a new token; stored
   | 'unchanged' // server ok, token did not change (no resign needed)
-  | 'revoked' // entitlement soft-revoked; grace-expire (token left intact)
-  | 'error'; // deterministic HTTP error (4xx) — recorded, not retried
+  | 'revoked' // entitlement soft-revoked (subscription lapsed); grace-expire, token left intact
+  | 'credential_revoked' // 401: THIS appliance's credential was hard-revoked — re-connect with a new claim code
+  | 'error'; // other deterministic HTTP error (4xx) — recorded, not retried
 
 export interface ApplianceCheckInResult {
   outcome: ApplianceCheckInOutcome;
   /** `exp` (unix seconds) of the current token after the check-in, when known. */
   exp?: number;
   detail?: string;
-}
-
-interface CheckInResponse {
-  status: 'ok' | 'revoked';
-  jwt?: string;
-  exp?: number;
 }
 
 /**
@@ -87,54 +83,53 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
     throw err;
   }
 
-  if (res.status >= 500) {
-    // Server-side error — transient; let Temporal retry.
-    const text = await res.text().catch(() => '');
-    log.warn('Appliance check-in 5xx; will retry', { status: res.status, body: text.slice(0, 200) });
-    throw new Error(`check-in failed: HTTP ${res.status}`);
+  // Response parsing and the license_state mapping are shared with the License
+  // page's "Refresh license now" action (see @alga-psa/licensing license-check-in).
+  const body: unknown = await res.json().catch(() => undefined);
+  const result = interpretCheckInResponse(res.status, body);
+
+  switch (result.kind) {
+    case 'server_error': {
+      // Server-side error — transient; let Temporal retry.
+      log.warn('Appliance check-in 5xx; will retry', { status: result.httpStatus });
+      throw new Error(`check-in failed: HTTP ${result.httpStatus}`);
+    }
+    case 'credential_revoked':
+      // 401 revoked_appliance: a hard revocation of this appliance's credential
+      // (rebind/compromise) — distinct from a lapsed subscription. Honor grace:
+      // do not touch the token, and leave last_checkin_at as the last time the
+      // service accepted us. The daily schedule re-attempts; don't spin.
+      log.warn('Appliance check-in rejected: credential revoked; re-connect with a new claim code', { status: res.status });
+      return { outcome: 'credential_revoked', detail: `HTTP ${res.status}` };
+    case 'rejected':
+      log.warn('Appliance check-in rejected', { status: res.status });
+      return { outcome: 'error', detail: `HTTP ${res.status}` };
+    case 'lapsed':
+      // Soft revocation: the subscription lapsed and the service stops issuing
+      // fresh tokens. Honor grace — leave license_token intact so the box stays
+      // licensed until the current token's exp, then resolveSelfHostTier falls
+      // to essentials on its own. Record the subscription context for the UI.
+      await applyCheckInResult(result, row);
+      log.warn('Appliance license subscription lapsed; honoring grace (token left intact)', {
+        cancelsAt: result.subscription?.cancelsAt?.toISOString(),
+      });
+      return { outcome: 'revoked' };
+    case 'ok':
+    case 'no_change': {
+      // 200 = the service processed our check-in: records last_checkin_at, stores
+      // a fresh token if one came back, and sets/clears the subscription context
+      // (reactivation clears the warning in the same write as the new token).
+      // getLicenseStateRow always reads the DB and the verify cache is keyed by
+      // token string, so the server process picks up the new token as a cache
+      // miss on its next read — no cross-process cache coordination needed.
+      const fields = await applyCheckInResult(result, row);
+      const exp = result.kind === 'ok' ? result.exp ?? undefined : undefined;
+      if (fields && 'license_token' in fields) {
+        log.info('Appliance license token refreshed', { exp });
+        return { outcome: 'refreshed', exp };
+      }
+      log.info('Appliance check-in ok; token unchanged', { exp });
+      return { outcome: 'unchanged', exp };
+    }
   }
-
-  if (!res.ok) {
-    // Deterministic 4xx (e.g. 401 revoked_appliance). Honor grace: do not touch
-    // the token. Don't spin on it — the daily schedule re-attempts. Leave
-    // last_checkin_at untouched (this was not a successful check-in) so it still
-    // reflects the last time the service accepted us.
-    const text = await res.text().catch(() => '');
-    log.warn('Appliance check-in rejected', { status: res.status, body: text.slice(0, 200) });
-    return { outcome: 'error', detail: `HTTP ${res.status}` };
-  }
-
-  const data = (await res.json()) as CheckInResponse;
-
-  // 200 from the service = it processed our check-in; record the timestamp
-  // on the admin-scoped license_state singleton.
-  await knex('license_state')
-    .where({ id: row.id })
-    .update({ last_checkin_at: knex.fn.now(), updated_at: knex.fn.now() });
-
-  if (data.status === 'revoked') {
-    // Soft revocation: the service stops issuing fresh tokens. Honor grace —
-    // leave license_token intact so the box stays licensed until the current
-    // token's exp, then resolveSelfHostTier falls to essentials on its own.
-    log.warn('Appliance license entitlement reported revoked; honoring grace (token left intact)');
-    return { outcome: 'revoked' };
-  }
-
-  if (!data.jwt || data.jwt === row.license_token) {
-    // No resign was needed this cycle.
-    log.info('Appliance check-in ok; token unchanged', { exp: data.exp });
-    return { outcome: 'unchanged', exp: data.exp };
-  }
-
-  // Fresh token: store it on the admin-scoped license_state singleton.
-  // getLicenseStateRow always reads the DB and the verify cache is keyed by
-  // token string, so the server process picks up the new token (and its
-  // rolled-forward exp) as a cache miss on its next read — no cross-process
-  // cache coordination needed.
-  await knex('license_state')
-    .where({ id: row.id })
-    .update({ license_token: data.jwt, updated_at: knex.fn.now() });
-
-  log.info('Appliance license token refreshed', { exp: data.exp });
-  return { outcome: 'refreshed', exp: data.exp };
 }

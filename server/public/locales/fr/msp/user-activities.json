@@ -124,6 +124,7 @@
       "dismissError": "Échec du rejet de la tâche : {{message}}"
     },
     "retryLater": "Veuillez réessayer plus tard.",
+    "tryAgain": "Réessayer",
     "adHoc": {
       "endBeforeStart": "L'heure de fin doit être postérieure à l'heure de début.",
       "fields": {

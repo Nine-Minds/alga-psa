@@ -8,7 +8,8 @@ const countLedgerByStatusMock = vi.hoisted(() => vi.fn(async () => ({})));
 const getLatestCycleMock = vi.hoisted(() => vi.fn<() => Promise<{ error: string } | null>>(async () => null));
 const countOpenMock = vi.hoisted(() => vi.fn(async () => 0));
 const readAutoApplyMock = vi.hoisted(() => vi.fn(async () => null));
-const qboCredentialsMock = vi.hoisted(() => vi.fn(async () => ({})));
+const qboCredentialsMock = vi.hoisted(() => vi.fn<() => Promise<Record<string, { environment?: 'sandbox' | 'production' }>>>(async () => ({})));
+const resolveTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => 'production' as 'sandbox' | 'production'));
 const xeroConnectionsMock = vi.hoisted(() => vi.fn<() => Promise<Record<string, { tenantName: string; accessTokenExpiresAt?: string }>>>(async () => ({
   'conn-1': { tenantName: 'Acme Org' }
 })));
@@ -47,7 +48,8 @@ vi.mock('../services/accountingSync/syncExceptionService', () => ({
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getStoredQboCredentialsMap: qboCredentialsMock,
   QboClientService: { create: vi.fn(), getPreferences: vi.fn() },
-  getQboEnvironment: vi.fn(() => 'sandbox')
+  getQboEnvironment: vi.fn(() => 'sandbox'),
+  resolveTenantQboEnvironment: resolveTenantQboEnvironmentMock
 }));
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   getStoredXeroConnections: xeroConnectionsMock
@@ -99,7 +101,8 @@ function xeroTarget() {
   return {
     integration: { adapterType: 'xero', targetRealm: 'conn-1' },
     adapter: {},
-    refreshTokenExpiresAt: null
+    refreshTokenExpiresAt: null,
+    qboEnvironment: null
   };
 }
 
@@ -110,6 +113,7 @@ beforeEach(() => {
   queryRecords = [];
   resolveSyncTargetMock.mockResolvedValue(xeroTarget());
   qboCredentialsMock.mockResolvedValue({});
+  resolveTenantQboEnvironmentMock.mockResolvedValue('production');
   xeroConnectionsMock.mockResolvedValue({ 'conn-1': { tenantName: 'Acme Org' } });
   tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
     table: (table: string) => makeBuilder(table, [])
@@ -155,6 +159,70 @@ describe('accounting sync actions organisation scoping', () => {
     expect(mappingQuery?.whereNulls).toContain('deleted_at');
     expect(opsQuery?.wheres).toContainEqual(expect.objectContaining({ adapter_type: 'xero' }));
     expect(opsQuery?.wheres).toContainEqual(expect.objectContaining({ target_realm: 'conn-1' }));
+  });
+
+  it('reports the Intuit environment of the connected QBO realm for the deep link', async () => {
+    resolveSyncTargetMock.mockResolvedValue({
+      integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-sandbox' },
+      adapter: {},
+      refreshTokenExpiresAt: null,
+      qboEnvironment: 'sandbox'
+    });
+    tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
+      table: (table: string) =>
+        makeBuilder(
+          table,
+          table === 'tenant_external_entity_mappings'
+            ? [
+                {
+                  alga_entity_id: 'inv-1',
+                  external_entity_id: 'qbo-inv-1',
+                  sync_status: 'synced',
+                  last_synced_at: '2026-03-01T00:00:00.000Z',
+                  metadata: {}
+                }
+              ]
+            : []
+        )
+    }));
+
+    const statuses = await (getInvoiceSyncStatuses as any)(USER, { tenant: TENANT }, ['inv-1']);
+
+    expect(statuses['inv-1'].environment).toBe('sandbox');
+    // The stored connection decides; the tenant setting is only the fallback.
+    expect(resolveTenantQboEnvironmentMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the tenant environment when the connection has none stored', async () => {
+    resolveSyncTargetMock.mockResolvedValue({
+      integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-legacy' },
+      adapter: {},
+      refreshTokenExpiresAt: null,
+      qboEnvironment: null
+    });
+    resolveTenantQboEnvironmentMock.mockResolvedValue('sandbox');
+    tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
+      table: (table: string) =>
+        makeBuilder(
+          table,
+          table === 'tenant_external_entity_mappings'
+            ? [
+                {
+                  alga_entity_id: 'inv-1',
+                  external_entity_id: 'qbo-inv-1',
+                  sync_status: 'synced',
+                  last_synced_at: '2026-03-01T00:00:00.000Z',
+                  metadata: {}
+                }
+              ]
+            : []
+        )
+    }));
+
+    const statuses = await (getInvoiceSyncStatuses as any)(USER, { tenant: TENANT }, ['inv-1']);
+
+    expect(statuses['inv-1'].environment).toBe('sandbox');
+    expect(resolveTenantQboEnvironmentMock).toHaveBeenCalledWith(TENANT);
   });
 
   it('scopes health counts and provider label to the selected organisation', async () => {

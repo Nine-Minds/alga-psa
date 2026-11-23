@@ -18,10 +18,6 @@ vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
-vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true)),
-}));
-
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { InvoiceService } from '@/lib/api/services/InvoiceService';
 import { manualInvoiceRequestSchema } from '@/lib/api/schemas/invoiceSchemas';
@@ -39,6 +35,7 @@ const {
 describe('REST manual invoice creation takes terms from the effective billing identity', () => {
   let context: TestContext;
   let serviceId: string;
+  let user: Record<string, unknown>;
 
   beforeAll(async () => {
     context = await setupContext({ runSeeds: false });
@@ -46,7 +43,17 @@ describe('REST manual invoice creation takes terms from the effective billing id
 
   beforeEach(async () => {
     context = await resetContext();
-    setupCommonMocks({ tenantId: context.tenantId, userId: context.userId, permissionCheck: () => true });
+    user = await context.db('users')
+      .where({ tenant: context.tenantId, user_id: context.userId })
+      .first();
+    expect(user).toBeDefined();
+    setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      user: user as any,
+      permissionCheck: (actor, resource, action) =>
+        actor.user_id === context.userId && resource === 'invoice' && action === 'create',
+    });
     await ensureDefaultBillingSettings(context);
     serviceId = await createTestService(context, {
       billing_method: 'fixed',
@@ -79,6 +86,7 @@ describe('REST manual invoice creation takes terms from the effective billing id
     const created = await serviceUnderTest().generateManualInvoice(request, {
       tenant: context.tenantId,
       userId: context.userId,
+      user,
     } as any);
     return context.db('invoices')
       .where({ tenant: context.tenantId, invoice_id: (created as any).invoice_id })
@@ -248,13 +256,10 @@ describe('REST manual invoice creation takes terms from the effective billing id
       return createBillingProfile(context, otherClientId, 'Foreign');
     }
 
-    const ctx = () => ({ tenant: context.tenantId, userId: context.userId } as any);
+    const ctx = () => ({ tenant: context.tenantId, userId: context.userId, user } as any);
     const base = () => ({
       client_id: context.clientId,
       invoice_date: '2026-03-01',
-      subtotal: 0,
-      tax: 0,
-      total_amount: 0,
       status: 'draft',
     });
 

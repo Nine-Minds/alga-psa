@@ -7,7 +7,7 @@ vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({ getPrioriti
 vi.mock('@alga-psa/reference-data/actions/status-actions/statusActions', () => ({ getTicketStatuses: vi.fn() }));
 vi.mock('../actions/board-actions', () => ({ getAllBoards: vi.fn() }));
 vi.mock('../actions/ticketCategoryActions', () => ({ getTicketCategoriesByBoard: vi.fn() }));
-vi.mock('../actions/checklists/checklistTemplateActions', () => ({ getChecklistTemplates: vi.fn() }));
+vi.mock('../actions/checklists/checklistTemplateActions', () => ({ getChecklistTemplateOptionsForEditor: vi.fn() }));
 
 import { checklistTemplatesForClient } from './useTicketFieldReferenceData';
 

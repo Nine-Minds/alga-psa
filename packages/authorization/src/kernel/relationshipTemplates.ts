@@ -8,6 +8,10 @@ import type {
   RelationshipTemplateKey,
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
+import { matchRulesForAction } from './actionAliases';
+import { closedBundlesNotNaming, closedSourcesNotNaming } from './closedBaseline';
+import { resolveAppliedBuiltinResolvers } from './builtinRuleResolvers';
+import { compileRecordGuardSql, isRecordGuardKey, type AttachedTicketQuantifier, type TicketScope } from './recordGuards';
 import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
@@ -47,9 +51,11 @@ function uniqueNonEmpty(values: Array<string | null | undefined> | undefined): s
  * template semantics; the resource supplies the columns/relations they map to.
  */
 export interface RelationshipSqlAdapter {
-  ownerColumn: string;
-  clientColumn: string;
-  boardColumn: string;
+  /** Column holding the record's own id. When omitted, the `selected_records` template denies all rows. */
+  idColumn?: string;
+  ownerColumn?: string;
+  clientColumn?: string;
+  boardColumn?: string;
   contactColumn?: string;
   /**
    * Column holding the ticket's billing profile. When omitted, billing-profile
@@ -62,7 +68,7 @@ export interface RelationshipSqlAdapter {
    * `contact_visibility` (narrower, fail-closed).
    */
   watchListColumn?: string;
-  teamColumn: string;
+  teamColumn?: string;
   /**
    * Column holding a boolean client-visibility flag. When omitted, the
    * `client_visible_only` bundle constraint denies all rows — matching the JS
@@ -71,11 +77,40 @@ export interface RelationshipSqlAdapter {
    */
   clientVisibleColumn?: string;
   /**
+   * Column holding the record's audience (`internal` / `client` / `public`). When omitted, the
+   * `external_audience_only` record guard denies all rows (fail closed), as the JS guard does for a
+   * record that carries no audience.
+   */
+  audienceColumn?: string;
+  /**
+   * Narrow `builder` by the tickets a row is attached to. `every`: no attached ticket lies outside `scope`
+   * (a row attached to none passes). `some`: at least one attached ticket lies inside it. A ticket is inside
+   * when its client AND its board are listed; a ticket with no board is outside. When omitted, the guards
+   * that read attachments deny all rows.
+   */
+  applyAttachedTickets?(builder: Knex.QueryBuilder, scope: TicketScope, quantifier: AttachedTicketQuantifier): void;
+  /**
    * Narrow `builder` to rows assigned to any of `userIds` (the primary assignee
    * column and/or a resource-specific co-assignee relation). Must deny (no rows)
    * when `userIds` is empty.
    */
   applyAssignedUsers(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Optional relationship-backed ownership mapping for resources without a scalar owner column. */
+  applyOwnerUsers?(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Compatibility hook for adapters that expose one owner at a time. */
+  applyOwner?(builder: Knex.QueryBuilder, userId: string): void;
+  /** Optional relationship-backed team mapping for resources without a scalar team column. */
+  applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
+  /** Optional relationship-backed board mapping for resources without a scalar board column. */
+  applyBoards?(builder: Knex.QueryBuilder, boardIds: string[]): void;
+  /**
+   * Narrow `builder` to rows whose client is in `clientIds`, for resources with no
+   * `clientColumn` (the polymorphic tables; see `polymorphicClientsHook`). Used only
+   * when `clientColumn` is absent. Called with an empty set too, so a resource may keep rows
+   * that need no client (a user's own client-less rows); the clause it adds for the clients
+   * themselves must match nothing when `clientIds` is empty.
+   */
+  applyClients?(builder: Knex.QueryBuilder, clientIds: string[]): void;
 }
 
 export interface RelationshipSqlContext {
@@ -83,6 +118,7 @@ export interface RelationshipSqlContext {
   subject: AuthorizationSubject;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
+  selectedRecordIds?: string[];
   adapter: RelationshipSqlAdapter;
 }
 
@@ -107,6 +143,26 @@ function whereInOrDeny(
   builder.whereIn(column, normalized);
 }
 
+/**
+ * Narrow to rows owned by any of `clientIds`: through the scalar client column when
+ * the resource has one, else through its `applyClients` hook, else deny.
+ */
+function whereClientsOrDeny(
+  builder: Knex.QueryBuilder,
+  adapter: RelationshipSqlAdapter,
+  clientIds: Array<string | null | undefined> | undefined
+): void {
+  if (adapter.clientColumn) {
+    whereInOrDeny(builder, adapter.clientColumn, clientIds);
+    return;
+  }
+  if (!adapter.applyClients) {
+    deny(builder);
+    return;
+  }
+  adapter.applyClients(builder, uniqueNonEmpty(clientIds));
+}
+
 interface RelationshipTemplateDef {
   matches(input: AuthorizationEvaluationInput): boolean;
   compileSql(builder: Knex.QueryBuilder, ctx: RelationshipSqlContext): void;
@@ -117,7 +173,15 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       typeof input.record?.ownerUserId === 'string' && input.record.ownerUserId === input.subject.userId,
     compileSql: (builder, ctx) => {
-      builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+      if (ctx.adapter.applyOwnerUsers) {
+        ctx.adapter.applyOwnerUsers(builder, [ctx.subject.userId]);
+      } else if (ctx.adapter.applyOwner) {
+        ctx.adapter.applyOwner(builder, ctx.subject.userId);
+      } else if (ctx.adapter.ownerColumn) {
+        builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+      } else {
+        deny(builder);
+      }
     },
   },
   assigned: {
@@ -140,22 +204,30 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.assigned.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orAssigned(this: Knex.QueryBuilder) {
+      builder.where(function ownOrAssigned(this: Knex.QueryBuilder) {
+        if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(this, ctx.subject.userId);
+        else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+        else deny(this);
+        this.orWhere(function orAssigned(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, [ctx.subject.userId]);
         });
+      });
     },
   },
   own_or_managed: {
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.managed.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orManaged(this: Knex.QueryBuilder) {
+      builder.where(function ownOrManaged(this: Knex.QueryBuilder) {
+        if (ctx.adapter.applyOwnerUsers) ctx.adapter.applyOwnerUsers(this, [ctx.subject.userId]);
+        else if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(this, ctx.subject.userId);
+        else if (ctx.adapter.ownerColumn) this.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+        else deny(this);
+        this.orWhere(function orManaged(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, ctx.subject.managedUserIds ?? []);
         });
+      });
     },
   },
   same_client: {
@@ -170,27 +242,30 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         deny(builder);
         return;
       }
-      builder.where(ctx.adapter.clientColumn, ctx.subject.clientId);
+      if (ctx.adapter.clientColumn) builder.where(ctx.adapter.clientColumn, ctx.subject.clientId);
+      else whereClientsOrDeny(builder, ctx.adapter, [ctx.subject.clientId]);
     },
   },
   client_portfolio: {
     matches: (input) =>
       Boolean(input.record?.clientId && input.subject.portfolioClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.subject.portfolioClientIds);
+      whereClientsOrDeny(builder, ctx.adapter, ctx.subject.portfolioClientIds);
     },
   },
   selected_clients: {
     matches: (input) =>
       Boolean(input.record?.clientId && input.selectedClientIds?.includes(input.record.clientId)),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.clientColumn, ctx.selectedClientIds);
+      whereClientsOrDeny(builder, ctx.adapter, ctx.selectedClientIds);
     },
   },
   same_team: {
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      if (ctx.adapter.applyTeams) ctx.adapter.applyTeams(builder, ctx.subject.teamIds ?? []);
+      else if (ctx.adapter.teamColumn) whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      else deny(builder);
     },
   },
   // One rule intersects client, board, and contact restrictions. Built-in rules
@@ -203,11 +278,16 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         deny(builder);
         return;
       }
+      if (!ctx.adapter.clientColumn) {
+        deny(builder);
+        return;
+      }
       builder.where(ctx.adapter.clientColumn, scope.clientId);
       if (scope.effectiveTicketScope === 'contact' && !ctx.adapter.contactColumn) {
         // Contact scope without a contact column cannot be expressed: deny.
         if (scope.visibleBoardIds !== null) {
-          whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
+          if (!ctx.adapter.boardColumn) deny(builder);
+          else whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
         }
         deny(builder);
         return;
@@ -217,7 +297,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         return;
       }
       applyTicketVisibilityFilter(builder, scope, {
-        boardColumn: ctx.adapter.boardColumn,
+        boardColumn: ctx.adapter.boardColumn ?? '',
         // Only read under contact scope, which returned above when it is absent.
         contactColumn: ctx.adapter.contactColumn ?? '',
         billingProfileColumn: ctx.adapter.billingProfileColumn,
@@ -229,7 +309,23 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.boardId && input.selectedBoardIds?.includes(input.record.boardId)),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      if (ctx.adapter.applyBoards) {
+        if (!ctx.selectedBoardIds?.length) deny(builder);
+        else ctx.adapter.applyBoards(builder, ctx.selectedBoardIds);
+      } else if (ctx.adapter.boardColumn) {
+        whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      } else {
+        deny(builder);
+      }
+    },
+  },
+  // The record itself is on an explicit list (a project shared with a seat arrangement, say). An empty list
+  // and a resource with no id column both deny.
+  selected_records: {
+    matches: (input) => Boolean(input.record?.id && input.selectedRecordIds?.includes(input.record.id)),
+    compileSql: (builder, ctx) => {
+      if (!ctx.adapter.idColumn) { deny(builder); return; }
+      whereInOrDeny(builder, ctx.adapter.idColumn, ctx.selectedRecordIds);
     },
   },
 };
@@ -293,8 +389,14 @@ function compileBundleRuleSql(
     return { supported: true };
   }
 
-  // `not_self_approver` only constrains mutations; it never denies a read.
-  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver') {
+  // `not_self_approver` only constrains mutations and `hide_sensitive_fields` only redacts fields of rows
+  // the rule already lets through: neither denies a read, so neither stops the rule narrowing in SQL.
+  // Redaction is applied afterwards as a projection over the narrowed page (see `projectNarrowedPage`).
+  if (
+    rule.constraintKey &&
+    rule.constraintKey !== 'not_self_approver' &&
+    rule.constraintKey !== 'hide_sensitive_fields'
+  ) {
     return { supported: false, reason: `unsupported bundle constraint ${rule.constraintKey}` };
   }
 
@@ -308,6 +410,8 @@ function compileBundleRuleSql(
       rule.templateKey === 'selected_clients' ? (rule.selectedClientIds ?? []) : ctx.selectedClientIds,
     selectedBoardIds:
       rule.templateKey === 'selected_boards' ? (rule.selectedBoardIds ?? []) : ctx.selectedBoardIds,
+    selectedRecordIds:
+      rule.templateKey === 'selected_records' ? (rule.selectedRecordIds ?? []) : ctx.selectedRecordIds,
   };
 
   builder.andWhere(function bundleTemplate(this: Knex.QueryBuilder) {
@@ -329,11 +433,54 @@ export function compileBundleReadNarrowingSql(
   action: string,
   ctx: RelationshipSqlContext
 ): RelationshipSqlCompileResult {
-  const matching = bundleRules.filter((rule) => rule.resource === resourceType && rule.action === action);
+  // A closed bundle that does not name this resource and action denies everything: representable in SQL, so
+  // it is `supported`, never a fall-back. Mirrors the closed-baseline branch of the bundle provider.
+  if (closedBundlesNotNaming(bundleRules, resourceType, action).length > 0) {
+    deny(builder);
+    return { supported: true };
+  }
+
+  const matching = matchRulesForAction(bundleRules, resourceType, action);
   for (const rule of matching) {
     const result = compileBundleRuleSql(builder, rule, ctx);
     if (!result.supported) {
       return result;
+    }
+  }
+  return { supported: true };
+}
+
+/**
+ * Registered built-in rule resolvers for the subject, as SQL. Mirrors `evaluateBuiltinRuleResolvers`: a closed
+ * resolver that does not name this resource and action denies; a named rule's template ANDs in. No resolver
+ * registered or applying leaves the builder untouched.
+ */
+export function compileBuiltinResolverReadNarrowingSql(
+  builder: Knex.QueryBuilder,
+  resourceType: string,
+  action: string,
+  ctx: RelationshipSqlContext
+): RelationshipSqlCompileResult {
+  const applied = resolveAppliedBuiltinResolvers({ subject: ctx.subject, resource: { type: resourceType, action } });
+  if (applied.length === 0) return { supported: true };
+
+  const closed = applied.filter((resolver) => resolver.baseline === 'closed');
+  if (closedSourcesNotNaming(closed, resourceType, action).length > 0) {
+    deny(builder);
+    return { supported: true };
+  }
+  for (const resolver of applied) {
+    for (const rule of matchRulesForAction(resolver.rules, resourceType, action)) {
+      // A record guard is a resolver-only condition: the bundle compiler never sees one.
+      if (isRecordGuardKey(rule.constraintKey)) {
+        const guardKey = rule.constraintKey;
+        builder.andWhere(function recordGuard(this: Knex.QueryBuilder) {
+          compileRecordGuardSql(this, guardKey, rule, ctx);
+        });
+        continue;
+      }
+      const result = compileBundleRuleSql(builder, rule, ctx);
+      if (!result.supported) return result;
     }
   }
   return { supported: true };
@@ -358,6 +505,13 @@ export function compileResourceReadAuthorizationSql(
   params: ResourceReadAuthorizationSqlParams
 ): RelationshipSqlCompileResult {
   compileRelationshipRulesSql(builder, params.builtinRules, params.ctx);
+  const resolverResult = compileBuiltinResolverReadNarrowingSql(
+    builder,
+    params.resourceType,
+    params.action,
+    params.ctx
+  );
+  if (!resolverResult.supported) return resolverResult;
   return compileBundleReadNarrowingSql(
     builder,
     params.bundleRules,

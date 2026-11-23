@@ -11,8 +11,22 @@ import type {
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
-import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getContactsByClient, getAllContacts, getClientById } from '@alga-psa/clients/actions/queryActions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
+
+// searchClientsForPicker caps `ids` lookups at this many per call.
+const CLIENT_ID_LOOKUP_CHUNK = 100;
+
+async function getExistingClientIds(clientIds: string[]): Promise<string[]> {
+  const unique = Array.from(new Set(clientIds));
+  const existing: string[] = [];
+  for (let i = 0; i < unique.length; i += CLIENT_ID_LOOKUP_CHUNK) {
+    const { clients } = await searchClientsForPicker({ ids: unique.slice(i, i + CLIENT_ID_LOOKUP_CHUNK) });
+    existing.push(...clients.map((client) => client.client_id));
+  }
+  return existing;
+}
 
 export function MspClientIntegrationProvider({ children }: { children: ReactNode }) {
   const renderQuickAddContact = useCallback(
@@ -21,7 +35,6 @@ export function MspClientIntegrationProvider({ children }: { children: ReactNode
         isOpen={props.isOpen}
         onClose={props.onClose}
         onContactAdded={props.onContactAdded}
-        clients={props.clients}
         selectedClientId={props.selectedClientId}
       />
     ),
@@ -56,6 +69,8 @@ export function MspClientIntegrationProvider({ children }: { children: ReactNode
       getContactsByClient,
       getAllContacts,
       getContactByContactNameId,
+      getClientById: async (clientId: string) => (await getClientById(clientId)) ?? null,
+      getExistingClientIds,
       renderQuickAddContact,
       renderQuickAddClient,
       renderClientDetails,

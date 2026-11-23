@@ -472,18 +472,37 @@
         "noLimit": "Geen limiet"
       },
       "actions": {
-        "save": "Serviceregels opslaan"
+        "save": "Serviceregels opslaan",
+        "savePortalBooking": "Portaalboekingsinstellingen opslaan"
       },
       "feedback": {
         "selectServiceError": "Selecteer een dienst",
         "saveSuccess": "Serviceregels opgeslagen",
         "saveError": "Kan serviceregels niet opslaan",
         "deleteSuccess": "Serviceregels verwijderd",
-        "deleteError": "Kan serviceregels niet verwijderen"
+        "deleteError": "Kan serviceregels niet verwijderen",
+        "portalBookingSaveSuccess": "Boekingsinstellingen van het klantportaal opgeslagen"
       },
       "deleteDialog": {
         "title": "Serviceregels verwijderen",
         "message": "Weet u zeker dat u de regels voor {{serviceName}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "portalBooking": {
+        "title": "Boeken in het klantportaal",
+        "description": "Wat klanten zien wanneer ze via het portaal een afspraak aanvragen."
+      },
+      "portalHideContractServices": {
+        "label": "Toon in het klantportaal alleen geconfigureerde boekbare services",
+        "help": "Verbergt de services die klanten via hun contracten krijgen, zodat het portaal alleen de hierboven geconfigureerde services toont met \"Boeking zonder contract toestaan\"."
+      },
+      "portalDefaultService": {
+        "label": "Standaardservice voor boekingen",
+        "none": "Geen standaard — de klant kiest",
+        "help": "Wordt voor klanten voorgeselecteerd, zodat zij nooit een service hoeven te kiezen. Kies een van uw geconfigureerde services — zolang u dat niet doet, wordt er niets voorgeselecteerd."
+      },
+      "portalShowServiceRates": {
+        "label": "Servicetarieven aan klanten tonen",
+        "help": "Als dit uit staat, zien klanten tijdens het boeken nooit een prijs voor een service."
       }
     },
     "exceptions": {

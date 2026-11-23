@@ -4,6 +4,7 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { assertClientPatchKeepsSeatArrangement } from '@alga-psa/core/config/deletion';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -296,6 +297,9 @@ export class ClientModel {
     if (dbData.properties) {
       dbData.properties = JSON.stringify(dbData.properties);
     }
+
+    // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+    await assertClientPatchKeepsSeatArrangement(trx, tenant, clientId, dbData);
 
     // Update client
     await tenantDb(trx, tenant).table('clients')

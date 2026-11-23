@@ -178,11 +178,14 @@ export default function SearchPalette({
     return (
       <>
         <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
+        {/* Rail-relative tokens, not fixed greys: a collapsed rail that paints
+            lighter than the expanded one reads as a different app. my-2 keeps the
+            box at the same height as the expanded input's wrapper. */}
         <button
           id="app-search-collapsed-button"
           type="button"
           onClick={onCollapsedClick}
-          className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
+          className="mx-3 my-2 flex h-10 w-10 items-center justify-center rounded-md border border-sidebar-text/20 bg-sidebar-text/5 text-sidebar-icon hover:bg-sidebar-text/10"
           aria-label={t('search.placeholder')}
         >
           <Search className="h-5 w-5" aria-hidden="true" />
@@ -210,7 +213,7 @@ export default function SearchPalette({
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}
             placeholder={t('search.placeholder')}
-            className="app-sidebar-search-input h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
+            className="app-sidebar-search-input h-10 w-full rounded-md border border-sidebar-text/20 bg-sidebar-text/5 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
           />
         </div>
         {isOpen && (

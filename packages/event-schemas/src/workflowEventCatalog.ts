@@ -131,6 +131,7 @@ export const WORKFLOW_EVENT_CATALOG = {
   PAYMENT_FAILED: { schemaRef: 'payload.PaymentFailed.v1' },
   PAYMENT_RECORDED: { schemaRef: 'payload.PaymentRecorded.v1' },
   PAYMENT_REFUNDED: { schemaRef: 'payload.PaymentRefunded.v1' },
+  PAYMENT_REVERSED: { schemaRef: 'payload.PaymentReversed.v1' },
   PROJECT_APPROVAL_GRANTED: { schemaRef: 'payload.ProjectApprovalGranted.v1' },
   PROJECT_APPROVAL_REJECTED: { schemaRef: 'payload.ProjectApprovalRejected.v1' },
   PROJECT_APPROVAL_REQUESTED: { schemaRef: 'payload.ProjectApprovalRequested.v1' },

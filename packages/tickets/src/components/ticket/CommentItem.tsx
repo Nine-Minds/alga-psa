@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
+import { ServiceAuthorBadge } from '@enterprise/components/service-principals/ServiceAuthorBadge';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -191,7 +193,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
-  const { enabled: coManagedEnabled } = useCapability('co-managed');
+  const { enabled: coManagedWorkspaceEnabled } = useCapability('co-managed');
+  // The seat shape labels comments too, but only a ticket of a live arrangement ever carries a read-time audience.
+  const { enabled: coManagedSeatEnabled } = useCapability('co-managed-seat');
+  const coManagedEnabled = coManagedWorkspaceEnabled || coManagedSeatEnabled;
   const dataSource = useTicketDataSource();
   const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
   const { searchUsersForMentions } = dataSource.viewer;
@@ -204,6 +209,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [isScheduleMutating, setIsScheduleMutating] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [reschedulePublishAt, setReschedulePublishAt] = useState<Date | undefined>(undefined);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
@@ -262,6 +268,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const getAuthorEmail = () => {
     if (isSystemAuthor) return null;
+    // Service principals have only a synthetic placeholder address; never surface it.
+    if (resolvedAuthor.authorKind === 'service') return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -313,9 +321,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
     // A co-managed collaborator's comment is owned by the sender's workspace; no local user may edit it.
     if (resolvedAuthor.source === 'collaborator') return false;
     // No handler means the host is showing the thread read-only.
-    if (!onEdit || !onDelete) return false;
+    if (!onEdit) return false;
+    // Portal projections deliberately remove user UUIDs. Their server-derived
+    // capability preserves ownership controls without exposing that identity.
+    if (conversation.portal_can_edit !== undefined) return conversation.portal_can_edit;
     return Boolean(currentUserId) && currentUserId === conversation.user_id;
-  }, [conversation.user_id, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+  }, [conversation.user_id, conversation.portal_can_edit, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+
+  const canDelete = useMemo(() => {
+    if (isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator' || !onDelete) return false;
+    if (conversation.portal_can_delete !== undefined) return conversation.portal_can_delete;
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
+  }, [conversation.user_id, conversation.portal_can_delete, resolvedAuthor.source, currentUserId, isDeleted, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -382,13 +399,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await rescheduleScheduledComment(commentId, date.toISOString(), timeZone);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setRescheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
+    setScheduleError(null);
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
+    try {
+      await cancelScheduledComment(commentId);
+      runTicketRefresh(dataSource, 'reload');
+    } catch {
+      setScheduleError(t('conversation.scheduledCommentChangeFailed', 'Unable to change this scheduled comment. Refresh and try again.'));
+    } finally {
+      setIsScheduleMutating(false);
+    }
   };
 
   const editorContent = useMemo(() => {
@@ -580,6 +612,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className={`font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] min-w-0 ${isCompact ? 'truncate' : 'break-words'}`}>
                   {getAuthorName()}
                 </p>
+                {resolvedAuthor.authorKind === 'service' && <ServiceAuthorBadge />}
+                <ViaPrincipalLabel principalName={conversation.via_principal_name} />
                 {isBundleMirror && (
                   conversation.bundle_mirror_source?.master_ticket_id ? (
                     <a
@@ -754,7 +788,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {(canCopy || (onReply && !isDeleted) || canEdit || (isCompact && onToggleReaction)) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit || canDelete || (isCompact && onToggleReaction)) && (
               <div className="c-actions space-x-2">
                 {/* Compact: with no reactions yet, React lives in the hover toolbar. */}
                 {isCompact && onToggleReaction && conversation.comment_id && (reactions?.length ?? 0) === 0 ? (
@@ -800,19 +834,20 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     <CornerUpLeft className="w-4 h-4" />
                   </Button>
                 )}
-                {canEdit && (
+                {(canEdit || canDelete) && (
                   <>
                     {conversation.publish_state === 'scheduled' && (
                       <>
-                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setScheduleError(null); setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
                           {t('conversation.reschedule', 'Reschedule')}
                         </Button>
                         <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
                           {t('conversation.cancel', 'Cancel')}
                         </Button>
+                        {scheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{scheduleError}</p>}
                       </>
                     )}
-                    <Button
+                    {canEdit && <Button
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -820,8 +855,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.editCommentAriaLabel')}
                     >
                       <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
+                    </Button>}
+                    {canDelete && <Button
                       id={`delete-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -829,7 +864,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.deleteCommentAriaLabel')}
                     >
                       <Trash className="w-4 h-4" />
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>
@@ -901,7 +936,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               minDate={new Date()}
               clearable
             />
-            {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
+            {rescheduleError && <p role="alert" className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
           </div>
         </DialogContent>
       </Dialog>

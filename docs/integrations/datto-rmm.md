@@ -136,7 +136,7 @@ Each asset carries the device's online or offline status, last seen time, last
 logged-in user, internal and external IP, operating system, agent version,
 last reboot, antivirus and patch status, and whether a reboot is required. Hardware
 details (serial number, make and model, CPU, memory, disks) come from Datto's
-device audit. AlgaPSA only reads the audit again when the device's last audit
+device audit. Datto's reported warranty expiration date is parsed from the `warrantyDate` field on the device and written to `assets.warranty_end_date`, enabling warranty-expiry workflow triggers for Datto-managed assets. If Datto reports no warranty date for a device, `warranty_end_date` is left untouched so that any date entered manually on the asset is preserved. AlgaPSA only reads the audit again when the device's last audit
 date changed, so repeat syncs stay inside Datto's rate limit. Servers, desktops
 and laptops, printers and network devices, ESXi hosts, and mobile devices map to
 the matching asset types. When a device is deleted in Datto, AlgaPSA keeps its

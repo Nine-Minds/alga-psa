@@ -87,6 +87,7 @@ export function mapDattoAlertToEvent(
     sourceType: 'datto_alert',
     severity: mapDattoPriority(alert.priority),
     message: buildMessage(alert, alertClass),
+    details: alert.diagnostics ?? null,
     deviceName: cleanString(source.deviceName),
     externalOrganizationId: cleanString(source.siteUid),
     occurredAt: parseDattoTimestamp(alert.timestamp),

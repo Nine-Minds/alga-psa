@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
 import knex, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';

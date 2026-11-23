@@ -14,8 +14,10 @@ import {
   getMicrosoftEmailOAuthSigningSecret,
   type MicrosoftEmailOAuthPurpose,
 } from '../../utils/email/microsoftEmailOAuthState';
+import { MICROSOFT_MULTI_TENANT_AUTHORITY, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { storeMicrosoftEmailOAuthNonce } from '../../utils/email/microsoftEmailOAuthStateStore';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
+import { resolveGoogleMailboxOAuthClient } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -62,10 +64,15 @@ export const initiateEmailOAuth = withAuth(async (
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri || '';
     let microsoftCredentialSource: 'tenant' | 'platform' | undefined;
+    let msTenantAuthority: string = MICROSOFT_MULTI_TENANT_AUTHORITY;
 
     if (provider === 'google') {
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-      clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
+      try {
+        clientId = (await resolveGoogleMailboxOAuthClient({ tenant })).clientId;
+      } catch {
+        clientId = null;
+      }
     } else {
       // Explicit issuer selection is mandatory for Microsoft. The server
       // resolves and validates ownership + Email capability + readiness and
@@ -74,6 +81,13 @@ export const initiateEmailOAuth = withAuth(async (
 
       clientId = resolution.clientId;
       microsoftCredentialSource = resolution.issuerKind === 'managed' ? 'platform' : 'tenant';
+      // Issuer kind decides the authority: managed -> common, tenant-owned ->
+      // the profile's directory ID. The callback derives it from the same
+      // revalidated resolution, so authorize and token exchange always agree.
+      msTenantAuthority = resolveMicrosoftOAuthAuthority({
+        issuerKind: resolution.issuerKind === 'managed' ? 'platform-managed' : 'tenant-owned',
+        profileTenantId: resolution.microsoftTenantId,
+      });
       effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
     }
 
@@ -101,10 +115,6 @@ export const initiateEmailOAuth = withAuth(async (
       hosted: microsoftCredentialSource === 'platform',
       microsoftCredentialSource,
     };
-
-    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
-    // This allows users from any Azure AD tenant to authenticate
-    const msTenantAuthority = 'common';
 
     let authUrl: string;
     let returnedState = Buffer.from(JSON.stringify(state)).toString('base64');

@@ -93,6 +93,21 @@ export class SyncMappingLedger {
     externalEntityId: string,
     targetRealm?: string | null
   ): Promise<ExternalEntityMappingRow | undefined> {
+    const rows = await this.findAllByExternalId(algaEntityType, externalEntityId, targetRealm);
+    return rows[0];
+  }
+
+  /**
+   * Every LIVE mapping on an external target. Targets that several Alga
+   * entities may share (QBO items for services) have more than one; callers that
+   * reason about such a target must use this, never the single-row lookup above
+   * (which silently picks one). Ordered by id so the result is deterministic.
+   */
+  async findAllByExternalId(
+    algaEntityType: string,
+    externalEntityId: string,
+    targetRealm?: string | null
+  ): Promise<ExternalEntityMappingRow[]> {
     const query = this.table<ExternalEntityMappingRow>()
       .where({
         integration_type: this.integrationType,
@@ -105,7 +120,7 @@ export class SyncMappingLedger {
     const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
     this.applyRealmScope(query, targetRealm, aliases);
 
-    return query.first();
+    return query.orderBy('id');
   }
 
   async findByAlgaId(
@@ -154,6 +169,57 @@ export class SyncMappingLedger {
           .orWhereNotIn('external_realm_id', realmIds);
       })
       .first();
+  }
+
+  /**
+   * Tombstoned (unlinked) rows for an external entity in this realm. The
+   * live lookups deliberately ignore them, so this is how a caller can tell
+   * "never seen" from "deliberately unlinked here" — e.g. a payment reversed
+   * in AlgaPSA only, which a later sync of the same external payment must not
+   * silently re-apply.
+   */
+  async findTombstonedByExternalId(
+    algaEntityType: string,
+    externalEntityId: string,
+    targetRealm?: string | null
+  ): Promise<ExternalEntityMappingRow[]> {
+    const query = this.table<ExternalEntityMappingRow>()
+      .where({
+        integration_type: this.integrationType,
+        alga_entity_type: algaEntityType,
+        external_entity_id: externalEntityId,
+      })
+      .whereNotNull('deleted_at');
+
+    const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
+    this.applyRealmScope(query, targetRealm, aliases);
+
+    return query.orderBy('id');
+  }
+
+  /**
+   * Unlink a mapping without losing it: the row stays as evidence of what was
+   * linked, `deleted_at` takes it out of every live lookup, and the metadata
+   * records who unlinked it and why. Used by the AlgaPSA-only reversal/void,
+   * which deliberately leaves the remote document untouched.
+   */
+  async tombstone(
+    id: string,
+    params: { syncStatus?: string; metadata?: Record<string, unknown> } = {}
+  ): Promise<void> {
+    const existing = await this.table<ExternalEntityMappingRow>().where({ id }).first();
+    if (!existing || existing.deleted_at) {
+      return;
+    }
+
+    await this.table()
+      .where({ id })
+      .update({
+        deleted_at: this.knex.fn.now(),
+        sync_status: params.syncStatus ?? 'unlinked',
+        metadata: { ...(existing.metadata ?? {}), ...(params.metadata ?? {}) },
+        updated_at: this.knex.fn.now(),
+      });
   }
 
   /**

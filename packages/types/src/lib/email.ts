@@ -79,7 +79,10 @@ export interface DomainVerificationResult {
 
 export interface DnsRecord {
   type: 'TXT' | 'MX' | 'CNAME' | 'A';
+  /** Fully qualified record name. */
   name: string;
+  /** Name relative to the zone the customer edits, as the provider reports it (`@` for the zone apex). */
+  host?: string;
   value: string;
   ttl?: number;
   priority?: number;
@@ -236,7 +239,6 @@ export interface TicketFieldOptions {
   statuses: Array<{ id: string; name: string; is_default?: boolean; board_id?: string; board_name?: string; is_closed?: boolean }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
-  clients: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string; username: string }>;
   locations: Array<{ id: string; name: string; client_id: string }>;
 }

@@ -1,3 +1,4 @@
+import { serverOnlyAlias } from '../../scripts/lib/vitest-server-runtime.mjs';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
@@ -23,6 +24,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      serverOnlyAlias,
       // next-auth's lib/env.js does `import { NextRequest } from "next/server"`;
       // under a fresh CI install vite can't resolve the extensionless builtin
       // specifier ("Cannot find module next/server ... Did you mean next/server.js?"),

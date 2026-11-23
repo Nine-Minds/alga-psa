@@ -59,6 +59,8 @@ describe('TimeSheetService time periods (API)', () => {
       tenant: context.tenantId,
     }));
     ctx = { tenant: context.tenantId, userId: context.userId, user: context.user };
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-31T12:00:00Z'));
   });
 
   afterEach(() => {
@@ -122,28 +124,33 @@ describe('TimeSheetService time periods (API)', () => {
   });
 
   describe('update', () => {
-    it('updates dates and ignores is_current (with and without it)', async () => {
-      // is_current is derived from the clock, so pin it: the real date must not decide the outcome.
+    it.each([
+      ['before the period', '2026-10-31T12:00:00Z', false],
+      ['inside the period', '2026-11-03T12:00:00Z', true],
+      ['inside the extended end', '2026-11-08T12:00:00Z', true],
+      ['at the exclusive end', '2026-11-09T00:00:00Z', false],
+    ])('updates dates and ignores is_current (with and without it) %s', async (_label, now, expected) => {
       vi.useFakeTimers({ toFake: ['Date'] });
-      vi.setSystemTime(new Date('2026-10-15T12:00:00Z')); // outside the period
+      vi.setSystemTime(new Date(now));
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
 
-      const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: true });
+      const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: !expected });
       expect(withFlag.end_date).toBe('2026-11-09');
-      expect(withFlag.is_current).toBe(false);
+      expect(withFlag.is_current).toBe(expected);
 
-      vi.setSystemTime(new Date('2026-11-03T12:00:00Z')); // inside the period
       const flagFalse = await update(period.period_id, { end_date: '2026-11-09', is_current: false });
-      expect(flagFalse.is_current).toBe(true);
+      expect(flagFalse.is_current).toBe(expected);
 
       const without = await update(period.period_id, { start_date: '2026-11-02' });
       expect(without.start_date).toBe('2026-11-02');
       expect(without.end_date).toBe('2026-11-09');
+      expect(without.is_current).toBe(expected);
 
-      const row = await dbRow(period.period_id);
-      expect(row).not.toHaveProperty('is_current');
-      expect(formatDbDate(row.start_date)).toBe('2026-11-02');
-    });
+        const row = await dbRow(period.period_id);
+        expect(row).not.toHaveProperty('is_current');
+        expect(formatDbDate(row.start_date)).toBe('2026-11-02');
+      },
+    );
 
     it('treats a body with only is_current as a no-op returning 200 data', async () => {
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });

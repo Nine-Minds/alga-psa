@@ -1,20 +1,20 @@
 /**
- * CM L4a deploy-fix: the shared-comment action gate is "admits, else serves", so a customer co_managed
- * workspace (a relationship row, NO entitlement row) can post and reply on its own shared ticket, while
- * FORCE_CAPABILITIES=co-managed:off refuses before any SQL and writes nothing.
+ * A customer workspace with a co-managed relationship can post on its own shared ticket
+ * without an entitlement. FORCE_CAPABILITIES=co-managed:off blocks the action before SQL.
  *
- * The capability gate and its co-managed resolvers are REAL (database reads through the admin
- * connection). Stand-ins: the rollout flag provider, the session (withAuth / browser actor), and the
- * shared-work admission, session-expiry, lifecycle and transport seams.
+ * The capability gate uses tenant targeting for the rollout flag and reads participation over the
+ * admin connection. Authentication, shared-work admission, session expiry, lifecycle and event
+ * delivery use test stand-ins.
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { admits } from '@alga-psa/core/capability';
+import { flagTargetingEnvName } from '@alga-psa/core/features';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const mocks = vi.hoisted(() => ({ actor: undefined as any, db: undefined as any, createTenantKnex: vi.fn() }));
-vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: vi.fn(async () => true) }));
 vi.mock('next/navigation', () => ({ notFound: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn({ user_id: mocks.actor.userId, user_type: 'internal' }, { tenant: mocks.actor.tenant }, ...args), getSession: vi.fn(), getApiKeyUserOverride: vi.fn() }));
 vi.mock('../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: async () => mocks.actor }));
@@ -52,8 +52,12 @@ beforeAll(async () => {
 });
 afterAll(async () => { await db?.destroy(); });
 
-afterAll(async () => { await db?.destroy(); });
-afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
+const rolloutTargetingEnv = flagTargetingEnvName('release-v2-0-feature');
+beforeEach(() => {
+  vi.stubEnv(rolloutTargetingEnv, tenant);
+  vi.stubEnv('FORCE_CAPABILITIES', undefined);
+});
+afterEach(() => { vi.unstubAllEnvs(); });
 
 // The server entry registers the real co-managed resolvers at boot; do the same here (idempotent).
 const registerResolvers = async () => (await import('../../../../packages/co-managed/src/capability')).registerCoManagedCapability();
@@ -65,19 +69,35 @@ describe('shared comment action gate (unmocked capability)', () => {
   it('lets a co_managed customer workspace with no entitlement row post a shared_it root and a reply', async () => {
     expect(await db('co_managed_entitlements').where({ tenant })).toHaveLength(0);
     await reset();
+    expect(await admits('co-managed', tenant)).toMatchObject({
+      admitted: false,
+      reasons: { admitted: 'not-eligible' },
+    });
     const create = await act();
-    const root = await create(resource, { operationId: uuidv4(), audience: 'shared_it', text: 'root' } as any);
-    expect(root).toMatchObject({ ok: true });
-    const parent = (root as any).receipt;
-    const reply = await create(resource, { operationId: uuidv4(), parent: { storeTenant: parent.storeTenant, threadId: parent.threadId, commentId: parent.commentId }, text: 'reply' } as any);
-    expect(reply).toMatchObject({ ok: true });
-    expect(await db('comments').where({ tenant, ticket_id: resource.id })).toHaveLength(2);
-    expect(await db('comment_threads').where({ tenant, thread_id: parent.threadId }).first()).toMatchObject({ collaboration_audience: 'shared_it' });
+    const root = await create(resource, { operationId: uuidv4(), audience: 'shared_it', text: 'root' });
+    if (!root.ok) throw new Error(`Posting the shared root comment failed (${root.code})`);
+    const { storeTenant, threadId, commentId } = root.receipt;
+    const reply = await create(resource, { operationId: uuidv4(), parent: { storeTenant, threadId, commentId }, text: 'reply' });
+    if (!reply.ok) throw new Error(`Posting the shared reply failed (${reply.code})`);
+
+    const ticket = { tenant, ticket_id: resource.id };
+    const comments = await db('comments').where(ticket).select('comment_id', 'thread_id', 'parent_comment_id');
+    expect(comments).toHaveLength(2);
+    expect(comments).toEqual(expect.arrayContaining([
+      { comment_id: commentId, thread_id: threadId, parent_comment_id: null },
+      { comment_id: reply.receipt.commentId, thread_id: threadId, parent_comment_id: commentId },
+    ]));
+    expect(await db('comment_threads').where({ ...ticket, thread_id: threadId }).first()).toMatchObject({ collaboration_audience: 'shared_it' });
+
+    const activity = await db('ticket_audit_logs').where({
+      ...ticket, actor_user_id: userId, event_type: 'TICKET_INTERNAL_NOTE_ADDED', source: 'ui',
+    }).pluck('entity_id');
+    expect(activity.sort()).toEqual([commentId, reply.receipt.commentId].sort());
   });
 
   it('refuses with CAPABILITY_UNAVAILABLE before any SQL under FORCE_CAPABILITIES=co-managed:off, writing nothing', async () => {
     const before = await count();
-    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:off');
     await reset();
     mocks.createTenantKnex.mockClear();
     const create = await act();
@@ -89,6 +109,7 @@ describe('shared comment action gate (unmocked capability)', () => {
   it('refuses a tenant that neither has an entitlement nor participates', async () => {
     const stranger = await createTenant(db, 'Plain PSA');
     const strangerUser = await createUser(db, stranger, {});
+    vi.stubEnv(rolloutTargetingEnv, stranger);
     const previous = mocks.actor;
     mocks.actor = { kind: 'session', tenant: stranger, userId: strangerUser, sessionId: uuidv4() };
     try {

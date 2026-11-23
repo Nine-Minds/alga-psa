@@ -45,15 +45,10 @@ vi.mock('../../invoice-designer/transforms/TransformsWorkspace', () => ({
   default: () => <div data-automation-id="transforms-workspace-mock">Transforms</div>,
 }));
 
-vi.mock('../PaperInvoice', () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-automation-id="paper-invoice-mock">{children}</div>
-  ),
-}));
-
-vi.mock('../TemplateRenderer', () => ({
-  TemplateRenderer: (props: any) => (
-    <div data-automation-id="template-renderer-mock">{props?.invoiceData?.quote_number ?? 'NO_QUOTE'}</div>
+vi.mock('../../invoice-designer/preview/PreviewSheetFrame', () => ({
+  // The preview is the printed pages, drawn server-side and shown in an iframe jsdom cannot lay out.
+  PreviewSheetFrame: (props: any) => (
+    <div data-automation-id="preview-sheet-frame-mock">{props?.html}</div>
   ),
 }));
 
@@ -141,7 +136,7 @@ describe('QuoteDocumentTemplateEditor existing-quote preview', () => {
       sourceHash: 'hash',
       generatedSource: '{}',
       compile: { status: 'success', diagnostics: [] },
-      render: { status: 'success', html: '<div />', css: '' },
+      render: { status: 'success', html: '<div />', css: '', documentHtml: '<html><body>QT-2026-0100</body></html>' },
       verification: { status: 'pass', mismatches: [] },
     });
   });
@@ -197,7 +192,11 @@ describe('QuoteDocumentTemplateEditor existing-quote preview', () => {
       phone: '+1-555-0100',
       logo_url: 'https://cdn.example/emerald.png',
     });
-    expect(await screen.findByText('QT-2026-0100')).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-automation-id="preview-sheet-frame-mock"]')?.textContent
+      ).toContain('QT-2026-0100')
+    );
   });
 
   it('surfaces an error when the selected quote cannot be loaded', async () => {

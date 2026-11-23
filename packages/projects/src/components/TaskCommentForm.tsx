@@ -7,6 +7,8 @@ import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import type { CommentAudience } from '@alga-psa/types';
+import { useTaskCommentAudience } from '../context/TaskCommentAudienceContext';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
 import {
@@ -35,9 +37,18 @@ export function TaskCommentForm({
   const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+  // Present only where the composition layer injects the audience select (a seat technician's screen). A reply takes
+  // its thread's audience, so only a new comment asks.
+  const audienceSlot = useTaskCommentAudience();
+  const asksAudience = audienceSlot !== null && !parentCommentId;
+  const [audience, setAudience] = useState<CommentAudience | null>(null);
 
   const handleSubmit = async (): Promise<void> => {
     if (!editorRef.current || isSubmitting) {
+      return;
+    }
+    // Without a choice nothing is posted: the author names who can read it (the select says so).
+    if (asksAudience && audience === null) {
       return;
     }
 
@@ -66,7 +77,8 @@ export function TaskCommentForm({
       const result = await createTaskComment({
         taskId: taskId,
         note,
-        parent_comment_id: parentCommentId
+        parent_comment_id: parentCommentId,
+        ...(asksAudience ? { audience } : {}),
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
@@ -100,6 +112,13 @@ export function TaskCommentForm({
         searchMentions={searchUsersForMentions}
         autoFocus={autoFocus}
       />
+      {asksAudience && audienceSlot.renderSelect({
+        id: parentCommentId ? 'task-reply-audience' : 'task-comment-audience',
+        audiences: audienceSlot.audiences,
+        value: audience,
+        onChange: setAudience,
+        disabled: isSubmitting,
+      })}
       <div className="flex justify-end gap-2">
         <Button
           id="add-task-comment-button"
@@ -109,7 +128,7 @@ export function TaskCommentForm({
             e.stopPropagation();
             handleSubmit();
           }}
-          disabled={isSubmitting}
+          disabled={isSubmitting || (asksAudience && audience === null)}
           variant="default"
         >
           {isSubmitting

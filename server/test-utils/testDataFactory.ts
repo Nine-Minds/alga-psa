@@ -234,3 +234,43 @@ export async function createTestEnvironment(
 export function getTestTimestamp(date: Date = new Date()): string {
   return date.toISOString();
 }
+
+/**
+ * Creates a contact of a client. `email: null` makes a contact with no email address.
+ * @returns The contact's id
+ */
+export async function createContact(
+  db: Knex,
+  tenantId: string,
+  clientId: string,
+  options: { fullName?: string; email?: string | null; isInactive?: boolean } = {}
+): Promise<string> {
+  const contactId = uuidv4();
+  await db('contacts').insert({
+    tenant: tenantId,
+    contact_name_id: contactId,
+    client_id: clientId,
+    full_name: options.fullName ?? 'Test Contact',
+    email: options.email === undefined ? `contact.${contactId.slice(0, 8)}@contact.example` : options.email,
+    is_inactive: options.isInactive ?? false,
+  });
+  return contactId;
+}
+
+/**
+ * The client's contact with this email (compared trimmed and lower-cased), created when there is none:
+ * asking twice for one address names one contact, as one person would be.
+ */
+export async function ensureContactWithEmail(
+  db: Knex,
+  tenantId: string,
+  clientId: string,
+  email: string,
+  fullName = 'Test Contact'
+): Promise<string> {
+  const existing = await db('contacts')
+    .where({ tenant: tenantId, client_id: clientId })
+    .whereRaw('lower(trim(email)) = ?', [email.trim().toLowerCase()])
+    .first('contact_name_id');
+  return existing?.contact_name_id ?? createContact(db, tenantId, clientId, { fullName, email });
+}

@@ -20,7 +20,8 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { ColumnDefinition } from '@alga-psa/types';
-import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
+import { ITicketCategory, TicketResponseState } from '@alga-psa/types';
+import type { ClientTicketListResponse } from '../../actions/client-portal-actions/clientTicketProjection';
 import type { IStatus } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { CategoryPicker } from '@alga-psa/tickets/components';
@@ -36,7 +37,6 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from './ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import {
   buildTicketStatusFilterOptions,
@@ -70,7 +70,7 @@ export function TicketList() {
   const { t } = useTranslation('features/tickets');
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [tickets, setTickets] = useState<ITicketListItem[]>([]);
+  const [tickets, setTickets] = useState<ClientTicketListResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -93,7 +93,6 @@ export function TicketList() {
     currentStatus: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
 
@@ -106,39 +105,6 @@ export function TicketList() {
 
   // Debounce search query to avoid triggering loadTickets on every keystroke
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-
-  // Fetch avatar URLs for additional agents when tickets change
-  useEffect(() => {
-    const fetchAvatarUrls = async () => {
-      // Collect all unique user IDs from additional agents
-      const userIds = new Set<string>();
-      tickets.forEach(ticket => {
-        ticket.additional_agents?.forEach(agent => {
-          userIds.add(agent.user_id);
-        });
-      });
-
-      if (userIds.size === 0) return;
-
-      // Get tenant from first ticket
-      const tenant = tickets[0]?.tenant;
-      if (!tenant) return;
-
-      try {
-        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
-        // Convert Map to Record
-        const urlsRecord: Record<string, string | null> = {};
-        avatarUrlsMap.forEach((url, id) => {
-          urlsRecord[id] = url;
-        });
-        setAdditionalAgentAvatarUrls(urlsRecord);
-      } catch (error) {
-        console.error('Failed to fetch avatar URLs:', error);
-      }
-    };
-
-    fetchAvatarUrls();
-  }, [tickets]);
 
   // Fetch team avatar URLs when tickets change
   useEffect(() => {
@@ -353,8 +319,8 @@ export function TicketList() {
       }
 
       const sortedTickets = [...filteredTickets].sort((a, b) => {
-        const aValue = a[sortField as keyof ITicketListItem];
-        const bValue = b[sortField as keyof ITicketListItem];
+        const aValue = a[sortField as keyof ClientTicketListResponse];
+        const bValue = b[sortField as keyof ClientTicketListResponse];
 
         if (!aValue && !bValue) return 0;
         if (!aValue) return 1;
@@ -408,7 +374,7 @@ export function TicketList() {
     if (!ticketToUpdateStatus) return;
 
     const { ticketId, newStatus } = ticketToUpdateStatus;
-    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
+    const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || t('status.unknown', { defaultValue: 'Unknown Status' });
 
     try {
       const result = await updateTicketStatus(ticketId, newStatus);
@@ -459,14 +425,14 @@ export function TicketList() {
     setCurrentPage(1);
   }, []);
 
-  const columns: ColumnDefinition<ITicketListItem>[] = [
+  const columns: ColumnDefinition<ClientTicketListResponse>[] = [
     // Ticket — the hero cell: bold title with the mono ticket number and
     // category folded underneath (mirrors the MSP Refined List design).
     {
       title: t('fields.title'),
       dataIndex: 'title',
       width: '32%',
-      render: (value: string, record: ITicketListItem) => {
+      render: (value: string, record: ClientTicketListResponse) => {
         const hasCategory = !!(record.category_id || record.subcategory_id);
         const categoryLabel = hasCategory ? formatCategoryLabel(record, categories) : null;
         return (
@@ -501,7 +467,7 @@ export function TicketList() {
       title: t('fields.status'),
       dataIndex: 'status_name',
       width: '20%',
-      render: (value: string, record: ITicketListItem) => {
+      render: (value: string, record: ClientTicketListResponse) => {
         // Get response_state from the record (F026-F030)
         const responseState = record.response_state as TicketResponseState | undefined;
         const closed =
@@ -521,7 +487,7 @@ export function TicketList() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
-                  <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+                  <span className="overflow-hidden text-ellipsis">{value || t('fields.noStatus', { defaultValue: 'No Status' })}</span>
                   <ChevronDown className="h-3 w-3 shrink-0 text-[rgb(var(--color-text-400))]" />
                 </button>
               </DropdownMenu.Trigger>
@@ -571,13 +537,13 @@ export function TicketList() {
       title: t('fields.priority'),
       dataIndex: 'priority_name',
       width: '12%',
-      render: (value: string, record: ITicketListItem) => (
+      render: (value: string, record: ClientTicketListResponse) => (
         <div className="flex items-center gap-2">
           <span
             className="h-3.5 w-[3px] shrink-0 rounded-full"
             style={{ backgroundColor: record.priority_color || '#94a3b8' }}
           />
-          <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
+          <span className="font-medium text-[rgb(var(--color-text-700))]">{value || t('fields.noPriority', { defaultValue: 'No Priority' })}</span>
         </div>
       ),
     },
@@ -589,7 +555,7 @@ export function TicketList() {
       width: '13%',
       render: (value: string | null) => {
         if (!value) {
-          return <span className="text-sm text-[rgb(var(--color-text-400))]">No due date</span>;
+          return <span className="text-sm text-[rgb(var(--color-text-400))]">{t('fields.noDueDate', { defaultValue: 'No due date' })}</span>;
         }
 
         const now = new Date();
@@ -601,7 +567,7 @@ export function TicketList() {
         else if (hoursUntilDue <= 24) primaryClass = 'text-orange-600 dark:text-orange-400';
 
         const d = daysUntil(dueDate, now);
-        const secondary = d >= 2 ? `in ${d} days` : null;
+        const secondary = d >= 2 ? t('fields.dueInDays', { defaultValue: 'in {{count}} days', count: d }) : null;
 
         return (
           <div className="flex flex-col leading-tight">
@@ -615,16 +581,16 @@ export function TicketList() {
       title: t('fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
-      render: (value: string | null, record: ITicketListItem) => {
+      render: (value: string | null, record: ClientTicketListResponse) => {
         const additionalCount = record.additional_agent_count || 0;
         const additionalAgents = record.additional_agents || [];
         return (
           <div className="text-sm text-[rgb(var(--color-text-700))] flex items-center gap-2">
             {value ? (
               <UserAvatar
-                userId={record.assigned_to || value}
+                userId={value}
                 userName={value}
-                avatarUrl={additionalAgentAvatarUrls[record.assigned_to ?? ''] ?? null}
+                avatarUrl={record.assigned_to_avatar_url ?? null}
                 size="xs"
               />
             ) : (
@@ -632,7 +598,7 @@ export function TicketList() {
                 +
               </span>
             )}
-            <span className="truncate">{value || 'Unassigned'}</span>
+            <span className="truncate">{value || t('filters.unassigned', { defaultValue: 'Unassigned' })}</span>
             {record.assigned_team_id && record.assigned_team_name && (
               <Tooltip content={record.assigned_team_name}>
                 <span className="inline-flex items-center cursor-help">
@@ -649,13 +615,13 @@ export function TicketList() {
               <Tooltip
                 content={
                   <div className="text-xs space-y-1.5">
-                    <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                    <div className="font-medium text-gray-300 mb-1">{t('info.additionalAgentsTooltip', { defaultValue: 'Additional Agents:' })}</div>
                     {additionalAgents.map((agent, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <UserAvatar
-                          userId={agent.user_id}
+                          userId={agent.name}
                           userName={agent.name}
-                          avatarUrl={additionalAgentAvatarUrls[agent.user_id] ?? null}
+                          avatarUrl={agent.avatar_url ?? null}
                           size="xs"
                         />
                         <span>{agent.name}</span>
@@ -718,7 +684,7 @@ export function TicketList() {
               setSelectedStatus(value);
               setCurrentPage(1);
             }}
-            placeholder="Select Status"
+            placeholder={t('filters.selectStatus', { defaultValue: 'Select Status' })}
           />
 
           {responseStateTrackingEnabled && (
@@ -749,7 +715,7 @@ export function TicketList() {
               setSelectedPriority(value);
               setCurrentPage(1);
             }}
-            placeholder="All Priorities"
+            placeholder={t('filters.allPriorities', { defaultValue: 'All Priorities' })}
           />
 
           <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
@@ -791,7 +757,7 @@ export function TicketList() {
               id="reset-filters-button"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('actions.reset', { defaultValue: 'Reset' })}
             </Button>
 
             <Button
@@ -832,10 +798,14 @@ export function TicketList() {
         isOpen={!!ticketToUpdateStatus}
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChange}
-        title="Update Ticket Status"
-        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatus}" to "${rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label}"?`}
-        confirmLabel="Update"
-        cancelLabel="Cancel"
+        title={t('statusChange.title', { defaultValue: 'Update Ticket Status' })}
+        message={t('statusChange.message', {
+          defaultValue: 'Are you sure you want to change the status from "{{from}}" to "{{to}}"?',
+          from: ticketToUpdateStatus?.currentStatus,
+          to: rawStatusOptions.find(s => s.value === ticketToUpdateStatus?.newStatus)?.label,
+        })}
+        confirmLabel={t('actions.update', { defaultValue: 'Update' })}
+        cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}
       />
     </div>
   );

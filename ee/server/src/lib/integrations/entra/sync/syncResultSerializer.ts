@@ -1,4 +1,5 @@
 import type { EntraSyncRunProgressResult } from '../entraWorkflowClient';
+import type { EntraSyncUserIssue } from './types';
 
 function toNumber(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -10,6 +11,16 @@ function toStringOrNull(value: unknown): string | null {
     return null;
   }
   return String(value);
+}
+
+function toUserIssues(value: unknown): EntraSyncUserIssue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(
+    (entry): entry is EntraSyncUserIssue =>
+      Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)
+  );
 }
 
 export function serializeEntraSyncRunProgress(
@@ -47,6 +58,8 @@ export function serializeEntraSyncRunProgress(
       updated: toNumber(item.updated),
       ambiguous: toNumber(item.ambiguous),
       inactivated: toNumber(item.inactivated),
+      failed: toNumber(item.failed),
+      userIssues: toUserIssues(item.userIssues),
       errorMessage: toStringOrNull(item.errorMessage),
       startedAt: toStringOrNull(item.startedAt),
       completedAt: toStringOrNull(item.completedAt),

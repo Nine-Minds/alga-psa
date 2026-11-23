@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   isTenantSuspended: vi.fn(),
   initialize: vi.fn(),
   sendEmail: vi.fn(),
-  tryConsume: vi.fn(),
+  tryConsumeAtomic: vi.fn(),
   limiterReady: { value: true },
 }));
 
@@ -16,7 +16,7 @@ vi.mock('@alga-psa/core/rateLimit', () => ({
   TokenBucketRateLimiter: {
     getInstance: () => ({
       isReady: () => mocks.limiterReady.value,
-      tryConsume: mocks.tryConsume,
+      tryConsumeAtomic: mocks.tryConsumeAtomic,
     }),
   },
 }));
@@ -49,7 +49,7 @@ describe('diagnostics live-send gates', () => {
     vi.clearAllMocks();
     mocks.limiterReady.value = true;
     mocks.isTenantSuspended.mockResolvedValue(false);
-    mocks.tryConsume.mockResolvedValue({ allowed: true });
+    mocks.tryConsumeAtomic.mockResolvedValue({ allowed: true });
     mocks.initialize.mockResolvedValue(undefined);
     mocks.sendEmail.mockResolvedValue({ success: true, messageId: 'm1' });
   });
@@ -65,13 +65,13 @@ describe('diagnostics live-send gates', () => {
   });
 
   it('refuses a rate-limited tenant without initializing or calling the provider', async () => {
-    mocks.tryConsume.mockResolvedValue({ allowed: false, reason: 'bucket empty', retryAfterMs: 1500 });
+    mocks.tryConsumeAtomic.mockResolvedValue({ allowed: false, reason: 'bucket empty', retryAfterMs: 1500 });
 
     const result = await defaultSendLive(input);
 
     expect(result).toMatchObject({ success: false, definitelyNotSent: true, retryable: true, errorCode: 'RATE_LIMITED' });
     expect(result.metadata).toMatchObject({ retryAfterMs: 1500 });
-    expect(mocks.tryConsume).toHaveBeenCalledWith('email', 'tenant-1', 'user-9');
+    expect(mocks.tryConsumeAtomic).toHaveBeenCalledWith('email', 'tenant-1', 'user-9');
     expect(mocks.initialize).not.toHaveBeenCalled();
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
