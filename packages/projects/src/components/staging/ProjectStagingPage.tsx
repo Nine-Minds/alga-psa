@@ -138,6 +138,8 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
   const lineById = useMemo(() => new Map(lines.map((l) => [l.staging_line_id, l])), [lines]);
   const selectedLines = [...selected].map((id) => lineById.get(id)).filter(Boolean) as StagingLineView[];
   const canUpdate = Boolean(state?.canUpdate);
+  // Without asset:read the custody fields are redacted, so a null state means "unknown", not "not in custody".
+  const canReadAssets = Boolean(state?.canReadAssets);
 
   const counts = useMemo(() => {
     const c = { reserved: 0, staged: 0, installed: 0, client: 0 };
@@ -413,7 +415,7 @@ export default function ProjectStagingPage({ projectId, containerId }: Props) {
                                 {line.serial_number && <span className="font-mono">S/N {line.serial_number}</span>}
                                 {line.asset_tag && <span className="font-mono">{line.asset_tag}</span>}
                               </div>
-                              {line.kind === 'client_asset' && line.asset_id && (line.custody_state || isActiveLine(line)) && (
+                              {canReadAssets && line.kind === 'client_asset' && line.asset_id && (line.custody_state || isActiveLine(line)) && (
                                 <div className="text-xs mt-1" id={`staging-custody-${line.staging_line_id}`}>
                                   <Link
                                     href={`/msp/assets/${line.asset_id}`}

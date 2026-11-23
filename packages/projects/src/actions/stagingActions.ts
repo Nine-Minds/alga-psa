@@ -157,6 +157,8 @@ export interface ProjectStagingState {
   /** Unit pickers and unit labels need inventory:read. */
   canReadInventory: boolean;
   canUpdate: boolean;
+  /** Custody fields on client-asset lines are only filled in for asset:read; without it they are unknown, not empty. */
+  canReadAssets: boolean;
 }
 
 export const getProjectStaging = withAuth(async (
@@ -184,7 +186,7 @@ export const getProjectStaging = withAuth(async (
         custody_location_name: null,
         custody_bin: null,
       }));
-  return { lines, containers, canReadInventory, canUpdate };
+  return { lines, containers, canReadInventory, canUpdate, canReadAssets };
 }));
 
 export interface ReserveProjectStagingInput {
