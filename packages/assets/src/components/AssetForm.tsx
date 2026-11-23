@@ -19,6 +19,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -38,7 +39,7 @@ import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
 import { parseNumberInput } from '../lib/numberInput';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
-import { retainReadableAssetUpdateFields } from '../lib/assetFormPayload';
+import { assetExtensionKeys, retainReadableAssetUpdateFields, type AssetExtensionKey } from '../lib/assetFormPayload';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -106,6 +107,8 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editedExtensions, setEditedExtensions] = useState<ReadonlySet<AssetExtensionKey>>(new Set());
+  const [pendingAssetType, setPendingAssetType] = useState<string | null>(null);
   // Distinguish load failures (no asset to render) from save failures (keep the form mounted with user input intact).
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -262,7 +265,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
         const warrantyEndDate = typeof data.warranty_end_date === 'string'
           ? data.warranty_end_date.split('T')[0]
           : '';
-  
+
+        // Assets created without hardware details (e.g. received equipment)
+        // have no extension row; seed blank fields so they can be filled in.
+        const defaults = emptyBuiltinTypeFields(data.asset_type);
+        setEditedExtensions(new Set());
         setFormData({
           asset_type: data.asset_type,
           client_id: data.client_id,
@@ -292,7 +299,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             storage_capacity_gb: data.workstation.storage_capacity_gb ?? null,
             gpu_model: data.workstation.gpu_model || '',
             installed_software: data.workstation.installed_software || []
-          } : undefined,
+          } : defaults.workstation,
           network_device: data.network_device ? {
             device_type: data.network_device.device_type || '',
             management_ip: data.network_device.management_ip || '',
@@ -302,7 +309,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             power_draw_watts: data.network_device.power_draw_watts ?? null,
             vlan_config: data.network_device.vlan_config || {},
             port_config: data.network_device.port_config || {}
-          } : undefined,
+          } : defaults.network_device,
           server: data.server ? {
             os_type: data.server.os_type || '',
             os_version: data.server.os_version || '',
@@ -316,7 +323,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             network_interfaces: data.server.network_interfaces || [],
             primary_ip: data.server.primary_ip || '',
             installed_services: data.server.installed_services || []
-          } : undefined,
+          } : defaults.server,
           mobile_device: data.mobile_device ? {
             os_type: data.mobile_device.os_type || '',
             os_version: data.mobile_device.os_version || '',
@@ -326,7 +333,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             carrier: data.mobile_device.carrier || '',
             is_supervised: data.mobile_device.is_supervised || false,
             installed_apps: data.mobile_device.installed_apps || []
-          } : undefined,
+          } : defaults.mobile_device,
           printer: data.printer ? {
             model: data.printer.model || '',
             ip_address: data.printer.ip_address || '',
@@ -337,7 +344,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
             supported_paper_types: data.printer.supported_paper_types || [],
             monthly_duty_cycle: data.printer.monthly_duty_cycle ?? null,
             supply_levels: data.printer.supply_levels || {}
-          } : undefined
+          } : defaults.printer
         });
         setCustomLocation(data.location || '');
         setPurchaseCostInput(minorUnitsToInputValue(data.purchase_cost));
@@ -626,7 +633,8 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
     }));
   };
 
-  const handleTypeSpecificChange = (type: keyof AssetFormData, field: string, value: unknown) => {
+  const handleTypeSpecificChange = (type: AssetExtensionKey, field: string, value: unknown) => {
+    setEditedExtensions(previous => new Set(previous).add(type));
     setFormData(prev => {
       const currentTypeData = prev[type];
       if (!currentTypeData) return prev;
@@ -670,6 +678,30 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
       [field]: value
     }));
   };
+  const applyAssetTypeChange = (value: string) => {
+    const typeFields = emptyBuiltinTypeFields(value);
+    setFormData(prev => {
+      const key = assetExtensionKeys.find(key => key === value);
+      return { ...prev, asset_type: value, ...(key && !prev[key] ? typeFields : {}) };
+    });
+    if (createMode) setAsset({ asset_id: '', asset_type: value, status: 'active', ownership: 'client', ...typeFields } as Asset);
+    setAttributeErrors({});
+  };
+  const handleAssetTypeChange = (value: string) => {
+    if (!asset) return;
+    const currentExtensionKey = assetExtensionKeys.find(key => key === asset.asset_type);
+    if (
+      !createMode
+      && formData.asset_type === asset.asset_type
+      && value !== asset.asset_type
+      && currentExtensionKey
+      && asset[currentExtensionKey]
+    ) {
+      setPendingAssetType(value);
+      return;
+    }
+    applyAssetTypeChange(value);
+  };
 
   // Inline server-side validation message for a field path such as
   // `network_device.power_draw_watts`, so a highlighted field is never invisible.
@@ -684,7 +716,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   };
 
   const renderWorkstationFields = () => {
-    if (!asset?.workstation) return null;
     if (!formData.workstation) return null;
 
     return (
@@ -782,7 +813,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   };
 
   const renderNetworkDeviceFields = () => {
-    if (!asset?.network_device) return null;
     if (!formData.network_device) return null;
 
     return (
@@ -856,7 +886,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   };
 
   const renderServerFields = () => {
-    if (!asset?.server) return null;
     if (!formData.server) return null;
 
     return (
@@ -961,7 +990,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   };
 
   const renderMobileDeviceFields = () => {
-    if (!asset?.mobile_device) return null;
     if (!formData.mobile_device) return null;
 
     return (
@@ -1042,7 +1070,6 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
   };
 
   const renderPrinterFields = () => {
-    if (!asset?.printer) return null;
     if (!formData.printer) return null;
 
     return (
@@ -1251,6 +1278,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
         };
       }
 
+      // Keep other type drafts locally, but only submit details for the selected type.
+      for (const key of assetExtensionKeys) {
+        if (key !== formData.asset_type) delete formattedData[key];
+      }
+
       // Remove any undefined or empty string values from the root object
       const cleanedData = Object.fromEntries(
         Object.entries(formattedData).filter(([, value]) => 
@@ -1258,7 +1290,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
         )
       ) as UpdateAssetRequest;
 
-      const safeFormData = retainReadableAssetUpdateFields(cleanedData, asset);
+      const safeFormData = retainReadableAssetUpdateFields(cleanedData, asset, editedExtensions);
 
       // updateAsset RETURNS expected failures (validation, permission, not found)
       // rather than throwing: Next.js masks thrown messages in production builds.
@@ -1585,14 +1617,7 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
                   <CustomSelect
                     id="asset-type-select"
                     value={formData.asset_type}
-                    onValueChange={(value) => {
-                      // D4: switching type keeps attributes values — fields
-                      // not in the new schema simply stop rendering.
-                      const typeFields = createMode ? emptyBuiltinTypeFields(value) : {};
-                      setFormData(prev => ({ ...prev, asset_type: value, ...typeFields }));
-                      if (createMode) setAsset({ asset_id: '', asset_type: value, status: 'active', ownership: 'client', ...typeFields } as Asset);
-                      setAttributeErrors({});
-                    }}
+                    onValueChange={handleAssetTypeChange}
                     options={assetTypeOptions}
                     disabled={saving}
                     className="mt-1"
@@ -1799,18 +1824,18 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           </Card>
         )}
 
-        {formData.asset_type === asset.asset_type && (asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
+        {assetExtensionKeys.some(key => key === formData.asset_type) && (
           <Card id="type-specific-details" className="p-4 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
-              {asset.workstation
+              {formData.asset_type === 'workstation'
                 ? t('assetForm.typeDetails.workstation', { defaultValue: 'Workstation Details' })
-                : asset.network_device
+                : formData.asset_type === 'network_device'
                   ? t('assetForm.typeDetails.networkDevice', {
                     defaultValue: 'Network Device Details'
                   })
-                  : asset.server
+                  : formData.asset_type === 'server'
                     ? t('assetForm.typeDetails.server', { defaultValue: 'Server Details' })
-                    : asset.mobile_device
+                    : formData.asset_type === 'mobile_device'
                       ? t('assetForm.typeDetails.mobileDevice', {
                         defaultValue: 'Mobile Device Details'
                       })
@@ -1818,11 +1843,11 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
                         defaultValue: 'Printer Details'
                       })}
             </Text>
-            {asset.workstation && renderWorkstationFields()}
-            {asset.network_device && renderNetworkDeviceFields()}
-            {asset.server && renderServerFields()}
-            {asset.mobile_device && renderMobileDeviceFields()}
-            {asset.printer && renderPrinterFields()}
+            {formData.asset_type === 'workstation' && renderWorkstationFields()}
+            {formData.asset_type === 'network_device' && renderNetworkDeviceFields()}
+            {formData.asset_type === 'server' && renderServerFields()}
+            {formData.asset_type === 'mobile_device' && renderMobileDeviceFields()}
+            {formData.asset_type === 'printer' && renderPrinterFields()}
           </Card>
         )}
 
@@ -1865,6 +1890,20 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
           </div>
         )}
       </form>
+      <ConfirmationDialog
+        id="asset-type-change-confirmation-dialog"
+        isOpen={pendingAssetType !== null}
+        onClose={() => setPendingAssetType(null)}
+        onConfirm={() => {
+          if (pendingAssetType) applyAssetTypeChange(pendingAssetType);
+          setPendingAssetType(null);
+        }}
+        title={t('assetForm.typeChangeConfirmation.title', { defaultValue: 'Change asset type?' })}
+        message={t('assetForm.typeChangeConfirmation.message', {
+          defaultValue: 'Changing the asset type and saving will permanently delete the saved hardware details for this asset. This cannot be undone. Continue?',
+        })}
+        confirmLabel={t('assetForm.typeChangeConfirmation.confirm', { defaultValue: 'Change type' })}
+      />
     </div>
   );
 }

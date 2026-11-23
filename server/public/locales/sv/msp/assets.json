@@ -635,6 +635,11 @@
     "title": "Tillgångsformulär",
     "description": "Huvudformulär för att skapa och redigera tillgångar med fält för identitet, livscykel, avtal och metadata",
     "heading": "Redigera tillgång",
+    "typeChangeConfirmation": {
+      "title": "Ändra tillgångstyp?",
+      "message": "Om du ändrar tillgångstypen och sparar raderas de sparade hårdvaruuppgifterna permanent. Detta kan inte ångras. Vill du fortsätta?",
+      "confirm": "Ändra typ"
+    },
     "loading": {
       "assetDetails": "Läser in tillgångsdetaljer…"
     },

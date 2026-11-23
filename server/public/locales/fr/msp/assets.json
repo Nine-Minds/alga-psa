@@ -634,6 +634,11 @@
     "title": "Formulaire d'actif",
     "description": "Formulaire de création et de modification de l'actif principal avec champs d'identité, de cycle de vie, de contrat et de métadonnées",
     "heading": "Modifier l'actif",
+    "typeChangeConfirmation": {
+      "title": "Changer le type d’actif ?",
+      "message": "Changer le type d’actif et enregistrer supprimera définitivement les détails matériels enregistrés pour cet actif. Cette action est irréversible. Continuer ?",
+      "confirm": "Changer le type"
+    },
     "loading": {
       "assetDetails": "Chargement des détails de l'actif..."
     },

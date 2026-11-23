@@ -634,6 +634,11 @@
     "title": "Vermögensformular",
     "description": "Formular zum Erstellen und Bearbeiten primärer Assets mit Feldern für Identität, Lebenszyklus, Vertrag und Metadaten",
     "heading": "Asset bearbeiten",
+    "typeChangeConfirmation": {
+      "title": "Asset-Typ ändern?",
+      "message": "Wenn Sie den Asset-Typ ändern und speichern, werden die gespeicherten Hardwaredetails für dieses Asset endgültig gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden. Fortfahren?",
+      "confirm": "Typ ändern"
+    },
     "loading": {
       "assetDetails": "Asset-Details werden geladen..."
     },

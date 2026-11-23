@@ -634,6 +634,11 @@
     "title": "Formularz zasobu",
     "description": "Formularz tworzenia i edytowania podstawowego zasobu z polami tożsamości, cyklu życia, umowy i metadanych",
     "heading": "Edytuj zasób",
+    "typeChangeConfirmation": {
+      "title": "Zmienić typ zasobu?",
+      "message": "Zmiana typu zasobu i zapisanie spowoduje trwałe usunięcie zapisanych danych sprzętowych. Tej operacji nie można cofnąć. Kontynuować?",
+      "confirm": "Zmień typ"
+    },
     "loading": {
       "assetDetails": "Ładowanie szczegółów zasobu..."
     },

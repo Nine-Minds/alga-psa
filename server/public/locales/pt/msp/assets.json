@@ -634,6 +634,11 @@
     "title": "Formulário de Ativos",
     "description": "Formulário de criação e edição de ativos primários com campos de identidade, ciclo de vida, contrato e metadados",
     "heading": "Editar recurso",
+    "typeChangeConfirmation": {
+      "title": "Alterar o tipo de recurso?",
+      "message": "Alterar o tipo de recurso e guardar eliminará permanentemente os detalhes de hardware guardados. Esta ação não pode ser desfeita. Continuar?",
+      "confirm": "Alterar tipo"
+    },
     "loading": {
       "assetDetails": "Carregando detalhes do recurso..."
     },

@@ -634,6 +634,11 @@
     "title": "Activaformulier",
     "description": "Primair formulier voor het maken en bewerken van assets, met velden voor identiteit, levenscyclus, contract en metadata",
     "heading": "Asset bewerken",
+    "typeChangeConfirmation": {
+      "title": "Assettype wijzigen?",
+      "message": "Als u het assettype wijzigt en opslaat, worden de opgeslagen hardwaregegevens voor dit asset definitief verwijderd. Dit kan niet ongedaan worden gemaakt. Doorgaan?",
+      "confirm": "Type wijzigen"
+    },
     "loading": {
       "assetDetails": "Itemgegevens laden..."
     },
