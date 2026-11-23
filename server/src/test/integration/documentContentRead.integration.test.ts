@@ -369,6 +369,40 @@ describe('GET /api/v1/documents/content', () => {
     }
   });
 
+  it('pages a ticket with 120 attachments to the end: all 200s, every cursor within the 8192 cap, each document exactly once', async () => {
+    const MAX_CURSOR_LENGTH = 8192; // the cap in schemas/documentContentRead.ts
+    const C = await buildFixture('C-many');
+    const total = 120;
+    const ids: string[] = [];
+    for (let i = 0; i < total; i++) {
+      ids.push(
+        await addDoc(C, `t${i}`, {
+          name: `note-${String(i).padStart(3, '0')}.txt`,
+          file: { bytes: Buffer.from(`attachment number ${i}: ${'x'.repeat(150)}`), mime: 'text/plain' },
+          age: i + 1,
+        }),
+      );
+    }
+    act(C);
+    // Small text budget so a call serves only a few files: 120 attachments need many pages.
+    process.env.ATTACHMENT_CONTENT_BUDGET_OVERRIDE = JSON.stringify({ maxTextChars: 700 });
+    const served: string[] = [];
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const r = await get({ entity_type: 'ticket', entity_id: C.ticketNumber, cursor: cursor ?? undefined });
+      expect(r.status).toBe(200);
+      served.push(...(r.header.served as Array<{ document_id: string }>).map((s) => s.document_id));
+      cursor = r.header.next_cursor;
+      if (cursor) expect(cursor.length).toBeLessThanOrEqual(MAX_CURSOR_LENGTH);
+      pages++;
+    } while (cursor && pages < 500);
+    expect(cursor).toBeNull();
+    expect(pages).toBeGreaterThan(5); // paging really happened
+    expect(new Set(served).size).toBe(served.length); // no duplicates
+    expect([...served].sort()).toEqual([...ids].sort()); // no gaps
+  }, 120_000);
+
   it('rejects a malformed cursor (400) and a cursor from another read', async () => {
     const bad = await get({ entity_type: 'ticket', entity_id: A.ticketNumber, cursor: 'not-a-cursor' });
     expect(bad.status).toBe(400);
