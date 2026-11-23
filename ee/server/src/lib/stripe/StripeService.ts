@@ -1716,13 +1716,14 @@ export class StripeService {
   async getOfferCatalog(): Promise<OfferCatalog> {
     await this.ensureInitialized();
     if (!this.offerCatalogInstance) {
-      const { getAdminConnection } = await import('@alga-psa/db/admin');
-      const db = await getAdminConnection();
+      // The memoised catalog holds policy, not a pool: the admin connection is resolved per operation
+      // because getAdminConnection() may destroy and rebuild its pool after a connection reset.
+      const resolveDb = async () => (await import('@alga-psa/db/admin')).getAdminConnection();
       this.offerCatalogInstance = createOfferCatalog({
-        db, stripe: this.stripe, subscriptions: this.stripe.subscriptions,
+        db: resolveDb, stripe: this.stripe, subscriptions: this.stripe.subscriptions,
         livemode: () => stripeLivemodeFromSecretKey(this.config.secretKey),
-        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, (livemode, connection = db) => {
-          return loadConfiguredBillingAccount(connection, livemode);
+        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, async (livemode, connection) => {
+          return loadConfiguredBillingAccount(connection ?? await resolveDb(), livemode);
         }),
       });
     }
