@@ -27,6 +27,10 @@ const PG_UNDEFINED_TABLE = '42P01';
 const PG_UNIQUE_VIOLATION = '23505';
 
 const dbCode = (error: unknown): string | undefined => (error as { code?: string })?.code;
+/** Knex rewrites a failed query's message as "<sql> - <driver message>"; keep only the driver message. */
+const KNEX_SQL_PREFIX = /^\s*(?:select|insert|update|delete|with)\b[\s\S]*? - /i;
+const driverMessage = (error: unknown): string =>
+  (error instanceof Error ? error.message : String(error)).replace(KNEX_SQL_PREFIX, '');
 const identity = (scope: CatalogScope, offerKey: string, interval: BillingInterval) =>
   ({ stripe_account: scope.stripeAccount, livemode: scope.livemode, offer_key: offerKey, billing_interval: interval });
 
@@ -54,7 +58,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
     const code = dbCode(error) ?? 'unknown';
     if (loggedErrorCodes.has(code)) return;
     loggedErrorCodes.add(code);
-    logger.error(`[OfferCatalog] catalog_unavailable: code=${code} message=${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`[OfferCatalog] catalog_unavailable: code=${code} message=${driverMessage(error)}`);
   }
 
   /** Resolve the current admin pool for ONE operation. A failing resolver is an outage like any failing query. */

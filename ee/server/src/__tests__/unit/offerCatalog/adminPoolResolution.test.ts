@@ -77,6 +77,16 @@ describe('offer catalog resolves the admin pool per operation', () => {
     await expect(otherCode.recognizedPriceIds(KEY, 'month', SCOPE)).rejects.toBeInstanceOf(OfferUnavailableError);
     expect(mocks.loggerError).toHaveBeenCalledTimes(2);
     expect(mocks.loggerError.mock.calls[1].join(' ')).toContain('53300');
+
+    // Knex prefixes the failed SQL to the driver message ("<sql> - <message>"); only the driver message is logged.
+    const knexShaped = createOfferCatalog({ db: async () => (() => { throw Object.assign(new Error(
+      'select "price_id" from "stripe_offer_versions" where "stripe_account" = $1 and "livemode" = $2 - terminating connection due to administrator command'),
+    { code: '57P01' }); }) as never, scope: async () => SCOPE, stripe: {} as never, env: {} });
+    await expect(knexShaped.recognizedPriceIds(KEY, 'month', SCOPE)).rejects.toMatchObject({ reason: 'catalog_unavailable' });
+    expect(mocks.loggerError).toHaveBeenCalledTimes(3);
+    const knexLine = mocks.loggerError.mock.calls[2].join(' ');
+    expect(knexLine).toContain('code=57P01 message=terminating connection due to administrator command');
+    expect(knexLine).not.toMatch(/select|stripe_offer_versions|stripe_account/);
   });
 
   it('treats a failing pool resolver as an outage: logs code and message, throws catalog_unavailable', async () => {
