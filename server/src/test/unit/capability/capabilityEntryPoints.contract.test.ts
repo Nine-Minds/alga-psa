@@ -1054,3 +1054,47 @@ describe('Seat UI entry points (T047)', () => {
     for (const f of seatFiles) expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*['"](release-v2-0-feature|capability:)/);
   });
 });
+
+describe('billing catalog context loader registration (co-managed-offer-context-at-the-gate)', () => {
+  // The licensing gate resolves the offer catalog through a loader that EE's surfaceProbe registers as an
+  // import side effect. An entry point that can reach the gate (`isCoManagedPurchaseSurfaceOpen`, or
+  // `admits('co-managed-seat')` through the trial path) without importing it would silently fall back to
+  // the env var. Add the new entry to this list, or its bootstrap to one that already imports the module.
+  const EE_GATE_ENTRY_POINTS = [
+    { file: 'ee/server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
+    { file: 'server/src/instrumentation.ts', importPath: '@enterprise/lib/stripe/offerCatalog/surfaceProbe' },
+    // KNOWN GAP: ee/temporal-workflows/src/worker.ts is not listed. surfaceProbe imports StripeService, which
+    // does not typecheck under the worker's strict tsconfig (18 errors, tsconfig.build.json follows the import)
+    // and has never been in the worker's runtime graph. Until that is resolved the worker's co-managed-seat
+    // decisions use the legacy env fallback. Add the worker here once it registers the loader.
+  ] as const;
+
+  const importsModule = (source: string, importPath: string): boolean => {
+    const sf = ts.createSourceFile('x.ts', source, ts.ScriptTarget.Latest, true);
+    let found = false;
+    const visit = (node: ts.Node): void => {
+      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === importPath) found = true;
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+        && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0]) && node.arguments[0].text === importPath) found = true;
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    return found;
+  };
+
+  it.each(EE_GATE_ENTRY_POINTS)('$file imports surfaceProbe', ({ file: path, importPath }) => {
+    expect(importsModule(readFileSync(join(REPO, path), 'utf8'), importPath)).toBe(true);
+  });
+
+  it('the matcher bites when the import is missing', () => {
+    expect(importsModule(`export async function register() { await import('@/lib/initializeApp'); }`, '@enterprise/lib/stripe/offerCatalog/surfaceProbe')).toBe(false);
+    expect(importsModule(`import "@ee/lib/stripe/offerCatalog/surfaceProbe";`, '@ee/lib/stripe/offerCatalog/surfaceProbe')).toBe(true);
+  });
+
+  it('EE surfaceProbe registers the loader and the CE alias registers nothing', () => {
+    expect(readFileSync(join(REPO, 'ee/server/src/lib/stripe/offerCatalog/surfaceProbe.ts'), 'utf8'))
+      .toMatch(/^registerBillingCatalogContextLoader\(loadBillingCatalogContext\);$/m);
+    expect(readFileSync(join(REPO, 'packages/ee/src/lib/stripe/offerCatalog/surfaceProbe.ts'), 'utf8'))
+      .not.toMatch(/registerBillingCatalogContextLoader|@alga-psa\/licensing/);
+  });
+});
