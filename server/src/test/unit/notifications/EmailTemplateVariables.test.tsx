@@ -56,6 +56,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
     footer?: React.ReactNode;
   }) => isOpen ? <div role="dialog">{children}{footer}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  // EmailTemplates renders the Reset to standard ConfirmationDialog, which builds these even while closed.
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 type TableRow = Record<string, unknown> & { id: string };
