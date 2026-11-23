@@ -68,8 +68,21 @@ describe('ITIL create writers wiring', () => {
   it('T138: the CSV import checks each row against the row’s board and reports per row', () => {
     const importAction = source('packages/tickets/src/actions/ticketImportActions.ts');
     expect(importAction).toContain('prepareTicketCreateFields(trx, tenant, {');
-    expect(importAction).toContain('boardId: destinationBoardId');
     expect(importAction).toContain("policy: 'refuse'");
+    // Every row is checked against its own destination board, through the memoised helper.
+    expect(importAction).toContain(
+      'prepareRowFields(destinationBoardId, rowPriorityId, resolvedCategoryId || null)'
+    );
+    // The memo may not blur two rows together: the board, the priority and the category all key it,
+    // so a row on another board never reuses this board's answer.
+    const memo = importAction.slice(
+      importAction.indexOf('const prepareRowFields = async ('),
+      importAction.indexOf('// Pre-load statuses')
+    );
+    expect(memo).toContain('const key = `${boardId}');
+    expect(memo).toContain('${priorityId');
+    expect(memo).toContain('${categoryId');
+    expect(memo).toContain('boardId,');
     // A failing row is reported and skipped, not thrown: one bad row never stops the import.
     const check = importAction.slice(importAction.indexOf('const rowPriorityId ='));
     expect(check.slice(0, 1_400)).toContain('ticketsSkipped++');

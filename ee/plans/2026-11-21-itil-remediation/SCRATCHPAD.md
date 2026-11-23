@@ -1076,6 +1076,12 @@ file the groups moved.
 - `ticketImportActions.ts` called `prepareTicketCreateFields` per row while the comment claimed one
   question per destination board. The answer depends only on (board, priority, category) and nothing
   in the resolution loop writes those rows, so it is memoised on that triple and the comment says so.
+  That move left T138's wiring half reading for the literal `boardId: destinationBoardId`, which the
+  memo helper no longer spells out, so the assertion was realigned on what the rule actually needs:
+  the per-row call passes the row's own `destinationBoardId`, and the board is part of the memo key,
+  so two rows on different boards can never share one answer. Lesson for text contracts: pin the
+  argument the rule depends on at the call site, not a property name inside a literal that a helper
+  may hoist.
 - The guard only saw `.table('tickets')`/`from('tickets')`, so a writer reaching the table through
   `tenantScopedTable(trx, 'tickets', tenant)` was invisible. It now matches the helper shape as well
   — and, to stay honest about what it can judge, reads only an object-literal payload up to its own
