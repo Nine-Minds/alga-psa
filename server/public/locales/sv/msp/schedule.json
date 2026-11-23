@@ -75,6 +75,7 @@
       "loadPermissions": "Det gick inte att läsa in behörigheterna.",
       "loadCurrentUser": "Det gick inte att läsa in den aktuella användaren.",
       "unknown": "Ett okänt fel uppstod",
+      "deepLinkEntryUnavailable": "Det går inte att öppna den schemaposten. Den kan ha tagits bort, eller så saknar du åtkomst till den.",
       "deleteFailed": "Det gick inte att radera schemaposten",
       "deleteUnexpected": "Ett fel uppstod när schemaposten skulle raderas",
       "updateFailed": "Det gick inte att uppdatera schemaposten: {{error}}",

@@ -1194,7 +1194,7 @@ describe('search entity indexers', () => {
       objectId: 'entry-1',
       title: 'Dispatch visit',
       body: 'Bring replacement switch',
-      url: '/msp/schedule/entry-1',
+      url: '/msp/schedule?entryId=entry-1',
       acl: {
         requiredPermission: 'schedule:read',
         visibleToUserIds: [

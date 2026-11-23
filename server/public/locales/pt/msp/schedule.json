@@ -75,6 +75,7 @@
       "loadPermissions": "Falha ao carregar permissões.",
       "loadCurrentUser": "Falha ao carregar o usuário atual.",
       "unknown": "Ocorreu um erro desconhecido",
+      "deepLinkEntryUnavailable": "Não foi possível abrir essa entrada da agenda. Ela pode ter sido excluída ou você pode não ter acesso a ela.",
       "deleteFailed": "Falha ao excluir entrada de agendamento",
       "deleteUnexpected": "Ocorreu um erro ao excluir a entrada de agendamento",
       "updateFailed": "Falha ao atualizar a entrada da programação: {{error}}",

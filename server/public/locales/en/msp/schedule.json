@@ -75,6 +75,7 @@
       "loadPermissions": "Failed to load permissions.",
       "loadCurrentUser": "Failed to load current user.",
       "unknown": "An unknown error occurred",
+      "deepLinkEntryUnavailable": "That schedule entry could not be opened. It may have been deleted, or you may not have access to it.",
       "deleteFailed": "Failed to delete schedule entry",
       "deleteUnexpected": "An error occurred while deleting the schedule entry",
       "updateFailed": "Failed to update schedule entry: {{error}}",

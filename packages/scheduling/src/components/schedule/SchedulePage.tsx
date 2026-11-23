@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ScheduleCalendar from './ScheduleCalendar';
 import AppointmentRequestsPanel from './AppointmentRequestsPanel';
@@ -9,7 +9,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { APPOINTMENT_REQUEST_ID_PARAM } from '@alga-psa/core';
+import {
+  APPOINTMENT_REQUEST_ID_PARAM,
+  SCHEDULE_ENTRY_ID_PARAM,
+  SCHEDULE_ENTRY_OCCURRENCE_PARAM,
+  parseScheduleEntryDeepLink,
+} from '@alga-psa/core';
 import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
 import {
   isReloadNavigation,
@@ -23,6 +28,18 @@ export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
   const searchParams = useSearchParams();
   const requestIdFromUrl = searchParams?.get(APPOINTMENT_REQUEST_ID_PARAM) ?? null;
+
+  // ?entryId=…[&occurrence=…]: open that entry on the calendar. Handled once per distinct link, so a
+  // calendar remount (refreshKey) does not reopen an entry the user has since closed.
+  const entryId = searchParams?.get(SCHEDULE_ENTRY_ID_PARAM) ?? null;
+  const occurrenceParam = searchParams?.get(SCHEDULE_ENTRY_OCCURRENCE_PARAM) ?? null;
+  const entryDeepLink = useMemo(
+    () => parseScheduleEntryDeepLink({ get: (name) => (name === SCHEDULE_ENTRY_ID_PARAM ? entryId : occurrenceParam) }),
+    [entryId, occurrenceParam],
+  );
+  const [handledDeepLinkKey, setHandledDeepLinkKey] = useState<string | null>(null);
+  const deepLinkKey = entryDeepLink ? `${entryDeepLink.entryId}|${entryDeepLink.occurrence?.getTime() ?? ''}` : null;
+  const pendingDeepLink = entryDeepLink && deepLinkKey !== handledDeepLinkKey ? entryDeepLink : null;
 
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
   const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);
@@ -139,7 +156,12 @@ export default function SchedulePage() {
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
-        <ScheduleCalendar key={refreshKey} headerActionsSlot={headerActionsSlot} />
+        <ScheduleCalendar
+          key={refreshKey}
+          headerActionsSlot={headerActionsSlot}
+          deepLink={pendingDeepLink}
+          onDeepLinkHandled={() => setHandledDeepLinkKey(deepLinkKey)}
+        />
       </div>
 
       <AppointmentRequestsPanel

@@ -75,6 +75,7 @@
       "loadPermissions": "Échec du chargement des autorisations.",
       "loadCurrentUser": "Échec du chargement de l'utilisateur actuel.",
       "unknown": "Une erreur inconnue s'est produite",
+      "deepLinkEntryUnavailable": "Impossible d'ouvrir cette entrée du planning. Elle a peut-être été supprimée, ou vous n'y avez pas accès.",
       "deleteFailed": "Échec de la suppression de l'entrée de planification",
       "deleteUnexpected": "Une erreur s'est produite lors de la suppression de l'entrée de planification",
       "updateFailed": "Échec de la mise à jour de l'entrée de planification : {{error}}",

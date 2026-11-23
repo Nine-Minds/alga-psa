@@ -75,6 +75,7 @@
       "loadPermissions": "No se pudieron cargar los permisos.",
       "loadCurrentUser": "No se pudo cargar el usuario actual.",
       "unknown": "Se produjo un error desconocido",
+      "deepLinkEntryUnavailable": "No se pudo abrir esa entrada de la agenda. Puede que se haya eliminado o que no tengas acceso a ella.",
       "deleteFailed": "No se pudo eliminar la entrada del programa",
       "deleteUnexpected": "Se produjo un error al eliminar la entrada del programa.",
       "updateFailed": "No se pudo actualizar la entrada del cronograma: {{error}}",

@@ -75,6 +75,7 @@
       "loadPermissions": "Die Berechtigungen konnten nicht geladen werden.",
       "loadCurrentUser": "Der aktuelle Benutzer konnte nicht geladen werden.",
       "unknown": "Es ist ein unbekannter Fehler aufgetreten",
+      "deepLinkEntryUnavailable": "Dieser Terminplaneintrag konnte nicht geöffnet werden. Er wurde möglicherweise gelöscht, oder Sie haben keinen Zugriff darauf.",
       "deleteFailed": "Zeitplaneintrag konnte nicht gelöscht werden",
       "deleteUnexpected": "Beim Löschen des Zeitplaneintrags ist ein Fehler aufgetreten",
       "updateFailed": "Zeitplaneintrag konnte nicht aktualisiert werden: {{error}}",

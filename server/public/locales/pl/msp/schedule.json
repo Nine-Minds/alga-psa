@@ -75,6 +75,7 @@
       "loadPermissions": "Nie udało się załadować uprawnień.",
       "loadCurrentUser": "Nie udało się załadować bieżącego użytkownika.",
       "unknown": "Wystąpił nieznany błąd",
+      "deepLinkEntryUnavailable": "Nie można otworzyć tego wpisu w harmonogramie. Mógł zostać usunięty lub możesz nie mieć do niego dostępu.",
       "deleteFailed": "Nie udało się usunąć wpisu harmonogramu",
       "deleteUnexpected": "Wystąpił błąd podczas usuwania wpisu harmonogramu",
       "updateFailed": "Nie udało się zaktualizować wpisu harmonogramu: {{error}}",

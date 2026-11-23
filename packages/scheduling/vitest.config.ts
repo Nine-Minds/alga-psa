@@ -27,6 +27,8 @@ export default defineConfig({
       'tests/entryPopup.assigneeOptions.test.tsx',
       'tests/entryPopup.teamsMeetingRefresh.test.tsx',
       'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
+      'tests/scheduleCalendar.entryDeepLink.test.tsx',
+      'tests/SchedulePage.entryDeepLink.test.tsx',
       'tests/monthScheduleChip.calendarColor.test.tsx',
       'tests/timeEntryLauncher.test.tsx',
       'tests/schedulingProjectTaskDetails.activityGroup.test.tsx',

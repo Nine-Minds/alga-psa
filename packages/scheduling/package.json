@@ -57,6 +57,10 @@
       "import": "./src/lib/timeEntryMode.ts",
       "types": "./src/lib/timeEntryMode.ts"
     },
+    "./lib/scheduleWorkItemDescriptor": {
+      "import": "./src/lib/scheduleWorkItemDescriptor.ts",
+      "types": "./src/lib/scheduleWorkItemDescriptor.ts"
+    },
     "./lib/appointmentApprovers": {
       "import": "./src/lib/appointmentApprovers.ts",
       "types": "./src/lib/appointmentApprovers.ts"

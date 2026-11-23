@@ -1,0 +1,378 @@
+[
+  {
+    "id": "F001",
+    "description": "describeScheduleWorkItems batch-resolves (work_item_type, work_item_id) to {label, title, link, ticketId?, done} for ticket, interaction, project_task, opportunity_step, appointment_request and ad_hoc",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R11",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Descriptor: interaction with ticket_id links to the ticket and carries ticketId; label is the interaction type name",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R11"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Descriptor: interaction without ticket and ad_hoc entries link to the schedule deep link",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R11"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Descriptor: project_task links to the task, opportunity_step to the opportunity, appointment_request to /msp/schedule?requestId=",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R11"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Descriptor done-state: interaction is_closed, ticket closed, project task closed status, appointment request not approved, opportunity step completed; missing work item reported as missing",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R6"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Schedule page accepts ?entryId= (and optional occurrence) and opens the schedule at that date with the entry open",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Search indexer uses the schedule deep link instead of the non-existent /msp/schedule/{entry_id} route",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Migration adds internal notification category 'schedule' and subtype 'schedule-entry-reminder' (enabled by default, default priority normal)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R17",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Template 'schedule-entry-reminder' with title/body for lead > 0 and lead = 0 variants, in all 9 supported locales",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Dev seed includes the new template",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Migration adds toast_on_arrival boolean (default false) to internal_notification_subtypes; true for schedule-entry-reminder",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R15"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Per-user lead preference stored in user_preferences as schedule_reminder_lead_minutes; allowed 0/5/10/15/30/60, normalized sorted unique; default [15] when unset; empty = off",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R16"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Profile > Notifications shows a Schedule reminders lead-time multi-select next to the category toggle and saves the preference",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "GET/PUT /api/v1/users/me/schedule-reminder-preferences returns and updates {leadMinutes, enabled, serverDelivered: true}; self-only; validated",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R18"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "OpenAPI, SDK and chat/MCP registries regenerated for the preference endpoint",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R18"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Migration creates tenant-distributed schedule_entry_reminder_deliveries ledger keyed (tenant, entry_id, occurrence_start, user_id, lead_minutes) with state, attempts, notification_id, timestamps",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "SCHEDULE_REMINDER_LEDGER registered with the shared delivery claim protocol (claim -> create notification -> finish sent/failed)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R5",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "schedule-reminder-scan maintenance job defined with defineJob, scope tenant, cron every minute, running on CE (pg-boss) and EE (Temporal fan-out)",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Tenant selector fans out only to tenants with a timed entry starting within the scan horizon or an active recurring master",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Scan loads timed non-recurring entries in [now-5m, now+70m] with assignees, excluding null start, all-day, and closed/completed/cancelled status",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R2"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Scan expands active recurring masters over the window with generateOccurrences, honouring exceptions and holidays, keyed by master entry_id + occurrence start",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R3"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Candidates are (occurrence, assignee, lead) with fire_at = start - lead in [now-10m, now] and occurrence start no more than 5 minutes past; older ones are dropped",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R1",
+      "Requirements > Functional Requirements > R4"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Candidates whose work item is done or missing (descriptor) are skipped",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Recipients are filtered to active users with a non-empty lead preference and the reminder subtype enabled (tenant and user level)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R8"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Assignees are read at scan time, so reassignment before fire_at changes who is reminded",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R7"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Each candidate is claimed in the ledger before delivery; a claimed key is never delivered again across concurrent scans or retries",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R5"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Delivery creates the internal notification in the server process via createNotificationFromTemplateInternal with link and metadata {entryId, occurrenceStart, leadMinutes, workItemType, workItemId, ticketId?}",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R9"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Notification text formats start time in the recipient's effective timezone and locale",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Scan purges ledger rows older than 30 days",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Fix generateOccurrences if timed recurring series omit their first occurrence (open question 5)",
+    "implemented": false,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Web: notifications arriving via the live signal whose subtype has toast_on_arrival show a toast with title, body and Open action following the link",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R15",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Web: the toast never fires for notifications already present at page load or fetched by polling catch-up after reconnect beyond a short freshness window",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "pushNotificationDispatcher resolves schedule-entry-reminder to a new 'schedule' push target",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R10"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "buildScheduleReminderPushMessage sends data {kind:'schedule-reminder', entryId, workItemType, workItemId, url} with no top-level ticketId/taskId",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R12"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Push for reminders is sent only to tokens whose app_version meets the configured minimum; getActivePushTokensForUser selects app_version",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R13"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Mobile: detects server reminder support via the preference endpoint (200 = supported) and caches the result per server",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R19"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Mobile: Settings > Calendar reminders reads/writes the server preference when supported (adds 'At start time' option), else keeps the local preference",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R19",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Mobile: when supported, cancels pending local schedule-reminder notifications and stops scheduling new ones",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R19"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Mobile: logout cancels pending local schedule reminders",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R20"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Mobile: tapping a server reminder push opens the ticket for ticket/interaction entries, else the schedule (existing reminder routing)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R12"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Teams notification categories defined once in a shared constant and imported by every current copy",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Teams: new category schedule_reminder classified from template schedule-entry-reminder; off by default per tenant",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R14"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Teams: activity type scheduleReminderDue declared in the app manifest; TEAMS_PACKAGE_VERSION bumped",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R14"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Teams: bot DM adaptive card for reminders with title, start time and Open link",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R14"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Teams settings shows the Schedule reminders category with channel selector and a re-upload hint for the activity feed",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Teams deep link maps reminder ticket links to the ticket tab and other reminder links to My Work",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements > R14"
+    ]
+  }
+]

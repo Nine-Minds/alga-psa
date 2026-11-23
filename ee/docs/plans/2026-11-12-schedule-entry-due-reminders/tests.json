@@ -1,0 +1,181 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: describeScheduleWorkItems returns correct label/link/ticketId/done for each work item type, including interaction with and without ticket, closed interaction, and a deleted work item",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration (happy path): a timed interaction entry with two assignees and leads [15,0] yields exactly the expected notifications when the scan runs at start-15m and at start, with correct link, metadata and recipient-timezone text",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F020",
+      "F022",
+      "F026",
+      "F027",
+      "F028",
+      "F025"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration (idempotency): two concurrent scans plus a retried scan over the same minute create one notification per key; the ledger has one 'sent' row per key; rows older than 30 days are purged by the scan",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F026",
+      "F029"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration (changes without events): moving the entry via the interaction edit path, removing an assignee, closing the interaction, and deleting the entry before fire_at each change or suppress reminders accordingly",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F023",
+      "F025",
+      "F024"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: reschedule after a reminder fired creates new keys and reminds again for the new start; no reminder for the old start",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: recurring weekly master reminds for each occurrence in the window, skips an exception date and a holiday, and includes the first occurrence of a timed series",
+    "implemented": false,
+    "featureIds": [
+      "F021",
+      "F030"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: late delivery window: fire_at 8 minutes ago delivers; 12 minutes ago or occurrence started 6 minutes ago does not",
+    "implemented": false,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration (guard): no reminder for all-day entries, null-start ad-hoc entries, entries with status closed/completed/cancelled, inactive users, empty lead preference, or subtype disabled at tenant or user level",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F024"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: tenant selector returns only tenants with upcoming timed entries or active recurring masters",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: lead preference normalization (allowed values, dedupe, sort, default [15], empty = off) and REST endpoint validation/self-only access",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F014"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Migration test: catalog migration seeds category, subtype, toast_on_arrival and templates; template locale parity passes for all 9 locales; ledger table is distributed with tenant-leading key",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F011",
+      "F016"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: push dispatcher builds a schedule push with kind/entryId/workItem/url and no top-level ticketId, and skips tokens below the minimum app version",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Mobile unit: with server support, the app cancels local schedule reminders, stops scheduling them, and edits the server preference; without support it keeps local behaviour; logout cancels pending reminders",
+    "implemented": false,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F039"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Mobile unit: a server reminder push for an interaction entry routes to its ticket; an ad_hoc entry routes to the schedule",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Teams unit: schedule-entry-reminder classifies to schedule_reminder, is skipped when the tenant category is off, maps to activity type scheduleReminderDue and the ticket deep link; manifest includes the activity type",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F042",
+      "F043",
+      "F044",
+      "F046"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Browser: a live reminder arriving while the app is open shows a toast whose Open action navigates to the ticket; reloading the page does not re-toast it",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Browser: /msp/schedule?entryId= opens the schedule on the entry date with the entry open",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Browser: Profile > Notifications lead-time selection persists and is returned by the REST endpoint",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  }
+]

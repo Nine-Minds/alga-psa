@@ -75,6 +75,7 @@
       "loadPermissions": "Kan rechten niet laden.",
       "loadCurrentUser": "Kan huidige gebruiker niet laden.",
       "unknown": "Er is een onbekende fout opgetreden",
+      "deepLinkEntryUnavailable": "Dit agenda-item kon niet worden geopend. Het is mogelijk verwijderd, of u hebt er geen toegang toe.",
       "deleteFailed": "Kan de planningsinvoer niet verwijderen",
       "deleteUnexpected": "Er is een fout opgetreden bij het verwijderen van de planningsinvoer",
       "updateFailed": "Kan planningsinvoer niet bijwerken: {{error}}",
