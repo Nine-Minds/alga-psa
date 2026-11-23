@@ -240,6 +240,80 @@ Releases: commits 1–2 can ship alone as the hotfix. Commits 4, 5 and 6 must re
 
 None. Items still to verify in code before implementation are listed in `SCRATCHPAD.md`.
 
+## Deviations for the operator
+
+Where the built thing differs from this plan as written, or goes beyond it. Everything else in
+`features.json` and `tests.json` is implemented as described.
+
+### Items implemented differently from their description
+
+- **T214 ("the same holds in a production build, for the server action and for `POST
+  /api/v1/boards`").** Now proven on a real production build, not only by the double-bundle unit
+  test: `scripts/check-itil-sla-on-production-build.mjs` signs in through the auth routes, finds
+  the `createBoard` action id in the built client chunks, posts it to a client-portal route the
+  server reference manifest allows, and also calls the REST create. Both boards came out with the
+  ITIL Standard policy. The script is not in CI — it needs a built, started server and a seeded
+  user — so the double-bundle test remains the gate and this stays a hand-run check. The run is
+  recorded in the SCRATCHPAD.
+
+- **F111 ("reference-data board import and the onboarding board insert go through the shared
+  create").** The import could not import `@alga-psa/tickets` (the dependency runs the other way)
+  and so had a second insert of its own, with a note saying why. It now calls a creator the
+  tickets package registers at startup through `packages/reference-data/src/lib/boardCreator.ts`,
+  the way the SLA hooks are registered. There is one board create again. Two bugs went with the
+  second path: the standard board's kind was never mapped (an imported ITIL board came out
+  custom), and `BOARD_CREATED` was published twice.
+
+- **T227 ("closing a ticket through the server action cancels its SLA timer").** The hook hangs
+  off the delete, not the close — there is no close path that cancels — so the test drives
+  `deleteTicket` with a cancellation hook registered from outside the action's module. The
+  description's point (a server action reaches what startup registered, with no page rendered) is
+  what the test checks.
+
+- **The explicit clear of an assessment, and workflow `tickets.update_fields`.** The defect was
+  real and is fixed in the shared rule. The shape cannot arrive from `tickets.update_fields`
+  itself: that action's patch schema carries no `itil_impact`/`itil_urgency`, and neither does the
+  REST ticket update schema. It arrives through `TicketModel.updateTicket`, the funnel both of
+  those paths use, which is what T240 drives.
+
+### Added beyond the feature list
+
+- **Two R9 surfaces the wider guard scan found.** `kbArticleActions.getKnowledgeBaseCategories`
+  (the knowledge-base category picker) and `ghostUsage` (the inventory review filter) list every
+  category of the tenant, so after the migration they would have shown one entry per ITIL board.
+  Both now de-duplicate through `dedupeStandardCategoriesForFilter`. They are not in
+  `features.json`; they are the same rule (R9) applied where it was missing.
+
+- **The onboarding wizard's default status.** Making the wizard go through the board create (F111,
+  earlier round) left its own status loop clearing the default the create had just written. Fixed
+  with the F111 work.
+
+### Tests that pin source text rather than behaviour
+
+Converted in this round: T194 (the board import is driven end to end; only "reference-data must
+not import the tickets package" and "startup registers the create" stay as text) and T227 (above).
+
+Still pinned as text, with the reason:
+
+- **T136, T172** — their description is "the existing <name> tests pass". The named suites are the
+  behaviour; the contract only names them.
+- **T133, T209** — "every new key exists in every locale and passes the glossary checks". The
+  tests read the locale files, which is the data they are about, and `npm run test:i18n` is the
+  gate.
+- **T173, T176, T177, T179** — a picker component filtering by the board's family. The filtering
+  itself is one shared client helper with its own behaviour tests
+  (`packages/tickets/src/lib/boardDefaultPriority.test.ts`), and these items pin that each
+  component calls it with the board it is editing: a call that must be registered, which is what a
+  structure pin is for. A render test per component would re-test the helper through six screens.
+- **T175** — the co-managed edit path. Its refusal half is behaviour and is driven by
+  `itilUpdateWriters.integration.test.ts` through the shared rule the co-managed editor calls; the
+  contract pins the call.
+- **The remaining entries of `itilCreateWritersContract`, `itilUpdateWritersContract`,
+  `itilImpactUrgencyContract`, `itilBoardLifecycleContract`, `itilBoardTypeSwitchContract` and
+  `itilSlaContract`** — each names a writer that must reach the shared rules, or a lookup that
+  must no longer exist (the P-number name pattern). The behaviour of every one of them is in the
+  matching integration suite; these files are the wiring, and F136 asks for exactly that.
+
 ## Acceptance Criteria
 
 - On a tenant with one non-ITIL board and two ITIL boards, every picker in the surface suite lists the same priorities and categories for both ITIL boards, and none lists a value the server then refuses.
