@@ -5,6 +5,8 @@ Branch: `feature/mcp-attach-files-to-ticket-documents-without-mul`, stacked on t
 
 **Revision 2026-10-29 (human review).** URL fetch is no longer open to any public https host. It is limited to a per-tenant allowlist that tenant admins manage, with every change audited (decision 10, section 5). Reason: with an open fetch, a prompt injection in ticket or email content can make our server send a GET carrying data to an attacker's host. It also lends our egress IP and bandwidth to any key holder. Everything built before this revision stays. The allowlist is added in front of the existing IP checks. Server-issued upload slots (the push alternative to URL fetch) go to a follow-up card; see Non-goals.
 
+Follow-up: [2026-11-18-mcp-attach-file-visibility.md](./2026-11-18-mcp-attach-file-visibility.md) adds an optional `is_client_visible` to `attach_file`, `POST /api/v1/documents` and the multipart ticket route. Attached documents stay internal-only unless the caller asks otherwise.
+
 ## Problem
 
 ChatGPT created the Joymode ticket, its contacts and its checklist over MCP, but it could not attach the two source files: a five-page PDF install guide and an annotated photo. Nothing on the MCP path can carry file bytes:
