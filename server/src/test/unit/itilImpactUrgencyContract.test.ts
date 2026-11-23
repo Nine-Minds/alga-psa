@@ -107,15 +107,20 @@ describe('ITIL Impact × Urgency wiring', () => {
     );
   });
 
-  it('T129: the SLA stage events take the level from the ticket’s priority', () => {
+  it('T129: the SLA stage events never read the level off the ticket row', () => {
+    // The `sla` group took the last reader of a hard-coded ITIL target out of these events: a
+    // resolution is met or missed by the ticket's own SLA, not by a level (F129). What T129 asks
+    // for — the level is never read from `tickets.itil_priority_level` — is what is pinned here.
     for (const file of [
       'packages/tickets/src/actions/ticketActions.ts',
       'packages/tickets/src/actions/optimizedTicketActions.ts',
     ]) {
       const text = source(file);
-      expect(text).toContain('itilPriorityLevel: await itilPriorityLevelForPriority(');
-      expect(text).not.toContain('itilPriorityLevel: fullTicket.itil_priority_level');
-      expect(text).not.toContain('itilPriorityLevel: currentTicket.itil_priority_level');
+      expect(text).toContain('buildTicketResolutionSlaStageCompletionEvent({');
+      expect(text).toContain('slaResolutionDueAt: updatedTicket.sla_resolution_due_at');
+      expect(text).not.toContain('itilPriorityLevel:');
+      expect(text).not.toContain('fullTicket.itil_priority_level');
+      expect(text).not.toContain('currentTicket.itil_priority_level');
     }
   });
 

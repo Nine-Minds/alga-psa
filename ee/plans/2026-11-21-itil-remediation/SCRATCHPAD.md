@@ -836,11 +836,35 @@ lifecycle suite.
   `node scripts/ci/artifact-drift.mjs --no-generate` reporting only the uncommitted-artifact drift
   this commit carries.
 
+### Three repairs found by the final full run
+
+Running every ITIL suite together at the end turned up three things earlier groups had left
+behind. None changes a decision; all three are in the last commit.
+
+- **T129 was pinning code the `sla` group deleted.** It asked for
+  `itilPriorityLevel: await itilPriorityLevelForPriority(` in the two ticket actions, but F129
+  rebuilt the SLA stage events on the ticket's own policy, start and due time, so the level is not
+  in them at all. The test now pins what D8 actually asks for — the level is never read from
+  `tickets.itil_priority_level` — and the two imports the change had left unused are gone.
+- **`itilBoardDeletionCleanup` was failing on the policy flag.** Its fixture inserts a policy named
+  "ITIL Standard" without `is_itil_standard`, and retirement now looks for the flag (F124), which
+  is the point: a policy the tenant named that itself is not ours to retire. The fixture sets the
+  flag, as the migration does, and a new case holds the other half — an unflagged policy of the
+  same name survives the delete.
+- **`itilDevSeedCategories` depended on how the suite database was bootstrapped.** It read whatever
+  the shared test database happened to hold, which is empty of tenants whenever the suites that ran
+  before it bootstrapped with `runSeeds: false`. It now runs `85_itil_priorities.cjs` and
+  `86_itil_categories.cjs` itself, in the file order knex would use, inside a transaction it rolls
+  back — so it tests the ordering the fix is about and leaves the database as it found it.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no
 `implemented: false`. Groups 4, 5 and 6 reach production together (see Rollout) and are all on this
 branch.
+
+Final run: every ITIL suite together — 28 files, 302 tests — and `packages/tickets`
+{actions, lib} 171 files, 1,462 tests.
 
 ## Commands
 

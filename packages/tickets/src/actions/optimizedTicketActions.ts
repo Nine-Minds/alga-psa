@@ -9,7 +9,7 @@ import {
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
 import { resolveSeatEffortSummary } from '@alga-psa/shared/lib/humanWork/seatEffortSummary';
-import { itilPriorityLevelForPriority, listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
+import { listCategoriesForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { standardCategoryFilterOptions } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {

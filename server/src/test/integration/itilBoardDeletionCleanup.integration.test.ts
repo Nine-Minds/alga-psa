@@ -133,7 +133,7 @@ async function createItilPriorities(tenantId: string, userId: string, levels: nu
   return priorityIds;
 }
 
-async function createItilSlaPolicy(tenantId: string, priorityIds: string[]) {
+async function createItilSlaPolicy(tenantId: string, priorityIds: string[], flagged = true) {
   const policyId = uuidv4();
 
   await tenantTable(tenantId, 'sla_policies').insert({
@@ -142,6 +142,9 @@ async function createItilSlaPolicy(tenantId: string, priorityIds: string[]) {
     policy_name: 'ITIL Standard',
     description: 'Auto-created for ITIL priorities',
     is_default: false,
+    // What makes a policy the auto-created one is the flag, not the name
+    // (F124 of ee/plans/2026-11-21-itil-remediation); the migration backfills it.
+    is_itil_standard: flagged,
   });
 
   await tenantTable(tenantId, 'sla_notification_thresholds').insert({
@@ -350,6 +353,28 @@ describe('ITIL board deletion cleanup', () => {
       .where({ ticket_id: ticketId })
       .first('sla_policy_id');
     expect(ticket.sla_policy_id).toBeNull();
+  }, HOOK_TIMEOUT);
+
+  it('keeps a policy the tenant named "ITIL Standard" itself', async () => {
+    // Only the auto-created policy is retired, and what marks it is is_itil_standard (F124).
+    // A policy of the tenant's own that happens to carry the name is its own to keep.
+    const defaultBoardId = uuidv4();
+    const itilBoardId = uuidv4();
+    const { tenantId, userId } = await createTenantFixture([
+      { boardId: defaultBoardId, name: 'General', isDefault: true },
+      { boardId: itilBoardId, name: 'ITIL Service Desk', categoryType: 'itil', priorityType: 'itil' },
+    ]);
+
+    const itilPriorityIds = await createItilPriorities(tenantId, userId, [1, 2]);
+    const policyId = await createItilSlaPolicy(tenantId, itilPriorityIds, false);
+
+    const result = await deleteBoard(itilBoardId, true, true);
+    expect(result.success).toBe(true);
+
+    const remainingPolicies = await tenantTable(tenantId, 'sla_policies').pluck('sla_policy_id');
+    expect(remainingPolicies).toEqual([policyId]);
+    // Its targets went with the retiring priorities, but the policy itself stays.
+    expect(await tenantTable(tenantId, 'sla_policy_targets').select('*')).toHaveLength(0);
   }, HOOK_TIMEOUT);
 
   it('keeps an ITIL priority that tickets still use, along with its SLA target', async () => {

@@ -72,7 +72,6 @@ import {
 } from '@alga-psa/event-bus/events';
 
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
-import { itilPriorityLevelForPriority } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import {
   findPriorityBoardTypeProblem,
   PriorityBoardTypeError,
