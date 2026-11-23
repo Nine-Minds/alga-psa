@@ -32,6 +32,11 @@ import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
 import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
 import { resolveContactLocationId, shouldResolveContactLocation } from './contactLocation';
+import {
+  BoardFieldRuleError,
+  prepareTicketCreateFields,
+  type BoardFieldPolicy,
+} from '../lib/tickets/boardFieldRules';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -284,6 +289,13 @@ export interface ValidationOptions {
   skipSubcategoryValidation?: boolean;
   skipStatusBoardValidation?: boolean;
   allowEmptyFields?: boolean;
+  /**
+   * R6. How a priority or category that does not fit the board is handled: `refuse` (the default)
+   * throws a `BoardFieldRuleError` naming the field, `fallback` repairs the values — the board's
+   * default priority, no category — so an automated path never loses the ticket. Every creation
+   * path funnels through `createTicket`, so this is where the rule is applied once.
+   */
+  boardFieldPolicy?: BoardFieldPolicy;
 }
 
 export interface BusinessRuleResult {
@@ -950,6 +962,42 @@ export class TicketModel {
   }
 
   /**
+   * R2/R4/R6 on a create: resolves the board-owned fields in place.
+   *
+   * A standard category of another board becomes this board's copy; Impact × Urgency decides the
+   * priority on an ITIL board; a value that still does not fit is refused with a field error or
+   * repaired, depending on the policy the caller passed (R6). A create without a board has no
+   * board rule to apply.
+   */
+  static async applyBoardFieldRules(
+    input: CreateTicketInput,
+    tenant: string,
+    trx: Knex.Transaction,
+    policy: BoardFieldPolicy
+  ): Promise<void> {
+    if (!input.board_id) return;
+
+    const prepared = await prepareTicketCreateFields(trx, tenant, {
+      boardId: input.board_id,
+      priorityId: input.priority_id ?? null,
+      categoryId: input.category_id ?? null,
+      subcategoryId: input.subcategory_id ?? null,
+      itilImpact: input.itil_impact ?? null,
+      itilUrgency: input.itil_urgency ?? null,
+      policy,
+    });
+
+    const [problem] = prepared.problems;
+    if (problem) throw new BoardFieldRuleError(problem);
+
+    input.priority_id = prepared.priority_id ?? undefined;
+    input.category_id = prepared.category_id ?? undefined;
+    input.subcategory_id = prepared.subcategory_id ?? undefined;
+    input.itil_impact = prepared.itil_impact ?? undefined;
+    input.itil_urgency = prepared.itil_urgency ?? undefined;
+  }
+
+  /**
    * Create a new ticket with retry logic for deadlock handling
    */
   static async createTicketWithRetry(
@@ -1089,6 +1137,11 @@ export class TicketModel {
     if (!businessRuleValidation.valid && businessRuleValidation.error) {
       throw new Error(businessRuleValidation.error);
     }
+
+    // R2/R4/R6 for every create path, applied once in the funnel they all reach. The policy says
+    // whether a value that does not fit the board is refused (a person or API caller sees the
+    // error) or repaired (nobody would).
+    await this.applyBoardFieldRules(cleanedInput, tenant, trx, validationOptions.boardFieldPolicy ?? 'refuse');
 
     const now = new Date();
 

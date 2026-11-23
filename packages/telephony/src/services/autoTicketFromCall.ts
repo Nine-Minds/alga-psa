@@ -79,7 +79,9 @@ export async function autoCreateTicketForCall(
       } as any,
       input.tenantId,
       trx,
-      {},
+      // R6: a call never loses its ticket — a configured priority that does not fit the board is
+      // replaced by the board's default (R7) instead of refused.
+      { boardFieldPolicy: 'fallback' },
       contactSuppressedTicketCreation(
         new WorkflowEventPublisher({ transaction: trx }),
         'auto-created telephony tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'

@@ -5,6 +5,7 @@ import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/tic
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { commentAudienceVisibleSql } from '@alga-psa/shared/lib/commentAudience';
+import { isBoardFieldRuleError } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
@@ -127,6 +128,12 @@ function toClientTicketActionError(error: unknown): ClientTicketActionError | nu
     return error.kind === 'permission'
       ? permissionError(error.message, error.messageKey, error.messageParams)
       : actionError(error.message, error.messageKey, error.messageParams);
+  }
+
+  // R6: the create funnel refused a priority that does not fit the requested board. The requester
+  // chose the value, so the refusal is theirs to see and correct.
+  if (isBoardFieldRuleError(error)) {
+    return actionError(error.message, error.messageKey, error.messageParams);
   }
 
   // Write admission refused a co-managed workspace's write: an expected outcome, not a server fault.

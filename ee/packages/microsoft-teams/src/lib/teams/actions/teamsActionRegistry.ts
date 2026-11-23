@@ -3,6 +3,7 @@ import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TicketModel } from '@shared/models/ticketModel';
+import { defaultPriorityForBoard } from '@shared/lib/tickets/boardFieldRules';
 import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
@@ -589,51 +590,15 @@ async function resolveTargetInternal(
   }
 }
 
+/**
+ * R7, through the one shared rule: the board's own default when it fits the board's priority
+ * family, otherwise the level-3 ITIL priority on an ITIL board or the tenant's lowest-order own
+ * priority elsewhere. A board whose stored default is of the other family no longer hands a Teams
+ * ticket a priority the board does not use.
+ */
 export async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
   const { knex } = await createTenantKnex(tenantId);
-  const db = tenantDb(knex, tenantId);
-  const board = (await db.table('boards')
-    .where({ board_id: boardId, is_inactive: false })
-    .select('default_priority_id', 'priority_type')
-    .first()) as { default_priority_id?: string | null; priority_type?: string | null } | null;
-
-  const boardDefaultPriorityId = normalizeOptionalString(board?.default_priority_id);
-  if (boardDefaultPriorityId) {
-    return boardDefaultPriorityId;
-  }
-
-  const desiredPriorityType = normalizeOptionalString(board?.priority_type) || 'custom';
-  const primaryPriority = (await db.table('priorities')
-    .select('priority_id')
-    .where({ item_type: 'ticket' })
-    .where(function filterPriorityType() {
-      if (desiredPriorityType === 'itil') {
-        this.where('is_from_itil_standard', true);
-      } else {
-        this.where(function filterCustomPriorities() {
-          this.whereNull('is_from_itil_standard').orWhere('is_from_itil_standard', false);
-        });
-      }
-    })
-    .orderByRaw(
-      desiredPriorityType === 'itil'
-        ? "CASE WHEN itil_priority_level = 3 THEN 0 ELSE 1 END, order_number ASC, priority_name ASC"
-        : 'order_number ASC, priority_name ASC'
-    )
-    .first()) as { priority_id?: string | null } | null;
-
-  if (normalizeOptionalString(primaryPriority?.priority_id)) {
-    return normalizeOptionalString(primaryPriority?.priority_id);
-  }
-
-  const fallbackPriority = (await db.table('priorities')
-    .select('priority_id')
-    .where({ item_type: 'ticket' })
-    .orderBy('order_number', 'asc')
-    .orderBy('priority_name', 'asc')
-    .first()) as { priority_id?: string | null } | null;
-
-  return normalizeOptionalString(fallbackPriority?.priority_id);
+  return defaultPriorityForBoard(knex, tenantId, boardId);
 }
 
 async function findTicketByMessageActionIdempotencyKey(

@@ -133,7 +133,10 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
         ticket_origin: 'api',
       };
 
-      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, contactSuppressedTicketCreation(new WorkflowEventPublisher({ transaction: trx }), 'inbound webhook tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'), undefined, undefined, 3);
+      // D7/R6: a webhook never loses a ticket. A priority that does not fit the mapped board
+      // becomes that board's default (R7); a category that is not the board's is dropped, after a
+      // standard category held for another ITIL board is translated to this board's copy (R2).
+      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, { boardFieldPolicy: 'fallback' }, contactSuppressedTicketCreation(new WorkflowEventPublisher({ transaction: trx }), 'inbound webhook tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'), undefined, undefined, 3);
 
       if (mappedValues.asset_id) {
         await tenantDb(trx, ctx.tenant).table('asset_associations').insert({

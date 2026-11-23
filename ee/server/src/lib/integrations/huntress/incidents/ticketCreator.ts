@@ -12,6 +12,7 @@ import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { applyBoardDefaultWatchers } from '@alga-psa/shared/lib/tickets/boardDefaultWatchers';
 import { TicketWatcherService } from '@alga-psa/shared/services/tickets/ticketWatcherService';
+import { prepareTicketCreateFields } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -62,6 +63,17 @@ export async function createHuntressTicket(
   });
   const now = new Date().toISOString();
 
+  // R6: an incident never loses its ticket. The configured priority is used when it fits the board,
+  // otherwise the board's default (R7); a category that is not the board's is dropped, and a
+  // standard category of another ITIL board is translated to this board's copy (R2).
+  const fields = await prepareTicketCreateFields(trx, tenantId, {
+    boardId: params.boardId,
+    priorityId: params.priorityId ?? null,
+    categoryId: params.categoryId ?? null,
+    subcategoryId: params.subcategoryId ?? null,
+    policy: 'fallback',
+  });
+
   // LEVERAGE: pattern ticket-create-composition — raw ticket insert bypasses TicketModel.createTicket, so board default watchers must be seeded by hand
   const attributes = await applyBoardDefaultWatchers(trx, tenantId, params.boardId, {
     description: params.body,
@@ -76,10 +88,10 @@ export async function createHuntressTicket(
       client_id: params.clientId,
       contact_name_id: contactId,
       status_id: defaultStatus.status_id,
-      priority_id: params.priorityId ?? null,
+      priority_id: fields.priority_id,
       board_id: params.boardId,
-      category_id: params.categoryId ?? null,
-      subcategory_id: params.subcategoryId ?? null,
+      category_id: fields.category_id,
+      subcategory_id: fields.subcategory_id,
       // The live tickets schema has no description/source_reference/created_at
       // columns: the body and provenance live in the attributes JSONB, and
       // entered_at is the creation timestamp.

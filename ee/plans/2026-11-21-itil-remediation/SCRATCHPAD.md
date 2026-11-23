@@ -448,6 +448,60 @@ written, and the level is read from the priority row; the "Not assessed" display
   `itilSecondBoardSurfaces` 16 covered + 28 todos, `itilImpactUrgencyContract` 9/9, and all 173 test
   files of `packages/tickets/src/{actions,lib,schemas}` (1465 tests).
 
+### Commit group 8 — `writers-create` (done)
+
+Landed: `prepareTicketCreateFields` / `prepareTicketCreateFieldsOrThrow`,
+`translateStandardCategoryPairForBoard` and `BoardFieldRuleError` /
+`isBoardFieldRuleError` in the shared module; `ValidationOptions.boardFieldPolicy` and
+`TicketModel.applyBoardFieldRules` inside `createTicket`; `boardFieldPolicy` on
+`createTicketWithSideEffects`; the policy set at every writer R6 names; the per-row check and
+board-default fallback in the CSV import; the Teams default-priority resolver replaced by R7;
+priority fall-back and the `item_type` filter in the RMM creator; field resolution in the
+Huntress creator; the priority check in `assets.create_maintenance_ticket`; the 400 mapping in
+REST create and create-from-asset; `server/src/test/integration/itilCreateWriters.integration.test.ts`
+(21 cases), `server/src/test/unit/itilCreateWritersContract.test.ts` (12 cases) and the eleven
+`writers-create` surface probes.
+
+- **The rule lives in the funnel, with a policy, and defaults to refusing.** F069 asks for "every
+  create that reaches it", so the policy cannot be opt-in: `createTicket` applies the rules
+  whenever the input names a board, and `boardFieldPolicy` defaults to `refuse`. Each of the nine
+  fall-back writers in R6 passes `'fallback'` explicitly, and the contract test asserts both
+  halves — a fall-back writer that loses its policy starts dropping tickets, and a refuse writer
+  that gains one starts storing values nobody chose.
+- **`BoardFieldRuleError` moved to `shared/`, and is recognised by its `code`.** `TicketModel`
+  cannot import `packages/tickets`, so the error class the model raises is the shared one and
+  `TicketBoardFieldError` now extends it. `ticketActionErrorFrom` and the client portal and REST
+  mappers test `isBoardFieldRuleError(error)` instead of `instanceof`: the same reason the SLA
+  hooks move to `globalThis` (two bundles, two classes) applies to an error class crossing the
+  same boundary.
+- **The translation is part of the create rule, not of each caller.**
+  `prepareTicketCreateFields` translates a standard category of another board (R2) *before* it
+  checks it, on both policies, so an API caller, a workflow with a fixed category and a Huntress
+  mapping all keep working on every ITIL board. A category with no standard link cannot be
+  translated: refused on a refuse path, dropped on a fall-back one (T154).
+- **The CSV import checks per row, in the pre-resolve pass.** Its old fallback priority was the
+  tenant's first row by `order_number`, which is the wrong family on an ITIL board; it is now
+  `defaultPriorityForBoard` per destination board (R7), memoised. A row whose values do not fit
+  is reported and skipped there, so one bad row never rolls back a batch of 25. The step's "pure
+  logic, no DB" comment was updated: it now asks the database once per distinct board.
+- **Two assertions in other suites are this group's own doing**, both found by running them:
+  `inboundWebhooks/ticketInboundActions.test.ts` pinned the create's `{}` validation options and
+  now pins `{ boardFieldPolicy: 'fallback' }`; and `ticketCreatedEventCoverage`'s source scan
+  allows 800 characters between `TicketModel.createTicket(` and `silentTicketCreation(` in
+  `entityAppliers.ts`, so the policy comment there is one line.
+- **Where a writer is tested at the funnel seam rather than end to end.** The nine fall-back
+  writers reach the same `createTicket` call with the same policy; standing up a workflow runtime,
+  a telephony call record or a renewal cycle adds no coverage of the decision under test, so the
+  behaviour runs at the seam and the contract test pins each caller's policy. The two writers with
+  no funnel — the RMM and Huntress creators — are driven end to end, because for them the seam is
+  the thing that could be missing.
+- **Not run here:** `checklistRulePredicates.integration.test.ts` and the suites that pin
+  `DB_PORT=5472` through `wireLocalTestDbEnv` (`ticketClientPortalAbac`, `ticketListActivitySort`,
+  `ticketListAssigneeSort`). The first fails with `sorry, too many clients already` — the shared
+  Postgres sits at 190/200 connections from other worktrees — and the others skip every test
+  because port 5472 is closed in this worktree. Both are environment limits, not this group's.
+  Everything else named above was run against this slot's database (`test_itil_mc15`).
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -465,7 +519,7 @@ written, and the level is read from the priority row; the "Not assessed" display
 
 ### Groups not started
 
-Commit groups 8–16 (`writers-create` through `docs`) are untouched: their features and tests are
+Commit groups 9–16 (`writers-update` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

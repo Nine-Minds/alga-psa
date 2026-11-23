@@ -193,8 +193,15 @@ export function registerAssetMaintenanceActions(): void {
         status_id: input.status_id, status_type: 'ticket', board_id: input.board_id, is_closed: false,
       }).first();
       if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'status_id must be an open ticket status on the selected board' });
-      const priority = await db.table('priorities').where({ priority_id: input.priority_id, item_type: 'ticket' }).first();
-      if (!priority) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid ticket priority_id' });
+      // R3/R6: the action has a caller who sees the error, so a priority of the family the board
+      // does not use is refused rather than replaced.
+      const priorityProblems = await findBoardFieldProblems(tx.trx, tx.tenantId, {
+        boardId: input.board_id,
+        priorityId: input.priority_id,
+      });
+      if (priorityProblems.length > 0) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: `Invalid ticket priority_id: ${priorityProblems[0].message}` });
+      }
       // One field takes either a primary category or one of its subcategories, like the ticket UI
       // dropdown. A subcategory stores as category_id = its parent + subcategory_id = itself.
       let categoryId: string | undefined;

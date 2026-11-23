@@ -573,6 +573,10 @@ export function registerTicketActions(): void {
             suppressInternalNotifications: input.notify?.internal === false,
             suppressContactNotifications: input.notify?.contact !== true,
           },
+          // D7/R6: an automation never loses a ticket. A priority of the family the board does not
+          // use becomes the board's default (R7), and a category that is not the board's is
+          // dropped — a standard category held for another ITIL board is translated first (R2).
+          boardFieldPolicy: 'fallback',
         });
       } catch (error) {
         rethrowAsStandardError(ctx, error);

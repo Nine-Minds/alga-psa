@@ -1375,7 +1375,10 @@ export async function createTicketFromEmail(
         email_metadata: ticketData.email_metadata,
         attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
-      }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
+        // R6, the category half: a defaults row holding a category that is not the board's (or
+        // another ITIL board's copy of a standard one) must not drop the email — the model
+        // translates what it can and drops the rest.
+      }, tenant, trx, { boardFieldPolicy: 'fallback' }, creationEvents, analyticsTracker, userId, 3);
 
       // Shared creation may apply a board user or team lead. Use the persisted
       // assignment while retaining the publisher's transaction/outbox semantics.

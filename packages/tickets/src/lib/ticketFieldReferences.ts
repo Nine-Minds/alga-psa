@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { TicketTemplateReferenceProblem } from '@alga-psa/types';
 import {
+  BoardFieldRuleError,
   describePriorityBoardKindMismatch,
   findBoardFieldProblems,
   findTicketPatchBoardFieldProblems,
@@ -68,17 +69,15 @@ export interface PriorityBoardTypeProblem {
  * `ticketActionErrorFrom` turns it into a returned `actionError(message, messageKey,
  * messageParams)`, so the refusal reaches the user instead of being redacted as an unrecognised
  * server error.
+ *
+ * It is the ticket package's flavour of the shared `BoardFieldRuleError`, which `TicketModel`
+ * raises for the same refusals inside the create funnel; both are recognised by
+ * `isBoardFieldRuleError`, never by `instanceof` alone.
  */
-export class TicketBoardFieldError extends Error {
-  readonly field: BoardFieldProblem['field'];
-  readonly messageKey?: string;
-  readonly messageParams?: Record<string, string>;
+export class TicketBoardFieldError extends BoardFieldRuleError {
   constructor(problem: BoardFieldProblem) {
-    super(problem.message);
+    super(problem);
     this.name = 'TicketBoardFieldError';
-    this.field = problem.field;
-    this.messageKey = problem.messageKey;
-    this.messageParams = problem.messageParams;
   }
 }
 

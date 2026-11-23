@@ -1207,7 +1207,7 @@
     "featureIds": [
       "F069"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "createTicket with policy refuse rejects a wrong-family priority and a category from another board"
   },
   {
@@ -1216,7 +1216,7 @@
     "featureIds": [
       "F069"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "createTicket with policy fallback creates the ticket with the board default priority and without the foreign category"
   },
   {
@@ -1225,7 +1225,7 @@
     "featureIds": [
       "F069"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The ticketCreateFieldPersistence and ticketCreateBoardStatusValidation integration tests pass"
   },
   {
@@ -1234,7 +1234,7 @@
     "featureIds": [
       "F070"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client portal create with a wrong-family priority id is refused"
   },
   {
@@ -1243,7 +1243,7 @@
     "featureIds": [
       "F071"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import with rows for an ITIL and a non-ITIL board imports the fitting rows and reports the others"
   },
   {
@@ -1252,7 +1252,7 @@
     "featureIds": [
       "F071"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import row without a priority gets its board's default priority"
   },
   {
@@ -1261,7 +1261,7 @@
     "featureIds": [
       "F072"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Teams message action on a board whose stored default is of the wrong family creates the ticket with a fitting priority"
   },
   {
@@ -1270,7 +1270,7 @@
     "featureIds": [
       "F073"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Maintenance-ticket action with a wrong-family priority fails the action with a field error"
   },
   {
@@ -1279,7 +1279,7 @@
     "featureIds": [
       "F074"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "RMM alert with a mapped priority of the wrong family creates the ticket with the board default"
   },
   {
@@ -1288,7 +1288,7 @@
     "featureIds": [
       "F074"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "RMM priority lookup never returns a project-task priority"
   },
   {
@@ -1297,7 +1297,7 @@
     "featureIds": [
       "F075"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Huntress incident with a severity mapped to a wrong-family priority creates the ticket with the board default"
   },
   {
@@ -1306,7 +1306,7 @@
     "featureIds": [
       "F076"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Telephony auto-ticket and renewal ticket with a non-fitting configured priority are created with the board default"
   },
   {
@@ -1315,7 +1315,7 @@
     "featureIds": [
       "F077"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow tickets.create with a wrong-family priority creates the ticket with the board default"
   },
   {
@@ -1324,7 +1324,7 @@
     "featureIds": [
       "F077"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Inbound webhook create with a category from another board creates the ticket without a category"
   },
   {
@@ -1333,7 +1333,7 @@
     "featureIds": [
       "F078"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Service request without a configured priority uses the board default and never a project-task priority"
   },
   {
@@ -1342,7 +1342,7 @@
     "featureIds": [
       "F079"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Data-migration import of a ticket with a non-fitting priority imports it with the board default"
   },
   {
@@ -1351,7 +1351,7 @@
     "featureIds": [
       "F080"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST create with a category from another board returns 400 with a category_id error"
   },
   {
@@ -1360,7 +1360,7 @@
     "featureIds": [
       "F080"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Surface suite: every create writer on the second ITIL board stores a fitting priority and a category owned by that board"
   },
   {
@@ -1369,7 +1369,7 @@
     "featureIds": [
       "F081"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST create on the second ITIL board with the first board's Hardware id stores the second board's Hardware"
   },
   {
@@ -1378,7 +1378,7 @@
     "featureIds": [
       "F081"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow tickets.create and inbound webhook create with another ITIL board's standard category store this board's copy instead of dropping it"
   },
   {
@@ -1387,7 +1387,7 @@
     "featureIds": [
       "F081"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A non-standard category of another board is still refused on refuse paths and dropped on fall-back paths"
   },
   {

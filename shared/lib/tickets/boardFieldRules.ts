@@ -275,6 +275,28 @@ export async function translateStandardCategoryForBoard(
   return (copy as { category_id: string } | undefined)?.category_id ?? null;
 }
 
+/**
+ * R2 for a write: the category (and subcategory) the ticket's own board owns for the same standard
+ * row. A value that is already the board's, has no standard link, or has no copy on the board is
+ * returned unchanged, so the caller can hand the pair straight to the check.
+ */
+export async function translateStandardCategoryPairForBoard(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string | null | undefined,
+  categoryId: string | null | undefined,
+  subcategoryId?: string | null
+): Promise<{ categoryId: string | null; subcategoryId: string | null }> {
+  const translate = async (id: string | null | undefined): Promise<string | null> => {
+    if (!id || !boardId) return id ?? null;
+    return (await translateStandardCategoryForBoard(conn, tenant, id, boardId)) ?? id;
+  };
+  return {
+    categoryId: await translate(categoryId),
+    subcategoryId: await translate(subcategoryId),
+  };
+}
+
 export interface BoardFieldCandidate {
   boardId: string | null | undefined;
   priorityId?: string | null;
@@ -689,4 +711,118 @@ async function resolvePlainPriority(
 
   const fallback = await defaultPriorityForBoardRow(conn, tenant, board);
   return { priority_id: fallback ?? candidatePriorityId, problems: [] };
+}
+
+/** Marks every refusal this module raises, whichever module instance threw it (see `code`). */
+export const BOARD_FIELD_RULE_ERROR_CODE = 'BOARD_FIELD_RULE';
+
+/**
+ * A refused board-owned field (R6), thrown by the lowest layer that knows: `TicketModel` and the
+ * writers that call the rules directly. `packages/tickets` extends it as `TicketBoardFieldError`
+ * so a server action reports it as a field error; use {@link isBoardFieldRuleError} to recognise
+ * it, because Next bundles the shared module separately for startup code and server actions and
+ * `instanceof` across two instances is not reliable.
+ */
+export class BoardFieldRuleError extends Error {
+  readonly code = BOARD_FIELD_RULE_ERROR_CODE;
+  readonly field: BoardFieldProblem['field'];
+  readonly messageKey?: string;
+  readonly messageParams?: Record<string, string>;
+
+  constructor(problem: BoardFieldProblem) {
+    super(problem.message);
+    this.name = 'BoardFieldRuleError';
+    this.field = problem.field;
+    this.messageKey = problem.messageKey;
+    this.messageParams = problem.messageParams;
+  }
+}
+
+export function isBoardFieldRuleError(error: unknown): error is BoardFieldRuleError {
+  return (
+    error instanceof Error &&
+    (error as { code?: unknown }).code === BOARD_FIELD_RULE_ERROR_CODE &&
+    typeof (error as { field?: unknown }).field === 'string'
+  );
+}
+
+export interface PrepareTicketFieldsInput extends ResolveTicketPriorityInput {
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+}
+
+export interface PreparedTicketFields {
+  priority_id: string | null;
+  itil_impact: number | null;
+  itil_urgency: number | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  problems: BoardFieldProblem[];
+}
+
+/**
+ * The one answer to "what should this create store for board, priority, Impact, Urgency, category
+ * and subcategory?" — R2, R4, R6 and R7 together, so every create path asks the same question.
+ *
+ * A standard category of another board is translated to this board's copy first (R2), on refuse and
+ * on fall-back paths alike. With `policy: 'refuse'` the problems are returned for the caller to
+ * raise against the field; with `policy: 'fallback'` nothing is refused — the priority falls back to
+ * the board's default and a category that does not belong to the board is dropped, never the ticket.
+ */
+export async function prepareTicketCreateFields(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  input: PrepareTicketFieldsInput
+): Promise<PreparedTicketFields> {
+  const { categoryId, subcategoryId } = await translateStandardCategoryPairForBoard(
+    conn,
+    tenant,
+    input.boardId,
+    input.categoryId,
+    input.subcategoryId
+  );
+
+  const priority = await resolveTicketPriorityFields(conn, tenant, input);
+
+  const categoryProblems = await findBoardFieldProblems(conn, tenant, {
+    boardId: input.boardId,
+    categoryId,
+    subcategoryId,
+  });
+
+  if (input.policy === 'refuse') {
+    return {
+      priority_id: priority.priority_id,
+      itil_impact: priority.itil_impact,
+      itil_urgency: priority.itil_urgency,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
+      problems: [...priority.problems, ...categoryProblems],
+    };
+  }
+
+  // R6 fall-back: a category that does not belong to the board is dropped. A subcategory goes with
+  // its category, because a subcategory on its own is not a value R2 accepts.
+  const categoryRefused = categoryProblems.some((problem) => problem.field === 'category_id');
+  const subcategoryRefused = categoryProblems.some((problem) => problem.field === 'subcategory_id');
+  return {
+    priority_id: priority.priority_id,
+    itil_impact: priority.itil_impact,
+    itil_urgency: priority.itil_urgency,
+    category_id: categoryRefused ? null : categoryId,
+    subcategory_id: categoryRefused || subcategoryRefused ? null : subcategoryId,
+    problems: [],
+  };
+}
+
+/** {@link prepareTicketCreateFields}, raising the first problem instead of returning it. */
+export async function prepareTicketCreateFieldsOrThrow(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  input: PrepareTicketFieldsInput
+): Promise<PreparedTicketFields> {
+  const prepared = await prepareTicketCreateFields(conn, tenant, input);
+  const [problem] = prepared.problems;
+  if (problem) throw new BoardFieldRuleError(problem);
+  return prepared;
 }

@@ -8,7 +8,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-import { TicketBoardFieldError } from '../lib/ticketFieldReferences';
+import { isBoardFieldRuleError } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
@@ -154,8 +154,10 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
     return permissionError(error instanceof Error ? error.message : String(error));
   }
 
-  // Covers PriorityBoardTypeError, which is one of its flavours.
-  if (error instanceof TicketBoardFieldError) {
+  // Covers TicketBoardFieldError and PriorityBoardTypeError, and the same refusal raised inside
+  // TicketModel's create funnel: recognised by its code, because the shared rules module can be
+  // bundled more than once and `instanceof` across two instances is not reliable.
+  if (isBoardFieldRuleError(error)) {
     return actionError(error.message, error.messageKey, error.messageParams);
   }
 

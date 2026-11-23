@@ -617,7 +617,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket takes a field policy and runs the priority and category rules inside the model, so every create that reaches it is covered"
   },
   {
@@ -626,7 +626,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client portal ticket create refuses a priority that does not fit the board"
   },
   {
@@ -635,7 +635,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import checks priority and category per row against the row's board and reports failures per row; its fallback priority is the board default"
   },
   {
@@ -644,7 +644,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Teams message action, Teams guest intake and manual telephony tickets take their priority from defaultPriorityForBoard"
   },
   {
@@ -653,7 +653,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow assets.create_maintenance_ticket refuses a priority or category that does not fit the board"
   },
   {
@@ -662,7 +662,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "RMM alert ticket creation resolves its priority with policy fallback and filters priorities by item type"
   },
   {
@@ -671,7 +671,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Huntress incident ticket creation resolves its priority with policy fallback and drops a category that is not the board's"
   },
   {
@@ -680,7 +680,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Telephony auto-ticket and contract renewal ticket resolve their priority with policy fallback"
   },
   {
@@ -689,7 +689,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Workflow tickets.create and inbound webhook create resolve priority with policy fallback and drop a category that is not the board's"
   },
   {
@@ -698,7 +698,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Service request provider falls back to the board default priority, filtered to ticket priorities"
   },
   {
@@ -707,7 +707,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Data-migration import resolves priority with policy fallback"
   },
   {
@@ -716,7 +716,7 @@
     "prdRefs": [
       "R6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST v1 create and create-from-asset check the category against the board"
   },
   {
@@ -725,7 +725,7 @@
     "prdRefs": [
       "R2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every create path translates a standard category of another board to the ticket's board's copy before the category check, on refuse and fall-back paths alike"
   },
   {

@@ -10,6 +10,10 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import {
+  defaultPriorityForBoard,
+  prepareTicketCreateFields,
+} from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -600,14 +604,17 @@ export const importTickets = withAuth(async (
       throw new Error('No ticket statuses found for the selected board. Please configure statuses first.');
     }
 
-    // Get first priority as fallback
-    const firstPriority = await tenantScopedTable('priorities')
-      .where({ item_type: 'ticket' })
-      .orderBy('order_number')
-      .first();
-    const fallbackPriorityId = firstPriority?.priority_id;
+    // R7: the fallback priority is the destination board's default, not the tenant's first
+    // priority by order — on a board with ITIL priorities the two are of different families.
+    const boardDefaultPriorityIds = new Map<string, string | null>();
+    const boardDefaultPriorityId = async (boardId: string): Promise<string | null> => {
+      if (!boardDefaultPriorityIds.has(boardId)) {
+        boardDefaultPriorityIds.set(boardId, await defaultPriorityForBoard(trx, tenant, boardId));
+      }
+      return boardDefaultPriorityIds.get(boardId) ?? null;
+    };
 
-    if (!fallbackPriorityId) {
+    if (!(await boardDefaultPriorityId(defaultBoardId))) {
       throw new Error('No ticket priorities found. Please configure priorities first.');
     }
 
@@ -645,7 +652,8 @@ export const importTickets = withAuth(async (
     // Imported-closed tickets, recorded for the close-rules bypass audit after creation.
     const closedUpdates: Array<{ ticket_id: string; board_id: string | null }> = [];
 
-    // Step 6: Pre-resolve all tickets (pure logic, no DB)
+    // Step 6: Pre-resolve all tickets. Reference resolution is pure; the board field rules (R2/R3)
+    // ask the database once per distinct destination board.
     interface ResolvedTicket {
       ticket: IProcessedTicketData;
       clientId: string;
@@ -720,12 +728,35 @@ export const importTickets = withAuth(async (
         finalStatusId = closedStatus.status_id;
       }
 
+      // R2/R3/R6 per row, against the row's own destination board: a value that does not fit is
+      // reported for that row and the row is skipped, so one bad row never stops the import. A row
+      // that named no priority takes the destination board's default (R7).
+      const rowPriorityId = resolvedPriorityId || (await boardDefaultPriorityId(destinationBoardId));
+      const prepared = await prepareTicketCreateFields(trx, tenant, {
+        boardId: destinationBoardId,
+        priorityId: rowPriorityId,
+        categoryId: resolvedCategoryId || null,
+        policy: 'refuse',
+      });
+      if (prepared.problems.length > 0) {
+        errors.push(
+          `Row ${ticket.rowNumber}: Cannot import "${ticket.title}" — ${prepared.problems.map((problem) => problem.message).join('; ')}`
+        );
+        ticketsSkipped++;
+        continue;
+      }
+      if (!prepared.priority_id) {
+        errors.push(`Row ${ticket.rowNumber}: Cannot import "${ticket.title}" — no priority fits the destination board`);
+        ticketsSkipped++;
+        continue;
+      }
+
       resolvedTickets.push({
         ticket,
         clientId: resolvedClientId,
         statusId: finalStatusId,
-        priorityId: resolvedPriorityId || fallbackPriorityId,
-        categoryId: resolvedCategoryId || undefined,
+        priorityId: prepared.priority_id,
+        categoryId: prepared.category_id ?? undefined,
         contactId: resolvedContactId,
         isClosed,
       });

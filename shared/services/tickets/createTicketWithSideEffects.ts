@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput, type IAnalyticsTracker } from '../../models/ticketModel';
+import type { BoardFieldPolicy } from '../../lib/tickets/boardFieldRules';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
@@ -232,6 +233,12 @@ export interface CreateTicketWithSideEffectsInput {
   eventPayload?: { recurrence?: { definitionId: string; occurrenceId: string; occurrenceDate?: string } };
   /** Records `ticket_created` analytics. Omit for callers that do not track it (e.g. the scheduler). */
   analyticsTracker?: IAnalyticsTracker;
+  /**
+   * R6. `refuse` (the default) raises a field error on a priority or category that does not fit the
+   * board; `fallback` lets an automated caller keep the ticket with the board's default priority
+   * and no category.
+   */
+  boardFieldPolicy?: BoardFieldPolicy;
 }
 
 export interface CreateTicketWithSideEffectsResult {
@@ -278,7 +285,7 @@ export async function createTicketWithSideEffects(
     { ...input.ticket, entered_by: actorUserId ?? undefined },
     tenant,
     trx,
-    {},
+    { boardFieldPolicy: input.boardFieldPolicy },
     eventPublisher,
     input.analyticsTracker,
     actorUserId ?? undefined,

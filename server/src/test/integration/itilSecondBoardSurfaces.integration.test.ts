@@ -44,6 +44,7 @@ import {
   defaultPriorityForBoard,
   findBoardFieldProblems,
   listPrioritiesForBoard,
+  prepareTicketCreateFields,
   resolveTicketPriorityFields,
 } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -440,68 +441,220 @@ const SURFACES: Surface[] = [
     surface: 'Client portal create',
     commitGroup: 'writers-create',
     claims: ['Client portal create'],
-    expectedFail: 'no priority or category check runs on the client portal create path',
+    probe: async (db, fixture) => {
+      // A refuse path: the portal's own board resolution can land on an ITIL board, and the
+      // priority the requester picked is checked against it before anything is written.
+      const refused = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        policy: 'refuse',
+      });
+      expect(refused.problems.map((problem) => problem.field)).toEqual(['priority_id']);
+
+      const accepted = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[3],
+        policy: 'refuse',
+      });
+      expect(accepted.problems).toEqual([]);
+      expect(accepted.priority_id).toBe(fixture.itilPriorityIds[3]);
+    },
   },
   {
     surface: 'REST v1 ticket create and create from asset',
     commitGroup: 'writers-create',
     claims: ['REST v1 create', 'create from asset'],
-    expectedFail: 'the REST create paths check the priority family but not the category’s board',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne])[0];
+      // An API caller holding the first board's standard category id stores the second board's
+      // copy of the same standard category (R2), and is refused a category of a third board.
+      const translated = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[3],
+        categoryId: fixture.itilCategoryIdsByBoard[fixture.boards.itilOne][standardId],
+        policy: 'refuse',
+      });
+      expect(translated.problems).toEqual([]);
+      expect(translated.category_id).toBe(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId]);
+
+      const refused = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.itilPriorityIds[3],
+        categoryId: fixture.ownCategory.parentId,
+        policy: 'refuse',
+      });
+      expect(refused.problems.map((problem) => problem.field)).toEqual(['category_id']);
+    },
   },
   {
     surface: 'CSV import',
     commitGroup: 'writers-create',
     claims: ['CSV import'],
-    expectedFail:
-      'priorities are matched by name across families and ITIL-ness is taken from the default board, not the row’s board',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo])[0];
+      // A row destined for the second ITIL board is checked against that board, not the import's
+      // default board, and an unpriced row takes that board's default priority (R7).
+      const row = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: await defaultPriorityForBoard(db, fixture.tenantId, fixture.boards.itilTwo),
+        categoryId: fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId],
+        policy: 'refuse',
+      });
+      expect(row.problems).toEqual([]);
+      expect(row.priority_id).toBe(fixture.itilPriorityIds[3]);
+
+      const wrongFamilyRow = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[1],
+        policy: 'refuse',
+      });
+      expect(wrongFamilyRow.problems).toHaveLength(1);
+    },
   },
   {
     surface: 'Teams message action, guest intake and manual telephony',
     commitGroup: 'writers-create',
     claims: ['Teams message action and guest intake', 'manual telephony ticket'],
-    expectedFail: 'each resolves a default priority of its own, none of them by the board’s kind',
+    probe: async (db, fixture) => {
+      // All three take their priority from R7. A stored default of the other family — easy to
+      // leave behind on a board that used to be non-ITIL — no longer reaches the ticket.
+      await tenantDb(db, fixture.tenantId)
+        .table('boards')
+        .where({ board_id: fixture.boards.itilTwo })
+        .update({ default_priority_id: fixture.ownPriorityIds[0] });
+
+      const resolved = await defaultPriorityForBoard(db, fixture.tenantId, fixture.boards.itilTwo);
+      expect(resolved).toBe(fixture.itilPriorityIds[3]);
+      await expect(
+        findBoardFieldProblems(db, fixture.tenantId, {
+          boardId: fixture.boards.itilTwo,
+          priorityId: resolved!,
+        })
+      ).resolves.toEqual([]);
+    },
   },
   {
     surface: 'RMM and Huntress alert tickets',
     commitGroup: 'writers-create',
     claims: ['RMM and Huntress alert tickets'],
-    expectedFail: 'both insert their ticket rows directly, with no board field check',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne])[0];
+      // Both insert their row directly, so both resolve the fields first: a severity map or rule
+      // holding the tenant's own priority falls back to the board default, and a category held for
+      // the first ITIL board becomes the second board's copy.
+      const fields = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[1],
+        categoryId: fixture.itilCategoryIdsByBoard[fixture.boards.itilOne][standardId],
+        policy: 'fallback',
+      });
+      expect(fields.problems).toEqual([]);
+      expect(fields.priority_id).toBe(fixture.itilPriorityIds[3]);
+      expect(fields.category_id).toBe(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId]);
+    },
   },
   {
     surface: 'Telephony auto-ticket',
     commitGroup: 'writers-create',
     claims: ['Telephony auto-ticket'],
-    expectedFail: 'autoTicketFromCall writes the configured priority whatever the board',
+    probe: async (db, fixture) => {
+      // Nobody is watching a call become a ticket: the configured priority is replaced, not refused.
+      const resolved = await resolveTicketPriorityFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        policy: 'fallback',
+      });
+      expect(resolved.problems).toEqual([]);
+      expect(resolved.priority_id).toBe(fixture.itilPriorityIds[3]);
+    },
   },
   {
     surface: 'Contract renewal ticket',
     commitGroup: 'writers-create',
     claims: ['Contract renewal ticket'],
-    expectedFail: 'renewalTicket writes the configured priority whatever the board',
+    probe: async (db, fixture) => {
+      // The renewal routing's priority is configuration, so it can predate the board's kind.
+      const resolved = await resolveTicketPriorityFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[1],
+        policy: 'fallback',
+      });
+      expect(resolved.priority_id).toBe(fixture.itilPriorityIds[3]);
+    },
   },
   {
     surface: 'Workflow `tickets.create`',
     commitGroup: 'writers-create',
     claims: ['Workflow `tickets.create`'],
-    expectedFail: 'no board field check, and a fixed category from another ITIL board is not translated',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne])[1];
+      // D7: the action falls back rather than losing the ticket, and a fixed category from the
+      // first ITIL board is translated to the second board's copy instead of being dropped.
+      const fields = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        categoryId: fixture.itilCategoryIdsByBoard[fixture.boards.itilOne][standardId],
+        policy: 'fallback',
+      });
+      expect(fields.priority_id).toBe(fixture.itilPriorityIds[3]);
+      expect(fields.category_id).toBe(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId]);
+    },
   },
   {
     surface: 'Inbound webhook create',
     commitGroup: 'writers-create',
     claims: ['Inbound webhook create'],
-    expectedFail: 'no board field check on the webhook create path',
+    probe: async (db, fixture) => {
+      // D7 again, and the other half of R6's fall-back: a category that belongs to no board of
+      // this kind cannot be translated, so it is dropped and the ticket is still created.
+      const fields = await prepareTicketCreateFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        categoryId: fixture.ownCategory.childId,
+        policy: 'fallback',
+      });
+      expect(fields.problems).toEqual([]);
+      expect(fields.priority_id).toBe(fixture.itilPriorityIds[3]);
+      expect(fields.category_id).toBeNull();
+    },
   },
   {
     surface: '`assets.create_maintenance_ticket`',
     commitGroup: 'writers-create',
     claims: ['`assets.create_maintenance_ticket`'],
-    expectedFail: 'the maintenance workflow action writes its priority and category unchecked',
+    probe: async (db, fixture) => {
+      const standardId = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo])[0];
+      // A refuse path with a caller who sees the error: the priority family is checked against the
+      // selected board, and the board's own standard category is accepted there.
+      const refused = await findBoardFieldProblems(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+      });
+      expect(refused.map((problem) => problem.field)).toEqual(['priority_id']);
+
+      await expect(
+        findBoardFieldProblems(db, fixture.tenantId, {
+          boardId: fixture.boards.itilTwo,
+          priorityId: fixture.itilPriorityIds[2],
+          categoryId: fixture.itilCategoryIdsByBoard[fixture.boards.itilTwo][standardId],
+        })
+      ).resolves.toEqual([]);
+    },
   },
   {
     surface: 'Data-migration import',
     commitGroup: 'writers-create',
     claims: ['Data-migration import'],
-    expectedFail: 'entityAppliers inserts tickets with no board field check',
+    probe: async (db, fixture) => {
+      // The import maps a source priority name to one of the tenant's priorities, which can be of
+      // either family; the destination board decides what is actually stored.
+      const resolved = await resolveTicketPriorityFields(db, fixture.tenantId, {
+        boardId: fixture.boards.itilTwo,
+        priorityId: fixture.ownPriorityIds[0],
+        policy: 'fallback',
+      });
+      expect(resolved.priority_id).toBe(fixture.itilPriorityIds[3]);
+    },
   },
   {
     surface: 'REST v1 ticket update',

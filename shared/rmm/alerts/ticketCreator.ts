@@ -9,6 +9,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
+import { resolveTicketPriorityFields } from '../../lib/tickets/boardFieldRules';
 import { SharedNumberingService } from '../../services/numberingService';
 import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
 import { TicketWatcherService } from '../../services/tickets/ticketWatcherService';
@@ -79,7 +80,16 @@ export async function createTicketForAlert(
     throw new Error('No default ticket status configured for tenant');
   }
 
-  const priorityId = actions.priorityOverride ?? (await resolvePriorityForSeverity(trx, tenantId, event.severity));
+  // R6: an alert never loses its ticket. The configured or severity-matched priority is used when
+  // it fits the board, otherwise the board's default (R7) — a rule that names an ITIL priority
+  // still works on a board with the tenant's own priorities, and the other way round.
+  const configuredPriorityId =
+    actions.priorityOverride ?? (await resolvePriorityForSeverity(trx, tenantId, event.severity));
+  const { priority_id: priorityId } = await resolveTicketPriorityFields(trx, tenantId, {
+    boardId,
+    priorityId: configuredPriorityId,
+    policy: 'fallback',
+  });
   const contactId = await resolveRmmTicketContactId(trx, tenantId, {
     clientId: params.clientId,
     mappingDefaultContactId: params.mappingDefaultContactId,
@@ -225,6 +235,8 @@ async function resolvePriorityForSeverity(
   for (const exact of [true, false]) {
     for (const name of candidates) {
       const priority = await tenantDb(trx, tenantId).table('priorities')
+        // A project-task priority is never a ticket priority, whatever it is named.
+        .where({ item_type: 'ticket' })
         .whereRaw(
           exact ? 'LOWER(priority_name) = ?' : 'LOWER(priority_name) LIKE ?',
           [exact ? name : `%${name}%`]

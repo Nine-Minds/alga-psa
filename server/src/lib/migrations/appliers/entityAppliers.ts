@@ -372,7 +372,8 @@ export class TicketMigrationApplier implements EntityApplier {
       },
       context.tenant,
       trx,
-      {},
+      // R6: a mapped priority that does not fit the board becomes the board's default (R7).
+      { boardFieldPolicy: 'fallback' },
       silentTicketCreation('data migration'),
       undefined,
       context.actorUserId

@@ -142,5 +142,8 @@ export async function createRenewalTicket(
       },
     },
     notificationSuppression: { suppressContactNotifications: true },
+    // R6: a renewal decision is never lost over a priority. A configured priority that does not
+    // fit the routed board is replaced by that board's default (R7).
+    boardFieldPolicy: 'fallback',
   });
 }

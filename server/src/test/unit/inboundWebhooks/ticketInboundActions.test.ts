@@ -124,7 +124,9 @@ describe('ticket inbound webhook actions', () => {
       }),
       'tenant-a',
       'trx',
-      {},
+      // D7: a webhook never loses a ticket, so the create funnel repairs a priority or category
+      // that does not fit the mapped board instead of refusing it.
+      { boardFieldPolicy: 'fallback' },
       expect.objectContaining({ publisher: expect.anything() }),
       undefined,
       undefined,

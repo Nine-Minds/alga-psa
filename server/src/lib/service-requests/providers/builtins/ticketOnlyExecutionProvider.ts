@@ -336,7 +336,9 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           },
           context.tenant,
           trx,
-          {},
+          // R6: nobody watches a service request execute, so a configured category that is not the
+          // board's is dropped rather than failing the request (the priority is already resolved).
+          { boardFieldPolicy: 'fallback' },
           ticketCreatedPublishedByCaller('published on the owning transaction after the savepoint succeeds'),
           undefined,
           context.requesterUserId,

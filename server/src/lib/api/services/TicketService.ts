@@ -62,6 +62,7 @@ import {
   findPriorityBoardTypeProblem,
   findTicketUpdatePriorityBoardTypeProblem,
 } from '@alga-psa/tickets/lib/ticketFieldReferences';
+import { isBoardFieldRuleError } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import {
   BundleConcurrentModificationError,
@@ -269,9 +270,16 @@ function resolveTicketNotificationSuppression(input: TicketNotificationSuppressi
   return { suppressContactNotifications, suppressInternalNotifications };
 }
 
-function throwTicketModelCreateApiError(error: unknown): never {
+/** Exported for the writers-create tests: the model's refusals must answer 400, not 500. */
+export function throwTicketModelCreateApiError(error: unknown): never {
   if (!(error instanceof Error)) {
     throw error;
+  }
+
+  // R6: the create funnel refuses a priority or category that does not fit the board, naming the
+  // field it refused, so the API answers 400 against that field.
+  if (isBoardFieldRuleError(error)) {
+    throw new ValidationError('Validation failed', [{ path: [error.field], message: error.message }]);
   }
 
   const message = error.message;
@@ -2761,7 +2769,7 @@ export class TicketService extends BaseService<ITicket> {
         trx,
         ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
-      );
+      ).catch(throwTicketModelCreateApiError);
 
       // Link the asset to the new ticket in asset_associations — the same table
       // the UI and the ticket/asset association endpoints read. (The shared model
