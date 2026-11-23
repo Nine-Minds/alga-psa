@@ -1172,6 +1172,33 @@ statuses before its own loop, and since the board create now writes those status
 found them "already there" and left the board with no open default. The loop names the wizard's
 default again when the status already exists.
 
+**4. T214 on a production build.** The double-bundle unit test stays the fast proof; this is
+the slow one, and it ran:
+
+```
+npm run build                                   # CE production build
+cd server && NEXTAUTH_URL=http://localhost:3116 next start -p 3116
+ALGA_BASE_URL=http://localhost:3116 ALGA_EMAIL=… ALGA_PASSWORD=… ALGA_API_KEY=… \
+  node scripts/check-itil-sla-on-production-build.mjs
+
+[itil-sla-production] signed in as … (no MSP page rendered)
+[itil-sla-production] createBoard=7f83ad773f346cf5e778b3616e2a2b3ba46ed331c9 through /auth/client-portal/signin
+[itil-sla-production] server action → board 47d4052c-… sla_policy_id=962d0220-…
+[itil-sla-production] REST → board 47642141-… sla_policy_id=962d0220-…
+[itil-sla-production] OK: a new ITIL board gets its SLA policy on a production build.
+```
+
+Both boards came out with the tenant's `ITIL Standard` policy (`is_itil_standard = true`), 35
+categories of their own and 5 statuses, with no MSP page rendered in the process — the session is
+made through `/api/auth` and the action is posted to a client-portal route that the server
+reference manifest lists for it. The production build showed nothing the plan did not expect.
+
+It is kept as `scripts/check-itil-sla-on-production-build.mjs`: it finds the action id in the
+built client chunks, picks a non-MSP route from the manifest, signs in, creates a board both ways
+and deletes them again. It is not wired into CI — it needs a built, started server and a seeded
+user — so it stays a hand-run check beside the unit test. The test boards and the temporary API key
+it needed were removed from the slot afterwards.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no
