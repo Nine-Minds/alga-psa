@@ -1089,6 +1089,65 @@ file the groups moved.
   false positive). A payload built elsewhere is still out of its reach by construction; those
   writers are what the F136 contract test lists. Two fixtures pin both halves.
 
+### PR gate round — merging main, and the four defects it named
+
+**1. Merge of `origin/main` (141 commits).** Two content conflicts, both resolved by keeping both
+sides' intent:
+
+- `packages/tickets/src/lib/ticketListPresentation.ts` — main narrowed `formatCategoryLabel`'s
+  record parameter to `Pick<ITicketListItem, 'category_id' | 'subcategory_id'>`; this branch added
+  the R9 `aliases` argument. The merged signature carries both.
+- `server/src/test/unit/product/support/permissionCoveragePinned.ts` — main deleted the
+  `cancelScheduledComment` pin (its commit added the permission check); this branch deleted the
+  `updateBoard` pin (board-lifecycle gave it one). Both deletions belong in the merge: keeping
+  either line fails `permissionCoverage.contract.test.ts`, which is how the mistake was caught.
+
+The three migrations of this plan still sort after everything main added (main's last is
+`20261122000000`); `lint:migrations` passes with 20 annotations honoured. `npm run
+generate:artifacts` (OpenAPI CE/EE, MCP + chat registry, pseudo-locales) reproduced the merged
+files byte for byte, so nothing was hand-merged.
+
+**2. An explicit clear now clears (`shared/lib/tickets/boardFieldRules.ts`).** A patch that named
+both `itil_impact` and `itil_urgency` as empty fell through to the "a priority on its own" branch,
+where `keepAssessment` handed the stored pair back: the clear was silently lost. The branch now
+treats "both halves named" as an explicit clear — the ticket becomes "Not assessed" and keeps its
+priority. One half on its own is still refused (R4).
+
+Where the shape can come from: not from workflow `tickets.update_fields` as the note assumed — its
+patch schema has no `itil_impact`/`itil_urgency` keys (`shared/workflow/runtime/actions/
+businessOperations/tickets.ts:753`), and neither does the REST ticket update schema. The shape
+reaches the rules through `TicketModel.updateTicket`, which is the funnel those two paths use, so
+that is what T240 drives end to end beside the rule-level case. The ticket screen saves one ITIL
+field per write and offers no empty option ("Not assessed" is a display state), so it cannot send a
+half clear.
+
+**3. The guard's read half now finds a read by the table name, not by the call syntax.**
+`enclosingCallee()` walks back over balanced brackets to the call that holds the literal and reads
+its callee, so `tenantScopedTable(trx, 'categories', tenant)`, `db.tenantJoin(query, 'priorities as
+p', …)`, `.leftJoin('categories as cat', fn)`, `tenantLeftJoin(trx, tenant, q, 'categories as cat',
+…)`, `trx('categories')` and a call split over several lines are all seen; a compared string
+(`dataType === 'categories'`) has no table callee and is not a read. The reviewer's "about 30 reads
+through `tenantScopedTable(...)`" was right in substance — the real count is 160 reads in 63 files.
+
+Each of the 63 is now on the read allow-list with its reason, in five groups: the rules and the
+seeding (6 files), category/priority CRUD and the REST surfaces over it (6), mapping lookups
+narrowed by board through the shared rule (4), one-row label lookups (8), and display joins that
+label a row already chosen (26); plus the cross-board feeds that go through
+`listCategoriesForBoard` / `standardCategoryFilterOptions`, the onboarding wizard and the CSV
+import that create the rows, and the project-task priorities (`item_type = 'project_task'`, a
+different family). The list is checked both ways: an entry whose file no longer reads the tables is
+reported as stale, so it cannot rot. `src/test-utils` joins `test/__tests__/e2e` as a skipped
+directory.
+
+Two surfaces the wider scan found that R9 had missed — both list every category of the tenant, so
+after the migration they would show one entry per ITIL board:
+
+- `packages/documents/src/actions/kbArticleActions.ts` — the knowledge-base category picker.
+- `packages/inventory/src/lib/ghostUsage.ts` — the ghost-usage review filter.
+
+Both now de-duplicate through `dedupeStandardCategoriesForFilter`. They are recorded as additions
+to the feature list in the PRD's deviations section.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no

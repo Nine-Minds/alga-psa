@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { dedupeStandardCategoriesForFilter } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import type {
   GhostClassificationResult,
   GhostClassificationVerdict,
@@ -219,10 +220,18 @@ export async function queryGhostUsageReport(
     .where({ tenant, is_inactive: false })
     .orderBy('board_name', 'asc');
 
-  const categories = await trx('categories')
-    .select('category_id', 'category_name', 'parent_category')
-    .where({ tenant })
-    .orderBy('category_name', 'asc');
+  // R9: every ITIL board owns its own copy of each standard category, so this tenant-wide filter
+  // list keeps one entry per standard category instead of one per board.
+  const categories = dedupeStandardCategoriesForFilter(
+    await trx('categories')
+      .select('category_id', 'category_name', 'parent_category', 'board_id', 'standard_category_id')
+      .where({ tenant })
+      .orderBy('category_name', 'asc')
+  ).map(({ category_id, category_name, parent_category }) => ({
+    category_id,
+    category_name,
+    parent_category,
+  }));
 
   return {
     funnel: {

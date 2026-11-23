@@ -144,6 +144,125 @@ declare function logSlaEvent(...args: unknown[]): Promise<void>;
     }
   }, 120_000);
 
+  // One fixture per call shape that names a table, so a shape the guard cannot see yet fails here
+  // rather than slipping into the product. Each is written in a file that is not on the allow-list.
+  const readForms: Array<[name: string, body: string, table: string]> = [
+    [
+      'a query-builder method',
+      `export async function list(conn: any, tenant: string) {
+  return conn.table('priorities').where({ tenant, item_type: 'ticket' });
+}`,
+      'priorities',
+    ],
+    [
+      'from()',
+      `export async function list(conn: any, tenant: string) {
+  return conn.from('categories').where({ tenant });
+}`,
+      'categories',
+    ],
+    [
+      'a helper with leading arguments',
+      `import { tenantScopedTable } from '@alga-psa/db';
+
+export async function list(trx: any, tenant: string) {
+  return tenantScopedTable(trx, 'priorities', tenant).where({ item_type: 'ticket' });
+}`,
+      'priorities',
+    ],
+    [
+      'the join family, aliased',
+      `export function label(db: any, query: any) {
+  db.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+  return query;
+}`,
+      'categories',
+    ],
+    [
+      'leftJoin with a join callback',
+      `export function label(query: any) {
+  return query.leftJoin('priorities as p', function joinPriority(this: any) {
+    this.on('t.priority_id', 'p.priority_id');
+  });
+}`,
+      'priorities',
+    ],
+    [
+      'a helper whose name ends in Join',
+      `import { tenantLeftJoin } from '@alga-psa/db';
+
+export function label(trx: any, tenant: string, query: any) {
+  return tenantLeftJoin(trx, tenant, query, 'categories as cat', 't.category_id', 'cat.category_id');
+}`,
+      'categories',
+    ],
+    [
+      'a callable connection',
+      `export async function list(trx: any, tenant: string) {
+  return trx('categories').select('category_id').where({ tenant });
+}`,
+      'categories',
+    ],
+    [
+      'a call spread over several lines',
+      `export async function list(conn: any, tenant: string) {
+  return conn
+    .from(
+      'priorities'
+    )
+    .where({ tenant });
+}`,
+      'priorities',
+    ],
+  ];
+
+  it.each(readForms)('T234: fails on a read through %s', (name, body, table) => {
+    const root = fixtureTree(`packages/tickets/src/lib/newReader.ts`, `${body}\n`);
+    try {
+      const result = runGuard(root);
+      expect(result.status, `${name} must be reported`).toBe(1);
+      expect(result.output).toContain(`reads \`${table}\` directly`);
+      expect(result.output).toContain('newReader.ts');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('T234: a table name compared as a value is not a read', () => {
+    // `dataType === 'categories'` and an i18n key are not table references: no call names them.
+    const root = fixtureTree(
+      'packages/tickets/src/lib/notAReader.ts',
+      `export function label(dataType: string, t: (key: string) => string) {
+  if (dataType === 'categories' || dataType === 'priorities') return t('categories');
+  return [{ name: 'priorities' }].map((row) => row.name).join(',');
+}
+`
+    );
+    try {
+      expect(runGuard(root).status).toBe(0);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('T234: an allow-list entry whose file no longer reads the tables is reported', () => {
+    // The list cannot rot: a file that stopped reading these tables has to leave the list.
+    const root = fixtureTree(
+      'packages/tickets/src/lib/labelViewModelProvider.ts',
+      `export function label(row: { category_name?: string | null }) {
+  return row.category_name ?? 'No Category';
+}
+`
+    );
+    try {
+      const result = runGuard(root);
+      expect(result.status).toBe(1);
+      expect(result.output).toContain('is on the read allow-list but no longer reads');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it('T234: a file on the allow-list is not a violation', () => {
     // The same two shapes, in a file the guard names: the rules themselves may read the rows.
     const root = fixtureTree(

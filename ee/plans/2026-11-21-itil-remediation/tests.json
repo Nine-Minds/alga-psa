@@ -2154,5 +2154,24 @@
     ],
     "implemented": true,
     "description": "The generated OpenAPI matches the route schemas with no diff after regeneration"
+  },
+  {
+    "id": "T240",
+    "commitGroup": "writers-update",
+    "featureIds": [
+      "F082",
+      "F085"
+    ],
+    "implemented": true,
+    "description": "A patch that names both itil_impact and itil_urgency as empty clears the assessment and keeps the priority, at the rule and through TicketModel.updateTicket"
+  },
+  {
+    "id": "T241",
+    "commitGroup": "guard",
+    "featureIds": [
+      "F135"
+    ],
+    "implemented": true,
+    "description": "The guard reports a read of priorities or categories in every call shape: a builder method, from(), a helper with leading arguments, the join family, an aliased leftJoin, a helper ending in Join, a callable connection and a multi-line call; a compared string is not a read and a stale allow-list entry is reported"
   }
 ]

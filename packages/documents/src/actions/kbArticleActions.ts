@@ -24,6 +24,7 @@ import {
   publishKbArticleCreated,
   syncKbArticleClientVisibility,
 } from '@alga-psa/shared/models/kbArticleModel';
+import { dedupeStandardCategoriesForFilter } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import type {
   ArticleAudience,
   ArticleStatus,
@@ -665,14 +666,28 @@ export const getKnowledgeBaseCategories = withAuth(
 
     const rows = await categoriesQuery
       .select(
-        'c.category_id as id',
+        'c.category_id as category_id',
+        'c.board_id as board_id',
+        'c.parent_category as parent_category',
+        'c.standard_category_id as standard_category_id',
         'c.category_name as name',
         'p.category_name as parentName'
       )
       .orderBy('c.category_name', 'asc');
 
-    return rows.map((row: { id: string; name: string; parentName?: string | null }) => ({
-      id: row.id,
+    // R9: every ITIL board owns its own copy of each standard category, so this tenant-wide list
+    // would otherwise offer "Hardware" once per ITIL board. One entry stands for all the copies.
+    return dedupeStandardCategoriesForFilter(
+      rows as Array<{
+        category_id: string;
+        board_id: string | null;
+        parent_category: string | null;
+        standard_category_id: string | null;
+        name: string;
+        parentName?: string | null;
+      }>
+    ).map((row) => ({
+      id: row.category_id,
       name: row.parentName ? `${row.parentName} / ${row.name}` : row.name,
     }));
   }
