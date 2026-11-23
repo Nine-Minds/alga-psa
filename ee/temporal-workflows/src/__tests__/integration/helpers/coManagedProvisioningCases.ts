@@ -28,7 +28,7 @@ interface Harness {
 }
 
 /** Queries one ordinary PSA team invitation issues, excluding BEGIN/COMMIT (see the switch-off case). */
-const PSA_INVITATION_QUERY_BUDGET = 11;
+const PSA_INVITATION_QUERY_BUDGET = 13;
 
 /**
  * A PSA team invitation never reads the co-managed switch's state: no relationship, entitlement,
@@ -98,11 +98,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
         expect((await invite()).success).toBe(true);
         expect(captured.length).toBe(ordinary.length);
         // The PSA budget: role, existing user; seat lock, the email's pending invitation, pending
-        // seats, seat lock, tenant row, licensed users, the refreshed invitation, its insert; the
-        // MSP's name. BEGIN/COMMIT are not queries.
+        // seats, seat lock, tenant row, licensed users, the refreshed invitation, the service's
+        // pending invitation and existing-user identity reads, its insert; the MSP's name.
+        // BEGIN/COMMIT are not queries.
         expect(ordinary.filter(sql => !/^(BEGIN|COMMIT);?$/.test(sql))).toHaveLength(PSA_INVITATION_QUERY_BUDGET);
         expectNoCoManagedSwitchReads([...ordinary, ...captured]);
-        expect([...ordinary, ...captured].some(sql => /co_manag/i.test(sql))).toBe(false);
         const createdInvitation = await sponsor.table('user_invitations').where({ invitation_id: acceptedByAction.invitationId }).first();
         const { completeUserInvitationSetup } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
         const accepted = await completeUserInvitationSetup(createdInvitation.token, 'ValidPassword!2026');
@@ -131,6 +131,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const seat = await inviteCoManagedSeatTechnician(db, { sponsorTenant: operation.tenant,
         arrangementId: arrangement.arrangement_id, contactId });
       const before = await sponsor.table('user_invitations').where('invitation_id', seat.invitation_id).first();
+      expect(before.email_normalized).toBe(seat.email.trim().toLowerCase());
       actorState.user = { tenant: operation.tenant, user_id: operation.requested_by, user_type: 'internal', username: 'admin' };
       appliance.check.mockResolvedValue(null);
       const { sendUserInvitation } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
