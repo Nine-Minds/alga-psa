@@ -344,7 +344,7 @@ export function TicketList() {
       }
 
       if (debouncedSearchQuery.trim()) {
-        filteredTickets = filteredTickets.filter(buildTicketSearchPredicate(debouncedSearchQuery));
+        filteredTickets = filteredTickets.filter(buildTicketSearchPredicate(debouncedSearchQuery, filteredTickets));
       }
 
       const sortedTickets = [...filteredTickets].sort((a, b) => {

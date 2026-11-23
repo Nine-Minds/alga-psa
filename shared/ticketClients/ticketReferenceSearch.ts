@@ -13,10 +13,10 @@ export interface TicketSearchQuery {
    * removed, and lowercased. Empty when nothing is left to compare.
    */
   reference: string;
-  /** The literal query as a ticket number, with leading # and separators removed. */
+  /** The literal number form; Ticket is retained unless followed by the email marker #. */
   literalReference: string;
-  /** A complete email reference should match the stored number exactly. */
-  exactReference: boolean;
+  /** True when the trimmed input starts with the email label marker, including a leading #. */
+  isExplicitLabel: boolean;
 }
 
 export function compactTicketReference(value: string): string {
@@ -27,19 +27,44 @@ export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
   const cleaned = cleanSearchIdentifierQuery(text);
   const reference = compactTicketReference(cleanSearchIdentifierQuery(cleaned.replace(LEADING_TICKET_LABEL, '')));
-  const literalReference = compactTicketReference(cleaned);
-  const hasEmailLabel = /^ticket\s*#/i.test(cleaned) || /^#/i.test(cleaned);
-  const exactReference = hasEmailLabel && /^[a-z]+\d{4,}$/i.test(reference);
-  return { text, reference, literalReference, exactReference };
+  const literalText = /^ticket\s*#/i.test(text) ? text.replace(/^ticket\s*/i, '') : cleaned;
+  const literalReference = compactTicketReference(cleanSearchIdentifierQuery(literalText));
+  const isExplicitLabel = /^(?:ticket\s*)?#/i.test(text);
+  return { text, reference, literalReference, isExplicitLabel };
 }
 
-/** Separator-insensitive number matching; complete email references match exactly, short queries by substring. */
+/** Separator-insensitive substring match for a ticket number and either parsed interpretation. */
 export function ticketNumberMatchesQuery(
   ticketNumber: string | null | undefined,
   query: TicketSearchQuery
 ): boolean {
   if (!ticketNumber || (!query.reference && !query.literalReference)) return false;
   const number = compactTicketReference(ticketNumber);
-  if (query.exactReference) return number === query.reference;
   return [query.literalReference, query.reference].some((reference) => reference && number.includes(reference));
+}
+
+/**
+ * Resolve number matches against the loaded rows. Exact literal identifiers win when a leading
+ * TICKET could also be read as an email label; otherwise an exact label reference wins before
+ * either interpretation falls back to substring matching.
+ */
+export function resolveTicketNumberMatches(
+  ticketNumbers: readonly (string | null | undefined)[],
+  query: TicketSearchQuery
+): ReadonlySet<string> {
+  const numbers = ticketNumbers.map((number) => compactTicketReference(number ?? '')).filter(Boolean);
+  if (!query.reference && !query.literalReference) return new Set();
+
+  const exactLiteral = query.literalReference
+    ? numbers.filter((number) => number === query.literalReference)
+    : [];
+  if (exactLiteral.length > 0) return new Set(exactLiteral);
+
+  const exactReference = query.reference ? numbers.filter((number) => number === query.reference) : [];
+  if (exactReference.length > 0) return new Set(exactReference);
+
+  const references = query.isExplicitLabel
+    ? [query.reference, query.literalReference]
+    : [query.literalReference, query.reference];
+  return new Set(numbers.filter((number) => references.some((reference) => reference && number.includes(reference))));
 }

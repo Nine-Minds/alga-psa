@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
-import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '../ticketReferenceSearch';
+import { parseTicketSearchQuery, resolveTicketNumberMatches, ticketNumberMatchesQuery } from '../ticketReferenceSearch';
 
 const NUMBER = 'ALGA-2026-0002826';
 const matches = (q: string, n: string = NUMBER) => ticketNumberMatchesQuery(n, parseTicketSearchQuery(q));
@@ -43,11 +43,26 @@ describe('ticketReferenceSearch', () => {
     expect(matches('Ticket ALGA-2026-0002826', 'ALGA-2026-0002826')).toBe(true);
   });
 
-  it('matches a complete labeled email reference exactly, while retaining partial matches', () => {
+  it('resolves exact labeled references before partial matches across loaded numbers', () => {
     const query = parseTicketSearchQuery('Ticket #ALGA-2026-0002826');
-    expect(ticketNumberMatchesQuery('ALGA-2026-0002826', query)).toBe(true);
-    expect(ticketNumberMatchesQuery('TICKET-ALGA-2026-0002826', query)).toBe(false);
-    expect(matches('2826', 'ALGA-2026-0002826')).toBe(true);
+    const numbers = ['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826'];
+    expect([...resolveTicketNumberMatches(numbers, query)]).toEqual(['alga20260002826']);
+    expect(parseTicketSearchQuery('#ALGA-2026-0002826').isExplicitLabel).toBe(true);
+    expect([...resolveTicketNumberMatches(numbers, parseTicketSearchQuery('#ALGA-2026-0002826'))]).toEqual(['alga20260002826']);
+    expect([...resolveTicketNumberMatches(numbers, parseTicketSearchQuery('Ticket #ALGA-2026'))]).toEqual([
+      'alga20260002826',
+      'ticketalga20260002826',
+    ]);
+    expect([...resolveTicketNumberMatches(numbers, parseTicketSearchQuery('2826'))]).toEqual([
+      'alga20260002826',
+      'ticketalga20260002826',
+    ]);
+  });
+
+  it('prefers an exact literal TICKET identifier before the email-label interpretation', () => {
+    const numbers = ['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826'];
+    const query = parseTicketSearchQuery('TICKET ALGA 2026 0002826');
+    expect([...resolveTicketNumberMatches(numbers, query)]).toEqual(['ticketalga20260002826']);
   });
 
   it('does not match a different number or an empty reference', () => {

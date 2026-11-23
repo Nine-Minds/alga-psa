@@ -1,4 +1,8 @@
-import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '@shared/ticketClients/ticketReferenceSearch';
+import {
+  compactTicketReference,
+  parseTicketSearchQuery,
+  resolveTicketNumberMatches,
+} from '@shared/ticketClients/ticketReferenceSearch';
 
 interface SearchableTicket {
   title?: string | null;
@@ -8,14 +12,20 @@ interface SearchableTicket {
 }
 
 /** Returns a predicate for the portal search box; an empty/whitespace query matches everything. */
-export function buildTicketSearchPredicate(rawQuery: string): (ticket: SearchableTicket) => boolean {
+export function buildTicketSearchPredicate(
+  rawQuery: string,
+  loadedTickets: readonly SearchableTicket[]
+): (ticket: SearchableTicket) => boolean {
   const query = parseTicketSearchQuery(rawQuery);
   if (!query.text) return () => true;
   const text = query.text.toLowerCase();
+  const matchingNumbers = resolveTicketNumberMatches(
+    loadedTickets.map(({ ticket_number }) => ticket_number),
+    query
+  );
   return (ticket) =>
     Boolean(ticket.title?.toLowerCase().includes(text)) ||
-    ticketNumberMatchesQuery(ticket.ticket_number, query) ||
-    Boolean(ticket.ticket_number?.toLowerCase().includes(text)) ||
+    matchingNumbers.has(compactTicketReference(ticket.ticket_number ?? '')) ||
     Boolean(ticket.status_name?.toLowerCase().includes(text)) ||
     Boolean(ticket.priority_name?.toLowerCase().includes(text));
 }
