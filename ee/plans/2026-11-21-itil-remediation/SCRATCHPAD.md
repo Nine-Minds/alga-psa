@@ -974,6 +974,51 @@ priority change still costs one write and no read. It is applied at both batch-s
 - Not changed: the optimistic merge itself, and nothing in the shared resolver. The resolver was
   already right (4992355838) — the screen simply never asked what it had decided.
 
+### The list/detail mismatch the browser check saw on a second ITIL board (group 6, F057)
+
+The browser check saved a ticket's category to "Network" on the second ITIL board and the detail
+screen showed it correctly, but the freshly loaded ticket list — both the board's own tab and the
+all-boards tab — showed "Unknown Category" for the same ticket. The write was right; the list's
+label lookup was wrong by construction, for a reason adjacent to F057 rather than a new defect in
+it.
+
+F057 de-duplicates the category list the list screens hold to one row per standard category (R9):
+every ITIL board keeps its own copy of "Network" (D7), so a tenant-wide list would otherwise show
+"Network" once per board. `getTicketFormOptions` (`optimizedTicketActions.ts`) and the portal's
+`loadOptions` both run the categories through `standardCategoryFilterOptions`, which returns the
+de-duplicated `categories` *and* an `aliases` map (another board's copy → the kept representative)
+so a stored filter value naming a dropped copy is translated instead of lost. Both screens kept the
+`categories` half and discarded `aliases`. A ticket's own `category_id`/`subcategory_id`, though,
+names whatever board it is actually on — on the second ITIL board that is exactly the copy the
+dedup just dropped — and `formatCategoryLabel` (`ticketListPresentation.ts`) matched it by plain
+`===` against the thinned list, so a ticket on a board whose copy was not the kept representative
+read as unknown. The single-ticket detail screens were never affected: they load the categories of
+the ticket's own board only (`getConsolidatedTicketData`), where there is nothing to de-duplicate.
+
+Fix: `formatCategoryLabel` takes an optional `aliases` map and resolves `category_id` and
+`subcategory_id` through it before matching, the same translation `ticketViewSettings.ts` already
+applies to a stored filter value. Both call sites now carry their aliases through to it:
+`TicketingDashboardContainer` passes the consolidated options' `categoryAliases` to
+`TicketingDashboard`, which threads it into `createTicketColumns`; the client portal's `TicketList`
+now calls `standardCategoryFilterOptions` directly (rather than the `dedupeStandardCategoriesForFilter`
+wrapper, which only returns the categories half) and keeps the aliases in state alongside the
+de-duplicated list. `MspContactTickets`/`MspClientTickets` (the client/contact profile tab's ticket
+list) were checked and need no change: their categories come from `ClientCrossFeatureContext`, which
+never runs the dedup, so `formatCategoryLabel` there always sees the full per-board list.
+
+- T109's contract test pinned the exact `dedupeStandardCategoriesForFilter` import line; switching
+  the import updates the test's assertions to match (still proves the same de-duplication behaviour,
+  T109's description in `tests.json` is unchanged and still true) and adds one asserting the row
+  label passes `categoryAliases` through.
+- New coverage: `ticketListPresentation.test.ts` gets `formatCategoryLabel` cases (none existed
+  before) — a direct match with no aliases, the alias translation for both `category_id` and
+  `subcategory_id`, and that an id with no alias and no direct match still reports unknown. No new
+  feature or test id: like the TicketDetails fix above, this is the list-rendering half of F057's
+  existing one-entry-per-standard-category rule, not a new rule.
+- Verified live on this slot (one headless sign-in + screenshot of `/msp/tickets`, both the "QA
+  Second ITIL" tab and "All tickets"): the ticket that previously read "Unknown Category" now shows
+  "Network" in the list, matching the detail screen.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no

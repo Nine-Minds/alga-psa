@@ -82,11 +82,24 @@ export function daysUntil(due: Date, now: Date): number {
 
 // Shared category label resolver, used by both the category column and the
 // category subtitle folded under the title cell.
-export function formatCategoryLabel(record: ITicketListItem, categories: ITicketCategory[]): string {
-  const categoryId = record.category_id || null;
-  if (!categoryId && !record.subcategory_id) return 'No Category';
-  if (record.subcategory_id) {
-    const subcategory = categories.find(c => c.category_id === record.subcategory_id);
+//
+// `categories` may be the R9 de-duplicated list (one row per standard category,
+// across every ITIL board), in which case a ticket's own `category_id` /
+// `subcategory_id` can name a board's copy that the list no longer carries.
+// `aliases` (the map `standardCategoryFilterOptions` returns alongside that
+// list) translates such an id to the kept representative before the lookup,
+// the same way a stored filter value is translated rather than dropped.
+export function formatCategoryLabel(
+  record: ITicketListItem,
+  categories: ITicketCategory[],
+  aliases: Readonly<Record<string, string>> = {}
+): string {
+  const resolveAlias = (id: string) => aliases[id] ?? id;
+  const categoryId = record.category_id ? resolveAlias(record.category_id) : null;
+  const subcategoryId = record.subcategory_id ? resolveAlias(record.subcategory_id) : null;
+  if (!categoryId && !subcategoryId) return 'No Category';
+  if (subcategoryId) {
+    const subcategory = categories.find(c => c.category_id === subcategoryId);
     if (!subcategory) return 'Unknown Category';
     const parent = categories.find(c => c.category_id === subcategory.parent_category);
     return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;

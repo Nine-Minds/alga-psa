@@ -196,6 +196,12 @@ interface TicketingDashboardProps {
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
+  /**
+   * R9 alias map alongside `initialCategories` when that list is the de-duplicated
+   * one (another board's copy of a standard category → the kept representative).
+   * Lets the category subtitle resolve a ticket's own board-specific category id.
+   */
+  categoryAliases?: Readonly<Record<string, string>>;
   initialTags?: ITag[];
   /** Contact / client tag definitions for the Requester tags / Client tags filters. */
   contactTagDefinitions?: ITag[];
@@ -362,6 +368,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialStatuses,
   initialPriorities,
   initialCategories,
+  categoryAliases,
   initialTags = [],
   initialUsers = [],
   totalCount,
@@ -1767,6 +1774,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const columns = useMemo(() => {
     const baseColumns = createTicketColumns({
       categories,
+      categoryAliases,
       boards,
       // The live view outranks the tenant document here: the View menu is
       // interaction state layered over the resolved board->tenant->catalog
@@ -1923,6 +1931,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return workspaceReadOnly ? [selectionColumn, ...listColumns] : [selectionColumn, ...listColumns, actionsColumn];
   }, [
     categories,
+    categoryAliases,
     boards,
     displaySettings,
     viewPresentation,

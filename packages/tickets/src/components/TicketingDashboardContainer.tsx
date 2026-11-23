@@ -1176,6 +1176,7 @@ export default function TicketingDashboardContainer({
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}
       initialCategories={effectiveOptions.categories}
+      categoryAliases={(effectiveOptions as { categoryAliases?: Record<string, string> }).categoryAliases}
       initialTags={effectiveOptions.tags || []}
       contactTagDefinitions={effectiveOptions.contactTagDefinitions}
       clientTagDefinitions={effectiveOptions.clientTagDefinitions}

@@ -19,7 +19,7 @@ import { getClientTickets, updateTicketStatus, getClientPortalTicketStatuses } f
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
-import { dedupeStandardCategoriesForFilter } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
+import { standardCategoryFilterOptions } from '@alga-psa/shared/lib/tickets/standardCategoryFilterOptions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import type { IStatus } from '@alga-psa/types';
@@ -81,6 +81,9 @@ export function TicketList() {
   const [boardStatusOptions, setBoardStatusOptions] = useState<Record<string, SelectOption[]>>({});
   const [priorityOptions, setPriorityOptions] = useState<{ value: string; label: string }[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  // R9 alias map alongside `categories` (another board's copy of a standard category → the kept
+  // representative), so a ticket's own board-specific category id still resolves to a label.
+  const [categoryAliases, setCategoryAliases] = useState<Record<string, string>>({});
   const [selectedStatus, setSelectedStatus] = useState<string>(TICKET_STATUS_FILTER_ALL);
   const [selectedResponseStatus, setSelectedResponseStatus] = useState<'all' | 'awaiting_client' | 'awaiting_internal' | 'none'>('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
@@ -203,8 +206,12 @@ export function TicketList() {
           }))
         ]);
 
-        // R9: the portal filter spans boards, so a standard category is listed once.
-        setCategories(dedupeStandardCategoriesForFilter(categories));
+        // R9: the portal filter spans boards, so a standard category is listed once; the alias
+        // map lets a ticket's own board-specific category id still resolve to a label instead of
+        // reporting "Unknown Category" once its row is de-duplicated out of the list.
+        const dedupedCategories = standardCategoryFilterOptions(categories);
+        setCategories(dedupedCategories.categories);
+        setCategoryAliases(dedupedCategories.aliases);
       } catch (error) {
         console.error('Failed to load options:', error);
         setError(t('messages.filtersError', 'Failed to load filter options.'));
@@ -470,7 +477,7 @@ export function TicketList() {
       width: '32%',
       render: (value: string, record: ITicketListItem) => {
         const hasCategory = !!(record.category_id || record.subcategory_id);
-        const categoryLabel = hasCategory ? formatCategoryLabel(record, categories) : null;
+        const categoryLabel = hasCategory ? formatCategoryLabel(record, categories, categoryAliases) : null;
         return (
           <div className="flex flex-col gap-0.5 overflow-hidden">
             <Link

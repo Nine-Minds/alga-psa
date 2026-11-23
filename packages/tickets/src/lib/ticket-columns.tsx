@@ -142,6 +142,12 @@ type TicketingDisplaySettings = {
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
+  /**
+   * R9 alias map (another board's copy of a standard category → the kept
+   * representative in `categories`). Lets the category subtitle resolve a
+   * ticket's own board-specific category id instead of reporting it unknown.
+   */
+  categoryAliases?: Readonly<Record<string, string>>;
   boards: IBoard[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
@@ -184,6 +190,7 @@ interface CreateTicketColumnsOptions {
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
     categories,
+    categoryAliases,
     boards: _boards,
     displaySettings,
     onTicketClick,
@@ -243,7 +250,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       render: (value: string, record: ITicketListItem) => {
         const isBundleMaster = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0;
         const showBundleToggle = showTicketNumberSubtitle && isBundleMaster && !!onToggleBundleExpanded;
-        const categoryLabel = formatCategoryLabel(record, categories);
+        const categoryLabel = formatCategoryLabel(record, categories, categoryAliases);
         return (
           <div className="flex items-start gap-2 overflow-hidden">
             {showBundleToggle && (
