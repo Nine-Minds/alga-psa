@@ -1287,11 +1287,20 @@ export async function createTicketFromEmail(
     assigned_to?: string;
     email_metadata?: any;
     attributes?: Record<string, unknown> | null;
+    /**
+     * The contact who sent the inbound email, when that is not the ticket's contact. `contact_id`
+     * says whose ticket it is; this says who acted. Omitted: the ticket contact is the sender (the
+     * usual case). `null`: no contact sent it, e.g. an internal user forwarded a client's email and
+     * the ticket was filed under that client's contact.
+     */
+    sender_contact_id?: string | null;
   },
   tenant: string,
   userId?: string,
   executionOptions?: InboundEmailExecutionOptions
 ): Promise<{ ticket_id: string; ticket_number: string }> {
+  const senderContactId =
+    ticketData.sender_contact_id === undefined ? ticketData.contact_id : ticketData.sender_contact_id;
   const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
@@ -1319,10 +1328,10 @@ export async function createTicketFromEmail(
       // A matched contact with no user account is the actor of the inbound ticket.
       // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
       const creationEvents =
-        !userId && ticketData.contact_id
+        !userId && senderContactId
           ? ticketCreationWithActor(
               eventPublisher,
-              { actorType: 'CONTACT', actorContactId: ticketData.contact_id },
+              { actorType: 'CONTACT', actorContactId: senderContactId },
               'inbound email ticket: sender matched a contact'
             )
           : eventPublisher;
@@ -1412,10 +1421,10 @@ export async function createTicketFromEmail(
           eventType: TICKET_ACTIVITY_EVENT.CREATED,
           entityType: TICKET_ACTIVITY_ENTITY.TICKET,
           entityId: result.ticket_id,
-          actor: ticketData.contact_id
+          actor: senderContactId
             ? {
                 actorType: TICKET_ACTIVITY_ACTOR.EMAIL_SENDER,
-                contactId: ticketData.contact_id,
+                contactId: senderContactId,
                 userId: userId ?? null,
               }
             : {
@@ -1444,10 +1453,10 @@ export async function createTicketFromEmail(
           eventType: TICKET_ACTIVITY_EVENT.INBOUND_EMAIL_RECEIVED,
           entityType: TICKET_ACTIVITY_ENTITY.EMAIL,
           entityId: safeEmailMeta?.messageId ?? null,
-          actor: ticketData.contact_id
+          actor: senderContactId
             ? {
                 actorType: TICKET_ACTIVITY_ACTOR.EMAIL_SENDER,
-                contactId: ticketData.contact_id,
+                contactId: senderContactId,
               }
             : { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
           source: TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL,

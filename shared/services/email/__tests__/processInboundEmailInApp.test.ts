@@ -1621,6 +1621,7 @@ describe('processInboundEmailInApp', () => {
         expect.objectContaining({ author_type: 'internal', author_id: 'tech-user-1' }),
         'tenant-1'
       );
+      expect(createTicketFromEmailMock.mock.calls[0][0]).not.toHaveProperty('sender_contact_id');
     };
 
     it('row 1: internal forwarder + contact original sender files under the contact/client, technician stays author', async () => {
@@ -1630,8 +1631,10 @@ describe('processInboundEmailInApp', () => {
       const result = await run(techEmail());
 
       expect(result.outcome).toBe('created');
+      // The ticket is Dana's, but Dana did not send this email: the sender identity is withheld so
+      // the creation activity/event is not credited to the recovered (unauthenticated) address.
       expect(createTicketFromEmailMock).toHaveBeenCalledWith(
-        expect.objectContaining({ client_id: 'client-a', contact_id: 'contact-dana' }),
+        expect.objectContaining({ client_id: 'client-a', contact_id: 'contact-dana', sender_contact_id: null }),
         'tenant-1'
       );
       expect(createCommentFromEmailMock).toHaveBeenCalledWith(
@@ -1700,6 +1703,8 @@ describe('processInboundEmailInApp', () => {
         expect.objectContaining({ client_id: 'client-f', contact_id: 'contact-forwarder' }),
         'tenant-1'
       );
+      // The forwarding contact really is the sender, so the ticket contact stays the actor.
+      expect(createTicketFromEmailMock.mock.calls[0][0]).not.toHaveProperty('sender_contact_id');
       expect(findContactByEmailMock).not.toHaveBeenCalledWith('dana@client-a.example', 'tenant-1', expect.anything());
     });
 

@@ -2480,6 +2480,9 @@ export async function processInboundEmailInApp(
           : {}),
       },
       attributes: seededAttributes ?? undefined,
+      // A forwarded ticket belongs to the original sender's contact, but that contact did not send
+      // this email: the internal forwarder did. Keep the recovered address out of the actor record.
+      ...(destinationContact ? { sender_contact_id: null } : {}),
     },
     tenantId,
     ...helperExtraArgs('ticket')

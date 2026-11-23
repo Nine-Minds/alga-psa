@@ -3195,6 +3195,17 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(comments[0].author_type).toBe('internal');
     expect(comments[0].user_id).toBe(technicianId);
     expect(comments[0].contact_id ?? null).toBeNull();
+
+    // The ticket is the client contact's, but the contact did not send this email: the audit
+    // trail must not credit the recovered (unauthenticated) address as the email sender.
+    const activity = await tenantTable('ticket_audit_logs')
+      .where({ ticket_id: ticket.ticket_id })
+      .whereIn('event_type', ['TICKET_CREATED', 'TICKET_INBOUND_EMAIL_RECEIVED']);
+    expect(activity).toHaveLength(2);
+    for (const row of activity) {
+      expect(row.actor_type).toBe('system');
+      expect(row.actor_contact_id ?? null).toBeNull();
+    }
   });
 
   it('Forwarded sender (row 5): a contact forwarding a message quoting another client stays the forwarder', async () => {
@@ -3238,6 +3249,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(comments).toHaveLength(1);
     expect(comments[0].author_type).toBe('client');
     expect(comments[0].contact_id).toBe(forwarderContactId);
+
+    // The forwarding contact really sent it, so it stays the email-sender actor.
+    const created = await tenantTable('ticket_audit_logs')
+      .where({ ticket_id: ticket.ticket_id, event_type: 'TICKET_CREATED' })
+      .first<any>();
+    expect(created?.actor_type).toBe('email_sender');
+    expect(created?.actor_contact_id).toBe(forwarderContactId);
   });
 
   it('Contact match (Google): the Exchange internal-auth stamp alone does not authorize contact attribution', async () => {
