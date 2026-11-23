@@ -1,4 +1,8 @@
 import { execFileSync, spawnSync } from 'child_process';
+import { randomUUID } from 'crypto';
+import { existsSync, readFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 const fromPath = vi.hoisted(() => vi.fn());
@@ -68,8 +72,14 @@ describe('Ghostscript hardening (R3)', () => {
   })();
 
   it.skipIf(!gs)('refuses file access from PostScript by default (SAFER is the default since 9.50)', () => {
-    const result = spawnSync('gs', ['-dBATCH', '-dNODISPLAY', '-c', '(/etc/hostname) (r) file closefile quit'], { encoding: 'utf8' });
-    expect(result.status).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toMatch(/invalidfileaccess/);
+    const logPath = join(tmpdir(), `gs-refusal-${randomUUID()}.log`);
+    try {
+      const result = spawnSync('gs', [`-sstdout=${logPath}`, '-dBATCH', '-dNODISPLAY', '-c', '(/etc/hostname) (r) file closefile quit'], { encoding: 'utf8' });
+      expect(result.status).not.toBe(0);
+      expect(existsSync(logPath)).toBe(true);
+      expect(readFileSync(logPath, 'utf8')).toMatch(/invalidfileaccess/);
+    } finally {
+      rmSync(logPath, { force: true });
+    }
   });
 });
