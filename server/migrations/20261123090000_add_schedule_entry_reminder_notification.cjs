@@ -16,6 +16,7 @@ const { ALL_SCHEDULE_REMINDER_TEMPLATES, SUBTYPE_NAME } = require('./utils/templ
 exports.up = async function up(knex) {
   await knex.raw('ALTER TABLE internal_notification_subtypes ADD COLUMN IF NOT EXISTS toast_on_arrival boolean NOT NULL DEFAULT false');
   await upsertCategoriesAndSubtypes(knex);
+  // migration-lint: allow 8 - flags only the single new schedule-entry-reminder catalog row (by unique name) seeded just above; no existing subtype is modified
   await knex('internal_notification_subtypes')
     .where({ name: SUBTYPE_NAME })
     .update({ toast_on_arrival: true, default_priority: 'normal' });
