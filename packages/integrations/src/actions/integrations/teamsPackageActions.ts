@@ -67,6 +67,7 @@ interface TeamsAppManifest {
     color: string;
   };
   accentColor: string;
+  supportsChannelFeatures: 'tier1';
   staticTabs: Array<{
     entityId: string;
     name: string;
@@ -140,8 +141,8 @@ interface PersistedTeamsPackageMetadata {
   };
 }
 
-const TEAMS_MANIFEST_VERSION = '1.24';
-const TEAMS_PACKAGE_VERSION = '1.0.0';
+const TEAMS_MANIFEST_VERSION = '1.25';
+const TEAMS_PACKAGE_VERSION = '1.2.0';
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -210,6 +211,8 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
       color: 'color.png',
     },
     accentColor: '#0F766E',
+    // Teams rejects uploads without channel-feature support for shared/private channels.
+    supportsChannelFeatures: 'tier1',
     staticTabs: [
       {
         entityId: TEAMS_PERSONAL_TAB_ENTITY_ID,
