@@ -605,6 +605,46 @@ board cases, and nine surface probes.
   `error instanceof TicketBoardFieldError`, which `writers-create` replaced with
   `isBoardFieldRuleError(error)`.
 
+### Commit group 11 — `board-lifecycle` (done)
+
+Landed: `packages/tickets/src/services/boardLifecycle.ts` — `createBoardCore`, `updateBoardCore`,
+`deleteBoardCore` plus the status seeding, the copy and the delete cleanups they own; the three
+server actions reduced to guard + transaction + error shaping; `BoardService` calling the same
+three; the create order (board → ITIL setup → default priority → statuses) with R1, R3 and R7
+applied; `default_assigned_team_id` stored; the create result and `BOARD_CREATED` carrying the row
+as it is after setup; the onboarding wizard's board going through the create;
+`server/src/test/integration/itilBoardLifecycle.integration.test.ts` (11 cases),
+`server/src/test/unit/itilBoardLifecycleContract.test.ts` (6 cases) and the surface probe.
+
+- **Why a service and not `lib/`.** The functions need `ItilStandardsService` and the board status
+  actions, which are server-only; `services/` is where `itilStandardsService` already lives, and
+  `lib/` holds modules client components import.
+- **The REST delete now refuses what the web refuses**, and passes `force: true` because an API
+  caller cannot answer a second prompt — the blocking checks (default board, inbound defaults,
+  sender route, settings, tickets) still block, and only the "there are categories, confirm" prompt
+  is answered for it. A refusal becomes `ConflictError`, a missing board `NotFoundError`, and a
+  refused *shape* (R1/R3) a 400 rather than a 500.
+- **The reference-data import could not call the create** (F111, deviation recorded in the PRD):
+  `packages/tickets` depends on `packages/reference-data`, so the import may not import back — the
+  package says so itself where its board delete refuses. It takes R7 from the shared rules module
+  both sides use, so an imported board gets a default priority; its statuses were already seeded
+  there, and a `standard_boards` row carries no ITIL kind, so there is no ITIL setup to run. The
+  onboarding wizard *can* import tickets (it already calls `createBoard` from its settings step),
+  so its board goes through `createBoardCore` with the statuses the wizard collected.
+- **Three existing suites were reconciled**, all this card's own doing: the board mutation-guard
+  harness needed a thenable query builder, because the create now asks the shared rules for its
+  default priority; `ticketPeripheralTenantScoped.contract` reads the lifecycle service as part of
+  the board surface (that is where the scoped queries moved); and `boardService.writable` now pins
+  the delegation and the 400, because releasing the previous default moved into the core — a case
+  the integration suite picked up.
+- **`copyBoardTicketStatuses` keeps returning its count**: an integration test asserts it, and the
+  first attempt at the re-export dropped it.
+- Run against this slot's database: `itilBoardLifecycle` 11/11, `itilBoardLifecycleContract` 6/6,
+  `itilSecondBoardSurfaces` 42 covered + 2 todos (`board-type-switch` and `sla`),
+  `boardCopyTicketStatuses` 1/1, `itilBoardDeletionCleanup` 5/5, `itilBoardFieldRules` +
+  `itilCategoryBoardRules` 55/55, all 171 test files of `packages/tickets/src/{actions,lib}`
+  (1,462 tests), `packages/onboarding` 12/12 and `packages/reference-data` 36/36.
+
 ### Round 3 housekeeping
 
 - **The eight `inboundTicketDefaultsActions.location.test.ts` failures were this card's**, from the
@@ -622,7 +662,7 @@ board cases, and nine surface probes.
 
 ### Groups not started
 
-Commit groups 11–16 (`board-lifecycle` through `docs`) are untouched: their features and tests are
+Commit groups 12–16 (`board-type-switch` through `docs`) are untouched: their features and tests are
 still `implemented: false` and their surface rows are still expected-fail. Groups 4, 5 and 6 reach
 production together (see Rollout) and are all on this branch.
 

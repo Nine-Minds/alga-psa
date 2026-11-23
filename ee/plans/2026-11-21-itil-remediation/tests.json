@@ -1657,7 +1657,7 @@
     "featureIds": [
       "F103"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The existing board action tests (mutation guard, portal status guard, co-managed deactivation) pass against the extracted functions"
   },
   {
@@ -1666,7 +1666,7 @@
     "featureIds": [
       "F104"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "POST /api/v1/boards for an ITIL board produces the same statuses, categories, default priority and SLA assignment as the web action"
   },
   {
@@ -1675,7 +1675,7 @@
     "featureIds": [
       "F104"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "POST /api/v1/boards for a non-ITIL board has seeded statuses"
   },
   {
@@ -1684,7 +1684,7 @@
     "featureIds": [
       "F105"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The first ITIL board in a tenant that has own priorities gets an ITIL default priority"
   },
   {
@@ -1693,7 +1693,7 @@
     "featureIds": [
       "F105"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The first ITIL board in a tenant with no priorities at all gets the level-3 ITIL default"
   },
   {
@@ -1702,7 +1702,7 @@
     "featureIds": [
       "F106"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Create and update with a default priority of the wrong family are refused"
   },
   {
@@ -1711,7 +1711,7 @@
     "featureIds": [
       "F107"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Create with ITIL categories and own priorities, and the reverse, is refused on web and REST"
   },
   {
@@ -1720,7 +1720,7 @@
     "featureIds": [
       "F108"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Renaming an existing mixed board saves; changing one of its kinds to another mixed combination is refused"
   },
   {
@@ -1729,7 +1729,7 @@
     "featureIds": [
       "F109"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A board created with a default team has it stored"
   },
   {
@@ -1738,7 +1738,7 @@
     "featureIds": [
       "F110"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The create result and BOARD_CREATED payload carry the assigned sla_policy_id"
   },
   {
@@ -1747,7 +1747,7 @@
     "featureIds": [
       "F111"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A board created by reference-data import or onboarding has a default priority and, when ITIL, its categories"
   },
   {
@@ -1756,7 +1756,7 @@
     "featureIds": [
       "F112"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DELETE /api/v1/boards on the default board, a board with tickets and a board used by inbound defaults is refused with the web's reason"
   },
   {
@@ -1765,7 +1765,7 @@
     "featureIds": [
       "F112"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DELETE /api/v1/boards on an unused board removes its statuses and categories"
   },
   {

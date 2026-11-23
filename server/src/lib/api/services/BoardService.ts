@@ -9,7 +9,21 @@ import {
   createBoardInputSchema,
   updateBoardInputSchema,
 } from '@alga-psa/tickets/actions/board-actions/boardInputSchema';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  createBoardCore,
+  deleteBoardCore,
+  isBoardLifecycleError,
+  updateBoardCore,
+} from '@alga-psa/tickets/services/boardLifecycle';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+
+/** A refused board shape is the caller's to fix: 400, not 500 (R1/R3). */
+function rethrowBoardLifecycleRefusal(error: unknown): never {
+  if (isBoardLifecycleError(error)) {
+    throw new ValidationError(error.message);
+  }
+  throw error;
+}
 
 export class BoardService extends BaseService<IBoard> {
   constructor() {
@@ -44,84 +58,41 @@ export class BoardService extends BaseService<IBoard> {
 
   async create(data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
     const writable = this.parseWritable(createBoardInputSchema, data);
-    const board = await this.mutationTransaction(context, async (trx) => {
-      // At most one default board per tenant: claiming it releases the previous one.
-      if (writable.is_default === true) {
-        await this.buildTenantScopedQuery(trx, context).where({ is_default: true }).update({ is_default: false });
-      }
-      const audited = await this.addCreateAuditFields(trx, writable, context);
-      const [row] = await this.buildTenantScopedQuery(trx, context).insert(audited).returning('*');
-      return row as IBoard;
-    });
-    if (!board.board_id) {
-      throw new Error('Created board is missing board_id');
-    }
-
-    await publishEvent({
-      eventType: 'BOARD_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        boardId: board.board_id,
-        userId: context.userId,
-        changes: { after: board },
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    return board;
+    // F104: the same function the settings screen calls, so a board created through the API has
+    // the same statuses, categories, default priority and SLA assignment. It publishes
+    // BOARD_CREATED itself, with the row as it is after setup (F110).
+    return this.mutationTransaction(context, (trx, tenant) =>
+      createBoardCore(trx, tenant, { userId: context.userId }, writable as never)
+    ).catch(rethrowBoardLifecycleRefusal);
   }
 
   async update(id: string, data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
     const writable = this.parseWritable(updateBoardInputSchema, data);
-    const board = await this.mutationTransaction(context, async (trx) => {
-      if (writable.is_default === true) {
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ is_default: true })
-          .whereNot({ board_id: id })
-          .update({ is_default: false });
-      }
-      const audited = await this.addUpdateAuditFields(trx, writable, context);
-      const [row] = await this.buildTenantScopedQuery(trx, context)
-        .where(this.primaryKey, id)
-        .update(audited)
-        .returning('*');
-      if (!row) {
-        throw new Error('Resource not found or permission denied');
-      }
-      return row as IBoard;
-    });
-
-    await publishEvent({
-      eventType: 'BOARD_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        boardId: id,
-        userId: context.userId,
-        changes: { after: board },
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    return board;
+    return this.mutationTransaction(context, (trx, tenant) =>
+      updateBoardCore(trx, tenant, { userId: context.userId }, id, writable as never)
+    ).catch(rethrowBoardLifecycleRefusal);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
-    await super.delete(id, context);
+    // F112: every check the web delete runs — the default board, inbound defaults, a sender route,
+    // settings that point at the board, tickets — and the same cleanup afterwards. `force` is on
+    // because an API caller cannot answer a second prompt; the blocking checks still block.
+    const { knex } = await this.getKnex();
+    const result = await this.mutationTransaction(context, (trx, tenant) =>
+      deleteBoardCore({ db: knex, trx }, tenant, { userId: context.userId }, id, {
+        force: true,
+        cleanupItil: false,
+      })
+    );
 
-    await publishEvent({
-      eventType: 'BOARD_DELETED',
-      payload: {
-        tenantId: context.tenant,
-        boardId: id,
-        userId: context.userId,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    if (!result.success) {
+      if (result.code === 'NOT_FOUND') {
+        throw new NotFoundError(result.message ?? 'Board not found');
+      }
+      throw new ConflictError(result.message ?? 'Cannot delete board');
+    }
   }
 
-  /**
-   * List boards with optional inactive filtering
-   */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IBoard>> {
     const { knex } = await this.getKnex();
 

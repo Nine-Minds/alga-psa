@@ -923,8 +923,42 @@ const SURFACES: Surface[] = [
     surface: 'Board create, update and delete',
     commitGroup: 'board-lifecycle',
     claims: [],
-    expectedFail:
-      'the REST board API writes a raw row with no statuses, ITIL rows or default priority, and its delete skips every web check',
+    probe: async (db, fixture) => {
+      const { createBoardCore, deleteBoardCore } = await import(
+        '../../../../packages/tickets/src/services/boardLifecycle'
+      );
+
+      // A second ITIL board created through the one lifecycle: statuses, its own copy of the
+      // standard set, and a default priority of the ITIL family — the same rows the first one has.
+      const created = await db.transaction((trx) =>
+        createBoardCore(trx, fixture.tenantId, { userId: fixture.userId }, {
+          board_name: `ITIL Three ${Date.now()}`,
+          category_type: 'itil',
+          priority_type: 'itil',
+        } as never)
+      );
+      const boardId = created.board_id as string;
+      const tt = (table: string) => tenantDb(db, fixture.tenantId).table(table);
+
+      expect(created.default_priority_id).toBe(fixture.itilPriorityIds[3]);
+      expect((await tt('statuses').where({ board_id: boardId })).length).toBeGreaterThan(0);
+      const standardCount = Object.keys(fixture.itilCategoryIdsByBoard[fixture.boards.itilOne]).length;
+      const copies = await tt('categories').where({ board_id: boardId }).whereNotNull('standard_category_id');
+      expect(copies).toHaveLength(standardCount);
+
+      // And the other ITIL boards kept exactly their own sets.
+      for (const other of [fixture.boards.itilOne, fixture.boards.itilTwo]) {
+        expect(
+          (await tt('categories').where({ board_id: other }).whereNotNull('standard_category_id')).length
+        ).toBe(standardCount);
+      }
+
+      const deleted = await db.transaction((trx) =>
+        deleteBoardCore({ db, trx }, fixture.tenantId, { userId: fixture.userId }, boardId, { force: true })
+      );
+      expect(deleted.success).toBe(true);
+      expect(await tt('categories').where({ board_id: boardId })).toHaveLength(0);
+    },
   },
   {
     surface: 'Board type switch',

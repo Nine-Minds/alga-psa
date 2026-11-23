@@ -20,16 +20,20 @@ describe('onboarding ticketing tenant-scoped query contract', () => {
     const section = sectionBetween('export const configureTicketing', 'export const validateOnboardingDefaults');
 
     expect(section).toContain("tenantScopedTable('next_number')");
+    // The board row itself is written by `createBoardCore`
+    // (`@alga-psa/tickets/services/boardLifecycle`), which the settings screen and the REST API
+    // also call, so the wizard's board gets its default priority and statuses from the one
+    // implementation (ee/plans/2026-11-21-itil-remediation, F111). That function is tenant-scoped
+    // itself; what this contract keeps is that nothing here reaches `boards` unscoped.
+    expect(section).toContain("createBoardCore(");
     expect(section).toContain("tenantScopedTable('boards')");
     expect(section).toContain("tenantScopedTable('categories')");
     expect(section).toContain("tenantScopedTable('statuses')");
     expect(section).toContain("tenantScopedTable('priorities')");
     expect(section).toContain("await tenantScopedTable('next_number').insert({");
-    expect(section).toContain("await tenantScopedTable('boards').insert({");
     expect(section).toContain("await tenantScopedTable('categories').insert({");
     expect(section).toContain("await tenantScopedTable('statuses').insert({");
     expect(section).toContain("await tenantScopedTable('priorities').insert({");
-    expect(section).toContain(".unscoped('boards', 'columnInfo reads schema metadata, not tenant rows')");
 
     expect(section).not.toMatch(/trx\('(next_number|boards|categories|statuses|priorities)'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(section).not.toMatch(/trx\('(next_number|boards|categories|statuses|priorities)'\)\.where\(\{\s*tenant/);

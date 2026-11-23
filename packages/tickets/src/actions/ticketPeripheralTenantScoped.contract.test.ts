@@ -7,6 +7,10 @@ import { resolve } from 'node:path';
 const source = (relativePath: string) => readFileSync(resolve(__dirname, relativePath), 'utf8');
 
 const boardActions = source('board-actions/boardActions.ts');
+// Board create, update and delete moved to one service the settings actions and the REST board
+// API both call (ee/plans/2026-11-21-itil-remediation, F103); the same scoping contract holds
+// there, so it is read as part of the board surface.
+const boardLifecycle = source('../services/boardLifecycle.ts');
 const exportActions = source('ticketExportActions.ts');
 const formActions = source('ticketFormActions.ts');
 const importActions = source('ticketImportActions.ts');
@@ -45,7 +49,9 @@ function expectNoDirectTenantRoots(sourceText: string): void {
 describe('ticket peripheral action tenant-scoped query contract', () => {
   it('routes tenant-owned roots through tenantDb in the owned peripheral action files', () => {
     expect(boardActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
-    expect(boardActions).toContain("tenantScopedTable('status_sla_pause_config')");
+    // The lifecycle service scopes its own board reads and writes the same way.
+    expect(boardLifecycle).toContain("tenantScopedTable<IBoard>('boards')");
+    expect(boardLifecycle).toContain("tenantScopedTable('status_sla_pause_config')");
     expect(exportActions).toContain('const tenantScopedDb = tenantDb(db, tenant)');
     expect(formActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
     expect(importActions).toContain("tenantScopedTable('boards')");
@@ -54,6 +60,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
 
   it('does not leave direct query roots for tenant-owned peripheral tables', () => {
     expectNoDirectTenantRoots(boardActionsWithoutStats);
+    expectNoDirectTenantRoots(boardLifecycle);
     expectNoDirectTenantRoots(exportActions);
     expectNoDirectTenantRoots(formActions);
     expectNoDirectTenantRoots(importActions);
@@ -67,7 +74,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
   });
 
   it('keeps board schema/reference access outside the tenant facade', () => {
-    expect(boardActions).toContain("tenantDb(trx, tenant).table('standard_statuses')");
-    expect(boardActions.match(/tenantDb\(trx, tenant\)\.table\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
+    expect(boardLifecycle).toContain("tenantDb(trx, tenant).table('standard_statuses')");
+    expect(boardLifecycle.match(/tenantDb\(trx, tenant\)\.table\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
   });
 });

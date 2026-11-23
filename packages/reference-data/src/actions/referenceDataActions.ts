@@ -7,6 +7,7 @@ import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { defaultPriorityForBoard } from '@alga-psa/shared/lib/tickets/boardFieldRules';
 import { BOARD_PERMISSION_DENIED, evaluateBoardMutationPolicy } from '@alga-psa/auth/boardPolicy';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -622,6 +623,18 @@ export const importReferenceData = withAuth(async (
 
 	      if (dataType === 'boards') {
 	        await seedBoardTicketStatusesFromStandards(trx, tenant, savedItem.board_id, user.user_id);
+	        // R7/F111: an imported board gets a default priority, as one created in settings does,
+	        // so Quick Add on it is not empty. The board create itself lives in
+	        // `@alga-psa/tickets/services/boardLifecycle`, which this package cannot import (tickets
+	        // already depends on reference-data), so the rule is taken from the shared module both
+	        // of them use. A standard board carries no ITIL kind, so there is no ITIL setup to run.
+	        const defaultPriorityId = await defaultPriorityForBoard(trx, tenant, savedItem.board_id);
+	        if (defaultPriorityId) {
+	          await tenantDb(trx, tenant).table('boards')
+	            .where({ board_id: savedItem.board_id })
+	            .update({ default_priority_id: defaultPriorityId });
+	          savedItem.default_priority_id = defaultPriorityId;
+	        }
 	      }
 
 	      if (dataType === 'boards') {

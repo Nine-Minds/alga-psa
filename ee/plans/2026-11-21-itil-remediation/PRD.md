@@ -145,6 +145,18 @@ All new strings go through `t()` in every locale; every new interactive element 
 - Shared module `shared/lib/tickets/boardFieldRules.ts`: plain functions taking a knex connection or transaction and a tenant, so server actions, REST services, co-managed and `shared/workflow` can all call it. The Impact × Urgency matrix moves to `shared/lib/itil/priorityMatrix.ts`.
 - REST: `GET /api/v1/tickets/priorities` accepts `board_id` and returns `itil_priority_level`. Board create, update and delete behave like the web. Board `PUT` with a changed kind runs the type switch. Category create, update and delete enforce R2. The priority API stays read-only. OpenAPI is regenerated.
 
+### Board lifecycle, one deviation
+
+`createBoardCore`, `updateBoardCore` and `deleteBoardCore` live in
+`packages/tickets/src/services/boardLifecycle.ts`; the board server actions and the REST
+`BoardService` both call them, and so does the onboarding wizard.
+
+The reference-data board import does not: `packages/tickets` depends on `packages/reference-data`,
+so importing the create back would be a cycle (the same reason its board *delete* refuses boards
+outright). It applies R7 through the shared rules module both sides use, so an imported board gets
+a default priority; its statuses were already seeded there, and a `standard_boards` row carries no
+ITIL kind, so there is no ITIL setup to run for it.
+
 ### Category migration
 
 One migration, idempotent, run per tenant, Citus-safe (self-contained `tenantDb` shim, values selected then updated by parameter, `transaction: false`). The order matters: the mapping is built and used before any flag is cleared.

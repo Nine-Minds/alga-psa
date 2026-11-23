@@ -923,7 +923,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board create, update and delete logic is extracted from the server actions into plain functions taking a transaction, tenant and actor; the actions add only authentication"
   },
   {
@@ -932,7 +932,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST BoardService create, update and delete call those functions"
   },
   {
@@ -941,7 +941,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board create inserts the board, runs ITIL setup, then picks the default priority, then seeds statuses"
   },
   {
@@ -950,7 +950,7 @@
     "prdRefs": [
       "R7"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A supplied default_priority_id is checked against the board's priority family on create and update"
   },
   {
@@ -959,7 +959,7 @@
     "prdRefs": [
       "R1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Creating a board with different category and priority kinds is refused on web and REST"
   },
   {
@@ -968,7 +968,7 @@
     "prdRefs": [
       "R1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "An update that changes either kind to a mixed combination is refused; an existing mixed board still saves other edits"
   },
   {
@@ -977,7 +977,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "default_assigned_team_id is saved on board create"
   },
   {
@@ -986,7 +986,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Board create returns, and BOARD_CREATED carries, the row as it is after setup"
   },
   {
@@ -995,7 +995,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Reference-data board import and the onboarding board insert go through the shared create function"
   },
   {
@@ -1004,7 +1004,7 @@
     "prdRefs": [
       "Problem 4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST board delete refuses with the same reasons as the web delete"
   },
   {

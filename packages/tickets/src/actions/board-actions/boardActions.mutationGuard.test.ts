@@ -57,6 +57,12 @@ function createTrx() {
   return ((table: string) => {
     reads.push(table);
     const builder: any = {
+      // The create now asks the shared board field rules for its default priority (R7), which
+      // awaits the builder itself: an empty result means "no priority fits", which is what this
+      // harness wants — it is about the guard, not about priorities.
+      then: (resolve: (rows: unknown[]) => unknown) => resolve([]),
+      orWhereNull: vi.fn(() => builder),
+      pluck: vi.fn(async () => []),
       where: vi.fn(() => builder),
       whereNot: vi.fn(() => builder),
       whereNull: vi.fn(() => builder),

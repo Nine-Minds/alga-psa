@@ -2,6 +2,7 @@
 
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createBoardCore } from '@alga-psa/tickets/services/boardLifecycle';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -922,30 +923,33 @@ export const configureTicketing = withAuth(async (
         createdIds.boardId.push(boardId);
       } else if (data.boardName) {
         // This is a manually created board
-        boardId = require('crypto').randomUUID();
-        const shouldBeDefault = data.isDefaultBoard || false;
-        const boardColumns = await tenantDb(trx, tenant)
-          .unscoped('boards', 'columnInfo reads schema metadata, not tenant rows')
-          .columnInfo();
-        
-        // If setting as default, clear any existing defaults first
-        if (shouldBeDefault) {
-          await tenantScopedTable('boards')
-            .where({ 
-              is_default: true
-            })
-            .update({ is_default: false });
-        }
-        
-        await tenantScopedTable('boards').insert({
-          board_id: boardId,
+        // F111: the wizard's board goes through the one board create, so it gets a default
+        // priority (R7) and its statuses exactly as a board made in settings does. The statuses
+        // the wizard collected are passed in; the loop below then finds them already there.
+        const createdBoard = await createBoardCore(
+          trx,
           tenant,
-          board_name: data.boardName,
-          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_active') ? { is_active: true } : {}),
-          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_inactive') ? { is_inactive: false } : {}),
-          is_default: shouldBeDefault
-        });
-        
+          { userId: currentUser.user_id },
+          {
+            board_name: data.boardName,
+            is_default: data.isDefaultBoard || false,
+            is_inactive: false,
+            ...(Array.isArray(data.statuses) && data.statuses.length > 0
+              ? {
+                  ticket_statuses: data.statuses
+                    .filter((status: any) => !status.status_id || String(status.status_id).startsWith('manual-'))
+                    .map((status: any) => ({
+                      name: status.name,
+                      is_closed: Boolean(status.is_closed),
+                      is_default: Boolean(status.is_default),
+                      order_number: status.order_number ?? 0,
+                    })),
+                }
+              : {}),
+          }
+        );
+        boardId = createdBoard.board_id as string;
+
         createdIds.boardId.push(boardId);
       }
 
