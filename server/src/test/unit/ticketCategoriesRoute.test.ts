@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * GET /api/v1/tickets/categories resolves a board's categories the way the web
- * does. An ITIL board is the interesting case: the standards are copied into
- * `categories` once per tenant and stamped with the *first* board that enabled
- * ITIL, so filtering by board_id leaves every later ITIL board with an empty
- * picker — and a board whose close rules require a category could then never be
- * satisfied from the phone, which is the bug this surface exists to fix.
+ * does, through the shared lister. An ITIL board is the interesting case: every
+ * ITIL board owns its own copy of the standard set (D9), so the board's own rows
+ * are the answer on an ITIL board too and a second ITIL board is no longer left
+ * with an empty picker — a board whose close rules require a category could
+ * otherwise never be satisfied from the phone, which is the bug this surface
+ * exists to fix.
  */
 
 const mockState = vi.hoisted(() => ({
@@ -120,24 +121,40 @@ beforeEach(() => {
     { board_id: ITIL_BOARD_B, category_type: 'itil' },
     { board_id: CUSTOM_BOARD, category_type: 'custom' },
   ];
-  // The ITIL copy stamped board A, the board that enabled ITIL first; board B
-  // owns none of them even though it is an ITIL board too.
+  // D9: each ITIL board owns its own copy of the standard set, so board B has
+  // its own Hardware/Laptop pair rather than borrowing board A's.
   mockState.categories = [
     {
-      category_id: 'itil-parent',
+      category_id: 'itil-a-parent',
       category_name: 'Hardware',
       parent_category: null,
       board_id: ITIL_BOARD_A,
       display_order: 1,
-      is_from_itil_standard: true,
+      is_from_itil_standard: false,
     },
     {
-      category_id: 'itil-child',
+      category_id: 'itil-a-child',
       category_name: 'Laptop',
-      parent_category: 'itil-parent',
+      parent_category: 'itil-a-parent',
       board_id: ITIL_BOARD_A,
       display_order: 2,
-      is_from_itil_standard: true,
+      is_from_itil_standard: false,
+    },
+    {
+      category_id: 'itil-b-parent',
+      category_name: 'Hardware',
+      parent_category: null,
+      board_id: ITIL_BOARD_B,
+      display_order: 1,
+      is_from_itil_standard: false,
+    },
+    {
+      category_id: 'itil-b-child',
+      category_name: 'Laptop',
+      parent_category: 'itil-b-parent',
+      board_id: ITIL_BOARD_B,
+      display_order: 2,
+      is_from_itil_standard: false,
     },
     {
       category_id: 'custom-parent',
@@ -151,23 +168,23 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/tickets/categories', () => {
-  it('gives a second ITIL board the tenant ITIL standards, not an empty list', async () => {
+  it('gives a second ITIL board its own standard set, not an empty list', async () => {
     const { status, body } = await get(ITIL_BOARD_B);
 
     expect(status).toBe(200);
     expect(body.data.map((c: { category_id: string }) => c.category_id)).toEqual([
-      'itil-parent',
-      'itil-child',
+      'itil-b-parent',
+      'itil-b-child',
     ]);
-    // Keyed on the ITIL flag, never on this board's own id.
-    expect(mockState.categoryFilters).toEqual([{ is_from_itil_standard: true }]);
+    // Keyed on this board's own id, never on the ITIL flag.
+    expect(mockState.categoryFilters).toEqual([{ board_id: ITIL_BOARD_B }]);
   });
 
   it('keeps the parent/child pair so a required subcategory is reachable', async () => {
     const { body } = await get(ITIL_BOARD_B);
 
-    const child = body.data.find((c: { category_id: string }) => c.category_id === 'itil-child');
-    expect(child.parent_category).toBe('itil-parent');
+    const child = body.data.find((c: { category_id: string }) => c.category_id === 'itil-b-child');
+    expect(child.parent_category).toBe('itil-b-parent');
   });
 
   it('filters a custom board by its own board_id', async () => {
@@ -177,7 +194,7 @@ describe('GET /api/v1/tickets/categories', () => {
     expect(mockState.categoryFilters).toEqual([{ board_id: CUSTOM_BOARD }]);
   });
 
-  it('falls back to board_id when the board row is missing', async () => {
+  it('needs no board row to list a board, the rows it owns are the answer', async () => {
     mockState.boards = [];
 
     const { status } = await get(CUSTOM_BOARD);
@@ -189,14 +206,15 @@ describe('GET /api/v1/tickets/categories', () => {
   it('returns every tenant category when no board is given', async () => {
     const { body } = await get();
 
-    expect(body.data).toHaveLength(3);
+    expect(body.data).toHaveLength(5);
     expect(mockState.categoryFilters).toEqual([]);
   });
 
-  it('selects the picker fields in display order', async () => {
-    await get(CUSTOM_BOARD);
+  it('returns the picker fields in display order for a board', async () => {
+    const { body } = await get(CUSTOM_BOARD);
 
-    expect(mockState.selected).toEqual([
+    // The shared lister reads the whole row; the route projects the picker fields.
+    expect(Object.keys(body.data[0])).toEqual([
       'category_id',
       'category_name',
       'parent_category',
@@ -206,6 +224,18 @@ describe('GET /api/v1/tickets/categories', () => {
     expect(mockState.orderBys).toEqual([
       ['display_order', 'asc'],
       ['category_name', 'asc'],
+    ]);
+  });
+
+  it('selects the picker fields itself when no board is given', async () => {
+    await get();
+
+    expect(mockState.selected).toEqual([
+      'category_id',
+      'category_name',
+      'parent_category',
+      'board_id',
+      'display_order',
     ]);
   });
 

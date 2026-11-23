@@ -243,8 +243,11 @@ describe('search index source event publishing contracts', () => {
     const timeEntrySource =
       readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts') +
       readRepoFile('server/src/lib/api/services/TimeEntryService.ts');
+    // Board create/update/delete live in the shared lifecycle module that both the web action
+    // and the REST service call (F103/F110), so that is where the events are published.
     const boardSource =
       readRepoFile('packages/tickets/src/actions/board-actions/boardActions.ts') +
+      readRepoFile('packages/tickets/src/services/boardLifecycle.ts') +
       readRepoFile('server/src/lib/api/services/BoardService.ts');
     const categorySource =
       readRepoFile('packages/tickets/src/actions/ticketCategoryActions.ts') +
