@@ -1229,7 +1229,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "docs/itil/itil-integration.md is rewritten to describe the rules, the data model and the board lifecycle as built"
   },
   {
@@ -1238,7 +1238,7 @@
     "prdRefs": [
       "Acceptance Criteria"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "docs/itil/ITIL_Integration_Plan.md moves to docs/archive"
   },
   {
@@ -1247,7 +1247,7 @@
     "prdRefs": [
       "Gotchas"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "scripts/reports/priority-board-mismatch.sql category sections compare the category's board with the ticket's board"
   },
   {
@@ -1256,7 +1256,7 @@
     "prdRefs": [
       "Data Model and API"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "OpenAPI is regenerated for the board, category, priority and ticket schema changes"
   }
 ]

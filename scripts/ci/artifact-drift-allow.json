@@ -1063,5 +1063,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/requestBody/content/application~1json/schema/$ref",
     "reason": "alga-2026-0003355: the body is now AccessBulkDeactivateUsersBodyV1 (user_ids[1..100] plus deactivate) instead of the single-user AccessUpdateUserBodyV1 the mis-wired route documented. That wiring read the literal path segment 'bulk' as {id} and rejected every request with 'Invalid user ID format' before it looked at the body, so no caller can have depended on the update shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/BoardApiResponse/properties/display_itil_impact",
+    "reason": "ITIL remediation (ee/plans/2026-11-21-itil-remediation, F134): boards.display_itil_impact and boards.display_itil_urgency are dropped \u2014 they were written by board create and read by nothing, and whether a form shows Impact and Urgency follows from the board's priority_type. Both keys are still accepted on create and update payloads so an older client still saves; only the response stops describing them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/BoardApiResponse/properties/display_itil_urgency",
+    "reason": "ITIL remediation (ee/plans/2026-11-21-itil-remediation, F134): boards.display_itil_impact and boards.display_itil_urgency are dropped \u2014 they were written by board create and read by nothing, and whether a form shows Impact and Urgency follows from the board's priority_type. Both keys are still accepted on create and update payloads so an older client still saves; only the response stops describing them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/BoardApiResponse/properties/display_itil_impact",
+    "reason": "ITIL remediation (ee/plans/2026-11-21-itil-remediation, F134): boards.display_itil_impact and boards.display_itil_urgency are dropped \u2014 they were written by board create and read by nothing, and whether a form shows Impact and Urgency follows from the board's priority_type. Both keys are still accepted on create and update payloads so an older client still saves; only the response stops describing them."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/BoardApiResponse/properties/display_itil_urgency",
+    "reason": "ITIL remediation (ee/plans/2026-11-21-itil-remediation, F134): boards.display_itil_impact and boards.display_itil_urgency are dropped \u2014 they were written by board create and read by nothing, and whether a form shows Impact and Urgency follows from the board's priority_type. Both keys are still accepted on create and update payloads so an older client still saves; only the response stops describing them."
   }
 ]

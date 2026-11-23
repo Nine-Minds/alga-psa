@@ -1033,6 +1033,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketCategoriesQuery',
     zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter categories to this board.') }),
   );
+  const TicketPrioritiesQuery = registry.registerSchema(
+    'WorkV1TicketPrioritiesQuery',
+    zOpenApi.object({
+      board_id: zOpenApi
+        .string()
+        .uuid()
+        .optional()
+        .describe('Return only the priorities this board accepts.'),
+    }),
+  );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
     zOpenApi.object({ comment_text: zOpenApi.string().min(1).max(5000).describe('Updated comment text (1–5000 visible chars).') }),
@@ -1152,8 +1162,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/priorities',
     summary: 'List ticket priorities',
-    description: 'Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.',
+    description: 'Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard and itil_priority_level. With board_id, only the priorities that board accepts: a board whose priority_type is itil accepts only ITIL priorities, any other board only the custom ones.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketPrioritiesQuery },
     responses: ticketStdResponses({ code: 200, description: 'Ticket priorities.' }, false),
     extensions: ticketExt('read'), edition: 'both',
   });
@@ -1292,8 +1303,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     category_id: zOpenApi.string().guid().nullable().optional().describe('Category on that board; a subcategory requires its parent category.'),
     subcategory_id: zOpenApi.string().guid().nullable().optional(),
     priority_id: zOpenApi.string().guid().nullable().optional().describe('Priority. Resolve with GET /api/v1/tickets/priorities first.'),
-    itil_impact: zOpenApi.number().int().min(1).max(5).nullable().optional(),
-    itil_urgency: zOpenApi.number().int().min(1).max(5).nullable().optional(),
+    itil_impact: zOpenApi.number().int().min(1).max(5).nullable().optional().describe('ITIL Impact, 1 (widest) to 5 (one user). Stored only when the template’s board uses ITIL priorities; supplying it with itil_urgency decides the priority through the ITIL matrix and any priority_id is ignored.'),
+    itil_urgency: zOpenApi.number().int().min(1).max(5).nullable().optional().describe('ITIL Urgency, 1 (work stopped) to 5 (work continues). Supply it together with itil_impact; one without the other is refused.'),
     tags: zOpenApi.array(zOpenApi.string().min(1).max(100)).max(50).optional().describe('Tag text applied to the created ticket (tag definitions are created as needed).'),
     custom_fields: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Custom field values copied onto the ticket.'),
     offer_for_manual_use: zOpenApi.boolean().optional().describe('Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use.'),

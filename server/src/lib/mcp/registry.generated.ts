@@ -37403,7 +37403,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/boards/{id}",
     "displayName": "Delete board",
     "summary": "Delete board",
-    "description": "Deletes a board by its UUID. This will fail if the board has associated tickets.",
+    "description": "Deletes a board by its UUID. This will fail if the board has associated tickets. Deleting the last ITIL board releases the ITIL categories and priorities it held and retires the auto-created ITIL Standard SLA policy when nothing else points at it.",
     "tags": [
       "Boards"
     ],
@@ -38245,7 +38245,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket",
     "displayName": "Create ticket category",
     "summary": "Create ticket category",
-    "description": "Creates a ticket category row for one board. Requires ticket_settings:create permission.",
+    "description": "Creates a ticket category row for one board. A board that uses the standard ITIL categories owns exactly that set, so a create on it is refused with 400. Requires ticket_settings:create permission.",
     "tags": [
       "Ticket Categories"
     ],
@@ -38327,7 +38327,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket/{id}",
     "displayName": "Update ticket category",
     "summary": "Update ticket category",
-    "description": "Updates one ticket category by category_id. Requires ticket_settings:update permission.",
+    "description": "Updates one ticket category by category_id. A standard ITIL category cannot be renamed or re-parented while its board uses the standard set (400). Requires ticket_settings:update permission.",
     "tags": [
       "Ticket Categories"
     ],
@@ -38381,7 +38381,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket/{id}",
     "displayName": "Delete ticket category",
     "summary": "Delete ticket category",
-    "description": "Deletes one ticket category by category_id. Requires ticket_settings:delete permission.",
+    "description": "Deletes one ticket category by category_id. A standard ITIL category cannot be deleted while its board uses the standard set (400). Requires ticket_settings:delete permission.",
     "tags": [
       "Ticket Categories"
     ],
@@ -38496,7 +38496,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket/move",
     "displayName": "Move ticket category in hierarchy",
     "summary": "Move ticket category in hierarchy",
-    "description": "Moves a ticket category under a new parent. Requires ticket_settings:update permission.",
+    "description": "Moves a ticket category under a new parent. A standard ITIL category cannot be moved while its board uses the standard set (400). Requires ticket_settings:update permission.",
     "tags": [
       "Ticket Categories"
     ],
@@ -54918,12 +54918,24 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/priorities",
     "displayName": "List ticket priorities",
     "summary": "List ticket priorities",
-    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard and itil_priority_level. With board_id, only the priorities that board accepts: a board whose priority_type is itil accepts only ITIL priorities, any other board only the custom ones.",
     "tags": [
       "Work Management v1"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Return only the priorities this board accepts.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Return only the priorities this board accepts."
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -55787,7 +55799,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "minimum": 1,
-          "maximum": 5
+          "maximum": 5,
+          "description": "ITIL Impact, 1 (widest) to 5 (one user). Stored only when the template’s board uses ITIL priorities; supplying it with itil_urgency decides the priority through the ITIL matrix and any priority_id is ignored."
         },
         "itil_urgency": {
           "type": [
@@ -55795,7 +55808,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "minimum": 1,
-          "maximum": 5
+          "maximum": 5,
+          "description": "ITIL Urgency, 1 (work stopped) to 5 (work continues). Supply it together with itil_impact; one without the other is refused."
         },
         "tags": {
           "type": "array",
@@ -56096,7 +56110,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "minimum": 1,
-          "maximum": 5
+          "maximum": 5,
+          "description": "ITIL Impact, 1 (widest) to 5 (one user). Stored only when the template’s board uses ITIL priorities; supplying it with itil_urgency decides the priority through the ITIL matrix and any priority_id is ignored."
         },
         "itil_urgency": {
           "type": [
@@ -56104,7 +56119,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "minimum": 1,
-          "maximum": 5
+          "maximum": 5,
+          "description": "ITIL Urgency, 1 (work stopped) to 5 (work continues). Supply it together with itil_impact; one without the other is refused."
         },
         "tags": {
           "type": "array",

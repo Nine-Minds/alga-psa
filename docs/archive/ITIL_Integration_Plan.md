@@ -1,5 +1,9 @@
 # ITIL Integration Plan for AlgaPSA
 
+> **Archived.** This is the original design document, kept for its reasoning. What is built is
+> described in [`docs/itil/itil-integration.md`](../itil/itil-integration.md); where the two differ,
+> that document is right.
+
 ## Overview
 
 This document outlines the comprehensive plan for integrating ITIL (Information Technology Infrastructure Library) v4 best practices into the AlgaPSA (Professional Services Automation) platform. The integration focuses on three core ITIL processes: Incident Management, Problem Management, and Change Management.

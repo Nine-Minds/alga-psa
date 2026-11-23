@@ -3,10 +3,12 @@
 --   psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/reports/priority-board-mismatch.sql
 -- (The whole script runs inside a READ ONLY transaction.)
 --
--- Family rules mirror findPriorityBoardTypeProblem (packages/tickets/src/lib/ticketFieldReferences.ts):
+-- Family rules mirror findBoardFieldProblems (shared/lib/tickets/boardFieldRules.ts):
 --   board is ITIL  <=>  boards.priority_type = 'itil'   (NULL = custom)
 --   priority is ITIL <=> priorities.is_from_itil_standard IS TRUE (NULL = custom)
---   mismatch when the two differ.
+--   mismatch when the two differ (R3).
+-- Categories are not a family question (R2): a category is valid for a row when its board is the
+-- row's board, so sections 4+ compare `categories.board_id` with the board the row points at.
 -- Output: one result set per section, one row per tenant that has at least one mismatch.
 
 BEGIN READ ONLY;
@@ -77,17 +79,23 @@ WHERE COALESCE(k.is_closed, false) = false
   AND (COALESCE(b.priority_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(p.is_from_itil_standard, false)
 GROUP BY k.tenant ORDER BY k.tenant;
 
--- 4. INFORMATIONAL ONLY (category type validation is out of scope): category family vs boards.category_type.
---    Category is ITIL <=> categories.is_from_itil_standard IS TRUE (NULL = custom).
-SELECT 'ticket_templates: category_type (info)' AS source, t.tenant, count(*) AS mismatched, count(*) FILTER (WHERE t.is_active) AS mismatched_active
+-- 4. Category vs board (R2): the category a row holds must belong to the board that row points at.
+--    A category with no board is a mismatch too — no picker offers it and no write accepts it; the
+--    row that already holds one keeps it and stays editable (R5). `boardless` splits those out.
+--    After the category migration each ITIL board owns its copy of the standard set, so a tenant
+--    whose boards are clean returns no rows here.
+SELECT 'ticket_templates: category board' AS source, t.tenant, count(*) AS mismatched,
+       count(*) FILTER (WHERE t.is_active) AS mismatched_active,
+       count(*) FILTER (WHERE c.board_id IS NULL) AS boardless
 FROM ticket_templates t
 JOIN boards b     ON b.tenant = t.tenant AND b.board_id = t.board_id
 JOIN categories c ON c.tenant = t.tenant AND c.category_id = t.category_id
-WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(c.is_from_itil_standard, false)
+WHERE c.board_id IS DISTINCT FROM b.board_id
 GROUP BY t.tenant ORDER BY t.tenant;
 
-SELECT 'recurring_ticket_definitions: category_type (info, effective)' AS source, d.tenant, count(*) AS mismatched,
-       count(*) FILTER (WHERE d.is_active AND d.archived_at IS NULL) AS mismatched_active
+SELECT 'recurring_ticket_definitions: category board (effective)' AS source, d.tenant, count(*) AS mismatched,
+       count(*) FILTER (WHERE d.is_active AND d.archived_at IS NULL) AS mismatched_active,
+       count(*) FILTER (WHERE c.board_id IS NULL) AS boardless
 FROM recurring_ticket_definitions d
 JOIN ticket_templates t ON t.tenant = d.tenant AND t.template_id = d.ticket_template_id
 JOIN boards b     ON b.tenant = d.tenant
@@ -97,12 +105,13 @@ JOIN categories c ON c.tenant = d.tenant
                    WHEN d.overrides ? 'category' THEN (d.overrides #>> '{category,category_id}')::uuid
                    ELSE t.category_id
                  END
-WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(c.is_from_itil_standard, false)
+WHERE c.board_id IS DISTINCT FROM b.board_id
 GROUP BY d.tenant ORDER BY d.tenant;
 
-SELECT 'recurring_ticket_definition_clients: category_type (info, effective)' AS source, c.tenant,
+SELECT 'recurring_ticket_definition_clients: category board (effective)' AS source, c.tenant,
        count(*) AS mismatched,
-       count(*) FILTER (WHERE c.is_active AND d.is_active AND d.archived_at IS NULL) AS mismatched_active
+       count(*) FILTER (WHERE c.is_active AND d.is_active AND d.archived_at IS NULL) AS mismatched_active,
+       count(*) FILTER (WHERE cat.board_id IS NULL) AS boardless
 FROM recurring_ticket_definition_clients c
 JOIN recurring_ticket_definitions d ON d.tenant = c.tenant AND d.definition_id = c.definition_id
 JOIN ticket_templates t ON t.tenant = d.tenant AND t.template_id = d.ticket_template_id
@@ -115,15 +124,29 @@ JOIN categories cat ON cat.tenant = c.tenant
                      WHEN d.overrides ? 'category' THEN (d.overrides #>> '{category,category_id}')::uuid
                      ELSE t.category_id
                    END
-WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(cat.is_from_itil_standard, false)
+WHERE cat.board_id IS DISTINCT FROM b.board_id
 GROUP BY c.tenant ORDER BY c.tenant;
 
-SELECT 'tickets (open): category_type (info)' AS source, k.tenant, count(*) AS mismatched, count(*) AS mismatched_active
+SELECT 'tickets (open): category board' AS source, k.tenant, count(*) AS mismatched,
+       count(*) AS mismatched_active,
+       count(*) FILTER (WHERE c.board_id IS NULL) AS boardless
 FROM tickets k
 JOIN boards b     ON b.tenant = k.tenant AND b.board_id = k.board_id
 JOIN categories c ON c.tenant = k.tenant AND c.category_id = k.category_id
 WHERE COALESCE(k.is_closed, false) = false
-  AND (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(c.is_from_itil_standard, false)
+  AND c.board_id IS DISTINCT FROM b.board_id
+GROUP BY k.tenant ORDER BY k.tenant;
+
+-- 5. Subcategory (R2): it must be a child of the ticket's category, so its board is the ticket's
+--    board as well. Only open tickets; the same shape as section 4.
+SELECT 'tickets (open): subcategory board' AS source, k.tenant, count(*) AS mismatched,
+       count(*) AS mismatched_active,
+       count(*) FILTER (WHERE s.board_id IS NULL) AS boardless
+FROM tickets k
+JOIN boards b     ON b.tenant = k.tenant AND b.board_id = k.board_id
+JOIN categories s ON s.tenant = k.tenant AND s.category_id = k.subcategory_id
+WHERE COALESCE(k.is_closed, false) = false
+  AND (s.board_id IS DISTINCT FROM b.board_id OR s.parent_category IS DISTINCT FROM k.category_id)
 GROUP BY k.tenant ORDER BY k.tenant;
 
 ROLLBACK;

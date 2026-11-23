@@ -121,7 +121,7 @@ export function registerBoardRoutes(
     path: '/api/v1/boards',
     summary: 'Create board',
     description:
-      'Creates a new ticket board. After creating a board, create at least one status for it via POST /api/v1/statuses so tickets can be assigned to the board.',
+      'Creates a new ticket board, with the same result as creating one in settings: its ticket statuses, and on an ITIL board its own copy of the standard categories, a default ITIL priority and the ITIL Standard SLA policy. category_type and priority_type must match; a mixed pair is refused with 400.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -164,7 +164,7 @@ export function registerBoardRoutes(
     method: 'put',
     path: '/api/v1/boards/{id}',
     summary: 'Update board',
-    description: 'Updates an existing board. All fields are optional — only send the fields you want to change.',
+    description: 'Updates an existing board. All fields are optional — only send the fields you want to change. Changing category_type or priority_type switches the board type: both columns move together (a mixed pair is refused with 400), an ITIL board is given its own standard categories, and no ticket, template, schedule or SLA assignment is changed.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -208,7 +208,7 @@ export function registerBoardRoutes(
     method: 'delete',
     path: '/api/v1/boards/{id}',
     summary: 'Delete board',
-    description: 'Deletes a board by its UUID. This will fail if the board has associated tickets.',
+    description: 'Deletes a board by its UUID. This will fail if the board has associated tickets. Deleting the last ITIL board releases the ITIL categories and priorities it held and retires the auto-created ITIL Standard SLA policy when nothing else points at it.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {

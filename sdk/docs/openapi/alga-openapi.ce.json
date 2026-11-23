@@ -18428,18 +18428,6 @@
               null
             ]
           },
-          "display_itil_impact": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "display_itil_urgency": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
           "default_assigned_to": {
             "type": [
               "string",
@@ -18497,8 +18485,6 @@
           "is_inactive",
           "category_type",
           "priority_type",
-          "display_itil_impact",
-          "display_itil_urgency",
           "default_assigned_to",
           "default_assigned_team_id",
           "enable_live_ticket_timer",
@@ -19210,6 +19196,14 @@
               "boolean",
               "null"
             ]
+          },
+          "standard_category_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The standard category this row is the board’s copy of, or null for the tenant’s own category. The same standard id appears once per ITIL board."
           },
           "created_by": {
             "type": "string",
@@ -27000,6 +26994,16 @@
           }
         }
       },
+      "WorkV1TicketPrioritiesQuery": {
+        "type": "object",
+        "properties": {
+          "board_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Return only the priorities this board accepts."
+          }
+        }
+      },
       "WorkV1TicketCommentUpdateBody": {
         "type": "object",
         "properties": {
@@ -27480,7 +27484,8 @@
               "null"
             ],
             "minimum": 1,
-            "maximum": 5
+            "maximum": 5,
+            "description": "ITIL Impact, 1 (widest) to 5 (one user). Stored only when the template’s board uses ITIL priorities; supplying it with itil_urgency decides the priority through the ITIL matrix and any priority_id is ignored."
           },
           "itil_urgency": {
             "type": [
@@ -27488,7 +27493,8 @@
               "null"
             ],
             "minimum": 1,
-            "maximum": 5
+            "maximum": 5,
+            "description": "ITIL Urgency, 1 (work stopped) to 5 (work continues). Supply it together with itil_impact; one without the other is refused."
           },
           "tags": {
             "type": "array",
@@ -27683,7 +27689,8 @@
               "null"
             ],
             "minimum": 1,
-            "maximum": 5
+            "maximum": 5,
+            "description": "ITIL Impact, 1 (widest) to 5 (one user). Stored only when the template’s board uses ITIL priorities; supplying it with itil_urgency decides the priority through the ITIL matrix and any priority_id is ignored."
           },
           "itil_urgency": {
             "type": [
@@ -27691,7 +27698,8 @@
               "null"
             ],
             "minimum": 1,
-            "maximum": 5
+            "maximum": 5,
+            "description": "ITIL Urgency, 1 (work stopped) to 5 (work continues). Supply it together with itil_impact; one without the other is refused."
           },
           "tags": {
             "type": "array",
@@ -84488,7 +84496,7 @@
       },
       "post": {
         "summary": "Create board",
-        "description": "Creates a new ticket board. After creating a board, create at least one status for it via POST /api/v1/statuses so tickets can be assigned to the board.",
+        "description": "Creates a new ticket board, with the same result as creating one in settings: its ticket statuses, and on an ITIL board its own copy of the standard categories, a default ITIL priority and the ITIL Standard SLA policy. category_type and priority_type must match; a mixed pair is refused with 400.",
         "tags": [
           "Boards"
         ],
@@ -84637,7 +84645,7 @@
       },
       "put": {
         "summary": "Update board",
-        "description": "Updates an existing board. All fields are optional — only send the fields you want to change.",
+        "description": "Updates an existing board. All fields are optional — only send the fields you want to change. Changing category_type or priority_type switches the board type: both columns move together (a mixed pair is refused with 400), an ITIL board is given its own standard categories, and no ticket, template, schedule or SLA assignment is changed.",
         "tags": [
           "Boards"
         ],
@@ -84728,7 +84736,7 @@
       },
       "delete": {
         "summary": "Delete board",
-        "description": "Deletes a board by its UUID. This will fail if the board has associated tickets.",
+        "description": "Deletes a board by its UUID. This will fail if the board has associated tickets. Deleting the last ITIL board releases the ITIL categories and priorities it held and retires the auto-created ITIL Standard SLA policy when nothing else points at it.",
         "tags": [
           "Boards"
         ],
@@ -86016,7 +86024,7 @@
       },
       "post": {
         "summary": "Create ticket category",
-        "description": "Creates a ticket category row for one board. Requires ticket_settings:create permission.",
+        "description": "Creates a ticket category row for one board. A board that uses the standard ITIL categories owns exactly that set, so a create on it is refused with 400. Requires ticket_settings:create permission.",
         "tags": [
           "Ticket Categories"
         ],
@@ -86197,7 +86205,7 @@
       },
       "put": {
         "summary": "Update ticket category",
-        "description": "Updates one ticket category by category_id. Requires ticket_settings:update permission.",
+        "description": "Updates one ticket category by category_id. A standard ITIL category cannot be renamed or re-parented while its board uses the standard set (400). Requires ticket_settings:update permission.",
         "tags": [
           "Ticket Categories"
         ],
@@ -86303,7 +86311,7 @@
       },
       "delete": {
         "summary": "Delete ticket category",
-        "description": "Deletes one ticket category by category_id. Requires ticket_settings:delete permission.",
+        "description": "Deletes one ticket category by category_id. A standard ITIL category cannot be deleted while its board uses the standard set (400). Requires ticket_settings:delete permission.",
         "tags": [
           "Ticket Categories"
         ],
@@ -86540,7 +86548,7 @@
     "/api/v1/categories/ticket/move": {
       "post": {
         "summary": "Move ticket category in hierarchy",
-        "description": "Moves a ticket category under a new parent. Requires ticket_settings:update permission.",
+        "description": "Moves a ticket category under a new parent. A standard ITIL category cannot be moved while its board uses the standard set (400). Requires ticket_settings:update permission.",
         "tags": [
           "Ticket Categories"
         ],
@@ -109224,7 +109232,7 @@
     "/api/v1/tickets/priorities": {
       "get": {
         "summary": "List ticket priorities",
-        "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
+        "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard and itil_priority_level. With board_id, only the priorities that board accepts: a board whose priority_type is itil accepts only ITIL priorities, any other board only the custom ones.",
         "tags": [
           "Work Management v1"
         ],
@@ -109241,6 +109249,19 @@
         "x-alga-products": [
           "psa",
           "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Return only the priorities this board accepts."
+            },
+            "required": false,
+            "description": "Return only the priorities this board accepts.",
+            "name": "board_id",
+            "in": "query"
+          }
         ],
         "responses": {
           "200": {

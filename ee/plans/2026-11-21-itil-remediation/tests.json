@@ -2125,7 +2125,7 @@
     "featureIds": [
       "F137"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Every table, column, function and file named in the doc exists in the repository"
   },
   {
@@ -2134,7 +2134,7 @@
     "featureIds": [
       "F138"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "docs/itil holds only itil-integration.md and no doc links to the old plan path"
   },
   {
@@ -2143,7 +2143,7 @@
     "featureIds": [
       "F139"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The report runs read-only against a migrated database and returns no category rows for a tenant with two clean ITIL boards"
   },
   {
@@ -2152,7 +2152,7 @@
     "featureIds": [
       "F140"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The generated OpenAPI matches the route schemas with no diff after regeneration"
   }
 ]

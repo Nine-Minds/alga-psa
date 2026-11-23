@@ -805,10 +805,42 @@ lifecycle suite.
 - Run after the change: `npm run guard:ticket-board-field-rules` clean on the repository and
   `itilBoardFieldRulesGuard` 5/5.
 
-### Groups not started
+### Group 16 — docs
 
-Commit group 16 (`docs`) is untouched: its features and tests are still `implemented: false`.
-Groups 4, 5 and 6 reach production together (see Rollout) and are all on this branch.
+- **The old guide described a product that was never built.** `/api/itil/*` endpoints, an
+  `itilService` with keyword auto-categorisation, `itil_category` / `sla_breach` /
+  `escalation_level` columns on `tickets`, an escalation workflow: none of it exists. The rewrite
+  keeps only what is in the repository, and `itilDocumentation.test.ts` checks every file, table,
+  column and function the document names — a doc that drifts back into fiction fails a test.
+- **The report's category sections were comparing the wrong thing.** They matched the category's
+  *family* against `boards.category_type`, which after this plan says nothing: two ITIL rows on two
+  different boards passed. They now compare `categories.board_id` with the board the row points at
+  (R2), count boardless categories apart, and a subcategory section was added for the other half of
+  R2 (a subcategory is a child of the ticket's category, so it sits on the ticket's board).
+- **The report test runs the file, not a copy of its SQL.** The script is sent as one simple query
+  through a raw connection, the way `psql -f` runs it, so `BEGIN READ ONLY` … `ROLLBACK` really
+  brackets it. (`knex.raw` would have eaten the `?` JSON operators as bindings.) One case proves
+  the shape the category migration removes — a ticket on the second ITIL board still holding the
+  first board's copy — which the old family comparison could not see.
+- **OpenAPI needed route metadata, not only a regeneration.** Regenerating alone dropped the two
+  board display columns from `BoardApiResponse`; the priority list still documented no `board_id`,
+  and the board and category routes did not say what they now refuse. Those descriptions are the
+  only API documentation a caller gets, so they were updated and the artifacts regenerated with
+  `npm run generate:artifacts` (the MCP and chat registries carry the same descriptions).
+- **The removed response properties are a non-additive change** and the CI artifact gate is right
+  to stop on them: four entries in `scripts/ci/artifact-drift-allow.json` (two documents × two
+  properties) record why — the keys are still accepted on create and update, only the response
+  stops describing them.
+- Run after the change: `itilDocumentation` 5/5, `itilOpenApi` 6/6, `itilMismatchReport` 5/5,
+  `ticketCategoryRestSurface` + `ticketTemplatesApiMcp` 13/13, and
+  `node scripts/ci/artifact-drift.mjs --no-generate` reporting only the uncommitted-artifact drift
+  this commit carries.
+
+### Groups
+
+All 16 commit groups are implemented; `features.json` and `tests.json` hold no
+`implemented: false`. Groups 4, 5 and 6 reach production together (see Rollout) and are all on this
+branch.
 
 ## Commands
 

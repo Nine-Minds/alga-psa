@@ -1,501 +1,284 @@
-# ITIL Integration Guide
-
-This document provides comprehensive information about the ITIL (Information Technology Infrastructure Library) integration in AlgaPSA.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Implementation](#implementation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [ITIL Board and Priority Lifecycle](#itil-board-and-priority-lifecycle)
-- [API Reference](#api-reference)
-- [Workflows](#workflows)
-- [Best Practices](#best-practices)
-- [Troubleshooting](#troubleshooting)
-
-## Overview
-
-The ITIL integration enhances AlgaPSA's ticketing system with comprehensive ITIL v4 practices, providing structured incident management, problem management, and service level management capabilities.
-
-### Key Benefits
-
-- **Standardized Processes**: Implements ITIL best practices for incident management
-- **Automated Priority Calculation**: Uses Impact × Urgency matrix for consistent prioritization
-- **SLA Management**: Tracks service level agreements and breach notifications
-- **Escalation Management**: Automated escalation based on time thresholds
-- **Problem Management**: Links incidents to problems for root cause analysis
-- **Reporting & Analytics**: ITIL-specific metrics and KPI tracking
-
-## Features
-
-### 1. Enhanced Incident Management
-
-#### ITIL Priority Matrix
-The system uses a standard 5×5 Impact × Urgency matrix to calculate priority:
-
-| Impact \ Urgency | High (1) | Medium-High (2) | Medium (3) | Medium-Low (4) | Low (5) |
-|-------------------|----------|------------------|------------|----------------|--------|
-| **High (1)**      | Critical | High            | High       | Medium         | Medium  |
-| **Medium-High (2)** | High   | High            | Medium     | Medium         | Low     |
-| **Medium (3)**    | High     | Medium          | Medium     | Low            | Low     |
-| **Medium-Low (4)** | Medium  | Medium          | Low        | Low            | Planning|
-| **Low (5)**       | Medium   | Low             | Low        | Planning       | Planning|
-
-#### ITIL Fields Added to Tickets
-
-- **itil_impact**: Impact level (1-5)
-- **itil_urgency**: Urgency level (1-5)  
-- **itil_category**: ITIL incident category
-- **itil_subcategory**: ITIL incident subcategory
-- **resolution_code**: How the incident was resolved
-- **root_cause**: Root cause analysis
-- **workaround**: Temporary workaround description
-- **related_problem_id**: Link to related problem record
-- **sla_target**: Target resolution time
-- **sla_breach**: Whether SLA was breached
-- **escalated**: Whether ticket was escalated
-- **escalation_level**: Current escalation level (1-3)
-- **escalated_at**: When escalation occurred
-- **escalated_by**: Who escalated the ticket
-
-### 2. ITIL Categories
-
-#### Standard Categories and Subcategories
-
-**Hardware**
-- Server
-- Desktop/Laptop
-- Network Equipment
-- Printer
-- Storage
-- Mobile Device
-
-**Software**
-- Application
-- Operating System
-- Database
-- Security Software
-- Productivity Software
-- Custom Application
-
-**Network**
-- Connectivity
-- VPN
-- Wi-Fi
-- Internet
-- LAN/WAN
-- DNS
-
-**Security**
-- Malware
-- Unauthorized Access
-- Data Breach
-- Phishing
-- Policy Violation
-- Account Lockout
-
-**Service Request**
-- Access Request
-- New User Setup
-- Software Installation
-- Equipment Request
-- Information Request
-- Password Reset
-
-### 3. SLA Management
-
-#### Priority-Based SLA Targets
-
-| Priority | Target Resolution Time |
-|----------|-----------------------|
-| Critical | 1 hour              |
-| High     | 4 hours             |
-| Medium   | 24 hours (1 day)    |
-| Low      | 72 hours (3 days)   |
-| Planning | 168 hours (1 week)  |
-
-> **Product note:** The "ITIL Standard" SLA policy is automatically created only for AlgaPSA tenants. AlgaDesk tenants that select ITIL priority mode still benefit from the Impact × Urgency priority matrix for ticket classification and prioritisation, but the SLA policy is not auto-created and SLA breach notifications are not emitted. This prevents AlgaDesk — which does not include SLA management — from generating spurious breach alerts. All other ITIL workflows (priority calculation, categories, escalation) apply equally to both products.
-
-#### Escalation Thresholds
-
-- **Level 1**: 70% of SLA target
-- **Level 2**: 90% of SLA target  
-- **Level 3**: 110% of SLA target (breached)
-
-## Implementation
-
-### Database Changes
-
-The integration adds several new fields to the `tickets` table:
-
-```sql
--- ITIL Impact and Urgency (1-5 scale)
-ALTER TABLE tickets ADD COLUMN itil_impact INTEGER CHECK (itil_impact >= 1 AND itil_impact <= 5);
-ALTER TABLE tickets ADD COLUMN itil_urgency INTEGER CHECK (itil_urgency >= 1 AND itil_urgency <= 5);
-
--- ITIL Categories
-ALTER TABLE tickets ADD COLUMN itil_category VARCHAR(255);
-ALTER TABLE tickets ADD COLUMN itil_subcategory VARCHAR(255);
-
--- Resolution and Root Cause
-ALTER TABLE tickets ADD COLUMN resolution_code TEXT;
-ALTER TABLE tickets ADD COLUMN root_cause TEXT;
-ALTER TABLE tickets ADD COLUMN workaround TEXT;
-
--- Problem Management
-ALTER TABLE tickets ADD COLUMN related_problem_id UUID;
-
--- SLA Management
-ALTER TABLE tickets ADD COLUMN sla_target VARCHAR(255);
-ALTER TABLE tickets ADD COLUMN sla_breach BOOLEAN DEFAULT FALSE;
-
--- Escalation Management
-ALTER TABLE tickets ADD COLUMN escalated BOOLEAN DEFAULT FALSE;
-ALTER TABLE tickets ADD COLUMN escalation_level INTEGER CHECK (escalation_level >= 1 AND escalation_level <= 3);
-ALTER TABLE tickets ADD COLUMN escalated_at TIMESTAMP;
-ALTER TABLE tickets ADD COLUMN escalated_by UUID;
-```
-
-### File Structure
-
-```
-server/src/
-├── interfaces/ticket.interfaces.tsx     # Extended ticket interface
-├── lib/
-│   ├── utils/itilUtils.ts              # ITIL utility functions
-│   ├── services/itilService.ts         # ITIL service class
-│   ├── schemas/ticket.schema.ts        # Updated schemas
-│   ├── workflows/
-│   │   ├── itilEscalationWorkflow.ts   # Escalation workflow
-│   │   └── itilIncidentLifecycleWorkflow.ts # Incident lifecycle
-│   └── api/itil.ts                     # ITIL API endpoints
-├── components/tickets/
-│   └── ItilFields.tsx                  # ITIL form components
-├── migrations/
-│   └── 20250910120000_add_itil_fields_to_tickets.cjs
-└── seeds/dev/
-    └── 80_itil_categories.cjs          # ITIL categories seed
-```
-
-## Usage
-
-### Creating ITIL-Enabled Tickets
-
-1. **Set Impact and Urgency**: Select appropriate impact and urgency levels
-2. **Auto-Priority Calculation**: Priority is automatically calculated using the matrix
-3. **Category Selection**: Choose from standard ITIL categories
-4. **SLA Assignment**: SLA targets are automatically assigned based on priority (AlgaPSA only — see [SLA Management](#sla-management))
-
-### Using ITIL Fields Component
-
-```tsx
-import { ItilFields } from '@/components/tickets/ItilFields';
-
-function TicketForm() {
-  const [formData, setFormData] = useState({});
-  
-  const handleItilChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-  
-  return (
-    <ItilFields
-      values={formData}
-      onChange={handleItilChange}
-      showResolutionFields={formData.status === 'resolved'}
-    />
-  );
-}
-```
-
-### Auto-Categorization
-
-The system can automatically categorize tickets based on keywords:
-
-```typescript
-import { ItilService } from '@/lib/services/itilService';
-
-const itilService = new ItilService(knex);
-await itilService.autoCategorizeTicket(ticketId, title, description);
-```
-
-## Configuration
-
-### Workflow Triggers
-
-ITIL workflows are automatically triggered on:
-
-- **Ticket Creation**: Starts incident lifecycle workflow
-- **Priority Changes**: Recalculates SLA targets
-- **Status Updates**: Monitors for resolution and closure
-- **Time Thresholds**: Triggers escalation workflows
-
-### Escalation Rules
-
-Configure escalation recipients by role:
-
-```typescript
-const escalationRules = {
-  level1: ['assigned_technician', 'team_lead'],
-  level2: ['team_lead', 'manager'],
-  level3: ['manager', 'director', 'service_desk_manager']
-};
-```
-
-## ITIL Board and Priority Lifecycle
-
-### Board-scoped priority pickers
-
-When a user creates or edits a ticket, the priority picker filters options by the board's declared priority type:
-
-- **ITIL boards** — surface only ITIL priorities (Critical, High, Medium, Low, Planning).
-- **Non-ITIL boards** — hide ITIL priorities and show only the custom priorities defined for that board.
-
-A ticket's already-assigned priority always remains visible in the picker even if the ticket is later moved to a board whose type no longer matches. This prevents existing tickets from losing their assigned value while guiding new assignments to the correct priority set for the board.
-
-### ITIL priority protection and deletion
-
-ITIL priorities are protected from deletion as long as at least one board with `priority_type: 'itil'` exists in the tenant. While any such board is present, the delete action does not appear for ITIL priorities in **Settings > Ticketing > Priorities**.
-
-Once every ITIL-typed board has been removed, ITIL priorities become deletable: a delete action appears alongside an informational note explaining the change, and each priority can be removed individually.
-
-### Last-board deletion cleanup
-
-Deleting the last ITIL board triggers an automatic cleanup sequence that runs **before** the board row is removed, so the operation completes cleanly without leaving orphaned data or foreign-key constraint errors:
-
-1. **Category re-pointing** — ITIL categories that still reference the board being deleted are re-pointed to another surviving ITIL board. If no other ITIL board exists, the category's board reference is cleared.
-2. **Priority reference release** — all FK references that would block priority deletion are released: `sla_policy_targets.priority_id`, board `default_priority_id`, and `inbound_ticket_defaults` are cleared or updated before any priority rows are dropped.
-3. **SLA policy retirement** — the auto-created "ITIL Standard" SLA policy is retired once it has no remaining targets and is not assigned to any client. Any ITIL-Standard stamp on tickets and boards is cleared before the policy row is removed.
-
-This means tenants can fully decommission ITIL ticketing — removing the last ITIL board, then deleting ITIL priorities from Settings — without requiring any manual database intervention.
-
-## API Reference
-
-### Update Ticket Priority
-
-**POST** `/api/itil/update-priority`
-
-```json
-{
-  "ticketId": "uuid",
-  "impact": 1,
-  "urgency": 5
-}
-```
-
-### Auto-Categorize Ticket
-
-**POST** `/api/itil/auto-categorize`
-
-```json
-{
-  "ticketId": "uuid",
-  "title": "string",
-  "description": "string"
-}
-```
-
-### Check SLA Breaches
-
-**GET** `/api/itil/sla-breaches`
-
-Returns list of tickets with breached SLAs.
-
-### Get Escalation Candidates
-
-**GET** `/api/itil/escalations`
-
-Returns tickets requiring escalation.
-
-### Get ITIL Metrics
-
-**GET** `/api/itil/metrics?startDate=2024-01-01&endDate=2024-12-31`
-
-Returns comprehensive ITIL metrics:
-
-```json
-{
-  "totalIncidents": 150,
-  "resolvedIncidents": 140,
-  "slaBreaches": 5,
-  "escalatedIncidents": 12,
-  "averageResolutionTime": 18.5,
-  "byPriority": {
-    "1": 5,
-    "2": 25,
-    "3": 80,
-    "4": 35,
-    "5": 5
-  },
-  "byCategory": {
-    "Hardware": 45,
-    "Software": 60,
-    "Network": 25,
-    "Security": 15,
-    "Service Request": 5
-  },
-  "firstCallResolutionRate": 85.5
-}
-```
-
-### Create Problem from Incident
-
-**POST** `/api/itil/create-problem`
-
-```json
-{
-  "incidentId": "uuid",
-  "title": "string",
-  "description": "string",
-  "rootCause": "string",
-  "workaround": "string"
-}
-```
-
-## Workflows
-
-### Escalation Workflow
-
-The escalation workflow monitors tickets and automatically escalates based on time thresholds:
-
-1. **Monitoring**: Continuously monitors open tickets
-2. **Threshold Checking**: Checks against 70%, 90%, and 110% SLA thresholds
-3. **Notification**: Sends notifications to appropriate personnel
-4. **Task Creation**: Creates human tasks for review
-5. **Status Updates**: Updates ticket with escalation information
-
-### Incident Lifecycle Workflow
-
-Manages the complete ITIL incident lifecycle:
-
-1. **Incident Logging**: Initial categorization and priority calculation
-2. **Initial Diagnosis**: Assignment and first-level diagnosis
-3. **Investigation**: Iterative investigation attempts
-4. **Resolution**: Final resolution and documentation
-5. **Closure**: Customer notification and satisfaction survey
-
-## Best Practices
-
-### 1. Impact and Urgency Guidelines
-
-**Impact Assessment:**
-- Consider number of affected users
-- Evaluate business function criticality
-- Assess financial or reputational impact
-
-**Urgency Assessment:**
-- Determine timeline requirements
-- Consider business deadlines
-- Evaluate workaround availability
-
-### 2. Category Selection
-
-- Use consistent categorization across the organization
-- Train staff on proper category selection
-- Review and update categories periodically
-
-### 3. Resolution Documentation
-
-- Always provide clear resolution codes
-- Document root causes for future reference
-- Include workarounds for similar incidents
-
-### 4. SLA Management
-
-- Set realistic SLA targets
-- Monitor compliance regularly
-- Review and adjust targets based on performance
-
-## Troubleshooting
-
-### Common Issues
-
-#### Priority Not Calculating
-- Ensure both impact and urgency are set
-- Verify values are between 1-5
-- Check for JavaScript errors in console
-
-#### SLA Targets Not Setting
-- Verify priority calculation is working
-- Check database constraints
-- Review workflow execution logs
-- Note: SLA auto-configuration only applies to AlgaPSA tenants, not AlgaDesk
-
-#### Escalation Not Triggering
-- Confirm escalation workflow is active
-- Check ticket status (only open tickets escalate)
-- Verify time calculations are correct
-
-#### Auto-Categorization Issues
-- Review keyword matching logic
-- Check for category spelling variations
-- Ensure categories exist in database
-
-### Debugging
-
-#### Check Workflow Execution
+# ITIL ticketing in AlgaPSA
+
+ITIL is a property of a **board**, not of a tenant. A tenant can run any number of ITIL boards
+beside its own boards, and each ITIL board behaves the same way as the first one: the same priority
+family, its own copy of the standard category set, the same Impact × Urgency rule and, on AlgaPSA,
+the same SLA policy.
+
+This document describes what is built. The rules are stated once here and implemented once, in
+`shared/lib/tickets/boardFieldRules.ts`; every screen, action, REST route, workflow and integration
+goes through that module, and `scripts/guard-ticket-board-field-rules.mjs` fails the build when
+something new does not.
+
+## Contents
+
+- [The rules](#the-rules)
+- [Data model](#data-model)
+- [Priorities and the Impact × Urgency matrix](#priorities-and-the-impact--urgency-matrix)
+- [Categories](#categories)
+- [Board lifecycle](#board-lifecycle)
+- [SLA](#sla)
+- [Where the code lives](#where-the-code-lives)
+- [Operating notes](#operating-notes)
+
+## The rules
+
+**R1 — a board has one kind.** `boards.category_type` and `boards.priority_type` are both
+`custom` or both `itil`. The pair is checked when a board is created and whenever either column
+changes. Boards created before this rule that hold a mixed pair keep working and can still be
+edited in every other respect; they cannot be produced again.
+
+**R2 — a category belongs to a board.** A category is valid for a ticket when
+`categories.board_id` is the ticket's board, and a subcategory must be a child of the ticket's
+category. This is the same rule on ITIL and non-ITIL boards.
+
+- Each ITIL board owns a copy of the standard set, and every copy carries the
+  `standard_categories` row it came from in `categories.standard_category_id`.
+- While its board is ITIL, a standard row cannot be renamed, re-parented, moved or deleted, and no
+  other category can be added to that board — from settings, REST, CSV import or a copy between
+  boards.
+- Categories that were attached to an ITIL board and are not standard rows stay attached and are
+  listed.
+- A write that supplies a standard category belonging to *another* board is translated to this
+  board's copy of the same standard category before it is checked, so an integration or workflow
+  holding one board's id keeps working on every ITIL board.
+- A category with no board is offered by no picker and is not accepted as a new value. A ticket
+  that already holds one keeps it and stays editable.
+
+**R3 — priorities come in two families.** A ticket priority fits a board when
+`priorities.is_from_itil_standard` matches the board's `priority_type`. Priorities are tenant-wide,
+so both families exist side by side; the picker is what narrows them to the board. The flag and
+`priorities.itil_priority_level` are set by ITIL seeding alone — no category or priority create or
+update can set them.
+
+**R4 — Impact × Urgency.** Only on a board with ITIL priorities:
+
+| The write supplies | Result |
+|---|---|
+| Impact and Urgency | The priority is the matrix result, found by `itil_priority_level`. A supplied priority is ignored. |
+| One of the two | Refused where a person sees the error; both dropped on automated paths. |
+| A priority only, no assessment stored | Accepted if it is an ITIL priority. Impact and Urgency stay empty ("Not assessed"). |
+| A priority only, an assessment stored | Accepted if it is an ITIL priority. Impact and Urgency are cleared to "Not assessed". |
+
+On a board with the tenant's own priorities, Impact and Urgency are not stored.
+
+**R5 — only what a change touches.** An update checks the priority when the priority or the board
+changes, and the category when the category, subcategory or board changes. A ticket that already
+breaks R2 or R3 still saves a change to its title, status, assignee or description.
+
+**R6 — refuse or fall back.** A path with a person or an API caller who sees the error refuses a
+value that does not fit; a path with nobody to see it never drops the ticket.
+
+| Refuses with a field error | Falls back |
+|---|---|
+| MSP create and update, create from asset | Inbound email |
+| Client portal create | RMM and Huntress alert tickets |
+| REST `v1` create, update and create-from-asset (and mobile, MCP and chat through it) | Telephony auto-ticket |
+| CSV import, per row | Contract renewal ticket |
+| Teams message action and guest intake, manual telephony ticket | Workflow `tickets.create` |
+| Workflow `tickets.update_fields`, `assets.create_maintenance_ticket` | Inbound webhook create |
+| Inbound webhook update | Service request provider |
+| Templates and recurring schedules | Data-migration import |
+| Bundle sync, the Activities inline picker, co-managed edit | |
+
+Falling back means: the configured priority if it fits the board; otherwise the board's default
+priority (R7); otherwise the configured priority unchanged. A category that does not belong to the
+board and cannot be translated is dropped.
+
+**R7 — a board's default priority.** `boards.default_priority_id` when it fits the board;
+otherwise the level-3 ITIL priority on an ITIL board, or the lowest-ordered ticket priority of the
+tenant's own on other boards; otherwise none.
+
+**R8 — SLA.** Creating a board with ITIL priorities on an AlgaPSA tenant creates the "ITIL
+Standard" policy if the tenant has none, adds any missing targets for the ITIL priorities, and
+assigns the policy to the new board unless the board already has one. Nothing else assigns a
+policy — a change of board kind does not. AlgaDesk tenants are skipped.
+
+**R9 — matching tickets by category across boards.** The ticket list filter and the client portal
+filter list every category of the tenant on every tab. A standard category appears once there, and
+choosing it matches that standard category on every board in scope. The match lives in the
+predicate engine, so ticket list filters, saved view filters and checklist apply rules all behave
+the same way, and a stored value holding one board's copy keeps matching the tickets it matched
+before.
+
+## Data model
+
+| Table | Column | What it holds |
+|---|---|---|
+| `boards` | `category_type`, `priority_type` | `custom` or `itil`; equal to each other (R1). |
+| `boards` | `default_priority_id` | The board's default priority; released when the priority is deleted. |
+| `boards` | `sla_policy_id` | The policy new tickets on the board start with. |
+| `categories` | `board_id` | The board the category belongs to (R2). `NULL` means no board: listed nowhere, kept where held. |
+| `categories` | `parent_category` | The parent of a subcategory. |
+| `categories` | `standard_category_id` | The `standard_categories` row this is a copy of, or `NULL`. Unique per `(tenant, board_id, standard_category_id)`. |
+| `categories` | `is_from_itil_standard` | Kept equal to "has a standard link". |
+| `standard_categories` | — | The 35 standard rows (5 parents, 30 children) every ITIL board is seeded from. |
+| `priorities` | `is_from_itil_standard` | The family (R3). |
+| `priorities` | `itil_priority_level` | 1 critical … 5 planning, on ITIL rows only. |
+| `priorities` | `item_type` | `ticket` rows are the ones these rules apply to. |
+| `tickets` | `itil_impact`, `itil_urgency` | The assessment, 1–5 each; empty means "Not assessed". |
+| `tickets` | `priority_id`, `category_id`, `subcategory_id`, `board_id` | Written only through the shared rules. |
+| `sla_policies` | `is_itil_standard` | Marks the auto-created policy; at most one per tenant. |
+| `sla_policy_targets` | `priority_id` | One target per ITIL priority. |
+| `sla_notification_thresholds` | `threshold_percent` | The warning and breach points of a target. |
+| `itil_category_remap` | `old_category_id`, `new_category_id` | The category migration's journal, kept afterwards. |
+
+`tickets.itil_priority_level` still exists and is no longer written or accepted from a client: the
+level is read from the ticket's priority row.
+
+## Priorities and the Impact × Urgency matrix
+
+The five ITIL priorities are seeded per tenant with their level in `itil_priority_level`. The
+matrix lives in `shared/lib/itil/priorityMatrix.ts` and is pure — no database, no tenant — so a
+client component and a workflow can both call `calculateItilPriority()`.
+
+| Impact \ Urgency | 1 High | 2 Medium-High | 3 Medium | 4 Medium-Low | 5 Low |
+|---|---|---|---|---|---|
+| **1 High** | Critical | High | High | Medium | Medium |
+| **2 Medium-High** | High | High | Medium | Medium | Low |
+| **3 Medium** | High | Medium | Medium | Low | Low |
+| **4 Medium-Low** | Medium | Medium | Low | Low | Planning |
+| **5 Low** | Medium | Low | Low | Planning | Planning |
+
+Every priority picker — the ticket form, the quick-add dialogs, the ticket list bulk actions, the
+Activities inline picker, inbound email defaults, templates, recurring schedules, CSV import and
+`GET /api/v1/tickets/priorities?board_id=…` — lists through `listPrioritiesForBoard()`, so no
+picker offers a value the server then refuses. A ticket's current priority stays visible even when
+it no longer fits, so an existing ticket can still be saved (R5).
+
+ITIL priorities cannot be deleted while any board of the tenant has `priority_type = 'itil'`.
+Once the last such board is gone they become deletable, with a note in
+**Settings → Ticketing → Priorities** explaining the change.
+
+## Categories
+
+An ITIL board is seeded with its own copy of the 35 standard rows when it is created, by
+`ItilStandardsService.copyItilCategoriesToTenant()`. Creating a second ITIL board changes no
+category on any other board.
+
+Lists come from `listCategoriesForBoard()`, which narrows by `board_id` and orders parents before
+their children. A write that names another board's copy of a standard category is translated by
+`translateStandardCategoryForBoard()`, so the ticket stores its own board's copy.
+
+### The per-board migration
+
+`server/migrations/20261122120000_itil_categories_per_board.cjs` moves a tenant from "one flagged
+set somewhere" to "a set per ITIL board". It is idempotent, runs per tenant and is Citus-safe, and
+it journals everything it does in `itil_category_remap` so `down()` can undo it:
+
+1. Add `standard_category_id` and create the journal table.
+2. Map every flagged category to its standard row by name and parent name — the only name match,
+   run once — wherever the row sits: on an ITIL board, on another board, or on none.
+3. Give every ITIL board its own set: rows already on the board are linked in place and keep their
+   ids, missing rows are inserted parents first, and a standard child whose parent sits elsewhere
+   is re-parented to the board's own parent.
+4. Re-point every reference an ITIL board holds to a mapped category that is not that board's own:
+   tickets, templates, recurring definitions and their overrides, inbound ticket defaults, saved
+   views, and the settings that hold a board and a category together.
+5. Clear the flag and the link on mapped rows that are not on an ITIL board. They become ordinary
+   categories, of their board if they have one. No row is deleted.
+6. Add the unique index.
+
+Settings that hold a category without a board — a workflow `tickets.update_fields` action, a
+checklist rule with no board, a view across all boards — are not re-pointed. They keep working
+through translation on write (R2) and standard-aware matching (R9).
+
+## Board lifecycle
+
+`createBoardCore()`, `updateBoardCore()` and `deleteBoardCore()` in
+`packages/tickets/src/services/boardLifecycle.ts` are the one implementation; the settings actions,
+the REST `BoardService` and the onboarding wizard all call them, so a board created through
+`POST /api/v1/boards` has the same statuses, categories, default priority and SLA assignment as one
+created in settings. (The reference-data board import is the exception: importing the create back
+into `packages/reference-data` would be a dependency cycle, so it applies R7 through the shared
+rules module instead.)
+
+Deleting the last ITIL board runs its cleanup before the board row is removed: categories of the
+board are released, references that would block a priority delete
+(`sla_policy_targets`, `boards.default_priority_id`, `inbound_ticket_defaults`) are cleared, and
+the auto-created policy is retired once nothing points at it.
+
+### Changing a board's kind
+
+**Settings → Ticketing → Boards → Change board type** calls
+`getBoardTypeSwitchSummary()` first: it reports how many open tickets and stored settings will no
+longer fit, and what SLA policy the board will have afterwards. On confirmation,
+`switchBoardType()` flips both kind columns together (R1) and seeds the standard categories when
+the new kind is ITIL. It changes no ticket, inbound default, template, schedule or SLA assignment —
+a board switched away from ITIL keeps an ITIL-only policy until an admin changes it, and the
+confirmation says so.
+
+## SLA
+
+The defaults are in `shared/lib/sla/itilSlaDefaults.ts`:
+
+| Level | Priority | Response | Resolution | 24×7 |
+|---|---|---|---|---|
+| 1 | Critical | 15 min | 1 h | yes |
+| 2 | High | 30 min | 4 h | no |
+| 3 | Medium | 1 h | 24 h | no |
+| 4 | Low | 4 h | 72 h | no |
+| 5 | Planning | 8 h | 1 week | no |
+
+Each target is created with escalation points at 70%, 90% and 110% of the target time, and
+notification thresholds at 50%, 75%, 90% (warning) and 100% (breach).
+
+`configureItilSlaForBoard()` in `packages/sla/src/services/itilSlaService.ts` does the work:
+create the policy if the tenant has none, top up missing targets, assign it to the board unless the
+board already has a policy. `packages/tickets` reaches it through hooks registered at startup
+(`registerSlaIntegration()`, asserted by `assertSlaIntegrationRegistered()`), because a Next build
+gives startup code and server actions separate module instances; the hooks are held on `globalThis`
+for that reason.
+
+AlgaDesk tenants are skipped: they get the matrix, the priorities and the categories, but no policy
+is created and no breach notification is emitted.
+
+## Where the code lives
+
+| File | What it is |
+|---|---|
+| `shared/lib/tickets/boardFieldRules.ts` | The rules: `listPrioritiesForBoard()`, `listCategoriesForBoard()`, `findBoardFieldProblems()`, `translateStandardCategoryForBoard()`, `defaultPriorityForBoard()`, `resolveTicketPriorityFields()`, `prepareTicketCreateFields()`, `prepareTicketFieldPatch()`. |
+| `shared/lib/itil/priorityMatrix.ts` | The Impact × Urgency matrix and its labels. |
+| `shared/lib/sla/itilSlaDefaults.ts` | Policy name, targets, escalation points, notification thresholds. |
+| `shared/models/ticketModel.ts` | The create funnel: the rules are applied before the row is built. |
+| `packages/tickets/src/services/boardLifecycle.ts` | Board create, update, delete and the type switch. |
+| `packages/tickets/src/services/itilStandardsService.ts` | Seeding priorities and a board's category set. |
+| `packages/tickets/src/lib/slaIntegrationHooks.ts` | The SLA hooks, held on `globalThis`. |
+| `packages/sla/src/services/itilSlaService.ts` | Policy creation, target top-up, board assignment. |
+| `server/migrations/20261122120000_itil_categories_per_board.cjs` | The per-board category migration and its reversal. |
+| `scripts/guard-ticket-board-field-rules.mjs` | The build guard. |
+| `scripts/reports/priority-board-mismatch.sql` | The read-only mismatch report. |
+
+The superseded design document is kept at `docs/archive/ITIL_Integration_Plan.md`.
+
+## Operating notes
+
+### Finding rows that do not fit
 
 ```bash
-# View workflow logs
-kubectl logs -f deployment/workflow-engine
-
-# Check workflow registry
-curl -X GET /api/workflows/registry
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/reports/priority-board-mismatch.sql
 ```
 
-#### Database Queries
+The script runs inside a read-only transaction and prints one section per source — recurring
+definitions, templates, open tickets — with one row per tenant that has a mismatch. The priority
+sections compare families (R3); the category sections compare the category's board with the board
+the row points at (R2), and count categories with no board apart.
 
-```sql
--- Check tickets with ITIL data
-SELECT ticket_number, itil_impact, itil_urgency, itil_category, sla_breach
-FROM tickets 
-WHERE itil_impact IS NOT NULL;
+### Common questions
 
--- Find SLA breaches
-SELECT ticket_number, entered_at, sla_target, sla_breach
-FROM tickets 
-WHERE sla_breach = true;
+**A picker offers nothing on an ITIL board.** The tenant has no ITIL priorities, or the board is
+mixed (R1): check `boards.category_type` and `boards.priority_type`.
 
--- Escalation status
-SELECT ticket_number, escalated, escalation_level, escalated_at
-FROM tickets 
-WHERE escalated = true;
-```
+**A write is refused with "does not belong to this board".** The category belongs to another board
+and is not a standard row, so it cannot be translated (R2). Pick the board's own category.
 
-### Performance Considerations
+**Inbound email uses a different priority than the configured one.** Email falls back (R6): the
+configured priority does not fit the board, so the board's default is used. The inbound defaults
+form shows a warning on the saved row until it is changed.
 
-- Index ITIL fields for faster queries
-- Batch SLA breach checks to avoid overload
-- Monitor workflow execution times
-- Consider archiving old tickets
+**A ticket has no SLA due date.** Its board has no policy — most often a board switched away from
+ITIL, or an AlgaDesk tenant, where no policy is created at all.
 
-## Migration Guide
-
-### Existing Tickets
-
-When implementing ITIL integration with existing tickets:
-
-1. **Backup Data**: Always backup before migration
-2. **Default Values**: Set appropriate defaults for ITIL fields
-3. **Bulk Updates**: Use batch updates for large datasets
-4. **Validation**: Verify data integrity after migration
-
-### Sample Migration Script
-
-```sql
--- Set default impact/urgency for existing tickets
-UPDATE tickets 
-SET itil_impact = 3, itil_urgency = 3 
-WHERE itil_impact IS NULL AND itil_urgency IS NULL;
-
--- Auto-categorize based on existing categories
-UPDATE tickets 
-SET itil_category = 'Hardware' 
-WHERE category_name ILIKE '%hardware%';
-```
-
----
-
-For additional support or questions about the ITIL integration, please refer to the main documentation or create an issue in the project repository.
+**A new file reads `priorities` or `categories` and CI fails.** That is
+`scripts/guard-ticket-board-field-rules.mjs`. List through the shared rules module; if the file
+genuinely owns those rows, add it to the allow-list in the same change.
