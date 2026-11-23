@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   decisions: new Map<string, { allowed: boolean; redactedFields: string[] }>(),
-  persisted: { phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' },
+  persisted: { phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' },
   statusProjects: ['p1', 'p2'],
   writes: [] as string[],
   foreignTask: false,
@@ -39,8 +39,10 @@ vi.mock('../models/project', () => ({ default: {
   getById: async (_trx: unknown, _tenant: string, project_id: string) => ({ project_id, client_id: 'c1', assigned_to: 'u1' }),
   updatePhase: async (_trx: unknown, _tenant: string, _id: string, updates: any) => {
     state.writes.push('phase');
-    state.persisted.phase = updates.phase_name;
-    return { ...updates, project_id: 'p1' };
+    if ('phase_name' in updates) state.persisted.phase = updates.phase_name;
+    if ('start_date' in updates) state.persisted.phaseStart = updates.start_date?.toISOString?.() ?? updates.start_date;
+    if ('end_date' in updates) state.persisted.phaseEnd = updates.end_date?.toISOString?.() ?? updates.end_date;
+    return { ...updates, project_id: updates.project_id ?? 'p1' };
   },
   updateStructure: async (_trx: unknown, _tenant: string, _projectId: string, updates: any) => {
     state.writes.push('structure');
@@ -76,7 +78,7 @@ const call = {
 describe('project child mutation authorization', () => {
   beforeEach(() => {
     state.decisions.clear();
-    state.persisted = { phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' };
+    state.persisted = { phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' };
     state.statusProjects = ['p1', 'p2'];
     state.writes = [];
     state.foreignTask = false;
@@ -86,14 +88,14 @@ describe('project child mutation authorization', () => {
     state.decisions.set('p1', denied);
     await call[action]();
     expect(state.writes).toEqual([]);
-    expect(state.persisted).toEqual({ phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
+    expect(state.persisted).toEqual({ phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
   });
 
   it.each(['phase', 'structure', 'status'] as const)('%s rejects wildcard-redacted update access after an allowed clean read', async (action) => {
     state.decisions.set('p1', wildcard);
     await call[action]();
     expect(state.writes).toEqual([]);
-    expect(state.persisted).toEqual({ phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
+    expect(state.persisted).toEqual({ phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
   });
 
   it.each([
@@ -104,13 +106,13 @@ describe('project child mutation authorization', () => {
     state.decisions.set('p1', { allowed: true, redactedFields: Object.entries(redaction).flatMap(([resource, fields]) => (fields as readonly string[]).map((field) => `${resource}.${field}`)) });
     await call[action]();
     expect(state.writes).toEqual([]);
-    expect(state.persisted).toEqual({ phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
+    expect(state.persisted).toEqual({ phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
   });
 
   it.each(['phase', 'structure', 'status'] as const)('%s persists the intended change for unrestricted access', async (action) => {
     await call[action]();
     expect(state.writes).toHaveLength(1);
-    if (action === 'phase') expect(state.persisted.phase).toBe('changed phase');
+    if (action === 'phase') expect(state.persisted).toMatchObject({ phase: 'changed phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31' });
     if (action === 'structure') expect(state.persisted).toMatchObject({ phase: 'changed phase', task: 'changed task' });
     if (action === 'status') expect(state.persisted).toMatchObject({ status: 'changed status', mapping: 'changed mapping' });
   });
@@ -130,6 +132,37 @@ describe('project child mutation authorization', () => {
     });
     expect(result).toBeDefined();
     expect(state.writes).toEqual([]);
-    expect(state.persisted).toEqual({ phase: 'initial phase', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
+    expect(state.persisted).toEqual({ phase: 'initial phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31', task: 'initial task', status: 'initial status', mapping: 'initial mapping' });
+  });
+
+  it('preserves omitted dates when the update decision redacts those dates', async () => {
+    state.decisions.set('p1', { allowed: true, redactedFields: ['project_phase.start_date', 'project_phase.end_date'] });
+    await updatePhase('ph1', { phase_name: 'changed phase' });
+    expect(state.persisted).toMatchObject({ phase: 'changed phase', phaseStart: '2026-01-01', phaseEnd: '2026-01-31' });
+  });
+
+  it('rejects an explicit protected date write before persistence', async () => {
+    state.decisions.set('p1', { allowed: true, redactedFields: ['project_phase.start_date'] });
+    await updatePhase('ph1', { start_date: '2026-02-01' as any });
+    expect(state.writes).toEqual([]);
+    expect(state.persisted).toMatchObject({ phaseStart: '2026-01-01', phaseEnd: '2026-01-31' });
+  });
+
+  it.each<[string, { allowed: boolean; redactedFields: string[] }]>([
+    ['field-redacted', { allowed: true, redactedFields: ['project_phase.phase_name'] }],
+    ['denied', denied],
+    ['wildcard', wildcard],
+  ])('checks the complete phase patch against a destination parent with %s access', async (_caseName, decision) => {
+    state.decisions.set('p2', decision);
+    await updatePhase('ph1', { project_id: 'p2', phase_name: 'destination rename' });
+    expect(state.writes).toEqual([]);
+    expect(state.persisted.phase).toBe('initial phase');
+  });
+
+  it('allows a phase move and rename when both parent decisions allow the complete write', async () => {
+    state.decisions.set('p2', { allowed: true, redactedFields: [] });
+    await updatePhase('ph1', { project_id: 'p2', phase_name: 'destination rename' });
+    expect(state.writes).toEqual(['phase']);
+    expect(state.persisted.phase).toBe('destination rename');
   });
 });

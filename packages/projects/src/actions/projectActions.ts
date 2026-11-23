@@ -614,8 +614,8 @@ export const searchProjectListIds = withAuth(async (
       scopedDb,
       trx,
       projectTasks.subquery,
-      trx.raw('??::text', ['pt.task_id']),
-      'si.parent_id',
+      'pt.task_id',
+      trx.raw('??::uuid', ['si.parent_id']),
       {
         type: 'left',
         rootTenantColumn: 'si.tenant',
@@ -638,9 +638,9 @@ export const searchProjectListIds = withAuth(async (
       }
     );
     const projectIdExpression = `CASE
-      WHEN si.object_type = 'project' THEN si.object_id
-      WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
-      ELSE si.parent_id
+      WHEN si.object_type = 'project' THEN si.object_id::uuid
+      WHEN si.object_type = 'project_task_comment' THEN ph.project_id
+      ELSE si.parent_id::uuid
     END`;
     const sourceExpressions: Record<string, string> = {
       'projects.project_name': 'p.project_name',
@@ -694,12 +694,12 @@ export const searchProjectListIds = withAuth(async (
             ${effectiveBody.sql} AS effective_body
           FROM ${searchIndex.sql}
           LEFT JOIN ${indexedTasks.sql} ON indexed_task.tenant = si.tenant
-            AND si.object_type = 'project_task' AND indexed_task.task_id::text = si.object_id
+            AND si.object_type = 'project_task' AND indexed_task.task_id = si.object_id::uuid
           LEFT JOIN ${indexedPhases.sql} ON indexed_phase.tenant = si.tenant
-            AND si.object_type = 'project_phase' AND indexed_phase.phase_id::text = si.object_id
+            AND si.object_type = 'project_phase' AND indexed_phase.phase_id = si.object_id::uuid
           ${projectTaskCommentJoin.sql}
           ${projectPhaseJoin.sql}
-          JOIN ${projects.sql} ON p.tenant = si.tenant AND p.project_id::text = ${projectIdExpression}
+          JOIN ${projects.sql} ON p.tenant = si.tenant AND p.project_id = ${projectIdExpression}
         ),
         searchable_with_vector AS (
           SELECT
@@ -1027,26 +1027,29 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
+            const phaseUpdate = { ...phaseData };
+            if ('start_date' in phaseData) {
+                phaseUpdate.start_date = phaseData.start_date ? new Date(phaseData.start_date) : null;
+            }
+            if ('end_date' in phaseData) {
+                phaseUpdate.end_date = phaseData.end_date ? new Date(phaseData.end_date) : null;
+            }
             const updateDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, projectId);
-            if ('tenant' in phaseData || 'phase_id' in phaseData) {
+            if ('tenant' in phaseUpdate || 'phase_id' in phaseUpdate) {
                 throw new Error('Permission denied: Cannot change project phase identity');
             }
-            assertProjectChildFieldsWritable(updateDecision.redactedFields, 'project_phases', Object.keys(phaseData));
-            if ('project_id' in phaseData) {
-                if (typeof phaseData.project_id !== 'string' || phaseData.project_id.length === 0) {
+            assertProjectChildFieldsWritable(updateDecision.redactedFields, 'project_phases', Object.keys(phaseUpdate));
+            if ('project_id' in phaseUpdate) {
+                if (typeof phaseUpdate.project_id !== 'string' || phaseUpdate.project_id.length === 0) {
                     throw new Error('Permission denied: Cannot change project phase ownership');
                 }
-                if (phaseData.project_id !== projectId) {
-                    const targetDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phaseData.project_id);
-                    assertProjectChildFieldsWritable(targetDecision.redactedFields, 'project_phases', ['project_id']);
+                if (phaseUpdate.project_id !== projectId) {
+                    const targetDecision = await assertProjectMutationAllowed(trx, tenant, user as IUserWithRoles, phaseUpdate.project_id);
+                    assertProjectChildFieldsWritable(targetDecision.redactedFields, 'project_phases', Object.keys(phaseUpdate));
                 }
             }
 
-            return await ProjectModel.updatePhase(trx, tenant, phaseId, {
-                ...phaseData,
-                start_date: phaseData.start_date ? new Date(phaseData.start_date) : null,
-                end_date: phaseData.end_date ? new Date(phaseData.end_date) : null
-            });
+            return await ProjectModel.updatePhase(trx, tenant, phaseId, phaseUpdate);
         });
 
         await publishEvent({
