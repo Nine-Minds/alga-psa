@@ -127,6 +127,57 @@ describe('classifyTenantTemplate with enterprise brand assets', () => {
     })).toEqual({ state: 'branded', differs: [] });
   });
 
+  /**
+   * What the old strip wrote: "Powered by AlgaPSA &middot;" gone, the slogan
+   * left alone in the footer row. Those rows sit in tenant_email_templates
+   * today (alga-2026-0003353) and must stay ours, or the corrected strip would
+   * never reach them.
+   */
+  const withOrphanedSlogan = (html: string, slogan: string) =>
+    html.replace(new RegExp(`Powered by AlgaPSA\\s*&middot;\\s*(?=${slogan})`), '');
+
+  it.each([
+    ['en', 'ticket-created', 'Keeping teams aligned'],
+    ['de', 'ticket-created', 'Teams auf Kurs halten'],
+  ])('recognizes a %s row the old strip left on the bare slogan as branded', (language, name, slogan) => {
+    const template = loadSystemTemplate(name, language);
+    const branded = decorateBrandedHtml(
+      applyEmailPalette(template.html, STOCK_EMAIL_PALETTE, TERRACOTTA),
+      { logo },
+    );
+    const stored = withOrphanedSlogan(branded, slogan);
+
+    expect(stored).not.toBe(branded);
+    expect(stored).toContain(slogan);
+    expect(stored).not.toContain('Powered by AlgaPSA');
+
+    expect(classifyTenantTemplate({
+      tenantRow: { subject: template.subject, html_content: stored },
+      systemRow: { subject: template.subject, html_content: template.html },
+      appliedPalette: TERRACOTTA,
+    })).toEqual({ state: 'branded', differs: [] });
+  });
+
+  it('recognizes a row the old strip left on an empty footer band as branded', () => {
+    // Templates whose stock footer is the attribution alone kept an empty
+    // coloured band instead of an orphaned slogan. Same leftover, same rule.
+    const template = loadSystemTemplate('project-status-update', 'en');
+    const branded = decorateBrandedHtml(
+      applyEmailPalette(template.html, STOCK_EMAIL_PALETTE, TERRACOTTA),
+      { logo },
+    );
+    const stored = branded.replace('Powered by AlgaPSA', '');
+
+    expect(stored).not.toBe(branded);
+    expect(stored).toMatch(/<tr[^>]*>\s*<td[^>]*>\s*<\/td>\s*<\/tr>/);
+
+    expect(classifyTenantTemplate({
+      tenantRow: { subject: template.subject, html_content: stored },
+      systemRow: { subject: template.subject, html_content: template.html },
+      appliedPalette: TERRACOTTA,
+    })).toEqual({ state: 'branded', differs: [] });
+  });
+
   it('still calls a copy edit on such a row customized', () => {
     const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true })
       .replace('View Ticket', 'Open in our portal');

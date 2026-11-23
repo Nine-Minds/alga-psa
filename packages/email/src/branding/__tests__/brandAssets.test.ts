@@ -269,15 +269,46 @@ describe('findBrandLogoCid', () => {
 });
 
 describe('stripBrandAttribution', () => {
-  it('removes the leading attribution and its separator from a layout footer', () => {
-    const template = loadSystemTemplate('ticket-created');
-    expect(containsBrandAttribution(template.html)).toBe(true);
+  /** The slogan of each language's stock footer, which belongs to the attribution. */
+  const SLOGANS: Record<string, string> = {
+    en: 'Keeping teams aligned',
+    de: 'Teams auf Kurs halten',
+    sv: 'För samspelta team',
+  };
 
-    const stripped = stripBrandAttribution(template.html);
+  it('takes the AlgaPSA slogan and the whole footer row with the attribution', () => {
+    for (const [language, slogan] of Object.entries(SLOGANS)) {
+      const template = loadSystemTemplate('ticket-created', language);
+      expect(containsBrandAttribution(template.html)).toBe(true);
+      expect(template.html).toContain(slogan);
 
-    expect(containsBrandAttribution(stripped)).toBe(false);
-    expect(stripped).toContain('Keeping teams aligned');
-    expect(stripped).not.toContain('&middot; Keeping teams aligned');
+      const stripped = stripBrandAttribution(template.html);
+
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      // The slogan is AlgaPSA's line: it goes with the attribution, and the
+      // footer row goes with it rather than leaving an empty coloured band.
+      expect(stripped).not.toContain(slogan);
+      expect(stripped).not.toMatch(/<td[^>]*background:#f8f5ff/i);
+      expect(stripped).toContain('{{ticket.title}}');
+    }
+  });
+
+  it('removes the localized attributions the templates ship without a slogan', () => {
+    for (const language of ['fr', 'es', 'de', 'nl', 'pt']) {
+      const template = loadSystemTemplate('project-status-update', language);
+      expect(containsBrandAttribution(template.html)).toBe(true);
+
+      const stripped = stripBrandAttribution(template.html);
+
+      expect(containsBrandAttribution(stripped)).toBe(false);
+      expect(stripped).not.toMatch(/<td[^>]*background:#f8f5ff/i);
+    }
+  });
+
+  it('removes a localized attribution and its slogan as one unit', () => {
+    const footer = '<tr>\n<td style="padding:18px 32px;text-align:center;">\n  Drivs av AlgaPSA &middot; För samspelta team\n</td>\n</tr>';
+
+    expect(stripBrandAttribution(`<table>${footer}</table>`)).toBe('<table></table>');
   });
 
   it('removes the trailing attribution from the default copyright footer', () => {
@@ -292,9 +323,21 @@ describe('stripBrandAttribution', () => {
     expect(stripBrandAttribution(footer)).toBe('<div class="footer"><p>Sent to you</p></div>');
   });
 
-  it('handles the bullet separator older migrations wrote', () => {
-    expect(stripBrandAttribution('<td>Powered by AlgaPSA • Keeping teams aligned</td>'))
-      .toBe('<td>Keeping teams aligned</td>');
+  it('handles the bullet separator and the pre-rename spelling older migrations wrote', () => {
+    expect(stripBrandAttribution('<td>Powered by Alga PSA • Keeping teams aligned</td>')).toBe('<td></td>');
+  });
+
+  it('leaves a footer the tenant wrote themselves alone', () => {
+    const footer = '<tr><td style="text-align:center;">&copy; 2026 Acme MSP &middot; support@acme.example</td></tr>';
+
+    expect(stripBrandAttribution(footer)).toBe(footer);
+  });
+
+  it('is idempotent', () => {
+    const template = loadSystemTemplate('ticket-created', 'de');
+    const once = stripBrandAttribution(template.html);
+
+    expect(stripBrandAttribution(once)).toBe(once);
   });
 });
 

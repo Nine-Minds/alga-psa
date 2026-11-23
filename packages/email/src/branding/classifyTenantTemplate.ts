@@ -7,6 +7,7 @@ import {
 import { removeBrandLogo, stripBrandAttribution } from './brandAssets';
 import { normalizeChangesBox } from './changesBox';
 import { stripGradientFallback } from './gradientFallback';
+import { stripOrphanedBrandFooter } from './orphanedSlogan';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type {
   EmailPaletteTokens,
@@ -70,10 +71,14 @@ function equalsBrandedStock(
  * attribution back on and have the footer restored. The flat gradient fallback
  * is ours too: rows written before the layout carried it must still read as
  * branded against the corrected system templates. So is the stock "Changes Made"
- * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts).
+ * box, which moved from pre-rendered HTML to a template loop (see changesBox.ts),
+ * and the orphaned slogan (or empty coloured band) an older attribution strip
+ * left in the footer of rows it wrote (see orphanedSlogan.ts), which must still
+ * read as ours so the next apply rewrites that footer rather than freezing it as
+ * a hand edit.
  */
 const withoutBrandAssets = (html: string): string =>
-  normalizeChangesBox(stripGradientFallback(stripBrandAttribution(removeBrandLogo(html))));
+  normalizeChangesBox(stripGradientFallback(stripOrphanedBrandFooter(stripBrandAttribution(removeBrandLogo(html)))));
 
 /**
  * Decides whether a tenant row is untouched, something the branding tool wrote,

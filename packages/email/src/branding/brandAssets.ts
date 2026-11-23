@@ -189,15 +189,41 @@ export function pickBrandLogoVariant(
   return uploaded.logoUrl ? 'default' : null;
 }
 
-const ATTRIBUTION = 'Powered by AlgaPSA';
+/**
+ * Every spelling the attribution has shipped in: the localized translations
+ * write their own, and the pre-rename templates spell the product "Alga PSA".
+ * None of them collide with a link or button label ("View in AlgaPSA").
+ */
+const ATTRIBUTION_PREFIXES = [
+  'Powered by',
+  'Drivs av',
+  'Propulsé par',
+  'Mogelijk gemaakt door',
+  'Desenvolvido por',
+  'Desarrollado por',
+  'Bereitgestellt von',
+];
+const ATTRIBUTION = `(?:${ATTRIBUTION_PREFIXES.join('|')}) Alga\\s?PSA`;
 const SEPARATOR = '(?:&middot;|&#183;|·|•)';
+/**
+ * The layout's footer row when the attribution opens it: the cell holds nothing
+ * but the attribution and, after the separator, AlgaPSA's own slogan.
+ */
+const ATTRIBUTION_ROW = `<tr[^>]*>\\s*<td[^>]*>\\s*${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*[^<]*?)?\\s*</td>\\s*</tr>`;
 
 /**
- * Drops the attribution line and whatever separator holds it to the rest of the
- * footer, in both shapes the templates ship: leading
- * "Powered by AlgaPSA &middot; Keeping teams aligned" and trailing
- * "&copy; 2026 Acme &middot; Powered by AlgaPSA", plus the standalone
- * <p>Powered by AlgaPSA</p> that portal-invitation carries.
+ * Drops the attribution and everything that only exists to carry it, in every
+ * shape the templates ship:
+ * - the layout's own footer row, "Powered by AlgaPSA &middot; Keeping teams
+ *   aligned" and its localized spellings, goes whole. The slogan is AlgaPSA's
+ *   line, not the tenant's, so hiding the attribution hides it too instead of
+ *   leaving an orphaned tagline; with the row gone there is no empty coloured
+ *   band left behind either.
+ * - a trailing "&copy; 2026 Acme &middot; Powered by AlgaPSA" loses only the
+ *   attribution: the copyright is the tenant's.
+ * - the standalone <p>Powered by AlgaPSA</p> older portal-invitation rows carry.
+ *
+ * Idempotent: a second pass has nothing left to match.
  */
 export function stripBrandAttribution(html: string): string {
   if (!html) return html;
@@ -205,12 +231,13 @@ export function stripBrandAttribution(html: string): string {
   return html
     .replace(new RegExp(`<p>\\s*${ATTRIBUTION}\\s*</p>`, 'gi'), '')
     .replace(new RegExp(`\\s*${SEPARATOR}\\s*${ATTRIBUTION}`, 'gi'), '')
-    .replace(new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*`, 'gi'), '')
+    .replace(new RegExp(ATTRIBUTION_ROW, 'gi'), '')
+    .replace(new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*[^<]*`, 'gi'), '')
     .replace(new RegExp(ATTRIBUTION, 'gi'), '');
 }
 
 export function containsBrandAttribution(html: string): boolean {
-  return !!html && html.includes(ATTRIBUTION);
+  return !!html && new RegExp(ATTRIBUTION, 'i').test(html);
 }
 
 /** The Enterprise pass the apply flow runs over every HTML it writes. */

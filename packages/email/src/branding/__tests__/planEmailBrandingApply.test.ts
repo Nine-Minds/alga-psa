@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette, containsEmailPaletteTokens } from '../applyEmailPalette';
 import { BRAND_LOGO_MARKER, containsBrandAttribution, decorateBrandedHtml } from '../brandAssets';
+import { LEGACY_BRAND_SLOGANS } from '../orphanedSlogan';
 import { planEmailBrandingApply, planEmailBrandingRemoval } from '../planEmailBrandingApply';
 import { resolveEmailPalette } from '../resolveEmailPalette';
 import { STOCK_EMAIL_PALETTE } from '../stockPalette';
@@ -403,6 +404,24 @@ describe('enterprise brand assets in the plan', () => {
     for (const row of applyOnce()) {
       expect(row.html_content).toContain(BRAND_LOGO_MARKER);
       expect(containsBrandAttribution(row.html_content)).toBe(false);
+    }
+  });
+
+  it('leaves no AlgaPSA slogan behind in anything it writes', () => {
+    const inserts = applyOnce();
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: inserts,
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    });
+
+    expect(plan.updates).toHaveLength(6);
+    for (const html of [...inserts.map((row) => row.html_content), ...plan.updates.map((update) => update.html)]) {
+      expect(containsBrandAttribution(html)).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => html.includes(slogan))).toEqual([]);
     }
   });
 
