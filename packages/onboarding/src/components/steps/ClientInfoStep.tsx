@@ -59,7 +59,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           })}
         </p>
         {data.companyAddressPrefilled && !isRevisit && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-600))]">
             {t('clientInfoStep.address.prefilledFromBilling', {
               defaultValue: 'Some of these values were filled in from your billing details. Please review them.'
             })}
