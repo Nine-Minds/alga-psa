@@ -55,9 +55,16 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
         </h3>
         <p className="text-sm text-gray-600">
           {t('clientInfoStep.address.description', {
-            defaultValue: 'Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.'
+            defaultValue: 'This address appears on your invoices and quotes.'
           })}
         </p>
+        {data.companyAddressPrefilled && !isRevisit && (
+          <p className="text-sm text-gray-600">
+            {t('clientInfoStep.address.prefilledFromBilling', {
+              defaultValue: 'Some of these values were filled in from your billing details. Please review them.'
+            })}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

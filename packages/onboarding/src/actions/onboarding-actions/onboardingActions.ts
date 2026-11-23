@@ -40,6 +40,8 @@ export interface ClientInfoData {
   companyPostalCode?: string;
   companyCountryCode?: string;
   companyCountryName?: string;
+  // Read-only: set by getOnboardingInitialData, never saved
+  companyAddressPrefilled?: boolean;
 }
 
 export interface TeamMember {
@@ -1346,8 +1348,17 @@ export const getOnboardingInitialData = withAuth(async (
         );
     }
     const blankPlaceholder = (value: string | null | undefined) =>
-      !value || value === 'N/A' ? '' : value;
+      !value || value === 'N/A' || value === 'Unknown' ? '' : value;
     const hasRealCountry = location?.country_code && location.country_code !== 'XX';
+    const addressFields = [
+      location?.address_line1,
+      location?.address_line2,
+      location?.city,
+      location?.state_province,
+      location?.postal_code,
+    ];
+    const companyAddressPrefilled =
+      !!hasRealCountry || addressFields.some((value) => blankPlaceholder(value) !== '');
 
     return {
       success: true,
@@ -1363,7 +1374,8 @@ export const getOnboardingInitialData = withAuth(async (
         companyStateProvince: blankPlaceholder(location?.state_province),
         companyPostalCode: blankPlaceholder(location?.postal_code),
         companyCountryCode: hasRealCountry ? location!.country_code : '',
-        companyCountryName: hasRealCountry ? location!.country_name : ''
+        companyCountryName: hasRealCountry ? location!.country_name : '',
+        companyAddressPrefilled
       }
     };
   } catch (error) {
