@@ -30,8 +30,8 @@ const ensureSequentialMode = async (knex) => {
 };
 
 exports.up = async function up(knex) {
-  await ensureSequentialMode(knex);
-
+  // Nullable column adds need no sequential mode; the index below is built
+  // CONCURRENTLY (an existing, populated table), which runs outside a transaction.
   const additions = [
     ['derived_from_system_id', (table) => table.integer('derived_from_system_id').nullable()],
     ['derived_palette', (table) => table.jsonb('derived_palette').nullable()],
@@ -45,13 +45,13 @@ exports.up = async function up(knex) {
   }
 
   await knex.raw(
-    'CREATE INDEX IF NOT EXISTS idx_tenant_email_templates_derived_from_system_id ON tenant_email_templates (derived_from_system_id)',
+    'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tenant_email_templates_derived_from_system_id ON tenant_email_templates (derived_from_system_id)',
   );
 };
 
 exports.down = async function down(knex) {
   await ensureSequentialMode(knex);
-  await knex.raw('DROP INDEX IF EXISTS idx_tenant_email_templates_derived_from_system_id');
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS idx_tenant_email_templates_derived_from_system_id');
   for (const column of ['derived_snapshot_hash', 'derived_palette', 'derived_from_system_id']) {
     if (await knex.schema.hasColumn('tenant_email_templates', column)) {
       await knex.schema.alterTable('tenant_email_templates', (table) => table.dropColumn(column));
@@ -59,4 +59,5 @@ exports.down = async function down(knex) {
   }
 };
 
+// CREATE/DROP INDEX CONCURRENTLY cannot run inside a transaction.
 exports.config = { transaction: false };
