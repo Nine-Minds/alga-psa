@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { describe, expect, it, vi } from 'vitest';
 
 const fromPath = vi.hoisted(() => vi.fn());
@@ -68,12 +68,8 @@ describe('Ghostscript hardening (R3)', () => {
   })();
 
   it.skipIf(!gs)('refuses file access from PostScript by default (SAFER is the default since 9.50)', () => {
-    let failed = false;
-    try {
-      execFileSync('gs', ['-q', '-dBATCH', '-dNODISPLAY', '-c', '(/etc/hostname) (r) file closefile quit'], { stdio: 'pipe' });
-    } catch (error) {
-      failed = /invalidfileaccess/.test(String((error as { stdout?: Buffer }).stdout));
-    }
-    expect(failed).toBe(true);
+    const result = spawnSync('gs', ['-dBATCH', '-dNODISPLAY', '-c', '(/etc/hostname) (r) file closefile quit'], { encoding: 'utf8' });
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toMatch(/invalidfileaccess/);
   });
 });
