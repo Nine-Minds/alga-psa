@@ -16,9 +16,9 @@ type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
 
 /**
  * App-owned co-managed integration for the client record. It owns capability
- * admission and the shared refresh state behind the summary and the co-managed
- * tab. When the capability does not admit this tenant it renders the ordinary
- * client with no feature slots and starts no feature read.
+ * admission and the shared refresh state behind the co-managed tab. When the
+ * capability does not admit this tenant it renders the ordinary client with no
+ * feature slots and starts no feature read.
  */
 export default function ClientCoManagedIntegration({ clientId, clientName, idPrefix, relationshipId, children }: ClientCoManagedIntegrationProps) {
   const { t } = useTranslation('msp/licensing');
