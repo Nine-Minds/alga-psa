@@ -608,7 +608,7 @@
       "emptyGroup": "Aún no hay elementos para esta ubicación."
     },
     "productDescription": {
-      "edited": "Editada para este presupuesto",
+      "edited": "Editada para esta cotización",
       "label": "Descripción del producto",
       "matchesProduct": "Coincide con el producto",
       "productGone": "El producto ya no está en el catálogo",
