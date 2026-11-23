@@ -812,7 +812,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           isDateDisabled={isDateDisabled}
         />
         {showErrors && validationErrors.date && (
-          <span id={`${id}-date-error`} className="text-sm text-red-500">{validationErrors.date}</span>
+          <span id={`${id}-date-error`} className="text-sm text-destructive">{validationErrors.date}</span>
         )}
         {sheetForSelectedDate && (
           <p id={`${id}-sheet-hint`} className="text-xs text-[rgb(var(--color-text-500))]">
