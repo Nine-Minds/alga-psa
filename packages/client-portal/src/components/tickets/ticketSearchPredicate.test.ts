@@ -47,6 +47,12 @@ describe('buildTicketSearchPredicate', () => {
     expect(buildTicketSearchPredicate('   ')(other)).toBe(true);
   });
 
+  it('finds a row by reference when the portal payload lacks status and priority', () => {
+    const matches = buildTicketSearchPredicate('Ticket #ALGA-2026-0002826');
+    expect(matches({ title: ticket.title, ticket_number: ticket.ticket_number, status_name: null })).toBe(true);
+    expect(matches({ title: other.title, ticket_number: other.ticket_number, priority_name: null })).toBe(false);
+  });
+
   it.each([
     ['TICKET 2026 0002826', ['TICKET-2026-0002826']],
     ['TICKET  2026 0002826', ['TICKET-2026-0002826']],

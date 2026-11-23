@@ -1,7 +1,11 @@
-import type { ITicketListItem } from '@alga-psa/types';
 import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '@shared/ticketClients/ticketReferenceSearch';
 
-type SearchableTicket = Pick<ITicketListItem, 'title' | 'ticket_number' | 'status_name' | 'priority_name'>;
+interface SearchableTicket {
+  title?: string | null;
+  ticket_number?: string | null;
+  status_name?: string | null;
+  priority_name?: string | null;
+}
 
 /** Returns a predicate for the portal search box; an empty/whitespace query matches everything. */
 export function buildTicketSearchPredicate(rawQuery: string): (ticket: SearchableTicket) => boolean {
