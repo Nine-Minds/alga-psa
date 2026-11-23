@@ -6,7 +6,7 @@ import { build } from "esbuild";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const mobileNodeModulesPath = path.join(projectRoot, "node_modules");
+const mobileNodeModulesPath = await fs.realpath(path.join(projectRoot, "node_modules"));
 const browserEntryPath = path.join(
   projectRoot,
   "scripts/ticket-mobile-editor-browser-entry.ts",
@@ -28,7 +28,7 @@ const result = await build({
     name: "mobile-editor-dependencies",
     setup(builder) {
       builder.onResolve({ filter: /^[^./]/ }, async (args) => {
-        if (args.pluginData?.mobileEditorResolution) return;
+        if (path.isAbsolute(args.path) || args.pluginData?.mobileEditorResolution) return;
         // Shared editor source lives outside mobile. Its bare imports must use
         // mobile's locked packages even when a root workspace install exists.
         // Retain nested package resolution for dependencies already in mobile.
