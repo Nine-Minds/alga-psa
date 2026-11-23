@@ -126,6 +126,13 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
     { name: 'net_amount', valueType: 'number', description: 'Quote line item total including tax.' },
     { name: 'billing_frequency', valueType: 'string', description: 'Recurring billing frequency.' },
     { name: 'is_recurring', valueType: 'boolean', description: 'Whether the line item is recurring.' },
+    { name: 'is_optional', valueType: 'boolean', description: 'Whether the line item is an optional add-on.' },
+    { name: 'is_selected', valueType: 'boolean', description: 'Whether an optional line item is selected (included).' },
+    {
+      name: 'optional_label',
+      valueType: 'string',
+      description: 'Localized "Optional" marker text for an optional line item; blank when the item is not optional.',
+    },
   ],
   'sales-order': [
     { name: 'description', valueType: 'string', description: 'Line description (product name).' },

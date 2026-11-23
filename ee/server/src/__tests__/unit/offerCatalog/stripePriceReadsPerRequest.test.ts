@@ -39,7 +39,7 @@ const db: any = (table: string) => {
 };
 
 const retrieve = vi.fn(async () => price);
-const catalog = createOfferCatalog({ db, scope: async () => scope, stripe: { prices: { retrieve } } as any, env: {} });
+const catalog = createOfferCatalog({ db: async () => db, scope: async () => scope, stripe: { prices: { retrieve } } as any, env: {} });
 // The deployment-level account setting is read from its own table; here it agrees with the catalog.
 const loaderCatalog = { ...catalog, deploymentLivemode: async () => false,
   effectiveAccountSetting: async () => ({ livemode: false, stripeAccount: 'acct_db', priceId: 'price_db',

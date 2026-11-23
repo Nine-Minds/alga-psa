@@ -1704,9 +1704,10 @@ export class StripeService {
   async getOfferCatalog(): Promise<OfferCatalog> {
     await this.ensureInitialized();
     if (!this.offerCatalogInstance) {
-      const { getAdminConnection } = await import('@alga-psa/db/admin');
-      const db = await getAdminConnection();
-      this.offerCatalogInstance = createBillingOfferCatalog({ db, stripe: this.stripe, secretKey: this.config.secretKey });
+      // The memoised catalog holds policy, not a pool: the admin connection is resolved per operation
+      // because getAdminConnection() may destroy and rebuild its pool after a connection reset.
+      const resolveDb = async () => (await import('@alga-psa/db/admin')).getAdminConnection();
+      this.offerCatalogInstance = createBillingOfferCatalog({ db: resolveDb, stripe: this.stripe, secretKey: this.config.secretKey });
     }
     return this.offerCatalogInstance;
   }

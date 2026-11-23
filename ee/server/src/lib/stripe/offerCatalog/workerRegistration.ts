@@ -17,7 +17,7 @@ async function workerCatalog() {
   const secretKey = await resolveStripeSecretKey();
   if (!secretKey) throw Object.assign(new Error('Stripe secret key is not configured'), { code: 'STRIPE_KEY_MISSING' });
   const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as never, typescript: true, ...stripeApiOverride(secretKey) });
-  return createBillingOfferCatalog({ db: await getAdminConnection(), stripe, secretKey });
+  return createBillingOfferCatalog({ db: () => getAdminConnection(), stripe, secretKey });
 }
 
 export const loadWorkerBillingCatalogContext = () => loadBillingCatalogContextFrom(workerCatalog);

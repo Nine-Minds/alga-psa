@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Företagsadress",
-      "description": "Förifylld från dina faktureringsuppgifter – granska och rätta vid behov. Den här adressen visas på dina fakturor och offerter.",
+      "description": "Den här adressen visas på dina fakturor och offerter.",
+      "prefilledFromBilling": "Vissa av värdena har fyllts i från dina faktureringsuppgifter. Granska dem.",
       "fields": {
         "addressLine1": {
           "label": "Adressrad 1",

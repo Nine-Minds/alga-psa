@@ -41,7 +41,7 @@ describe('quote admission from an already-open purchase screen', () => {
         first: async () => versions.find((row) => Object.entries(criteria).every(([key, value]) => row[key as keyof typeof row] === value)),
       }),
     });
-    const catalog = createOfferCatalog({ db: db as never, stripe: {} as never, scope: async () => scope, env: {} });
+    const catalog = createOfferCatalog({ db: async () => db as never, stripe: {} as never, scope: async () => scope, env: {} });
     mocks.service.getOfferCatalog.mockResolvedValue(catalog);
     // An existing pool can still be priced from its historical subscription even if new sales close.
     mocks.service.previewCoManagedSeats.mockResolvedValue(reviewedQuote);

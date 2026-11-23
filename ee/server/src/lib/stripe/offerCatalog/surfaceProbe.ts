@@ -5,8 +5,8 @@ import { loadBillingCatalogContextFrom } from './catalogContext';
 export { resetLoggedContextLoadFailures } from './catalogContext';
 
 /** Load request-current platform catalog settings through StripeService; no process cache. Registered below as the licensing loader. */
-export const loadBillingCatalogContext = (): Promise<BillingCatalogContext> =>
-  loadBillingCatalogContextFrom(() => getStripeService().getOfferCatalog());
+export const loadBillingCatalogContext = (tenantId?: string): Promise<BillingCatalogContext> =>
+  loadBillingCatalogContextFrom(() => getStripeService().getOfferCatalog(), tenantId);
 
 /**
  * Optional since the gate resolves the context itself. Kept as an explicit request entry point: it loads
@@ -14,9 +14,9 @@ export const loadBillingCatalogContext = (): Promise<BillingCatalogContext> =>
  * already-open request scope (withAuth opens one for every server action) it joins that scope instead, so
  * the request still loads once.
  */
-export async function withBillingCatalogContext<T>(work: () => T | Promise<T>): Promise<T> {
+export async function withBillingCatalogContext<T>(work: () => T | Promise<T>, tenantId?: string): Promise<T> {
   if (hasBillingCatalogScope()) return work();
-  const context = await loadBillingCatalogContext();
+  const context = await loadBillingCatalogContext(tenantId);
   return runWithBillingCatalogContext(context, work);
 }
 

@@ -49,17 +49,23 @@ describe('temporal worker billing catalog loader', () => {
 
     // Catalog sellable, env unset: open.
     expect(await licensing.isCoManagedPurchaseSurfaceOpen('tenant')).toBe(true);
-    expect(stub.build).toHaveBeenCalledWith(expect.objectContaining({ secretKey: 'sk_test_worker', db: { fake: 'admin-connection' } }));
+    expect(stub.build).toHaveBeenCalledWith(expect.objectContaining({ secretKey: 'sk_test_worker', db: expect.any(Function) }));
+    // The catalog gets a resolver, not a captured pool: each call asks the admin connection afresh.
+    const { db } = stub.build.mock.calls[0][0] as { db: () => Promise<unknown> };
+    expect(await db()).toEqual({ fake: 'admin-connection' });
 
     // Catalog unconfigured, env set: closed (a registered loader never falls back to the env var).
     vi.stubEnv('STRIPE_CO_MANAGED_USER_PRICE_ID', 'price_env');
     stub.catalog.effectiveAccountSetting.mockResolvedValue(unconfiguredSetting);
     expect(await licensing.isCoManagedPurchaseSurfaceOpen('tenant')).toBe(false);
 
-    // Each load asks for a fresh admin connection: nothing is held across loads.
-    const before = stub.adminConnection.mock.calls.length;
+    // Each load builds a catalog whose db resolver asks the admin connection afresh: no pool is held across loads.
+    const builds = stub.build.mock.calls.length;
     await licensing.isCoManagedPurchaseSurfaceOpen('tenant');
-    expect(stub.adminConnection.mock.calls.length).toBe(before + 1);
+    expect(stub.build.mock.calls.length).toBe(builds + 1);
+    const resolved = stub.adminConnection.mock.calls.length;
+    await (stub.build.mock.calls[builds][0] as { db: () => Promise<unknown> }).db();
+    expect(stub.adminConnection.mock.calls.length).toBe(resolved + 1);
   });
 
   it('fails closed, without throwing, when no Stripe key can be resolved', async () => {

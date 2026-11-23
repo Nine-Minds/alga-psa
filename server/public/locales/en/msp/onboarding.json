@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Company Address",
-      "description": "Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.",
+      "description": "This address appears on your invoices and quotes.",
+      "prefilledFromBilling": "Some of these values were filled in from your billing details. Please review them.",
       "fields": {
         "addressLine1": {
           "label": "Address Line 1",

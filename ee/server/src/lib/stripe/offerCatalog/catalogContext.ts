@@ -14,8 +14,20 @@ function failureCode(error: unknown): string {
   return typeof raw === 'string' && /^[A-Za-z0-9_.:-]{1,64}$/.test(raw) ? raw : 'UNKNOWN';
 }
 
-function logContextLoadFailure(error: unknown): void {
+/** Knex rewrites a failed query's message as "<sql> - <driver message>"; keep only the driver message. */
+const KNEX_SQL_PREFIX = /^\s*(?:select|insert|update|delete|with)\b[\s\S]*? - /i;
+
+function logContextLoadFailure(error: unknown, tenantId?: string): void {
   const code = failureCode(error);
+  if (tenantId) {
+    // A caller that names its tenant gets an operator-diagnostic line, once per tenant and code.
+    const key = `${tenantId}:${code}`;
+    if (loggedFailureCodes.has(key)) return;
+    loggedFailureCodes.add(key);
+    const raw = error instanceof Error ? error.message : String(error);
+    logger.error(`[BillingCatalogProbe] purchase surface probe failed closed: tenant=${tenantId} code=${code} message=${raw.replace(KNEX_SQL_PREFIX, '')}`);
+    return;
+  }
   if (loggedFailureCodes.has(code)) return;
   loggedFailureCodes.add(code);
   // Message carries no tenant data and no error text (which can embed ids); the code locates the cause.
@@ -33,7 +45,7 @@ export function resetLoggedContextLoadFailures(): void {
  * workerRegistration.ts). Any failure, including obtaining the catalog, is logged and yields an
  * unsellable context.
  */
-export async function loadBillingCatalogContextFrom(getCatalog: () => Promise<OfferCatalog>): Promise<BillingCatalogContext> {
+export async function loadBillingCatalogContextFrom(getCatalog: () => Promise<OfferCatalog>, tenantId?: string): Promise<BillingCatalogContext> {
   let livemode = /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY_PLATFORM ?? '');
   let context: BillingCatalogContext = { mode: livemode ? 'live' : 'test', stripeAccount: null,
     priceId: null, source: 'unconfigured', sellable: false };
@@ -54,7 +66,7 @@ export async function loadBillingCatalogContextFrom(getCatalog: () => Promise<Of
     return { ...context, sellable: offer.scope.stripeAccount === context.stripeAccount &&
       offer.scope.livemode === livemode && offer.priceId === context.priceId };
   } catch (error) {
-    logContextLoadFailure(error);
+    logContextLoadFailure(error, tenantId);
     return context;
   }
 }

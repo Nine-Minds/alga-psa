@@ -21,9 +21,12 @@ export async function loadConfiguredBillingAccount(db: Knex, livemode: boolean):
   }
 }
 
-/** Compose a catalog over `db`. The caller owns the connection's lifetime. */
+/**
+ * Compose a catalog over `db`: a resolver of the admin pool, called per operation (the pool may be rebuilt
+ * after a connection reset, so it is never captured). The caller owns the connection's lifetime.
+ */
 export function createBillingOfferCatalog(input: {
-  db: Knex;
+  db: () => Promise<Knex>;
   stripe: Stripe;
   secretKey: string;
   env?: NodeJS.ProcessEnv;
@@ -32,7 +35,7 @@ export function createBillingOfferCatalog(input: {
   return createOfferCatalog({
     db, stripe, subscriptions: stripe.subscriptions,
     livemode: () => stripeLivemodeFromSecretKey(secretKey),
-    scope: createScopeResolver(stripe, secretKey, env, (livemode, connection = db) => loadConfiguredBillingAccount(connection, livemode)),
+    scope: createScopeResolver(stripe, secretKey, env, async (livemode, connection) => loadConfiguredBillingAccount(connection ?? await db(), livemode)),
   });
 }
 
