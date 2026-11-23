@@ -5,10 +5,13 @@ const state = vi.hoisted(() => ({
   permitted: true,
   authorizationError: null as Error | null,
   row: null as Record<string, unknown> | null,
-  contactPhone: null as Record<string, unknown> | null,
+  rowsById: null as Record<string, Record<string, unknown>> | null,
+  phones: [] as Array<{ contact_name_id: string; phone_number: string }>,
   selected: [] as string[],
   joins: [] as string[],
   phoneOrder: [] as Array<{ column: string; order: string }>,
+  phoneQueries: 0,
+  phoneContactIds: [] as string[],
   queries: 0,
 }));
 
@@ -18,8 +21,17 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
     table: (tableName: string) => {
       state.queries += 1;
+      if (tableName === 'contact_phone_numbers') state.phoneQueries += 1;
+      let ticketId: string | null = null;
       const query = {
-        where: () => query,
+        where: (_column: string, value: string) => {
+          ticketId = value;
+          return query;
+        },
+        whereIn: (_column: string, values: string[]) => {
+          state.phoneContactIds = values;
+          return query;
+        },
         select: (...columns: string[]) => {
           state.selected.push(...columns);
           return query;
@@ -28,7 +40,8 @@ vi.mock('@alga-psa/db', () => ({
           if (tableName === 'contact_phone_numbers') state.phoneOrder = order;
           return query;
         },
-        first: async () => tableName === 'contact_phone_numbers' ? state.contactPhone : state.row,
+        first: async () => (state.rowsById && ticketId ? state.rowsById[ticketId] : state.row),
+        then: (resolve: (rows: unknown) => unknown) => resolve(state.phones),
       };
       return query;
     },
@@ -58,8 +71,11 @@ beforeEach(() => {
   state.authorizationError = null;
   state.selected = [];
   state.joins = [];
-  state.contactPhone = { phone_number: '+1-206-555-0142' };
+  state.phones = [{ contact_name_id: 'contact-1', phone_number: '+1-206-555-0142' }];
+  state.rowsById = null;
   state.phoneOrder = [];
+  state.phoneQueries = 0;
+  state.phoneContactIds = [];
   state.queries = 0;
   state.row = {
     ticket_id: ticketId,
@@ -87,9 +103,35 @@ describe('ticketLabelViewModelProvider worksheet details', () => {
     expect(state.selected).toContain('t.contact_name_id');
     expect(state.joins).toContain('contacts as ct');
     expect(state.phoneOrder).toEqual([
+      { column: 'contact_name_id', order: 'asc' },
       { column: 'is_default', order: 'desc' },
       { column: 'display_order', order: 'asc' },
     ]);
+  });
+
+  it('looks up contact phones for the whole batch in one query', async () => {
+    const otherTicketId = '22222222-2222-4222-8222-222222222222';
+    const noContactTicketId = '33333333-3333-4333-8333-333333333333';
+    state.rowsById = {
+      [ticketId]: { ...state.row!, contact_name_id: 'contact-1' },
+      [otherTicketId]: { ...state.row!, ticket_id: otherTicketId, contact_name_id: 'contact-2' },
+      [noContactTicketId]: { ...state.row!, ticket_id: noContactTicketId, contact_name_id: null },
+    };
+    state.phones = [
+      { contact_name_id: 'contact-1', phone_number: 'default-1' },
+      { contact_name_id: 'contact-1', phone_number: 'second-1' },
+      { contact_name_id: 'contact-2', phone_number: 'default-2' },
+    ];
+
+    const results = await ticketLabelViewModelProvider.getLabelViewModels(context, [
+      ticketId,
+      otherTicketId,
+      noContactTicketId,
+    ]);
+
+    expect(state.phoneQueries).toBe(1);
+    expect(state.phoneContactIds).toEqual(['contact-1', 'contact-2']);
+    expect(results.map((result) => result?.contactPhone)).toEqual(['default-1', 'default-2', null]);
   });
 
   it('does not read or return a description for ordinary tags', async () => {

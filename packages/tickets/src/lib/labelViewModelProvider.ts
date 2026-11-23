@@ -30,6 +30,19 @@ export { deriveWorkReason };
 
 const NOT_VISIBLE = /^(Ticket not found|Permission denied)/;
 
+interface TicketLabelRow {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  contact_name_id: string | null;
+  client_name: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  category_name: string | null;
+  subcategory_name: string | null;
+  attributes?: { description?: unknown } | null;
+}
+
 export const ticketLabelViewModelProvider: LabelViewModelProvider = {
   entityType: 'ticket',
   labelClass: 'ticket-work-tag',
@@ -39,9 +52,10 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
       return ids.map(() => null);
     }
     const { knex } = await createTenantKnex(context.tenant);
+    const facade = tenantDb(knex, context.tenant);
 
-    return Promise.all(
-      ids.map(async (ticketId): Promise<LabelViewModel | null> => {
+    const rows = await Promise.all(
+      ids.map(async (ticketId): Promise<TicketLabelRow | null> => {
         try {
           await authorizeTicketRecordAccess({
             trx: knex,
@@ -57,7 +71,6 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           throw error;
         }
 
-        const facade = tenantDb(knex, context.tenant);
         const query = facade
           .table('tickets as t')
           .where('t.ticket_id', ticketId)
@@ -79,35 +92,36 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
         facade.tenantJoin(query, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
         facade.tenantJoin(query, 'categories as sub', 't.subcategory_id', 'sub.category_id', { type: 'left' });
-        const row = (await query.first()) as
-          | {
-              ticket_id: string;
-              ticket_number: string | null;
-              title: string | null;
-              contact_name_id: string | null;
-              client_name: string | null;
-              contact_name: string | null;
-              contact_email: string | null;
-              category_name: string | null;
-              subcategory_name: string | null;
-              attributes?: { description?: unknown } | null;
-            }
-          | undefined;
+        return ((await query.first()) as TicketLabelRow | undefined) ?? null;
+      })
+    );
+
+    // One phone query for the whole batch; the first row per contact is its preferred number.
+    const contactIds = Array.from(
+      new Set(rows.map((row) => row?.contact_name_id).filter((id): id is string => Boolean(id)))
+    );
+    const phoneByContact = new Map<string, string>();
+    if (contactIds.length > 0) {
+      const phones = (await facade
+        .table('contact_phone_numbers')
+        .whereIn('contact_name_id', contactIds)
+        .select('contact_name_id', 'phone_number')
+        .orderBy([
+          { column: 'contact_name_id', order: 'asc' },
+          { column: 'is_default', order: 'desc' },
+          { column: 'display_order', order: 'asc' },
+        ])) as Array<{ contact_name_id: string; phone_number: string }>;
+      for (const phone of phones) {
+        if (!phoneByContact.has(phone.contact_name_id)) {
+          phoneByContact.set(phone.contact_name_id, phone.phone_number);
+        }
+      }
+    }
+
+    return rows.map((row): LabelViewModel | null => {
         if (!row) {
           return null;
         }
-
-        const contactPhone = row.contact_name_id
-          ? ((await facade
-              .table('contact_phone_numbers')
-              .where('contact_name_id', row.contact_name_id)
-              .select('phone_number')
-              .orderBy([
-                { column: 'is_default', order: 'desc' },
-                { column: 'display_order', order: 'asc' },
-              ])
-              .first()) as { phone_number: string } | undefined)
-          : undefined;
         const description = row.attributes?.description;
         const ticketDescription = flattenBlockContentToPlainText(description).trim() || null;
 
@@ -121,7 +135,7 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           title: row.title ?? null,
           clientName: row.client_name ?? null,
           contactName: row.contact_name ?? null,
-          contactPhone: contactPhone?.phone_number ?? null,
+          contactPhone: (row.contact_name_id && phoneByContact.get(row.contact_name_id)) || null,
           contactEmail: row.contact_email ?? null,
           detail: deriveWorkReason(row.subcategory_name, row.category_name),
           ...(context.includeWorksheetDetails
@@ -136,7 +150,6 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           custodyLocation: null,
           nextAction: null,
         };
-      })
-    );
+    });
   },
 };

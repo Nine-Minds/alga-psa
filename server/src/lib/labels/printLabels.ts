@@ -13,7 +13,7 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 import { isWorksheetLabelTemplate, resolveCommonTemplatePageSize } from '@alga-psa/billing/lib/label-batch/layout';
-import { getStandardLabelTemplateAstByCode, resolveLabelTemplateAst } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
+import { resolveLabelTemplateAst } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 import type {
   LabelBatchLayout,
   LabelLayoutErrorCode,
@@ -57,8 +57,7 @@ const DEFAULT_LAYOUT: LabelBatchLayout = {
  */
 function layoutForTemplates(templates: ReadonlyMap<LabelClass, Extract<ResolvedLabelTemplate, { ok: true }>>): LabelBatchLayout {
   const sources = Array.from(templates, ([labelClass, template]) => {
-    const ast = template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);
-    return { labelClass, metadata: ast?.metadata };
+    return { labelClass, metadata: resolveLabelTemplateAst(template)?.metadata };
   });
   const pageSize = resolveCommonTemplatePageSize(sources);
   return pageSize ? { kind: 'one-per-page', pageSize } : DEFAULT_LAYOUT;
