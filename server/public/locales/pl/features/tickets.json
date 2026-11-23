@@ -619,6 +619,15 @@
       },
       "unavailable": "To zgłoszenie jest niedostępne.",
       "back": "Wróć do zgłoszeń klientów"
+    },
+    "opener": {
+      "openedBy": "Otwarte e-mailem od {{sender}}",
+      "attachments_one": "{{count}} załącznik",
+      "attachments_few": "{{count}} załączniki",
+      "attachments_many": "{{count}} załączników",
+      "attachments_other": "{{count}} załącznika",
+      "show": "Pokaż oryginalną wiadomość e-mail",
+      "hide": "Ukryj oryginalną wiadomość e-mail"
     }
   },
   "responseState": {
