@@ -389,16 +389,31 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
 
-/** Tenant-wide key catalog used to validate dynamic ticket attribute redactions consistently across batches. */
-export async function getTenantTicketAttributeKeys(
+function supportedTicketCustomRedactionKeys(context: TicketAuthorizationContext): string[] {
+  const names = context.ticketReadBundleNarrowingRules.flatMap((rule) => rule.redactedFields ?? []);
+  return [...new Set(names.filter((name) => {
+    if (typeof name !== 'string' || name.trim() === '' || /^(?:tickets?\.)?attributes\./i.test(name)) return false;
+    return !TICKET_FIELD_PROJECTIONS.some((projection) => isTicketFieldHidden([name], projection));
+  }).map((name) => name.trim().toLowerCase()))];
+}
+
+/** Stable custom-key names declared by the caller's active ticket policies. */
+export async function getSupportedTicketCustomRedactionKeys(
   trx: Knex.Transaction,
-  tenant: string
+  tenant: string,
+  user: IUserWithRoles
 ): Promise<string[]> {
-  const rows = await tenantDb(trx, tenant)
-    .table('tickets')
-    .whereNotNull('attributes')
-    .select(trx.raw("DISTINCT jsonb_object_keys(CASE WHEN jsonb_typeof(attributes) = 'object' THEN attributes ELSE '{}'::jsonb END) AS key"));
-  return rows.map((row: { key: string }) => row.key);
+  const context = await createTicketAuthorizationContext(trx, tenant, user);
+  return supportedTicketCustomRedactionKeys(context);
+}
+
+function canonicalTicketRedactions(redactions: readonly string[], supportedCustomKeys: readonly string[]): string[] {
+  const custom = new Set(supportedCustomKeys.map((key) => key.toLowerCase()));
+  return redactions.map((name) => {
+    if (/^(?:tickets?\.)?attributes(?:\.|$)/i.test(name)) return name;
+    if (custom.has(name.toLowerCase())) return `attributes.${name}`;
+    return name;
+  });
 }
 
 /** Per-ticket kernel decisions for callers that forward ticket data outside the list action. */
@@ -428,8 +443,9 @@ export const authorizeTicketIdsWithRedactions = withAuth(async (
       requestCache: context.requestCache,
       knex: trx,
     })));
+    const supportedCustomKeys = supportedTicketCustomRedactionKeys(context);
     const byId = new Map<string, string[]>(rows.flatMap((row: any, index: number) => decisions[index]?.allowed
-      ? [[row.ticket_id, (decisions[index].redactedFields as string[] | undefined) ?? []] as const] : []));
+      ? [[row.ticket_id, canonicalTicketRedactions((decisions[index].redactedFields as string[] | undefined) ?? [], supportedCustomKeys)] as const] : []));
     return requested.flatMap((id) => byId.has(id) ? [{ ticketId: id, redactedFields: byId.get(id)! }] : []);
   });
 });
@@ -1881,7 +1897,7 @@ function buildTicketListItemsQuery(
       nullable('is_closed', 'boolean', 't.is_closed'),
       hiddenFields.has('attributes') ? trx.raw('NULL::jsonb as attributes')
         : hiddenAttributes.size > 0 || hiddenFields.has('description')
-          ? trx.raw(`${hiddenFields.has('description') ? "jsonb_set(COALESCE(t.attributes, '{}'::jsonb) - ?::text[], '{description}', 'null'::jsonb)" : "(COALESCE(t.attributes, '{}'::jsonb) - ?::text[])"} as attributes`, [Array.from(hiddenAttributes)])
+          ? trx.raw(`${hiddenFields.has('description') ? "jsonb_set(" : ""}(SELECT COALESCE(jsonb_object_agg(attribute.key, attribute.value), '{}'::jsonb) FROM jsonb_each(CASE WHEN jsonb_typeof(COALESCE(t.attributes, '{}'::jsonb)) = 'object' THEN COALESCE(t.attributes, '{}'::jsonb) ELSE '{}'::jsonb END) AS attribute(key, value) WHERE lower(attribute.key) <> ALL(?::text[]))${hiddenFields.has('description') ? ", '{description}', 'null'::jsonb)" : ""} as attributes`, [[...hiddenAttributes].map((key) => key.toLowerCase())])
           : 't.attributes',
       nullable('master_ticket_id', 'uuid', 't.master_ticket_id'), nullable('tenant', 'uuid', 't.tenant'),
       nullable('itil_impact', 'text', 't.itil_impact'), nullable('itil_urgency', 'text', 't.itil_urgency'), nullable('itil_priority_level', 'integer', 't.itil_priority_level'),
@@ -2431,10 +2447,7 @@ export const loadTicketListItemsByIds = withAuth(async (
           'contact_name_id', 'billing_profile_id', 'attributes');
       const freshDecisions = await authorizeTicketRowsWithRedactions(trx, authorizationContext, authorizationRecords);
       const freshById = new Map(freshDecisions.map(({ ticket, redactedFields }) => [ticket.ticket_id!, redactedFields] as const));
-      const attributesById = new Map(authorizationRecords.map((row: any) => [row.ticket_id, row.attributes] as const));
-      // Resolve dynamic field validity against the tenant catalog so a policy
-      // keeps its meaning when candidate/scoring batches contain no example key.
-      const knownAttributeKeys = await getTenantTicketAttributeKeys(trx, tenant);
+      const supportedCustomKeys = supportedTicketCustomRedactionKeys(authorizationContext);
       const redactionsById = new Map<string, string[]>();
       for (const id of requestedIds) {
         if (!freshById.has(id)) continue;
@@ -2448,7 +2461,7 @@ export const loadTicketListItemsByIds = withAuth(async (
       const interpretationsById = new Map<string, TicketRedactionInterpretation>();
       for (const id of authorizedIds) {
         const fields = redactionsById.get(id)!;
-        const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined, knownAttributeKeys);
+        const interpreted = interpretTicketRedactions(fields, supportedCustomKeys);
         interpretationsById.set(id, interpreted);
         const key = JSON.stringify({
           fields: [...interpreted.hiddenFields].sort(),

@@ -229,6 +229,8 @@ describeDb('ticket chip tag hydration (DB)', () => {
     await publishBundleRevision(db, { tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: ids.actor });
     const previousUser = authMocks.user;
     authMocks.user = { user_id: redactionUser, user_type: 'internal', tenant: ids.tenant };
+    const originalAttributes = await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B])
+      .select('ticket_id', 'attributes');
     try {
       const authorized = await authorizeTicketIdsWithRedactions([ids.A, ids.B, ids.C]);
       expect(authorized).toHaveLength(3);
@@ -339,6 +341,41 @@ describeDb('ticket chip tag hydration (DB)', () => {
       expect(qualifiedCustomSubset.tickets[0].attributes).toEqual({
         description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE',
       });
+
+      // The published policy remains unchanged while the tenant loses all
+      // stored examples of both its unqualified and qualified custom keys.
+      for (const row of originalAttributes) {
+        const attributes = row.attributes as Record<string, unknown>;
+        const stripped = Object.fromEntries(Object.entries(attributes).filter(([key]) =>
+          !['secret_alias', 'title', 'status_id'].includes(key.toLowerCase())));
+        await db('tickets').where({ tenant: ids.tenant, ticket_id: row.ticket_id }).update({ attributes: stripped });
+      }
+      const remainingKeys = (await db('tickets').where({ tenant: ids.tenant }).select('attributes'))
+        .flatMap((row: { attributes: Record<string, unknown> | null }) => Object.keys(row.attributes ?? {}).map((key) => key.toLowerCase()));
+      for (const absent of ['secret_alias', 'title', 'status_id']) expect(remainingKeys).not.toContain(absent);
+
+      const keylessRedactions = new Map([[ids.C, [
+        ...(redactions.get(ids.C) ?? []), 'attributes.title', 'attributes.status_id',
+      ]]]);
+      const keylessCandidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+        trx, ids.tenant, authMocks.user, [ids.C], keylessRedactions
+      )));
+      expect(keylessCandidates).toHaveLength(1);
+      let keylessScoreRequest: unknown;
+      await scoreBatch({ systemOne: async (request: unknown) => {
+        keylessScoreRequest = request;
+        return { model: 'db-test', answers: { c0: { type: 'noul', noul: 0.9 } }, usage: { input_tokens: 1 } } as never;
+      } } as never, ticketSmartSearch.relevance, 'incident', keylessCandidates, new AbortController().signal);
+      const keylessScorerInput = JSON.stringify(keylessScoreRequest);
+      expect(keylessScorerInput).toContain('DB-C-PERMITTED-DESCRIPTION');
+      expect(keylessScorerInput).toContain('Ticket 5');
+      expect(keylessScorerInput).toContain('Open');
+
+      const keylessHydrated: any = await ticketSmartSearch.hydrateRows(base, [ids.C], keylessRedactions);
+      expect(keylessHydrated.rows[0]).toMatchObject({
+        title: 'Ticket 5', status_name: 'Open',
+        attributes: { description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE' },
+      });
     } finally {
       authMocks.user = previousUser;
       await db('authorization_bundle_assignments').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
@@ -346,6 +383,9 @@ describeDb('ticket chip tag hydration (DB)', () => {
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).update({ published_revision_id: null });
       await db('authorization_bundle_revisions').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
+      for (const row of originalAttributes) {
+        await db('tickets').where({ tenant: ids.tenant, ticket_id: row.ticket_id }).update({ attributes: row.attributes });
+      }
       await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B, ids.C]).update({ assigned_to: ids.actor });
       await db('users').where({ tenant: ids.tenant, user_id: redactionUser }).del();
     }
@@ -453,7 +493,16 @@ describeDb('ticket chip tag hydration (DB)', () => {
         ? { description: `STREAM-PERMITTED-DESCRIPTION-${index + 1}`, secret_alias: `STREAM-SECRET-${index + 1}` }
         : { description: 'STREAM-KEYLESS-PERMITTED-DESCRIPTION', visible_alias: 'STREAM-KEYLESS-VISIBLE' },
     })));
-    const redactions = new Map(streamedIds.map((ticketId) => [ticketId, ['secret_alias']] as const));
+    const bundle = await createAuthorizationBundle(db, { tenant: ids.tenant, name: `Streaming redaction ${uuidv4()}`, actorUserId: ids.actor });
+    await createBundleAssignment(db, {
+      tenant: ids.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: ids.actor, actorUserId: ids.actor,
+    });
+    await upsertBundleRule(db, {
+      tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
+      resourceType: 'ticket', action: 'read', templateKey: 'own_or_assigned', constraintKey: 'hide_sensitive_fields',
+      config: { redactedFields: ['secret_alias'] }, position: 0, actorUserId: ids.actor,
+    });
+    await publishBundleRevision(db, { tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: ids.actor });
     const scorerRequests: unknown[] = [];
     const systemOne = vi.fn(async (request: any) => {
       scorerRequests.push(request);
@@ -467,9 +516,11 @@ describeDb('ticket chip tag hydration (DB)', () => {
     });
     const client = vi.spyOn(typesafeClient, 'resolveTypeSafeClient').mockResolvedValue({ systemOne } as never);
     try {
+      const authorized = await authorizeTicketIdsWithRedactions(streamedIds);
+      expect(authorized).toHaveLength(11);
       const definition = {
         ...ticketSmartSearch,
-        enumerate: async () => streamedIds.map((id) => ({ id, redactedFields: ['secret_alias'] })),
+        enumerate: async () => authorized.map(({ ticketId, redactedFields }) => ({ id: ticketId, redactedFields })),
       };
       const events = [];
       await runWithTenant(ids.tenant, async () => {
@@ -492,6 +543,11 @@ describeDb('ticket chip tag hydration (DB)', () => {
     } finally {
       client.mockRestore();
       await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', streamedIds).del();
+      await db('authorization_bundle_assignments').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
+      await db('authorization_bundle_rules').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
+      await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).update({ published_revision_id: null });
+      await db('authorization_bundle_revisions').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
+      await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
     }
   });
 

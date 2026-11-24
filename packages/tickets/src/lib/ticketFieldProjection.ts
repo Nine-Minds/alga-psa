@@ -101,19 +101,14 @@ export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
   return hidden;
 }
 
-/** Resolve policy names against the custom keys available to the projection.
- * Callers processing a set of tickets pass the union of their keys so one row
- * missing a key cannot change the meaning of a valid restriction for another.
- * Names that are neither known ticket fields nor known custom keys are rejected.
- */
+/** Resolve policy names against stable ticket fields and custom keys declared by policy. */
 export function interpretTicketRedactions(
   redactions: readonly string[],
-  attributes: Record<string, unknown> | null | undefined,
-  knownAttributeKeys: readonly string[] = []
+  supportedCustomKeys: readonly string[] = []
 ): TicketRedactionInterpretation {
   const hiddenFields = hiddenTicketFields([]);
   const hiddenAttributes = new Set<string>();
-  const availableAttributeKeys = [...new Set([...Object.keys(attributes ?? {}), ...knownAttributeKeys])];
+  const supportedCustomKeysLower = new Set(supportedCustomKeys.map((key) => key.toLowerCase()));
   for (const raw of redactions) {
     if (typeof raw !== 'string' || raw.trim() === '') throw new Error('Unsupported empty ticket redaction');
     const name = raw.trim();
@@ -125,30 +120,27 @@ export function interpretTicketRedactions(
       hiddenFields.add('attributes');
       continue;
     }
-    const qualifiedAttributePath = /^(?:tickets?\.)?attributes\.(.+)$/i.test(name);
-    const attributeName = name.replace(/^(?:tickets?\.)?attributes\./i, '').toLowerCase();
-    const attributeMatches = availableAttributeKeys.filter((key) => key.toLowerCase() === attributeName);
-    if (qualifiedAttributePath && attributeMatches.length > 0) {
-      for (const key of attributeMatches) hiddenAttributes.add(key);
-      if (attributeName === 'description') {
+    const qualifiedAttributePath = /^(?:tickets?\.)?attributes\.(.+)$/i.exec(name);
+    if (qualifiedAttributePath) {
+      const attributeName = qualifiedAttributePath[1];
+      // An explicit attributes path addresses a custom JSON key even if no
+      // ticket currently stores it. Restrict this syntax to one key segment.
+      if (!attributeName || attributeName.includes('.') || /[\[\]*]/.test(attributeName)) {
+        throw new Error(`Unsupported ticket redaction: ${name}`);
+      }
+      hiddenAttributes.add(attributeName.toLowerCase());
+      if (attributeName.toLowerCase() === 'description') {
         for (const field of hiddenTicketFields(['description'])) hiddenFields.add(field);
       }
       continue;
-    }
-    if (qualifiedAttributePath && attributeName !== 'description') {
-      // A qualified JSON path must never fall through to a catalog field with
-      // the same suffix (for example attributes.title or attributes.status_id).
-      throw new Error(`Unsupported ticket redaction: ${name}`);
-    }
-    if (attributeName === 'description') {
-      for (const key of attributeMatches) hiddenAttributes.add(key);
     }
     const fieldMatch = TICKET_FIELD_PROJECTIONS.some((projection) =>
       isTicketFieldHidden([name], projection));
     if (fieldMatch) {
       for (const field of hiddenTicketFields([name])) hiddenFields.add(field);
-    } else if (attributeMatches.length > 0) {
-      for (const key of attributeMatches) hiddenAttributes.add(key);
+      if (name.toLowerCase() === 'description') hiddenAttributes.add('description');
+    } else if (supportedCustomKeysLower.has(name.toLowerCase())) {
+      hiddenAttributes.add(name.toLowerCase());
     } else {
       throw new Error(`Unsupported ticket redaction: ${name}`);
     }
@@ -163,10 +155,11 @@ export function interpretTicketRedactions(
 
 export function redactTicketAttributes(
   attributes: Record<string, unknown> | null | undefined,
-  redactions: readonly string[]
+  redactions: readonly string[],
+  supportedCustomKeys: readonly string[] = []
 ): Record<string, unknown> | null {
   if (!attributes) return attributes ?? null;
-  const { hiddenFields, hiddenAttributes } = interpretTicketRedactions(redactions, attributes);
+  const { hiddenFields, hiddenAttributes } = interpretTicketRedactions(redactions, supportedCustomKeys);
   if (hiddenFields.has('attributes')) return null;
   return Object.fromEntries(Object.entries(attributes).filter(([key]) => !hiddenAttributes.has(key)));
 }

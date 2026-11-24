@@ -13,7 +13,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
-import { authorizeTicketIdsWithRedactions, getAllMatchingTicketIds, getTenantTicketAttributeKeys, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { authorizeTicketIdsWithRedactions, getAllMatchingTicketIds, getSupportedTicketCustomRedactionKeys, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ticketListFiltersSchema } from '@alga-psa/tickets/schemas/ticket.schema';
 import type { TicketSmartSearchRowMetadata, TicketSmartSearchScope } from '@alga-psa/tickets/lib/smartTicketSearch/types';
 import type { ITicketListItem, IUserWithRoles } from '@alga-psa/types';
@@ -199,14 +199,12 @@ export async function loadTicketCandidates(
   const authorizedIds = ticketIds.filter((id) => redactions.has(id));
   if (authorizedIds.length === 0) return [];
   const principal = await resolveSearchAclPrincipal(trx, user);
-  const attributesRows = await tenantDb(trx, tenant).table('tickets').whereIn('ticket_id', authorizedIds).select('ticket_id', 'attributes');
-  const attributesById = new Map(attributesRows.map((row: { ticket_id: string; attributes: Record<string, unknown> | null }) => [row.ticket_id, row.attributes]));
-  const knownAttributeKeys = await getTenantTicketAttributeKeys(trx, tenant);
+  const supportedCustomKeys = await getSupportedTicketCustomRedactionKeys(trx, tenant, user);
   const grouped = new Map<string, { ids: string[]; interpretation: TicketRedactionInterpretation; hasRedactions: boolean }>();
   for (const id of authorizedIds) {
     const fields = [...new Set(redactions.get(id)!)].sort();
     // Candidate construction must reject policy names it cannot interpret just as hydration does.
-    const interpretation = interpretTicketRedactions(fields, attributesById.get(id), knownAttributeKeys);
+    const interpretation = interpretTicketRedactions(fields, supportedCustomKeys);
     const key = JSON.stringify({
       fields: [...interpretation.hiddenFields].sort(),
       attributes: [...interpretation.hiddenAttributes].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())),
