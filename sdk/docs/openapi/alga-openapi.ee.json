@@ -11390,7 +11390,7 @@
               "skipped",
               "failed"
             ],
-            "description": "sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, already a portal user, shared mailbox, not in this client, or no longer in the requested invitation_states). failed: the invitation could not be delivered."
+            "description": "sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, inactive contact, already a portal user, shared mailbox, not in this client, or no longer in the requested invitation_states). failed: the invitation could not be delivered."
           },
           "invitation_id": {
             "type": "string",

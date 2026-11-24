@@ -15953,7 +15953,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ]
           },
           "minItems": 1,
-          "description": "Narrows the eligible contacts to those whose latest unused invitation is expired and/or still pending — the chase-up case. A resend renews the link for the tenant's full invitation validity. Ignored when contact_ids is given; narrower than all_eligible when both are set."
+          "description": "Narrows the contacts to those whose latest invitation is expired and/or still pending — the chase-up case. A contact whose latest invitation was used or revoked is in neither state, whatever older invitations it has. A resend renews the link for the tenant's full invitation validity. Narrower than all_eligible, and it also narrows contact_ids: an id whose invitation is no longer in one of these states comes back as skipped with INVITATION_STATE_MISMATCH."
         }
       },
       "description": "Supply contact_ids, all_eligible=true, or invitation_states. One of the three is required."
