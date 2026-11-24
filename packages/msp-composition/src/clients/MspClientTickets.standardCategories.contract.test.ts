@@ -10,6 +10,14 @@
  * alias map `formatCategoryLabel` reports it as unknown. This pins the thread: the detail screen
  * keeps the aliases beside the categories, the render props carry them, both providers hand them
  * on, and both lists pass them to `createTicketColumns`.
+ *
+ * This is wiring only (a prop threaded through four React layers with no behaviour of its own).
+ * The alias resolution it is wiring *to* is the behaviour, and it is driven directly, not pinned
+ * as text, in two other places: `packages/tickets/src/lib/ticketListPresentation.test.ts`
+ * (`formatCategoryLabel` resolving both a `category_id` and a `subcategory_id` through an alias)
+ * and `server/src/test/integration/itilCategoryFilters.integration.test.ts` (T107, the
+ * de-duplication itself, against a real database). A render test of `MspClientTickets` would
+ * re-test that same resolver through a data-fetching table component, not add coverage.
  */
 import fs from 'node:fs';
 import path from 'node:path';

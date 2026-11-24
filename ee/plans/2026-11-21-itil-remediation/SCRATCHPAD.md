@@ -1226,6 +1226,29 @@ already" (the cluster sat at 188–199 of 200 connections, most of them other wo
 failure the previous browser check recorded. Re-running after releasing this slot's idle
 connections succeeded. That is slot capacity, not this branch.
 
+**7 (follow-up). The eight named source-text suites, checked one by one.** T227 was the one real
+gap (fixed above, in `itilSlaContract.test.ts`). Checking the rest against the PRD's own
+"Tests that pin source text rather than behaviour" section found it already covered six of the
+eight (`itilCreateWritersContract`, `itilUpdateWritersContract`, `itilImpactUrgencyContract`,
+`itilPriorityPickersContract` via T172/T173/T175–T177/T179, `itilBoardLifecycleContract`,
+`itilBoardTypeSwitchContract`) with a named integration suite or shared-helper test holding the
+actual behaviour for every entry — confirmed by grepping each integration file for the T-ids its
+contract sibling claims. The two `standardCategories.contract` files were missing from that
+section entirely:
+
+- `TicketList.standardCategories.contract.test.ts` already drives `standardCategoryFilterOptions`
+  directly in its last case (five rows in, the kept list and alias map asserted) — behaviour, not
+  text. Nothing to convert; it was undocumented, not unfixed.
+- `MspClientTickets.standardCategories.contract.test.ts` was pure text with no pointer to where
+  the alias resolution it wires is proved. It wires a prop through four React layers with no
+  behaviour of its own; the resolution is `formatCategoryLabel` (driven in
+  `ticketListPresentation.test.ts`) and the de-duplication behind it (driven in
+  `itilCategoryFilters.integration.test.ts`, T107). A render test of the profile tab would exercise
+  that same resolver again through a data-fetching table component, not add coverage, so it stays
+  text — now with the pointer the other six files already carry.
+
+Both are added to the PRD's deviations section so the audit covers every suite the chore named.
+
 ### Groups
 
 All 16 commit groups are implemented; `features.json` and `tests.json` hold no

@@ -313,6 +313,20 @@ Still pinned as text, with the reason:
   `itilSlaContract`** — each names a writer that must reach the shared rules, or a lookup that
   must no longer exist (the P-number name pattern). The behaviour of every one of them is in the
   matching integration suite; these files are the wiring, and F136 asks for exactly that.
+- **`MspClientTickets.standardCategories.contract.test.ts` (T109, the client/contact profile tab
+  half).** Pins that the alias map a ticket needs to resolve another ITIL board's copy of a
+  standard category reaches `createTicketColumns` through four React layers
+  (`ClientDetails` → `ClientCrossFeatureContext` → the two providers → `MspClientTickets` /
+  `MspContactTickets`). The resolution itself is driven, not pinned, in
+  `ticketListPresentation.test.ts` (`formatCategoryLabel`) and in
+  `itilCategoryFilters.integration.test.ts` (T107, the de-duplication). A render test of the
+  profile tab would exercise that same resolver again through a data-fetching table, not add
+  coverage.
+- **`TicketList.standardCategories.contract.test.ts` (T109, the client portal half).** Mostly
+  text (the import and the two setter calls), but its last case drives
+  `standardCategoryFilterOptions` directly against five rows and asserts the kept list and the
+  alias map it returns — the one piece of this file that is its own behaviour, not a pointer to
+  someone else's.
 
 ## Acceptance Criteria
 
