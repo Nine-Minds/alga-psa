@@ -695,9 +695,12 @@
     "actions": {
       "send": "Send {{total}} invitations",
       "sending": "Sending...",
-      "resendExpired": "Resend {{total}} expired invitations",
-      "resendPending": "Resend {{total}} pending invitations",
-      "resendOpen": "Resend {{total}} expired or pending invitations"
+      "resendExpired_one": "Resend {{count}} expired invitation",
+      "resendExpired_other": "Resend {{count}} expired invitations",
+      "resendPending_one": "Resend {{count}} pending invitation",
+      "resendPending_other": "Resend {{count}} pending invitations",
+      "resendOpen_one": "Resend {{count}} expired or pending invitation",
+      "resendOpen_other": "Resend {{count}} expired or pending invitations"
     },
     "results": {
       "summary": "Sent {{sent}}, skipped {{skipped}}, failed {{failed}}.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "Could not work out who can be invited. Please try again.",
-      "sendFailed": "Could not send the invitations. Please try again."
+      "sendFailed": "Could not send the invitations. Please try again.",
+      "statesUnavailable": "Could not read which invitations are outstanding for this client."
     },
     "resendTitle": "Resend client portal invitations",
-    "resendCount": "{{total}} contacts will get their invitation again, with the full validity period."
+    "resendCount_one": "{{count}} contact will get their invitation again, with the full validity period.",
+    "resendCount_other": "{{count}} contacts will get their invitation again, with the full validity period."
   },
   "contactsLayout": {
     "title": "Contacts Layout",

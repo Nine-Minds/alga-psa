@@ -695,9 +695,12 @@
     "actions": {
       "send": "Enviar {{total}} invitaciones",
       "sending": "Enviando...",
-      "resendExpired": "Reenviar {{total}} invitaciones vencidas",
-      "resendPending": "Reenviar {{total}} invitaciones pendientes",
-      "resendOpen": "Reenviar {{total}} invitaciones vencidas o pendientes"
+      "resendExpired_one": "Reenviar {{count}} invitación vencida",
+      "resendExpired_other": "Reenviar {{count}} invitaciones vencidas",
+      "resendPending_one": "Reenviar {{count}} invitación pendiente",
+      "resendPending_other": "Reenviar {{count}} invitaciones pendientes",
+      "resendOpen_one": "Reenviar {{count}} invitación vencida o pendiente",
+      "resendOpen_other": "Reenviar {{count}} invitaciones vencidas o pendientes"
     },
     "results": {
       "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
-      "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo."
+      "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo.",
+      "statesUnavailable": "No se pudo determinar qué invitaciones están pendientes para este cliente."
     },
     "resendTitle": "Reenviar invitaciones al portal del cliente",
-    "resendCount": "{{total}} contactos recibirán su invitación de nuevo, con el período de validez completo."
+    "resendCount_one": "{{count}} contacto recibirá su invitación de nuevo, con el período de validez completo.",
+    "resendCount_other": "{{count}} contactos recibirán su invitación de nuevo, con el período de validez completo."
   },
   "contactsLayout": {
     "title": "Diseño de contactos",

@@ -695,9 +695,12 @@
     "actions": {
       "send": "Skicka {{total}} inbjudningar",
       "sending": "Skickar…",
-      "resendExpired": "Skicka {{total}} utgångna inbjudningar igen",
-      "resendPending": "Skicka {{total}} väntande inbjudningar igen",
-      "resendOpen": "Skicka {{total}} utgångna eller väntande inbjudningar igen"
+      "resendExpired_one": "Skicka {{count}} utgången inbjudan igen",
+      "resendExpired_other": "Skicka {{count}} utgångna inbjudningar igen",
+      "resendPending_one": "Skicka {{count}} väntande inbjudan igen",
+      "resendPending_other": "Skicka {{count}} väntande inbjudningar igen",
+      "resendOpen_one": "Skicka {{count}} utgången eller väntande inbjudan igen",
+      "resendOpen_other": "Skicka {{count}} utgångna eller väntande inbjudningar igen"
     },
     "results": {
       "summary": "{{sent}} skickade, {{skipped}} överhoppade, {{failed}} misslyckade.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
-      "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen."
+      "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen.",
+      "statesUnavailable": "Kunde inte avgöra vilka inbjudningar som är utestående för den här kunden."
     },
     "resendTitle": "Skicka inbjudningar till kundportalen igen",
-    "resendCount": "{{total}} kontakter får sin inbjudan igen, med hela giltighetsperioden."
+    "resendCount_one": "{{count}} kontakt får sin inbjudan igen, med hela giltighetsperioden.",
+    "resendCount_other": "{{count}} kontakter får sin inbjudan igen, med hela giltighetsperioden."
   },
   "contactsLayout": {
     "title": "Kontaktlayout",

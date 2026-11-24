@@ -695,9 +695,12 @@
     "actions": {
       "send": "Enviar {{total}} convites",
       "sending": "Enviando...",
-      "resendExpired": "Reenviar {{total}} convites expirados",
-      "resendPending": "Reenviar {{total}} convites pendentes",
-      "resendOpen": "Reenviar {{total}} convites expirados ou pendentes"
+      "resendExpired_one": "Reenviar {{count}} convite expirado",
+      "resendExpired_other": "Reenviar {{count}} convites expirados",
+      "resendPending_one": "Reenviar {{count}} convite pendente",
+      "resendPending_other": "Reenviar {{count}} convites pendentes",
+      "resendOpen_one": "Reenviar {{count}} convite expirado ou pendente",
+      "resendOpen_other": "Reenviar {{count}} convites expirados ou pendentes"
     },
     "results": {
       "summary": "{{sent}} enviados, {{skipped}} ignorados, {{failed}} com falha.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "Não foi possível determinar quem pode ser convidado. Tente novamente.",
-      "sendFailed": "Não foi possível enviar os convites. Tente novamente."
+      "sendFailed": "Não foi possível enviar os convites. Tente novamente.",
+      "statesUnavailable": "Não foi possível determinar quais convites estão pendentes para este cliente."
     },
     "resendTitle": "Reenviar convites para o portal do cliente",
-    "resendCount": "{{total}} contatos receberão o convite novamente, com o período de validade completo."
+    "resendCount_one": "{{count}} contato receberá o convite novamente, com o período de validade completo.",
+    "resendCount_other": "{{count}} contatos receberão o convite novamente, com o período de validade completo."
   },
   "contactsLayout": {
     "title": "Layout de contatos",

@@ -695,9 +695,18 @@
     "actions": {
       "send": "Wyślij {{total}} zaproszeń",
       "sending": "Wysyłanie...",
-      "resendExpired": "Wyślij ponownie {{total}} wygasłych zaproszeń",
-      "resendPending": "Wyślij ponownie {{total}} oczekujących zaproszeń",
-      "resendOpen": "Wyślij ponownie {{total}} wygasłych lub oczekujących zaproszeń"
+      "resendExpired_one": "Wyślij ponownie {{count}} wygasłe zaproszenie",
+      "resendExpired_few": "Wyślij ponownie {{count}} wygasłe zaproszenia",
+      "resendExpired_many": "Wyślij ponownie {{count}} wygasłych zaproszeń",
+      "resendExpired_other": "Wyślij ponownie {{count}} wygasłego zaproszenia",
+      "resendPending_one": "Wyślij ponownie {{count}} oczekujące zaproszenie",
+      "resendPending_few": "Wyślij ponownie {{count}} oczekujące zaproszenia",
+      "resendPending_many": "Wyślij ponownie {{count}} oczekujących zaproszeń",
+      "resendPending_other": "Wyślij ponownie {{count}} oczekującego zaproszenia",
+      "resendOpen_one": "Wyślij ponownie {{count}} wygasłe lub oczekujące zaproszenie",
+      "resendOpen_few": "Wyślij ponownie {{count}} wygasłe lub oczekujące zaproszenia",
+      "resendOpen_many": "Wyślij ponownie {{count}} wygasłych lub oczekujących zaproszeń",
+      "resendOpen_other": "Wyślij ponownie {{count}} wygasłego lub oczekującego zaproszenia"
     },
     "results": {
       "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
@@ -707,10 +716,14 @@
     },
     "errors": {
       "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
-      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
+      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie.",
+      "statesUnavailable": "Nie udało się ustalić, które zaproszenia są otwarte dla tego klienta."
     },
     "resendTitle": "Ponowne wysłanie zaproszeń do portalu klienta",
-    "resendCount": "{{total}} kontaktów otrzyma zaproszenie ponownie, z pełnym okresem ważności."
+    "resendCount_one": "{{count}} kontakt otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_few": "{{count}} kontakty otrzymają zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_many": "{{count}} kontaktów otrzyma zaproszenie ponownie, z pełnym okresem ważności.",
+    "resendCount_other": "{{count}} kontaktu otrzyma zaproszenie ponownie, z pełnym okresem ważności."
   },
   "contactsLayout": {
     "title": "Układ kontaktów",

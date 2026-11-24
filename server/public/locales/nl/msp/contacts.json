@@ -691,9 +691,12 @@
     "actions": {
       "send": "{{total}} uitnodigingen verzenden",
       "sending": "Verzenden...",
-      "resendExpired": "{{total}} verlopen uitnodigingen opnieuw verzenden",
-      "resendPending": "{{total}} openstaande uitnodigingen opnieuw verzenden",
-      "resendOpen": "{{total}} verlopen of openstaande uitnodigingen opnieuw verzenden"
+      "resendExpired_one": "{{count}} verlopen uitnodiging opnieuw verzenden",
+      "resendExpired_other": "{{count}} verlopen uitnodigingen opnieuw verzenden",
+      "resendPending_one": "{{count}} openstaande uitnodiging opnieuw verzenden",
+      "resendPending_other": "{{count}} openstaande uitnodigingen opnieuw verzenden",
+      "resendOpen_one": "{{count}} verlopen of openstaande uitnodiging opnieuw verzenden",
+      "resendOpen_other": "{{count}} verlopen of openstaande uitnodigingen opnieuw verzenden"
     },
     "results": {
       "summary": "{{sent}} verzonden, {{skipped}} overgeslagen, {{failed}} mislukt.",
@@ -703,10 +706,12 @@
     },
     "errors": {
       "loadFailed": "Kon niet bepalen wie kan worden uitgenodigd. Probeer het opnieuw.",
-      "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw."
+      "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw.",
+      "statesUnavailable": "Kon niet bepalen welke uitnodigingen voor deze klant openstaan."
     },
     "resendTitle": "Uitnodigingen voor het klantenportaal opnieuw verzenden",
-    "resendCount": "{{total}} contactpersonen krijgen hun uitnodiging opnieuw, met de volledige geldigheidsperiode."
+    "resendCount_one": "{{count}} contactpersoon krijgt de uitnodiging opnieuw, met de volledige geldigheidsperiode.",
+    "resendCount_other": "{{count}} contactpersonen krijgen hun uitnodiging opnieuw, met de volledige geldigheidsperiode."
   },
   "contactsLayout": {
     "title": "Contactenlay-out",

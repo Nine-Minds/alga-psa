@@ -695,9 +695,12 @@
     "actions": {
       "send": "Invia {{total}} inviti",
       "sending": "Invio...",
-      "resendExpired": "Invia di nuovo {{total}} inviti scaduti",
-      "resendPending": "Invia di nuovo {{total}} inviti in attesa",
-      "resendOpen": "Invia di nuovo {{total}} inviti scaduti o in attesa"
+      "resendExpired_one": "Invia di nuovo {{count}} invito scaduto",
+      "resendExpired_other": "Invia di nuovo {{count}} inviti scaduti",
+      "resendPending_one": "Invia di nuovo {{count}} invito in attesa",
+      "resendPending_other": "Invia di nuovo {{count}} inviti in attesa",
+      "resendOpen_one": "Invia di nuovo {{count}} invito scaduto o in attesa",
+      "resendOpen_other": "Invia di nuovo {{count}} inviti scaduti o in attesa"
     },
     "results": {
       "summary": "{{sent}} inviati, {{skipped}} ignorati, {{failed}} non riusciti.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "Non è stato possibile determinare chi invitare. Riprovare.",
-      "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare."
+      "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare.",
+      "statesUnavailable": "Non è stato possibile determinare quali inviti sono in sospeso per questo cliente."
     },
     "resendTitle": "Invia di nuovo gli inviti al portale clienti",
-    "resendCount": "{{total}} contatti riceveranno di nuovo il loro invito, con il periodo di validità completo."
+    "resendCount_one": "{{count}} contatto riceverà di nuovo il suo invito, con il periodo di validità completo.",
+    "resendCount_other": "{{count}} contatti riceveranno di nuovo il loro invito, con il periodo di validità completo."
   },
   "contactsLayout": {
     "title": "Layout contatti",

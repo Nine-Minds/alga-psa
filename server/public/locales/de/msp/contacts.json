@@ -691,9 +691,12 @@
     "actions": {
       "send": "{{total}} Einladungen senden",
       "sending": "Wird gesendet...",
-      "resendExpired": "{{total}} abgelaufene Einladungen erneut senden",
-      "resendPending": "{{total}} ausstehende Einladungen erneut senden",
-      "resendOpen": "{{total}} abgelaufene oder ausstehende Einladungen erneut senden"
+      "resendExpired_one": "{{count}} abgelaufene Einladung erneut senden",
+      "resendExpired_other": "{{count}} abgelaufene Einladungen erneut senden",
+      "resendPending_one": "{{count}} ausstehende Einladung erneut senden",
+      "resendPending_other": "{{count}} ausstehende Einladungen erneut senden",
+      "resendOpen_one": "{{count}} abgelaufene oder ausstehende Einladung erneut senden",
+      "resendOpen_other": "{{count}} abgelaufene oder ausstehende Einladungen erneut senden"
     },
     "results": {
       "summary": "{{sent}} gesendet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
@@ -703,10 +706,12 @@
     },
     "errors": {
       "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
-      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen."
+      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen.",
+      "statesUnavailable": "Es konnte nicht ermittelt werden, welche Einladungen für diesen Kunden offen sind."
     },
     "resendTitle": "Einladungen zum Kundenportal erneut senden",
-    "resendCount": "{{total}} Kontakte erhalten ihre Einladung erneut, mit dem vollen Gültigkeitszeitraum."
+    "resendCount_one": "{{count}} Kontakt erhält seine Einladung erneut, mit dem vollen Gültigkeitszeitraum.",
+    "resendCount_other": "{{count}} Kontakte erhalten ihre Einladung erneut, mit dem vollen Gültigkeitszeitraum."
   },
   "contactsLayout": {
     "title": "Kontaktroute",

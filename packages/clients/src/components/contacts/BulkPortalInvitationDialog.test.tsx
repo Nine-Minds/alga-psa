@@ -19,7 +19,13 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string; [k: string]: unknown }) => {
-    let text = options?.defaultValue ?? key;
+    let text = String(
+      (typeof options?.count === 'number' && options.count === 1
+        ? options?.defaultValue_one
+        : options?.defaultValue_other)
+      ?? options?.defaultValue
+      ?? key,
+    );
     for (const [name, value] of Object.entries(options ?? {})) {
       text = text.replace(`{{${name}}}`, String(value));
     }
@@ -193,11 +199,12 @@ describe('BulkPortalInvitationDialog', () => {
     );
 
     // Only the expired contact: the eligible rule and the state rule agree, so
-    // the count on the button is the number of emails that go out.
+    // the count on the button is the number of emails that go out — and a set of
+    // one reads as one, not "1 expired invitations".
     await screen.findByText(
-      '1 contacts will get their invitation again, with the full validity period.',
+      '1 contact will get their invitation again, with the full validity period.',
     );
-    fireEvent.click(screen.getByText('Resend 1 expired invitations'));
+    fireEvent.click(screen.getByText('Resend 1 expired invitation'));
 
     await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
       clientId: 'acme',
@@ -233,5 +240,31 @@ describe('BulkPortalInvitationDialog', () => {
     expect(await screen.findByText('Resend 2 expired or pending invitations')).toBeInTheDocument();
     // An invitation-state resend is the server's own set: active contacts only.
     expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'active');
+  });
+
+  // The read refuses (or fails) while a state resend is open: with no states
+  // there is nothing to count, so the dialog has to say that rather than sit on
+  // "Checking who can be invited..." with Send disabled and no reason given.
+  it('reports a refused invitation-state read instead of loading forever', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([eligible('lapsed', 'lapsed@acme.com')]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue(null);
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'invitationState', states: ['expired'] }}
+        statusFilter="all"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(
+      'Could not read which invitations are outstanding for this client.',
+    )).toBeInTheDocument();
+    expect(screen.queryByText('Checking who can be invited...')).not.toBeInTheDocument();
+    expect(hoisted.sendBulkPortalInvitations).not.toHaveBeenCalled();
   });
 });

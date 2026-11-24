@@ -695,9 +695,12 @@
     "actions": {
       "send": "Envoyer {{total}} invitations",
       "sending": "Envoi...",
-      "resendExpired": "Renvoyer {{total}} invitations expirées",
-      "resendPending": "Renvoyer {{total}} invitations en attente",
-      "resendOpen": "Renvoyer {{total}} invitations expirées ou en attente"
+      "resendExpired_one": "Renvoyer {{count}} invitation expirée",
+      "resendExpired_other": "Renvoyer {{count}} invitations expirées",
+      "resendPending_one": "Renvoyer {{count}} invitation en attente",
+      "resendPending_other": "Renvoyer {{count}} invitations en attente",
+      "resendOpen_one": "Renvoyer {{count}} invitation expirée ou en attente",
+      "resendOpen_other": "Renvoyer {{count}} invitations expirées ou en attente"
     },
     "results": {
       "summary": "{{sent}} envoyées, {{skipped}} ignorées, {{failed}} en échec.",
@@ -707,10 +710,12 @@
     },
     "errors": {
       "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
-      "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer."
+      "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer.",
+      "statesUnavailable": "Impossible de déterminer quelles invitations sont en attente pour ce client."
     },
     "resendTitle": "Renvoyer les invitations au portail client",
-    "resendCount": "{{total}} contacts recevront à nouveau leur invitation, avec la durée de validité complète."
+    "resendCount_one": "{{count}} contact recevra à nouveau son invitation, avec la durée de validité complète.",
+    "resendCount_other": "{{count}} contacts recevront à nouveau leur invitation, avec la durée de validité complète."
   },
   "contactsLayout": {
     "title": "Mise en page des contacts",

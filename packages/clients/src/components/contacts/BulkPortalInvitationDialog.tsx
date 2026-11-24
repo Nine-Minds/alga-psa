@@ -99,6 +99,14 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     ])
       .then(([rows, states]) => {
         if (isCancelled) return;
+        // A state resend with no states to go on cannot be previewed or counted:
+        // say so instead of sitting on "Checking who can be invited..." forever.
+        if (target.mode === 'invitationState' && states === null) {
+          setLoadError(t('bulkPortalInvitation.errors.statesUnavailable', {
+            defaultValue: 'Could not read which invitations are outstanding for this client.',
+          }));
+          return;
+        }
         setEligibleContacts(rows);
         setStateContactIds(states === null
           ? null
@@ -235,17 +243,20 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     })
     : targetStates.length > 1
       ? t('bulkPortalInvitation.actions.resendOpen', {
-        defaultValue: 'Resend {{total}} expired or pending invitations',
-        total: invitationCount,
+        count: invitationCount,
+        defaultValue_one: 'Resend {{count}} expired or pending invitation',
+        defaultValue_other: 'Resend {{count}} expired or pending invitations',
       })
       : targetStates[0] === 'pending'
         ? t('bulkPortalInvitation.actions.resendPending', {
-          defaultValue: 'Resend {{total}} pending invitations',
-          total: invitationCount,
+          count: invitationCount,
+          defaultValue_one: 'Resend {{count}} pending invitation',
+          defaultValue_other: 'Resend {{count}} pending invitations',
         })
         : t('bulkPortalInvitation.actions.resendExpired', {
-          defaultValue: 'Resend {{total}} expired invitations',
-          total: invitationCount,
+          count: invitationCount,
+          defaultValue_one: 'Resend {{count}} expired invitation',
+          defaultValue_other: 'Resend {{count}} expired invitations',
         });
 
   const body = () => {
@@ -307,9 +318,11 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         <p className="text-sm">
           {target.mode === 'invitationState'
             ? t('bulkPortalInvitation.resendCount', {
-              defaultValue:
-                '{{total}} contacts will get their invitation again, with the full validity period.',
-              total: preview.invitable.length,
+              count: preview.invitable.length,
+              defaultValue_one:
+                '{{count}} contact will get their invitation again, with the full validity period.',
+              defaultValue_other:
+                '{{count}} contacts will get their invitation again, with the full validity period.',
             })
             : t('bulkPortalInvitation.inviteCount', {
               defaultValue: '{{total}} contacts will be invited to the client portal.',
