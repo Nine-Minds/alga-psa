@@ -12,6 +12,8 @@
  * Platform-only: this module and its tables exist in EE; CE has no catalog (F015).
  */
 import type { Knex } from 'knex';
+import logger from '@alga-psa/core/logger';
+import { forgetBillingCatalogRequest, memoiseInBillingCatalogRequest } from '@alga-psa/licensing/billing-catalog-scope';
 import {
   CO_MANAGED_SEAT_OFFER_KEY, LEGACY_ENV_BINDINGS, OfferPublishError, OfferUnavailableError,
   type BillingInterval, type CatalogDeps, type EnvLike, type CatalogOperator, type CatalogScope, type ClassifiedPrice,
@@ -26,6 +28,10 @@ const PG_UNDEFINED_TABLE = '42P01';
 const PG_UNIQUE_VIOLATION = '23505';
 
 const dbCode = (error: unknown): string | undefined => (error as { code?: string })?.code;
+/** Knex rewrites a failed query's message as "<sql> - <driver message>"; keep only the driver message. */
+const KNEX_SQL_PREFIX = /^\s*(?:select|insert|update|delete|with)\b[\s\S]*? - /i;
+const driverMessage = (error: unknown): string =>
+  (error instanceof Error ? error.message : String(error)).replace(KNEX_SQL_PREFIX, '');
 const identity = (scope: CatalogScope, offerKey: string, interval: BillingInterval) =>
   ({ stripe_account: scope.stripeAccount, livemode: scope.livemode, offer_key: offerKey, billing_interval: interval });
 
@@ -47,25 +53,43 @@ export function legacyEnvPriceId(offerKey: string, interval: BillingInterval, en
 export function createOfferCatalog(deps: CatalogDeps) {
   const env = deps.env ?? process.env;
 
+  /** One line per distinct error code per process; never the query, account or price ID. */
+  const loggedErrorCodes = new Set<string>();
+  function logUnavailableOnce(error: unknown): void {
+    const code = dbCode(error) ?? 'unknown';
+    if (loggedErrorCodes.has(code)) return;
+    loggedErrorCodes.add(code);
+    logger.error(`[OfferCatalog] catalog_unavailable: code=${code} message=${driverMessage(error)}`);
+  }
+
+  /** Resolve the current admin pool for ONE operation. A failing resolver is an outage like any failing query. */
+  async function connect(): Promise<Knex> {
+    try { return await deps.db(); } catch (error) {
+      logUnavailableOnce(error);
+      throw new OfferUnavailableError('catalog_unavailable', 'The offer catalog is unavailable.', error);
+    }
+  }
+
   /** Run a catalog query. A catalog that has not been migrated yet manages nothing. */
   async function guarded<T>(work: () => Promise<T>, whenMissingTable: T): Promise<T> {
     try { return await work(); } catch (error) {
       if (dbCode(error) === PG_UNDEFINED_TABLE) return whenMissingTable;
+      logUnavailableOnce(error);
       throw new OfferUnavailableError('catalog_unavailable', 'The offer catalog is unavailable.', error);
     }
   }
 
   /** Is `offerKey` governed by the catalog (has any version in this scope)? */
-  async function isManaged(scope: CatalogScope, offerKey: string, interval: BillingInterval): Promise<boolean> {
-    return guarded(async () => Boolean(await deps.db(VERSIONS).where(identity(scope, offerKey, interval)).first('version_id')), false);
+  async function isManaged(scope: CatalogScope, offerKey: string, interval: BillingInterval, db: Knex): Promise<boolean> {
+    return guarded(async () => Boolean(await db(VERSIONS).where(identity(scope, offerKey, interval)).first('version_id')), false);
   }
 
-  async function isManagedAnywhere(offerKey: string, interval: BillingInterval): Promise<boolean> {
-    return guarded(async () => Boolean(await deps.db(VERSIONS)
+  async function isManagedAnywhere(offerKey: string, interval: BillingInterval, db: Knex): Promise<boolean> {
+    return guarded(async () => Boolean(await db(VERSIONS)
       .where({ offer_key: offerKey, billing_interval: interval }).first('version_id')), false);
   }
 
-  async function currentVersion(scope: CatalogScope, offerKey: string, interval: BillingInterval, db: Knex = deps.db): Promise<OfferVersionRow | undefined> {
+  async function currentVersion(scope: CatalogScope, offerKey: string, interval: BillingInterval, db: Knex): Promise<OfferVersionRow | undefined> {
     return db(VERSIONS).where({ ...identity(scope, offerKey, interval), is_current: true }).first();
   }
 
@@ -80,7 +104,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
     });
   }
 
-  async function scopeOrNull(db?: Knex): Promise<CatalogScope | null> {
+  async function scopeOrNull(db: Knex): Promise<CatalogScope | null> {
     try { return await deps.scope(db); } catch { return null; }
   }
 
@@ -90,20 +114,21 @@ export function createOfferCatalog(deps: CatalogDeps) {
    * version, an invalid mapping or an outage throws; it never falls back to the env var.
    */
   async function resolveCurrentOffer(offerKey: string, interval: BillingInterval): Promise<ResolvedOffer> {
-    const scope = await scopeOrNull();
+    const db = await connect();
+    const scope = await scopeOrNull(db);
     if (!scope) {
       // Without a scope we cannot tell whether this key is managed. Only a key that no scope manages
       // (and an unmigrated catalog) may use the legacy binding; otherwise fail closed.
       const legacy = legacyEnvPriceId(offerKey, interval, env);
-      if (await isManagedAnywhere(offerKey, interval) || !legacy) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
+      if (await isManagedAnywhere(offerKey, interval, db) || !legacy) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
       return legacyOffer(offerKey, interval, legacy, null);
     }
-    if (!(await isManaged(scope, offerKey, interval))) {
+    if (!(await isManaged(scope, offerKey, interval, db))) {
       const legacy = legacyEnvPriceId(offerKey, interval, env);
       if (!legacy) throw new OfferUnavailableError('not_configured', 'This offer has no price configured.');
       return legacyOffer(offerKey, interval, legacy, scope);
     }
-    const version = await guarded(() => currentVersion(scope, offerKey, interval), undefined);
+    const version = await guarded(() => currentVersion(scope, offerKey, interval, db), undefined);
     if (!version) throw new OfferUnavailableError('no_current_version', 'New purchases of this offer are paused: no current price is published.');
     let price;
     try { price = await deps.stripe.prices.retrieve(version.price_id, { stripeAccount: scope.stripeAccount }); } catch (error) {
@@ -131,11 +156,12 @@ export function createOfferCatalog(deps: CatalogDeps) {
    * unmapped. Reads only the catalog (plus the legacy binding for unmanaged keys).
    */
   async function classifyPrice(scope: CatalogScope, priceId: string): Promise<ClassifiedPrice | null> {
-    const row = await guarded(async () => deps.db(VERSIONS)
+    const db = await connect();
+    const row = await guarded(async () => db(VERSIONS)
       .where({ stripe_account: scope.stripeAccount, livemode: scope.livemode, price_id: priceId }).first(), undefined);
     if (row) return { source: 'catalog', offerKey: row.offer_key, interval: row.billing_interval, versionId: row.version_id, current: row.is_current };
     for (const [offerKey, binding] of Object.entries(LEGACY_ENV_BINDINGS)) {
-      if (env[binding.env] === priceId && !(await isManaged(scope, offerKey, binding.interval))) {
+      if (env[binding.env] === priceId && !(await isManaged(scope, offerKey, binding.interval, db))) {
         return { source: 'legacy_env', offerKey, interval: binding.interval, versionId: null, current: true };
       }
     }
@@ -144,14 +170,15 @@ export function createOfferCatalog(deps: CatalogDeps) {
 
   /** Every Price ID that is, or ever was, bound to the offer in this scope. */
   async function recognizedPriceIds(offerKey: string, interval: BillingInterval, requestedScope?: CatalogScope): Promise<Set<string>> {
-    const scope = requestedScope ?? await scopeOrNull();
+    const db = await connect();
+    const scope = requestedScope ?? await scopeOrNull(db);
     if (!scope) {
       // Scope unknown: only a key no scope manages may be recognised through the legacy binding.
       const legacy = legacyEnvPriceId(offerKey, interval, env);
-      if (await isManagedAnywhere(offerKey, interval)) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
+      if (await isManagedAnywhere(offerKey, interval, db)) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
       return new Set(legacy ? [legacy] : []); // nothing managed, nothing configured: inert
     }
-    const rows = await guarded(() => deps.db(VERSIONS).where(identity(scope, offerKey, interval)).select('price_id') as Promise<Array<{ price_id: string }>>, []);
+    const rows = await guarded(() => db(VERSIONS).where(identity(scope, offerKey, interval)).select('price_id') as Promise<Array<{ price_id: string }>>, []);
     const ids = new Set(rows.map((row) => row.price_id));
     if (!rows.length) {
       const legacy = legacyEnvPriceId(offerKey, interval, env);
@@ -162,17 +189,18 @@ export function createOfferCatalog(deps: CatalogDeps) {
 
   /** Admission to the purchase surface, independent of the price an existing pool is billed at. */
   async function requireSellableOffer(offerKey: string, interval: BillingInterval): Promise<void> {
+    const db = await connect();
     const legacy = legacyEnvPriceId(offerKey, interval, env);
-    if (!legacy && !(await isManagedAnywhere(offerKey, interval))) {
+    if (!legacy && !(await isManagedAnywhere(offerKey, interval, db))) {
       throw new OfferUnavailableError('not_configured', 'This offer has no price configured.');
     }
-    const scope = await scopeOrNull();
+    const scope = await scopeOrNull(db);
     if (!scope) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode could not be determined.');
-    if (!(await isManaged(scope, offerKey, interval))) {
+    if (!(await isManaged(scope, offerKey, interval, db))) {
       if (legacy) return;
       throw new OfferUnavailableError('not_configured', 'This offer has no price configured in this scope.');
     }
-    if (!await guarded(() => currentVersion(scope, offerKey, interval), undefined)) {
+    if (!await guarded(() => currentVersion(scope, offerKey, interval, db), undefined)) {
       throw new OfferUnavailableError('no_current_version', 'New purchases are paused until a price is published.');
     }
   }
@@ -188,40 +216,45 @@ export function createOfferCatalog(deps: CatalogDeps) {
   }
 
   async function getVersion(versionId: string): Promise<OfferVersionRow | undefined> {
-    return deps.db(VERSIONS).where({ version_id: versionId }).first();
+    return (await connect())(VERSIONS).where({ version_id: versionId }).first();
   }
 
   /** Operator review: the current binding plus history, with the current price re-read from Stripe. */
   async function inspect(offerKey: string, interval: BillingInterval) {
-    const scope = await deps.scope();
-    const versions: OfferVersionRow[] = await deps.db(VERSIONS).where(identity(scope, offerKey, interval)).orderBy('version_number', 'desc');
+    const db = await connect();
+    const scope = await deps.scope(db);
+    const versions: OfferVersionRow[] = await db(VERSIONS).where(identity(scope, offerKey, interval)).orderBy('version_number', 'desc');
     return { scope, versions, current: versions.find((version) => version.is_current) ?? null, legacyEnvPriceId: legacyEnvPriceId(offerKey, interval, env) ?? null };
   }
 
   async function inspectAccountSetting(livemode: boolean) {
-    return guarded(async () => deps.db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
+    const db = await connect();
+    return guarded(async () => db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
   }
 
-  async function deploymentLivemode(): Promise<boolean> {
-    return deps.livemode ? deps.livemode() : (await deps.scope()).livemode;
+  async function deploymentLivemode(db?: Knex): Promise<boolean> {
+    return deps.livemode ? deps.livemode() : (await deps.scope(db)).livemode;
   }
 
-  async function historicalAccounts(livemode: boolean, db: Knex = deps.db): Promise<string[]> {
+  async function historicalAccounts(livemode: boolean, handle?: Knex): Promise<string[]> {
+    const db = handle ?? await connect();
     return guarded(async () => db(VERSIONS).where({ offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month', livemode })
       .distinct('stripe_account').pluck('stripe_account'), []);
   }
 
-  async function historicalScopeForPrice(priceId: string, livemode?: boolean, db: Knex = deps.db): Promise<CatalogScope | null> {
+  async function historicalScopeForPrice(priceId: string, livemode?: boolean, handle?: Knex): Promise<CatalogScope | null> {
+    const db = handle ?? await connect();
     const query = db(VERSIONS).where({ price_id: priceId, offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' });
     if (livemode !== undefined) query.where({ livemode });
     const rows: Array<{ stripe_account: string; livemode: boolean }> = await guarded(async () => query.distinct('stripe_account', 'livemode'), []);
     return rows.length === 1 ? { stripeAccount: rows[0].stripe_account, livemode: rows[0].livemode } : null;
   }
 
-  async function effectiveAccountSetting(livemode: boolean, db: Knex = deps.db): Promise<EffectiveCatalogAccountSetting> {
+  async function effectiveAccountSetting(livemode: boolean, handle?: Knex): Promise<EffectiveCatalogAccountSetting> {
+    const db = handle ?? await connect();
     const setting = await guarded(async () => db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
     const accounts = await historicalAccounts(livemode, db);
-    const applies = (await deploymentLivemode()) === livemode;
+    const applies = (await deploymentLivemode(db)) === livemode;
     const bootstrapAccount = applies ? env.STRIPE_ACCOUNT_ID || null : null;
     let stripeAccount: string | null = null;
     let accountSource: EffectiveCatalogAccountSetting['accountSource'] = 'unconfigured';
@@ -273,7 +306,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
     if (!/^acct_[A-Za-z0-9]+$/.test(input.stripeAccount) || !/^price_[A-Za-z0-9]+$/.test(input.priceId)) {
       throw new OfferPublishError('INVALID_CANDIDATE', 'A valid Stripe account ID and Price ID are required.');
     }
-    const currentLivemode = await deploymentLivemode();
+    const db = await connect();
+    const currentLivemode = await deploymentLivemode(db);
     if (currentLivemode !== input.livemode) throw new OfferPublishError('WRONG_MODE', 'Use a deployment whose restricted Stripe key matches the mode being configured.');
     let price;
     try { price = await deps.stripe.prices.retrieve(input.priceId, { stripeAccount: input.stripeAccount }); }
@@ -285,13 +319,13 @@ export function createOfferCatalog(deps: CatalogDeps) {
     const problems = priceProblems(price, { interval: 'month', livemode: input.livemode, requireActive: true });
     if (problems.length) throw new OfferPublishError('INVALID_CANDIDATE', `Price ${input.priceId} cannot back this offer: ${problems.join('; ')}.`, problems);
     const id = { stripe_account: input.stripeAccount, livemode: input.livemode, offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' };
-    const knownProducts: Array<{ product_id: string }> = await deps.db('stripe_offer_versions').where(id).distinct('product_id');
+    const knownProducts: Array<{ product_id: string }> = await db('stripe_offer_versions').where(id).distinct('product_id');
     if (knownProducts.length > 1 || (knownProducts[0] && knownProducts[0].product_id !== priceProductId(price))) {
       throw new OfferPublishError('INVALID_CANDIDATE', 'The candidate product does not match the offer’s existing account-scoped price history.');
     }
     if (!input.confirmSwitch) throw new OfferPublishError('INVALID_CANDIDATE', 'Review the account and price, then retry with explicit switch confirmation.');
 
-    const result = await deps.db.transaction(async (trx) => {
+    const result = await db.transaction(async (trx) => {
       await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`stripe-billing-catalog:${input.livemode ? 'live' : 'test'}`]);
       const current = await trx('stripe_offer_catalog_settings').where({ livemode: input.livemode }).forUpdate().first();
       const effective = await effectiveAccountSetting(input.livemode, trx);
@@ -372,13 +406,13 @@ export function createOfferCatalog(deps: CatalogDeps) {
   }
 
   /** Validate a candidate against Stripe in this scope; returns what the operator reviews. */
-  async function reviewCandidate(scope: CatalogScope, offerKey: string, interval: BillingInterval, priceId: string, opts: { productId?: string; requireActive: boolean }) {
+  async function reviewCandidate(db: Knex, scope: CatalogScope, offerKey: string, interval: BillingInterval, priceId: string, opts: { productId?: string; requireActive: boolean }) {
     let price;
     try { price = await deps.stripe.prices.retrieve(priceId, { stripeAccount: scope.stripeAccount }); } catch (error) {
       throw new OfferPublishError('STRIPE_UNAVAILABLE', `Stripe could not retrieve ${priceId} in this account and mode: ${error instanceof Error ? error.message : String(error)}`);
     }
     if (price.livemode !== scope.livemode) throw new OfferPublishError('WRONG_MODE', `Price ${priceId} is ${price.livemode ? 'live' : 'test'} mode; this catalog scope is ${scope.livemode ? 'live' : 'test'} mode.`);
-    const known: Array<{ product_id: string }> = await deps.db(VERSIONS).where(identity(scope, offerKey, interval)).distinct('product_id');
+    const known: Array<{ product_id: string }> = await db(VERSIONS).where(identity(scope, offerKey, interval)).distinct('product_id');
     const expectedProduct = known[0]?.product_id ?? opts.productId;
     if (known.length > 1) throw new OfferPublishError('INVALID_CANDIDATE', 'The offer already spans several products; resolve this with the catalog owner.');
     if (!expectedProduct) throw new OfferPublishError('INVALID_CANDIDATE', 'This is the first price for the offer: name the Stripe product it belongs to (--product).');
@@ -399,14 +433,15 @@ export function createOfferCatalog(deps: CatalogDeps) {
     expectedCurrentVersionId: string | null; productId?: string; mode?: 'operator' | 'seed' | 'historical';
   }): Promise<PublishResult> {
     const actor = assertCatalogOperator(input.actor, env);
-    const scope = await deps.scope();
+    const db = await connect();
+    const scope = await deps.scope(db);
     const mode = input.mode ?? 'operator';
-    const { productId, terms } = await reviewCandidate(scope, input.offerKey, input.interval, input.priceId,
+    const { productId, terms } = await reviewCandidate(db, scope, input.offerKey, input.interval, input.priceId,
       { productId: input.productId, requireActive: mode !== 'historical' });
     const id = identity(scope, input.offerKey, input.interval);
     const historical = mode === 'historical';
 
-    const attempt = () => deps.db.transaction(async (trx): Promise<PublishResult> => {
+    const attempt = () => db.transaction(async (trx): Promise<PublishResult> => {
       const bound: OfferVersionRow | undefined = await trx(VERSIONS)
         .where({ stripe_account: scope.stripeAccount, livemode: scope.livemode, price_id: input.priceId }).forUpdate().first();
       if (bound && (bound.offer_key !== input.offerKey || bound.billing_interval !== input.interval)) {
@@ -466,9 +501,10 @@ export function createOfferCatalog(deps: CatalogDeps) {
   async function pauseSales(input: { actor: CatalogOperator | null | undefined; offerKey: string; interval: BillingInterval; expectedCurrentVersionId: string | null }):
     Promise<{ changed: boolean; previousVersionId: string | null }> {
     const actor = assertCatalogOperator(input.actor, env);
-    const scope = await deps.scope();
+    const db = await connect();
+    const scope = await deps.scope(db);
     const id = identity(scope, input.offerKey, input.interval);
-    return deps.db.transaction(async (trx) => {
+    return db.transaction(async (trx) => {
       const current: OfferVersionRow | undefined = await trx(VERSIONS).where({ ...id, is_current: true }).forUpdate().first();
       if (!current) {
         if (!(await trx(VERSIONS).where(id).first('version_id'))) {
@@ -487,11 +523,26 @@ export function createOfferCatalog(deps: CatalogDeps) {
 
   /** Operator dry run: validate a candidate against Stripe and return its terms; writes nothing. */
   async function reviewCandidateTerms(offerKey: string, interval: BillingInterval, priceId: string, productId?: string) {
-    return reviewCandidate(await deps.scope(), offerKey, interval, priceId, { productId, requireActive: true });
+    const db = await connect();
+    return reviewCandidate(db, await deps.scope(db), offerKey, interval, priceId, { productId, requireActive: true });
   }
 
-  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
-    requireSellableOffer, inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
+  /**
+   * NEW-SALE selection is read once per request: inside a billing catalog request scope (every server action,
+   * the co-managed root render) the first resolution's Stripe price read is shared by the gate's context load
+   * and by every display, preview and purchase path in that request. No scope (a Temporal activity, a
+   * script) resolves per call, as before. Nothing outlives the request.
+   */
+  const resolveCurrentOfferOncePerRequest = (offerKey: string, interval: BillingInterval): Promise<ResolvedOffer> =>
+    memoiseInBillingCatalogRequest(`offer-catalog:current-offer:${offerKey}:${interval}`, () => resolveCurrentOffer(offerKey, interval));
+  /** A write makes the request's memoised reads stale; later reads in the same request see the new state. */
+  const thenForget = <A extends unknown[], R>(write: (...args: A) => Promise<R>) => async (...args: A): Promise<R> => {
+    try { return await write(...args); } finally { forgetBillingCatalogRequest(); }
+  };
+
+  return { resolveCurrentOffer: resolveCurrentOfferOncePerRequest, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
+    requireSellableOffer, inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice,
+    setAccountSetting: thenForget(setAccountSetting), publishBinding: thenForget(publishBinding), pauseSales: thenForget(pauseSales), scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

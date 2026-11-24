@@ -82,6 +82,7 @@ export default function OnboardingPage() {
             companyPostalCode,
             companyCountryCode,
             companyCountryName,
+            companyAddressPrefilled,
           } = initialDataResult.data;
           data = {
             ...data,
@@ -94,6 +95,7 @@ export default function OnboardingPage() {
             companyPostalCode,
             companyCountryCode,
             companyCountryName,
+            companyAddressPrefilled,
           };
         }
       }

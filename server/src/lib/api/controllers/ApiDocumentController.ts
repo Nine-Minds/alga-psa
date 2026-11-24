@@ -90,6 +90,8 @@ export class ApiDocumentController extends ApiBaseController {
               mapSourceError: (error) => mapFetchError(error, apiRequest.context.tenant, providerMax),
             },
             source: input.source.type,
+            options: { isClientVisible: input.is_client_visible === true },
+            permissionContext: apiRequest.context,
           });
 
           return createSuccessResponse(document, 201, undefined, apiRequest);

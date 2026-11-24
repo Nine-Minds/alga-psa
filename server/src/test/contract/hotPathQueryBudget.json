@@ -40,12 +40,12 @@
     },
     {
       "name": "comment.edit",
-      "statements": 13,
+      "statements": 14,
       "locks": 2
     },
     {
       "name": "comment.delete",
-      "statements": 12,
+      "statements": 13,
       "locks": 0
     },
     {
@@ -65,7 +65,7 @@
     },
     {
       "name": "invoice.generate",
-      "statements": 230,
+      "statements": 228,
       "locks": 4
     },
     {

@@ -15,10 +15,12 @@ import { hasPermission } from '../lib/permissions';
 import { projectedPeopleAsUsers, projectedPeopleForCaller } from '../lib/seatPeople';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser as getAuthenticatedUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { projectCurrentUserForClient } from '../lib/currentUserProjection';
 
+/** Return only public session fields, after explicitly dropping credential material. */
 export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
   const user = await getAuthenticatedUser();
-  return user ? sanitizeUserForResponse(user) : null;
+  return user ? sanitizeUserForResponse(projectCurrentUserForClient(user)) : null;
 }
 
 function isPermissionDeniedError(error: unknown): boolean {

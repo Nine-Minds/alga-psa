@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Primär e-postadress",
-      "description": "Den här adressen förblir standardadressen som sparas i kontaktposten"
+      "description": "Den här adressen förblir standardadressen som sparas i kontaktposten",
+      "keepOldEmail": "Behåll {{email}} som ytterligare e-postadress"
     },
     "row": {
       "title": "Ytterligare e-postadress {{number}}",

@@ -14,6 +14,9 @@ import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 import { getNodeMetadata } from '../../utils/nodeProps';
 import { normalizeCssLength } from '../normalizers';
 import { StandardLabelControl } from './StandardLabelControl';
+import { ValueLabelsEditor } from './ValueLabelsEditor';
+import { suggestValueLabels } from '../../utils/valueLabelSuggestions';
+import type { TemplateI18nText } from '@alga-psa/types';
 import {
   isColumnHeaderTranslatable,
   resolveAutoTranslation,
@@ -847,6 +850,12 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 </div>
               );
             })()}
+            <ValueLabelsEditor
+              domId={`column-${column.id}`}
+              valueLabels={column.valueLabels as Record<string, TemplateI18nText> | undefined}
+              suggestions={suggestValueLabels(column.key)}
+              onChange={(next) => updateColumn(column.id, { valueLabels: next }, true)}
+            />
             <div className="grid grid-cols-2 gap-1.5">
               <div>
                 <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">

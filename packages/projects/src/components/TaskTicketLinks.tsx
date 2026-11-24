@@ -127,15 +127,37 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   const [selectedClient, setSelectedClient] = useState('');
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
-  const [statusOptions, setStatusOptions] = useState<SelectOption[]>([
-    { value: 'all', label: linkT('allStatuses', 'All Statuses') }
-  ]);
+  const [ticketStatuses, setTicketStatuses] = useState<IStatus[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([
     { value: 'all', label: linkT('allPriorities', 'All Priorities') }
   ]);
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
   const [clientOptions, setClientOptions] = useState<SelectOption[]>([]);
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
+  const scopedStatuses = ticketStatuses.filter(status =>
+    !selectedBoard || selectedBoard === 'all' || status.board_id === selectedBoard
+  );
+  // Status IDs belong to individual boards; the filter represents a name
+  // so identically named statuses match tickets across all selected boards.
+  const statusOptions: SelectOption[] = [
+    { value: 'all', label: linkT('allStatuses', 'All Statuses') },
+    ...Array.from(new Set(scopedStatuses.map(status => status.name))).map(name => ({
+      value: `status:${name}`,
+      label: name,
+    })),
+  ];
+  const matchingStatusIds = new Set(scopedStatuses
+    .filter(status => `status:${status.name}` === selectedTicketStatus)
+    .map(status => status.status_id));
+
+  useEffect(() => {
+    if (selectedTicketStatus !== 'all' && !ticketStatuses.some(status =>
+      (!selectedBoard || selectedBoard === 'all' || status.board_id === selectedBoard) &&
+      `status:${status.name}` === selectedTicketStatus
+    )) {
+      setSelectedTicketStatus('all');
+    }
+  }, [ticketStatuses, selectedBoard, selectedTicketStatus]);
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [prefilledClient, setPrefilledClient] = useState<{ id: string; name: string } | undefined>(undefined);
   const ticketPrefill = taskData
@@ -257,14 +279,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         findDefaultStatus(fetchedStatuses);
       }
       
-      const defaultStatus = { value: 'all', label: linkT('allStatuses', 'All Statuses') };
-      setStatusOptions([
-        defaultStatus,
-        ...fetchedStatuses.map((status: IStatus): SelectOption => ({
-          value: status.status_id!,
-          label: status.name ?? ""
-        }))
-      ]);
+      setTicketStatuses(fetchedStatuses);
 
       const defaultPriority = { value: 'all', label: linkT('allPriorities', 'All Priorities') };
       setPriorityOptions([
@@ -280,7 +295,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       console.error('Error fetching filter options:', error);
       setCategories([]);
       setBoards([]);
-      setStatusOptions([{ value: 'all', label: linkT('allStatuses', 'All Statuses') }]);
+      setTicketStatuses([]);
       setPriorityOptions([{ value: 'all', label: linkT('allPriorities', 'All Priorities') }]);
     }
   };
@@ -351,7 +366,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         ticket.priority_id === selectedPriority;
 
       const matchesStatus = selectedTicketStatus === 'all' || 
-        ticket.status_id === selectedTicketStatus;
+        (ticket.status_id !== null && matchingStatusIds.has(ticket.status_id));
 
       return matchesSearch && matchesCategory && matchesUser && 
              matchesBoard && matchesPriority && matchesStatus;

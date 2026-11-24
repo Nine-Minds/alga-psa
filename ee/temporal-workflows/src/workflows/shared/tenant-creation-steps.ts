@@ -6,6 +6,7 @@ import {
   startChild,
   ParentClosePolicy,
   log,
+  patched,
 } from '@temporalio/workflow';
 import { trialPaymentReminderWorkflow } from '../trial-payment-reminder-workflow.js';
 import type {
@@ -214,7 +215,16 @@ export async function runTenantCreationOrchestration(
       billingAddress: input.billingAddress,
     };
 
-    if (input.checkoutSessionId && !input.stripeCustomerId) {
+    // Runs started before the address lookup was decoupled only fetched when the
+    // Stripe customer ID was missing. patched() keeps those histories on that
+    // path; the extra fetch (customer ID supplied, billing address missing) runs
+    // only for executions that started on the new code.
+    const shouldFetchStripeDetails =
+      !!input.checkoutSessionId &&
+      (!input.stripeCustomerId ||
+        (!input.billingAddress && patched('tenant-creation-fetch-checkout-address-v1')));
+
+    if (input.checkoutSessionId && shouldFetchStripeDetails) {
       workflowState.step = 'fetching_stripe_details';
       workflowState.progress = 5;
 
@@ -227,10 +237,19 @@ export async function runTenantCreationOrchestration(
           checkoutSessionId: input.checkoutSessionId,
         });
 
+        // Caller-supplied values win; fetched values only fill fields the input left undefined.
         stripeDetails = {
-          ...stripeDetails,
-          ...fetchedStripeDetails,
-          billingAddress: fetchedStripeDetails.billingAddress ?? stripeDetails.billingAddress,
+          stripeCustomerId: stripeDetails.stripeCustomerId ?? fetchedStripeDetails.stripeCustomerId,
+          stripeSubscriptionId:
+            stripeDetails.stripeSubscriptionId ?? fetchedStripeDetails.stripeSubscriptionId,
+          stripeSubscriptionItemId:
+            stripeDetails.stripeSubscriptionItemId ?? fetchedStripeDetails.stripeSubscriptionItemId,
+          stripePriceId: stripeDetails.stripePriceId ?? fetchedStripeDetails.stripePriceId,
+          stripeBaseItemId: stripeDetails.stripeBaseItemId ?? fetchedStripeDetails.stripeBaseItemId,
+          stripeBasePriceId:
+            stripeDetails.stripeBasePriceId ?? fetchedStripeDetails.stripeBasePriceId,
+          licenseCount: stripeDetails.licenseCount ?? fetchedStripeDetails.licenseCount,
+          billingAddress: stripeDetails.billingAddress ?? fetchedStripeDetails.billingAddress,
         };
 
         log.info('Stripe details fetched successfully', {

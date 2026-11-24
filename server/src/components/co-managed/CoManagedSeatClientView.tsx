@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { getCoManagedSeatClientState } from '@/lib/actions/coManagedSeatActions';
 import CoManagedSeatPanel from './CoManagedSeatPanel';
+import type { SeatEnableStory } from '@/lib/co-managed/seatEnableStory';
 
 export type CoManagedSeatClientState = Awaited<ReturnType<typeof getCoManagedSeatClientState>>;
 
@@ -13,11 +14,13 @@ export type CoManagedSeatClientState = Awaited<ReturnType<typeof getCoManagedSea
  * seat arrangement, otherwise a plain "not enabled" card (the chooser itself is rendered by
  * `CoManagedClientView`, which owns the workspace setup it hands over to).
  */
-export default function CoManagedSeatClientView({ state, clientName, idPrefix, onReload, children }: {
+export default function CoManagedSeatClientView({ state, clientName, idPrefix, onReload, notEnabledHeading = 'notEnabled', children }: {
   state: CoManagedSeatClientState;
   clientName: string;
   idPrefix: string;
   onReload: () => Promise<void> | void;
+  /** The heading variant for a client with no arrangement, from `resolveSeatEnableStory`. */
+  notEnabledHeading?: SeatEnableStory['heading'];
   /** The shape chooser, when the client may be given an arrangement. */
   children?: React.ReactNode;
 }) {
@@ -30,7 +33,9 @@ export default function CoManagedSeatClientView({ state, clientName, idPrefix, o
             <p className="text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.client.forClient', { defaultValue: 'Co-managed IT for {{name}}', name: clientName })}</p>
             <h3 className="text-lg font-semibold">{state.panel
               ? t('coManaged.seat.client.seatArrangement', { defaultValue: 'Seat arrangement' })
-              : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}</h3>
+              : notEnabledHeading === 'trialEnables'
+                ? t('coManaged.client.notEnabledTrialEnables', { defaultValue: 'Co-managed IT is not enabled yet. Starting the free 15-day Seat trial enables it for this client.' })
+                : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}</h3>
           </div>
           <Button id={`${idPrefix}-refresh`} variant="outline" size="sm" onClick={() => void onReload()}>
             {t('coManaged.provisioning.refresh', { defaultValue: 'Refresh' })}

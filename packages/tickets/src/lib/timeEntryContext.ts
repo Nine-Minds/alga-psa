@@ -100,5 +100,6 @@ export function stopwatchSessionToTimeEntryContext(
     serviceName: session.service_name,
     notice,
     stopwatchSessionId: session.session_id,
+    stopwatchSegments: session.segments,
   };
 }

@@ -15,7 +15,7 @@ export default function CoManagedPurchaseOverview() {
       <header>
         <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{t('coManaged.title')}</h1>
         <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-          {t('coManaged.purchaseOnly.intro', { defaultValue: 'Buy a pool of co-managed seats here. After purchase, allocate seats to clients from each client record.' })}
+          {t('coManaged.description')}
         </p>
       </header>
       <CoManagedPurchasePool />

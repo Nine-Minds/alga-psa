@@ -11,7 +11,8 @@
       "oneTime": "One-time",
       "other": "Other",
       "quarterly": "Quarterly",
-      "semiAnnually": "Semi-annually"
+      "semiAnnually": "Semi-annually",
+      "weekly": "Weekly"
     },
     "cadenceTotal": "{{cadence}} Total",
     "currency": "Currency",
@@ -141,7 +142,9 @@
     "replacementSerial": "Replacement serial",
     "shipping": "Shipping",
     "returnBy": "Return by",
-    "returnShipTo": "Return ship to"
+    "returnShipTo": "Return ship to",
+    "yes": "Yes",
+    "no": "No"
   },
   "errors": {
     "permissions": {

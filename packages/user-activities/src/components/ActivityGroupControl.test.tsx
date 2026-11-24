@@ -120,6 +120,47 @@ describe('ActivityGroupControl', () => {
     expect(mocks.store.createAndMove).toHaveBeenCalledWith('Focus', 'ticket', 't1');
   });
 
+  it('renders a server-supplied answer on the first paint without a client check', () => {
+    // A chip that pops in after a client round trip moves the form below it under the pointer:
+    // a click aimed at the hero's Save button landed on empty space instead.
+    render(<ActivityGroupControl {...props} initialOnMyList />);
+    expect(screen.getByText('My group: Ungrouped')).toBeTruthy();
+    expect(mocks.isActivityOnMyList).not.toHaveBeenCalled();
+  });
+
+  it('renders nothing for a server-supplied "not on my list" without a client check', () => {
+    const { container } = render(<ActivityGroupControl {...props} initialOnMyList={false} />);
+    expect(container.innerHTML).toBe('');
+    expect(mocks.isActivityOnMyList).not.toHaveBeenCalled();
+  });
+
+  it('re-checks a server-supplied answer once the saved assignment changes', async () => {
+    const { rerender } = render(<ActivityGroupControl {...props} initialOnMyList />);
+    mocks.isActivityOnMyList.mockResolvedValue(false);
+    rerender(<ActivityGroupControl {...props} initialOnMyList assignmentKey="u2|" />);
+    await waitFor(() => expect(screen.queryByText('My group: Ungrouped')).toBeNull());
+    expect(mocks.isActivityOnMyList).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the chip in place while re-checking a changed assignment', async () => {
+    const { rerender } = render(<ActivityGroupControl {...props} />);
+    await screen.findByText('My group: Ungrouped');
+    let resolve!: (v: boolean) => void;
+    mocks.isActivityOnMyList.mockReturnValue(new Promise<boolean>((r) => { resolve = r; }));
+    rerender(<ActivityGroupControl {...props} assignmentKey="u2|" />);
+    expect(screen.getByText('My group: Ungrouped')).toBeTruthy();
+    await act(async () => { resolve(false); });
+    expect(screen.queryByText('My group: Ungrouped')).toBeNull();
+  });
+
+  it('starts unknown again for a different record', async () => {
+    const { rerender, container } = render(<ActivityGroupControl {...props} />);
+    await screen.findByText('My group: Ungrouped');
+    mocks.isActivityOnMyList.mockReturnValue(new Promise<boolean>(() => {}));
+    rerender(<ActivityGroupControl {...props} activityId="t2" />);
+    expect(container.innerHTML).toBe('');
+  });
+
   it('re-checks eligibility when the saved assignment changes', async () => {
     const { rerender } = render(<ActivityGroupControl {...props} />);
     await screen.findByText('My group: Ungrouped');

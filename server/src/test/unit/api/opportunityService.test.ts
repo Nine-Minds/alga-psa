@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   completeOpportunityNextAction: vi.fn(),
   correctEvidence: vi.fn(),
   declareStage: vi.fn(),
+  declareStageFromStep: vi.fn(),
+  amendDeclaration: vi.fn(),
   getOpportunityDetail: vi.fn(),
   tenantDb: vi.fn(),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({})),
@@ -32,6 +34,13 @@ vi.mock('@alga-psa/opportunities', () => ({
     delete: vi.fn(),
   },
   declareStage: mocks.declareStage,
+  declareStageFromStep: mocks.declareStageFromStep,
+  amendDeclaration: mocks.amendDeclaration,
+  // The real wire-to-engine mapping: refType/refId is shorthand for one citation.
+  declarationContentFromInput: (input: any) => ({
+    note: input.detail,
+    citations: input.citations ?? (input.refType != null && input.refId != null ? [{ type: input.refType, id: input.refId }] : undefined),
+  }),
   assembleWorkQueue: mocks.assembleWorkQueue,
   buildOpportunityCreatedPayload: vi.fn(),
   buildOpportunityStatusChangedPayload: vi.fn(),
@@ -220,9 +229,21 @@ describe('OpportunityService', () => {
         'opportunity-1',
         'proposed',
         'user-1',
-        'Proposal sent',
+        { note: 'Proposal sent', citations: undefined },
       );
       expect(result).toEqual({ opportunity_id: 'opportunity-1', stage: 'proposed' });
+    });
+
+    it('passes citations through, and leaves note and sources undefined (keep) when none are sent', async () => {
+      mocks.declareStage.mockResolvedValue({ opportunity_id: 'opportunity-1', stage: 'proposed' });
+      const service = new OpportunityService();
+      const citations = [{ type: 'document', id: 'doc-1' }];
+
+      await service.setStage('opportunity-1', { stage: 'proposed', citations } as any, context);
+      expect(mocks.declareStage).toHaveBeenLastCalledWith({}, 'tenant-1', 'opportunity-1', 'proposed', 'user-1', { note: undefined, citations });
+
+      await service.setStage('opportunity-1', { stage: 'proposed' } as any, context);
+      expect(mocks.declareStage).toHaveBeenLastCalledWith({}, 'tenant-1', 'opportunity-1', 'proposed', 'user-1', { note: undefined, citations: undefined });
     });
 
     it.each([
@@ -236,6 +257,34 @@ describe('OpportunityService', () => {
         message: expect.stringContaining(`/api/v1/opportunities/{id}/${endpoint}`),
       });
       expect(mocks.declareStage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('amendDeclaration', () => {
+    it('amends through the engine with the caller as editor', async () => {
+      mocks.amendDeclaration.mockResolvedValue({ opportunity_id: 'opportunity-1', stage: 'verbal' });
+      const service = new OpportunityService();
+
+      const result = await service.amendDeclaration('opportunity-1', 'verbal', { detail: 'Edited', citations: [{ type: 'interaction', id: 'int-1' }] } as any, context);
+
+      expect(mocks.amendDeclaration).toHaveBeenCalledWith({}, 'tenant-1', 'opportunity-1', 'verbal', 'user-1', { note: 'Edited', citations: [{ type: 'interaction', id: 'int-1' }] });
+      expect(result).toEqual({ opportunity_id: 'opportunity-1', stage: 'verbal' });
+    });
+
+    it.each([
+      ['checkpoint_not_reached', 409],
+      ['checkpoint_not_amendable', 400],
+      ['too_many_citations', 400],
+    ])('maps the engine refusal %s to HTTP %i', async (code, status) => {
+      mocks.amendDeclaration.mockRejectedValue(Object.assign(new Error('refused'), { name: 'OpportunityDeclarationError', code }));
+      const service = new OpportunityService();
+      await expect(service.amendDeclaration('opportunity-1', 'verbal', {} as any, context)).rejects.toMatchObject({ statusCode: status });
+    });
+
+    it('maps a refused source to a 400 naming the refusal', async () => {
+      mocks.amendDeclaration.mockRejectedValue(Object.assign(new Error('That source is not attached to this opportunity'), { name: 'OpportunityEvidenceRefError' }));
+      const service = new OpportunityService();
+      await expect(service.amendDeclaration('opportunity-1', 'verbal', {} as any, context)).rejects.toMatchObject({ statusCode: 400 });
     });
   });
 

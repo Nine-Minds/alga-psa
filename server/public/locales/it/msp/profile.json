@@ -114,7 +114,7 @@
     "sso": {
       "advanced": {
         "title": "Avanzate: instradamento del provider di identità personalizzato",
-        "description": "Instrada l'accesso SSO MSP al tuo provider di identità usando domini di accesso verificati. È necessario solo nelle installazioni personalizzate o locali.",
+        "description": "Instrada l'accesso SSO MSP al tuo provider di identità usando domini di accesso verificati. È necessario quando il personale accede tramite il tuo realm Keycloak o la tua applicazione Google o Microsoft.",
         "inertNotice": "Nessun provider di identità del tenant è configurato, quindi le attestazioni sui domini non hanno attualmente effetto. Configura Keycloak qui sopra, oppure nella Enterprise Edition le credenziali della tua app Google/Microsoft, e poi rivendica qui il dominio di accesso."
       }
     },
@@ -803,10 +803,11 @@
     "providers": {
       "title": "Collega un provider",
       "description": "Scegli un provider per completare il collegamento SSO. Verrai reindirizzato attraverso il flusso di accesso del provider.",
-      "noneConfigured": "Nessun provider SSO è configurato per questo ambiente. Chiedi al tuo amministratore di configurare le credenziali Google o Microsoft.",
-      "noneConfiguredAdmin": "Nessun provider SSO è ancora configurato. Configura prima l'applicazione Google o Microsoft della tua organizzazione.",
-      "openProviderSetup": "Configura un provider SSO",
+      "noneConfigured": "Nessun provider SSO è configurato per la tua organizzazione. Chiedi al tuo amministratore di configurarne uno.",
+      "noneConfiguredAdmin": "Nessun provider SSO è ancora configurato. Usa il link di configurazione di uno dei provider qui sotto per iniziare.",
       "notConfigured": "Non configurato",
+      "setUpProvider": "Configura {{provider}}",
+      "askAdministrator": "Chiedi al tuo amministratore di configurarlo.",
       "branding": {
         "google": "Continua con Google",
         "microsoft": "Continua con Microsoft",

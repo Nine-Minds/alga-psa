@@ -17,6 +17,7 @@ import { BROWSER_RETENTION_DAYS, BROWSER_WEEKLY_HEADER, browserSummaryKey, planB
 const TAB = 'browser_readiness';
 const WEEKLY_TAB = 'browser_readiness_weekly';
 
+// LEVERAGE: pattern sheet-tab-retention — same read-plan-verify-delete shape as coverage-metrics-retention.mjs
 export async function runBrowserMetricsRetention({ env = process.env, dryRun = true, now = Date.now(),
   request = fetch, append = appendRows, token, log = console.log } = {}) {
   const sheetId = env.TEST_METRICS_SHEET_ID;

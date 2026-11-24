@@ -252,8 +252,21 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     expect(originatingNote).toContain(`/api/documents/view/${imageDocuments[0].file_id}`);
     expect(originatingNote).not.toContain('cid:');
 
-    // The rendered images in both the description and the timeline must have
-    // loaded (naturalWidth > 0), not be broken cid placeholders.
+    // The originating comment duplicates the description, so the timeline shows
+    // it collapsed to a one-line "opened by email" row (alga-2026-0003227). Its
+    // body, and therefore the inline image, only renders once it is expanded.
+    const originatingMetadata = typeof originatingComment?.metadata === 'string'
+      ? JSON.parse(originatingComment.metadata) : originatingComment?.metadata;
+    expect(originatingMetadata?.opensTicket).toBe(true);
+    const openerTimeline = page.locator('#ticket-details-bento-timeline-tile');
+    const showOriginal = openerTimeline.getByRole('button', { name: 'Show original email', exact: true });
+    await expect(showOriginal).toBeVisible();
+    await expect(openerTimeline.locator(`img[src*="/api/documents/view/${imageDocuments[0].file_id}"]`)).toHaveCount(0);
+    await showOriginal.click();
+    await expect(openerTimeline.getByRole('button', { name: 'Hide original email' })).toBeVisible();
+
+    // The rendered images in both the description and the expanded timeline
+    // comment must have loaded (naturalWidth > 0), not be broken cid placeholders.
     const renderedImageWidths = async () => page.evaluate(() => {
       const read = (selector: string) => {
         const root = document.querySelector(selector);

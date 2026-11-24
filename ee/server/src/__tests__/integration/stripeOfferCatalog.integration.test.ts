@@ -23,7 +23,7 @@ describe('stripe offer catalog (postgres)', () => {
   let prices: Record<string, any>;
   const catalog = (scope: CatalogScope = TEST, env: Record<string, string | undefined> = {}, stripeFails = false,
     subscriptions?: any) => createOfferCatalog({
-    db, livemode: () => scope.livemode, scope: async () => scope, env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
+    db: async () => db, livemode: () => scope.livemode, scope: async () => scope, env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
     stripe: { prices: { retrieve: async (id: string) => { if (stripeFails) throw new Error('stripe down'); if (!prices[id]) throw new Error('no such price'); return prices[id]; } } } as any,
     subscriptions,
   });
@@ -150,7 +150,7 @@ describe('stripe offer catalog (postgres)', () => {
     });
     const stripe = { accounts: { retrieve: accountRead }, prices: { retrieve } } as unknown as Stripe;
     const restricted = createOfferCatalog({
-      db, env, stripe, livemode: () => false,
+      db: async () => db, env, stripe, livemode: () => false,
       scope: createScopeResolver(stripe, 'rk_test_fixture', env, async (livemode, connection = db) =>
         (await connection('stripe_offer_catalog_settings').where({ livemode }).first())?.stripe_account),
     });
@@ -176,7 +176,7 @@ describe('stripe offer catalog (postgres)', () => {
   it('T011: history without a settings row supplies the expected prior pair and catches an untagged retired-price subscription', async () => {
     await catalog(TEST).publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
     const requests: unknown[] = [];
-    const c = createOfferCatalog({ db, livemode: () => false, scope: async () => { throw new Error('account read denied'); },
+    const c = createOfferCatalog({ db: async () => db, livemode: () => false, scope: async () => { throw new Error('account read denied'); },
       env: { MASTER_BILLING_TENANT_ID: MASTER },
       stripe: { prices: { retrieve: async (id: string, options: unknown) => { requests.push({ id, options }); return prices[id]; } } } as any,
       subscriptions: { list: async function* (_params: unknown, options: unknown) {
@@ -194,7 +194,7 @@ describe('stripe offer catalog (postgres)', () => {
   it('T011: actual operator commands inspect and configure an empty catalog with account reads denied', async () => {
     const retrieved: Array<{ id: string; options: unknown }> = [];
     const outputs: string[] = [];
-    const restricted = createOfferCatalog({ db, livemode: () => false,
+    const restricted = createOfferCatalog({ db: async () => db, livemode: () => false,
       // The restricted fixture intentionally exposes Price reads only. It has no accounts API at all.
       scope: async () => { throw new Error('account reads are denied'); },
       env: { MASTER_BILLING_TENANT_ID: MASTER },
@@ -250,7 +250,7 @@ describe('stripe offer catalog (postgres)', () => {
   it('skips Stripe scope resolution for an unconfigured offer', async () => {
     const scope = vi.fn().mockResolvedValue(TEST);
     const retrieve = vi.fn().mockResolvedValue(prices.price_a);
-    const c = createOfferCatalog({ db, scope, stripe: { prices: { retrieve } } as any, env: {} });
+    const c = createOfferCatalog({ db: async () => db, scope, stripe: { prices: { retrieve } } as any, env: {} });
     await catalog().publishBinding({ actor: operator, offerKey: 'other_offer', interval: 'month', priceId: 'price_b', expectedCurrentVersionId: null, productId: 'prod_seat' });
 
     expect(await c.isOfferSellable(KEY, 'month')).toBe(false);
@@ -419,5 +419,36 @@ describe('stripe offer catalog (postgres)', () => {
       expect(await db('stripe_offer_versions')).toHaveLength(1);
       await db.raw('DROP TABLE co_managed_purchase_operations');
     });
+  });
+
+  it('incident 2026-11-22: the catalog keeps working after the admin pool is destroyed and rebuilt', async () => {
+    // Point the REAL getAdminConnection() at the disposable test database.
+    const conn = (db.client as any).config.connection;
+    const saved = Object.fromEntries(['DB_HOST_ADMIN', 'DB_PORT_ADMIN', 'DB_USER_ADMIN', 'DB_PASSWORD_ADMIN', 'DB_NAME_SERVER'].map((k) => [k, process.env[k]]));
+    Object.assign(process.env, { DB_HOST_ADMIN: conn.host, DB_PORT_ADMIN: String(conn.port), DB_USER_ADMIN: conn.user,
+      DB_PASSWORD_ADMIN: conn.password, DB_NAME_SERVER: conn.database });
+    const admin = await import('@alga-psa/db/admin');
+    try {
+      const c = createOfferCatalog({ db: admin.getAdminConnection, livemode: () => false, scope: async () => TEST,
+        env: { MASTER_BILLING_TENANT_ID: MASTER }, stripe: { prices: { retrieve: async (id: string) => prices[id] } } as any });
+      await c.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
+      expect([...await c.recognizedPriceIds(KEY, 'month')]).toEqual(['price_a']);
+
+      // The failure mode this guards against: a handle captured before the reset is dead afterwards.
+      const captured = await admin.getAdminConnection();
+      await admin.destroyAdminConnection();
+      await expect(captured('stripe_offer_versions').first()).rejects.toThrow();
+
+      // The memoised catalog resolves the new pool on its next operation.
+      expect([...await c.recognizedPriceIds(KEY, 'month')]).toEqual(['price_a']);
+      await expect(c.isOfferSellable(KEY, 'month')).resolves.toBe(true);
+
+      await admin.refreshAdminConnection();
+      expect([...await c.recognizedPriceIds(KEY, 'month')]).toEqual(['price_a']);
+      await expect(c.isOfferSellable(KEY, 'month')).resolves.toBe(true);
+    } finally {
+      await admin.destroyAdminConnection();
+      for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    }
   });
 });

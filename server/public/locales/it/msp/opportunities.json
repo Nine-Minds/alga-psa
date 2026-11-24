@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Suggerimento pronto per la revisione",
       "whitespaceSuggestionDismissed": "Questo suggerimento era stato precedentemente respinto",
       "whitespaceSuggestionKnown": "Questo suggerimento è già noto",
-      "won": "Vinto"
+      "won": "Vinto",
+      "evidenceSaved": "Evidenze salvate"
     },
     "type": {
       "expansion": "Espansione",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Sposta a {{stage}}",
-      "sourceLabel": "Fonte a supporto",
-      "noSource": "Nessuna fonte",
-      "sourceHelp": "Facoltativo. Cita un'interazione o un documento di questa trattativa. Se non è elencato, allega prima il documento alla trattativa.",
+      "sourceHelp": "Facoltativo. Cita interazioni o documenti di questa opportunità. Se un documento non è elencato, allegalo prima all'opportunità.",
       "submit": "Dichiara",
       "source": "Fonte",
       "sourceRemoved": "Fonte rimossa",
       "interactionFallback": "Interazione",
-      "documentFallback": "Documento"
+      "documentFallback": "Documento",
+      "editTitle": "Evidenze per {{stage}}",
+      "noteLabel": "Nota",
+      "notePlaceholder": "Cosa dimostra che l'opportunità è in questa fase?",
+      "sourcesLabel": "Fonti a supporto",
+      "groupInteractions": "Interazioni",
+      "groupDocuments": "Documenti",
+      "removeSource": "Rimuovi fonte",
+      "sourcesLoading": "Caricamento delle fonti…",
+      "addSource": "Aggiungi una fonte",
+      "noSourcesAvailable": "Nessun'altra interazione o documento su questa opportunità",
+      "save": "Salva",
+      "editEvidence": "Modifica evidenze",
+      "addEvidence": "Aggiungi evidenza"
     }
   }
 }

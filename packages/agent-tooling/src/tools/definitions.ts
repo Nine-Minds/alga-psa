@@ -55,7 +55,8 @@ export const MCP_SERVER_INSTRUCTIONS =
   'Never ask the user for an API key. ' +
   'Never base64-encode a file you did not author yourself; content_base64 is only for small text you wrote. ' +
   'call_api_endpoint cannot send multipart/form-data, so do not use it to upload files. ' +
-  'Attach one file per call; for several files make several calls.';
+  'Attach one file per call; for several files make several calls. ' +
+  'Files are internal-only unless the user asks for the client to see them; then set is_client_visible to true (ticket, project task or client only).';
 
 export interface BuildMetaToolOptions {
   edition: Edition;
@@ -202,6 +203,7 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
         '`content_base64` (only small content you wrote yourself; never base64 a user-provided file). ' +
         '`file_name` is required with content_base64 and otherwise defaults from the file or URL. ' +
         'If a url is refused with FETCH_HOST_NOT_ALLOWED, tell the user a workspace admin can add that host under Settings > MCP Server > Allowed download hosts; do not retry with other URLs and never ask for an API key. ' +
+        'The file is internal-only unless you set `is_client_visible: true`, which only the user can ask for. ' +
         'Call once per file. If the file did not arrive (missing or not a download link), ask the user to re-attach it from ChatGPT web or desktop.',
       inputSchema: {
         type: 'object',
@@ -231,6 +233,12 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
           mime_type: {
             type: 'string',
             description: 'MIME type, if known. Optional; the server also inspects the bytes.',
+          },
+          is_client_visible: {
+            type: 'boolean',
+            description:
+              'Whether the client portal can show this file. Default false (internal only); leave it out unless the user asks for the client to see the file. ' +
+              'Only ticket, project_task and client support true (contact and asset are refused), and true needs the document:update permission. The result shows the saved is_client_visible value.',
           },
         },
         required: ['entity_type', 'entity_id'],

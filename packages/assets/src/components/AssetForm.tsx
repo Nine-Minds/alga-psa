@@ -38,6 +38,7 @@ import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
 import { parseNumberInput } from '../lib/numberInput';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
+import { retainReadableAssetUpdateFields } from '../lib/assetFormPayload';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -1108,9 +1109,14 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
     e.preventDefault();
     if (!asset) return;
 
-    // F309: required enforcement for custom-type schema fields, inline.
+    // Edit payloads merge into stored attributes, so omitted required fields
+    // (including redacted fields) are not missing writes. Provided required
+    // fields still fail when blank. Switching to another type is a create-like
+    // operation for that schema, so all of its required fields must be set.
     const attributeIssues = customTypeFields.length > 0
-      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
+      ? validateAttributesAgainstSchema(customTypeFields, customAttributes, {
+          requireAll: createMode || formData.asset_type !== asset.asset_type,
+        })
       : [];
     if (attributeIssues.length > 0) {
       setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
@@ -1252,11 +1258,13 @@ export default function AssetForm({ assetId, createMode = false, onSaved, onCanc
         )
       ) as UpdateAssetRequest;
 
+      const safeFormData = retainReadableAssetUpdateFields(cleanedData, asset);
+
       // updateAsset RETURNS expected failures (validation, permission, not found)
       // rather than throwing: Next.js masks thrown messages in production builds.
       const result = createMode
         ? await createAsset({ ...cleanedData, asset_tag: automaticTag ? '' : cleanedData.asset_tag } as CreateAssetRequest)
-        : await updateAsset(assetId!, cleanedData);
+        : await updateAsset(assetId!, safeFormData);
 
       if (isAssetValidationError(result)) {
         const nextFieldErrors: Record<string, string> = {};

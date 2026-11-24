@@ -125,7 +125,7 @@ describe('standard quote template AST definitions', () => {
     const migration = await import(
       /* @vite-ignore */ path.resolve(
         __dirname,
-        '../../../../../server/migrations/20261105120000_update_standard_quote_templates_edited_description.cjs'
+        '../../../../../server/migrations/20261115090000_update_standard_quote_templates_value_wording.cjs'
       )
     );
     const literals =

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Bookmark, BookmarkCheck, Check, X } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -18,22 +18,36 @@ import { useMyActivityGroups } from './MyActivityGroupsProvider';
  * personal activity groups the record is in, with a popover to move it, clear it, or create a
  * group inline. Personal to the session user; renders nothing unless the record is on my list.
  */
-export function ActivityGroupControl({ id, activityId, activityType, assignmentKey }: ActivityGroupControlRenderProps) {
+export function ActivityGroupControl({ id, activityId, activityType, assignmentKey, initialOnMyList }: ActivityGroupControlRenderProps) {
   const { t } = useTranslation('msp/user-activities');
   const store = useMyActivityGroups();
   const { ensureLoaded, groupOf, moveTo, clear, createAndMove } = store;
 
-  // null = unknown (pending); the control renders nothing until the answer is true.
-  const [eligible, setEligible] = useState<boolean | null>(null);
+  // null = unknown (pending); the control renders nothing until the answer is true. A server-supplied
+  // answer (initialOnMyList) renders on first paint, so the chip never pops in above the form and
+  // shifts it under the pointer.
+  const [eligible, setEligible] = useState<boolean | null>(initialOnMyList ?? null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const record = `${activityType}:${activityId}`;
+  // The saved state the server answered for; the mount check is skipped for exactly that state.
+  const seededFor = useRef<string | null>(initialOnMyList == null ? null : `${record}|${assignmentKey}`);
+  const checkedRecord = useRef(record);
+
   // Re-check whenever the record or its SAVED assignment changes.
   useEffect(() => {
+    if (seededFor.current === `${record}|${assignmentKey}`) return;
+    seededFor.current = null;
+    // A different record starts unknown. The same record keeps its current answer while the
+    // re-check runs, so the chip does not blink out and back after every save.
+    if (checkedRecord.current !== record) {
+      checkedRecord.current = record;
+      setEligible(null);
+    }
     let cancelled = false;
-    setEligible(null);
     isActivityOnMyList(activityType, activityId)
       .then((result) => { if (!cancelled) setEligible(result === true); })
       .catch((err) => {
@@ -41,7 +55,7 @@ export function ActivityGroupControl({ id, activityId, activityType, assignmentK
         if (!cancelled) setEligible(false);
       });
     return () => { cancelled = true; };
-  }, [activityType, activityId, assignmentKey]);
+  }, [record, activityType, activityId, assignmentKey]);
 
   useEffect(() => {
     if (eligible) void ensureLoaded();

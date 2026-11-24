@@ -29,6 +29,6 @@ export async function resolveCoManagedPurchaseDiscovery(user: Principal, tenant:
   const owner = await tenantDb(knex, tenant).table('tenants').first('product_code', 'plan', 'billing_source');
   if (owner?.product_code !== 'psa' || owner.plan !== 'pro' || owner.billing_source === 'manual') return { eligible: false, reason: 'not_hosted_pro' };
   if (await getLicenseStateRow()) return { eligible: false, reason: 'self_host' };
-  if (!await withBillingCatalogContext(() => isCoManagedPurchaseSurfaceOpen(tenant))) return { eligible: false, reason: 'surface_closed' };
+  if (!await withBillingCatalogContext(() => isCoManagedPurchaseSurfaceOpen(tenant), tenant)) return { eligible: false, reason: 'surface_closed' };
   return { eligible: true };
 }

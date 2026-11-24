@@ -65,13 +65,17 @@ describe('GET /auth/mobile/signout', () => {
     expect(sessionCookieNamesToClear([])).toEqual(['authjs-port-3000.session-token']);
   });
 
-  it('falls back to the sign-in page for a missing or foreign redirect', async () => {
-    const missing = await GET(request('http://localhost:3000/auth/mobile/signout'));
-    expect(missing.headers.get('location')).toBe('http://localhost:3000/auth/signin');
+  it('falls back to the sign-in page for a missing or foreign redirect, relative to the public host', async () => {
+    // localhost:3000 stands in for the internal upstream origin a hosted request carries.
+    const missing = await GET(request('http://localhost:3000/auth/mobile/signout', 'authjs-port-3000.session-token=abc'));
+    expect(missing.status).toBe(302);
+    expect(missing.headers.get('location')).toBe('/auth/signin');
+    expect(missing.headers.get('cache-control')).toBe('no-store');
+    expect(clearedCookies(missing).has('authjs-port-3000.session-token')).toBe(true);
 
     const foreign = await GET(
       request('http://localhost:3000/auth/mobile/signout?redirect=https%3A%2F%2Fevil.example%2Fauth%2Fcallback'),
     );
-    expect(foreign.headers.get('location')).toBe('http://localhost:3000/auth/signin');
+    expect(foreign.headers.get('location')).toBe('/auth/signin');
   });
 });

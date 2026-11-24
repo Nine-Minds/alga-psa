@@ -471,7 +471,8 @@
       "whitespaceSuggestionCreated": "Sugerencia lista para revisión",
       "whitespaceSuggestionDismissed": "Esta sugerencia fue previamente descartada.",
       "whitespaceSuggestionKnown": "Esta sugerencia ya es conocida.",
-      "won": "Ganado"
+      "won": "Ganado",
+      "evidenceSaved": "Evidencia guardada"
     },
     "type": {
       "expansion": "Expansión",
@@ -569,14 +570,25 @@
     },
     "declare": {
       "title": "Mover a {{stage}}",
-      "sourceLabel": "Fuente de respaldo",
-      "noSource": "Sin fuente",
-      "sourceHelp": "Opcional. Cita una interacción o un documento de esta oportunidad. Si no aparece, adjunta primero el documento a la oportunidad.",
+      "sourceHelp": "Opcional. Cita interacciones o documentos de esta oportunidad. Si un documento no aparece, adjúntalo primero a la oportunidad.",
       "submit": "Declarar",
       "source": "Fuente",
       "sourceRemoved": "Fuente eliminada",
       "interactionFallback": "Interacción",
-      "documentFallback": "Documento"
+      "documentFallback": "Documento",
+      "editTitle": "Evidencia de {{stage}}",
+      "noteLabel": "Nota",
+      "notePlaceholder": "¿Qué demuestra que la oportunidad está en esta etapa?",
+      "sourcesLabel": "Fuentes de respaldo",
+      "groupInteractions": "Interacciones",
+      "groupDocuments": "Documentos",
+      "removeSource": "Quitar fuente",
+      "sourcesLoading": "Cargando fuentes…",
+      "addSource": "Añadir una fuente",
+      "noSourcesAvailable": "No hay más interacciones ni documentos en esta oportunidad",
+      "save": "Guardar",
+      "editEvidence": "Editar evidencia",
+      "addEvidence": "Añadir evidencia"
     }
   }
 }

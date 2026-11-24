@@ -148,9 +148,11 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   const home = tenantDb(trx, actor.tenant);
   const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
   const organization = await home.table('tenants').first('client_name');
+  const displayName = [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim();
+  const username = typeof author?.username === 'string' && !isCoManagedUuid(author.username) ? author.username : '';
   const event = { tenant: resource.tenant, ...key, operation_id: request.operationId, revision, transition,
     request_fingerprint: fingerprint, actor_tenant: actor.tenant, actor_user_id: actor.userId,
-    actor_name: [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.username || actor.userId,
+    actor_name: displayName || username || 'Unknown user',
     actor_organization: organization?.client_name ?? '', note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event); // write-admission: exempt — append-only receipt of the admitted transition
   // Routing notifications (L5): recipients are captured atomically with the receipt as pending ledger rows.

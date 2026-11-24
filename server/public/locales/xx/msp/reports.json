@@ -2,12 +2,6 @@
   "page": {
     "title": "⟦Řḗƥȯřŧş⟧"
   },
-  "actions": {
-    "refresh": "⟦Řḗƒřḗşħ⟧"
-  },
-  "placeholders": {
-    "selectContract": "⟦Şḗŀḗƈŧ ƈȯƞŧřȧƈŧ...⟧"
-  },
   "units": {
     "hoursShort": "⟦ħřş⟧",
     "days": "⟦ḓȧẏş⟧",
@@ -433,64 +427,6 @@
       "label": "⟦Ƈȯŀŭḿƞş⟧",
       "title": "⟦Ƈȯŀŭḿƞş⟧",
       "reset": "⟦Řḗşḗŧ ŧȯ ḓḗƒȧŭŀŧ ƈȯŀŭḿƞş⟧"
-    }
-  },
-  "contractPerformance": {
-    "title": "⟦Ƈȯƞŧřȧƈŧ Ƥḗřƒȯřḿȧƞƈḗ Ḿḗŧřīƈş⟧",
-    "errors": {
-      "loadData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓȧŧȧ⟧"
-    },
-    "metrics": {
-      "totalClients": "⟦Ŧȯŧȧŀ Ƈŀīḗƞŧş⟧",
-      "activeClients": "⟦Ȧƈŧīṽḗ Ƈŀīḗƞŧş⟧",
-      "totalPlans": "⟦Ŧȯŧȧŀ Ƥŀȧƞş⟧",
-      "averagePlansPerClient": "⟦Ȧṽɠ. Ƥŀȧƞş Ƥḗř Ƈŀīḗƞŧ⟧",
-      "totalRevenue": "⟦Ŧȯŧȧŀ Řḗṽḗƞŭḗ⟧",
-      "averageRevenuePerClient": "⟦Ȧṽɠ. Řḗṽḗƞŭḗ Ƥḗř Ƈŀīḗƞŧ⟧"
-    },
-    "empty": {
-      "selectContract": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŧȯ ṽīḗẇ ƥḗřƒȯřḿȧƞƈḗ ḿḗŧřīƈş⟧",
-      "noContracts": "⟦Ƞȯ ƈȯƞŧřȧƈŧş ȧṽȧīŀȧƀŀḗ⟧"
-    },
-    "comparison": {
-      "title": "⟦Ƈȯƞŧřȧƈŧ Ƈȯḿƥȧřīşȯƞ⟧",
-      "table": {
-        "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
-        "clients": "⟦Ƈŀīḗƞŧş⟧",
-        "plans": "⟦Ƥŀȧƞş⟧",
-        "revenue": "⟦Řḗṽḗƞŭḗ⟧"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "⟦Ƈȯƞŧřȧƈŧ Ŭşȧɠḗ Řḗƥȯřŧ⟧",
-    "errors": {
-      "loadInitialData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞīŧīȧŀ ḓȧŧȧ⟧",
-      "loadUsageData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŭşȧɠḗ ḓȧŧȧ⟧"
-    },
-    "empty": {
-      "noClientsUsingContract": "⟦Ƞȯ ƈŀīḗƞŧş ȧřḗ ŭşīƞɠ ŧħīş ƈȯƞŧřȧƈŧ⟧",
-      "selectContract": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŧȯ ṽīḗẇ ŭşȧɠḗ ḓȧŧȧ⟧"
-    },
-    "table": {
-      "client": "⟦Ƈŀīḗƞŧ⟧",
-      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
-      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
-      "contractLines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
-      "totalBilled": "⟦Ŧȯŧȧŀ Ɓīŀŀḗḓ⟧",
-      "status": "⟦Şŧȧŧŭş⟧"
-    },
-    "statusValues": {
-      "active": "⟦Ȧƈŧīṽḗ⟧",
-      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
-      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
-      "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧"
-    },
-    "summary": {
-      "title": "⟦Şŭḿḿȧřẏ⟧",
-      "totalClients": "⟦Ŧȯŧȧŀ Ƈŀīḗƞŧş⟧",
-      "activeAssignments": "⟦Ȧƈŧīṽḗ Ȧşşīɠƞḿḗƞŧş⟧",
-      "totalBilled": "⟦Ŧȯŧȧŀ Ɓīŀŀḗḓ⟧"
     }
   },
   "deferredRevenue": {

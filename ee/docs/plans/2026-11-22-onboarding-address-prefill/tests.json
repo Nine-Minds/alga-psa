@@ -1,0 +1,11 @@
+[
+  {"id": "T001", "description": "Workflow test: input with checkoutSessionId and stripeCustomerId and no billingAddress calls fetchStripeDetailsFromCheckout and passes the fetched billingAddress to createTenant", "featureIds": ["F001"], "implemented": true},
+  {"id": "T002", "description": "Workflow test: caller-supplied stripeCustomerId, subscription and price IDs reach createTenant unchanged when the fetch returns different IDs", "featureIds": ["F002"], "implemented": true},
+  {"id": "T003", "description": "Workflow test: input with checkoutSessionId, stripeCustomerId and billingAddress does not call the fetch", "featureIds": ["F001", "F002"], "implemented": true},
+  {"id": "T004", "description": "Workflow test: input with checkoutSessionId only still resolves IDs and address from the fetch (existing behaviour)", "featureIds": ["F001"], "implemented": true},
+  {"id": "T005", "description": "Workflow test: fetch throwing leaves tenant creation succeeding with no billingAddress", "featureIds": ["F003"], "implemented": true},
+  {"id": "T006", "description": "getOnboardingInitialData: placeholder location (N/A, XX) returns blank fields and prefilled=false", "featureIds": ["F005"], "implemented": true},
+  {"id": "T007", "description": "getOnboardingInitialData: location with only country and postal code returns those values and prefilled=true", "featureIds": ["F005"], "implemented": true},
+  {"id": "T008", "description": "ClientInfoStep renders the neutral sentence without the prefill sentence when prefilled=false, and both when prefilled=true on first visit; revisit hides the prefill sentence", "featureIds": ["F006"], "implemented": true},
+  {"id": "T009", "description": "Every locale's msp/onboarding.json has the updated description key and the new prefill key", "featureIds": ["F007"], "implemented": true}
+]

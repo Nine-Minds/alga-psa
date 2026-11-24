@@ -409,6 +409,12 @@ const servicePeriodPostInventoryRefs = new Set([
   // materialization and coverage-audit actions above, they landed after the pass-0 snapshot.
   'packages/billing/src/actions/arrearsOnlyLineGaps.ts',
   'packages/billing/src/actions/arrearsOnlyLineRepair.ts',
+  // Accounting export projects persisted recurring-detail service periods onto
+  // export lines through one shared module, used by both the invoice selector
+  // and validation, so fixed lines with several service periods export correctly.
+  'packages/billing/src/services/accountingExportServicePeriods.ts',
+  'server/src/test/integration/accounting/fixedLineMultiServicePeriods.integration.test.ts',
+  'server/src/test/unit/accounting/accountingExportServicePeriods.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

@@ -2,12 +2,6 @@
   "page": {
     "title": "Rapporten"
   },
-  "actions": {
-    "refresh": "Vernieuwen"
-  },
-  "placeholders": {
-    "selectContract": "Contract selecteren..."
-  },
   "units": {
     "hoursShort": "u",
     "days": "dagen",
@@ -433,64 +427,6 @@
       "label": "Kolommen",
       "title": "Kolommen",
       "reset": "Standaardkolommen herstellen"
-    }
-  },
-  "contractPerformance": {
-    "title": "Prestatiestatistieken van contracten",
-    "errors": {
-      "loadData": "Contractgegevens konden niet worden geladen"
-    },
-    "metrics": {
-      "totalClients": "Totale klanten",
-      "activeClients": "Actieve klanten",
-      "totalPlans": "Totale plannen",
-      "averagePlansPerClient": "Gem. plannen per klant",
-      "totalRevenue": "Totale omzet",
-      "averageRevenuePerClient": "Gem. omzet per klant"
-    },
-    "empty": {
-      "selectContract": "Selecteer een contract om prestatiestatistieken te bekijken",
-      "noContracts": "Geen contracten beschikbaar"
-    },
-    "comparison": {
-      "title": "Contractvergelijking",
-      "table": {
-        "contract": "Contract",
-        "clients": "Klanten",
-        "plans": "Plannen",
-        "revenue": "Omzet"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Contractgebruikrapport",
-    "errors": {
-      "loadInitialData": "Initiële gegevens konden niet worden geladen",
-      "loadUsageData": "Contractgebruiksgegevens konden niet worden geladen"
-    },
-    "empty": {
-      "noClientsUsingContract": "Geen klanten gebruiken dit contract",
-      "selectContract": "Selecteer een contract om gebruiksgegevens te bekijken"
-    },
-    "table": {
-      "client": "Klant",
-      "startDate": "Startdatum",
-      "endDate": "Einddatum",
-      "contractLines": "Contractregels",
-      "totalBilled": "Totaal gefactureerd",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "ongoing": "Doorlopend",
-      "unknownClient": "Onbekende klant"
-    },
-    "summary": {
-      "title": "Samenvatting",
-      "totalClients": "Totale klanten",
-      "activeAssignments": "Actieve toewijzingen",
-      "totalBilled": "Totaal gefactureerd"
     }
   },
   "deferredRevenue": {
