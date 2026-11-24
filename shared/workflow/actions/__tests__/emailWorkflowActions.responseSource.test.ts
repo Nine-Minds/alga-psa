@@ -6,6 +6,7 @@ const displayNameFirstMock = vi.fn(async () => null);
 const tenantSettingsFirstMock = vi.fn(async () => ({
   ticket_display_settings: { responseStateTrackingEnabled: true },
 }));
+const ticketStateFirstMock = vi.fn(async () => ({ response_state: null as string | null }));
 const trxMock = vi.fn((table: string) => {
   if (table === 'tenant_settings') {
     return {
@@ -32,7 +33,7 @@ const trxMock = vi.fn((table: string) => {
   }
 
   return {
-    select: () => ({ where: () => ({ first: async () => ({ response_state: null }) }) }),
+    select: () => ({ where: () => ({ first: ticketStateFirstMock }) }),
     where: vi.fn().mockReturnValue({ update: updateTicketStateMock }),
   };
 });
@@ -42,6 +43,12 @@ const withAdminTransactionMock = vi.fn(async (callback: (trx: any) => Promise<an
 );
 const createCommentMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
+const registerActionMock = vi.fn();
+const publisherOptionsMock = vi.fn();
+
+vi.mock('../../runtime/registries/actionRegistry', () => ({
+  getActionRegistryV2: () => ({ register: registerActionMock }),
+}));
 
 vi.mock('@alga-psa/db', () => ({
   registerAfterCommit: vi.fn(),
@@ -59,7 +66,9 @@ vi.mock('@alga-psa/shared/models/ticketModel', () => ({
 }));
 
 vi.mock('../../adapters/workflowEventPublisher', () => ({
-  WorkflowEventPublisher: class WorkflowEventPublisher {},
+  WorkflowEventPublisher: class WorkflowEventPublisher {
+    constructor(options: unknown) { publisherOptionsMock(options); }
+  },
 }));
 
 vi.mock('../../adapters/workflowAnalyticsTracker', () => ({
@@ -88,6 +97,48 @@ describe('createCommentFromEmail response source metadata', () => {
     updateTicketStateMock.mockResolvedValue(1);
     ticketAuditLogInsertMock.mockResolvedValue(undefined);
     displayNameFirstMock.mockResolvedValue(null);
+    ticketStateFirstMock.mockResolvedValue({ response_state: null });
+  });
+
+  it('processes an attachment-only workflow reply through the writer and its side effects', async () => {
+    const { registerEmailWorkflowActionsV2 } = await import('../../runtime/actions/registerEmailWorkflowActions');
+    const { parseEmailReply } = await import('../../../lib/email/replyParser');
+    registerEmailWorkflowActionsV2();
+    const action = registerActionMock.mock.calls.map(([entry]) => entry)
+      .find((entry) => entry.id === 'create_comment_from_parsed_email');
+    ticketStateFirstMock.mockResolvedValue({ response_state: 'awaiting_client' });
+    createCommentMock.mockResolvedValue({ comment_id: 'comment-1', is_internal: false });
+    const body = { text: '', html: '<div dir="ltr"><br></div>' };
+    const input = action.inputSchema.parse({
+      ticketId: 'ticket-1',
+      contact_id: 'contact-1',
+      emailData: {
+        id: 'attachment-only-reply',
+        subject: 'Re: Deployment failed',
+        from: { email: 'client@example.com' },
+        inReplyTo: '<original-message@example.com>',
+        body,
+        attachments: [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }],
+      },
+      parsedEmail: parseEmailReply(body),
+    });
+
+    expect(await action.handler(input, { tenantId: 'tenant-1' })).toEqual({ comment_id: 'comment-1' });
+    expect(createCommentMock).toHaveBeenCalledTimes(1);
+    expect(createCommentMock.mock.calls[0][0]).toMatchObject({
+      author_type: 'contact',
+      is_internal: false,
+      metadata: { responseSource: 'inbound_email' },
+    });
+    expect(updateTicketStateMock).toHaveBeenCalledWith({ response_state: 'awaiting_internal' });
+    expect(ticketAuditLogInsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      event_type: 'TICKET_CUSTOMER_REPLIED',
+      entity_id: 'comment-1',
+      source: 'inbound_email',
+    }));
+    // The model receives its normal event publisher with comment notifications enabled.
+    expect(publisherOptionsMock).toHaveBeenCalledWith(expect.objectContaining({ suppressCommentEmail: false }));
+    expect(createCommentMock.mock.calls[0][3]).toBeDefined();
   });
 
   it('T002: persists metadata.responseSource=inbound_email', async () => {

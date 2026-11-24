@@ -598,6 +598,26 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expect(result.comment_id).toBeUndefined();
     });
 
+    it.each([false, true])('creates a comment for an attachment-only reply (Alga token: %j)', async (withToken) => {
+      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+      const body = {
+        text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
+        html: '<div dir="ltr"><br></div>',
+      };
+      const comment = await writtenComment(parseEmailReply(body), {
+        ...emailData,
+        body,
+        inReplyTo: '<original-message@example.test>',
+        attachments: [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }],
+      });
+
+      expect(comment.author_type).toBe('contact');
+      expect(comment.source).toBe('email');
+      expect(visibleText(comment.content)).toBe('');
+      expect(comment.content.length).toBeGreaterThan(0);
+      expectNoLeaks(comment.content);
+    });
+
     // The parser reports an empty reply through sanitizedText alone; its HTML side may still
     // hold the quoted notification when no blockquote wrapped it.
     it('ignores the retained HTML of a reply the parser reported as empty', async () => {

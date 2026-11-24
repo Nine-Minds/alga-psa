@@ -205,6 +205,26 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     expect(result.sanitizedText).toContain('Please confirm which window you want');
   });
 
+  it.each([false, true])('preserves an unattributed trailing quotation (HTML trim rejected: %j)', (withHtml) => {
+    const text = readFixture('authored-trailing-quotation.txt');
+    const authored = text.split('\n\n--- Please reply above this line ---')[0];
+    const result = parseEmailReply({
+      text,
+      ...(withHtml ? {
+        html: '<p>The deployment failed with this error:</p><blockquote class="gmail_quote">'
+          + '<p>ACCESS DENIED (code 5). The service account cannot access the deployment share.</p>'
+          + '<p>Retry failed. No machines were updated.</p></blockquote>',
+      } : {}),
+    });
+
+    expect(result.sanitizedText).toBe(authored);
+    expect(result.appliedHeuristics).not.toContain('quote-prefix');
+    if (withHtml) {
+      expect(result.sanitizedHtml).toBeUndefined();
+      expect(result.appliedHeuristics).toContain('html-trim-rejected');
+    }
+  });
+
   it.each(['', '\n--- Please reply above this line ---\nOld notification'])(
     'rejects a trim that removes an inline answer, with boundary %j',
     (boundary) => {

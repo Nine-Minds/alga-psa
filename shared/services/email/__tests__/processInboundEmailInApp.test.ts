@@ -1665,5 +1665,18 @@ describe('processInboundEmailInApp', () => {
 
       expect(content).toContain(answer);
     });
+
+    it('stores the trailing error quotation above an explicit reply boundary', async () => {
+      parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));
+      const content = await storedCommentContent('email-trailing-error-quotation', {
+        text: readEmailFixture('authored-trailing-quotation.txt') + '\n[ALGA-REPLY-TOKEN OWNREPLY-TOKEN-11]',
+        html: '',
+      });
+
+      expect(content).toContain('ACCESS DENIED (code 5). The service account cannot access the deployment share.');
+      expect(content).toContain('Retry failed. No machines were updated.');
+      expect(content).not.toContain('Old notification');
+      expect(content).not.toContain('[ALGA-REPLY-TOKEN');
+    });
   });
 });

@@ -657,7 +657,7 @@ function earliestMarkerIndex(html: string, config: ReplyParserConfig): number {
   }, -1);
 }
 
-function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResult {
+function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveUnattributedQuotes = false): TrimResult {
   const lines = normalizeText(text).split('\n');
   const kept: string[] = [];
   let matched: string | undefined;
@@ -714,9 +714,11 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
       const quoteOpening = line.replace(/^>\s*/, '');
       const hasAttribution = [precedingLine, quoteOpening].some((value) =>
         /\bwrote:$/i.test(value) || config.providerReplyHeaders.some((regex) => regex.test(value)));
-      // A quotation surrounded by authored prose may be an error message or other evidence.
-      // Only discard it as inline reply history when an attribution identifies it as such.
-      if (precedingLine && !hasAttribution && introducesInlineQuote(lines, i, config)) {
+      // Above an explicit boundary, even a trailing quotation may be authored evidence.
+      // Without an attribution, preserve it rather than silently deleting the customer's
+      // error message. Elsewhere, keep the existing inline-quotation safeguard.
+      if (!hasAttribution && (preserveUnattributedQuotes
+        || (precedingLine && introducesInlineQuote(lines, i, config)))) {
         kept.push(...lines.slice(i, end));
       } else {
         kept.push(...lines.slice(i, end).filter((value) => !value.trim()));
@@ -935,7 +937,7 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   // empty, and ambiguous mail keeps preserving too much.
   const providerTrim: TrimResult = preserveUntrimmedText
     ? { text: trimmedText }
-    : stripProviderHeaders(trimmedText, mergedConfig);
+    : stripProviderHeaders(trimmedText, mergedConfig, Boolean(textBoundary));
   if (providerTrim.heuristic && (!textBoundary || providerTrim.text.trim())) {
     trimmedText = providerTrim.text;
     appliedHeuristics.push(providerTrim.heuristic);
