@@ -1063,7 +1063,7 @@
         "ongoing": "In corso",
         "useDefaultRate": "Utilizza tariffa predefinita",
         "wholeContract": "Intero contratto",
-        "wholeContractEffect": "Intero contratto — ciascuna delle {{count}} linee contrattuali a tariffa fissa fattura {{amount}}",
+        "wholeContractEffect": "Intero contratto — tariffa di riserva di {{amount}} per linea contrattuale attiva a tariffa fissa ({{count}} linee). Le pianificazioni specifiche della linea hanno la precedenza.",
         "unnamedLine": "Linea senza nome"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Importo per periodo di fatturazione",
         "lineFeeHelp": "Quanto fattura questa linea in ogni periodo di fatturazione coperto dalla pianificazione, al posto della sua tariffa consueta.",
         "lineFeeHelpMixed": "Sostituisce la tariffa forfettaria di questa linea in ogni periodo di fatturazione coperto dalla pianificazione. I servizi con prezzo per unità mantengono il loro prezzo unitario.",
-        "lineFeeHelpWholeContract": "Ogni linea contrattuale a tariffa fissa di questo contratto fattura questo importo in ogni periodo di fatturazione coperto dalla pianificazione."
+        "lineFeeHelpWholeContract": "Tariffa di riserva per ogni linea contrattuale attiva a tariffa fissa nei periodi di fatturazione coperti. Le pianificazioni specifiche della linea hanno la precedenza."
       },
       "title": {
         "addPricingSchedule": "Aggiungi pianificazione dei prezzi",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Linea senza nome"
       },
       "notices": {
-        "wholeContract": "Intero contratto: questa pianificazione si applica a ogni linea contrattuale a tariffa fissa di questo contratto.",
-        "wholeContractEffect": "Intero contratto: ciascuna delle {{count}} linee contrattuali a tariffa fissa fattura {{amount}} per periodo di fatturazione.",
+        "wholeContract": "Intero contratto: pianificazione di riserva per le linee contrattuali attive a tariffa fissa. Le pianificazioni specifiche della linea hanno la precedenza.",
+        "wholeContractEffect": "Intero contratto: tariffa di riserva di {{amount}} per linea contrattuale attiva a tariffa fissa e per periodo di fatturazione ({{count}} linee). Le pianificazioni specifiche della linea hanno la precedenza.",
         "unitPricedExcluded": "Le linee che fatturano per unità non sono elencate: una pianificazione dei prezzi non cambia mai un prezzo per unità. Modifica invece il prezzo unitario sulla linea."
       },
       "empty": {

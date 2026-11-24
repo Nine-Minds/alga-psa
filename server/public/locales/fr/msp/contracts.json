@@ -1063,7 +1063,7 @@
         "ongoing": "En cours",
         "useDefaultRate": "Utiliser le tarif par défaut",
         "wholeContract": "Tout le contrat",
-        "wholeContractEffect": "Tout le contrat — chacune des {{count}} lignes à tarif fixe facture {{amount}}",
+        "wholeContractEffect": "Tout le contrat — tarif de repli de {{amount}} par ligne active à tarif fixe ({{count}} lignes). Les barèmes propres à chaque ligne sont prioritaires.",
         "unnamedLine": "Ligne sans nom"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Montant par période de facturation",
         "lineFeeHelp": "Ce que cette ligne facture sur chaque période de facturation couverte par le barème, à la place de son tarif habituel.",
         "lineFeeHelpMixed": "Remplace le forfait de cette ligne sur chaque période de facturation couverte par le barème. Les services tarifés à l'unité conservent leur prix unitaire.",
-        "lineFeeHelpWholeContract": "Chaque ligne à tarif fixe de ce contrat facture ce montant sur chaque période de facturation couverte par le barème."
+        "lineFeeHelpWholeContract": "Tarif de repli pour chaque ligne active à tarif fixe pendant les périodes de facturation couvertes. Les barèmes propres à chaque ligne sont prioritaires."
       },
       "title": {
         "addPricingSchedule": "Ajouter un barème de prix",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Ligne sans nom"
       },
       "notices": {
-        "wholeContract": "Tout le contrat : ce barème s'applique à chaque ligne à tarif fixe de ce contrat.",
-        "wholeContractEffect": "Tout le contrat : chacune des {{count}} lignes à tarif fixe facture {{amount}} par période de facturation.",
+        "wholeContract": "Tout le contrat : barème de repli pour les lignes actives à tarif fixe. Les barèmes propres à chaque ligne sont prioritaires.",
+        "wholeContractEffect": "Tout le contrat : tarif de repli de {{amount}} par ligne active à tarif fixe et par période de facturation ({{count}} lignes). Les barèmes propres à chaque ligne sont prioritaires.",
         "unitPricedExcluded": "Les lignes facturées à l'unité ne sont pas listées : un barème de prix ne modifie jamais un prix unitaire. Modifiez le prix unitaire sur la ligne."
       },
       "empty": {

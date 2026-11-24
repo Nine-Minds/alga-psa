@@ -1063,7 +1063,7 @@
         "ongoing": "Ongoing",
         "useDefaultRate": "Use default rate",
         "wholeContract": "Whole contract",
-        "wholeContractEffect": "Whole contract — each of the {{count}} fixed-fee lines bills {{amount}}",
+        "wholeContractEffect": "Whole contract — fallback fee of {{amount}} per active fixed-fee line ({{count}} lines). Line-specific schedules take precedence.",
         "unnamedLine": "Unnamed line"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Fee per billing period",
         "lineFeeHelp": "What this line bills in every billing period the schedule covers, replacing its usual fee.",
         "lineFeeHelpMixed": "Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price.",
-        "lineFeeHelpWholeContract": "Every fixed-fee line on this contract bills this amount in every billing period the schedule covers."
+        "lineFeeHelpWholeContract": "Fallback fee for each active fixed-fee line in the billing periods covered. Line-specific schedules take precedence."
       },
       "title": {
         "addPricingSchedule": "Add Pricing Schedule",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Unnamed line"
       },
       "notices": {
-        "wholeContract": "Whole contract: this schedule applies to every fixed-fee line on this contract.",
-        "wholeContractEffect": "Whole contract: each of the {{count}} fixed-fee lines bills {{amount}} per billing period.",
+        "wholeContract": "Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence.",
+        "wholeContractEffect": "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",
         "unitPricedExcluded": "Lines that bill per unit are not listed: a pricing schedule never changes a per-unit price. Change the unit price on the line instead."
       },
       "empty": {

@@ -1063,7 +1063,7 @@
         "ongoing": "Em andamento",
         "useDefaultRate": "Usar taxa padrão",
         "wholeContract": "Todo o contrato",
-        "wholeContractEffect": "Todo o contrato — cada uma das {{count}} linhas de taxa fixa cobra {{amount}}",
+        "wholeContractEffect": "Todo o contrato — taxa de recurso de {{amount}} por linha ativa de taxa fixa ({{count}} linhas). Os cronogramas específicos de cada linha têm prioridade.",
         "unnamedLine": "Linha sem nome"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Valor por período de cobrança",
         "lineFeeHelp": "O que esta linha cobra em cada período de cobrança abrangido pelo cronograma, em lugar da taxa habitual.",
         "lineFeeHelpMixed": "Substitui a taxa do pacote desta linha em cada período de cobrança abrangido pelo cronograma. Os serviços com preço por unidade mantêm o seu preço unitário.",
-        "lineFeeHelpWholeContract": "Cada linha de taxa fixa deste contrato cobra este valor em cada período de cobrança abrangido pelo cronograma."
+        "lineFeeHelpWholeContract": "Taxa de recurso para cada linha ativa de taxa fixa nos períodos de cobrança abrangidos. Os cronogramas específicos de cada linha têm prioridade."
       },
       "title": {
         "addPricingSchedule": "Adicionar tabela de preços",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Linha sem nome"
       },
       "notices": {
-        "wholeContract": "Todo o contrato: este cronograma aplica-se a todas as linhas de taxa fixa deste contrato.",
-        "wholeContractEffect": "Todo o contrato: cada uma das {{count}} linhas de taxa fixa cobra {{amount}} por período de cobrança.",
+        "wholeContract": "Todo o contrato: cronograma de recurso para linhas ativas de taxa fixa. Os cronogramas específicos de cada linha têm prioridade.",
+        "wholeContractEffect": "Todo o contrato: taxa de recurso de {{amount}} por linha ativa de taxa fixa por período de cobrança ({{count}} linhas). Os cronogramas específicos de cada linha têm prioridade.",
         "unitPricedExcluded": "As linhas que cobram por unidade não são listadas: um cronograma de preços nunca altera um preço por unidade. Altere o preço unitário na linha."
       },
       "empty": {

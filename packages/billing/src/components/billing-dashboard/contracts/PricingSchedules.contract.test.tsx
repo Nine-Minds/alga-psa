@@ -97,6 +97,7 @@ function schedule(overrides: Partial<IContractPricingSchedule> = {}): IContractP
 const fixedLine = (id: string, name: string, overrides: Record<string, unknown> = {}) => ({
   contract_line_id: id,
   contract_line_name: name,
+  is_active: true,
   has_bundle_fee: true,
   has_unit_priced_members: false,
   ...overrides,
@@ -165,8 +166,49 @@ describe('PricingSchedules contract-currency custom rate', () => {
 
     // Both the column and timeline flag the legacy row and state its effect.
     expect(await screen.findAllByText(
-      'Whole contract — each of the 2 fixed-fee lines bills $900.00'
+      'Whole contract — fallback fee of $900.00 per active fixed-fee line (2 lines). Line-specific schedules take precedence.'
     )).toHaveLength(2);
+  });
+
+  it('describes legacy rates as fallback when an overlapping line schedule takes precedence', async () => {
+    getPricingSchedulesByContractMock.mockResolvedValue([
+      schedule({ contract_line_id: null, custom_rate: 90000 }),
+      schedule({ schedule_id: 'line-schedule', contract_line_id: 'line-1', custom_rate: 70000 }),
+    ]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup'),
+    ]);
+
+    renderList();
+
+    expect(await screen.findAllByText(
+      'Whole contract — fallback fee of $900.00 per active fixed-fee line (2 lines). Line-specific schedules take precedence.'
+    )).toHaveLength(2);
+    expect(screen.getAllByText('$700.00')).toHaveLength(2);
+    expect(screen.queryByText(/each of the.*bills/)).not.toBeInTheDocument();
+  });
+
+  it.each([1, 2])('counts only the %i active bundle lines while preserving inactive bindings', async (activeCount) => {
+    getPricingSchedulesByContractMock.mockResolvedValue([
+      schedule({ contract_line_id: null, custom_rate: 90000 }),
+      schedule({ schedule_id: 'inactive-schedule', contract_line_id: 'inactive', custom_rate: 70000 }),
+    ]);
+    getPricingScheduleLineScopesMock.mockResolvedValue([
+      ...Array.from({ length: activeCount }, (_, i) => fixedLine(`active-${i}`, `Active ${i}`)),
+      fixedLine('inactive', 'Paused support', { is_active: false }),
+    ]);
+
+    renderList();
+
+    await screen.findByRole('cell', { name: 'Paused support' });
+    if (activeCount > 1) {
+      expect(screen.getAllByText(/fallback fee of.*\(2 lines\)/)).toHaveLength(2);
+    } else {
+      expect(screen.queryByText(/fallback fee of/)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/3 lines|each of the.*bills/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('cell', { name: 'Paused support' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Paused support');
   });
 
   it('passes the current ineligible line name to the editor without offering it as eligible', async () => {

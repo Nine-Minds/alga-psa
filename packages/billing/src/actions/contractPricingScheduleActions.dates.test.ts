@@ -61,7 +61,7 @@ type Fixtures = {
   /** Rows the list read (`select('*')`) resolves to. */
   schedulesRows?: unknown[];
   /** Fixed lines of the contract, as contract_lines rows. */
-  lines?: Array<{ contract_line_id: string; contract_line_name: string | null }>;
+  lines?: Array<{ contract_line_id: string; contract_line_name: string | null; is_active?: boolean }>;
   /** Member rows: one per (line, pricing_basis). */
   members?: Array<{ contract_line_id: string; pricing_basis: string | null; configuration_type?: string; item_kind?: string }>;
 };
@@ -387,6 +387,25 @@ describe('pricing schedule actions: line scope', () => {
     expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
       expect.objectContaining({ has_bundle_fee: false, has_unit_priced_members: true }),
     ]);
+  });
+
+  it('returns active status without discarding inactive stored line bindings', async () => {
+    const { linesQuery } = seedTables({
+      lines: [
+        { contract_line_id: 'line-1', contract_line_name: 'Active support', is_active: true },
+        { contract_line_id: 'line-2', contract_line_name: 'Paused support', is_active: false },
+      ],
+      members: [
+        { contract_line_id: 'line-1', pricing_basis: 'bundle' },
+        { contract_line_id: 'line-2', pricing_basis: 'bundle' },
+      ],
+    });
+    expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
+      expect.objectContaining({ contract_line_id: 'line-1', has_bundle_fee: true, is_active: true }),
+      expect.objectContaining({ contract_line_id: 'line-2', has_bundle_fee: true, is_active: false }),
+    ]);
+    expect(linesQuery.select).toHaveBeenCalledWith('contract_line_id', 'contract_line_name', 'is_active');
+    expect(linesQuery.where).toHaveBeenCalledExactlyOnceWith({ contract_id: 'contract-1', contract_line_type: 'Fixed' });
   });
 
   it('includes a non-Fixed fallback service in scope inventory, create, and re-scope', async () => {

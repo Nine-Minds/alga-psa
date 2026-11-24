@@ -1063,7 +1063,7 @@
         "ongoing": "En curso",
         "useDefaultRate": "Usar tarifa predeterminada",
         "wholeContract": "Todo el contrato",
-        "wholeContractEffect": "Todo el contrato: cada una de las {{count}} líneas de tarifa fija factura {{amount}}",
+        "wholeContractEffect": "Todo el contrato: tarifa de respaldo de {{amount}} por línea activa de tarifa fija ({{count}} líneas). Los programas específicos de cada línea tienen prioridad.",
         "unnamedLine": "Línea sin nombre"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Tarifa por período de facturación",
         "lineFeeHelp": "Lo que factura esta línea en cada período de facturación que cubre el programa, en lugar de su tarifa habitual.",
         "lineFeeHelpMixed": "Reemplaza la tarifa del paquete de esta línea en cada período de facturación que cubre el programa. Los servicios con precio por unidad conservan su precio unitario.",
-        "lineFeeHelpWholeContract": "Cada línea de tarifa fija de este contrato factura este importe en cada período de facturación que cubre el programa."
+        "lineFeeHelpWholeContract": "Tarifa de respaldo para cada línea activa de tarifa fija en los períodos de facturación cubiertos. Los programas específicos de cada línea tienen prioridad."
       },
       "title": {
         "addPricingSchedule": "Agregar programa de precios",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Línea sin nombre"
       },
       "notices": {
-        "wholeContract": "Todo el contrato: este programa se aplica a todas las líneas de tarifa fija de este contrato.",
-        "wholeContractEffect": "Todo el contrato: cada una de las {{count}} líneas de tarifa fija factura {{amount}} por período de facturación.",
+        "wholeContract": "Todo el contrato: programa de respaldo para las líneas activas de tarifa fija. Los programas específicos de cada línea tienen prioridad.",
+        "wholeContractEffect": "Todo el contrato: tarifa de respaldo de {{amount}} por línea activa de tarifa fija y período de facturación ({{count}} líneas). Los programas específicos de cada línea tienen prioridad.",
         "unitPricedExcluded": "Las líneas que facturan por unidad no se muestran: un programa de precios nunca cambia un precio por unidad. Cambie el precio unitario en la línea."
       },
       "empty": {

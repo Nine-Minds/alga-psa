@@ -141,9 +141,10 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
     handleDialogClose();
   };
 
-  // Only lines with a bundle fee can be repriced by a schedule, so they are
-  // the ones a whole-contract row actually applies to.
+  // Retain inactive lines for stored bindings and authoring, but only active
+  // bundle-fee lines contribute to the legacy fallback notice.
   const bundleFeeLines = lineScopes.filter((line) => line.has_bundle_fee);
+  const activeBundleFeeLineCount = bundleFeeLines.filter((line) => line.is_active).length;
   const unitPricedLineCount = lineScopes.filter((line) => !line.has_bundle_fee && line.has_unit_priced_members).length;
 
   const lineName = (contractLineId: string): string => {
@@ -159,15 +160,15 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       : t('pricingSchedules.list.values.wholeContract', { defaultValue: 'Whole contract' });
 
   /**
-   * The same scope, with what a whole-contract row bills spelled out when the
-   * contract has several fixed-fee lines — the rate applies to each of them.
+   * A legacy rate is a fallback: line-specific schedules take precedence.
+   * The count describes active eligible lines, not actual schedule coverage.
    */
   const renderTimelineScope = (schedule: IContractPricingSchedule) => {
     if (schedule.contract_line_id) {
       return <span>{scopeLabel(schedule)}</span>;
     }
 
-    const statesEffect = bundleFeeLines.length > 1
+    const statesEffect = activeBundleFeeLineCount > 1
       && schedule.custom_rate !== undefined && schedule.custom_rate !== null;
 
     return (
@@ -175,9 +176,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
         <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
         {statesEffect
           ? t('pricingSchedules.list.values.wholeContractEffect', {
-            count: bundleFeeLines.length,
+            count: activeBundleFeeLineCount,
             amount: formatCustomRate(schedule.custom_rate as number),
-            defaultValue: 'Whole contract — each of the {{count}} fixed-fee lines bills {{amount}}',
+            defaultValue: 'Whole contract — fallback fee of {{amount}} per active fixed-fee line ({{count}} lines). Line-specific schedules take precedence.',
           })
           : scopeLabel(schedule)}
       </span>

@@ -304,7 +304,7 @@ describe('simulator schedule line selection', () => {
     render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b'), fallback]} initialSchedules={[
       { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
     ]} />);
-    expect(screen.getByRole('status')).toHaveTextContent('each of the 3 fixed-fee lines bills $900.00');
+    expect(screen.getByRole('status')).toHaveTextContent('fallback fee of $900.00 per active fixed-fee line per billing period (3 lines)');
     expect(screen.getByText('+ add schedule')).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Applies to'), { target: { value: 'fallback' } });
     fireEvent.click(screen.getByText('+ add schedule'));
@@ -322,7 +322,7 @@ describe('simulator schedule line selection', () => {
     render(<Harness currencyCode={currencyCode} initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[
       { effective_date: '2026-06-01', end_date: null, custom_rate: 900 },
     ]} />);
-    expect(screen.getByRole('status').textContent).toContain(`each of the 2 fixed-fee lines bills ${amount}`);
+    expect(screen.getByRole('status').textContent).toContain(`fallback fee of ${amount} per active fixed-fee line per billing period (2 lines)`);
   });
 
   it('preselects the only eligible line and never authors whole-contract scope', () => {
@@ -349,11 +349,23 @@ describe('simulator schedule line selection', () => {
     expect(scheduleState()[0].contract_line_key).toBe('line-b');
   });
 
+  it('qualifies the legacy fee when an overlapping line-specific schedule wins', () => {
+    render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 70000, contract_line_key: 'line-a' },
+    ]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('fallback fee of $900.00');
+    expect(screen.getByRole('status')).toHaveTextContent('Line-specific schedules take precedence.');
+    expect(screen.getByRole('status')).not.toHaveTextContent('each of the 2 fixed-fee lines bills');
+    expect(screen.getAllByLabelText('Schedule rate')[1]).toHaveValue(700);
+    expect(scheduleState()[0].contract_line_key).toBeUndefined();
+  });
+
   it('flags legacy scope with eligible counts and preserves it until explicitly re-scoped', () => {
     render(<Harness initialLines={[fixedLine('line-a'), fixedLine('line-b'), fixedLine('product', 'product')]} initialSchedules={[
       { effective_date: '2026-06-01', end_date: null, custom_rate: 90000 },
     ]} />);
-    expect(screen.getByRole('status')).toHaveTextContent('each of the 2 fixed-fee lines bills $900.00');
+    expect(screen.getByRole('status')).toHaveTextContent('fallback fee of $900.00 per active fixed-fee line per billing period (2 lines)');
     fireEvent.change(screen.getByLabelText('Schedule rate'), { target: { value: '950' } });
     expect(scheduleState()[0].contract_line_key).toBeUndefined();
     fireEvent.change(screen.getByLabelText('Applies To'), { target: { value: 'line-a' } });

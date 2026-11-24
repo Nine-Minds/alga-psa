@@ -1063,7 +1063,7 @@
         "ongoing": "Ciągła",
         "useDefaultRate": "Użyj stawki domyślnej",
         "wholeContract": "Cały kontrakt",
-        "wholeContractEffect": "Cały kontrakt — każda z {{count}} linii z opłatą stałą nalicza {{amount}}",
+        "wholeContractEffect": "Cały kontrakt — opłata rezerwowa {{amount}} za aktywną linię z opłatą stałą (liczba linii: {{count}}). Harmonogramy przypisane do poszczególnych linii mają pierwszeństwo.",
         "unnamedLine": "Linia bez nazwy"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Opłata za okres rozliczeniowy",
         "lineFeeHelp": "Kwota, którą ta linia nalicza w każdym okresie rozliczeniowym objętym harmonogramem, zamiast zwykłej opłaty.",
         "lineFeeHelpMixed": "Zastępuje opłatę pakietową tej linii w każdym okresie rozliczeniowym objętym harmonogramem. Usługi wycenione za jednostkę zachowują swoją cenę jednostkową.",
-        "lineFeeHelpWholeContract": "Każda linia z opłatą stałą tego kontraktu nalicza tę kwotę w każdym okresie rozliczeniowym objętym harmonogramem."
+        "lineFeeHelpWholeContract": "Opłata rezerwowa za każdą aktywną linię z opłatą stałą w objętych okresach rozliczeniowych. Harmonogramy przypisane do poszczególnych linii mają pierwszeństwo."
       },
       "title": {
         "addPricingSchedule": "Dodaj harmonogram cenowy",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Linia bez nazwy"
       },
       "notices": {
-        "wholeContract": "Cały kontrakt: ten harmonogram dotyczy każdej linii z opłatą stałą tego kontraktu.",
-        "wholeContractEffect": "Cały kontrakt: każda z {{count}} linii z opłatą stałą nalicza {{amount}} za okres rozliczeniowy.",
+        "wholeContract": "Cały kontrakt: harmonogram rezerwowy dla aktywnych linii z opłatą stałą. Harmonogramy przypisane do poszczególnych linii mają pierwszeństwo.",
+        "wholeContractEffect": "Cały kontrakt: opłata rezerwowa {{amount}} za aktywną linię z opłatą stałą w okresie rozliczeniowym (liczba linii: {{count}}). Harmonogramy przypisane do poszczególnych linii mają pierwszeństwo.",
         "unitPricedExcluded": "Linie naliczane za jednostkę nie są wymienione: harmonogram cenowy nigdy nie zmienia ceny za jednostkę. Zmień cenę jednostkową na linii."
       },
       "empty": {

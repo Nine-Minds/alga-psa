@@ -98,9 +98,10 @@ export function PricingScheduleDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   // A stored row opens on the scope it already has — a whole-contract row
-  // reprices every fixed-fee line and is kept exactly as stored unless the user
-  // re-scopes it.
+  // provides a fallback for active fixed-fee lines and is kept as stored unless
+  // the user re-scopes it.
   const [scope, setScope] = useState<string>(() => initialScope(schedule, eligibleLines));
+  const activeBundleFeeLineCount = eligibleLines.filter((line) => line.is_active).length;
   const isWholeContract = Boolean(schedule?.schedule_id && !schedule.contract_line_id && !scope);
   const selectedLine = eligibleLines.find((line) => line.contract_line_id === scope) ?? null;
 
@@ -253,7 +254,7 @@ export function PricingScheduleDialog({
   // to. A row that already exists stays editable either way, so its dates can
   // still be corrected after the contract's lines changed under it.
   const canSave = eligibleLines.length > 0 || Boolean(schedule?.schedule_id);
-  // What the rate currently in the form bills on each line, so the
+  // The fallback rate currently in the form, so the
   // whole-contract notice can state the effect in numbers while it is picked.
   const enteredRate = !useDefaultRate && customRate.trim() !== ''
     ? Number.parseFloat(customRate)
@@ -337,14 +338,14 @@ export function PricingScheduleDialog({
               />
               {isWholeContract && (
                 <Alert variant="warning" className="mt-1">
-                  <AlertDescription>{wholeContractRate && eligibleLines.length > 1
+                  <AlertDescription>{wholeContractRate && activeBundleFeeLineCount > 1
                     ? t('pricingSchedules.dialog.notices.wholeContractEffect', {
-                      count: eligibleLines.length,
+                      count: activeBundleFeeLineCount,
                       amount: wholeContractRate,
-                      defaultValue: 'Whole contract: each of the {{count}} fixed-fee lines bills {{amount}} per billing period.',
+                      defaultValue: 'Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.',
                     })
                     : t('pricingSchedules.dialog.notices.wholeContract', {
-                      defaultValue: 'Whole contract: this schedule applies to every fixed-fee line on this contract.',
+                      defaultValue: 'Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence.',
                     })}</AlertDescription>
                 </Alert>
               )}
@@ -484,7 +485,7 @@ export function PricingScheduleDialog({
               <p className="text-xs text-[rgb(var(--color-text-600))]">
                 {isWholeContract
                   ? t('pricingSchedules.dialog.fields.lineFeeHelpWholeContract', {
-                    defaultValue: 'Every fixed-fee line on this contract bills this amount in every billing period the schedule covers.',
+                    defaultValue: 'Fallback fee for each active fixed-fee line in the billing periods covered. Line-specific schedules take precedence.',
                   })
                   : selectedLine?.has_unit_priced_members
                     ? t('pricingSchedules.dialog.fields.lineFeeHelpMixed', {

@@ -1063,7 +1063,7 @@
         "ongoing": "Pågående",
         "useDefaultRate": "Använd standardtaxa",
         "wholeContract": "Hela avtalet",
-        "wholeContractEffect": "Hela avtalet — var och en av de {{count}} avtalsraderna med fast avgift debiterar {{amount}}",
+        "wholeContractEffect": "Hela avtalet — reservavgift på {{amount}} per aktiv avtalsrad med fast avgift ({{count}} rader). Radspecifika prisscheman har företräde.",
         "unnamedLine": "Namnlös rad"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Belopp per faktureringsperiod",
         "lineFeeHelp": "Vad raden debiterar varje faktureringsperiod som prisschemat omfattar, i stället för sin vanliga avgift.",
         "lineFeeHelpMixed": "Ersätter radens paketavgift varje faktureringsperiod som prisschemat omfattar. Tjänster med pris per enhet behåller sitt enhetspris.",
-        "lineFeeHelpWholeContract": "Varje avtalsrad med fast avgift i avtalet debiterar det här beloppet varje faktureringsperiod som prisschemat omfattar."
+        "lineFeeHelpWholeContract": "Reservavgift för varje aktiv avtalsrad med fast avgift under de faktureringsperioder som omfattas. Radspecifika prisscheman har företräde."
       },
       "title": {
         "addPricingSchedule": "Lägg till prisschema",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Namnlös rad"
       },
       "notices": {
-        "wholeContract": "Hela avtalet: prisschemat gäller för varje avtalsrad med fast avgift i avtalet.",
-        "wholeContractEffect": "Hela avtalet: var och en av de {{count}} avtalsraderna med fast avgift debiterar {{amount}} per faktureringsperiod.",
+        "wholeContract": "Hela avtalet: reservschema för aktiva avtalsrader med fast avgift. Radspecifika prisscheman har företräde.",
+        "wholeContractEffect": "Hela avtalet: reservavgift på {{amount}} per aktiv avtalsrad med fast avgift och faktureringsperiod ({{count}} rader). Radspecifika prisscheman har företräde.",
         "unitPricedExcluded": "Rader som debiterar per enhet listas inte: ett prisschema ändrar aldrig ett pris per enhet. Ändra enhetspriset på raden i stället."
       },
       "empty": {

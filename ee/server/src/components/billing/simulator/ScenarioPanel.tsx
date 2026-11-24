@@ -1596,11 +1596,11 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                   {!schedule.contract_line_key && <p role="status" className="mt-1 text-xs text-amber-700">
                     {eligibleScheduleLines.length > 1 && schedule.custom_rate != null
                       ? t("pricingSchedules.dialog.notices.wholeContractEffect", {
-                          defaultValue: "Whole contract: each of the {{count}} fixed-fee lines bills {{amount}} per billing period.",
+                          defaultValue: "Whole contract: fallback fee of {{amount}} per active fixed-fee line per billing period ({{count}} lines). Line-specific schedules take precedence.",
                           count: eligibleScheduleLines.length,
                           amount: money(schedule.custom_rate, currencyCode),
                         })
-                      : t("pricingSchedules.dialog.notices.wholeContract", { defaultValue: "Whole contract: this schedule applies to every fixed-fee line on this contract." })}
+                      : t("pricingSchedules.dialog.notices.wholeContract", { defaultValue: "Whole contract: fallback schedule for active fixed-fee lines. Line-specific schedules take precedence." })}
                   </p>}
                   {schedule.contract_line_key && <p className="mt-1 text-xs">
                     {t("pricingSchedules.dialog.fields.lineFeeHelpMixed", { defaultValue: "Replaces the bundle fee of this line in every billing period the schedule covers. Members priced per unit keep their own unit price." })}

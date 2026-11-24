@@ -124,6 +124,7 @@ function schedule(overrides: Partial<IContractPricingSchedule> = {}): IContractP
 const fixedLine = (id: string, name: string, overrides: Partial<PricingScheduleLineScope> = {}): PricingScheduleLineScope => ({
   contract_line_id: id,
   contract_line_name: name,
+  is_active: true,
   has_bundle_fee: true,
   has_unit_priced_members: false,
   ...overrides,
@@ -452,7 +453,31 @@ describe('PricingScheduleDialog scope', () => {
     expect(linePicker().options[0].textContent).toBe('Whole contract');
     expect(
       screen.getByRole('alert')
-    ).toHaveTextContent('each of the 2 fixed-fee lines bills $900.00 per billing period');
+    ).toHaveTextContent('fallback fee of $900.00 per active fixed-fee line per billing period (2 lines). Line-specific schedules take precedence.');
+  });
+
+  it('states fallback precedence in the legacy notice and rate helper', () => {
+    renderDialog({ schedule: schedule({ contract_line_id: null, custom_rate: 90000 }), eligibleLines: TWO_LINES });
+    expect(screen.getByRole('alert')).toHaveTextContent('Line-specific schedules take precedence.');
+    expect(screen.getByText('Fallback fee for each active fixed-fee line in the billing periods covered. Line-specific schedules take precedence.')).toBeInTheDocument();
+  });
+
+  it.each([1, 2])('counts only %i active lines in the legacy notice and keeps NULL on save', async (activeCount) => {
+    const { onSave } = renderDialog({
+      schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
+      eligibleLines: [
+        ...TWO_LINES.slice(0, activeCount),
+        fixedLine('inactive', 'Paused support', { is_active: false }),
+      ],
+    });
+    const notice = screen.getByRole('alert');
+    expect(notice).toHaveTextContent('Line-specific schedules take precedence.');
+    if (activeCount > 1) expect(notice).toHaveTextContent('(2 lines)');
+    else expect(notice).not.toHaveTextContent('(2 lines)');
+    expect(notice).not.toHaveTextContent('3 lines');
+    submitForm();
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith('schedule-1', expect.objectContaining({ contract_line_id: null }));
   });
 
   it('keeps a whole-contract schedule whole-contract when the picker is untouched', async () => {

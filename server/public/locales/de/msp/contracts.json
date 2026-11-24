@@ -1063,7 +1063,7 @@
         "ongoing": "Laufend",
         "useDefaultRate": "Standardtarif verwenden",
         "wholeContract": "Gesamter Vertrag",
-        "wholeContractEffect": "Gesamter Vertrag – jede der {{count}} Vertragslinien mit Festpreis berechnet {{amount}}",
+        "wholeContractEffect": "Gesamter Vertrag – Ersatzgebühr von {{amount}} je aktiver Vertragslinie mit Festpreis ({{count}} Linien). Linienspezifische Preispläne haben Vorrang.",
         "unnamedLine": "Unbenannte Position"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Gebühr pro Abrechnungszeitraum",
         "lineFeeHelp": "Was diese Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum berechnet – anstelle ihrer üblichen Gebühr.",
         "lineFeeHelpMixed": "Ersetzt die Paketgebühr dieser Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum. Pro Einheit bepreiste Services behalten ihren Einzelpreis.",
-        "lineFeeHelpWholeContract": "Jede Vertragslinie mit Festpreis dieses Vertrags berechnet diesen Betrag in jedem vom Preisplan abgedeckten Abrechnungszeitraum."
+        "lineFeeHelpWholeContract": "Ersatzgebühr für jede aktive Vertragslinie mit Festpreis in den abgedeckten Abrechnungszeiträumen. Linienspezifische Preispläne haben Vorrang."
       },
       "title": {
         "addPricingSchedule": "Preisplan hinzufügen",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Unbenannte Position"
       },
       "notices": {
-        "wholeContract": "Gesamter Vertrag: Dieser Preisplan gilt für jede Vertragslinie mit Festpreis dieses Vertrags.",
-        "wholeContractEffect": "Gesamter Vertrag: Jede der {{count}} Vertragslinien mit Festpreis berechnet {{amount}} pro Abrechnungszeitraum.",
+        "wholeContract": "Gesamter Vertrag: Ersatzpreisplan für aktive Vertragslinien mit Festpreis. Linienspezifische Preispläne haben Vorrang.",
+        "wholeContractEffect": "Gesamter Vertrag: Ersatzgebühr von {{amount}} je aktiver Vertragslinie mit Festpreis pro Abrechnungszeitraum ({{count}} Linien). Linienspezifische Preispläne haben Vorrang.",
         "unitPricedExcluded": "Positionen, die pro Einheit abrechnen, werden nicht aufgeführt: Ein Preisplan ändert nie einen Preis pro Einheit. Ändern Sie stattdessen den Einzelpreis der Position."
       },
       "empty": {

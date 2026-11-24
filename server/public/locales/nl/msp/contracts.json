@@ -1063,7 +1063,7 @@
         "ongoing": "Lopend",
         "useDefaultRate": "Standaardtarief gebruiken",
         "wholeContract": "Hele contract",
-        "wholeContractEffect": "Hele contract — elk van de {{count}} contractregels met een vast tarief factureert {{amount}}",
+        "wholeContractEffect": "Hele contract — terugvaltarief van {{amount}} per actieve contractregel met een vast tarief ({{count}} regels). Prijsschema’s voor afzonderlijke regels hebben voorrang.",
         "unnamedLine": "Naamloze regel"
       }
     },
@@ -1100,7 +1100,7 @@
         "lineFee": "Bedrag per factureerperiode",
         "lineFeeHelp": "Wat deze regel factureert in elke factureerperiode die het prijsschema dekt, in plaats van het gebruikelijke tarief.",
         "lineFeeHelpMixed": "Vervangt het bundeltarief van deze regel in elke factureerperiode die het prijsschema dekt. Services met een prijs per eenheid houden hun eigen stukprijs.",
-        "lineFeeHelpWholeContract": "Elke contractregel met een vast tarief van dit contract factureert dit bedrag in elke factureerperiode die het prijsschema dekt."
+        "lineFeeHelpWholeContract": "Terugvaltarief voor elke actieve contractregel met een vast tarief in de gedekte factureerperioden. Prijsschema’s voor afzonderlijke regels hebben voorrang."
       },
       "title": {
         "addPricingSchedule": "Prijsschema toevoegen",
@@ -1121,8 +1121,8 @@
         "unnamedLine": "Naamloze regel"
       },
       "notices": {
-        "wholeContract": "Hele contract: dit prijsschema geldt voor elke contractregel met een vast tarief van dit contract.",
-        "wholeContractEffect": "Hele contract: elk van de {{count}} contractregels met een vast tarief factureert {{amount}} per factureerperiode.",
+        "wholeContract": "Hele contract: terugvalschema voor actieve contractregels met een vast tarief. Prijsschema’s voor afzonderlijke regels hebben voorrang.",
+        "wholeContractEffect": "Hele contract: terugvaltarief van {{amount}} per actieve contractregel met een vast tarief per factureerperiode ({{count}} regels). Prijsschema’s voor afzonderlijke regels hebben voorrang.",
         "unitPricedExcluded": "Regels die per eenheid factureren staan er niet bij: een prijsschema wijzigt nooit een prijs per eenheid. Wijzig in plaats daarvan de stukprijs op de regel."
       },
       "empty": {

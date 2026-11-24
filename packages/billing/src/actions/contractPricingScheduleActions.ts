@@ -19,12 +19,14 @@ type PricingScheduleMutationResult = IContractPricingSchedule | PricingScheduleA
 type PricingScheduleDeleteResult = { success: true } | PricingScheduleActionError;
 
 /**
- * A Fixed contract line a pricing schedule can be scoped to, with the two facts
+ * A Fixed contract line a pricing schedule can be scoped to, with the facts
  * the UI needs to describe what the schedule rate would actually do.
  */
 export interface PricingScheduleLineScope {
   contract_line_id: string;
   contract_line_name: string | null;
+  /** Inactive bindings remain visible, but do not contribute to live billing. */
+  is_active: boolean;
   /**
    * The line has a bundle member or a non-product fallback service, so the
    * schedule rate becomes the line's fee for the period. False when every
@@ -121,7 +123,7 @@ async function fetchFixedLineScopes(
   const lines = await db.table('contract_lines')
     .where({ contract_id: contractId, contract_line_type: 'Fixed' })
     .orderBy('display_order', 'asc')
-    .select('contract_line_id', 'contract_line_name');
+    .select('contract_line_id', 'contract_line_name', 'is_active');
 
   if (!Array.isArray(lines) || lines.length === 0) {
     return [];
@@ -164,6 +166,7 @@ async function fetchFixedLineScopes(
   return lines.map((line: any) => ({
     contract_line_id: line.contract_line_id,
     contract_line_name: line.contract_line_name ?? null,
+    is_active: line.is_active === true,
     // The engine falls back to a non-product service of any configuration
     // only when no Fixed services exist. Fixed unit members suppress fallback.
     has_bundle_fee: bundleMembers.has(line.contract_line_id) ||
