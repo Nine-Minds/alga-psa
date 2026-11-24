@@ -13,7 +13,7 @@ import { MANAGED_ROLE_MANAGE_PATHS, type ManagedRoleMarker } from '../../../lib/
 export function ManagedRoleBadge({ role }: { role: ManagedRoleMarker }) {
   const { t } = useTranslation('msp/settings');
   if (!role.managed_by) return null;
-  return <Badge variant="secondary" size="sm">{t('managedRole.badge')}</Badge>;
+  return <Badge variant="secondary" size="sm" className="shrink-0 whitespace-nowrap">{t('managedRole.badge')}</Badge>;
 }
 
 /**
@@ -30,7 +30,7 @@ export function ManagedRoleNotice({ role, roleName }: { role: ManagedRoleMarker;
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <ManagedRoleBadge role={role} />
-            <span>{roleName ? t('managedRole.permissionsLocked', { role: roleName }) : t('managedRole.readOnlyNotice')}</span>
+            <span className="min-w-0 flex-1">{roleName ? t('managedRole.permissionsLocked', { role: roleName }) : t('managedRole.readOnlyNotice')}</span>
           </div>
           <span>
             {t('managedRole.scopeHint')}{' '}

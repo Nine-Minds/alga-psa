@@ -19,7 +19,10 @@ import { tenantDb } from './tenantDb';
  *
  * Identity is reserved as well: creating, importing or renaming another role to a registered
  * capability role's (name, scope), or to the identity of a role that is already managed in the
- * tenant, is refused, so a lookalike can never collide with the managed role.
+ * tenant, is refused, so a lookalike can never collide with the managed role. Only a change of
+ * identity is a claim: an existing unmanaged role that already holds a reserved identity (a legacy,
+ * hand-made look-alike) stays an ordinary, editable role, and saving it with its identity unchanged
+ * (including a case or whitespace variant of the same name) is admitted.
  *
  * Tenant teardown is the one other lifecycle the guard understands: `runAsTenantTeardown(tenant, fn)`.
  * Deleting a whole tenant must remove its managed roles, grants and memberships, and no owner is
@@ -216,11 +219,15 @@ export async function admitManagedRoleWrite(write: ManagedRoleWrite): Promise<vo
   assertMayWrite(affected.map((row) => row.role_id), 'MANAGED_ROLE_DEFINITION');
   if (changesIdentity) {
     for (const row of affected) {
-      assertIdentityFree({
+      const resulting = {
         role_name: String(values.role_name ?? row.role_name),
         msp: values.msp ?? row.msp,
         client: values.client ?? row.client,
-      });
+      };
+      // Reserving an identity stops a role from newly claiming it. A row that already holds it and
+      // is not managed is a legacy role; resubmitting its unchanged identity is not a claim.
+      if (identityKey(resulting) === identityKey(row)) continue;
+      assertIdentityFree(resulting);
     }
   }
 }

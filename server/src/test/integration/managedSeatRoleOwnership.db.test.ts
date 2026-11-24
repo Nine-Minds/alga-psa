@@ -338,5 +338,20 @@ describeDb('the seat role belongs to Alga (T001, T002)', { shuffle: false }, () 
       this.on('p.tenant', 'rp.tenant').andOn('p.permission_id', 'rp.permission_id');
     }).where({ 'rp.tenant': sponsor, 'rp.role_id': managed[0].role_id }).select('p.resource', 'p.action');
     expect(grants.map((g: any) => `${g.resource}:${g.action}`).sort()).toEqual([...CO_MANAGED_SEAT_ROLE_GRANTS].sort());
+
+    // The legacy role stays an ordinary, editable role: an unchanged identity is not a claim.
+    const roles = serviceFor(sponsor);
+    const context = { tenant: sponsor, userId: testState.userId } as any;
+    await roles.updateRole(handmade, { role_name: 'Seat Technician', description: 'edited' } as any, context);
+    expect(await db('roles').where({ tenant: sponsor, role_id: handmade }).first()).toMatchObject({ role_name: 'Seat Technician', description: 'edited' });
+    await roles.updateRole(handmade, { role_name: '  seat TECHNICIAN ', description: 'edited again' } as any, context);
+    expect(await db('roles').where({ tenant: sponsor, role_id: handmade }).first()).toMatchObject({ description: 'edited again' });
+    // Another role still cannot be renamed into the identity, and the managed role stays locked.
+    const other = await roles.createRole({ role_name: 'Dispatch lead', description: 'Custom', msp: true, client: false } as any, context);
+    await expectRefused(() => roles.updateRole(other.role_id, { role_name: 'Seat Technician' } as any, context), 'MANAGED_ROLE_IDENTITY_RESERVED');
+    await expectRefused(() => roles.updateRole(managed[0].role_id, { description: 'Edited' } as any, context), 'MANAGED_ROLE_DEFINITION');
+    // The Roles edit dialog's action sends the same payload and succeeds.
+    testState.tenant = sponsor;
+    expect(await updateRole(handmade, { role_name: 'Seat Technician', description: 'by action' })).toMatchObject({ description: 'by action' });
   }, 120_000);
 });

@@ -38,6 +38,16 @@ describe('the read-only presentation of a capability-owned role (F004)', () => {
     expect(screen.getByText(/permissions of Seat Technician are managed by Co-managed IT/)).toBeTruthy();
   });
 
+  it('keeps the badge on one line at its natural width and lets the text take the rest', () => {
+    render(<ManagedRoleNotice role={{ managed_by: 'co-managed-seat' }} roleName="Seat Technician" />);
+    const badge = screen.getByText('Managed by Co-managed IT');
+    expect(badge.className).toContain('shrink-0');
+    expect(badge.className).toContain('whitespace-nowrap');
+    const text = screen.getByText(/permissions of Seat Technician are managed by Co-managed IT/);
+    expect(text.className).toContain('min-w-0');
+    expect(text.className).toContain('flex-1');
+  });
+
   it('shows nothing for an ordinary role', () => {
     const { container } = render(<><ManagedRoleBadge role={{ managed_by: null }} /><ManagedRoleNotice role={{}} /></>);
     expect(container.textContent).toBe('');
