@@ -1208,6 +1208,10 @@
         "maintenance": {
           "label": "Underhåll",
           "description": "Hitta underhåll, länka ärenden, slutför eller hoppa över tillfällen och pausa eller återuppta planer."
+        },
+        "tags": {
+          "label": "Taggar",
+          "description": "Lägg till eller ta bort taggar på ärenden, kunder, kontakter och andra taggbara poster."
         }
       },
       "noMatches": {
@@ -1456,7 +1460,6 @@
         "not_contains_ci": "innehåller inte utan skiftlägeskänslighet",
         "starts_with": "börjar med",
         "ends_with": "slutar med",
-        "not_contains": "innehåller inte",
         "not_starts_with": "börjar inte med",
         "not_ends_with": "slutar inte med",
         "is_empty": "är tomt",

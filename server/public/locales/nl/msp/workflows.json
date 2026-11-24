@@ -1330,6 +1330,10 @@
         "maintenance": {
           "label": "Onderhoud",
           "description": "Zoek onderhoud, koppel tickets, voltooi of sla onderhoudsbeurten over en pauzeer of hervat plannen."
+        },
+        "tags": {
+          "label": "Tags",
+          "description": "Tags toevoegen aan of verwijderen van tickets, klanten, contactpersonen en andere records met tags."
         }
       },
       "noMatches": {
@@ -1578,7 +1582,6 @@
         "not_contains_ci": "bevat niet, zonder onderscheid in hoofdletters",
         "starts_with": "begint met",
         "ends_with": "eindigt op",
-        "not_contains": "bevat niet",
         "not_starts_with": "begint niet met",
         "not_ends_with": "eindigt niet op",
         "is_empty": "is leeg",

@@ -1330,6 +1330,10 @@
         "maintenance": {
           "label": "Entretien",
           "description": "Rechercher la maintenance, lier des tickets, terminer ou ignorer des occurrences et suspendre ou reprendre des plans."
+        },
+        "tags": {
+          "label": "Étiquettes",
+          "description": "Ajouter ou retirer des étiquettes sur les tickets, clients, contacts et autres enregistrements étiquetables."
         }
       },
       "noMatches": {
@@ -1578,7 +1582,6 @@
         "not_contains_ci": "ne contient pas sans tenir compte de la casse",
         "starts_with": "commence par",
         "ends_with": "se termine par",
-        "not_contains": "ne contient pas",
         "not_starts_with": "ne commence pas par",
         "not_ends_with": "ne se termine pas par",
         "is_empty": "est vide",

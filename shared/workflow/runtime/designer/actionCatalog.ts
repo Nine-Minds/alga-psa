@@ -171,6 +171,15 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     modules: ['activities']
   },
   {
+    groupKey: 'tags',
+    label: 'Tags',
+    iconToken: 'tags',
+    tileKind: 'core-object',
+    description: 'Add or remove tags on tickets, clients, contacts, and other taggable records.',
+    defaultActionId: 'tags.add',
+    modules: ['tags']
+  },
+  {
     groupKey: 'data-store',
     label: 'Data Store',
     iconToken: 'data-store',
