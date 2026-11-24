@@ -14,6 +14,12 @@
  * apply instead of freezing as a hand customization — which is also what lets
  * turning the attribution back on restore the whole footer.
  *
+ * It is also the repair itself, wherever the apply rewrites a row rather than
+ * rebuilding it from the standard template: a `customized` row the tenant ticked
+ * keeps its own HTML, and the leftover footer in it has no attribution left for
+ * `stripBrandAttribution` to find (see `decorateBrandedHtml`). Writer and
+ * classifier run the same pass, so a repaired row reads as the one we wrote.
+ *
  * The slogan list is the set of lines the template sources and their history
  * ever shipped. Nothing writes an orphaned footer any more, so it needs no
  * entry for a repair that cannot happen; it does need one for every slogan the

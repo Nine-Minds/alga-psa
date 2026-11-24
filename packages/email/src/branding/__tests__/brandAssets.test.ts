@@ -429,4 +429,36 @@ describe('decorateBrandedHtml', () => {
     expect(countLogos(branded)).toBe(1);
     expect(containsBrandAttribution(branded)).toBe(false);
   });
+
+  /**
+   * Hiding the attribution also repairs the footer an older strip left behind,
+   * which rides along on every HTML the apply writes. On the standard templates
+   * that repair has to be inert — the attribution strip has already taken the
+   * whole footer row, and nothing else the corpus ships looks like a leftover —
+   * so the only row it can ever change is one an older strip wrote.
+   */
+  it('leaves the standard templates to the attribution strip alone', () => {
+    const templates = loadAllSystemTemplates();
+    expect(templates.length).toBeGreaterThan(400);
+
+    for (const template of templates) {
+      const where = `${template.name}/${template.language}`;
+      const decorated = decorateBrandedHtml(template.html, { logo: LOGO, hideAttribution: true });
+
+      expect(decorated, where).toBe(stripBrandAttribution(applyBrandLogo(template.html, LOGO)));
+    }
+  });
+
+  /**
+   * And on a row an older strip did write, it is the repair: the orphaned slogan
+   * the tenant's branded copies have been sending (alga-2026-0003353) goes, in
+   * either footer mode — `shipped-slogan` included, which is how the apply
+   * decorates a ticked customization, the one row it rewrites in place.
+   */
+  it.each(['any-tail', 'shipped-slogan'] as const)('repairs an orphaned slogan in %s mode', (footerRow) => {
+    const leftover = '<table><tr><td style="padding:18px 32px;background:#f8f5ff;text-align:center;">'
+      + '\n          Teams auf Kurs halten\n        </td></tr></table>';
+
+    expect(decorateBrandedHtml(leftover, { hideAttribution: true, footerRow })).toBe('<table></table>');
+  });
 });

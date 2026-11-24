@@ -496,6 +496,49 @@ describe('enterprise brand assets in the plan', () => {
   });
 
   /**
+   * The same repair has to reach a copy the tenant has since edited. That row is
+   * theirs, so only a tick brings it into the run, and it is then recolored in
+   * place in `shipped-slogan` mode — where there is no attribution left to
+   * recognize, the old strip having already taken it. The leftover footer is
+   * still ours, so it goes too, instead of being repainted in the new palette
+   * and left standing as an orphaned tagline (alga-2026-0003353).
+   */
+  it('repairs an orphaned slogan in a customized row the tenant ticked', () => {
+    const stored = storedBeforeTheFix().map((row) => ({
+      ...row,
+      html_content: row.html_content.replace('</body>', '<p>Call us on +1 555 0100.</p>\n</body>'),
+    }));
+
+    const planInput = {
+      systemRows: SYSTEM_ROWS,
+      tenantRows: stored,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: SCOPE,
+      decorate,
+    };
+
+    // The hand edit makes the row the tenant's: untouched until they tick it.
+    const untouched = planEmailBrandingApply(planInput);
+    expect(untouched.updates).toEqual([]);
+    expect(untouched.skipped).toHaveLength(6);
+    expect(untouched.skipped.every((skip) => skip.state === 'customized')).toBe(true);
+
+    const plan = planEmailBrandingApply({
+      ...planInput,
+      scope: { ...SCOPE, includeCustomized: NAMES },
+    });
+
+    expect(plan.skipped).toEqual([]);
+    expect(plan.updates).toHaveLength(6);
+    for (const update of plan.updates) {
+      expect(update.html).toContain('+1 555 0100');
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
+      expect(update.html).not.toMatch(EMPTY_FOOTER_BAND);
+    }
+  });
+
+  /**
    * The other side of the same rule: hiding the attribution takes the whole
    * footer row, but only where that row is ours. A tenant who kept the
    * attribution and wrote their own line beside it owns that footer, so neither

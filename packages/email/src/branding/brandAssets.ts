@@ -6,7 +6,7 @@
  * leaves exactly one logo and one footer.
  */
 
-import { LEGACY_BRAND_SLOGAN_PATTERN } from './orphanedSlogan';
+import { LEGACY_BRAND_SLOGAN_PATTERN, stripOrphanedBrandFooter } from './orphanedSlogan';
 import type { EmailBrandingLogoArtwork, EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
@@ -237,9 +237,9 @@ export interface BrandAttributionStripOptions {
   /**
    * Which footer row counts as ours.
    * - `any-tail`, the default: the HTML being decorated is the standard
-   *   template — a clone, a rebuild, the settings preview, the send-time repair
-   *   — so a footer row the attribution opens is ours by construction and goes
-   *   whatever follows the separator, wording we have not shipped yet included.
+   *   template — a clone, a rebuild, the settings preview — so a footer row the
+   *   attribution opens is ours by construction and goes whatever follows the
+   *   separator, wording we have not shipped yet included.
    * - `shipped-slogan`, whenever the HTML passing through is a tenant's own row:
    *   only the footers we have actually shipped go. A footer reworded around the
    *   attribution ("Powered by AlgaPSA &middot; Acme MSP, your IT partner") then
@@ -285,9 +285,23 @@ export function containsBrandAttribution(html: string): boolean {
   return !!html && new RegExp(ATTRIBUTION, 'i').test(html);
 }
 
-/** The Enterprise pass the apply flow runs over every HTML it writes. */
+/**
+ * The Enterprise pass the apply flow runs over every HTML it writes.
+ *
+ * Hiding the attribution also repairs what an older strip left in a row this one
+ * is rewriting. That matters for the one row the apply does not rebuild from the
+ * standard template — a `customized` row the tenant ticked, recolored in place —
+ * because the leftover carries no attribution for `stripBrandAttribution` to
+ * recognize it by: the old strip took the attribution and kept the slogan. Left
+ * to itself the apply would repaint that orphaned tagline in the tenant's new
+ * palette and leave it standing (alga-2026-0003353). The repair is the same one
+ * the classifier normalizes such a row with, so what we write back is what it
+ * reads as ours.
+ */
 export function decorateBrandedHtml(html: string, options: BrandDecorationOptions): string {
   let result = options.logo ? applyBrandLogo(html, options.logo) : removeBrandLogo(html);
-  if (options.hideAttribution) result = stripBrandAttribution(result, { footerRow: options.footerRow });
+  if (options.hideAttribution) {
+    result = stripOrphanedBrandFooter(stripBrandAttribution(result, { footerRow: options.footerRow }));
+  }
   return result;
 }
