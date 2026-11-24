@@ -29,7 +29,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { updateContact, getInteractionsForEntity, getClientById } from '@alga-psa/clients/actions';
+import { updateContact, getInteractionsForEntity, getClientById, getContactPortalSummary } from '@alga-psa/clients/actions';
 import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
@@ -235,7 +235,7 @@ export function ContactBentoLayout({
   stats,
   ticketsSummary,
   relatedWork,
-  portalSummary,
+  portalSummary: initialPortalSummary,
   newTicketHref,
   assetsSlot,
   userPermissions = { canInvite: false, canUpdateRoles: false, canRead: false },
@@ -264,6 +264,22 @@ export function ContactBentoLayout({
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false);
   const [isInteractionOpen, setIsInteractionOpen] = useState(false);
+  const [portalSummary, setPortalSummary] = useState(initialPortalSummary);
+  useEffect(() => {
+    setPortalSummary(initialPortalSummary);
+  }, [initialPortalSummary]);
+
+  const handleInvitationChanged = async () => {
+    onChangesSaved?.();
+    // Full server-rendered contact pages cannot supply a refresh callback.
+    // Refresh our own tile and hero as well as notifying the quick-view opener.
+    try {
+      const summary = await getContactPortalSummary(contact.contact_name_id);
+      if (!isReturnedActionError(summary)) setPortalSummary(summary);
+    } catch (error) {
+      console.error('Failed to refresh contact portal summary:', error);
+    }
+  };
 
   // The interactions list is owned here: server pages can't pass refresh
   // callbacks across the RSC boundary, and quick-view callers don't pass
@@ -1040,13 +1056,10 @@ export function ContactBentoLayout({
         className="max-w-3xl"
       >
         <DialogContent>
-          {/* Inviting, resending or revoking in here changes what the list
-              behind this drawer shows for the contact, so the opener is told
-              the same way a save tells it. */}
           <ContactPortalTab
             contact={contact}
             currentUserPermissions={userPermissions}
-            onInvitationChanged={onChangesSaved}
+            onInvitationChanged={handleInvitationChanged}
           />
         </DialogContent>
       </Dialog>

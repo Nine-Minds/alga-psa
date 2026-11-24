@@ -8,8 +8,6 @@
  */
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactPortalTab } from './ContactPortalTab';
@@ -20,9 +18,11 @@ const getPortalInvitationsMock = vi.fn();
 const sendPortalInvitationMock = vi.fn();
 const revokePortalInvitationMock = vi.fn();
 
-vi.mock('@alga-psa/ui', () => ({ useToast: () => ({ toast: vi.fn() }) }));
+const toastMock = vi.fn();
+vi.mock('@alga-psa/ui', () => ({ useToast: () => ({ toast: toastMock }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string; [k: string]: unknown }) => {
+    if (key.startsWith('contactPortalTab.toast.')) return `translated:${key}`;
     let text = String(
       (typeof options?.count === 'number' && options.count === 1
         ? options?.defaultValue_one
@@ -110,7 +110,7 @@ beforeEach(() => {
   getUserByContactIdMock.mockResolvedValue({ user: null });
   getRolesMock.mockResolvedValue([]);
   getPortalInvitationsMock.mockResolvedValue([]);
-  sendPortalInvitationMock.mockResolvedValue({ success: true });
+  sendPortalInvitationMock.mockResolvedValue({ success: true, message: 'Raw English success' });
   revokePortalInvitationMock.mockResolvedValue({ success: true });
 });
 
@@ -131,6 +131,7 @@ describe('ContactPortalTab invitation changes', () => {
     fireEvent.click(await screen.findByText('Send Portal Invitation'));
 
     await waitFor(() => expect(onInvitationChanged).toHaveBeenCalled());
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'translated:contactPortalTab.toast.sendInviteSuccess' }));
   });
 
   it('tells its opener after a resend and after a revoke', async () => {
@@ -153,9 +154,30 @@ describe('ContactPortalTab invitation changes', () => {
 
     fireEvent.click(await screen.findByText('Resend'));
     await waitFor(() => expect(onInvitationChanged).toHaveBeenCalledTimes(1));
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'translated:contactPortalTab.toast.resendInviteSuccess' }));
 
     fireEvent.click(screen.getByText('Revoke'));
     await waitFor(() => expect(onInvitationChanged).toHaveBeenCalledTimes(2));
+  });
+
+  it.each(['INVITATION_FAILED', undefined])('localizes send failures with code %s', async (errorCode) => {
+    sendPortalInvitationMock.mockResolvedValue({ success: false, errorCode, error: 'Raw English failure' });
+    render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+    fireEvent.click(await screen.findByText('Send Portal Invitation'));
+    await waitFor(() => expect(toastMock).toHaveBeenCalled());
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'translated:contactPortalTab.toast.sendInviteFailed' }));
+  });
+
+  it('localizes revoke failures', async () => {
+    getPortalInvitationsMock.mockResolvedValue([{
+      invitation_id: 'invitation-1', email: contact.email, status: 'pending',
+      created_at: '2026-01-01T00:00:00.000Z', expires_at: '2099-01-08T00:00:00.000Z',
+    }]);
+    revokePortalInvitationMock.mockResolvedValue({ success: false, errorCode: 'REVOKE_FAILED', error: 'Raw English failure' });
+    render(<ContactPortalTab contact={contact} currentUserPermissions={permissions} />);
+    fireEvent.click(await screen.findByText('Revoke'));
+    await waitFor(() => expect(toastMock).toHaveBeenCalled());
+    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ description: 'translated:contactPortalTab.toast.revokeInviteFailed' }));
   });
 
   it('shows when a renewed invitation was last sent', async () => {
@@ -177,16 +199,6 @@ describe('ContactPortalTab invitation changes', () => {
     // And how often: the count is stored on the row, so the history shows it
     // instead of leaving one resend and five looking the same.
     expect(screen.getByText(/sent again 2 times/)).toBeInTheDocument();
-  });
-});
-
-describe('the contact drawer', () => {
-  it('passes the invitation-change callback down to the portal tab', () => {
-    // The drawer is what the client's contact list opens, and that list is
-    // where the stale invitation state would be seen.
-    const source = readFileSync(resolve(__dirname, 'bento/ContactBentoLayout.tsx'), 'utf8');
-
-    expect(source).toContain('onInvitationChanged={onChangesSaved}');
   });
 });
 

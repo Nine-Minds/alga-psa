@@ -74,13 +74,6 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   RATE_LIMITED: 'contactPortalTab.toast.errors.rateLimited'
 };
 
-// Catch-all codes whose localized message is generic ("Failed to send
-// invitation"). When the server attached a specific reason, show that instead
-// of masking it with the generic translation.
-const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
-  'INVITATION_FAILED',
-  'REVOKE_FAILED'
-]);
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -135,15 +128,12 @@ export function ContactPortalTab({
     defaultValue: string
   ): string => {
     if (result.errorCode) {
-      if (GENERIC_PORTAL_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
-        return result.error;
-      }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
-        return t(key, { defaultValue: result.error ?? defaultValue });
+        return t(key, { defaultValue });
       }
     }
-    return result.error || t(defaultKey, { defaultValue });
+    return t(defaultKey, { defaultValue });
   };
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -459,7 +449,7 @@ export function ContactPortalTab({
       if (result.success) {
         toast({
           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
-          description: result.message || t('contactPortalTab.toast.sendInviteSuccess', { defaultValue: 'Portal invitation sent successfully!' })
+          description: t('contactPortalTab.toast.sendInviteSuccess', { defaultValue: 'Portal invitation sent successfully!' })
         });
         // Reload invitation history to show the new invitation
         await loadData();
@@ -532,7 +522,7 @@ export function ContactPortalTab({
       if (result.success) {
         toast({
           title: t('contactPortalTab.toast.successTitle', { defaultValue: 'Success' }),
-          description: result.message || t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
+          description: t('contactPortalTab.toast.resendInviteSuccess', { defaultValue: 'Portal invitation resent successfully!' })
         });
         await loadData();
         onInvitationChanged?.();

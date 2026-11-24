@@ -23,6 +23,8 @@ import { getApiMetadataProducts } from '../../productSurfaceRegistry';
 import fs from 'fs/promises';
 import path from 'path';
 import { BadRequestError } from '../middleware/apiMiddleware';
+import { createRegistry } from '../openapi/registry';
+import { registerPortalInvitationRoutes } from '../openapi/routes/portalInvitations';
 
 export class MetadataService {
   private endpointsCache: ApiEndpoint[] | null = null;
@@ -225,6 +227,29 @@ export class MetadataService {
       ],
       tags: this.generateOpenApiTags(endpoints)
     };
+
+    // Filesystem discovery cannot infer the invitation selection contract.
+    // Reuse the same definitions as the SDK docs, only for discovered routes.
+    const invitationDocs = createRegistry([registerPortalInvitationRoutes]).buildDocument({
+      title: spec.info.title,
+      version: spec.info.version,
+      edition: 'ce', // Both invitation routes are available in both editions.
+    });
+    for (const [routePath, definition] of Object.entries(invitationDocs.paths)) {
+      const discovered = spec.paths[routePath]?.post;
+      if (!discovered || !definition?.post) continue;
+      spec.paths[routePath].post = {
+        ...discovered,
+        ...definition.post,
+        operationId: discovered.operationId,
+      };
+      Object.assign(spec.components!.schemas!, invitationDocs.components?.schemas);
+      for (const tag of definition.post.tags ?? []) {
+        if (!spec.tags?.some(existing => existing.name === tag)) {
+          spec.tags?.push({ name: tag });
+        }
+      }
+    }
 
     return {
       success: true,

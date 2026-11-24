@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { ApiEndpoint, ApiPermissionInfo, ApiSchemaInfo } from '@/lib/api/schemas/metadataSchemas';
 import { MetadataService } from '@/lib/api/services/MetadataService';
+import { createRegistry } from '@/lib/api/openapi/registry';
+import { registerPortalInvitationRoutes } from '@/lib/api/openapi/routes/portalInvitations';
 
 const noopDb: any = {};
 const noopEventBus: any = {};
@@ -126,5 +128,39 @@ describe('MetadataService', () => {
     expect(result.data.totalPermissions).toBe(1);
     expect(result.data.coverage.deprecated).toBe(0);
     expect(result.meta?.period).toBe('7d');
+  });
+
+  it('serves the curated invitation selection contract in live API documentation', async () => {
+    const registry = createRegistry([registerPortalInvitationRoutes]);
+    const curated = registry.buildDocument({ title: 'Portal invitations', version: '1.0.0', edition: 'ce' });
+    const invitationEndpoints: ApiEndpoint[] = registry.getRegisteredRoutes().map(route => ({
+      path: route.path,
+      method: 'POST',
+      summary: route.summary,
+      tags: route.tags,
+      requiresAuth: true,
+      permissions: ['user:invite'],
+    }));
+    vi.spyOn(service as any, 'discoverEndpoints').mockResolvedValue([...sampleEndpoints, ...invitationEndpoints]);
+    vi.spyOn(service as any, 'discoverSchemas').mockResolvedValue(sampleSchemas);
+
+    const { data: spec } = await service.generateOpenApiSpec({} as any, 'tenant-123');
+    for (const endpoint of invitationEndpoints) {
+      const operation = spec.paths[endpoint.path].post;
+      expect(operation.requestBody).toEqual(curated.paths[endpoint.path].post!.requestBody);
+      const ref = operation.requestBody.content['application/json'].schema.$ref;
+      const body = spec.components!.schemas![ref.split('/').pop()];
+      expect(body.properties.invitation_states.items.enum).toEqual(['expired', 'pending']);
+      expect(body.properties.contact_ids).toBeDefined();
+      expect(body.properties.invitation_states.description).toContain('narrows contact_ids');
+      expect(operation.responses).toEqual(curated.paths[endpoint.path].post!.responses);
+    }
+    expect(spec.components!.schemas!.ClientPortalInvitationRequest.description).toContain('One of the three is required');
+    expect(spec.components!.schemas!.BulkPortalInvitationRequest.required).toContain('contact_ids');
+    for (const [name, schema] of Object.entries(curated.components!.schemas!)) {
+      expect(spec.components!.schemas![name]).toEqual(schema);
+    }
+    expect(spec.paths['/api/v1/teams'].get.security).toEqual([{ ApiKeyAuth: [] }]);
+    expect(spec.components!.schemas!.Team).toBeDefined();
   });
 });

@@ -90,6 +90,10 @@ const warning = {
   fr: "Ce lien d’invitation expirera dans <strong>{{expirationTime}}</strong>.",
   es: 'Este enlace de invitación expirará en <strong>{{expirationTime}}</strong>.',
   sv: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>.',
+  it: 'Questo link di invito scadrà tra <strong>{{expirationTime}}</strong>.',
+  nl: 'Deze uitnodigingslink verloopt over <strong>{{expirationTime}}</strong>.',
+  pl: 'Ten link zaproszeniowy wygaśnie za <strong>{{expirationTime}}</strong>.',
+  pt: 'Este link de convite expirará em <strong>{{expirationTime}}</strong>.',
 } as const;
 
 const subjects = {
@@ -98,6 +102,10 @@ const subjects = {
   fr: 'Invitation au portail client - {{tenantName}}',
   es: 'Invitación al portal del cliente - {{tenantName}}',
   sv: 'Inbjudan till kundportalen – {{tenantName}}',
+  it: 'Invito al portale clienti - {{tenantName}}',
+  nl: 'Uitnodiging voor het klantenportaal - {{tenantName}}',
+  pl: 'Zaproszenie do portalu klienta - {{tenantName}}',
+  pt: 'Convite para o portal do cliente - {{tenantName}}',
 } as const;
 
 function systemRow(language: keyof typeof warning): TemplateRow {
@@ -124,7 +132,7 @@ function tenantRow(language: keyof typeof warning): TemplateRow {
 }
 
 /** Every supported locale has a system template, as production does. */
-const SYSTEM_TEMPLATES = (['en', 'de', 'fr', 'es', 'sv'] as const).map(systemRow);
+const SYSTEM_TEMPLATES = (['en', 'de', 'fr', 'es', 'sv', 'it', 'nl', 'pl', 'pt'] as const).map(systemRow);
 
 function seedTemplates(rows: TemplateRow[]): void {
   getConnectionMock.mockResolvedValue(createFakeTemplateKnex(rows));
@@ -220,9 +228,20 @@ describe('sendPortalInvitationEmail validity wording', () => {
     ['de', 7, '7 Tagen'],
     ['de', 1, '1 Tag'],
     ['fr', 3, '3 jours'],
+    ['fr', 1, '1 jour'],
     ['es', 1, '1 día'],
+    ['es', 7, '7 días'],
     ['sv', 7, '7 dagar'],
     ['sv', 1, '1 dag'],
+    ['it', 1, '1 giorno'],
+    ['it', 7, '7 giorni'],
+    ['nl', 1, '1 dag'],
+    ['nl', 7, '7 dagen'],
+    ['pl', 1, '1 dzień'],
+    ['pl', 2, '2 dni'],
+    ['pl', 7, '7 dni'],
+    ['pt', 1, '1 dia'],
+    ['pt', 7, '7 dias'],
   ])('renders %s validity of %i day(s) as "%s"', async (locale, validityDays, expected) => {
     resolveEmailLocaleMock.mockResolvedValue(locale);
 
