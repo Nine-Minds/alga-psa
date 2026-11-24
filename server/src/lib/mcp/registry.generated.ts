@@ -70499,6 +70499,431 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_inventory_vendors",
+    "method": "get",
+    "path": "/api/v1/inventory/vendors",
+    "displayName": "List vendors",
+    "summary": "List vendors",
+    "description": "Paginated; `search` matches the vendor name; inactive vendors are excluded unless include_inactive=true.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "include_inactive",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_vendors",
+    "method": "post",
+    "path": "/api/v1/inventory/vendors",
+    "displayName": "Create a vendor",
+    "summary": "Create a vendor",
+    "description": "Vendor names are unique per tenant after trimming and case-folding; a clash returns 409 naming the existing vendor.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "vendor_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "contact_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "payment_terms": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "account_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 5000
+        }
+      },
+      "required": [
+        "vendor_name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_vendors_vendorid",
+    "method": "get",
+    "path": "/api/v1/inventory/vendors/{vendorId}",
+    "displayName": "Get a vendor",
+    "summary": "Get a vendor",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "put-_api_v1_inventory_vendors_vendorid",
+    "method": "put",
+    "path": "/api/v1/inventory/vendors/{vendorId}",
+    "displayName": "Update a vendor",
+    "summary": "Update a vendor",
+    "description": "Send is_active=true to reactivate a vendor.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "vendor_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "contact_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "payment_terms": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "account_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 5000
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_vendors_vendorid_deactivate",
+    "method": "post",
+    "path": "/api/v1/inventory/vendors/{vendorId}/deactivate",
+    "displayName": "Deactivate a vendor",
+    "summary": "Deactivate a vendor",
+    "description": "Idempotent: an already-inactive vendor is returned unchanged. An active vendor with open purchase orders (draft, open, partially received) returns 409.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_vendors_vendorid_products",
+    "method": "get",
+    "path": "/api/v1/inventory/vendors/{vendorId}/products",
+    "displayName": "List a vendor price list",
+    "summary": "List a vendor price list",
+    "description": "Price list entries with product name and SKU. unit_cost is in integer minor units of cost_currency.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "put-_api_v1_inventory_vendors_vendorid_products_serviceid",
+    "method": "put",
+    "path": "/api/v1/inventory/vendors/{vendorId}/products/{serviceId}",
+    "displayName": "Create or update a vendor price list entry",
+    "summary": "Create or update a vendor price list entry",
+    "description": "Upsert keyed on vendor and product. unit_cost is in integer minor units. An omitted cost_currency resolves as in the MSP UI. Marking an entry preferred clears the preferred flag on the product's other vendors.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "vendor_sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "unit_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cost_currency": {
+          "type": "string",
+          "pattern": "^[A-Za-z]{3}$"
+        },
+        "lead_time_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "is_preferred": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "delete-_api_v1_inventory_vendors_vendorid_products_serviceid",
+    "method": "delete",
+    "path": "/api/v1/inventory/vendors/{vendorId}/products/{serviceId}",
+    "displayName": "Delete a vendor price list entry",
+    "summary": "Delete a vendor price list entry",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "vendorId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
     "id": "get-_api_v1_inventory_transfers",
     "method": "get",
     "path": "/api/v1/inventory/transfers",

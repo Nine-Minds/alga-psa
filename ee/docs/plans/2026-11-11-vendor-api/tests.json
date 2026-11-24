@@ -1,0 +1,67 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed: create a vendor, update it, deactivate it; it leaves the default list and returns with include_inactive",
+    "featureIds": [
+      "F001",
+      "F003",
+      "F005",
+      "F007",
+      "F008"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed: duplicate normalized vendor name is refused with 409 and no row is written",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed: upsert a price list entry, list it, mark a second vendor's entry preferred for the same product; exactly one preferred offer remains",
+    "featureIds": [
+      "F002",
+      "F009",
+      "F010"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed: delete a price list entry; a later purchase order line for that product no longer defaults from it",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "Permission: a key without vendor read, create or update gets 403 on the matching routes; unknown vendorId gets 404",
+    "featureIds": [
+      "F004",
+      "F012"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "Existing vendor and vendor product action tests still pass against the extracted cores",
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "OpenAPI registry contains the eight routes with body schemas",
+    "featureIds": [
+      "F013",
+      "F014"
+    ],
+    "implemented": false
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "F001",
+    "description": "Extract queryVendors, queryVendor, updateVendorCore and deactivateVendorCore into packages/inventory/src/lib/vendors.ts; vendorActions.ts calls them",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Extract queryVendorProducts and deleteVendorProductCore into packages/inventory/src/lib/vendorProducts.ts; vendorProductActions.ts calls them",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "GET /api/v1/inventory/vendors lists vendors with pagination, name search and include_inactive",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "GET /vendors/{vendorId} returns one vendor or 404",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "POST /vendors creates a vendor through createVendorCore",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "A vendor name that matches an existing vendor after normalization is refused with 409",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "PUT /vendors/{vendorId} updates vendor fields including is_active",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "POST /vendors/{vendorId}/deactivate deactivates idempotently",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "GET /vendors/{vendorId}/products lists the vendor price list with product name and SKU",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "PUT /vendors/{vendorId}/products/{serviceId} upserts a price list entry through upsertVendorProductCore",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "DELETE /vendors/{vendorId}/products/{serviceId} removes a price list entry",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Routes enforce vendor read, create and update permissions; 'vendor' added to InventoryApiResource",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Zod request schemas for vendor create, vendor update and price list upsert",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "All new routes registered in inventoryV1.ts with request body schemas",
+    "implemented": false
+  }
+]
