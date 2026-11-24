@@ -2900,8 +2900,7 @@
       "notFound": "Preiszeitplan nicht gefunden",
       "invalidDate": "Gültigkeitsdatum und Enddatum müssen Kalenderdaten sein (JJJJ-MM-TT)",
       "lineNotEligible": "Preispläne gelten für eine Position mit Festpreis dieses Vertrags; wählen Sie eine seiner festen Positionen",
-      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position.",
-      "noRepriceableLine": "Dieser Vertrag hat keine Vertragslinie mit Festpreis, die ein Preisplan neu bepreisen kann; eine Vertragslinie, die pro Einheit abrechnet, wird über ihren eigenen Einheitspreis neu bepreist"
+      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position."
     },
     "renewals": {
       "permissions": {

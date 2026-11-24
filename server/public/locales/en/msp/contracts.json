@@ -2900,8 +2900,7 @@
       "notFound": "Pricing schedule not found",
       "invalidDate": "Effective date and end date must be calendar dates (YYYY-MM-DD)",
       "lineNotEligible": "Pricing schedules apply to a fixed-fee line of this contract; pick one of its fixed lines",
-      "lineUnitPriced": "This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead.",
-      "noRepriceableLine": "This contract has no fixed-fee line a pricing schedule can reprice; a line that bills per unit is repriced by its own unit price"
+      "lineUnitPriced": "This line bills per unit, so a pricing schedule would not change what it bills. Change the unit price on the line instead."
     },
     "renewals": {
       "permissions": {

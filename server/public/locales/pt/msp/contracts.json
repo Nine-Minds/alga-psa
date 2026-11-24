@@ -2900,8 +2900,7 @@
       "notFound": "Agenda de preços não encontrada",
       "invalidDate": "A data de vigência e a data de término devem ser datas de calendário (AAAA-MM-DD)",
       "lineNotEligible": "Os cronogramas de preços aplicam-se a uma linha de taxa fixa deste contrato; escolha uma das suas linhas fixas",
-      "lineUnitPriced": "Esta linha cobra por unidade, por isso um cronograma de preços não alteraria o que ela cobra. Altere o preço unitário na linha.",
-      "noRepriceableLine": "Este contrato não tem nenhuma linha de taxa fixa que um cronograma de preços possa reprecificar; uma linha que cobra por unidade é reprecificada pelo seu próprio preço unitário"
+      "lineUnitPriced": "Esta linha cobra por unidade, por isso um cronograma de preços não alteraria o que ela cobra. Altere o preço unitário na linha."
     },
     "renewals": {
       "permissions": {

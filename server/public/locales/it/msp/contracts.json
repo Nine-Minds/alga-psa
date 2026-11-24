@@ -2900,8 +2900,7 @@
       "notFound": "Pianificazione dei prezzi non trovata",
       "invalidDate": "La data di decorrenza e la data di fine devono essere date di calendario (AAAA-MM-GG)",
       "lineNotEligible": "Le pianificazioni dei prezzi si applicano a una linea a tariffa fissa di questo contratto; scegli una delle sue linee fisse",
-      "lineUnitPriced": "Questa linea fattura per unità, quindi una pianificazione dei prezzi non cambierebbe ciò che fattura. Modifica invece il prezzo unitario sulla linea.",
-      "noRepriceableLine": "Questo contratto non ha linee contrattuali a tariffa fissa che una pianificazione dei prezzi possa riprezzare; una linea che fattura a unità si riprezza con il proprio prezzo unitario"
+      "lineUnitPriced": "Questa linea fattura per unità, quindi una pianificazione dei prezzi non cambierebbe ciò che fattura. Modifica invece il prezzo unitario sulla linea."
     },
     "renewals": {
       "permissions": {

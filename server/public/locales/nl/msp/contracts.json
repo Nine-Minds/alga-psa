@@ -2900,8 +2900,7 @@
       "notFound": "Prijsplanning niet gevonden",
       "invalidDate": "Ingangsdatum en einddatum moeten kalenderdatums zijn (JJJJ-MM-DD)",
       "lineNotEligible": "Prijsschema’s gelden voor een regel met een vast tarief van dit contract; kies een van de vaste regels",
-      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel.",
-      "noRepriceableLine": "Dit contract heeft geen contractregel met een vast tarief die een prijsschema kan herprijzen; een regel die per eenheid factureert, wordt via de eigen stukprijs herprijsd"
+      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel."
     },
     "renewals": {
       "permissions": {

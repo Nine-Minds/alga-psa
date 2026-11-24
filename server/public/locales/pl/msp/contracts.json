@@ -2910,8 +2910,7 @@
       "notFound": "Nie znaleziono harmonogramu cen",
       "invalidDate": "Data wejścia w życie i data zakończenia muszą być datami kalendarzowymi (RRRR-MM-DD)",
       "lineNotEligible": "Harmonogramy cenowe dotyczą linii z opłatą stałą tego kontraktu; wybierz jedną z jego linii stałych",
-      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii.",
-      "noRepriceableLine": "Ten kontrakt nie ma linii z opłatą stałą, którą harmonogram cenowy mógłby przecenić; linia naliczana za jednostkę jest przeceniana własną ceną jednostkową"
+      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii."
     },
     "renewals": {
       "permissions": {

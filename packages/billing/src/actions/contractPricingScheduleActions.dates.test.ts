@@ -260,15 +260,17 @@ describe('pricing schedule actions: line scope', () => {
     );
   });
 
-  it('refuses either scope when the contract has no line a schedule can reprice', async () => {
+  it('still accepts a whole-contract schedule on a contract with no lines yet', async () => {
+    // The NULL scope is the column's original meaning, so only a named line is
+    // validated: a caller that writes schedules before the lines exist (the
+    // overlap-guard regression test does exactly that) is not refused.
     const { schedulesQuery } = seedTables({ schedulesFirst: [undefined], lines: [] });
 
     await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
-      .resolves.toEqual({
-        actionError: 'This contract has no fixed-fee line a pricing schedule can reprice; a line that bills per unit is repriced by its own unit price',
-        messageKey: 'msp/contracts:errors.pricingSchedule.noRepriceableLine',
-      });
-    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+      .resolves.toEqual(storedRow);
+    expect(schedulesQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ contract_line_id: null, effective_date: '2026-06-01' })
+    );
   });
 
   it('refuses a whole-contract schedule overlapping another whole-contract one', async () => {
@@ -371,6 +373,19 @@ describe('pricing schedule actions: line scope', () => {
     expect(schedulesQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({ contract_line_id: null })
     );
+  });
+
+  it('keeps a stored line scope when a save does not mention it', async () => {
+    const lineScoped = { ...storedRow, contract_line_id: 'line-1' };
+    const { schedulesQuery } = seedTables({ schedulesFirst: [lineScoped, undefined] });
+
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { effective_date: '2026-07-01' }))
+      .resolves.toEqual(storedRow);
+
+    // No contract_line_id in the payload: the stored scope is kept and not
+    // re-validated, and the probe stays on that line.
+    expect(tableMock).not.toHaveBeenCalledWith('contract_lines');
+    expect(schedulesQuery.where).toHaveBeenCalledWith('contract_line_id', 'line-1');
   });
 
   it('validates the new scope when an existing row is re-scoped to a line', async () => {

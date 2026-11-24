@@ -2900,8 +2900,7 @@
       "notFound": "Prisschemat hittades inte",
       "invalidDate": "Datumet då ändringen börjar gälla och slutdatumet måste vara kalenderdatum (ÅÅÅÅ-MM-DD)",
       "lineNotEligible": "Prisscheman gäller för en rad med fast avgift i avtalet; välj en av dess fasta rader",
-      "lineUnitPriced": "Raden debiterar per enhet, så ett prisschema skulle inte ändra vad den debiterar. Ändra enhetspriset på raden i stället.",
-      "noRepriceableLine": "Avtalet har ingen avtalsrad med fast avgift som ett prisschema kan prissätta om; en rad som debiterar per enhet prissätts om via sitt eget enhetspris"
+      "lineUnitPriced": "Raden debiterar per enhet, så ett prisschema skulle inte ändra vad den debiterar. Ändra enhetspriset på raden i stället."
     },
     "renewals": {
       "permissions": {

@@ -2900,8 +2900,7 @@
       "notFound": "No se encontró el calendario de precios",
       "invalidDate": "La fecha de entrada en vigor y la fecha de finalización deben ser fechas de calendario (AAAA-MM-DD)",
       "lineNotEligible": "Los programas de precios se aplican a una línea de tarifa fija de este contrato; elija una de sus líneas fijas",
-      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea.",
-      "noRepriceableLine": "Este contrato no tiene ninguna línea de tarifa fija que un programa de precios pueda volver a tarificar; una línea que factura por unidad se tarifica con su propio precio unitario"
+      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea."
     },
     "renewals": {
       "permissions": {

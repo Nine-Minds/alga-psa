@@ -152,27 +152,6 @@ async function fetchFixedLineScopes(
 }
 
 /**
- * Guard for the whole-contract scope (NULL `contract_line_id`): the rate becomes
- * the period fee of every fixed-fee line, so the contract needs at least one
- * line a schedule can reprice.
- */
-async function getWholeContractScopeValidationError(
-  db: any,
-  contractId: string,
-): Promise<{ message: string; key: string } | null> {
-  const scopes = await fetchFixedLineScopes(db, contractId);
-
-  if (!scopes.some((scope) => scope.has_bundle_fee)) {
-    return {
-      message: 'This contract has no fixed-fee line a pricing schedule can reprice; a line that bills per unit is repriced by its own unit price',
-      key: 'msp/contracts:errors.pricingSchedule.noRepriceableLine',
-    };
-  }
-
-  return null;
-}
-
-/**
  * Guard for a requested line scope: the line must belong to this contract, be
  * Fixed, and have a bundle fee for the schedule rate to replace.
  */
@@ -378,21 +357,20 @@ export const createPricingSchedule = withAuth(async (
   }
 
   // Both scopes are offered: NULL applies to every fixed-fee line of the
-  // contract, a line id to that line only. Either way the contract has to own a
-  // line the rate can reprice.
+  // contract, a line id to that line only. Only a named line is validated — the
+  // NULL scope is the column's original meaning and stays accepted on any
+  // contract (a contract whose lines are added after its schedules still takes
+  // one), so no existing caller is refused.
   const contractLineId = scheduleData.contract_line_id ?? null;
-  const scopeError = contractLineId
-    ? await getLineScopeValidationError(
+  if (contractLineId) {
+    const scopeError = await getLineScopeValidationError(
       tenantDb(knex, tenant),
       scheduleData.contract_id,
       contractLineId,
-    )
-    : await getWholeContractScopeValidationError(
-      tenantDb(knex, tenant),
-      scheduleData.contract_id,
     );
-  if (scopeError) {
-    return actionError(scopeError.message, scopeError.key);
+    if (scopeError) {
+      return actionError(scopeError.message, scopeError.key);
+    }
   }
 
   return knex.transaction(async (trx) => {

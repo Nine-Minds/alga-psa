@@ -2900,8 +2900,7 @@
       "notFound": "Planning tarifaire introuvable",
       "invalidDate": "La date d'effet et la date de fin doivent être des dates calendaires (AAAA-MM-JJ)",
       "lineNotEligible": "Les barèmes de prix s'appliquent à une ligne à tarif fixe de ce contrat ; choisissez l'une de ses lignes fixes",
-      "lineUnitPriced": "Cette ligne facture à l'unité : un barème de prix ne changerait pas ce qu'elle facture. Modifiez le prix unitaire sur la ligne.",
-      "noRepriceableLine": "Ce contrat n'a aucune ligne à tarif fixe qu'un barème de prix puisse retarifer ; une ligne facturée à l'unité se retarife par son propre prix unitaire"
+      "lineUnitPriced": "Cette ligne facture à l'unité : un barème de prix ne changerait pas ce qu'elle facture. Modifiez le prix unitaire sur la ligne."
     },
     "renewals": {
       "permissions": {
