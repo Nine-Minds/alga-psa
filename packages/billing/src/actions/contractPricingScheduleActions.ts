@@ -152,6 +152,27 @@ async function fetchFixedLineScopes(
 }
 
 /**
+ * Guard for the whole-contract scope (NULL `contract_line_id`): the rate becomes
+ * the period fee of every fixed-fee line, so the contract needs at least one
+ * line a schedule can reprice.
+ */
+async function getWholeContractScopeValidationError(
+  db: any,
+  contractId: string,
+): Promise<{ message: string; key: string } | null> {
+  const scopes = await fetchFixedLineScopes(db, contractId);
+
+  if (!scopes.some((scope) => scope.has_bundle_fee)) {
+    return {
+      message: 'This contract has no fixed-fee line a pricing schedule can reprice; a line that bills per unit is repriced by its own unit price',
+      key: 'msp/contracts:errors.pricingSchedule.noRepriceableLine',
+    };
+  }
+
+  return null;
+}
+
+/**
  * Guard for a requested line scope: the line must belong to this contract, be
  * Fixed, and have a bundle fee for the schedule rate to replace.
  */
@@ -268,8 +289,9 @@ export const getPricingScheduleById = withAuth(async (
  * which hosted Postgres lacks, and Citus refuses triggers on distributed
  * tables. Callers run it and the write in one transaction under
  * lockTenantBilling so two concurrent saves cannot both pass.
- * NULL `contract_line_id` means contract-wide and only conflicts with another
- * contract-wide row — a line-scoped override intentionally coexists with it.
+ * NULL `contract_line_id` means the whole contract and only conflicts with
+ * another whole-contract row — a line-scoped override intentionally coexists
+ * with it and wins on its own line.
  */
 async function findOverlappingPricingSchedule(
   db: any,
@@ -355,16 +377,22 @@ export const createPricingSchedule = withAuth(async (
     return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
+  // Both scopes are offered: NULL applies to every fixed-fee line of the
+  // contract, a line id to that line only. Either way the contract has to own a
+  // line the rate can reprice.
   const contractLineId = scheduleData.contract_line_id ?? null;
-  if (contractLineId) {
-    const lineScopeError = await getLineScopeValidationError(
+  const scopeError = contractLineId
+    ? await getLineScopeValidationError(
       tenantDb(knex, tenant),
       scheduleData.contract_id,
       contractLineId,
+    )
+    : await getWholeContractScopeValidationError(
+      tenantDb(knex, tenant),
+      scheduleData.contract_id,
     );
-    if (lineScopeError) {
-      return actionError(lineScopeError.message, lineScopeError.key);
-    }
+  if (scopeError) {
+    return actionError(scopeError.message, scopeError.key);
   }
 
   return knex.transaction(async (trx) => {
@@ -387,6 +415,7 @@ export const createPricingSchedule = withAuth(async (
     const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
       .insert({
         ...scheduleData,
+        contract_line_id: contractLineId,
         effective_date: effectiveDate,
         end_date: endDate,
         tenant,
@@ -475,9 +504,9 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   // Check for overlapping schedules (excluding current schedule) in the same
-  // line scope; an update may move a schedule between scopes. A NULL scope
-  // stays valid, so an existing contract-wide row is never rewritten by a save
-  // that does not re-scope it.
+  // line scope; an update may move a schedule between scopes in either
+  // direction. A NULL scope stays valid, so an existing whole-contract row is
+  // never rewritten by a save that does not re-scope it.
   const nextLineScope =
     scheduleData.contract_line_id !== undefined
       ? scheduleData.contract_line_id

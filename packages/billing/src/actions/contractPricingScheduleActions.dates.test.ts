@@ -62,6 +62,12 @@ type Fixtures = {
 };
 
 /**
+ * Either scope needs a fixed-fee line to apply to, so every create below sees a
+ * contract that owns one unless the test says otherwise.
+ */
+const DEFAULT_LINES = [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }];
+
+/**
  * The overlap builders pass callbacks to where/orWhere; a returnThis mock never
  * invokes them, so the chain collapses to the queued first() results. The scope
  * queries end on `select()`, which resolves to their rows.
@@ -86,7 +92,7 @@ function seedTables(fixtures: Fixtures = {}) {
   const linesQuery: any = {
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
-    select: vi.fn(async () => fixtures.lines ?? []),
+    select: vi.fn(async () => fixtures.lines ?? DEFAULT_LINES),
   };
   const membersQuery: any = {
     leftJoin: vi.fn().mockReturnThis(),
@@ -233,8 +239,68 @@ describe('pricing schedule actions: line scope', () => {
     );
   });
 
-  it('lets a line-scoped schedule coexist with a contract-wide one', async () => {
-    // The probe is scoped, so the contract-wide row is never returned here.
+  it('accepts a new whole-contract schedule and stores a null scope', async () => {
+    const { schedulesQuery } = seedTables({
+      schedulesFirst: [undefined],
+      lines: [
+        { contract_line_id: 'line-1', contract_line_name: 'Managed Services' },
+        { contract_line_id: 'line-2', contract_line_name: 'Backup' },
+      ],
+      members: [{ contract_line_id: 'line-1', pricing_basis: 'bundle' }],
+    });
+
+    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
+      .resolves.toEqual(storedRow);
+
+    // Whole contract: the probe only looks at the other NULL-scope rows.
+    expect(schedulesQuery.whereNull).toHaveBeenCalledWith('contract_line_id');
+    expect(schedulesQuery.where).not.toHaveBeenCalledWith('contract_line_id', expect.anything());
+    expect(schedulesQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ contract_line_id: null })
+    );
+  });
+
+  it('refuses either scope when the contract has no line a schedule can reprice', async () => {
+    const { schedulesQuery } = seedTables({ schedulesFirst: [undefined], lines: [] });
+
+    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
+      .resolves.toEqual({
+        actionError: 'This contract has no fixed-fee line a pricing schedule can reprice; a line that bills per unit is repriced by its own unit price',
+        messageKey: 'msp/contracts:errors.pricingSchedule.noRepriceableLine',
+      });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a whole-contract schedule overlapping another whole-contract one', async () => {
+    const overlapping = { ...storedRow, schedule_id: 'schedule-existing' };
+    const { schedulesQuery } = seedTables({ schedulesFirst: [overlapping] });
+
+    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: null })))
+      .resolves.toEqual({
+        actionError: 'This schedule overlaps with an existing pricing schedule',
+        messageKey: 'msp/contracts:errors.pricingSchedule.overlaps',
+      });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it('refuses a schedule overlapping another on the same line', async () => {
+    const overlapping = { ...storedRow, schedule_id: 'schedule-existing', contract_line_id: 'line-1' };
+    const { schedulesQuery } = seedTables({
+      schedulesFirst: [overlapping],
+      members: [{ contract_line_id: 'line-1', pricing_basis: 'bundle' }],
+    });
+
+    await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: 'line-1' })))
+      .resolves.toEqual({
+        actionError: 'This schedule overlaps with an existing pricing schedule',
+        messageKey: 'msp/contracts:errors.pricingSchedule.overlaps',
+      });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
+  });
+
+  it('lets a line-scoped schedule coexist with a whole-contract one', async () => {
+    // The probe is scoped to the line, so the whole-contract row it overlaps is
+    // out of its query: the engine prefers the line-scoped rate on that line.
     const { schedulesQuery } = seedTables({
       schedulesFirst: [undefined],
       lines: [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }],
@@ -243,6 +309,8 @@ describe('pricing schedule actions: line scope', () => {
 
     await expect(callCreatePricingSchedule(user, ctx, createData({ contract_line_id: 'line-1' })))
       .resolves.toEqual(storedRow);
+    expect(schedulesQuery.where).toHaveBeenCalledWith('contract_line_id', 'line-1');
+    expect(schedulesQuery.whereNull).not.toHaveBeenCalled();
     expect(schedulesQuery.insert).toHaveBeenCalled();
   });
 

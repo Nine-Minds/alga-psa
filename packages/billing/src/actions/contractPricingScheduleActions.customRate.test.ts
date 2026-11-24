@@ -74,9 +74,23 @@ function seedTables(schedulesFirstResults: unknown[], row: Record<string, unknow
     where: vi.fn().mockReturnThis(),
     first: vi.fn(async () => ({ is_system_managed_default: false })),
   };
-  tableMock.mockImplementation((tableName: string) => (
-    tableName === 'contracts' ? contractsQuery : schedulesQuery
-  ));
+  // Either scope needs a fixed-fee line to apply to, so the contract owns one.
+  const linesQuery: any = {
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    select: vi.fn(async () => [{ contract_line_id: 'line-1', contract_line_name: 'Managed Services' }]),
+  };
+  const membersQuery: any = {
+    leftJoin: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    select: vi.fn(async () => []),
+  };
+  tableMock.mockImplementation((tableName: string) => {
+    if (tableName === 'contracts') return contractsQuery;
+    if (tableName === 'contract_lines') return linesQuery;
+    if (tableName === 'contract_line_service_configuration as clsc') return membersQuery;
+    return schedulesQuery;
+  });
   return { schedulesQuery, contractsQuery };
 }
 
