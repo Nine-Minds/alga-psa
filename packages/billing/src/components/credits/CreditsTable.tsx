@@ -12,7 +12,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditTracking } from '@alga-psa/types';
 import { listCredits, type CreditStatusFilter } from './actions';
-import { fetchClientsForDropdown } from '@alga-psa/reporting/actions/clientDropdownActions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CreditDetailDialog from './CreditDetailDialog';
 import EditCreditExpirationDialog from './EditCreditExpirationDialog';
 import ExpireCreditDialog from './ExpireCreditDialog';
@@ -160,11 +160,6 @@ function createColumns(
   ];
 }
 
-interface ClientOption {
-  id: string;
-  name: string;
-}
-
 export default function CreditsTable() {
   const { t } = useTranslation('msp/credits');
   const searchParams = useSearchParams();
@@ -175,7 +170,8 @@ export default function CreditsTable() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedClient, setSelectedClient] = useState<string>(() => searchParams?.get('client') ?? '');
   const [selectedStatus, setSelectedStatus] = useState<CreditStatusFilter | ''>('');
-  const [clientOptions, setClientOptions] = useState<{ value: string; label: string }[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -183,20 +179,6 @@ export default function CreditsTable() {
   const [editCredit, setEditCredit] = useState<CreditRow | null>(null);
   const [expireCreditRow, setExpireCreditRow] = useState<CreditRow | null>(null);
   const [transferCreditRow, setTransferCreditRow] = useState<CreditRow | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchClientsForDropdown()
-      .then((clients: ClientOption[]) => {
-        if (!cancelled) {
-          setClientOptions(clients.map((client) => ({ value: client.id, label: client.name })));
-        }
-      })
-      .catch((err) => console.error('Failed to load clients for credits filter:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const loadCredits = useCallback(async () => {
     setIsLoading(true);
@@ -250,18 +232,36 @@ export default function CreditsTable() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-4">
-        <CustomSelect
-          id="credits-client-filter"
-          options={clientOptions}
-          value={selectedClient || null}
-          onValueChange={(value) => {
-            setSelectedClient(value);
-            setPage(1);
-          }}
-          placeholder={t('filters.allClients', { defaultValue: 'All Clients' })}
-          allowClear
-          className="w-64"
-        />
+        {/* Server-searched: the filter never loads the tenant's client list. */}
+        <div className="flex items-center gap-2">
+          <ClientPicker
+            id="credits-client-filter"
+            selectedClientId={selectedClient || null}
+            onSelect={(clientId) => {
+              setSelectedClient(clientId ?? '');
+              setPage(1);
+            }}
+            filterState={clientFilterState}
+            onFilterStateChange={setClientFilterState}
+            clientTypeFilter={clientTypeFilter}
+            onClientTypeFilterChange={setClientTypeFilter}
+            placeholder={t('filters.allClients', { defaultValue: 'All Clients' })}
+            className="w-64"
+          />
+          {selectedClient && (
+            <Button
+              id="credits-client-filter-clear"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedClient('');
+                setPage(1);
+              }}
+            >
+              {t('filters.allClients', { defaultValue: 'All Clients' })}
+            </Button>
+          )}
+        </div>
         <CustomSelect
           id="credits-status-filter"
           options={[

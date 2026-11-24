@@ -66,6 +66,15 @@ export interface TimeEntryFormProps {
   isNewEntry?: boolean;
   isSaving?: boolean;
   disableSave?: boolean;
+  /**
+   * The registered time source's answer for this work item: time may be saved without a service (it is then
+   * recorded as operational, non-billable time). Absent/false is the native rule: a service is required.
+   */
+  serviceOptional?: boolean;
+  /** Field errors computed by a parent that validates outside the form (see TimeEntryDialog's Save). */
+  errors?: { startTime?: string; endTime?: string; duration?: string; date?: string; service?: string };
+  /** Show `errors` (and the form's own) without waiting for the form's own Save. */
+  showErrors?: boolean;
 }
 
 export interface TimeEntryReadOnlyProps {

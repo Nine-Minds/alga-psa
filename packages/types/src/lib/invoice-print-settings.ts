@@ -297,41 +297,36 @@ export const resolveTemplatePrintSettings = (
   return createResolvedTemplatePrintSettings(DEFAULT_INVOICE_PRINT_SETTINGS, 'fallback');
 };
 
+/**
+ * The page box a single document prints into. The margin lives here and nowhere else: only the
+ * page box repeats it on EVERY page, where CSS padding in the markup can only indent the first
+ * and last one. The markup is stripped of its own page margin and page width for print (see
+ * DOCUMENT_PRINT_GEOMETRY_CSS in the billing package), so these numbers are the whole geometry.
+ */
 export const resolveInvoicePdfPrintOptions = (
   input: InvoicePrintResolutionInput | null | undefined
 ): InvoicePdfPrintOptions => {
   const resolved = resolveTemplatePrintSettings(input);
+  const marginStr = `${roundToTwoDecimals(resolved.marginMm)}mm`;
+  const margin = { top: marginStr, right: marginStr, bottom: marginStr, left: marginStr };
 
-  // When margins come from explicit printSettings (not inferred from CSS
-  // padding), use them as Puppeteer margins.  When they were inferred from the
-  // page section's CSS padding, the padding is already in the HTML — setting
-  // Puppeteer margins too would double-count and push content to extra pages.
   const customPageSize = resolved.source === 'explicit' ? resolved.customPageSize : undefined;
   if (customPageSize) {
     // A custom page is sized by the document's own @page rule (see resolveCustomPageCss), which
-    // also owns the margin; Chromium is told to honour it, and the same width/height is passed so
-    // the two can never disagree. Margins are therefore not repeated here.
+    // Chromium is told to honour; under preferCSSPageSize that rule's margin wins over the one
+    // passed here, so the same number is passed and the two can never disagree.
     return {
       width: `${customPageSize.width}${customPageSize.unit}`,
       height: `${customPageSize.height}${customPageSize.unit}`,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+      margin,
       printBackground: true,
       preferCSSPageSize: true,
     };
   }
 
-  const hasCssPadding = Number.isFinite(input?.pagePaddingPx) && (input?.pagePaddingPx ?? 0) > 0;
-  const useExplicitMargin = resolved.source === 'explicit' && !hasCssPadding;
-  const marginStr = useExplicitMargin ? `${roundToTwoDecimals(resolved.marginMm)}mm` : '0mm';
-
   return {
     format: resolved.paperPreset,
-    margin: {
-      top: marginStr,
-      right: marginStr,
-      bottom: marginStr,
-      left: marginStr,
-    },
+    margin,
     printBackground: true,
   };
 };

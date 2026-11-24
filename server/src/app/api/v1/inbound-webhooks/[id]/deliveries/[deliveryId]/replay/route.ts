@@ -12,15 +12,16 @@ import {
   isServerActionErrorResult,
   NotFoundError,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
 type RouteContext = {
   params: Promise<{ id: string; deliveryId: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { id, deliveryId } = await context.params;
-    const original = await getInboundDelivery(deliveryId);
+    const original = await runWithApiKeyOrSession(request, () => getInboundDelivery(deliveryId));
     if (isServerActionErrorResult(original)) {
       return createServerActionErrorResponse(original);
     }
@@ -29,7 +30,7 @@ export async function POST(_request: Request, context: RouteContext) {
       throw new NotFoundError('Inbound delivery not found');
     }
 
-    const replayedDelivery = await replayInboundDelivery(deliveryId);
+    const replayedDelivery = await runWithApiKeyOrSession(request, () => replayInboundDelivery(deliveryId));
     if (isServerActionErrorResult(replayedDelivery)) {
       return createServerActionErrorResponse(replayedDelivery);
     }

@@ -4,10 +4,16 @@
  * secret resolution and persistence behavior without import cycles.
  */
 
-import axios from 'axios';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
+import {
+  assertImapOauthCredentialIssuerBound,
+  assertSafeImapOauthTokenEndpoint,
+  getImapOauthSecretNames,
+  isImapOauthCredentialIssuerBound,
+} from './imapOutboundTarget';
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -15,16 +21,45 @@ function asNonEmptyString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export async function getImapOauthSecrets(provider: {
-  id: string;
+type ImapOauthCredentialConfig = {
+  id?: string;
+  email_provider_id?: string;
   tenant: string;
-}): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  oauth_token_url?: string | null;
+  oauth_credentials_token_url?: string | null;
+  oauth_credentials_secret_version?: number | null;
+  oauth_client_secret?: string | null;
+  refresh_token?: string | null;
+};
+
+/**
+ * A newly saved application secret can start authorization before mailbox
+ * tokens exist. Persistence clears this DB value on endpoint changes. Secret
+ * store fallbacks and existing refresh tokens require an active issuer binding.
+ */
+export async function getImapOauthAuthorizationCredentials(
+  provider: ImapOauthCredentialConfig,
+): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  if (!isImapOauthCredentialIssuerBound(provider)) {
+    return {
+      clientSecret: provider.oauth_credentials_token_url == null ? provider.oauth_client_secret || null : null,
+      refreshToken: null,
+    };
+  }
+  const names = getImapOauthSecretNames(provider);
   const secretProvider = await getSecretProviderInstance();
   const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.clientSecret)) || provider.oauth_client_secret || null;
   const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
+    (await secretProvider.getTenantSecret(provider.tenant, names.refreshToken)) || provider.refresh_token || null;
   return { clientSecret, refreshToken };
+}
+
+export async function getImapOauthSecrets(
+  provider: ImapOauthCredentialConfig,
+): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  assertImapOauthCredentialIssuerBound(provider);
+  return getImapOauthAuthorizationCredentials(provider);
 }
 
 export async function refreshImapAccessToken(params: {
@@ -32,6 +67,8 @@ export async function refreshImapAccessToken(params: {
     id: string;
     tenant: string;
     oauth_token_url?: string | null;
+    oauth_credentials_token_url?: string | null;
+    oauth_credentials_secret_version?: number | null;
     oauth_client_id?: string | null;
     oauth_client_secret?: string | null;
     refresh_token?: string | null;
@@ -45,27 +82,31 @@ export async function refreshImapAccessToken(params: {
     throw new Error('IMAP OAuth token URL or client ID missing');
   }
 
-  const { clientSecret, refreshToken } = await getImapOauthSecrets({
-    id: provider.id,
-    tenant: provider.tenant,
-  });
-  const effectiveRefreshToken = refreshToken || provider.refresh_token;
-  const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
-  if (!effectiveRefreshToken) {
+  // Check the durable DB binding before reading secrets: secret-provider
+  // fallbacks must not revive credentials for a different token issuer.
+  assertImapOauthCredentialIssuerBound(provider);
+  await assertPublicHttpsUrl(provider.oauth_token_url);
+  await assertSafeImapOauthTokenEndpoint(provider.oauth_token_url);
+
+  const { clientSecret, refreshToken } = await getImapOauthSecrets(provider);
+  if (!refreshToken) {
     throw new Error('IMAP OAuth refresh token missing');
   }
 
   const paramsBody = new URLSearchParams();
   paramsBody.append('grant_type', 'refresh_token');
-  paramsBody.append('refresh_token', effectiveRefreshToken);
+  paramsBody.append('refresh_token', refreshToken);
   paramsBody.append('client_id', provider.oauth_client_id);
-  if (effectiveClientSecret) {
-    paramsBody.append('client_secret', effectiveClientSecret);
+  if (clientSecret) {
+    paramsBody.append('client_secret', clientSecret);
   }
 
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
+  let response;
+  try {
+    response = await postSafeOutboundForm<{ access_token?: string; expires_in?: number }>(provider.oauth_token_url, paramsBody);
+  } catch {
+    throw new Error('IMAP OAuth token refresh failed');
+  }
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {
     throw new Error('IMAP OAuth refresh returned no access token');

@@ -51,7 +51,8 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 - **Repeatable stack**: the `stack` node accepts an optional `repeat: { sourceBinding, itemBinding, keyPath? }` — the stack (and all its children) renders once per item in the source collection, pushing the current item onto the render scope under `itemBinding`. Nested `path` expressions and inner `dynamic-table` nodes resolve against the per-iteration item. Without `repeat`, the stack renders its children once against the outer scope.
 - Style tokens/classes and inline style declarations
 - Bindings for invoice values and collections (extensible — quote and sales-order bindings supported through the same per-document-kind catalog)
-- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field.
+- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field. Two replacement fields are now part of the render model: `invoice.discountTotal` carries the positive discount magnitude (the amount taken off), and `invoice.grossSubtotal` carries the pre-discount line-item subtotal (net subtotal plus the discount amount). Line-item rows also gain a boolean `isDiscount` field that is `true` for discount-type line items; use it in a `filter` transform to separate discount rows from charge rows in a custom totals section.
+- **Value wording**: field, table column, column line and totals-row nodes accept an optional `valueLabels?: Record<string, TemplateI18nText>` (validated in `schema.ts`) that maps a raw value, keyed by `String(value)`, to the text printed for it. All of those surfaces, plus child-row cells, word values through one helper, `formatTemplateValue()` (`packages/billing/src/lib/invoice-template-ast/valueFormatting.ts`), with this precedence: the author's `valueLabels` entry (a label that resolves to `''` prints nothing), then localized Yes/No (`labels.yes` / `labels.no`) for any boolean, then the caller's existing formatting. Booleans therefore no longer render as raw `true`/`false` in any template, standard or custom, without AST edits; currency, number and date formatting is unchanged. The designer exposes this as **Value wording** in the table column inspector (`ValueLabelsEditor`), with known-value suggestions for `is_*`/`has_*` booleans and `billing_frequency` (`valueLabelSuggestions.ts`). Field, column-line and totals nodes support `valueLabels` in the AST and renderer but have no editor yet, and the canvas preview of standalone fields ignores it.
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
 
@@ -86,6 +87,26 @@ Invoice view models expose a complete primary presentation and two optional deta
 The default recipient instruction is **Contact your service provider for a billed-time breakdown.** It does not promise an invoice-specific entry or rate ledger in the client portal.
 
 **Privacy and accounting.** Snapshots include only approved customer-visible work-item fields. Internal ticket comments and time-entry notes are excluded. Presentation does not change canonical charge descriptions, service/account mappings, or accounting exports.
+
+### Bundle Component Rows (Fixed Contract Lines)
+
+A Fixed contract line is persisted as one parent charge (quantity 1, no service) with a detail row per service. At generation a **presentation snapshot** is written to `invoice_charges.bundle_presentation` (JSONB, version 1). It holds names, raw configured quantities, the pricing basis (`unit` | `bundle`), order, service period, the detail ids and the previous-period quantity with a comparison marker. It holds **no amounts**; component money always comes from `invoice_charge_fixed_details.allocated_amount`.
+
+Items of a bundle expose `subtitle`, `hasComponents` and `components` (`name`, `quantity`, `quantityChange`, `pricingBasis`, `periodLabelStart`/`periodLabelEnd`, and `unitPrice`/`total` only when priced - see below). The parent keeps quantity 1 and rate = total, so templates that ignore `components` render exactly as before.
+
+**Rendering.** `dynamic-table.childRows` is a native renderer feature: `sourcePath`, `itemBinding`, per-column `cells` (`value`, `format`, `lines`, and a `change` value formatted `signed-number`, shown green for +N and red for −N), `parentBlankColumns` and `style`. The `daterange` path filter renders "start – end". `buildBundleChildRowsPreset` (`lib/invoice-template-ast/bundleChildRows.ts`) is the single definition used by the standard template and the designer's **Bundle component rows** section (Off / Quantities only / Quantities and prices, plus a change toggle). Hand-authored `childRows` round-trip through the designer unchanged and show as "Custom".
+
+**Standard template.** `standard-bundle-quantities` ("Standard Invoice With Bundle Quantities") shows title, a muted subtitle and the bundle total, then indented service rows with quantity and change. Existing standard templates are not changed.
+
+**Where the text comes from.** Contract lines have an optional *Invoice title* (`invoice_line_description`) and *Invoice subtitle* (`invoice_line_subtitle`), edited in the contract line editors and the Fixed-line wizard step, mirrored on `contract_template_lines` and copied when a template is cloned.
+
+**Previous period.** `+N`/`−N` compares each service with the same line's latest earlier billed period, read from invoice detail rows (snapshot quantity preferred, cancelled invoices and the current invoice ignored). A first invoice, or a period that cannot be compared, shows no change.
+
+**Price gating (client visibility).** The client portal serializes the view model to the browser, so prices are omitted from the data, not merely hidden. `templateUsesComponentPricing(ast)` is true only when the template binds `unitPrice` or `total` of a component; component prices are loaded for client-visible reads only then, and component rows only when `templateHasComponentRows(ast)`. MSP users always receive amounts. An unresolvable template fails closed (no component data). `Invoice.getInvoiceCharges` (shared with the REST `/items` endpoint and MCP) loads none of this unless a caller opts in via `InvoiceChargeLoadOptions`.
+
+**Draft preview.** `buildPreviewInvoiceForSelectionInputs({ consolidateFixedBundles: true })` folds a draft's Fixed charges into the same bundle shape; the Automatic Invoices dialog keeps its per-service operator view.
+
+Out of scope: inventory kits, non-Fixed lines, mid-period adjustment rows, and backfill of invoices generated before this feature (they have no snapshot and render as plain lines).
 
 ### Style Declaration Properties
 
@@ -161,7 +182,10 @@ There are two types of invoice layouts:
 | `standard-detailed` | Full branding + party blocks |
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
+| `standard-bundle-quantities` | Default layout plus Fixed-line bundle rows: title, muted subtitle, total, then indented service rows with quantity and +N/−N change (no component prices) |
 | `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
+
+**Service period and currency in standard templates.** All five standard invoice templates include a **Service Period** column on each line-item row, showing the billing period as a formatted date range (e.g. `Sep 1, 2026 – Sep 30, 2026`) for recurring contract lines and blank for one-time charges. A **Currency** field also appears in the document header and the totals block. Custom templates can reproduce either element by binding `item.servicePeriodLabel` (per item, inside a `table` or `dynamic-table`) or `currencyCode` (a top-level document binding) from the field picker.
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 
@@ -243,7 +267,7 @@ The quoting system reuses the AST engine for its own document templates. The sha
 
 | Shared | Invoice-specific | Quote-specific |
 |--------|-----------------|----------------|
-| AST schema + validation | Invoice bindings | Quote bindings (`quoteNumber`, `validUntil`, `lineItems` with `is_optional`/`is_recurring`) |
+| AST schema + validation | Invoice bindings | Quote bindings (`quoteNumber`, `validUntil`, `lineItems` with `is_optional`/`is_selected`/`optional_label`/`is_recurring`) |
 | Evaluator | Invoice view model | Quote view model |
 | React renderer | Invoice sample scenarios | Quote sample scenarios (`quoteSampleScenarios.ts`) |
 | Server HTML wrapper | `invoice_templates` table | `quote_document_templates` table |

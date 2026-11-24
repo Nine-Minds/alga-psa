@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const TICKET_1 = '00000000-0000-4000-8000-000000000001';
 
@@ -106,6 +106,11 @@ vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
 }));
 
 describe('addClientTicketComment response source metadata', () => {
+  // LEVERAGE: pattern warm-cold-import — the first dynamic import is billed to the first test's timeout
+  beforeAll(async () => {
+    await import('./client-tickets');
+  }, 120_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     currentUser = {
@@ -183,11 +188,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {
@@ -290,11 +306,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {
@@ -377,14 +404,16 @@ describe('addClientTicketComment response source metadata', () => {
               return {
                 where: vi.fn((criteria: any) => {
                   if (criteria && 'user_id' in criteria) {
-                    // Ownership lookup: comment_id + user_id
-                    return {
+                    // Ownership lookup: comment_id + user_id + visibility guards
+                    const ownershipBuilder: any = {
+                      whereNull: vi.fn(() => ownershipBuilder),
                       first: vi.fn().mockResolvedValue({
                         comment_id: 'comment-1',
                         ticket_id: TICKET_1,
                         user_id: 'user-1',
                       }),
                     };
+                    return ownershipBuilder;
                   }
                   return {
                     update: commentsUpdateMock,

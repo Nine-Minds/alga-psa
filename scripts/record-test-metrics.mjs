@@ -56,6 +56,12 @@ export function runKind(env) {
   }
 }
 
+// One row per source directory per run. Recording them for every PR run
+// filled the workbook, and only main's history is read as a trend.
+export function recordsCoverageDetail(env) {
+  return env.TEST_METRICS_DETAIL === '1' && runKind(env) === 'main';
+}
+
 function executionMetrics(execution, revision) {
   const unknown = { expectedFiles: '', collectedTests: '', gateStatus: 'incomplete' };
   if (execution === undefined) return { ...unknown, gateStatus: 'unverified' };
@@ -446,6 +452,7 @@ async function main() {
 
   writeJobSummary(row);
 
+  const recordDetail = recordsCoverageDetail(process.env);
   const rawKey = process.env.GOOGLE_SA_KEY;
   const sheetId = process.env.TEST_METRICS_SHEET_ID;
   if (!rawKey || !sheetId) {
@@ -456,10 +463,10 @@ async function main() {
   const tab = process.env.TEST_METRICS_SHEET_TAB || 'metrics';
   const token = await getAccessToken(parseServiceAccountKey(rawKey));
   await appendRows(token, sheetId, tab, HEADER, [row]);
-  if (detailRows.length) {
+  if (recordDetail && detailRows.length) {
     await appendRows(token, sheetId, 'coverage_by_dir', DETAIL_HEADER, detailRows);
   }
-  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed${row[17] === 'partial' ? ', partial run' : ''})${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
+  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed${row[17] === 'partial' ? ', partial run' : ''})${recordDetail && detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

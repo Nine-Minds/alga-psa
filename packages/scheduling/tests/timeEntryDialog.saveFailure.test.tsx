@@ -36,6 +36,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback?: string) => (typeof fallback === 'string' ? fallback : _key),
   }),
+  useFormatters: () => ({ formatDate: (value: Date | string) => new Date(value).toISOString().slice(0, 10) }),
+  translate: (_namespace: string, key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -80,6 +82,7 @@ vi.mock('../src/context/SchedulingCrossFeatureContext', () => ({
 }));
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  isServiceOptionalForWorkItem: vi.fn(async () => false),
   deleteTimeEntry: vi.fn(),
   fetchTimeEntriesForTimeSheet: vi.fn().mockResolvedValue([]),
 }));

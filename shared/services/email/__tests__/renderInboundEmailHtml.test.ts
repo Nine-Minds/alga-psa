@@ -6,8 +6,10 @@ import { simpleParser } from 'mailparser';
 
 import { normalizeRfc822MessageId } from '../inboundEmailIdentity';
 import { INBOUND_MIME_PARSE_OPTIONS } from '../inboundMimeParseOptions';
+import { embeddedCidAttachmentId, extractEmbeddedImageAttachments } from '../inboundEmailArtifactHelpers';
 import {
   buildInboundEmailHtmlFromMime,
+  embeddedImageMappingsFromRows,
   whereInboundEmailArtifactMessageId,
 } from '../renderInboundEmailHtml';
 
@@ -170,6 +172,68 @@ describe('buildInboundEmailHtmlFromMime', () => {
     );
 
     expect(html).toBeNull();
+  });
+});
+
+describe('embeddedImageMappingsFromRows', () => {
+  const emailId = '<YT1PR01MB4776@YT1PR01MB4776.CANPRD01.PROD.OUTLOOK.COM>';
+  const contentId = '<140e8e1f-33e0-488b-b94d-6764e9453f8f>';
+  const providerRow = {
+    attachment_id: contentId,
+    content_id: contentId,
+    file_id: null,
+    document_id: null,
+    processing_status: 'skipped',
+  };
+
+  it('maps a pasted image whose stored row predates the recorded Content-ID', async () => {
+    const mappings = embeddedImageMappingsFromRows(emailId, [
+      providerRow,
+      {
+        attachment_id: embeddedCidAttachmentId(emailId, contentId, contentId),
+        content_id: null,
+        file_id: 'file-1',
+        document_id: 'doc-1',
+        processing_status: 'success',
+      },
+      { attachment_id: '__original_email_source__', content_id: null, file_id: 'eml', document_id: 'd', processing_status: 'success' },
+    ]);
+
+    expect(mappings).toEqual([
+      {
+        source: 'cid',
+        reference: '140e8e1f-33e0-488b-b94d-6764e9453f8f',
+        fileId: 'file-1',
+        documentId: 'doc-1',
+        url: '/api/documents/view/file-1',
+      },
+    ]);
+  });
+
+  it('maps the row extraction writes today, once', () => {
+    const [embedded] = extractEmbeddedImageAttachments({
+      emailId,
+      html: `<img src="cid:${contentId.slice(1, -1)}">`,
+      attachments: [{ id: contentId, name: 'image.png', contentType: 'image/png', size: 10, contentId }],
+    }).attachments;
+
+    const mappings = embeddedImageMappingsFromRows(emailId, [
+      providerRow,
+      {
+        attachment_id: embedded!.id,
+        content_id: embedded!.contentId ?? null,
+        file_id: 'file-1',
+        document_id: 'doc-1',
+        processing_status: 'success',
+      },
+    ]);
+
+    expect(embedded!.contentId).toBe('140e8e1f-33e0-488b-b94d-6764e9453f8f');
+    expect(mappings.map((mapping) => mapping.url)).toEqual(['/api/documents/view/file-1']);
+  });
+
+  it('offers nothing for an image that was never stored', () => {
+    expect(embeddedImageMappingsFromRows(emailId, [providerRow])).toEqual([]);
   });
 });
 

@@ -168,7 +168,7 @@ describe('live ticket update helpers', () => {
       updatedAt: '2026-05-07T12:00:00.000Z',
     });
 
-    const [, payloadJson] = publishMock.mock.calls.at(-1) ?? [];
+    const [, payloadJson] = publishMock.mock.calls[0] ?? [];
     const payload = JSON.parse(payloadJson);
 
     expect(payload).toEqual({
@@ -183,6 +183,12 @@ describe('live ticket update helpers', () => {
     expect(payload).not.toHaveProperty('title');
     expect(JSON.stringify(payload)).not.toContain('Original');
     expect(JSON.stringify(payload)).not.toContain('Resolved');
+  });
+
+  it('does not publish ticket ids to the tenant room without recipient ticket-read authorization', async () => {
+    await publishTicketUpdate({ tenantId: 'tenant-1', ticketId: 'ticket-9', updatedFields: ['status_id'],
+      updatedBy: { userId: 'user-1', displayName: 'Pat Agent' }, updatedAt: '2026-05-07T12:00:00.000Z' });
+    expect(publishMock.mock.calls.some(([channel]) => channel.endsWith('ticket-list-changes:tenant-1'))).toBe(false);
   });
   it('publishes a qualified MSP actor with a null local user and rejects mixed/cross-owner identities', async () => {
     const tenantId = '00000000-0000-4000-8000-000000000001';

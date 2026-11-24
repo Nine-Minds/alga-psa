@@ -1,0 +1,19 @@
+{
+  "projectId": "408b0ddd-de45-4ef6-bf35-b88251c8515c",
+  "projectRevision": 176,
+  "attention": {
+    "kind": "blocked",
+    "captainRequirement": {
+      "kind": "access",
+      "detail": "Authorized card-managed app must be running under the no-app-start constraint; attach QA-authenticated project browser and provide read-only server_card_sp_c4 access. Do not restart shared supervisor or launch app from this step."
+    },
+    "recordedAt": "2026-11-03T23:07:53.408Z"
+  },
+  "liveServices": ["idp-sim", "review-guide"],
+  "applicationServicesAvailable": false,
+  "ports": {
+    "3835": 0,
+    "23835": 0
+  },
+  "uiEvidence": "pending"
+}

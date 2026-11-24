@@ -52,6 +52,11 @@ function makeStatefulLedger() {
       rows.find((r) => r.alga_entity_type === entityType && r.external_entity_id === externalId) ?? null
     ),
     findNonConsumable: vi.fn(async () => undefined),
+    findTombstonedByExternalId: vi.fn(async (entityType: string, externalId: string) =>
+      rows.filter(
+        (r) => r.alga_entity_type === entityType && r.external_entity_id === externalId && r.deleted_at
+      )
+    ),
     insert: vi.fn(async (record: any) => {
       const row = {
         id: `map-${rows.length + 1}`,
@@ -383,7 +388,8 @@ describe('Scenario: QBO-side void arrives through CDC', () => {
     const exceptions = makeExceptions();
     const applyLocalVoid = vi.fn(async (_invoiceId: string) => ({
       status: 'blocked' as const,
-      reason: 'Unwind payments before voiding.'
+      reasonCode: 'payments_recorded',
+      reason: 'Reverse the payments recorded in AlgaPSA (check 1042) before voiding this invoice.'
     }));
 
     for (const change of changeSet.changes.filter((c) => c.entityType === 'Invoice')) {
@@ -399,7 +405,7 @@ describe('Scenario: QBO-side void arrives through CDC', () => {
         type: 'accounting_sync_drift',
         context: expect.objectContaining({
           drift_kind: 'external_voided',
-          local_void_blocked_reason: 'Unwind payments before voiding.'
+          local_void_blocked_reason: 'payments_recorded'
         })
       })
     );

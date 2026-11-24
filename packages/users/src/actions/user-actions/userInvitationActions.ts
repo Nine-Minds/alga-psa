@@ -8,9 +8,10 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { findPendingInvitation } from '@alga-psa/licensing';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
-import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
+import { isCoManagedInvitationServed, seatAssignmentOfInvitation, seatInvitationAcceptance } from '../../lib/coManagedInvitationCapability';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -33,6 +34,7 @@ export type UserInvitationErrorCode =
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | 'SEAT_ARRANGEMENT_REFUSED'
   | 'CAPABILITY_UNAVAILABLE'
   | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
   | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
@@ -59,6 +61,14 @@ function normalizeSendUserInvitationError(
   }
   if (error instanceof UserInvitationError) {
     return { message: error.message.trim() || undefined, errorCode: error.errorCode };
+  }
+  // Seat-limit refusal from UserService.createFromInvitation (same codes the
+  // invite-send limit check reports).
+  if (error instanceof Error && error.name === 'LicenseLimitError') {
+    const code = (error as Error & { code?: unknown }).code;
+    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED' || code === 'SEAT_ARRANGEMENT_REFUSED') {
+      return { message: error.message, errorCode: code };
+    }
   }
 
   if (error instanceof Error) {
@@ -172,6 +182,13 @@ export const sendUserInvitation = withAuth(async (
     const reservation: Reservation = await knex.transaction(async (trx): Promise<Reservation> => {
       // Lock before counting reserved seats: the count is part of the decision.
       await lockInternalUserSeats(trx, tenant);
+      // A seat technician's invitation holds a seat of its arrangement, not one of the MSP's. This
+      // flow would count it against the MSP limit and give it a role, so the seat flow keeps it.
+      // The same read tells whether this send creates the invitation or refreshes a pending one.
+      const pending = await findPendingInvitation(trx, tenant, normalizedEmail);
+      if (pending?.seatInvitation) {
+        return { rejected: { success: false as const, error: 'This email already holds a seat invitation.', errorCode: 'CO_MANAGED_INVITATION_INVALID' as const } };
+      }
       const reservedSeats = await countPendingInvitationSeats(trx, tenant, { excludeEmail: normalizedEmail });
 
       const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { reservedSeats, deferCoManaged: true });
@@ -181,12 +198,13 @@ export const sendUserInvitation = withAuth(async (
       if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
         return { rejected: { success: false as const, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const } };
       }
-      if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
-
       const refreshedExisting = await tenantDb(trx, tenant).table('user_invitations')
-        .where({ email: normalizedEmail, used_at: null })
+        .where({ email_normalized: normalizedEmail, used_at: null })
         .where('expires_at', '>', trx.fn.now())
-        .first('invitation_id');
+        .first('invitation_id', 'email_normalized');
+      if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, {
+        email: normalizedEmail, kind: 'invitation', existingInvitationId: refreshedExisting?.invitation_id,
+      });
 
       const invitationResult = await UserInvitationService.createInvitationWithTransaction(
         { email: normalizedEmail, firstName: params.firstName, lastName: params.lastName, roleId: params.roleId },
@@ -201,7 +219,7 @@ export const sendUserInvitation = withAuth(async (
       return {
         invitationId: invitationResult.invitationId,
         token: invitationResult.token || '',
-        created: !refreshedExisting,
+        created: !pending,
       };
     }).catch((error) => {
       console.error('Team invitation transaction failed:', error);
@@ -332,6 +350,13 @@ export async function completeUserInvitationSetup(
     const tenantFromInvitation = verificationResult.tenant;
     const invitee = verificationResult.invitee;
 
+    // A seat technician's invitation completes through the seat command, which creates the user with
+    // the seat role and activates the assignment; this flow would give it a role and count it against
+    // the MSP's licence. The capability was checked in verifyToken, with the token's own tenant.
+    if (seatAssignmentOfInvitation(verificationResult.invitation?.metadata)) {
+      return await completeSeatInvitationSetup(tenantFromInvitation, token, password, invitee.email);
+    }
+
     const result = await runWithTenant(tenantFromInvitation, async () => {
       const { knex, tenant } = await createTenantKnex();
       if (!tenant) {
@@ -364,11 +389,11 @@ export async function completeUserInvitationSetup(
       try {
         outcome = await runAsSystem('user-invitation-account-creation', async () =>
           knex.transaction(async (trx): Promise<AcceptOutcome> => {
-            const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { deferCoManaged: true });
-            if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-              return { rejected: { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } };
-            }
-            if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+            // Co-managed tenants are admitted by their sponsor-backed allocation
+            // inside UserService.createFromInvitation; the capability is gated here.
+            const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+            const coManagedTenant = tenantRow?.product_code === 'co_managed';
+            if (coManagedTenant && !await isCoManagedInvitationServed(tenant)) {
               return { rejected: { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' } };
             }
 
@@ -413,12 +438,19 @@ export async function completeUserInvitationSetup(
               role_ids: [invitationRole.role_id]
             };
 
-            let user;
-            if (licenseCheck.coManaged) {
-              // Consumes the invitation token itself.
-              user = await userService.createFromCoManagedInvitation(userData, systemContext, trx, token);
-            } else {
-              user = await userService.createInTransaction(userData, systemContext, trx);
+            // Admission (co-managed gate or ordinary seat limit), the account and
+            // its role run under the per-tenant seat lock in this transaction.
+            // Co-managed admission consumes the invitation token itself.
+            const { user, coManaged } = await userService.createFromInvitation(userData, systemContext, trx, token);
+            if (!coManaged) {
+              const acceptedInvitation = await tenantDb(trx, tenant).table('user_invitations')
+                .where({ token, used_at: null }).forUpdate()
+                .first('invitation_id', 'email_normalized');
+              if (!acceptedInvitation) throw new UserInvitationError('Invitation already used', 'INVALID_OR_EXPIRED_TOKEN');
+              await tenantDb(trx, tenant).table('user_invitations')
+                .where({ email_normalized: acceptedInvitation.email_normalized, used_at: null })
+                .whereNull('invited_user_id')
+                .update({ invited_user_id: user.user_id });
               const consumed = await tenantDb(trx, tenant).table('user_invitations')
                 .where({ token, used_at: null })
                 .update({ used_at: trx.fn.now() });
@@ -465,6 +497,43 @@ export async function completeUserInvitationSetup(
   } catch (error) {
     console.error('Error completing team invitation setup:', error);
     return { success: false, error: 'Failed to complete account setup', errorCode: 'SETUP_FAILED' };
+  }
+}
+
+/** Seat-kind completion: the same password policy and token handling as above, the seat command for the account. */
+async function completeSeatInvitationSetup(tenant: string, token: string, password: string, email: string) {
+  try {
+    return await runWithTenant(tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const answer = await seatInvitationAcceptance().delegate(tenant, (seat) => seat.acceptSeatInvitation(knex, { token, password }));
+      // No provider, or the seat shape no longer serves the sponsor: the same refusal verifyToken gives.
+      if (!answer.handled) {
+        return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const };
+      }
+      if ('refused' in answer) {
+        const { code, message } = answer.refused;
+        const errorCode: UserInvitationErrorCode =
+          code === 'INVITATION_NOT_FOUND' || code === 'INVITATION_EXPIRED' || code === 'INVITATION_REVOKED' || code === 'INVALID_ACCEPTANCE'
+            ? 'INVALID_OR_EXPIRED_TOKEN'
+            : code === 'EMAIL_IN_USE' ? 'CREATE_USER_FAILED'
+              : code === 'ENTITLEMENT_LAPSED' ? 'CO_MANAGED_LICENSE_LAPSED'
+                : 'CO_MANAGED_NOT_ACTIVE';
+        return { success: false, error: errorCode === 'INVALID_OR_EXPIRED_TOKEN' ? 'Invalid or expired invitation token' : message, errorCode } as const;
+      }
+      const accepted = answer.accepted;
+      if (accepted.created) {
+        try {
+          const UserPreferences = await import('@alga-psa/db').then((m) => m.UserPreferences);
+          await UserPreferences.upsert(knex, { user_id: accepted.user_id, setting_name: 'has_reset_password', setting_value: true, updated_at: new Date() });
+        } catch (prefError) {
+          console.warn('Failed to set password reset preference:', prefError);
+        }
+      }
+      return { success: true, userId: accepted.user_id, username: email, message: 'Account created successfully' } as const;
+    });
+  } catch (error) {
+    console.error('Error completing seat invitation setup:', error);
+    return { success: false, error: 'Failed to complete account setup', errorCode: 'SETUP_FAILED' as const };
   }
 }
 

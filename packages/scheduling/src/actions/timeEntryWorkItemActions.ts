@@ -1,6 +1,7 @@
 'use server'
 
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -10,13 +11,17 @@ import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
   FetchTimeEntriesParams,
   addWorkItemParamsSchema,
-  AddWorkItemParams
+  AddWorkItemParams,
+  deleteWorkItemParamsSchema,
+  DeleteWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 import { recalculateProjectTaskActualHours } from '@alga-psa/db';
+import { deleteTimeEntryCore } from '../lib/timeEntryWriteCore';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   effectiveServiceIdSql,
   effectiveServiceNameSql,
@@ -28,6 +33,21 @@ const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 function normalizeNonBillableWorkItemId(workItemId: string | null | undefined): string {
   return workItemId || NON_BILLABLE_FALLBACK_WORK_ITEM_ID;
 }
+
+/**
+ * Whether the time-entry drawer may save time on this work item without a service. The answer comes only from a
+ * registered time source; native (and every tenant no source serves) answers false, so "service required" stands.
+ */
+export const isServiceOptionalForWorkItem = withAuth(async (
+  user,
+  { tenant },
+  workItemType: string,
+  workItemId: string
+): Promise<boolean> => {
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType, workItemId },
+    (source, ctx) => source.work.serviceOptional(ctx, workItemType, workItemId));
+  return delegated.handled ? delegated.value === true : false;
+});
 
 export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
@@ -45,6 +65,14 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entry work items');
   }
+
+  // Work items listed here are the ones this sheet's entries point at; entries of clients the reader may not see do not count.
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+  const timeEntriesInScope = () => {
+    const query = scopedDb.table('time_entries');
+    readScope.apply(query);
+    return query;
+  };
 
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
@@ -64,7 +92,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const ticketsQuery = scopedDb.table('tickets')
     .whereIn(
       'tickets.ticket_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ticket',
@@ -72,6 +100,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
         })
     );
   scopedDb.tenantJoin(ticketsQuery, 'tickets as mt', 'tickets.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+  // Not narrowed by ticket read scope here: the time sheet grid has one row per work item returned, so a time entry
+  // whose ticket is dropped would stay in the totals and submission with no row to show it. Narrowing this list
+  // belongs with the time entry list authorization (S10), which must drop the entries and the work items together.
   const tickets = await ticketsQuery
     .select(
       'tickets.ticket_id as work_item_id',
@@ -87,7 +118,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const projectTasksQuery = scopedDb.table('project_tasks')
     .whereIn(
       'task_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'project_task',
@@ -120,7 +151,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const adHocEntries = await scopedDb.table('schedule_entries')
     .whereIn(
       'entry_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'ad_hoc',
@@ -138,7 +169,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   const interactionsQuery = scopedDb.table('interactions')
     .whereIn(
       'interaction_id',
-      scopedDb.table('time_entries')
+      timeEntriesInScope()
         .select('work_item_id')
         .where({
           'time_entries.work_item_type': 'interaction',
@@ -159,7 +190,7 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       db.raw("'interaction' as type")
     );
 
-  const nonBillableEntries = await scopedDb.table('time_entries')
+  const nonBillableEntries = await timeEntriesInScope()
     .where({
       'time_entries.work_item_type': 'non_billable_category',
       'time_entries.time_sheet_id': validatedParams.timeSheetId
@@ -183,10 +214,15 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     }, new Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>()).values()
   );
 
-  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IExtendedWorkItem => ({
+  // Time-source seam: a registered provider lists the work items it owns on this sheet; native misses (0 statements).
+  const contributed = await delegateToTimeSource({ tenant, userId: user.user_id },
+    (source, ctx) => source.work.listSheetItems(ctx, db, validatedParams.timeSheetId));
+  const providerItems = contributed.handled ? contributed.value : [];
+
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems, ...(providerItems as any[])].map((item): IExtendedWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
-    ticket_number: item.type === 'ticket' ? item.ticket_number : undefined
+    ticket_number: item.type === 'ticket' || providerItems.includes(item) ? item.ticket_number : undefined
   }));
   } catch (error) {
     const expected = timeSheetActionErrorFrom(error);
@@ -246,39 +282,88 @@ export const addWorkItem = withAuth(async (
 export const deleteWorkItem = withAuth(async (
   user,
   { tenant },
-  workItemId: string
+  workItemId: string,
+  timeSheetId: string,
+  workItemType: string,
 ): Promise<void | TimeSheetActionError> => {
   // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
-  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.removeWorkItem(ctx, workItemId));
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.removeWorkItem(ctx, workItemId, timeSheetId, workItemType));
   if (delegated.handled) return delegated.value;
   try {
   const {knex: db} = await createTenantKnex();
+  const validatedParams = validateData<DeleteWorkItemParams>(deleteWorkItemParamsSchema, {
+    workItemId,
+    timeSheetId,
+    workItemType,
+  });
 
   // Check permission for time entry deletion (deleting work items affects time entries)
   if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete work items for time entries');
   }
 
-    await db.transaction(async (trx) => {
-      const scopedDb = tenantDb(trx, tenant) as any;
-      const projectTaskEntries = await scopedDb.table('time_entries')
-        .where({ work_item_id: workItemId, work_item_type: 'project_task' })
-        .select('work_item_id');
-      // First delete all time entries associated with this work item
-      // Note: This only deletes time entries. It doesn't delete the work item itself
-      // (e.g., the ticket or project task). Consider if the work item itself should be deleted.
-      await scopedDb.table('time_entries')
-        .where({
-          work_item_id: workItemId
-        })
-        .delete();
-      await recalculateProjectTaskActualHours(
-        trx,
-        tenant,
-        projectTaskEntries.map((entry: { work_item_id: string }) => entry.work_item_id),
-      );
-        console.log(`Deleted time entries associated with work item ${workItemId}`);
-    });
+  const scopedDb = tenantDb(db, tenant) as any;
+  const timeSheet = await scopedDb.table('time_sheets')
+    .where({ id: validatedParams.timeSheetId })
+    .select('user_id')
+    .first();
+  if (!timeSheet) {
+    throw new Error(`Time sheet with id ${validatedParams.timeSheetId} not found`);
+  }
+  await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+
+  const deletedEntries = await db.transaction(async (trx) => {
+    const transactionDb = tenantDb(trx, tenant) as any;
+    const entries = await transactionDb.table('time_entries')
+      .where({
+        work_item_id: validatedParams.workItemId,
+        work_item_type: validatedParams.workItemType,
+        time_sheet_id: validatedParams.timeSheetId,
+      })
+      .select('entry_id', 'user_id', 'invoiced', 'work_item_type', 'time_sheet_id', 'work_item_id')
+      // Keep both row-lock acquisition and billing reversal order deterministic.
+      .orderBy('entry_id', 'asc')
+      .forUpdate();
+
+    for (const entry of entries) {
+      await deleteTimeEntryCore(trx, tenant, entry.entry_id, {
+        guard: async (currentEntry) => {
+          await assertCanActOnBehalf(user, tenant, currentEntry.user_id, trx);
+          if (currentEntry.invoiced) {
+            throw new Error('This time entry has already been invoiced and cannot be deleted.');
+          }
+        },
+      });
+    }
+
+    await recalculateProjectTaskActualHours(
+      trx,
+      tenant,
+      entries
+        .filter((entry: { work_item_type: string }) => entry.work_item_type === 'project_task')
+        .map((entry: { work_item_id: string }) => entry.work_item_id),
+    );
+    return entries;
+  });
+
+  for (const entry of deletedEntries) {
+    try {
+      await publishEvent({
+        eventType: 'TIME_ENTRY_DELETED',
+        payload: {
+          tenantId: tenant,
+          timeEntryId: entry.entry_id,
+          userId: entry.user_id,
+          workItemId: entry.work_item_id,
+          workItemType: entry.work_item_type,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (eventError) {
+      console.error('[TimeEntryActions] Failed to publish TIME_ENTRY_DELETED event', eventError);
+    }
+  }
+  console.log(`Deleted time entries associated with work item ${validatedParams.workItemId}`);
   } catch (error) {
     console.error('Error deleting work item (associated time entries):', error);
     const expected = timeSheetActionErrorFrom(error);

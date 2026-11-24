@@ -133,7 +133,8 @@
       "notes": "Opmerkingen",
       "deleteTimeEntry": "Tijdsinvoer verwijderen",
       "unsavedChanges": "Niet-opgeslagen wijzigingen",
-      "contractLine": "Contractregel"
+      "contractLine": "Contractregel",
+      "operational": "Operationeel – niet gefactureerd"
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",
@@ -152,7 +153,8 @@
       "endAfterStartPicker": "De eindtijd moet na de starttijd liggen",
       "durationSameDay": "De duur moet op dezelfde dag eindigen",
       "endSameDay": "De eindtijd moet op dezelfde dag vallen als de starttijd",
-      "invalidTimeRange": "Voer een geldig tijdsbereik in"
+      "invalidTimeRange": "Voer een geldig tijdsbereik in",
+      "billableExceedsDuration": "De factureerbare duur mag de totale duur niet overschrijden"
     },
     "serviceSource": {
       "task": "Standaard van taak",
@@ -287,6 +289,7 @@
     }
   },
   "comments": {
+    "loading": "Opmerkingen laden...",
     "placeholder": "Voeg een reactie toe...",
     "responsePlaceholder": "Reageer op de gevraagde wijzigingen...",
     "respondToChanges": "Reageer op wijzigingen"
@@ -362,6 +365,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Gegevenstabel van de urenstaat",
+    "deleteWorkItem": {
+      "title": "Werkitem verwijderen",
+      "message": "Hierdoor worden alle tijdregistraties voor dit werkitem definitief verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "bundled": "Gebundeld",
+    "bundledTo": "Gebundeld → {{ticketNumber}}",
+    "addEntryForCell": "Tijdregistratie voor {{workItem}} op {{date}} toevoegen",
+    "saveTimeEntry": "Tijdregistratie opslaan",
+    "weeklyTotal": "Weektotaal",
     "empty": {
       "title": "Geen werkitems op uw urenstaat",
       "description": "Voeg een nieuw werkitem toe om uw tijd voor deze week bij te houden.",
@@ -424,6 +437,9 @@
     "viewEntryDetails": "Bekijk de invoerdetails"
   },
   "messages": {
+    "saveEntryFailed": "Kan tijdregistratie niet opslaan",
+    "updateTaskFailed": "Kan taak niet bijwerken",
+    "deleteWorkItemFailed": "Kan werkitem niet verwijderen",
     "serviceRequired": "Selecteer een dienst voordat u tijdregistraties opslaat",
     "invalidService": "Ongeldige dienst geselecteerd",
     "taxRegionRequired": "Selecteer een belastingregio voor belastbare diensten",
@@ -516,6 +532,12 @@
     "save": {
       "noPeriod": "Geen periode omvat {{date}}. Kies een dag binnen een periode.",
       "sheetLocked": "De urenstaat voor {{date}} heeft de status ‘{{status}}’. Kies een dag op een conceptstaat of een staat met aangevraagde wijzigingen."
+    },
+    "multiDay": {
+      "notice": "Deze timer liep over {{count}} dagen en wordt daarom opgeslagen als één tijdregistratie per dag. Verwijder een dag om de tijd daarvan weg te laten.",
+      "dayHeading": "Dag {{index}} van {{count}} · {{date}}",
+      "remove": "Verwijderen",
+      "total": "Totaal: {{duration}}"
     }
   },
   "launch": {
@@ -554,6 +576,11 @@
     },
     "activitySummary_few": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})",
     "activitySummary_many": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Urenstaten beheren",
+    "delegationDisabledPrefix": "Gedelegeerde tijdregistratie is momenteel uitgeschakeld. Schakel de functievlag",
+    "delegationDisabledSuffix": "in om de urenstaten van andere gebruikers te bewerken."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} bijgehouden in {{count}} segment (gepauzeerd {{paused}})",

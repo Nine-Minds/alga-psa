@@ -133,7 +133,8 @@
       "notes": "Notizen",
       "deleteTimeEntry": "Zeiteintrag löschen",
       "unsavedChanges": "Nicht gespeicherte Änderungen",
-      "contractLine": "Vertragsposition"
+      "contractLine": "Vertragsposition",
+      "operational": "Operativ – nicht abgerechnet"
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",
@@ -152,7 +153,8 @@
       "endAfterStartPicker": "Die Endzeit muss nach der Startzeit liegen",
       "durationSameDay": "Die Dauer muss am selben Tag enden",
       "endSameDay": "Die Endzeit muss am selben Tag wie die Startzeit liegen",
-      "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein"
+      "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein",
+      "billableExceedsDuration": "Die abrechenbare Dauer darf die Gesamtdauer nicht überschreiten"
     },
     "serviceSource": {
       "task": "Standard aus Aufgabe",
@@ -287,6 +289,7 @@
     }
   },
   "comments": {
+    "loading": "Kommentare werden geladen...",
     "placeholder": "Kommentar hinzufügen...",
     "responsePlaceholder": "Reagieren Sie auf die gewünschten Änderungen...",
     "respondToChanges": "Reagieren Sie auf Änderungen"
@@ -362,6 +365,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Stundenzetteltabelle",
+    "deleteWorkItem": {
+      "title": "Arbeitselement löschen",
+      "message": "Dadurch werden alle Zeiteinträge für dieses Arbeitselement dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "bundled": "Gebündelt",
+    "bundledTo": "Gebündelt → {{ticketNumber}}",
+    "addEntryForCell": "Zeiteintrag für {{workItem}} am {{date}} hinzufügen",
+    "saveTimeEntry": "Zeiteintrag speichern",
+    "weeklyTotal": "Wochensumme",
     "empty": {
       "title": "Keine Arbeitselemente auf Ihrem Stundenzettel",
       "description": "Fügen Sie ein neues Arbeitselement hinzu, um die Zeiterfassung für diese Woche zu starten.",
@@ -424,6 +437,9 @@
     "viewEntryDetails": "Eintragsdetails anzeigen"
   },
   "messages": {
+    "saveEntryFailed": "Zeiteintrag konnte nicht gespeichert werden",
+    "updateTaskFailed": "Aufgabe konnte nicht aktualisiert werden",
+    "deleteWorkItemFailed": "Arbeitselement konnte nicht gelöscht werden",
     "serviceRequired": "Bitte wählen Sie einen Dienst, bevor Sie Zeiteinträge speichern",
     "invalidService": "Ungültiger Dienst ausgewählt",
     "taxRegionRequired": "Bitte wählen Sie eine Steuerregion für steuerpflichtige Dienste",
@@ -516,6 +532,12 @@
     "save": {
       "noPeriod": "Kein Zeitraum umfasst den {{date}}. Wählen Sie einen Tag innerhalb eines Zeitraums.",
       "sheetLocked": "Der Stundenzettel für den {{date}} hat den Status „{{status}}“. Wählen Sie einen Tag auf einem Entwurf oder einem Stundenzettel mit angeforderten Änderungen."
+    },
+    "multiDay": {
+      "notice": "Dieser Timer lief über {{count}} Tage und wird daher als ein Zeiteintrag pro Tag gespeichert. Entfernen Sie einen Tag, um dessen Zeit nicht zu erfassen.",
+      "dayHeading": "Tag {{index}} von {{count}} · {{date}}",
+      "remove": "Entfernen",
+      "total": "Gesamt: {{duration}}"
     }
   },
   "launch": {
@@ -554,6 +576,11 @@
     },
     "activitySummary_few": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
     "activitySummary_many": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Stundenzettelverwaltung",
+    "delegationDisabledPrefix": "Die delegierte Zeiterfassung ist derzeit deaktiviert. Aktivieren Sie das Feature-Flag",
+    "delegationDisabledSuffix": "um die Stundenzettel anderer Benutzer zu bearbeiten."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",

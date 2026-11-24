@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { ContractLineSelectionReason } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import {
   actionError,
   permissionError,
@@ -132,6 +133,7 @@ export const getUnresolvedChargeReview = withAuth(async (
     db.tenantJoin(timeQuery, 'projects as p', 'p.project_id', 'pp.project_id', { type: 'left' });
 
     const timeRows = await timeQuery
+      .whereRaw(commercialTimeEntrySql('te'))
       .whereNull('te.contract_line_id')
       .where('te.invoiced', false)
       .whereNotNull('te.service_id')

@@ -152,8 +152,16 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
-  // alga-2026-0002945: invoice REST update field classification lists recurring service-period columns as lifecycle-owned.
-  'server/src/lib/api/schemas/invoiceUpdateFields.ts',
+  // alga-2026-0003012: shared invoice field policy classifies service-period fields for create and update.
+  'server/src/lib/api/schemas/invoiceFieldPolicy.ts',
+  // Bundle presentation compares component quantities across billed periods.
+  'packages/billing/src/lib/invoiceBundleComponents/bundleComponents.test.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/components.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/preview.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/previousPeriod.ts',
+  'packages/billing/src/lib/invoiceBundleComponents/snapshot.ts',
+  'packages/client-portal/src/components/billing/InvoiceDetailsDialog.bundleRows.test.tsx',
+  'server/src/test/integration/billing/invoiceBundleComponentRows.integration.test.ts',
   // alga-2026-0002883 (CM T0-2): late approved hourly time loader reads persisted service-period fields.
   'packages/billing/src/lib/billing/lateHourlyTime.ts',
   // alga-2026-0002883 (CM T0-2): late approved hourly time integration test seeds persisted service-period fields.
@@ -401,6 +409,12 @@ const servicePeriodPostInventoryRefs = new Set([
   // materialization and coverage-audit actions above, they landed after the pass-0 snapshot.
   'packages/billing/src/actions/arrearsOnlyLineGaps.ts',
   'packages/billing/src/actions/arrearsOnlyLineRepair.ts',
+  // Accounting export projects persisted recurring-detail service periods onto
+  // export lines through one shared module, used by both the invoice selector
+  // and validation, so fixed lines with several service periods export correctly.
+  'packages/billing/src/services/accountingExportServicePeriods.ts',
+  'server/src/test/integration/accounting/fixedLineMultiServicePeriods.integration.test.ts',
+  'server/src/test/unit/accounting/accountingExportServicePeriods.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

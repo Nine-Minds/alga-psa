@@ -129,6 +129,12 @@ export interface TemplateFieldNode extends TemplateNodeBase {
   emptyValue?: string;
   placeholder?: string;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   displayFormat?: TemplateFieldDisplayFormat;
   borderStyle?: TemplateFieldBorderStyle;
   children?: never;
@@ -173,6 +179,12 @@ export interface TemplateTableColumnLine {
   id: string;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   style?: TemplateNodeStyleRef;
   /**
    * An annotation line (e.g. an "Optional (included)" marker). It renders
@@ -188,6 +200,12 @@ export interface TemplateTableColumn {
   header?: TemplateI18nText;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   style?: TemplateNodeStyleRef;
   /**
    * Optional ordered stacked lines for a cell. When present, each line that
@@ -217,10 +235,53 @@ export interface TemplateRepeatRegionBinding {
   keyPath?: string;
 }
 
+/**
+ * One cell of a child (sub) row, keyed by the parent column id it sits under.
+ * Columns with no entry render empty on child rows.
+ */
+export interface TemplateChildRowCell {
+  value: TemplateValueExpression;
+  format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
+  /** Stacked lines, same semantics as `TemplateTableColumn.lines`. */
+  lines?: TemplateTableColumnLine[];
+  /**
+   * Optional leading adornment rendered before the value, e.g. a quantity
+   * change. In `signed-number` format a positive value shows "+N" (positive
+   * tone), a negative value "\u2212N" (negative tone), and null/0 renders nothing.
+   */
+  change?: {
+    value: TemplateValueExpression;
+    format: 'signed-number';
+  };
+  style?: TemplateNodeStyleRef;
+}
+
+/**
+ * Presentation-only sub-rows rendered directly under each parent row of a
+ * `dynamic-table`. They never feed transforms, aggregates or totals.
+ */
+export interface TemplateChildRows {
+  /** Path relative to the parent row binding, e.g. `item.components`. */
+  sourcePath: string;
+  /** Name the child item is bound to for the cell expressions, e.g. `component`. */
+  itemBinding: string;
+  cells: Record<string, TemplateChildRowCell>;
+  /** Parent column ids whose cell renders empty on rows that have child rows. */
+  parentBlankColumns?: string[];
+  style?: TemplateNodeStyleRef;
+}
+
 export interface TemplateDynamicTableNode extends TemplateNodeBase {
   type: 'dynamic-table';
   repeat: TemplateRepeatRegionBinding;
   columns: TemplateTableColumn[];
+  childRows?: TemplateChildRows;
   headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: TemplateI18nText;
   children?: never;
@@ -239,6 +300,12 @@ export interface TemplateTotalsRow {
   labelStyle?: TemplateNodeStyleRef;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
+  /**
+   * Author-chosen wording for specific values, keyed by `String(value)` (e.g.
+   * `'true'`, `'false'`, `'monthly'`). A label resolving to `''` prints nothing.
+   * Values without an entry fall back to `format` / the default rendering.
+   */
+  valueLabels?: Record<string, TemplateI18nText>;
   emphasize?: boolean;
   /**
    * Omit the row entirely when its value resolves to zero or nothing, so an

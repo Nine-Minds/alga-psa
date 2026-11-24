@@ -8,6 +8,7 @@ export {
   collectDistinctLocationIds,
   shouldShowLocationGroups,
   buildLocationGroups,
+  relocateLocationGroup,
   formatLocationSummaryLabel,
   formatLocationAddressBlock,
   pickDefaultLocation,

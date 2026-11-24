@@ -1,0 +1,34 @@
+{
+  "title": "Home",
+  "search": "Search",
+  "retry": "Retry",
+  "viewAll": "View all",
+  "unableToLoad": "Unable to load.",
+  "offline": "Offline, showing cached data",
+  "timer": {
+    "title": "Running timer",
+    "untitled": "Timer",
+    "stop": "Stop"
+  },
+  "today": {
+    "title": "Today",
+    "empty": "Nothing scheduled today."
+  },
+  "tickets": {
+    "title": "My tickets",
+    "count": "{{count}}",
+    "empty": "No open tickets assigned to you."
+  },
+  "activities": {
+    "title": "Activities",
+    "empty": "Nothing due.",
+    "overdue": "Overdue"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "newTicket": "New ticket",
+    "scan": "Scan",
+    "logInteraction": "Log interaction",
+    "startTimer": "Start timer"
+  }
+}

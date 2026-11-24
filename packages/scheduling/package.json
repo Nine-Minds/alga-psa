@@ -53,6 +53,10 @@
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
     },
+    "./lib/timeEntryMode": {
+      "import": "./src/lib/timeEntryMode.ts",
+      "types": "./src/lib/timeEntryMode.ts"
+    },
     "./lib/appointmentApprovers": {
       "import": "./src/lib/appointmentApprovers.ts",
       "types": "./src/lib/appointmentApprovers.ts"

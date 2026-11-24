@@ -14,6 +14,10 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./lib/meetingDocumentActor": {
+      "import": "./src/lib/meetingDocumentActor.ts",
+      "types": "./src/lib/meetingDocumentActor.ts"
+    },
     "./session": {
       "import": "./src/lib/session.ts",
       "types": "./src/lib/session.ts"
@@ -46,6 +50,10 @@
       "import": "./src/lib/geolocation.ts",
       "types": "./src/lib/geolocation.ts"
     },
+    "./boardPolicy": {
+      "import": "./src/boardPolicy.ts",
+      "types": "./src/boardPolicy.ts"
+    },
     "./twoFactorHelpers": {
       "import": "./src/lib/twoFactorHelpers.ts",
       "types": "./src/lib/twoFactorHelpers.ts"
@@ -77,6 +85,30 @@
     "./nextauth/auth": {
       "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
+    },
+    "./lib/clientBillingProjection": {
+      "import": "./src/lib/clientBillingProjection.ts",
+      "types": "./src/lib/clientBillingProjection.ts"
+    },
+    "./lib/commercialAccess": {
+      "import": "./src/lib/commercialAccess.ts",
+      "types": "./src/lib/commercialAccess.ts"
+    },
+    "./lib/authenticateUserForAuth": {
+      "import": "./src/lib/authenticateUserForAuth.ts",
+      "types": "./src/lib/authenticateUserForAuth.ts"
+    },
+    "./lib/authPolicy": {
+      "import": "./src/lib/authPolicy.ts",
+      "types": "./src/lib/authPolicy.ts"
+    },
+    "./lib/authPolicyStore": {
+      "import": "./src/lib/authPolicyStore.ts",
+      "types": "./src/lib/authPolicyStore.ts"
+    },
+    "./lib/sso/mspSsoResolution": {
+      "import": "./src/lib/sso/mspSsoResolution.ts",
+      "types": "./src/lib/sso/mspSsoResolution.ts"
     },
     "./lib/mspRememberedEmail": {
       "import": "./src/lib/mspRememberedEmail.ts",
@@ -142,11 +174,13 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
     "jose": "^6.1.3",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
+    "server-only": "0.0.1",
     "ua-parser-js": "^1.0.37"
   },
   "devDependencies": {

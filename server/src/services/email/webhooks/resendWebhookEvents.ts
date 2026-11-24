@@ -155,6 +155,34 @@ export function verifyResendWebhookSignature(params: {
   return { verified: false, reason: 'signature_mismatch' };
 }
 
+/** What the on-wire reconciliation needs from a (signature-verified) Resend webhook. */
+export type ResendOnWireMessageIdUpdate = {
+  tenantId: string;
+  /** Resend `email_id`, matched against email_sending_logs.provider_message_id. */
+  providerMessageId: string;
+  /** Resend `message_id`: the Message-ID header on the delivered message. */
+  onWireMessageId: string;
+};
+
+/**
+ * Every `email.*` event carries `message_id` (Resend changelog 2026-07-08), `email.sent` included.
+ * Tenant comes from the signed `alga_tenant_id` tag under the same trust rule as the workflow events:
+ * the payload is only trusted because the caller verified the signature first. An event without a
+ * tenant tag (or a `system` one — system mail writes no tenant log row), `email_id` or `message_id`
+ * yields null, which is a no-op for reconciliation.
+ *
+ * Only call this after verifyResendWebhookSignature has passed.
+ */
+export function extractResendOnWireMessageIdUpdate(webhook: ResendWebhookEvent): ResendOnWireMessageIdUpdate | null {
+  if (typeof webhook?.type !== 'string' || !webhook.type.startsWith('email.')) return null;
+  const data = webhook.data || {};
+  const tenantId = parseResendTags((data as any).tags).alga_tenant_id?.trim();
+  const providerMessageId = typeof (data as any).email_id === 'string' ? (data as any).email_id.trim() : '';
+  const onWireMessageId = typeof (data as any).message_id === 'string' ? (data as any).message_id.trim() : '';
+  if (!tenantId || tenantId === 'system' || !providerMessageId || !onWireMessageId) return null;
+  return { tenantId, providerMessageId, onWireMessageId };
+}
+
 export function mapResendWebhookToWorkflowEvents(params: {
   webhook: ResendWebhookEvent;
   svixId?: string | null;

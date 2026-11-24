@@ -14,6 +14,30 @@ const SIGNED = 'https://files.oaiusercontent.com/file-abc?sig=SECRET-TOKEN';
 const base = { entity_type: 'ticket', entity_id: ID };
 const body = (r: { body?: string }) => JSON.parse(r.body as string);
 
+describe('buildAttachFileRequest is_client_visible', () => {
+  const withUrl = { ...base, url: 'https://files.example.com/a.pdf' };
+
+  it('sends nothing by default, so the server keeps the file internal', () => {
+    expect(body(buildAttachFileRequest(withUrl))).not.toHaveProperty('is_client_visible');
+  });
+
+  it.each([true, false])('passes %s through', (value) => {
+    expect(body(buildAttachFileRequest({ ...withUrl, is_client_visible: value })).is_client_visible).toBe(value);
+  });
+
+  it.each(['true', 1, {}])('throws AttachFileInputError for non-boolean %j', (value) => {
+    expect(() => buildAttachFileRequest({ ...withUrl, is_client_visible: value })).toThrow(AttachFileInputError);
+  });
+
+  it('declares the boolean in the tool schema and leaves the OpenAI file schema alone', () => {
+    const tool = buildMetaToolDefinitions({ edition: 'ce' }).find((t) => t.name === ATTACH_FILE_TOOL)!;
+    const props = (tool.inputSchema as any).properties;
+    expect(props.is_client_visible.type).toBe('boolean');
+    expect((tool.inputSchema as any).required).not.toContain('is_client_visible');
+    expect(Object.keys(OPENAI_FILE_SCHEMA.properties)).toEqual(['download_url', 'file_id', 'mime_type', 'file_name']);
+  });
+});
+
 describe('buildAttachFileRequest', () => {
   it('maps a ChatGPT file object to a url source', () => {
     const req = buildAttachFileRequest({

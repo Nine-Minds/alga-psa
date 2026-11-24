@@ -3309,13 +3309,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -3465,9 +3467,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_users_bulk_create",
     "method": "post",
     "path": "/api/v1/users/bulk/create",
-    "displayName": "Bulk create users (route currently mapped to single create)",
-    "summary": "Bulk create users (route currently mapped to single create)",
-    "description": "Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.",
+    "displayName": "Bulk create users",
+    "summary": "Bulk create users",
+    "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates every user and creates nothing.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3476,64 +3478,38 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "password": {
-          "type": "string",
-          "minLength": 8
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "users": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AccessCreateUserBodyV1"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "send_welcome_email": {
+              "type": "boolean",
+              "description": "Default true. Mails each created user a link to set their own password."
+            },
+            "force_password_reset": {
+              "type": "boolean",
+              "description": "Default false. Records the must_change_password preference on each account, the same flag an admin-initiated password reset sets. Nothing enforces it at sign-in yet, so pair it with send_welcome_email to make the owner choose their own password."
+            },
+            "skip_invalid": {
+              "type": "boolean",
+              "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
+            },
+            "dry_run": {
+              "type": "boolean",
+              "description": "Validates every user and creates nothing."
+            }
           }
         }
       },
       "required": [
-        "username",
-        "email",
-        "password"
+        "users"
       ]
     },
     "responseBodySchema": {
@@ -3568,9 +3544,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_users_bulk_deactivate",
     "method": "put",
     "path": "/api/v1/users/bulk/deactivate",
-    "displayName": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+    "displayName": "Bulk deactivate users",
+    "summary": "Bulk deactivate users",
+    "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -3579,56 +3555,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "user_ids": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "deactivate": {
+          "type": "boolean",
+          "description": "Default true; false reactivates the listed users (subject to seat limits)."
         }
-      }
+      },
+      "required": [
+        "user_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -3959,7 +3902,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -4998,13 +4942,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -5131,10 +5077,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
-        "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter.",
+        "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total.",
         "schema": {
           "type": "string",
-          "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter."
+          "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total."
         }
       },
       {
@@ -5401,7 +5347,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, name, and status are required. A blank or omitted asset_tag is allocated from the tenant-wide sequence, optionally using asset_number_reservation_id. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -5421,9 +5367,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_tag": {
           "type": "string",
-          "minLength": 1,
           "maxLength": 255,
-          "description": "Required tenant-specific asset tag."
+          "description": "Optional physical tag. Omit or send blank to allocate from the tenant-wide asset sequence."
+        },
+        "asset_number_reservation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional durable reservation to commit to this new asset."
         },
         "name": {
           "type": "string",
@@ -5528,7 +5478,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "asset_type",
-        "asset_tag",
         "name",
         "status"
       ]
@@ -5701,7 +5650,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/documents/{associationId}",
     "displayName": "Remove asset document association",
     "summary": "Remove asset document association",
-    "description": "Removes a document association row by document_associations.association_id for the authenticated tenant. The service deletes rows where association_id and tenant match and does not verify entity_type in this method. The controller intends to return an empty success response after deletion, but currently calls createApiResponse(null, 204) inside NextResponse.json, which can throw because JSON responses cannot use status 204 with a body.",
+    "description": "Removes a document association by its API association ID within the authenticated tenant and verifies it belongs to an asset before authorization. The asset is resolved within the tenant before the caller’s update permission and record-level scope are checked; foreign-tenant IDs return 404. The generic document link and any asset-specific notes record are deleted together.",
     "tags": [
       "Assets"
     ],
@@ -5711,11 +5660,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "associationId",
         "in": "path",
         "required": true,
-        "description": "Document association UUID from document_associations.association_id.",
+        "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs.",
         "schema": {
           "type": "string",
           "format": "uuid",
-          "description": "Document association UUID from document_associations.association_id."
+          "description": "Asset document association UUID returned by the API; new API associations use document_associations.association_id and may also resolve asset_document_associations IDs."
         }
       }
     ]
@@ -6015,11 +5964,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "relationshipId",
         "in": "path",
         "required": true,
-        "description": "Asset relationship UUID from asset_relationships.relationship_id.",
+        "description": "Composite asset relationship identity: parent_asset_id:child_asset_id.",
         "schema": {
           "type": "string",
-          "format": "uuid",
-          "description": "Asset relationship UUID from asset_relationships.relationship_id."
+          "description": "Composite asset relationship identity: parent_asset_id:child_asset_id."
         }
       }
     ]
@@ -6456,7 +6404,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "List asset document associations",
     "summary": "List asset document associations",
-    "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+    "description": "Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],
@@ -6516,7 +6464,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "Associate document with asset",
     "summary": "Associate document with asset",
-    "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError.",
+    "description": "Creates the tenant-scoped document link for the path asset and supplied document_id, while storing optional notes and authenticated created_by in asset_document_associations. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. Both association records are written transactionally so document workflows and the asset API stay consistent. Tenant-scoped asset and document checks run before insert; database persistence errors are surfaced through handleApiError.",
     "tags": [
       "Assets"
     ],
@@ -6544,7 +6492,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "notes": {
           "type": "string",
-          "description": "Optional notes stored on document_associations.notes."
+          "description": "Optional notes stored on asset_document_associations.notes."
         }
       },
       "required": [
@@ -8780,6 +8728,1878 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_assetaudits",
+    "method": "get",
+    "path": "/api/v1/asset-audits",
+    "displayName": "List site audits",
+    "summary": "List site audits",
+    "description": "Returns the tenant audits newest first, optionally narrowed by client, location (or \"no location\"), status and a started_at range.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Page number. Defaults to 1.",
+        "schema": {
+          "type": "string",
+          "description": "Page number. Defaults to 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1 through 100. Defaults to 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1 through 100. Defaults to 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits of this client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits of this client."
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits scoped to this client location.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits scoped to this client location."
+        }
+      },
+      {
+        "name": "no_location",
+        "in": "query",
+        "required": false,
+        "description": "true returns only audits scoped to the assets that have no location. Wins over location_id.",
+        "schema": {
+          "type": "string",
+          "description": "true returns only audits scoped to the assets that have no location. Wins over location_id."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Only audits in this state.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "in_progress",
+            "completed",
+            "cancelled"
+          ],
+          "description": "Only audits in this state."
+        }
+      },
+      {
+        "name": "started_from",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone."
+        }
+      },
+      {
+        "name": "started_to",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or before it.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or before it."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "audit_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "location_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              "started_by": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "started_at": {
+                "type": "string"
+              },
+              "completed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expected_count": {
+                "type": "integer"
+              },
+              "present_count": {
+                "type": "integer"
+              },
+              "missing_count": {
+                "type": "integer"
+              },
+              "unexpected_count": {
+                "type": "integer"
+              },
+              "statuses": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "location_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "started_by_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "asset_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "result": {
+                      "type": "string",
+                      "enum": [
+                        "expected",
+                        "present",
+                        "missing",
+                        "unexpected"
+                      ]
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "scan",
+                        "manual",
+                        "register",
+                        null
+                      ]
+                    },
+                    "marked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "asset_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "asset_tag": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "serial_number": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "asset_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "client_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "asset_id",
+                    "result",
+                    "method",
+                    "marked_at",
+                    "marked_by"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "audit_id",
+              "tenant",
+              "client_id",
+              "location_id",
+              "status",
+              "started_by",
+              "started_at",
+              "completed_at",
+              "expected_count",
+              "present_count",
+              "missing_count",
+              "unexpected_count"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits",
+    "method": "post",
+    "path": "/api/v1/asset-audits",
+    "displayName": "Start a site audit",
+    "summary": "Start a site audit",
+    "description": "Snapshots the assets expected for the client, location and status slugs in scope as expected items and opens the audit. Needs asset:update because completing the audit writes asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client whose assets are audited."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location in scope. null or omitted audits the client assets that have no location."
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Asset status slugs in scope. Omitted means every status."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetaudits_id",
+    "method": "get",
+    "path": "/api/v1/asset-audits/{id}",
+    "displayName": "Get a site audit",
+    "summary": "Get a site audit",
+    "description": "Returns the audit with its items joined to each asset name, tag, serial and location.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_items",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/items",
+    "displayName": "Mark an asset in a site audit",
+    "summary": "Mark an asset in a site audit",
+    "description": "Marks the asset present, or unexpected when it is not in the audit snapshot. Idempotent per asset: a second mark keeps the first marked_at.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset being marked."
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "present",
+            "unexpected"
+          ],
+          "description": "Caller intent; an asset outside the snapshot is stored as unexpected regardless. Defaults to present."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "scan",
+            "manual",
+            "register"
+          ],
+          "description": "How the asset was marked. Defaults to manual."
+        }
+      },
+      "required": [
+        "asset_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetaudits_id_items_assetid",
+    "method": "delete",
+    "path": "/api/v1/asset-audits/{id}/items/{assetId}",
+    "displayName": "Undo a site audit mark",
+    "summary": "Undo a site audit mark",
+    "description": "Returns an expected asset to the remaining list; an unexpected asset was never in scope, so its item is removed.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      },
+      {
+        "name": "assetId",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_complete",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/complete",
+    "displayName": "Complete a site audit",
+    "summary": "Complete a site audit",
+    "description": "Turns every still-expected item into missing, writes the counts, and records one asset_history row (change_type audit) plus assets.last_audited_at and last_audit_result for each present and missing asset, in one transaction.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_cancel",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/cancel",
+    "displayName": "Cancel a site audit",
+    "summary": "Cancel a site audit",
+    "description": "Abandons an open audit; it writes no asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register",
+                      null
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_integrations_rmm",
     "method": "get",
     "path": "/api/v1/integrations/rmm",
@@ -8814,10 +10634,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       }
     ],
@@ -8917,10 +10737,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       }
     ],
@@ -9038,10 +10858,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing."
         }
       }
     ],
@@ -11054,7 +12874,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/contacts",
     "displayName": "List contacts for client",
     "summary": "List contacts for client",
-    "description": "Returns paginated contacts filtered by client_id after client existence check.",
+    "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).",
     "tags": [
       "Clients"
     ],
@@ -11067,6 +12887,183 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "created_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "created_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "full_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "phone_number",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "role",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_inactive",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "has_client",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts linked to this client location in any role, primary or not.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contacts linked to this client location in any role, primary or not."
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       }
     ],
@@ -11276,6 +13273,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               },
               "is_active": {
                 "type": "boolean"
+              },
+              "contact_count": {
+                "type": "integer",
+                "minimum": 0
               },
               "created_at": {
                 "type": "string",
@@ -11539,6 +13540,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             "is_active": {
               "type": "boolean"
+            },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
             },
             "created_at": {
               "type": "string",
@@ -12266,6 +14271,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_active": {
               "type": "boolean"
             },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
+            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -12353,7 +14362,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "List Contacts",
     "summary": "Fetch contacts",
-    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
+    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket, or by location_id / work_arrangement to find who works at a client location. Every row carries work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -12376,6 +14385,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Search text to match against contact names or emails.",
         "schema": {
           "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts who work at this client location, primary or not. Discover location ids from /api/v1/clients/{id}/locations.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "description": "Where the person works: on_site, hybrid or remote.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       },
       {
@@ -12460,6 +14493,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+      },
+      {
+        "name": "Who works at a location",
+        "request": {
+          "query": {
+            "location_id": "33333333-3333-3333-3333-333333333333"
+          }
+        },
+        "notes": "The location ids come from /api/v1/clients/{id}/locations; the same filter works on /api/v1/clients/{id}/contacts."
       }
     ]
   },
@@ -12469,7 +14511,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "Create contact",
     "summary": "Create contact",
-    "description": "Inherited ApiBaseController create route for contacts.",
+    "description": "Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact's client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.",
     "tags": [
       "Contacts"
     ],
@@ -12728,6 +14770,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean",
           "default": false
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -12763,7 +14835,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Get contact",
     "summary": "Get contact",
-    "description": "Inherited ApiBaseController get route for one contact_name_id.",
+    "description": "Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.",
     "tags": [
       "Contacts"
     ],
@@ -12801,7 +14873,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id.",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients). A different email replaces the primary address and drops the old one unless it is re-sent in additional_email_addresses (sending one of the contact's own additional addresses with no additional_email_addresses in the body promotes it and keeps the old primary as an additional row, leaving the contact's other addresses alone); an address already used by another contact is refused.",
     "tags": [
       "Contacts"
     ],
@@ -13060,6 +15132,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "is_inactive": {
           "type": "boolean"
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -13230,7 +15332,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/search",
     "displayName": "Search contacts",
     "summary": "Search contacts",
-    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check.",
+    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.",
     "tags": [
       "Contacts"
     ],
@@ -13310,7 +15412,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/export",
     "displayName": "Export contacts",
     "summary": "Export contacts",
-    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.",
+    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations (\"Warehouse; Head office\") and Primary Location columns; JSON rows carry work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -13706,6 +15808,264 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_clients_id_billingprofiles",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles",
+    "displayName": "List client billing profiles",
+    "summary": "List client billing profiles",
+    "description": "Lists every billing profile of the client, including inactive ones: default profile first, then by name. billing_profile_id is the value used on invoices, contract lines, tickets and assets. Nullable settings mean \"inherit from the client\".",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ClientBillingProfile"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}",
+    "displayName": "Get a client billing profile",
+    "summary": "Get a client billing profile",
+    "description": "Returns one billing profile of the client. billing_profile_id is the value used on invoices, contract lines, tickets and assets. A profile that belongs to another client returns 404, the same as an unknown one.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_portalinvitations",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/portal-invitations",
+    "displayName": "Invite a client's contacts to the client portal",
+    "summary": "Invite a client's contacts to the client portal",
+    "description": "Sends client portal invitations for one client: either every eligible contact (all_eligible) or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite. Ids that do not belong to the client in the path come back as skipped, never invited."
+        },
+        "all_eligible": {
+          "type": "boolean",
+          "description": "Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given."
+        }
+      },
+      "description": "Supply contact_ids, or all_eligible=true. One of the two is required."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_portalinvitations_bulk",
+    "method": "post",
+    "path": "/api/v1/portal-invitations/bulk",
+    "displayName": "Invite contacts to the client portal in bulk",
+    "summary": "Invite contacts to the client portal in bulk",
+    "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.",
+    "tags": [
+      "Portal Invitations"
+    ],
+    "rbacResource": "user",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Contacts to invite, in any client. Each contact is authorized against its own client."
+        }
+      },
+      "required": [
+        "contact_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Contacts considered by this request."
+            },
+            "sent": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/PortalInvitationResult"
+              }
+            }
+          },
+          "required": [
+            "total",
+            "sent",
+            "skipped",
+            "failed",
+            "results"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_contractlines",
     "method": "get",
     "path": "/api/v1/contract-lines",
@@ -14021,6 +16381,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
+        },
         "billing_frequency": {
           "type": "string",
           "enum": [
@@ -14257,6 +16633,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 255
+        },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
         },
         "billing_frequency": {
           "type": "string",
@@ -14582,12 +16974,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/bulk",
     "displayName": "Bulk delete contract lines",
     "summary": "Bulk delete contract lines",
-    "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.",
+    "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_ids` query parameter.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "contract_line_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -14819,17 +17222,105 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "delete-_api_v1_contractlines_bulk_delete",
-    "method": "delete",
+    "id": "post-_api_v1_contractlines_bulk_delete",
+    "method": "post",
     "path": "/api/v1/contract-lines/bulk/delete",
-    "displayName": "Bulk delete contract lines (explicit route)",
-    "summary": "Bulk delete contract lines (explicit route)",
-    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk.",
+    "displayName": "Bulk delete contract lines (POST alias)",
+    "summary": "Bulk delete contract lines (POST alias)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/delete, for clients that cannot send a body on DELETE.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
     "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_line_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "contract_line_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timestamp",
+            "version"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contractlines_bulk_delete",
+    "method": "delete",
+    "path": "/api/v1/contract-lines/bulk/delete",
+    "displayName": "Bulk delete contract lines (explicit route)",
+    "summary": "Bulk delete contract lines (explicit route)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk. The ids may come from the request body or from the `contract_line_ids` query parameter.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contract_line_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated contract line UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -14977,17 +17468,121 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "delete-_api_v1_contractlines_bulk_removeservices",
-    "method": "delete",
+    "id": "post-_api_v1_contractlines_bulk_removeservices",
+    "method": "post",
     "path": "/api/v1/contract-lines/bulk/remove-services",
-    "displayName": "Bulk remove services from contract line",
-    "summary": "Bulk remove services from contract line",
-    "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results.",
+    "displayName": "Bulk remove services from contract line (POST alias)",
+    "summary": "Bulk remove services from contract line (POST alias)",
+    "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk/remove-services, for clients that cannot send a body on DELETE.",
     "tags": [
       "Contract Lines"
     ],
     "approvalRequired": false,
     "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "contract_line_id",
+        "service_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "timestamp",
+            "version"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contractlines_bulk_removeservices",
+    "method": "delete",
+    "path": "/api/v1/contract-lines/bulk/remove-services",
+    "displayName": "Bulk remove services from contract line",
+    "summary": "Bulk remove services from contract line",
+    "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results. The ids may come from the request body or, for clients that cannot send a body on DELETE, from the `contract_line_id` + `service_ids` query parameters.",
+    "tags": [
+      "Contract Lines"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contract_line_id",
+        "in": "query",
+        "required": false,
+        "description": "Contract line UUID. DELETE-only alternative to the request body.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract line UUID. DELETE-only alternative to the request body."
+        }
+      },
+      {
+        "name": "service_ids",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated service UUIDs. DELETE-only alternative to the request body, for clients that cannot send a body on DELETE."
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {
@@ -16399,7 +18994,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. The file is internal-only unless you pass is_client_visible=true (only when the user asks for the client to see it; ticket, project_task and client only, contact and asset get 400; needs document:update); the returned document shows is_client_visible. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -16475,6 +19070,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "mime_type": {
           "type": "string",
           "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        },
+        "is_client_visible": {
+          "type": "boolean",
+          "description": "Whether the client portal can show the document. Default false (internal only). Only ticket, project_task and client support true; contact and asset get 400. true also needs the document:update permission. The created document in the response carries the resulting is_client_visible."
         }
       },
       "required": [
@@ -17702,7 +20301,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/bulk/invoices",
     "displayName": "Run bulk invoice operation",
     "summary": "Run bulk invoice operation",
-    "description": "FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.",
+    "description": "FinancialService.bulkInvoiceOperation() runs finalize or cancel against the canonical invoice engines (1–50 ids). finalize requires invoice:finalize; cancel voids eligible invoices through the canonical void engine (invoice:update, plus accounting_integrations:remote_mutate when an accounting integration is connected). Each id runs independently; per-id results carry success, error and outcome (finalized/voided). Bulk send is unsupported until canonical recipient delivery is implemented; standalone invoice send behavior is unchanged. apply_credit is unsupported: use POST /api/v1/financial/invoices/{id}/credit.",
     "tags": [
       "Financial"
     ],
@@ -17714,10 +20313,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "operation": {
           "type": "string",
           "enum": [
-            "send",
             "finalize",
-            "cancel",
-            "mark_paid"
+            "cancel"
           ]
         },
         "invoice_ids": {
@@ -17726,9 +20323,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 50
         },
-        "options": {
+        "parameters": {
           "type": "object",
           "additionalProperties": {}
         }
@@ -21225,7 +23823,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices",
     "displayName": "Create invoice",
     "summary": "Create invoice",
-    "description": "Creates an invoice record via ApiBaseController.create() and invoice create schema.",
+    "description": "Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.",
     "tags": [
       "Invoices"
     ],
@@ -21236,7 +23834,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "client_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Must be a client in the caller's tenant."
         },
         "invoice_date": {
           "type": "string"
@@ -21244,40 +23843,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "due_date": {
           "type": "string"
         },
-        "subtotal": {
-          "type": "integer",
-          "minimum": 0
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "credit_card",
+            "bank_transfer",
+            "check",
+            null
+          ]
         },
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "total_amount": {
-          "type": "integer",
-          "minimum": 0
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
         "status": {
           "type": "string",
           "enum": [
-            "draft",
-            "sent",
-            "paid",
-            "overdue",
-            "cancelled",
-            "pending",
-            "prepayment",
-            "partially_applied"
-          ]
-        },
-        "credit_applied": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "is_manual": {
-          "type": "boolean"
-        },
-        "is_prepayment": {
-          "type": "boolean"
+            "draft"
+          ],
+          "description": "Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status."
         },
         "items": {
           "type": "array",
@@ -21290,13 +23880,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "invoice_date",
-        "due_date",
-        "subtotal",
-        "tax",
-        "total_amount",
-        "status"
+        "due_date"
       ],
-      "additionalProperties": {}
+      "additionalProperties": {},
+      "description": "New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400."
     },
     "responseBodySchema": {
       "type": "object",
@@ -21493,7 +24080,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21523,9 +24110,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -34793,8 +37377,16 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "client_portal_visible": {
           "type": "boolean"
+        },
+        "default_assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
+      "additionalProperties": false,
       "description": "Payload for updating a board. All fields are optional."
     },
     "responseBodySchema": {
@@ -38358,7 +40950,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "List webhook templates",
     "summary": "List webhook templates",
-    "description": "Returns webhook templates visible to the tenant (own + system templates).",
+    "description": "Webhook templates are not persisted, so this always returns 200 with an empty list. There is no template storage to read from.",
     "tags": [
       "Webhooks"
     ],
@@ -38389,7 +40981,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "Create webhook template",
     "summary": "Create webhook template",
-    "description": "Creates a reusable webhook template. Requires system_settings RBAC.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -38453,9 +41045,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_webhooks_templates_id",
     "method": "get",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Get webhook template detail (webhook getById wiring)",
-    "summary": "Get webhook template detail (webhook getById wiring)",
-    "description": "Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.",
+    "displayName": "Get webhook template detail",
+    "summary": "Get webhook template detail",
+    "description": "Webhook templates are not persisted, so a template id never resolves: returns 404 NOT_FOUND after the RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -38477,7 +41069,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -38493,9 +41085,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_webhooks_templates_id",
     "method": "put",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Update webhook template (webhook update wiring)",
-    "summary": "Update webhook template (webhook update wiring)",
-    "description": "Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.",
+    "displayName": "Update webhook template",
+    "summary": "Update webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check, id validation and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -38517,269 +41109,32 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "name": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "description": {
           "type": "string"
         },
-        "url": {
-          "type": "string",
-          "format": "uri"
+        "category": {
+          "type": "string"
         },
-        "method": {
-          "type": "string",
-          "enum": [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE"
-          ]
+        "default_config": {
+          "type": "object",
+          "additionalProperties": {}
         },
-        "event_types": {
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supported_events": {
           "type": "array",
           "items": {
             "$ref": "#/components/schemas/WebhookEventTypeV1"
-          },
-          "minItems": 1
-        },
-        "security": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_format": {
-          "type": "string",
-          "enum": [
-            "json",
-            "xml",
-            "form_data",
-            "custom"
-          ]
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "custom_headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
           }
         },
-        "event_filter": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_fields": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "ticket": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "ticket_number",
-                  "title",
-                  "url",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "response_state",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "previous_response_state",
-                  "new_response_state",
-                  "priority_id",
-                  "priority_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "assigned_team_id",
-                  "board_id",
-                  "board_name",
-                  "category_id",
-                  "subcategory_id",
-                  "entered_at",
-                  "updated_at",
-                  "closed_at",
-                  "due_date",
-                  "tags",
-                  "comment",
-                  "changes",
-                  "comments"
-                ]
-              }
-            },
-            "project": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "project_name",
-                  "wbs_code",
-                  "description",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "start_date",
-                  "end_date",
-                  "budgeted_hours",
-                  "url",
-                  "changes",
-                  "phases",
-                  "task_counts",
-                  "task_id",
-                  "phase_id",
-                  "phase_name",
-                  "task_name",
-                  "estimated_hours",
-                  "actual_hours",
-                  "due_date",
-                  "priority_id",
-                  "priority_name",
-                  "tags"
-                ]
-              }
-            },
-            "client": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "changed_fields"
-                ]
-              }
-            },
-            "contact": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "client_location": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "quote": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "quote_number",
-                  "version",
-                  "contact_id",
-                  "opportunity_id",
-                  "previous_status",
-                  "new_status",
-                  "currency_code",
-                  "total_amount",
-                  "performed_by_type",
-                  "performed_by_id",
-                  "sent_at",
-                  "viewed_at",
-                  "approved_at",
-                  "accepted_at",
-                  "rejected_at",
-                  "expired_at",
-                  "converted_at",
-                  "conversion_reverted_at",
-                  "superseded_at",
-                  "cancelled_at",
-                  "accepted_by_name",
-                  "accepted_on_behalf",
-                  "selected_optional_item_ids",
-                  "rejection_reason",
-                  "conversion_targets",
-                  "contract_id",
-                  "invoice_id",
-                  "sales_order_id",
-                  "released_invoice_id",
-                  "superseded_by_quote_id",
-                  "next_version"
-                ]
-              }
-            }
-          },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
-        },
-        "payload_transformation": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "retry_config": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "is_active": {
+        "is_system_template": {
           "type": "boolean"
-        },
-        "is_test_mode": {
-          "type": "boolean"
-        },
-        "verify_ssl": {
-          "type": "boolean"
-        },
-        "secret_token": {
-          "type": "string"
-        },
-        "rate_limit": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -38787,7 +41142,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -38803,9 +41158,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "delete-_api_v1_webhooks_templates_id",
     "method": "delete",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Delete webhook template (webhook delete wiring)",
-    "summary": "Delete webhook template (webhook delete wiring)",
-    "description": "Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.",
+    "displayName": "Delete webhook template",
+    "summary": "Delete webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -38830,7 +41185,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates/{id}/create",
     "displayName": "Create webhook from template",
     "summary": "Create webhook from template",
-    "description": "Instantiates a webhook configuration from a template, merging caller-supplied overrides.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -41943,7 +44298,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "assigned_to": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "estimated_hours": {
@@ -41955,11 +44313,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time"
         },
         "due_date": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         },
         "priority_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "task_type_key": {
@@ -42033,6 +44397,178 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Project task UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_projects_id_materials",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "List project materials",
+    "summary": "List project materials",
+    "description": "Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectMaterialResource"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_projects_id_materials",
+    "method": "post",
+    "path": "/api/v1/projects/{id}/materials",
+    "displayName": "Add a project material",
+    "summary": "Add a project material",
+    "description": "Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "unit_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "billing_destination": {
+          "type": "string",
+          "enum": [
+            "next_project_invoice",
+            "schedule_entry",
+            "separate",
+            "project_completion",
+            "on_hold"
+          ]
+        },
+        "billing_schedule_entry_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "service_id",
+        "quantity",
+        "rate",
+        "currency_code"
+      ],
+      "additionalProperties": false,
+      "description": "Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectMaterialResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_id_materials_materialid",
+    "method": "delete",
+    "path": "/api/v1/projects/{id}/materials/{materialId}",
+    "displayName": "Delete a project material",
+    "summary": "Delete a project material",
+    "description": "Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "materialId",
+        "in": "path",
+        "required": true,
+        "description": "Project material UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project material UUID."
         }
       }
     ]
@@ -46537,7 +49073,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. Set suppressContactNotifications=true to create the ticket silently — no customer-facing ticket-created email (which otherwise falls back to the client's address when the ticket has no contact) and no portal notifications. Add suppressInternalNotifications=true to also skip agent and watcher notifications; internal suppression requires customer suppression. Silent creations still create normal audit, workflow, and webhook records.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires ticket create permission. IMPORTANT: status_id must belong to board_id. HISTORICAL IMPORT: send entered_at (ISO 8601 with offset, not in the future) to create a silent source=api_import record with no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. For already-closed history, use a closed status and closed_at (entered_at <= closed_at <= now), optionally closed_by; no TICKET_CLOSED fires. Then create comments with created_at after their ticket and parent. Historical dates require an internal (MSP) user with the corresponding ticket create/update permission. Use PUT /tickets/{id} with entered_at to correct an existing open date. Notification suppression fields also apply to live creates; suppressed live creations retain their normal audit, workflow and webhook behavior.",
     "tags": [
       "Work Management v1"
     ],
@@ -46678,13 +49214,28 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. ISO 8601 datetime with offset; not in the future. Stores the ticket with this open date and marks it historical: silent, source=api_import, no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission."
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import only (requires entered_at). Required for a closed status and rejected for an open status. Must satisfy entered_at <= closed_at <= now. Stored closed without TICKET_CLOSED."
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Historical import only (requires closed_at). Defaults to the API user."
+        },
         "suppressContactNotifications": {
           "type": "boolean",
-          "description": "Suppress the customer-facing ticket-created email and portal notifications for this creation. Use it for machine-generated tickets that should not reach the client."
+          "description": "Suppress customer-facing ticket-created email and portal notifications for this operation."
         },
         "suppressInternalNotifications": {
           "type": "boolean",
-          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+          "description": "Also suppress agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -47176,6 +49727,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Correct the ticket open date. ISO 8601 datetime with an offset; requires an internal MSP user with ticket:update permission. Must not be in the future or after closure or the earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers."
+        },
         "url": {
           "type": "string",
           "format": "uri"
@@ -47650,6 +50206,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 20,
           "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         }
       },
       "required": [
@@ -47717,11 +50278,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "closed_at": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently."
         },
         "closed_by": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Honored with closed_at when this update closes the ticket; defaults to the API user."
         },
         "override_close_rules": {
           "type": "boolean"
@@ -48385,7 +50948,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48640,7 +51204,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48764,7 +51329,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49642,7 +52208,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -50599,7 +53166,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets",
     "displayName": "Create time sheet",
     "summary": "Create time sheet",
-    "description": "Creates time sheet via create() path.",
+    "description": "Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT (\"A time sheet already exists for this user and period\") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.",
     "tags": [
       "Work Management v1"
     ],
@@ -50703,7 +53270,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/export",
     "displayName": "Export time sheets",
     "summary": "Export time sheets",
-    "description": "Exports time sheets using ApiTimeSheetController.export().",
+    "description": "Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.",
     "tags": [
       "Work Management v1"
     ],
@@ -50828,7 +53395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/search",
     "displayName": "Search time sheets",
     "summary": "Search time sheets",
-    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
+    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.",
     "tags": [
       "Work Management v1"
     ],
@@ -50984,12 +53551,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
-              "notes": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
               "user_name": {
                 "type": "string"
               },
@@ -51051,6 +53612,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51233,7 +53795,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "submitted_at",
               "approved_at",
               "approved_by",
-              "notes",
               "user_name"
             ]
           }
@@ -51609,6 +54170,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },
@@ -52455,7 +55017,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/stopwatch/{id}/log",
     "displayName": "Log stopwatch as time entry",
     "summary": "Log stopwatch as time entry",
-    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "description": "Logs the session as one time entry per work day (in the entry user timezone) that has active time: each entry starts at the first active instant of that day (to the minute) and lasts the active minutes of that day, ending no later than 23:59; paused time is never booked. A session within one day is one entry (billable_duration = active minutes, min 1). An explicit start_time/end_time in the body produces exactly one entry over that span. Other body fields override the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
     "tags": [
       "Work Management v1"
     ],
@@ -52512,12 +55074,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "time_entry": {
               "type": "object",
               "additionalProperties": {},
-              "description": "The persisted time entry."
+              "description": "The persisted time entry (the first one when the session spans several work days)."
+            },
+            "time_entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "description": "Every persisted time entry, one per work day with active time."
             }
           },
           "required": [
             "session",
-            "time_entry"
+            "time_entry",
+            "time_entries"
           ]
         }
       },
@@ -52532,7 +55103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/priorities",
     "displayName": "List ticket priorities",
     "summary": "List ticket priorities",
-    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name.",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
     "tags": [
       "Work Management v1"
     ],
@@ -52587,6 +55158,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Filter statuses to this board."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_categories",
+    "method": "get",
+    "path": "/api/v1/tickets/categories",
+    "displayName": "List ticket categories",
+    "summary": "List ticket categories",
+    "description": "Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter categories to this board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Filter categories to this board."
         }
       }
     ],
@@ -53141,6 +55764,3825 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_templates",
+    "method": "get",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "List ticket templates",
+    "summary": "List ticket templates",
+    "description": "Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item. To create tickets on a schedule (for example a yearly renewal), schedule a template with POST /api/v1/tickets/recurring.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-100. Default 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first."
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Omitted or 'true': active templates only (the default). 'false': the inactive ones."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive substring of the template name or of the ticket title it produces.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive substring of the template name or of the ticket title it produces."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_templates",
+    "method": "post",
+    "path": "/api/v1/tickets/templates",
+    "displayName": "Create a ticket template",
+    "summary": "Create a ticket template",
+    "description": "Creates a reusable ticket template with its whole checklist in one request. Resolve client_id, board_id, category_id and priority_id to UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories, /api/v1/tickets/priorities); a reference that does not exist is refused with 400. Leave client_id out for a template every client can use. A second active template with the same name returns 409.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_templates_templateid",
+    "method": "get",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Get a ticket template",
+    "summary": "Get a ticket template",
+    "description": "Returns one ticket template with its checklist items and documentation links in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_templates_templateid",
+    "method": "put",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Update a ticket template",
+    "summary": "Update a ticket template",
+    "description": "Replaces the template wholesale: omitted fields are reset and the checklist you send replaces the stored items, so GET the template first and send it back edited. `is_active` activates or deactivates it (deactivating only hides it from manual use; recurring schedules keep running). Changes apply to every schedule that uses the template, from the next ticket each one creates.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Template name, unique among active templates in the tenant."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000,
+          "description": "Note for your team; never copied onto tickets."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ticket description (plain text or serialized BlockNote JSON)."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client’s tickets. Resolve the UUID with GET /api/v1/clients first."
+        },
+        "board_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Board the created ticket lands on. Resolve with GET /api/v1/boards first."
+        },
+        "category_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Category on that board; a subcategory requires its parent category."
+        },
+        "subcategory_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Priority. Resolve with GET /api/v1/tickets/priorities first."
+        },
+        "itil_impact": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "itil_urgency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 50,
+          "description": "Tag text applied to the created ticket (tag definitions are created as needed)."
+        },
+        "custom_fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Custom field values copied onto the ticket."
+        },
+        "offer_for_manual_use": {
+          "type": "boolean",
+          "description": "Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Checklist item text."
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_required": {
+                "type": "boolean",
+                "description": "Whether the item gates ticket closure."
+              },
+              "checklist_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Checklist template the item came from; leave null for a plain item."
+              }
+            },
+            "required": [
+              "item_name",
+              "is_required"
+            ]
+          },
+          "maxItems": 200,
+          "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running."
+        }
+      },
+      "required": [
+        "name",
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_templates_templateid",
+    "method": "delete",
+    "path": "/api/v1/tickets/templates/{templateId}",
+    "displayName": "Delete a ticket template",
+    "summary": "Delete a ticket template",
+    "description": "Deletes the template and its checklist items. Tickets already created from it are not changed. Refused with 409 while any non-archived recurring schedule still uses it; point those schedules at another template or archive them first, or deactivate the template instead (PUT with is_active=false).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_templates_templateid_instantiate",
+    "method": "post",
+    "path": "/api/v1/tickets/templates/{templateId}/instantiate",
+    "displayName": "Create a ticket from a ticket template",
+    "summary": "Create a ticket from a ticket template",
+    "description": "Creates one ticket from the template and returns it, exactly as POST /api/v1/tickets does. The template supplies the title (with its {{client}}/{{contact}}/{{due_date}} tokens filled in), description, board, category, priority, ITIL values, tags, custom fields and every checklist item, and the ticket records created_from_template_id. Prefer this over POST /api/v1/tickets followed by one POST /api/v1/tickets/{id}/checklist per item whenever a template exists. Requires ticket:create as well as ticket_template:read. Resolve client_id (and contact_name_id, location_id, assigned_to) to UUIDs first; a contact, location or asset that does not belong to client_id, a status that is not on the template’s board, or a template bound to a different client are all refused with 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket_template",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket template UUID from ticket_templates.template_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template UUID from ticket_templates.template_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client the ticket is for. A template bound to another client is refused with 400."
+        },
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Requester contact; must belong to client_id. Also fills the {{contact}} title token."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location; must belong to client_id."
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 50,
+          "description": "Assets to link to the ticket; each must belong to client_id."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary assignee. Defaults to unassigned."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Status for the new ticket; must belong to the template's board. Defaults to that board's default status."
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the {{due_date}}, {{month}} and {{year}} title tokens."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Create the ticket without notifying the customer."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also skip internal notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "required": [
+        "client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring",
+    "displayName": "List recurring ticket definitions",
+    "summary": "List recurring ticket definitions",
+    "description": "Lists the schedules that create tickets automatically (for example a yearly certificate renewal): name, status (active, paused or archived), recurrence rule, client_count, next_due_at, time_zone and has_failure. Use it to find a schedule by name (search), to see what is paused (status=paused), or to see which one is failing: has_failure means the latest occurrence for some client failed, and GET /api/v1/tickets/recurring/{definitionId}/occurrences?status=failed gives the reason. status defaults to all, which includes archived definitions. Due and create times are wall-clock in time_zone, the tenant time zone.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter by state. Default 'all', which includes archived definitions.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused",
+            "archived",
+            "all"
+          ],
+          "description": "Filter by state. Default 'all', which includes archived definitions."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive substring of the definition name.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive substring of the definition name."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-100. Default 25."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring",
+    "displayName": "Create a recurring ticket definition",
+    "summary": "Create a recurring ticket definition",
+    "description": "Creates a schedule that creates a ticket every time it falls due, for example \"every year on 1 March, created 30 days early\". What the ticket looks like (title, description, checklist, tags, board, priority) comes from a ticket template: create one first with POST /api/v1/tickets/templates and pass its template_id as ticket_template_id; ticket content fields such as title are rejected here with 400. recurrence.frequency is daily, weekly, monthly or yearly; a yearly rule is { frequency: \"yearly\", month, day, end } and means every year (it has no interval). A new definition generates nothing until clients are added with POST /api/v1/tickets/recurring/{definitionId}/clients. Use POST /api/v1/tickets/recurring/preview to check the dates first. Requires recurring_ticket:create and ticket_template:read. Returns 201 with definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the schedule, for example \"Apple APNs certificate renewal\". It is not the ticket title; the title comes from the ticket template."
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the schedule generates tickets. A definition only generates tickets for the clients added to it. Default true."
+        },
+        "ticket_template_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template this schedule creates tickets from: it supplies the title, description, checklist, tags and default board, priority and category. Create one with POST /api/v1/tickets/templates first."
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "default": {},
+          "additionalProperties": false,
+          "description": "Overrides of the template for the whole schedule: board, priority, category and assignment groups. Each group present replaces that group of template fields; absent groups inherit. Default {}."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Status for created tickets; must belong to the effective board. Null uses the board default."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "User created tickets are assigned to. Null leaves them unassigned."
+        },
+        "assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Team created tickets are assigned to. Null for none."
+        },
+        "additional_agent_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": [],
+          "description": "Additional agent user UUIDs on created tickets. Default []."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD. For a yearly rule this is the first year it is due."
+        },
+        "create_time": {
+          "type": "string",
+          "default": "08:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) the ticket is created on its create date. Default 08:00."
+        },
+        "due_time": {
+          "type": "string",
+          "default": "17:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) on the due date the ticket is due. Default 17:00."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "How many days before the due date the ticket is created. 30 creates it a month ahead. Default 0."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "default": "keep",
+          "description": "When the due date is not a business day: 'keep' it, move to the 'previous' business day, or the 'next' one. Default keep."
+        },
+        "open_previous_policy": {
+          "type": "string",
+          "enum": [
+            "always_create",
+            "skip"
+          ],
+          "default": "always_create",
+          "description": "'always_create' makes a new ticket even if the previous one is still open; 'skip' skips the occurrence while one is open. Default always_create."
+        },
+        "notify_client_on_create": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send the usual new-ticket notification to the client contact when a ticket is created. Default false."
+        }
+      },
+      "required": [
+        "name",
+        "ticket_template_id",
+        "recurrence",
+        "start_date"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_preview",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/preview",
+    "displayName": "Preview the next due dates of an unsaved recurring schedule",
+    "summary": "Preview the next due dates of an unsaved recurring schedule",
+    "description": "Computes the next 5 occurrences (nominal date, due date, create_at and due_at instants) of a draft schedule without saving anything, in the tenant time zone and with the business-day calendar the non_business_day_policy uses. Pass ticket_template_id to also get sample_title, the template title rendered for the first occurrence. Use it to check a rule before POST /api/v1/tickets/recurring. For a saved definition use GET /api/v1/tickets/recurring/{definitionId}/upcoming.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional ticket template UUID; when given the response includes its title rendered for the first occurrence."
+        },
+        "sample_client_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200,
+          "description": "Client name used to render {{client}} in the sample title."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD."
+        },
+        "create_time": {
+          "type": "string",
+          "description": "Wall-clock create time, HH:MM, tenant time zone."
+        },
+        "due_time": {
+          "type": "string",
+          "description": "Wall-clock due time, HH:MM, tenant time zone."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "description": "Days before the due date the ticket is created."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "description": "'keep', 'previous' or 'next' business day when the due date is not a business day."
+        }
+      },
+      "required": [
+        "recurrence",
+        "start_date",
+        "create_time",
+        "due_time",
+        "lead_days",
+        "non_business_day_policy"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Get a recurring ticket definition",
+    "summary": "Get a recurring ticket definition",
+    "description": "Returns one definition with definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields. clients lists every client the schedule runs for; effective_fields is what a client without its own overrides gets (template, then dispatch, then schedule overrides). An archived definition stays readable: definition.archived_at is set.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_recurring_definitionid",
+    "method": "put",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Replace a recurring ticket definition",
+    "summary": "Replace a recurring ticket definition",
+    "description": "Replaces the whole definition: every field you omit goes back to its default (create_time 08:00, due_time 17:00, lead_days 0, overrides {}, no assignee), it does not keep its current value. GET the definition first and send it back edited. Clients attached to the definition are not touched. Archived definitions are read-only (409). Requires recurring_ticket:update, and ticket_template:read when the template changes. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the schedule, for example \"Apple APNs certificate renewal\". It is not the ticket title; the title comes from the ticket template."
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the schedule generates tickets. A definition only generates tickets for the clients added to it. Default true."
+        },
+        "ticket_template_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template this schedule creates tickets from: it supplies the title, description, checklist, tags and default board, priority and category. Create one with POST /api/v1/tickets/templates first."
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "default": {},
+          "additionalProperties": false,
+          "description": "Overrides of the template for the whole schedule: board, priority, category and assignment groups. Each group present replaces that group of template fields; absent groups inherit. Default {}."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Status for created tickets; must belong to the effective board. Null uses the board default."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "User created tickets are assigned to. Null leaves them unassigned."
+        },
+        "assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Team created tickets are assigned to. Null for none."
+        },
+        "additional_agent_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": [],
+          "description": "Additional agent user UUIDs on created tickets. Default []."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD. For a yearly rule this is the first year it is due."
+        },
+        "create_time": {
+          "type": "string",
+          "default": "08:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) the ticket is created on its create date. Default 08:00."
+        },
+        "due_time": {
+          "type": "string",
+          "default": "17:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) on the due date the ticket is due. Default 17:00."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "How many days before the due date the ticket is created. 30 creates it a month ahead. Default 0."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "default": "keep",
+          "description": "When the due date is not a business day: 'keep' it, move to the 'previous' business day, or the 'next' one. Default keep."
+        },
+        "open_previous_policy": {
+          "type": "string",
+          "enum": [
+            "always_create",
+            "skip"
+          ],
+          "default": "always_create",
+          "description": "'always_create' makes a new ticket even if the previous one is still open; 'skip' skips the occurrence while one is open. Default always_create."
+        },
+        "notify_client_on_create": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send the usual new-ticket notification to the client contact when a ticket is created. Default false."
+        }
+      },
+      "required": [
+        "name",
+        "ticket_template_id",
+        "recurrence",
+        "start_date"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_recurring_definitionid",
+    "method": "delete",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Archive a recurring ticket definition",
+    "summary": "Archive a recurring ticket definition",
+    "description": "Archives the definition: it stops creating tickets and becomes read-only. Occurrence history and the tickets already created are kept, and the definition stays readable with status archived. There is no unarchive, so to pause temporarily use POST /api/v1/tickets/recurring/{definitionId}/pause instead. Returns 204.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_pause",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/pause",
+    "displayName": "Pause a recurring ticket definition",
+    "summary": "Pause a recurring ticket definition",
+    "description": "Stops the whole definition from creating tickets until it is resumed. Reversible with POST /api/v1/tickets/recurring/{definitionId}/resume. To stop only one client use the client pause endpoint. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, with definition.is_active false.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_resume",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/resume",
+    "displayName": "Resume a recurring ticket definition",
+    "summary": "Resume a recurring ticket definition",
+    "description": "Restarts ticket creation for a paused definition. Occurrences that fell due while it was paused are not backfilled: generation continues from now. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, with definition.is_active true.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid_upcoming",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}/upcoming",
+    "displayName": "Get the next due dates of a recurring ticket definition",
+    "summary": "Get the next due dates of a recurring ticket definition",
+    "description": "Returns the next 5 due dates of the saved definition: each with nominal date, due date, create_at and due_at instants, plus time_zone, the business-day calendar used and sample_title. The dates are computed from the schedule rule only: they ignore whether the definition or a client is paused and ignore occurrences already generated, so read definition_status (active, paused or archived) before telling someone a ticket will be created. For the per-client next_due_at use GET /api/v1/tickets/recurring/{definitionId}.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid_occurrences",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}/occurrences",
+    "displayName": "List the occurrence history of a recurring ticket definition",
+    "summary": "List the occurrence history of a recurring ticket definition",
+    "description": "The history of what the schedule did, newest first: for each client and due date the status (created, skipped, missed or failed), the ticket_id and ticket_number it created, the reason a skip or failure happened, and the number of attempts. History survives removing a client. Filter with status=failed to see why a schedule is failing, or with client_id for one client.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter by what happened to the occurrence.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "created",
+            "skipped",
+            "missed",
+            "failed"
+          ],
+          "description": "Filter by what happened to the occurrence."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Only occurrences for this client (client_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only occurrences for this client (client_id)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-200. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-200. Default 25."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients",
+    "displayName": "Add clients to a recurring ticket definition",
+    "summary": "Add clients to a recurring ticket definition",
+    "description": "Adds clients to the definition; this is what starts ticket generation for them, one ticket per client per occurrence. Resolve client_ids with GET /api/v1/clients first. Clients already on the definition are ignored, so the call is safe to repeat. A new client is not backfilled: tickets start from the next occurrence. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, plus added (how many were new). A client_id that does not exist is 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "description": "client_id values (from GET /api/v1/clients) to add. Clients already on the definition are ignored. Adding a client is what starts ticket generation for it."
+        }
+      },
+      "required": [
+        "client_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_recurring_definitionid_clients_clientid",
+    "method": "put",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}",
+    "displayName": "Replace a client’s settings on a recurring ticket definition",
+    "summary": "Replace a client’s settings on a recurring ticket definition",
+    "description": "Replaces the per-client settings (overrides, contact_id, location_id, asset_ids): all four are required, send {}, null or [] to clear one. {clientId} is the client_id, and the client must already be on this definition (404 otherwise). Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Overrides for this client only, layered on top of the definition overrides. Send {} to clear."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Requester contact for this client's tickets; must belong to the client. Null to clear."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location for its tickets; must belong to the client. Null to clear."
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 500,
+          "description": "Assets linked to each created ticket; each must belong to the client. [] to clear."
+        }
+      },
+      "required": [
+        "overrides",
+        "contact_id",
+        "location_id",
+        "asset_ids"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_recurring_definitionid_clients_clientid",
+    "method": "delete",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}",
+    "displayName": "Remove a client from a recurring ticket definition",
+    "summary": "Remove a client from a recurring ticket definition",
+    "description": "Removes the client from the schedule so it no longer gets tickets. Its occurrence history and the tickets already created are kept. To stop a client temporarily use the client pause endpoint instead. {clientId} is the client_id and must be on the definition (404 otherwise). Returns 204.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients_clientid_pause",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause",
+    "displayName": "Pause one client on a recurring ticket definition",
+    "summary": "Pause one client on a recurring ticket definition",
+    "description": "Stops ticket creation for this client only; the other clients keep running. {clientId} is the client_id and must already be on the definition (404 otherwise). Reversible with the client resume endpoint. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients_clientid_resume",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/resume",
+    "displayName": "Resume one client on a recurring ticket definition",
+    "summary": "Resume one client on a recurring ticket definition",
+    "description": "Restarts ticket creation for a paused client; occurrences missed while it was paused are not backfilled. {clientId} is the client_id and must already be on the definition (404 otherwise). Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_externallinks",
     "method": "get",
     "path": "/api/v1/tickets/{id}/external-links",
@@ -53262,6 +59704,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           ],
           "format": "uri",
           "description": "Optional explicit link-out; must be http(s)."
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
         },
         "relationship": {
           "type": "string",
@@ -53410,6 +59860,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "format": "uri"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
         },
         "actor": {
           "type": [
@@ -54768,6 +61226,295 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_timeperiodsettings",
+    "method": "get",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "List time period settings",
+    "summary": "List time period settings",
+    "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_timeperiodsettings",
+    "method": "post",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "Create time period settings",
+    "summary": "Create time period settings",
+    "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+        }
+      },
+      "required": [
+        "frequency",
+        "frequency_unit"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_timeperiodsettings_id",
+    "method": "get",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Get time period settings",
+    "summary": "Get time period settings",
+    "description": "Gets one time period setting by time_period_settings_id.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_timeperiodsettings_id",
+    "method": "put",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Update time period settings",
+    "summary": "Update time period settings",
+    "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive); null clears it."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Inactive settings are ignored by period generation and overlap checks."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_timeperiodsettings_id",
+    "method": "delete",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Delete time period settings",
+    "summary": "Delete time period settings",
+    "description": "Deletes a time period setting. Time periods it already generated are kept.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_quotes",
     "method": "get",
     "path": "/api/v1/quotes",
@@ -54909,7 +61656,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/quotes",
     "displayName": "Create quote",
     "summary": "Create quote",
-    "description": "Creates quote via ApiQuoteController.create().",
+    "description": "Creates quote via ApiQuoteController.create(). Notes and terms are internal_notes and terms_and_conditions; the previously documented notes/terms aliases still map onto them for one release, quote_number is server-assigned and ignored, and any other unknown key is rejected with 400.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -54995,36 +61742,162 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "client_id": {
-          "type": "string",
-          "format": "uuid"
-        },
         "title": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Quote title. The only required field."
         },
-        "quote_number": {
-          "type": "string"
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Owning client. Required before the quote can be converted, and required when any item carries a location_id."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary contact at the client."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Internal summary of the quote."
+        },
+        "quote_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Quote issue date. Calendar date as YYYY-MM-DD."
         },
         "valid_until": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Expiry date. Calendar date as YYYY-MM-DD."
         },
-        "notes": {
-          "type": "string"
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Client purchase-order number."
         },
-        "terms": {
-          "type": "string"
+        "recurring_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the recurring section on the rendered quote."
+        },
+        "onetime_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the one-time section on the rendered quote."
+        },
+        "opportunity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Opportunity this quote belongs to."
+        },
+        "internal_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes kept internal to the MSP. This is the real field name; the published `notes` alias is deprecated."
+        },
+        "client_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes shown to the client on the quote."
+        },
+        "terms_and_conditions": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Terms text rendered on the quote. This is the real field name; the published `terms` alias is deprecated."
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code. Resolved from the client default, then the tenant billing default, when omitted."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ],
+          "description": "Where tax figures come from. Defaults to internal."
+        },
+        "is_template": {
+          "type": "boolean",
+          "description": "Creates a reusable template instead of a live quote. Defaults to false."
+        },
+        "template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Template this quote was created from."
         },
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": {}
-          }
+            "$ref": "#/components/schemas/QuoteItemBodyV1"
+          },
+          "description": "Line items created with the quote, in order."
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED alias for internal_notes, honoured for one release. Previously documented here but never persisted."
+        },
+        "terms": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED alias for terms_and_conditions, honoured for one release. Previously documented here but never persisted."
+        },
+        "quote_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DEPRECATED and ignored: quote numbers are assigned by the server."
         }
       },
       "required": [
-        "client_id"
-      ]
+        "title"
+      ],
+      "description": "Create body for POST /api/v1/quotes. Unknown keys other than the deprecated aliases are rejected with 400 rather than silently dropped."
     },
     "responseBodySchema": {
       "type": "object",
@@ -55132,8 +62005,132 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Quote title."
+        },
+        "client_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Owning client. Required before the quote can be converted, and required when any item carries a location_id."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Primary contact at the client."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Internal summary of the quote."
+        },
+        "quote_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Quote issue date. Calendar date as YYYY-MM-DD."
+        },
+        "valid_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Expiry date. Calendar date as YYYY-MM-DD."
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Client purchase-order number."
+        },
+        "recurring_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the recurring section on the rendered quote."
+        },
+        "onetime_section_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Heading for the one-time section on the rendered quote."
+        },
+        "opportunity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Opportunity this quote belongs to."
+        },
+        "internal_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes kept internal to the MSP. This is the real field name; the published `notes` alias is deprecated."
+        },
+        "client_notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Notes shown to the client on the quote."
+        },
+        "terms_and_conditions": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Terms text rendered on the quote. This is the real field name; the published `terms` alias is deprecated."
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code. Resolved from the client default, then the tenant billing default, when omitted."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ],
+          "description": "Where tax figures come from. Defaults to internal."
+        },
+        "is_template": {
+          "type": "boolean",
+          "description": "Creates a reusable template instead of a live quote. Defaults to false."
+        },
+        "template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Template this quote was created from."
+        }
+      },
+      "description": "Update body for PUT /api/v1/quotes/{id}. Every field is optional and absent keys are left untouched. Items are not updatable here: use the /quotes/{id}/items endpoints. status is not an update field (400 if sent): use a lifecycle command (submit-for-approval, approve, send, cancel, archive)."
     },
     "responseBodySchema": {
       "type": "object",
@@ -55222,6 +62219,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "List quote activities",
     "summary": "List quote activities",
     "description": "Lists quote activity history via listActivities().",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_quotes_id_archive",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/archive",
+    "displayName": "Archive quote",
+    "summary": "Archive quote",
+    "description": "Archives a quote via archive(): allowed from draft, cancelled, rejected and expired; sets status archived plus archived_at and writes a status_changed activity. Any other source status returns 409. This is the Archive alternative offered when DELETE is refused with DEPENDENCIES_EXIST.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -55511,8 +62560,202 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Catalog service to snapshot name, SKU, unit, cost and tax treatment from. Omit for a custom or discount line."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Line description shown on the quote."
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Integer quantity, >= 1."
+        },
+        "unit_price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Integer price in minor units (cents), >= 0. A fixed discount is NOT a negative price: send a positive unit_price with is_discount: true and discount_type: \"fixed\", optionally naming the line it reduces via applies_to_item_id."
+        },
+        "unit_of_measure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Human-readable unit label, e.g. \"hours\"."
+        },
+        "unit_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "UN/CEFACT REC 20 unit code, e.g. C62 (each) or HUR (hour). Resolved from unit_of_measure when omitted."
+        },
+        "phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Free-text grouping label for the line."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "client_locations.location_id the line is delivered to. Must belong to the quote's client, otherwise the request is rejected with 400."
+        },
+        "cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Integer cost in minor units, used for margin display. Snapshotted from the catalog for product lines."
+        },
+        "cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code for cost."
+        },
+        "is_optional": {
+          "type": "boolean",
+          "description": "Marks the line as optional on the quote. Defaults to false."
+        },
+        "is_selected": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether an optional line is selected. Defaults to true."
+        },
+        "is_recurring": {
+          "type": "boolean",
+          "description": "Recurring (contract) line rather than one-time. Defaults to false."
+        },
+        "billing_frequency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Required by the editor for recurring lines, e.g. \"monthly\"."
+        },
+        "billing_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Billing method, e.g. fixed or per_unit. Falls back to the service default."
+        },
+        "is_discount": {
+          "type": "boolean",
+          "description": "Marks the line as a discount. Defaults to false."
+        },
+        "discount_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "percentage",
+            "fixed",
+            null
+          ],
+          "description": "With is_discount: \"percentage\" uses discount_percentage, \"fixed\" uses the positive unit_price."
+        },
+        "discount_percentage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage discount, 0-100."
+        },
+        "applies_to_item_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to one quote item; omit to spread it across the quote."
+        },
+        "applies_to_service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to lines of one service."
+        },
+        "is_taxable": {
+          "type": "boolean",
+          "description": "Omit to derive the treatment from the service tax configuration; an explicit value overrides it."
+        },
+        "tax_region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Tax region override for the line."
+        },
+        "tax_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Tax rate percentage override; fractional values are kept as sent."
+        },
+        "service_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Overrides the snapshotted catalog service name."
+        },
+        "service_sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Overrides the snapshotted catalog SKU."
+        },
+        "service_item_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Item kind, e.g. product or service. Falls back to the catalog value."
+        }
+      },
+      "required": [
+        "description",
+        "quantity",
+        "unit_price"
+      ],
+      "description": "Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is a server-captured snapshot and is ignored if sent."
     },
     "responseBodySchema": {
       "type": "object",
@@ -55577,8 +62820,202 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+      "properties": {
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Catalog service to snapshot name, SKU, unit, cost and tax treatment from. Omit for a custom or discount line."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Line description shown on the quote."
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Integer quantity, >= 1."
+        },
+        "unit_price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Integer price in minor units (cents), >= 0. A fixed discount is NOT a negative price: send a positive unit_price with is_discount: true and discount_type: \"fixed\", optionally naming the line it reduces via applies_to_item_id."
+        },
+        "unit_of_measure": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Human-readable unit label, e.g. \"hours\"."
+        },
+        "unit_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "UN/CEFACT REC 20 unit code, e.g. C62 (each) or HUR (hour). Resolved from unit_of_measure when omitted."
+        },
+        "phase": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Free-text grouping label for the line."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "client_locations.location_id the line is delivered to. Must belong to the quote's client, otherwise the request is rejected with 400."
+        },
+        "cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Integer cost in minor units, used for margin display. Snapshotted from the catalog for product lines."
+        },
+        "cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 code for cost."
+        },
+        "is_optional": {
+          "type": "boolean",
+          "description": "Marks the line as optional on the quote. Defaults to false."
+        },
+        "is_selected": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether an optional line is selected. Defaults to true."
+        },
+        "is_recurring": {
+          "type": "boolean",
+          "description": "Recurring (contract) line rather than one-time. Defaults to false."
+        },
+        "billing_frequency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Required by the editor for recurring lines, e.g. \"monthly\"."
+        },
+        "billing_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Billing method, e.g. fixed or per_unit. Falls back to the service default."
+        },
+        "is_discount": {
+          "type": "boolean",
+          "description": "Marks the line as a discount. Defaults to false."
+        },
+        "discount_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "percentage",
+            "fixed",
+            null
+          ],
+          "description": "With is_discount: \"percentage\" uses discount_percentage, \"fixed\" uses the positive unit_price."
+        },
+        "discount_percentage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage discount, 0-100."
+        },
+        "applies_to_item_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to one quote item; omit to spread it across the quote."
+        },
+        "applies_to_service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restricts a discount to lines of one service."
+        },
+        "is_taxable": {
+          "type": "boolean",
+          "description": "Omit to derive the treatment from the service tax configuration; an explicit value overrides it."
+        },
+        "tax_region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Tax region override for the line."
+        },
+        "tax_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Tax rate percentage override; fractional values are kept as sent."
+        },
+        "service_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Overrides the snapshotted catalog service name."
+        },
+        "service_sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100,
+          "description": "Overrides the snapshotted catalog SKU."
+        },
+        "service_item_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50,
+          "description": "Item kind, e.g. product or service. Falls back to the catalog value."
+        }
+      },
+      "required": [
+        "description",
+        "quantity",
+        "unit_price"
+      ],
+      "description": "Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is a server-captured snapshot and is ignored if sent."
     },
     "responseBodySchema": {
       "type": "object",
@@ -55676,6 +63113,63 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "Reorder quote items",
     "summary": "Reorder quote items",
     "description": "Reorders quote item sequence via reorderItems().",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_quotes_id_cancel",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/cancel",
+    "displayName": "Cancel quote",
+    "summary": "Cancel quote",
+    "description": "Cancels quote via cancel(); requires billing:update. Quote status is not editable through PUT /api/v1/quotes/{id}.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -56261,7 +63755,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contracts",
     "displayName": "Create contract",
     "summary": "Create contract",
-    "description": "Creates contract via ApiContractLineController.createContract() (v2 controller mounted under v1 route).",
+    "description": "Creates a client-owned contract the way the UI wizard does: header + client_contracts assignment (+ optional lines) in ONE transaction, so the contract appears in the product. client_id is required (400 otherwise). Responds 201.",
     "tags": [
       "Quotes & Contracts v1"
     ],
@@ -56349,25 +63843,851 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "client_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "REQUIRED. Owning client (owner_client_id is accepted as an alias). A contract is always client-owned; creating without a client is rejected with 400 so no unassigned, UI-invisible contract can be created."
         },
         "contract_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_description": {
           "type": "string"
+        },
+        "billing_frequency": {
+          "type": "string",
+          "description": "monthly | quarterly | semi-annually | annually."
+        },
+        "start_date": {
+          "type": "string",
+          "description": "YYYY-MM-DD (or ISO datetime). Required: it is the assignment start date."
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "draft",
+            "terminated",
+            "expired",
+            "published",
+            "archived"
+          ],
+          "description": "Defaults to draft semantics: a draft contract gets an inactive assignment."
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "po_required": {
+          "type": "boolean"
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "po_amount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "custom_rate": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "contract_line_id"
+            ]
+          },
+          "description": "Optional contract lines attached in the same transaction. Any invalid line rolls back the header, the assignment and all lines."
+        }
+      },
+      "required": [
+        "client_id",
+        "contract_name",
+        "billing_frequency",
+        "start_date"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_contracts_contractid",
+    "method": "get",
+    "path": "/api/v1/contracts/{contractId}",
+    "displayName": "Get contract",
+    "summary": "Get contract",
+    "description": "Gets a contract with its assignments and contract lines.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_contracts_contractid",
+    "method": "put",
+    "path": "/api/v1/contracts/{contractId}",
+    "displayName": "Update contract",
+    "summary": "Update contract",
+    "description": "Updates contract header fields with the UI rules (system-managed contracts: 422; invoiced/expired restrictions: 409).",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "billing_frequency": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "draft",
+            "terminated",
+            "expired",
+            "published",
+            "archived"
+          ]
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_contracts_contractid",
+    "method": "patch",
+    "path": "/api/v1/contracts/{contractId}",
+    "displayName": "Patch contract",
+    "summary": "Patch contract",
+    "description": "Alias of PUT (partial header update).",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contract_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "billing_frequency": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "draft",
+            "terminated",
+            "expired",
+            "published",
+            "archived"
+          ]
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contracts_contractid",
+    "method": "delete",
+    "path": "/api/v1/contracts/{contractId}",
+    "displayName": "Delete contract",
+    "summary": "Delete contract",
+    "description": "Deletes a contract with the UI rules: 404 not found, 422 system-managed, 409 has invoices. 204 on success.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_contracts_contractid_assignments",
+    "method": "get",
+    "path": "/api/v1/contracts/{contractId}/assignments",
+    "displayName": "List contract assignments",
+    "summary": "List contract assignments",
+    "description": "Lists client_contracts rows for the contract.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_contracts_contractid_assignments",
+    "method": "post",
+    "path": "/api/v1/contracts/{contractId}/assignments",
+    "displayName": "Create contract assignment",
+    "summary": "Create contract assignment",
+    "description": "Assigns an existing contract to its owning client (e.g. repairs a contract with no client_contracts row). 409 if already assigned, 422 if system-managed or client is not the owner.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Defaults to the contract owner; must equal it when supplied."
         },
         "start_date": {
           "type": "string"
         },
         "end_date": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "billing_frequency": {
-          "type": "string"
+        "is_active": {
+          "type": "boolean",
+          "description": "Defaults to true only when the contract header is active and not draft."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "po_required": {
+          "type": "boolean"
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "po_amount": {
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "required": [
-        "client_id"
+        "start_date"
       ]
     },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_contracts_contractid_assignments_clientcontractid",
+    "method": "get",
+    "path": "/api/v1/contracts/{contractId}/assignments/{clientContractId}",
+    "displayName": "Get contract assignment",
+    "summary": "Get contract assignment",
+    "description": "Gets one assignment.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      },
+      {
+        "name": "clientContractId",
+        "in": "path",
+        "required": true,
+        "description": "Assignment UUID from client_contracts.client_contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assignment UUID from client_contracts.client_contract_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_contracts_contractid_assignments_clientcontractid",
+    "method": "put",
+    "path": "/api/v1/contracts/{contractId}/assignments/{clientContractId}",
+    "displayName": "Update contract assignment",
+    "summary": "Update contract assignment",
+    "description": "Updates dates/terms; is_active:true activates the assignment and contract.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      },
+      {
+        "name": "clientContractId",
+        "in": "path",
+        "required": true,
+        "description": "Assignment UUID from client_contracts.client_contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assignment UUID from client_contracts.client_contract_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "true activates the assignment and its contract header (UI \"Set to Active\")."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "po_required": {
+          "type": "boolean"
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "po_amount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_contracts_contractid_assignments_clientcontractid",
+    "method": "patch",
+    "path": "/api/v1/contracts/{contractId}/assignments/{clientContractId}",
+    "displayName": "Patch contract assignment",
+    "summary": "Patch contract assignment",
+    "description": "Alias of PUT.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      },
+      {
+        "name": "clientContractId",
+        "in": "path",
+        "required": true,
+        "description": "Assignment UUID from client_contracts.client_contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assignment UUID from client_contracts.client_contract_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "true activates the assignment and its contract header (UI \"Set to Active\")."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "po_required": {
+          "type": "boolean"
+        },
+        "po_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "po_amount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contracts_contractid_assignments_clientcontractid",
+    "method": "delete",
+    "path": "/api/v1/contracts/{contractId}/assignments/{clientContractId}",
+    "displayName": "Delete contract assignment",
+    "summary": "Delete contract assignment",
+    "description": "Removes an assignment unless invoices reference it (409; end it with an update instead). 204 on success.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "Contract UUID from contracts.contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract UUID from contracts.contract_id."
+        }
+      },
+      {
+        "name": "clientContractId",
+        "in": "path",
+        "required": true,
+        "description": "Assignment UUID from client_contracts.client_contract_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assignment UUID from client_contracts.client_contract_id."
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -56490,9 +64810,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "contractLineId",
         "in": "path",
         "required": true,
-        "description": "ContractLineId path parameter.",
+        "description": "Contract line UUID from contract_lines.contract_line_id.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "uuid",
+          "description": "Contract line UUID from contract_lines.contract_line_id."
         }
       }
     ],
@@ -57844,6 +66166,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
+        },
+        "refType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "refId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "required": [
@@ -62498,6 +70834,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "boolean",
                   "description": "Project tasks on mobile (project:read; PSA product only)."
                 },
+                "assets": {
+                  "type": "boolean",
+                  "description": "Asset browsing on mobile (asset:read; PSA product only)."
+                },
+                "assetAudit": {
+                  "type": "boolean",
+                  "description": "Site audits on mobile (asset:read AND asset:update; PSA product only)."
+                },
                 "clientsCreate": {
                   "type": "boolean"
                 },
@@ -62509,6 +70853,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "contactsUpdate": {
                   "type": "boolean"
+                },
+                "dontNotifyCustomerDefault": {
+                  "type": "boolean",
+                  "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                 }
               },
               "required": [
@@ -62516,10 +70864,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "opportunities",
                 "opportunitiesCreate",
                 "projects",
+                "assets",
+                "assetAudit",
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",
-                "contactsUpdate"
+                "contactsUpdate",
+                "dontNotifyCustomerDefault"
               ]
             },
             "formatting": {

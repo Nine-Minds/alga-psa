@@ -1,3 +1,4 @@
+import { resolveMicrosoftOAuthAuthority } from '../microsoftAuthority';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { randomBytes, randomUUID } from 'crypto';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
@@ -19,11 +20,19 @@ import {
   toDiagnosticsErrorMeta,
   type GraphFailure,
 } from '../../diagnostics/graphFailure';
+import {
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  classifySafeMicrosoftOAuthFailure,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '../microsoftOAuthErrors';
 import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
+import { repairUtf8Mojibake } from '../inboundEmailMimeHelpers';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
+import { getEmailWebhookBaseUrl } from '../webhookBaseUrl';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
@@ -119,6 +128,9 @@ export type MicrosoftGraphSendMailPayload =
   | { kind: 'json'; message: Record<string, unknown>; fromAddress?: string }
   | { kind: 'mime'; content: string; fromAddress?: string };
 
+/** Marks a request config that already spent its one refresh-and-replay. */
+const TOKEN_RECOVERY_ATTEMPTED = '__algaTokenRecoveryAttempted';
+
 function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
   const status = error?.response?.status ?? error?.status;
   const code = String(error?.response?.data?.error?.code ?? error?.code ?? '');
@@ -177,6 +189,37 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
       return config;
     });
+
+    // Graph can reject a bearer the stored expiry still calls live: the token
+    // was revoked, or another process refreshed first and rotated it. One
+    // refresh and one replay per request recovers that on every call the
+    // adapter makes, connect's /me probe included, instead of only on sendMail.
+    this.httpClient.interceptors.response.use(undefined, async (error: any) => {
+      const request = error?.config;
+      if (error?.response?.status !== 401 || !request || request[TOKEN_RECOVERY_ATTEMPTED]) throw error;
+      request[TOKEN_RECOVERY_ATTEMPTED] = true;
+      await this.refreshAccessTokenOnce();
+      return this.httpClient.request(request);
+    });
+  }
+
+  private tokenRefresh: Promise<void> | null = null;
+
+  /**
+   * Parallel requests that all find the token dead share one refresh. The
+   * token endpoint rotates refresh tokens, so a second concurrent refresh
+   * would replay a refresh token that the first one already consumed.
+   */
+  private refreshAccessTokenOnce(): Promise<void> {
+    this.tokenRefresh ??= this.refreshAccessToken().finally(() => {
+      this.tokenRefresh = null;
+    });
+    return this.tokenRefresh;
+  }
+
+  protected async ensureValidToken(): Promise<void> {
+    if (!this.accessToken) await this.loadCredentials();
+    if (this.isTokenExpired()) await this.refreshAccessTokenOnce();
   }
 
   /**
@@ -512,29 +555,33 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
-      // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
-      // tenant-independent authority used when the refresh grant was issued.
-      // Appliance deployments use a customer-owned, normally single-tenant app
-      // and therefore require that app's concrete tenant authority.
-      let tenantAuthority = isHosted
-        ? 'common'
-        : vendorTenantId
-          || getAccessTokenTenantId(this.accessToken)
-          || process.env.MICROSOFT_TENANT_ID;
-      if (!tenantAuthority) {
-        try {
-          const secretProvider = await getSecretProviderInstance();
-          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
-            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
-            || 'common';
-        } catch {
-          tenantAuthority = 'common';
+      // The authority must match the one the refresh token was issued under, so
+      // the issuer kind decides (see microsoftAuthority.ts): platform-managed ->
+      // common; tenant-owned -> the profile's directory ID. Config built by
+      // buildMicrosoftEmailProviderConfig carries `resolved_issuer_kind`;
+      // callers that have not migrated fall back to the deployment capability.
+      const issuerKind =
+        vendorConfig.resolved_issuer_kind ??
+        (resolveDeploymentCapabilities().microsoftOAuth.sharedApp ? 'platform-managed' : 'tenant-owned');
+      let profileTenantId: string | undefined;
+      if (issuerKind === 'tenant-owned') {
+        // Only values that belong to this mailbox's own app. The deployment-wide
+        // MICROSOFT_TENANT_ID (env or app secret) is the hosting tenant, never a
+        // tenant-owned app's directory, so it is deliberately not consulted.
+        profileTenantId = vendorTenantId || getAccessTokenTenantId(this.accessToken) || undefined;
+        if (!profileTenantId) {
+          try {
+            const secretProvider = await getSecretProviderInstance();
+            profileTenantId = (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')) || undefined;
+          } catch {
+            profileTenantId = undefined;
+          }
         }
       }
+      const tenantAuthority = resolveMicrosoftOAuthAuthority({ issuerKind, profileTenantId });
 
-      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority || 'common');
+      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -564,6 +611,21 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
+      // Microsoft's token endpoint answers with an OAuth body (error /
+      // error_codes / error_description), not a Graph error, so classify that
+      // first. Only safe fields are carried; never the axios config/body.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind) {
+        const wrapped = new Error(formatMicrosoftOAuthFailureForMailboxFlow(failureKind));
+        Object.assign(wrapped, {
+          status: safeFailure.status,
+          code: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+          microsoftOAuthFailureKind: failureKind,
+          microsoftOAuthFailure: safeFailure,
+        });
+        throw wrapped;
+      }
       throw this.toSanitizedGraphError(error, 'refreshAccessToken');
     }
   }
@@ -630,7 +692,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   /** Proactively load and refresh credentials when they are near expiry. */
   async ensureTokenHealthy(bufferMinutes = 30): Promise<void> {
     if (!this.accessToken) await this.loadCredentials();
-    if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessToken();
+    if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessTokenOnce();
   }
 
   /**
@@ -659,20 +721,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         });
 
     try {
+      // A 401 here is refreshed and replayed once by the client's response
+      // interceptor, like every other Graph call.
       const response = await send();
       return this.extractGraphIds(response.headers);
     } catch (error: any) {
-      if (error?.response?.status === 401) {
-        // A single bounded retry covers tokens revoked/expired between the
-        // request interceptor's expiry check and Graph receiving the request.
-        await this.refreshAccessToken();
-        try {
-          const response = await send();
-          return this.extractGraphIds(response.headers);
-        } catch (retryError) {
-          throw this.toSanitizedGraphError(retryError, 'sendMail');
-        }
-      }
       throw this.toSanitizedGraphError(error, 'sendMail');
     }
   }
@@ -706,18 +759,34 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     return messages;
   }
 
-  /** Delete app-owned subscriptions for this webhook URL that are not the DB cursor. */
+  /** Remove untracked subscriptions for this mailbox and folder. */
   async cleanupOrphanedSubscriptions(): Promise<number> {
     const webhookUrl = this.config.webhook_notification_url;
     if (!webhookUrl) return 0;
+    const { resource } = await this.buildFolderResourcePath(this.config.folder_to_monitor || 'Inbox');
     const response = await this.httpClient.get('/subscriptions');
     const currentId = this.config.webhook_subscription_id;
-    const orphans = (response.data?.value || []).filter(
-      (subscription: any) => subscription?.notificationUrl === webhookUrl && subscription?.id !== currentId
+    const candidates = (response.data?.value || []).filter(
+      (subscription: any) =>
+        typeof subscription?.id === 'string' &&
+        subscription.id !== currentId &&
+        subscription.notificationUrl === webhookUrl &&
+        subscription.changeType === 'created' &&
+        typeof subscription.resource === 'string' &&
+        subscription.resource.replace(/^\//, '') === resource.replace(/^\//, '')
     );
+    if (candidates.length === 0) return 0;
+
+    // An OAuth application and callback can be shared across mailbox providers.
+    const knex = await getAdminConnection();
+    const trackedIds = await tenantDb(knex, this.config.tenant)
+      .unscoped('microsoft_email_provider_config', 'protect subscription IDs tracked by any mailbox provider')
+      .whereIn('webhook_subscription_id', candidates.map((subscription: { id: string }) => subscription.id))
+      .pluck('webhook_subscription_id');
 
     let deleted = 0;
-    for (const orphan of orphans) {
+    for (const orphan of candidates) {
+      if (trackedIds.includes(orphan.id)) continue;
       try {
         await this.httpClient.delete(`/subscriptions/${encodeURIComponent(String(orphan.id))}`);
         deleted += 1;
@@ -881,11 +950,19 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       const newExpiry = new Date(
         Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
       ).toISOString();
-      
+      const hasPublicWebhookOverride = Boolean(process.env.PUBLIC_WEBHOOK_BASE_URL?.trim());
+      const webhookUrl = hasPublicWebhookOverride
+        ? `${getEmailWebhookBaseUrl()}/api/email/webhooks/microsoft`
+        : undefined;
+
       await this.httpClient.patch(`/subscriptions/${this.config.webhook_subscription_id}`, {
         expirationDateTime: newExpiry,
+        ...(webhookUrl ? { notificationUrl: webhookUrl } : {}),
       });
 
+      if (webhookUrl) {
+        this.config.webhook_notification_url = webhookUrl;
+      }
       this.config.webhook_expires_at = newExpiry;
       this.config.last_subscription_renewal = new Date().toISOString();
 
@@ -970,7 +1047,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           email: recipient.emailAddress?.address || '',
           name: recipient.emailAddress?.name,
         })),
-        subject: message.subject || '',
+        subject: repairUtf8Mojibake(message.subject || ''),
         body: {
           text: textBody,
           html: htmlBody,
@@ -1203,7 +1280,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         .join(' ');
       return {
         success: false,
-        error: detail
+        error: (error as any)?.microsoftOAuthFailureKind
+          ? failure.message
+          : detail
           ? `${failure.message} (${detail})`
           : failure.message || 'Connection test failed',
         status: failure.status,

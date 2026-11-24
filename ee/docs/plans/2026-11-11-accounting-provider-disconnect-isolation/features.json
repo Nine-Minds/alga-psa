@@ -1,0 +1,10 @@
+[
+  {"id":"F001","description":"Define/reuse provider-scoped disconnect eligibility with canonical provider IDs and the existing non-finalized state semantics, preserving credential tombstones.","implemented":true,"prdRefs":["Provider-scoped eligibility"]},
+  {"id":"F002","description":"Scheduled accounting ticks skip only blocked providers and process every connected target of each eligible provider, including when blocked-provider credentials are absent.","implemented":true,"prdRefs":["Scheduled execution"]},
+  {"id":"F003","description":"Sync Now checks only the intended provider's disconnect state and retains actionable feedback when its credentials are tombstoned.","implemented":true,"prdRefs":["Interactive mutations"]},
+  {"id":"F004","description":"Invoice sync enqueue checks only the intended provider and writes no export operation for a blocked provider.","implemented":true,"prdRefs":["Interactive mutations"]},
+  {"id":"F005","description":"Drift re-export checks only the intended provider and preserves provider/organisation identity on queued work.","implemented":true,"prdRefs":["Interactive mutations"]},
+  {"id":"F006","description":"Explicit blocked or missing provider/organisation selections never fall back to another target; permissions and tenant boundaries remain enforced.","implemented":true,"prdRefs":["Interactive mutations","Security / permissions"]},
+  {"id":"F007","description":"Healthy-provider cycles resume without clearing the other provider's disconnect record, and a new actual result replaces the historical error while retaining history.","implemented":true,"prdRefs":["Recovery and displayed history"]},
+  {"id":"F008","description":"Retain both-blocked/no-target no-op behavior, finalized/no-record eligibility, multi-target execution, CE gating, and automatic-sync settings.","implemented":true,"prdRefs":["Provider-scoped eligibility","Scheduled execution"]}
+]

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Button } from "@alga-psa/ui/components/Button";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
@@ -9,18 +9,32 @@ import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Check, Copy, ExternalLink, Search } from "lucide-react";
 import {
+  CLIENT_TICKET_EMAIL_TEMPLATES,
   templateVariableCategories,
   templateVariableRegistry,
   type VariableDef,
 } from "../../lib/templateVariables";
 
 const DOCUMENTATION_URL =
-  "https://algapsa.com/documentation/email-template-variables";
+  "https://www.nineminds.com/documentation/email-template-variables";
+
+const TICKET_ARRAY_ROWS: Record<string, string> = {
+  "ticket.assets": "{{name}}",
+  "ticket.materials": "{{name}}: {{quantity}} \u00d7 {{rate}} = {{amount}}",
+  "ticket.timeEntries": "{{date}} | {{technician}} | {{worked}} | {{billable}}",
+};
 
 function tokenFor(variable: VariableDef): string {
+  const arrayRow = variable.type === "array" ? TICKET_ARRAY_ROWS[variable.path] : undefined;
+  if (arrayRow) {
+    return `{{#each ${variable.path}}}${arrayRow}{{/each}}`;
+  }
+  const path = variable.path.includes("[].")
+    ? `this.${variable.path.split("[].").pop()}`
+    : variable.path;
   return variable.type === "raw-html"
-    ? `{{{${variable.path}}}}`
-    : `{{${variable.path}}}`;
+    ? `{{{${path}}}}`
+    : `{{${path}}}`;
 }
 
 function matchesSearch(variable: VariableDef, search: string): boolean {
@@ -47,11 +61,29 @@ function VariableRow({
 }) {
   const { t } = useTranslation("msp/settings");
   const [copied, setCopied] = useState(false);
+  const copyFeedback = useRef<{ timeoutId?: number } | null>(null);
+
+  useEffect(() => {
+    copyFeedback.current = {};
+    const feedback = copyFeedback.current;
+    return () => {
+      copyFeedback.current = null;
+      window.clearTimeout(feedback.timeoutId);
+    };
+  }, []);
+
   const token = tokenFor(variable);
   const copy = async () => {
+    const feedback = copyFeedback.current;
     await navigator.clipboard.writeText(token);
+    if (!feedback || copyFeedback.current !== feedback) return;
+
+    window.clearTimeout(feedback.timeoutId);
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    feedback.timeoutId = window.setTimeout(() => {
+      feedback.timeoutId = undefined;
+      setCopied(false);
+    }, 1200);
   };
 
   return (
@@ -76,6 +108,11 @@ function VariableRow({
             >
               {variable.type}
             </Badge>
+            {variable.audience === "msp" && (
+              <Badge size="sm" variant="warning">
+                {t('notifications.templateVariables.mspOnly')}
+              </Badge>
+            )}
           </div>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-[rgb(var(--color-text-600))]">
             {variable.description}
@@ -139,6 +176,11 @@ export function TemplateVariablePanel({
                 ? t('notifications.templateVariables.insertHelp')
                 : t('notifications.templateVariables.availableHelp')}
             </p>
+            {CLIENT_TICKET_EMAIL_TEMPLATES.has(templateName) && (
+              <p className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
+                {t('notifications.templateVariables.clientSafeHelp')}
+              </p>
+            )}
           </div>
           <Badge size="sm" variant="info">
             {entry?.variables.length ?? 0}

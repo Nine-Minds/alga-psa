@@ -22,3 +22,7 @@ jobs:
       - name: Run compose port exposure tests
         # Pure node:test; renders `docker compose config`, so no images or secrets are needed.
         run: node --test scripts/tests/compose-port-exposure.test.mjs
+
+      - name: Run compose PgBouncer authentication tests
+        # Same approach: renders `docker compose config`, no images or secrets needed.
+        run: node --test scripts/tests/compose-pgbouncer-auth.test.mjs

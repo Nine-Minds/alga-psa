@@ -98,6 +98,7 @@ export {
 export type { TicketListIdentity, TicketListIdentitySource } from './ticketListIdentity';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
+export { isTicketOpenerComment, getTicketOpenerAttachmentCount } from './ticketOpenerComment';
 export { resolveCommentAuthor } from './commentAuthorResolution';
 export {
   convertProseMirrorToTicketRichTextBlocks,
@@ -110,6 +111,10 @@ export {
   serializeTicketRichTextContent,
 } from './ticketRichText';
 export { extractTicketRichTextHtml } from './ticketRichTextHtml';
+export {
+  removeTicketRichTextImageUrls,
+  replaceTicketRichTextImageUrls,
+} from './ticketRichTextImages';
 export {
   parseTicketMobileEditorNativeToWebMessage,
   parseTicketMobileEditorWebToNativeMessage,
@@ -185,12 +190,14 @@ export {
   TicketCloseValidationError,
   CLOSE_RULE_REQUIRED_FIELDS,
   CLOSE_RULE_REQUIRED_FIELD_LABELS,
+  pickCloseRulePendingFields,
 } from './closeRuleConstants';
 export type {
   CloseRuleFailure,
   CloseRuleId,
   CloseRuleBypassSource,
   CloseRuleRequiredField,
+  CloseRulePendingFields,
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';

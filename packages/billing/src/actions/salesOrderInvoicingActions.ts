@@ -3,7 +3,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, resolveTenantToday } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
@@ -225,6 +225,7 @@ export const generateInvoiceForSalesOrder = withAuth(
     let session: Awaited<ReturnType<typeof invoiceService.validateSessionAndTenant>>['session'];
     let client: any;
     let dueDate: string;
+    let invoiceDate: string;
     let taxSource: any;
     try {
       ({ session } = await invoiceService.validateSessionAndTenant());
@@ -244,7 +245,10 @@ export const generateInvoiceForSalesOrder = withAuth(
             'Client billing email is required',
         };
       }
-      const due = await getDueDate(header.client_id, Temporal.Now.plainDateISO().toString());
+      // Tenant-local today, resolved once per order: the invoice date and the due date
+      // derived from it share this value so they cannot drift (e.g. across midnight).
+      invoiceDate = (await resolveTenantToday(db, tenant)).toString();
+      const due = await getDueDate(header.client_id, invoiceDate);
       if (isActionMessageError(due) || isActionPermissionError(due)) {
         return { success: false, invoiced: 0, error: getErrorMessage(due) };
       }
@@ -384,7 +388,7 @@ export const generateInvoiceForSalesOrder = withAuth(
             invoice_id: invoiceId,
             tenant,
             client_id: so.client_id,
-            invoice_date: Temporal.Now.plainDateISO().toString(),
+            invoice_date: invoiceDate,
             due_date: dueDate,
             invoice_number: invoiceNumber,
             status: 'draft',

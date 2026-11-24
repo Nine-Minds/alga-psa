@@ -115,11 +115,27 @@ export async function POST(request: NextRequest): Promise<Response> {
       continue;
     }
 
+    const runner = await getJobRunner();
+
+    // Lifecycle notifications (sent to lifecycleNotificationUrl) carry no artifact. Graph
+    // stops delivery unless we reauthorize, and a removed subscription must be recreated;
+    // a forced renewal does both (PATCH reauthorizes, a 404 recreates). Missed-notification
+    // events have nothing to recover, so they are acknowledged and dropped.
+    const lifecycleEvent = notification?.lifecycleEvent;
+    if (typeof lifecycleEvent === 'string') {
+      if (lifecycleEvent === 'reauthorizationRequired' || lifecycleEvent === 'subscriptionRemoved') {
+        await runner.scheduleJob('renew-teams-meeting-artifact-subscriptions', {
+          tenantId: parsed.tenantId,
+          force: true,
+        });
+      }
+      continue;
+    }
+
     // Runner seam (Temporal on EE, pg-boss on CE) rather than the legacy
     // pg-boss-only JobScheduler: on EE this starts genericJobWorkflow, whose
     // worker forwards execution to the server over the event bus with tenant
     // context set. The route is EE-gated above, so the runner here is Temporal.
-    const runner = await getJobRunner();
     await runner.scheduleJob('process-teams-meeting-artifact-notification', {
       tenantId: parsed.tenantId,
       notification,

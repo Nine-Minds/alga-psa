@@ -27,23 +27,34 @@
  * describe the row itself.
  */
 import { tagSet } from '@alga-psa/predicates/sql';
-import type { Attribute, ComputedAttribute, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
+import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, PredicateValue, QuerySchema, SqlFragment } from '@alga-psa/predicates';
 import { ticketSlaBreachedSql } from './ticketSlaSql';
 
-type Resolver = (alias: string, value: unknown, nowIso: string, operator: PredicateOperator) => SqlFragment;
+type Resolver = (alias: string, value: PredicateValue | undefined, nowIso: string, operator: PredicateOperator, tenant: string | undefined) => SqlFragment;
 
-const scalar = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value);
-const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const scalar = (value: PredicateValue | undefined): PredicateLiteral => {
+  const result = Array.isArray(value) ? value[0] : value;
+  if (result === undefined) throw new Error('Computed ticket predicate requires a scalar value');
+  return result;
+};
+const list = (value: PredicateValue | undefined): PredicateLiteral[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
 
 const COMPUTED_RESOLVERS = (() => {
+  /**
+   * Tenant scope of a subquery row: correlated to the ticket and, when the tenant is known, also
+   * filtered by value. Citus cannot route a subquery under OR that is only correlated.
+   */
+  const tenantScope = (subAlias: string, alias: string, tenant: string | undefined): SqlFragment => tenant === undefined
+    ? { sql: `${subAlias}.tenant = ??`, bindings: [`${alias}.tenant`] }
+    : { sql: `${subAlias}.tenant = ? AND ${subAlias}.tenant = ??`, bindings: [tenant, `${alias}.tenant`] };
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
   // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
-  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: unknown): SqlFragment => {
+  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateValue | undefined): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
       : { sql: `(${expression.sql}) IS NOT NULL`, bindings: expression.bindings };
-    if ((operator === 'equals' || operator === 'not_equals') && value === null) {
+    if ((operator === 'equals' || operator === 'not_equals') && scalar(value) === null) {
       const present = compare(expression, type, 'is_not_empty', undefined);
       return operator === 'equals' ? { sql: `NOT (${present.sql})`, bindings: present.bindings } : present;
     }
@@ -52,10 +63,10 @@ const COMPUTED_RESOLVERS = (() => {
       return values.length ? { sql: `COALESCE((${expression.sql}) IN (${values.map(() => '?').join(', ')}), FALSE)`, bindings: [...expression.bindings, ...values] } : { sql: 'FALSE', bindings: [] };
     }
     if (operator === 'equals' || operator === 'not_equals') return {
-      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, value],
+      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, scalar(value)],
     };
     if (operator === 'contains' || operator === 'starts_with' || operator === 'ends_with') {
-      const escaped = String(value).replace(/[\\%_]/g, (character) => `\\${character}`);
+      const escaped = String(scalar(value)).replace(/[\\%_]/g, (character) => `\\${character}`);
       const pattern = operator === 'contains' ? `%${escaped}%` : operator === 'starts_with' ? `${escaped}%` : `%${escaped}`;
       return { sql: `COALESCE((${expression.sql}) LIKE ? ESCAPE '\\', FALSE)`, bindings: [...expression.bindings, pattern] };
     }
@@ -67,35 +78,51 @@ const COMPUTED_RESOLVERS = (() => {
     sql: `alga_predicate_lower_v1(alga_checklist_description_v1(??))`,
     bindings: [`${alias}.attributes`],
   }, 'string', operator, value),
-  from_service_request: (alias, value) => value === null ? { sql: 'FALSE', bindings: [] } : ({
-    sql: `EXISTS (SELECT 1 FROM service_request_submissions AS __sr WHERE __sr.tenant = ?? AND __sr.created_ticket_id = ??) = ?`,
-    bindings: [`${alias}.tenant`, `${alias}.ticket_id`, scalar(value)],
-  }),
-  service_request_definition_id: (alias, value, _now, operator) => compare({
-    sql: `(SELECT __sr.definition_id FROM service_request_submissions AS __sr WHERE __sr.tenant = ?? AND __sr.created_ticket_id = ?? LIMIT 1)`,
-    bindings: [`${alias}.tenant`, `${alias}.ticket_id`],
-  }, 'uuid', operator, value),
+  from_service_request: (alias, value, _now, _operator, tenant) => {
+    if (value === null) return { sql: 'FALSE', bindings: [] };
+    const sr = tenantScope('__sr', alias, tenant);
+    return {
+      sql: `EXISTS (SELECT 1 FROM service_request_submissions AS __sr WHERE ${sr.sql} AND __sr.created_ticket_id = ??) = ?`,
+      bindings: [...sr.bindings, `${alias}.ticket_id`, scalar(value)],
+    };
+  },
+  service_request_definition_id: (alias, value, _now, operator, tenant) => {
+    const sr = tenantScope('__sr', alias, tenant);
+    return compare({
+      sql: `(SELECT __sr.definition_id FROM service_request_submissions AS __sr WHERE ${sr.sql} AND __sr.created_ticket_id = ?? LIMIT 1)`,
+      bindings: [...sr.bindings, `${alias}.ticket_id`],
+    }, 'uuid', operator, value);
+  },
 
   /** `board_inactive equals true|false`: the ticket's board is (not) marked inactive. No board: false. */
-  board_inactive: (alias, value) => ({
-    sql: `EXISTS (SELECT 1 FROM boards AS __cb WHERE __cb.tenant = ??
+  board_inactive: (alias, value, _now, _operator, tenant) => {
+    const cb = tenantScope('__cb', alias, tenant);
+    return {
+      sql: `EXISTS (SELECT 1 FROM boards AS __cb WHERE ${cb.sql}
       AND __cb.board_id = ?? AND __cb.is_inactive = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.board_id`, scalar(value) === true],
-  }),
+      bindings: [...cb.bindings, `${alias}.board_id`, scalar(value) === true],
+    };
+  },
 
   /** `status_closed equals true|false`: the ticket's status is (not) a closed status. */
-  status_closed: (alias, value) => ({
-    sql: `EXISTS (SELECT 1 FROM statuses AS __cs WHERE __cs.tenant = ??
+  status_closed: (alias, value, _now, _operator, tenant) => {
+    const cs = tenantScope('__cs', alias, tenant);
+    return {
+      sql: `EXISTS (SELECT 1 FROM statuses AS __cs WHERE ${cs.sql}
       AND __cs.status_id = ?? AND __cs.is_closed = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.status_id`, scalar(value) === true],
-  }),
+      bindings: [...cs.bindings, `${alias}.status_id`, scalar(value) === true],
+    };
+  },
 
   /** `status_name equals <name>`: the ticket's status has this exact name (statuses are per board). */
-  status_name: (alias, value) => ({
-    sql: `EXISTS (SELECT 1 FROM statuses AS __sn WHERE __sn.tenant = ??
+  status_name: (alias, value, _now, _operator, tenant) => {
+    const sn = tenantScope('__sn', alias, tenant);
+    return {
+      sql: `EXISTS (SELECT 1 FROM statuses AS __sn WHERE ${sn.sql}
       AND __sn.status_id = ?? AND __sn.name = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.status_id`, scalar(value)],
-  }),
+      bindings: [...sn.bindings, `${alias}.status_id`, scalar(value)],
+    };
+  },
 
   /**
    * `category in [ids]`: the ticket's category OR subcategory is one of the ids. Selecting a parent
@@ -161,25 +188,54 @@ const COMPUTED_RESOLVERS = (() => {
    * `involves_user equals <user id>`: the user is the assignee, an additional agent
    * (ticket_resources), or a member of the assigned team. Backs "assigned to me".
    */
-  involves_user: (alias, value) => {
+  involves_user: (alias, value, _now, _operator, tenant) => {
     const userId = scalar(value);
+    const tr = tenantScope('__tr', alias, tenant);
+    const tm = tenantScope('__tm', alias, tenant);
     return {
       sql: `(?? = ?
-        OR EXISTS (SELECT 1 FROM ticket_resources AS __tr WHERE __tr.tenant = ??
+        OR EXISTS (SELECT 1 FROM ticket_resources AS __tr WHERE ${tr.sql}
           AND __tr.ticket_id = ?? AND __tr.additional_user_id = ?)
-        OR EXISTS (SELECT 1 FROM team_members AS __tm WHERE __tm.tenant = ??
+        OR EXISTS (SELECT 1 FROM team_members AS __tm WHERE ${tm.sql}
           AND __tm.team_id = ?? AND __tm.user_id = ?))`,
       bindings: [
         `${alias}.assigned_to`,
         userId,
-        `${alias}.tenant`,
+        ...tr.bindings,
         `${alias}.ticket_id`,
         userId,
-        `${alias}.tenant`,
+        ...tm.bindings,
         `${alias}.assigned_team_id`,
         userId,
       ],
     };
+  },
+
+  /**
+   * `seat_responsibility equals client_it|msp`: who is responsible for a ticket of a client in a live
+   * co-managed seat arrangement (`co_managed_seat_ticket_work`, see seatTicketWork). A ticket with no
+   * work row is the MSP's. A work row written under an earlier arrangement does not count: under the
+   * client's current arrangement the ticket starts with the MSP. A ticket whose client has no live
+   * arrangement has no responsibility, so it matches neither value.
+   */
+  seat_responsibility: (alias, value, _now, _operator, tenant) => {
+    const sa = tenantScope('__sa', alias, tenant);
+    const sw = tenantScope('__sw', alias, tenant);
+    const live = `EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE ${sa.sql}
+        AND __sa.client_id = ?? AND __sa.state = 'active'`;
+    const clientIt = `EXISTS (SELECT 1 FROM co_managed_seat_ticket_work AS __sw WHERE ${sw.sql}
+        AND __sw.ticket_id = ?? AND __sw.responsibility = 'client_it'
+        AND EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE ${sa.sql}
+          AND __sa.arrangement_id = __sw.arrangement_id AND __sa.client_id = ?? AND __sa.state = 'active'))`;
+    const itBindings = [...sw.bindings, `${alias}.ticket_id`, ...sa.bindings, `${alias}.client_id`];
+    switch (scalar(value)) {
+      case 'client_it':
+        return { sql: clientIt, bindings: itBindings };
+      case 'msp':
+        return { sql: `${live}) AND NOT ${clientIt}`, bindings: [...sa.bindings, `${alias}.client_id`, ...itBindings] };
+      default:
+        return { sql: 'FALSE', bindings: [] };
+    }
   },
   } satisfies Record<string, Resolver>;
 })();
@@ -198,6 +254,7 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   category: { type: 'uuid', operators: ['in', 'not_in'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
+  seat_responsibility: { type: 'string', operators: ['equals'] },
 };
 
 export const TICKET_COMPUTED_ATTRIBUTES = Object.keys(COMPUTED_RESOLVERS) as TicketComputedAttributeName[];
@@ -206,7 +263,7 @@ const computed = (name: TicketComputedAttributeName, nowIso: () => string): Comp
   kind: 'computed',
   name,
   ...COMPUTED_META[name],
-  resolve: ({ alias, value, operator }) => (COMPUTED_RESOLVERS[name] as Resolver)(alias, value, nowIso(), operator),
+  resolve: ({ alias, value, operator, tenant }) => (COMPUTED_RESOLVERS[name] as Resolver)(alias, value, nowIso(), operator, tenant),
 });
 
 const uuidColumn = (column: string, operators?: ComputedAttribute['operators']): Attribute => ({
@@ -235,6 +292,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       priority_id: uuidColumn('priority_id'),
       category_id: uuidColumn('category_id'),
       subcategory_id: uuidColumn('subcategory_id'),
+      location_id: uuidColumn('location_id', ['equals', 'in', 'not_in', 'is_empty', 'is_not_empty']),
       assigned_to: uuidColumn('assigned_to'),
       assigned_team_id: uuidColumn('assigned_team_id'),
       master_ticket_id: uuidColumn('master_ticket_id', ['is_empty', 'is_not_empty']),
@@ -248,6 +306,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       category: computed('category', nowIso),
       sla_state: computed('sla_state', nowIso),
       involves_user: computed('involves_user', nowIso),
+      seat_responsibility: computed('seat_responsibility', nowIso),
     },
     relations: {
       client: {
@@ -256,7 +315,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         local: 'client_id',
         foreign: 'client_id',
         attributes: {
-          id: uuidColumn('client_id', ['equals', 'in']),
+          id: uuidColumn('client_id', ['equals', 'in', 'not_in']),
           tags: tagSet({ taggedType: 'client', local: 'client_id' }),
         },
       },
@@ -268,6 +327,16 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         attributes: {
           id: uuidColumn('contact_name_id', ['equals', 'in']),
           tags: tagSet({ taggedType: 'contact', local: 'contact_name_id' }),
+          // "Where the requester works", as a set: a person can be linked to several locations, so
+          // `in` means "linked to any of these" exactly as a tag clause does.
+          locations: {
+            kind: 'set',
+            table: 'contact_locations',
+            local: 'contact_name_id',
+            foreign: 'contact_name_id',
+            valueColumn: 'location_id',
+            valueType: 'uuid',
+          },
         },
       },
     },

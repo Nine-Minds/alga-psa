@@ -2,8 +2,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createComment, updateComment, deleteComment } from './commentActions';
-import { toggleCommentReaction } from './commentReactionActions';
+import { createComment, updateComment, deleteComment, cancelScheduledComment, rescheduleScheduledComment } from './commentActions';
+import { summarizeTicketActivityHistory } from '../../lib/ticketChangeCounts';
+import { toggleCommentReaction, getCommentsReactionsBatch } from './commentReactionActions';
+import * as ticketAuthz from '../../lib/ticketRecordAuthorization';
+import { cancelScheduledJob, scheduleJobAt } from '@alga-psa/core';
+import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -11,7 +15,9 @@ import { toggleCommentReaction } from './commentReactionActions';
 let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let commentRow: Record<string, unknown> | null;
-let writes: Array<{ table: string; op: string }>;
+let writes: Array<{ table: string; op: string; value?: any }>;
+// Rows returned by multi-row (awaited) queries, keyed by table. Unset => [].
+let listRows: Record<string, any[]> = {};
 
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -19,8 +25,10 @@ const withTransactionMock = vi.fn();
 const commentUpdate = vi.fn();
 const commentDelete = vi.fn();
 const commentInsert = vi.fn();
+const activityWrites: any[] = [];
 let commentAuthorType = 'client';
 let parentThreadRow: Record<string, unknown> | null = null;
+let bundleRules: any[] = [];
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) => action(currentUser, { tenant: 'tenant-1' }, ...args),
@@ -28,17 +36,25 @@ vi.mock('@alga-psa/auth', () => ({
   getCurrentUser: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/shared/lib/ticketActivity', () => ({
+  TICKET_ACTIVITY_ACTOR: { USER: 'USER' },
+  TICKET_ACTIVITY_ENTITY: { COMMENT: 'COMMENT' },
+  TICKET_ACTIVITY_EVENT: { COMMENT_UPDATED: 'TICKET_COMMENT_UPDATED' },
+  TICKET_ACTIVITY_SOURCE: { UI: 'UI' },
+  writeTicketActivity: vi.fn(async (_trx: unknown, entry: any) => { activityWrites.push(entry); }),
+}));
 
 function makeBuilder(table: string) {
   const builder: any = new Proxy(function () {}, {
     get(_t, prop: string) {
-      if (prop === 'then') return (resolve: any) => resolve([]);
+      if (prop === 'then') return (resolve: any) => resolve(listRows[table] ?? []);
       if (prop === 'first') {
         return async () => (table === 'tickets' ? ticketRow ?? undefined : table === 'comments' ? commentRow ?? undefined : table === 'comments as parent' ? parentThreadRow ?? undefined : undefined);
       }
       if (prop === 'insert' || prop === 'update' || prop === 'del' || prop === 'delete') {
-        return () => {
-          writes.push({ table, op: prop });
+        return (value?: any) => {
+          writes.push({ table, op: prop, value });
           return Promise.resolve([]);
         };
       }
@@ -70,9 +86,9 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('../../models/comment', () => ({
   default: {
     get: vi.fn(async () => commentRow),
-    insert: (...args: any[]) => commentInsert(...args),
+    insertRecord: async (...args: any[]) => ({ ...args[2], comment_id: await commentInsert(...args), thread_id: 'thread-1' }),
     update: (...args: any[]) => commentUpdate(...args),
-    delete: (...args: any[]) => commentDelete(...args),
+    deleteRecord: (trx: any, tenant: string, row: any) => commentDelete(trx, tenant, row.comment_id),
   },
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -82,8 +98,12 @@ vi.mock('@alga-psa/shared/lib/ticketCommentAttachments', () => ({ persistComment
 vi.mock('@shared/lib/ticketCommentAttachments', () => ({ withdrawCommentAttachments: vi.fn() }));
 vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({ convertBlockNoteToMarkdown: vi.fn(async () => 'md') }));
 vi.mock('@alga-psa/core', () => ({ scheduleJobAt: vi.fn(), cancelScheduledJob: vi.fn() }));
+vi.mock('../../lib/ticketRecordAuthorization', async (importActual) => {
+  const actual: any = await importActual();
+  return { ...actual, authorizeTicketRecordAccessConcealed: vi.fn(actual.authorizeTicketRecordAccessConcealed) };
+});
 vi.mock('../../lib/liveUpdates', () => ({ publishTicketUpdate: vi.fn(async () => undefined) }));
-vi.mock('../../lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: async () => ({
     effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
     visibleBoardIds: ['board-1'], grantedTicketProfileIds: [], isClientAdmin: false, visibilityGroupId: 'g',
@@ -97,28 +117,45 @@ vi.mock('../../lib/cannedResponses/commentMerge', () => ({ resolveCommentMergeTo
 vi.mock('../../lib/workflowTicketCommunicationEvents', () => ({ buildTicketCommunicationWorkflowEvents: vi.fn(() => []), publishTicketCommunicationWorkflowEvent: vi.fn() }));
 vi.mock('@alga-psa/db/commentEventRegistry', () => ({ publishCommentEvent: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({ maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined) }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+vi.mock('@alga-psa/authorization/bundles/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/bundles/service')>()),
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => bundleRules),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async () => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: bundleRules.map((r) => ({ rule_id: r.id, resource_type: r.resource, action: r.action, template_key: r.templateKey, constraint_key: r.constraintKey ?? null, config: {} })),
+  })),
 }));
 
 const client = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'rc' }] };
 const ownTicket = { ticket_id: 'ticket-1', tenant: 'tenant-1', client_id: 'client-1', board_id: 'board-1', contact_name_id: 'contact-1', billing_profile_id: null, attributes: {}, assigned_to: null, entered_by: 'x', assigned_team_id: null };
 const foreignTicket = { ...ownTicket, ticket_id: 'ticket-2', client_id: 'client-2', contact_name_id: 'contact-9' };
 // A comment the client authored (e.g. planted through the old unguarded path) on a ticket it cannot see.
-const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'client-user-1', note: 'x', is_internal: false, tenant: 'tenant-1' });
+const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'client-user-1', note: 'x', is_internal: false, publish_state: 'published', thread_id: 'th-1', deleted_at: null, tenant: 'tenant-1' });
+
+// A bundle-restricted MSP user: ticket read+update narrowed to own_or_assigned records.
+const mspUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+const ownOrAssignedRules = ['read', 'update'].map((action) => ({ id: `rule-${action}`, resource: 'ticket', action, templateKey: 'own_or_assigned' }));
+// Neither entered by nor assigned to i-1 (ownTicket is entered_by 'x', unassigned).
+const mspOwnComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'i-1', note: 'x', is_internal: false, tenant: 'tenant-1' });
 
 describe('comment mutations: client principals need record access to the owning ticket', () => {
   beforeEach(() => {
     writes = [];
+    activityWrites.length = 0;
+    listRows = {};
+    vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mockClear();
     commentInsert.mockReset().mockResolvedValue('new-comment-id');
     commentAuthorType = 'client';
     parentThreadRow = null;
+    bundleRules = [];
     currentUser = client;
     ticketRow = foreignTicket;
     commentRow = ownComment('ticket-2');
     hasPermissionMock.mockReset().mockResolvedValue(true);
     commentUpdate.mockReset();
-    commentDelete.mockReset();
+    commentDelete.mockReset().mockImplementation(() => {
+      writes.push({ table: 'comments', op: 'delete' });
+    });
     createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
     withTransactionMock.mockReset().mockImplementation(async (_k: any, cb: any) => cb(makeTrx()));
   });
@@ -134,6 +171,134 @@ describe('comment mutations: client principals need record access to the owning 
     commentRow = ownComment('ticket-1');
     await updateComment('c-1', { note: 'edited' });
     expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'update' });
+  });
+
+  it('updateComment: ignores client attempts to change authorship and publication metadata', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    await updateComment('c-1', {
+      note: 'edited',
+      is_resolution: true,
+      user_id: 'another-user',
+      author_type: 'internal',
+      publish_state: 'published',
+      scheduled_publish_at: '2030-01-01T00:00:00.000Z',
+      deleted_at: '2030-01-01T00:00:00.000Z',
+    } as any);
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toEqual(expect.objectContaining({ note: 'edited', markdown_content: 'md' }));
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('user_id');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('author_type');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('publish_state');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('scheduled_publish_at');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('deleted_at');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_resolution');
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_internal');
+  });
+
+  it('updateComment: ignores client attempts to change comment visibility', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    await updateComment('c-1', { note: 'edited', is_internal: true });
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toEqual(expect.objectContaining({ note: 'edited', markdown_content: 'md' }));
+    expect(commentUpdate.mock.calls[0][3]).not.toHaveProperty('is_internal');
+  });
+
+  it('updateComment: allows an MSP to change resolution and visibility flags', async () => {
+    ticketRow = ownTicket;
+    commentRow = { ...ownComment('ticket-1'), user_id: 'msp-user', author_type: 'internal' };
+    currentUser = { user_id: 'msp-user', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    await updateComment('c-1', { note: 'edited by MSP', is_resolution: true, is_internal: true });
+    expect(commentUpdate).toHaveBeenCalledTimes(1);
+    expect(commentUpdate.mock.calls[0][3]).toMatchObject({ note: 'edited by MSP', markdown_content: 'md', is_resolution: true, is_internal: true });
+  });
+
+  it('updateComment: authorship does not bypass ticket:update', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(updateComment('c-1', { note: 'edited' })).resolves.toMatchObject({ permissionError: expect.any(String) });
+    expect(commentUpdate).not.toHaveBeenCalled();
+  });
+
+  it('deleteComment: authorship does not bypass ticket:delete', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+    hasPermissionMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'delete');
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ permissionError: expect.any(String) });
+    expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: still checks ticket:delete for an orphaned comment', async () => {
+    ticketRow = null;
+    commentRow = { ...ownComment('ticket-1'), ticket_id: null };
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ permissionError: expect.any(String) });
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: denies an author when an exact delete rule denies a ticket allowed by update rules', async () => {
+    currentUser = mspUser;
+    commentRow = mspOwnComment('ticket-1');
+    ticketRow = { ...ownTicket, assigned_to: 'i-1', entered_by: 'another-user' };
+    bundleRules = [
+      { id: 'update-assigned', resource: 'ticket', action: 'update', templateKey: 'assigned' },
+      { id: 'delete-own', resource: 'ticket', action: 'delete', templateKey: 'own' },
+    ];
+
+    await expect(deleteComment('c-1')).resolves.toMatchObject({ actionError: expect.any(String) });
+
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
+    expect(commentRow).toMatchObject({ comment_id: 'c-1', ticket_id: 'ticket-1' });
+    expect(commentDelete).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: allows an author with delete-specific ticket record access', async () => {
+    currentUser = mspUser;
+    commentRow = mspOwnComment('ticket-1');
+    ticketRow = { ...ownTicket, entered_by: 'i-1' };
+    bundleRules = [
+      { id: 'update-assigned', resource: 'ticket', action: 'update', templateKey: 'assigned' },
+      { id: 'delete-own', resource: 'ticket', action: 'delete', templateKey: 'own' },
+    ];
+
+    await deleteComment('c-1');
+
+    expect(vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mock.calls.at(-1)?.[0]).toMatchObject({ action: 'delete' });
+    expect(hasPermissionMock).toHaveBeenCalledTimes(1);
+    expect(hasPermissionMock).toHaveBeenCalledWith(mspUser, 'ticket', 'delete', expect.anything());
+    expect(commentDelete).toHaveBeenCalledTimes(1);
+    expect(writes).toEqual([
+      { table: 'comment_reactions', op: 'delete', value: undefined },
+      { table: 'email_reply_tokens', op: 'update', value: { comment_id: null } },
+      { table: 'comments', op: 'delete' },
+    ]);
+  });
+
+  it('keeps an own comment edit out of external recovery activity', async () => {
+    currentUser = { user_id: 'editor-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    commentRow = { ...ownComment('ticket-1'), user_id: 'editor-1' };
+    ticketRow = ownTicket;
+    commentUpdate.mockResolvedValue({ ...commentRow, note: 'edited by viewer' });
+    await updateComment('c-1', { note: 'edited by viewer' });
+
+    const audit = activityWrites[0];
+    expect(audit).toMatchObject({ actor: { userId: 'editor-1' }, ticketId: 'ticket-1' });
+    const history = summarizeTicketActivityHistory({
+      entries: [{ actorUserId: audit.actor.userId, occurredAt: new Date().toISOString() }],
+      currentUserId: 'editor-1',
+      listSince: 0,
+    });
+    expect(history.listActivityActors).toEqual([]);
   });
 
   it('deleteComment: rejects a client deleting their own comment on a ticket they cannot see', async () => {
@@ -141,6 +306,19 @@ describe('comment mutations: client principals need record access to the owning 
     expect(JSON.stringify(result?.message ?? result)).toMatch(/denied|permission/i);
     expect(commentDelete).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
+  });
+
+  it('deleteComment: clears email reply references before deleting the comment', async () => {
+    ticketRow = ownTicket;
+    commentRow = ownComment('ticket-1');
+
+    await deleteComment('c-1');
+
+    expect(writes).toEqual([
+      { table: 'comment_reactions', op: 'delete', value: undefined },
+      { table: 'email_reply_tokens', op: 'update', value: { comment_id: null } },
+      { table: 'comments', op: 'delete' },
+    ]);
   });
 
   it('toggleCommentReaction: rejects a client reacting on a comment of a ticket they cannot see', async () => {
@@ -158,12 +336,162 @@ describe('comment mutations: client principals need record access to the owning 
   it('toggleCommentReaction: allows a client on a visible ticket', async () => {
     ticketRow = ownTicket;
     commentRow = ownComment('ticket-1');
+    listRows = { comments: [commentRow] };
     await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
   });
 
-  it('toggleCommentReaction: internal MSP users get no new record check', async () => {
+  describe('bundle-restricted MSP principals (own_or_assigned)', () => {
+    const DENIED = 'Permission denied: Cannot access ticket';
+    beforeEach(() => {
+      currentUser = mspUser;
+      bundleRules = ownOrAssignedRules;
+      ticketRow = ownTicket; // not entered by / assigned to i-1
+      commentRow = mspOwnComment('ticket-1');
+      listRows = { comments: [commentRow] };
+    });
+
+    it('updateComment: denies an MSP author editing a comment on a ticket they cannot see', async () => {
+      const result: any = await updateComment('c-1', { note: 'edited' }).catch((e) => e);
+      expect(result?.actionError).toContain('Ticket not found');
+      expect(commentUpdate).not.toHaveBeenCalled();
+    });
+
+    it('updateComment: allows an MSP author on an assigned ticket', async () => {
+      ticketRow = { ...ownTicket, assigned_to: 'i-1' };
+      await updateComment('c-1', { note: 'edited' });
+      expect(commentUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('deleteComment: denies an MSP author deleting a comment on a ticket they cannot see', async () => {
+      const result: any = await deleteComment('c-1').catch((e) => e);
+      expect(result?.actionError).toContain('Ticket not found');
+      expect(commentDelete).not.toHaveBeenCalled();
+      expect(writes).toEqual([]);
+    });
+
+    it('toggleCommentReaction: denies an MSP user reacting on a ticket they cannot see', async () => {
+      const result: any = await toggleCommentReaction('c-1', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toMatch(/Permission denied/);
+      expect(writes).toEqual([]);
+    });
+
+    it('toggleCommentReaction: gives an MSP user the same denial for a missing comment', async () => {
+      commentRow = null;
+      listRows = { comments: [] };
+      const result: any = await toggleCommentReaction('c-missing', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toMatch(/Permission denied/);
+    });
+
+    it('toggleCommentReaction: allows an MSP user on an assigned ticket', async () => {
+      ticketRow = { ...ownTicket, assigned_to: 'i-1' };
+      await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+    });
+  });
+
+  it('toggleCommentReaction: internal MSP users are now ticket-authorized (update) and may react to internal comments', async () => {
     currentUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    bundleRules = [];
+    ticketRow = { ...ownTicket, assigned_to: 'i-1' };
+    commentRow = { ...ownComment('ticket-1'), is_internal: true };
+    listRows = { comments: [commentRow] };
     await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+  });
+
+  describe('toggleCommentReaction: comment-level visibility for clients', () => {
+    beforeEach(() => { ticketRow = ownTicket; });
+    const deniedFor = async (overrides: Record<string, unknown>, thread?: Record<string, unknown>) => {
+      commentRow = { ...ownComment('ticket-1'), ...overrides };
+      listRows = { comments: [commentRow], comment_threads: thread ? [thread] : [] };
+      const result: any = await toggleCommentReaction('c-1', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toBe('Permission denied: Cannot access ticket');
+      expect(writes).toEqual([]);
+    };
+    const allowedFor = async (overrides: Record<string, unknown>) => {
+      commentRow = { ...ownComment('ticket-1'), ...overrides };
+      listRows = { comments: [commentRow], comment_threads: [{ thread_id: 'th-1', is_internal: false }] };
+      await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+    };
+
+    it('denies an internal comment on a ticket the client can see (no insert)', async () => {
+      await deniedFor({ is_internal: true });
+    });
+    it('denies a comment in an internal thread', async () => {
+      await deniedFor({}, { thread_id: 'th-1', is_internal: true });
+    });
+    it('denies an unpublished (scheduled) comment', async () => {
+      await deniedFor({ publish_state: 'scheduled' });
+    });
+    it('denies a soft-deleted comment', async () => {
+      await deniedFor({ deleted_at: '2030-01-01T00:00:00Z' });
+    });
+    it('allows a published, non-internal requester-audience comment (collaboration_audience requester <=> is_internal false)', async () => {
+      await allowedFor({ is_internal: false });
+    });
+    it('fails closed for a comment with no ticket', async () => {
+      await deniedFor({ ticket_id: null });
+    });
+  });
+
+  describe('getCommentsReactionsBatch', () => {
+    const visible = { ...ownComment('ticket-1'), comment_id: 'c-vis' };
+    const hidden = { ...ownComment('ticket-1'), comment_id: 'c-hid', is_internal: true };
+    beforeEach(() => {
+      ticketRow = ownTicket;
+      createTenantKnexMock.mockResolvedValue({ knex: makeTrx(), tenant: 'tenant-1' });
+      listRows = {
+        comments: [visible, hidden],
+        comment_threads: [{ thread_id: 'th-1', is_internal: false }],
+        comment_reactions: [{ comment_id: 'c-vis', emoji: '👍', user_id: 'u-a' }],
+        users: [{ user_id: 'u-a', first_name: 'Ann', last_name: 'A' }],
+      };
+    });
+
+    it('returns reactions only for the visible comment and no names from the hidden one', async () => {
+      const result = await getCommentsReactionsBatch(['c-vis', 'c-hid']);
+      expect(Object.keys(result.reactions)).toEqual(['c-vis']);
+      expect(Object.keys(result.userNames)).toEqual(['u-a']);
+    });
+
+    it('queries reactions only for authorized IDs', async () => {
+      const seen: any[] = [];
+      const trx = makeTrx();
+      listRows.comment_reactions = [
+        { comment_id: 'c-vis', emoji: '👍', user_id: 'u-a' },
+        { comment_id: 'c-hid', emoji: '🎉', user_id: 'u-secret' },
+      ];
+      // The fake returns whatever rows we list, so assert on the filter argument instead.
+      const origTable = trx;
+      const wrapped: any = (t: string) => {
+        const b = origTable(t);
+        if (t !== 'comment_reactions') return b;
+        return new Proxy(b, { get(target, prop: string) {
+          if (prop === 'whereIn') return (...a: any[]) => { seen.push(a); return target; };
+          return target[prop];
+        } });
+      };
+      createTenantKnexMock.mockResolvedValue({ knex: wrapped, tenant: 'tenant-1' });
+      await getCommentsReactionsBatch(['c-vis', 'c-hid']);
+      expect(seen[0]).toEqual(['comment_id', ['c-vis']]);
+    });
+
+    it('returns empty (no throw) for comments on a ticket the caller cannot see', async () => {
+      ticketRow = foreignTicket;
+      listRows.comments = [{ ...visible, ticket_id: 'ticket-2' }];
+      await expect(getCommentsReactionsBatch(['c-vis'])).resolves.toEqual({ reactions: {}, userNames: {} });
+    });
+
+    it('returns empty for missing IDs', async () => {
+      listRows.comments = [];
+      await expect(getCommentsReactionsBatch(['nope'])).resolves.toEqual({ reactions: {}, userNames: {} });
+    });
+
+    it('authorizes once per ticket, not once per comment', async () => {
+      listRows.comments = ['a', 'b', 'c'].map((id) => ({ ...visible, comment_id: id }));
+      await getCommentsReactionsBatch(['a', 'b', 'c']);
+      const spy = vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][0]).toMatchObject({ ticketId: 'ticket-1', action: 'read' });
+    });
   });
 
   describe('createComment', () => {
@@ -236,14 +564,153 @@ describe('comment mutations: client principals need record access to the owning 
       expect(commentInsert).not.toHaveBeenCalled();
     });
 
-    it('internal MSP users get no record check and succeed unchanged', async () => {
-      currentUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    it('denies a bundle-restricted MSP user on a ticket they cannot see, with the nonexistent-ticket denial, and inserts nothing', async () => {
+      currentUser = mspUser;
       commentAuthorType = 'internal';
-      ticketRow = foreignTicket;
+      bundleRules = ownOrAssignedRules;
+      ticketRow = null;
+      const missing = await outcome(newComment('ticket-nope'));
+      ticketRow = foreignTicket; // not entered by / assigned to i-1
+      parentThreadRow = { thread_is_internal: true };
+      const denied = await outcome(newComment('ticket-2', { parent_comment_id: 'p-1' }));
+      expect((missing as any).returned.actionError).toContain('Ticket not found');
+      expect(denied).toEqual(missing);
+      expect(commentInsert).not.toHaveBeenCalled();
+      expect(writes).toEqual([]);
+    });
+
+    it('fails closed for any principal when ticket_id is missing', async () => {
+      currentUser = mspUser;
+      commentAuthorType = 'internal';
+      const result = await outcome(newComment(undefined as any));
+      expect(JSON.stringify(result)).toMatch(/ticket_id is required/);
+      expect(commentInsert).not.toHaveBeenCalled();
+    });
+
+    it('allows an MSP user on an assigned ticket and inserts as author_type internal', async () => {
+      currentUser = mspUser;
+      commentAuthorType = 'internal';
+      bundleRules = ownOrAssignedRules;
+      ticketRow = { ...foreignTicket, assigned_to: 'i-1' };
       const result: any = await outcome(newComment('ticket-2'));
-      expect(JSON.stringify(result)).not.toContain(DENIED);
       expect(result.returned).toBe('new-comment-id');
       expect(commentInsert.mock.calls[0][2]).toMatchObject({ author_type: 'internal' });
     });
+  });
+});
+
+describe('scheduled comment management: real ticket authorization plus authorship', () => {
+  const scheduledComment = (author: string) => ({
+    comment_id: 'scheduled-1', ticket_id: 'ticket-1', user_id: author,
+    author_type: 'internal', publish_state: 'scheduled', scheduled_publish_at: '2030-01-01T00:00:00.000Z',
+    scheduled_publish_tz: 'UTC', schedule_job_id: 'job-1', tenant: 'tenant-1',
+  });
+  const scheduledAttachments = [{ attachment_id: 'attachment-1', comment_id: 'scheduled-1', state: 'attached' }];
+
+  beforeEach(() => {
+    writes = [];
+    listRows = { ticket_comment_attachments: scheduledAttachments.map((row) => ({ ...row })) };
+    bundleRules = [];
+    currentUser = client;
+    ticketRow = ownTicket;
+    commentRow = scheduledComment('i-1');
+    hasPermissionMock.mockReset().mockResolvedValue(true);
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    withTransactionMock.mockReset().mockImplementation(async (_k: any, cb: any) => cb(makeTrx()));
+    vi.mocked(cancelScheduledJob).mockReset().mockResolvedValue(true);
+    vi.mocked(scheduleJobAt).mockReset().mockResolvedValue({ jobId: 'job-2' } as any);
+    vi.mocked(withdrawCommentAttachments).mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s denies a client with ticket:update and current ticket access over another agent’s schedule', async (_operation, run) => {
+    const original = { ...commentRow };
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+
+    expect(commentRow).toEqual(original);
+    expect(listRows.ticket_comment_attachments).toEqual(scheduledAttachments);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(withdrawCommentAttachments)).not.toHaveBeenCalled();
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+  });
+
+  it('allows an internal author to cancel after real ticket record authorization', async () => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+
+    await expect(cancelScheduledComment('scheduled-1')).resolves.toBeUndefined();
+
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'comments',
+      op: 'update',
+      value: expect.objectContaining({
+        publish_state: 'canceled',
+        schedule_job_id: null,
+        deleted_at: expect.any(Date),
+        updated_at: expect.any(Date),
+      }),
+    }));
+    expect(vi.mocked(withdrawCommentAttachments)).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'scheduled-1');
+    expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
+  });
+
+  it('allows an internal author to reschedule after real ticket record authorization', async () => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+
+    await expect(rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')).resolves.toBeUndefined();
+
+    expect(vi.mocked(cancelScheduledJob)).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(vi.mocked(scheduleJobAt)).toHaveBeenCalledTimes(1);
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'comments',
+      op: 'update',
+      value: expect.objectContaining({
+        schedule_job_id: expect.any(String),
+        scheduled_publish_at: '2030-01-02T00:00:00.000Z',
+        scheduled_publish_tz: 'UTC',
+        updated_at: expect.any(Date),
+      }),
+    }));
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s does not let an internal non-author manage another user’s schedule', async (_operation, run) => {
+    currentUser = { ...mspUser, user_id: 'i-2' };
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+
+    expect(writes).toEqual([]);
+    expect(vi.mocked(withdrawCommentAttachments)).not.toHaveBeenCalled();
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['cancel', () => cancelScheduledComment('scheduled-1')],
+    ['reschedule', () => rescheduleScheduledComment('scheduled-1', '2030-01-02T00:00:00.000Z', 'UTC')],
+  ] as const)('%s denies the author when ticket:update is absent or record access is denied', async (_operation, run) => {
+    currentUser = mspUser;
+    commentRow = scheduledComment('i-1');
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(run()).rejects.toThrow(/Permission denied/);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
+
+    hasPermissionMock.mockResolvedValue(true);
+    bundleRules = ['read', 'update'].map((action) => ({ id: `rule-${action}`, resource: 'ticket', action, templateKey: 'own_or_assigned' }));
+    ticketRow = ownTicket;
+    await expect(run()).rejects.toThrow(/Ticket not found|Cannot access ticket|Permission denied/);
+    expect(writes).toEqual([]);
+    expect(vi.mocked(cancelScheduledJob)).not.toHaveBeenCalled();
+    expect(vi.mocked(scheduleJobAt)).not.toHaveBeenCalled();
   });
 });

@@ -11,7 +11,8 @@
       "oneTime": "Jednorazowo",
       "other": "Inne",
       "quarterly": "Kwartalnie",
-      "semiAnnually": "Półrocznie"
+      "semiAnnually": "Półrocznie",
+      "weekly": "Co tydzień"
     },
     "cadenceTotal": "Suma {{cadence}}",
     "currency": "Waluta",
@@ -29,6 +30,7 @@
     "invoiceTitle": "FAKTURA",
     "issueDate": "Data wystawienia",
     "locationSubtotal": "Suma częściowa lokalizacji",
+    "unassignedLocation": "Cała oferta",
     "monthly": "Miesięcznie",
     "monthlyItems": "Pozycje miesięczne",
     "monthlyTotal": "Razem miesięcznie",
@@ -56,6 +58,20 @@
     "product": "Produkt",
     "projectPhase": "Faza projektu",
     "qty": "Ilość",
+    "quoteAcceptance": {
+      "title": "Oferta zaakceptowana",
+      "signedBy": "Podpisano przez",
+      "email": "E-mail",
+      "jobTitle": "Stanowisko",
+      "acceptedOn": "Zaakceptowano dnia",
+      "method": "Metoda",
+      "ipAddress": "Adres IP",
+      "methods": {
+        "emailLink": "Link w wiadomości e-mail",
+        "portal": "Portal klienta",
+        "msp": "Zarejestrowane przez MSP"
+      }
+    },
     "quoteNumber": "Oferta nr",
     "quoteTitle": "OFERTA",
     "rate": "Stawka",
@@ -69,6 +85,7 @@
     "sku": "SKU",
     "source": "Źródło",
     "subtotal": "Suma częściowa",
+    "subtotalBeforeDiscounts": "Suma częściowa przed rabatami",
     "tax": "Podatek",
     "termsAndConditions": "Warunki i postanowienia",
     "ticket": "Zgłoszenie",
@@ -125,7 +142,9 @@
     "replacementSerial": "Numer seryjny zamiennika",
     "shipping": "Wysyłka",
     "returnBy": "Zwrot do",
-    "returnShipTo": "Adres wysyłki zwrotnej"
+    "returnShipTo": "Adres wysyłki zwrotnej",
+    "yes": "Tak",
+    "no": "Nie"
   },
   "errors": {
     "permissions": {
@@ -164,6 +183,7 @@
     "upload": {
       "fileRequired": "Wybierz plik przed przesłaniem.",
       "typeNotAllowed": "Ten typ pliku jest niedozwolony.",
+      "contentMismatch": "Zawartość tego pliku nie odpowiada jego typowi, więc nie został przesłany. Sprawdź, czy wybrano właściwy plik.",
       "sessionRequired": "Przesyłanie dokumentów wymaga aktywnej sesji. Zaloguj się ponownie."
     }
   },

@@ -22,29 +22,19 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(source).toContain("await contactText('errors.contact.sharedMailboxAdmin')");
   });
 
-  it('uses structural tenant scoping for contact deletion roots', () => {
-    const cleanupSection = sectionBetween('async function cleanupEntraReferencesBeforeContactDelete', 'export const getContactByContactNameId');
+  it('delegates contact deletion to the shared cascade behind dependency validation', () => {
     const deleteSection = sectionBetween('export const deleteContact', 'type ContactFilterStatus');
 
     expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');
     expect(source).not.toContain('createTenantScopedQuery');
 
-    expect(cleanupSection).toContain("tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)");
-    expect(cleanupSection).not.toContain(".where({ tenant: tenantId, resolved_contact_id: contactId })");
-
     expect(deleteSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'contact_phone_numbers', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'comments', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'portal_invitations', tenantId)");
-    // manager_contact_id / assets.contact_name_id are NO ACTION FKs: cleared via the shared helper before the delete.
-    expect(deleteSection).toContain('clearContactLinksBeforeDelete(trx, tenantId, contactId)');
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'contacts', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'document_block_content', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'document_associations', tenantId)");
-    expect(deleteSection).toContain("tenantScopedTable(trx, 'documents', tenantId)");
+    // Every child cleanup (phones, emails, comments, invitations, notes documents,
+    // the Entra queue and the NO ACTION link clearing) lives in the shared cascade
+    // so the REST API path cannot drift from this one.
+    expect(deleteSection).toContain('deleteContactCascade(trx, tenantId, contactId, {');
+    expect(deleteSection).toContain("deleteTags: (tagTrx, id) => deleteEntityTags(tagTrx, id, 'contact'),");
     expect(deleteSection).not.toContain(".where({ contact_name_id: contactId, tenant })");
     expect(deleteSection).not.toContain('tenant: tenantId');
     expect(deleteSection).not.toContain("trx('contact_phone_numbers')");

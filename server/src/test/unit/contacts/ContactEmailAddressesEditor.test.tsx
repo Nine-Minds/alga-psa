@@ -33,6 +33,15 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
 
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({
+  Checkbox: ({ id, label, checked, disabled, onChange }: any) => (
+    <div>
+      <input id={id} type="checkbox" checked={Boolean(checked)} disabled={disabled} onChange={onChange} />
+      <label htmlFor={id}>{label}</label>
+    </div>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/Label', () => ({
   Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
 }));
@@ -75,6 +84,8 @@ function EditorHarness({
   initialValue,
   errorMessages,
   compactAdditionalRows,
+  savedPrimaryEmail,
+  onValueChange,
 }: {
   initialValue?: {
     email: string;
@@ -84,6 +95,8 @@ function EditorHarness({
   };
   errorMessages?: string[];
   compactAdditionalRows?: boolean;
+  savedPrimaryEmail?: string | null;
+  onValueChange?: (value: any) => void;
 }) {
   const [value, setValue] = React.useState(
     initialValue ?? {
@@ -98,8 +111,12 @@ function EditorHarness({
     <ContactEmailAddressesEditor
       id="contact-email-editor"
       compactAdditionalRows={compactAdditionalRows}
+      savedPrimaryEmail={savedPrimaryEmail}
       value={value}
-      onChange={setValue}
+      onChange={(nextValue) => {
+        onValueChange?.(nextValue);
+        setValue(nextValue as typeof value);
+      }}
       customTypeSuggestions={['Escalations', 'Billing Inbox']}
       errorMessages={errorMessages}
     />
@@ -249,6 +266,80 @@ describe('ContactEmailAddressesEditor', () => {
         String(firstArg).includes('Encountered two children with the same key')
       )
     ).toBe(false);
+  });
+
+  it('offers to keep the old primary address only once a saved contact primary email changed', async () => {
+    const user = userEvent.setup();
+
+    render(<EditorHarness savedPrimaryEmail="primary@example.com" />);
+
+    const keepOldLabel = /keep primary@example.com as an additional email/i;
+    expect(screen.queryByLabelText(keepOldLabel)).not.toBeInTheDocument();
+
+    const primaryEmailInput = screen.getByDisplayValue('primary@example.com');
+    await user.clear(primaryEmailInput);
+    await user.type(primaryEmailInput, 'corrected@example.com');
+
+    expect(await screen.findByLabelText(keepOldLabel)).not.toBeChecked();
+
+    // Correcting the typo back to the stored address withdraws the question.
+    await user.clear(primaryEmailInput);
+    await user.type(primaryEmailInput, 'primary@example.com');
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText(keepOldLabel)).not.toBeInTheDocument();
+    });
+  });
+
+  it('never offers to keep an old primary address on a contact that has none', async () => {
+    const user = userEvent.setup();
+
+    render(<EditorHarness />);
+
+    const primaryEmailInput = screen.getByDisplayValue('primary@example.com');
+    await user.clear(primaryEmailInput);
+    await user.type(primaryEmailInput, 'corrected@example.com');
+
+    expect(screen.queryByLabelText(/as an additional email/i)).not.toBeInTheDocument();
+  });
+
+  it('emits the old primary address as an additional row only while the keep option is checked', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+
+    render(<EditorHarness savedPrimaryEmail="primary@example.com" onValueChange={onValueChange} />);
+
+    const primaryEmailInput = screen.getByDisplayValue('primary@example.com');
+    await user.clear(primaryEmailInput);
+    await user.type(primaryEmailInput, 'corrected@example.com');
+
+    expect(onValueChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      email: 'corrected@example.com',
+      additional_email_addresses: [],
+    }));
+
+    await user.click(await screen.findByLabelText(/keep primary@example.com as an additional email/i));
+
+    expect(onValueChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      email: 'corrected@example.com',
+      additional_email_addresses: [
+        {
+          email_address: 'primary@example.com',
+          canonical_type: 'work',
+          custom_type: null,
+          display_order: 0,
+        },
+      ],
+    }));
+    // The kept address is a payload decision, not another row to edit.
+    expect(screen.queryByTestId('contact-email-editor-additional-row-0')).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText(/keep primary@example.com as an additional email/i));
+
+    expect(onValueChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      email: 'corrected@example.com',
+      additional_email_addresses: [],
+    }));
   });
 
   it('renders additional rows in compact mode until the user expands one for editing', async () => {

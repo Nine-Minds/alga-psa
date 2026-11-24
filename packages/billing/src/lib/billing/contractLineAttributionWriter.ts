@@ -6,6 +6,7 @@ import {
   ticketProjectIdExpression,
 } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import type { ISO8601String } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
@@ -141,6 +142,7 @@ async function loadWindowRecords(params: {
   const timeEntriesQuery = timeQuery
       .where('time_entries.tenant', tenant)
       .where('time_entries.invoiced', false)
+      .whereRaw(commercialTimeEntrySql('time_entries'))
       .whereNull('time_entries.contract_line_id')
       .whereNotNull('time_entries.service_id')
       .where('time_entries.approval_status', 'APPROVED')

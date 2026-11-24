@@ -14,7 +14,8 @@ const stripeEmulator: EmulatorPackage<StripeEmulatorCore> = {
 
 export default stripeEmulator;
 export { stripeEmulator as emulator };
-export { StripeEmulatorCore, StripeWireError } from './core';
+export { StripeEmulatorCore, StripeWireError, toStripeAddress } from './core';
+export type { StripeAddress, StripeAddressInput, StripeBillingDetailsInput } from './core';
 export { signStripePayload, deliverEvent } from './notifier';
 export type {
   StripeCheckoutSession,

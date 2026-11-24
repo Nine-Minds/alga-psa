@@ -10,12 +10,17 @@ describe('document authorization kernel wiring contracts', () => {
   const source = readActionSource();
 
   it('T015: preserves own/same-client/client-visible baseline semantics with premium narrowing overlays', () => {
-    expect(source).toContain("function getDocumentBuiltinRelationshipRules(user: IUser)");
-    expect(source).toContain("return [{ template: 'own' }, { template: 'same_client' }];");
+    expect(source).toContain("function getDocumentBuiltinRelationshipRules(");
+    // own/same_client for every non-MSP subject; the published-parent rule only for subjects passing the shared KB read check.
+    expect(source).toContain("[{ template: 'own' }, { template: 'same_client' }]");
+    expect(source).toMatch(/if \(await canReadPublishedKnowledgeBase\(user, conn\)\) \{\s*rules\.push\(\{ template: 'readable_via_published_parent' \}\);/);
+    expect(source).toContain("await getDocumentBuiltinRelationshipRules(user, trx)");
+    expect(source).toContain("await getDocumentBuiltinRelationshipRules(user, conn)");
     expect(source).toContain("const selectedClientIds = user.clientId ? [user.clientId] : undefined;");
     expect(source).toContain("const deniedByClientVisibility =");
     expect(source).toContain("user.user_type === 'client' && !isOwnedBySubject && !isClientVisible");
-    expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');
+    // Rules load through the shared fail-closed provider: a load fault denies, it never reads as "no rules".
+    expect(source).toContain('bundleProvider: createBundleNarrowingProvider(trx),');
     expect(source).toContain("export const getDocument = withAuth(async (user, { tenant }, documentId: string)");
     expect(source).toContain("authorizeAndRedactDocuments(trx, tenant, user, [processedDoc])");
     expect(source).toContain("export const getAllDocuments = withAuth(async (");

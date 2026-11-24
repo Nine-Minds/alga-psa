@@ -512,8 +512,8 @@ describe('ticket comment threading actions', () => {
         !(resource === 'ticket' && action === 'update'));
       userRef.user = other;
       await expect(updateComment(commentId, { note: blockNote('Rewritten without ticket:update') }))
-        .resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
-      await expect(deleteComment(commentId)).resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+        .resolves.toMatchObject({ permissionError: 'Permission denied: Cannot update comment' });
+      await expect(deleteComment(commentId)).resolves.toMatchObject({ permissionError: 'Permission denied: Cannot delete ticket' });
       expect(permission).toHaveBeenCalledWith(expect.objectContaining({ user_id: other.user_id }), 'ticket', 'update', expect.anything());
       const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
       expect(stored).toBeTruthy();
@@ -526,7 +526,7 @@ describe('ticket comment threading actions', () => {
     }
   });
 
-  it('refuses a customer-side caller who submits is_internal on their own comment', async () => {
+  it('does not let a customer-side edit change comment visibility', async () => {
     // The client principal must be able to see the ticket (record-level authz runs first), so pick a
     // client ticket on a portal-visible board and give the user a client-scope contact of that client.
     const ticket = await scopedDb().table('tickets as t').select('t.ticket_id', 't.client_id')
@@ -549,10 +549,10 @@ describe('ticket comment threading actions', () => {
       userRef.user = { user_id: clientUserId, user_type: 'client', first_name: 'Portal', last_name: 'Client',
         contact_id: clientContactId, clientId: ticket.client_id };
       await expect(updateComment(commentId, { note: blockNote('Now hidden from my own portal'), is_internal: true }))
-        .resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
+        .resolves.toBeUndefined();
       const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
       expect(stored.is_internal).toBe(false);
-      expect(stored.note).toContain('Client visible text');
+      expect(stored.note).toContain('Now hidden from my own portal');
 
       // Control: resubmitting the unchanged flag alongside a text edit is not a change and is accepted.
       const edited = await updateComment(commentId, { note: blockNote('Edited by the client'), is_internal: false });
@@ -585,7 +585,7 @@ describe('ticket comment threading actions', () => {
       userRef.user = other;
       await expect(updateComment(commentId, { note: blockNote('Rewritten by someone else') }))
         .resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
-      await expect(deleteComment(commentId)).resolves.toMatchObject({ actionError: 'You can only edit your own comments' });
+      await expect(deleteComment(commentId)).resolves.toMatchObject({ permissionError: 'Permission denied: Cannot delete ticket' });
       expect((await scopedDb().table('comments').where({ comment_id: commentId }).first()).note).toContain('Original text');
 
       userRef.user = author;

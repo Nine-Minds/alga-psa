@@ -62,16 +62,17 @@
       "phoneNumber": "Numer telefonu",
       "client": "Klient",
       "tags": "Tagi",
-      "actions": "Akcje"
+      "actions": "Akcje",
+      "location": "Lokalizacja"
     },
     "lastPhoneTypeUsage": {
       "title": "Ostatnie użycie typu telefonu",
       "message_one": "Niestandardowy typ telefonu nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu czy zachować ją na przyszłość?",
-      "message_few": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
-      "message_many": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
       "message_other": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
       "deleteType": "Usuń typ",
-      "keepType": "Zachowaj typ"
+      "keepType": "Zachowaj typ",
+      "message_few": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?",
+      "message_many": "Niestandardowe typy telefonów nie są już używane przez żaden kontakt: {{labels}}. Usunąć definicje typów czy zachować je na przyszłość?"
     },
     "print": {
       "title": "Kontakty",
@@ -182,7 +183,10 @@
       "role": "Rola",
       "notes": "Notatki",
       "primaryEmailLabel": "Etykieta głównego e-maila",
-      "additionalEmails": "Dodatkowe adresy e-mail"
+      "additionalEmails": "Dodatkowe adresy e-mail",
+      "workArrangement": "Tryb pracy",
+      "locations": "Lokalizacje",
+      "primaryLocation": "Główna lokalizacja"
     },
     "unassigned": "Wybierz pole",
     "errors": {
@@ -284,7 +288,8 @@
     },
     "primary": {
       "title": "Główny adres e-mail",
-      "description": "Ten adres pozostaje domyślnym adresem zapisanym w rekordzie kontaktu"
+      "description": "Ten adres pozostaje domyślnym adresem zapisanym w rekordzie kontaktu",
+      "keepOldEmail": "Zachowaj {{email}} jako dodatkowy e-mail"
     },
     "row": {
       "title": "Dodatkowy e-mail {{number}}",
@@ -361,8 +366,6 @@
   },
   "contactPortalTab": {
     "boardCount_one": "{{count}} tablica",
-    "boardCount_few": "{{count}} tablice",
-    "boardCount_many": "{{count}} tablic",
     "boardCount_other": "{{count}} tablic",
     "title": "Dostęp do portalu",
     "description": "Zarządzanie dostępem kontaktu do portalu klienta, w tym zaproszeniami i aktualizacją ról",
@@ -416,7 +419,10 @@
       "refreshing": "Odświeżanie...",
       "resend": "Wyślij ponownie",
       "resending": "Ponowne wysyłanie...",
-      "revoke": "Unieważnij"
+      "revoke": "Unieważnij",
+      "cancel": "Anuluj",
+      "edit": "Edytuj",
+      "delete": "Usuń"
     },
     "toast": {
       "successTitle": "Sukces",
@@ -452,14 +458,18 @@
         "contactMissingEmail": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
         "userExistsForContact": "Dla tego kontaktu istnieje już konto użytkownika. Zamiast wysyłać zaproszenie, skorzystaj z resetowania hasła.",
+        "portalUserAlreadyExists": "Ten adres e-mail należy już do innego konta użytkownika w tej organizacji.",
         "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
         "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
         "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
         "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
       },
-      "userNotFound": "Nie znaleziono użytkownika klienta"
-    }
+      "userNotFound": "Nie znaleziono użytkownika klienta",
+      "validationErrorTitle": "Błąd walidacji"
+    },
+    "boardCount_few": "{{count}} tablice",
+    "boardCount_many": "{{count}} tablic"
   },
   "quickAddContact": {
     "title": "Dodaj nowy kontakt",
@@ -630,24 +640,58 @@
       "email": "E-mail",
       "phoneNumber": "Numer telefonu",
       "actions": "Akcje",
-      "role": "Rola"
+      "role": "Rola",
+      "location": "Lokalizacja"
     },
     "filter": {
       "show": "Pokaż:",
       "active": "Aktywne kontakty",
       "inactive": "Nieaktywne kontakty",
       "all": "Wszystkie kontakty",
-      "searchPlaceholder": "Szukaj kontaktów..."
+      "searchPlaceholder": "Szukaj kontaktów...",
+      "allLocations": "Wszystkie lokalizacje",
+      "noLocation": "Brak lokalizacji"
     },
     "actions": {
       "openMenu": "Otwórz menu",
       "quickView": "Szybki podgląd",
-      "addNewContact": "Dodaj nowy kontakt"
+      "addNewContact": "Dodaj nowy kontakt",
+      "selectAll": "Zaznacz wszystkie kontakty",
+      "selectContact": "Zaznacz {{name}}",
+      "inviteSelected": "Zaproś do portalu ({{selected}})",
+      "inviteAllEligible": "Zaproś wszystkich uprawnionych"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować kontaktów.",
       "loadingTitle": "Błąd podczas ładowania kontaktów",
       "retryFailed": "Nie udało się załadować kontaktów. Spróbuj ponownie."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Zaproś kontakty do portalu klienta",
+    "description": "Potwierdzenie zbiorczych zaproszeń do portalu z podglądem uprawnionych i wynikami dla każdego kontaktu",
+    "loading": "Sprawdzanie, kogo można zaprosić...",
+    "inviteCount": "{{total}} kontaktów zostanie zaproszonych do portalu klienta.",
+    "skipCount": "{{total}} zostanie pominiętych:",
+    "visibilityNote": "Każde zaproszenie przyznaje dostęp, który kontakt już posiada: {{grouped}} jest ograniczonych do grupy widoczności portalu, a {{full}} otrzymuje pełny dostęp do danych portalu swojego klienta.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ma już dostęp do portalu",
+      "missingEmail": "brak użytecznego adresu e-mail",
+      "sharedMailbox": "skrzynka współdzielona"
+    },
+    "actions": {
+      "send": "Wyślij {{total}} zaproszeń",
+      "sending": "Wysyłanie..."
+    },
+    "results": {
+      "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
+      "sent": "Wysłano",
+      "skipped": "Pominięto",
+      "failed": "Niepowodzenie"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
+      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
     }
   },
   "contactsLayout": {
@@ -716,6 +760,118 @@
       "saved": "Kontakt zaktualizowany",
       "saveFailed": "Nie mozna zaktualizowac kontaktu",
       "saveFailedDescription": "Nie udało się zaktualizować kontaktu. Spróbuj ponownie."
+    },
+    "relative": {
+      "today": "dzisiaj",
+      "yesterday": "wczoraj",
+      "daysAgo": "{{count}} dni temu"
+    },
+    "emailType": {
+      "primary": "Główny",
+      "other": "inny"
+    },
+    "phoneType": {
+      "other": "Inny"
+    },
+    "ticketPill": {
+      "closed": "Zamknięte",
+      "urgent": "Pilne",
+      "open": "Otwarte"
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "role": {
+      "add": "Dodaj rolę",
+      "editTitle": "Kliknij, aby edytować rolę"
+    },
+    "atClient": "w",
+    "noClient": "Brak klienta",
+    "noPrimaryEmail": "Brak głównego adresu e-mail",
+    "noPhoneNumber": "Brak numeru telefonu",
+    "contactSince": "Kontakt od {{date}}",
+    "lastTouch": "Ostatni kontakt",
+    "editContact": "Edytuj kontakt",
+    "openFullPage": "Otwórz pełną stronę",
+    "viewAll": "Zobacz wszystkie",
+    "viewAllCount": "Zobacz wszystkie ({{count}})",
+    "reach": {
+      "title": "Dane kontaktowe",
+      "add": "Dodaj adres e-mail lub telefon",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "primaryMeta": "główny",
+      "noEmails": "Brak adresów e-mail",
+      "addEmail": "Dodaj adres e-mail",
+      "noPhones": "Brak numerów telefonu",
+      "addPhone": "Dodaj numer telefonu"
+    },
+    "portalChip": {
+      "deactivated": "Portal · dostęp wyłączony",
+      "signedIn": "Portal · ostatnie logowanie {{when}}",
+      "neverSignedIn": "Portal · brak logowań",
+      "invited": "Portal · wysłano zaproszenie",
+      "noAccess": "Brak dostępu do portalu"
+    },
+    "portal": {
+      "title": "Dostęp do portalu",
+      "manage": "Zarządzaj",
+      "status": "Status",
+      "role": "Rola",
+      "clientAdmin": "Administrator klienta",
+      "standard": "Użytkownik standardowy",
+      "lastSignIn": "Ostatnie logowanie",
+      "invited": "Zaproszono",
+      "noClientAssigned": "Nie przypisano klienta",
+      "deactivated": "Konto dezaktywowane",
+      "activeAccount": "Aktywne konto",
+      "invitationSent": "Zaproszenie wysłane",
+      "noAccess": "Brak dostępu"
+    },
+    "tickets": {
+      "title": "Zgłoszenia",
+      "create": "Utwórz zgłoszenie",
+      "createFirst": "Utwórz zgłoszenie",
+      "empty": "Brak zgłoszeń",
+      "fallbackTitle": "Zgłoszenie {{number}}"
+    },
+    "interactions": {
+      "title": "Interakcje",
+      "log": "Zarejestruj interakcję",
+      "logFirst": "Zarejestruj interakcję",
+      "empty": "Brak zarejestrowanych interakcji",
+      "fallbackTitle": "Interakcja",
+      "loadError": "Nie udało się załadować interakcji. Spróbuj ponownie."
+    },
+    "documents": {
+      "title": "Dokumenty",
+      "add": "Dodaj dokument",
+      "addFirst": "Dodaj dokument",
+      "empty": "Brak dokumentów",
+      "fallbackTitle": "Dokument",
+      "dialogTitle": "Dokumenty kontaktu"
+    },
+    "relatedWork": {
+      "title": "Powiązane prace",
+      "projects": "Projekty",
+      "quotes": "Oferty",
+      "noProjects": "Brak projektów",
+      "noQuotes": "Brak ofert",
+      "noStatus": "Brak statusu",
+      "noStatusLower": "brak statusu",
+      "projectFallback": "Projekt {{number}}",
+      "quoteFallback": "Oferta",
+      "empty": "Brak powiązanych projektów lub ofert"
+    },
+    "notes": {
+      "title": "Notatki",
+      "edit": "Edytuj",
+      "openDocument": "Otwórz dokument z notatką",
+      "save": "Zapisz notatki",
+      "cancel": "Anuluj",
+      "empty": "Brak notatek",
+      "add": "Dodaj notatki"
     }
   },
   "errors": {
@@ -798,7 +954,10 @@
         "updateClientUsers": "Nie masz uprawnień do aktualizowania użytkowników klientów",
         "viewClientUsers": "Nie masz uprawnień do wyświetlania użytkowników klientów"
       },
-      "field": "pole"
+      "field": "pole",
+      "locationClientMismatch": "Ta lokalizacja należy do innego klienta.",
+      "importLocationUnknown": "Nie można zaimportować {{name}}: lokalizacja „{{location}}” nie istnieje dla tego klienta",
+      "importLocationNoClient": "Nie można zaimportować {{name}}: lokalizacje wymagają klienta w tym samym wierszu"
     }
   },
   "portal": {
@@ -823,9 +982,32 @@
       "scopeSummaryAll": "Wszystkie",
       "scopeSummaryOwn": "Własne",
       "managerScopeNote_one": "Jego widok obejmuje także dane {{count}} podlegającej mu osoby.",
+      "managerScopeNote_other": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
       "managerScopeNote_few": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
       "managerScopeNote_many": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
-      "managerScopeNote_other": "Jego widok obejmuje także dane {{count}} podlegających mu osób."
+      "assignmentLabel": "Grupa widoczności zgłoszeń",
+      "assignmentPlaceholder": "Wybierz przypisanie widoczności",
+      "assignmentUpdated": "Zaktualizowano przypisanie widoczności kontaktu",
+      "assignFailed": "Nie udało się przypisać grupy widoczności",
+      "manageLabel": "Grupy widoczności klienta",
+      "manageHelp": "Twórz lub edytuj grupy tablic i przypisuj je do kontaktów.",
+      "nameLabel": "Nazwa grupy",
+      "nameRequired": "Nazwa grupy widoczności jest wymagana",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Opcjonalny opis",
+      "boardsLabel": "Tablice",
+      "noBoards": "Brak dostępnych tablic",
+      "createGroup": "Utwórz grupę",
+      "updateGroup": "Zaktualizuj grupę",
+      "created": "Utworzono grupę widoczności",
+      "updated": "Zaktualizowano grupę widoczności",
+      "deleted": "Usunięto grupę widoczności",
+      "deleteConfirm": "Usunąć tę grupę widoczności?",
+      "deleteFailed": "Nie udało się usunąć grupy widoczności",
+      "saveFailed": "Nie udało się zapisać grupy widoczności",
+      "loadFailed": "Nie udało się załadować grupy widoczności do edycji",
+      "empty": "Brak grup widoczności",
+      "fullAccess": "Pełny dostęp"
     }
   },
   "messages": {
@@ -849,5 +1031,28 @@
     "lastSynced": "Ostatnia synchronizacja: {{date}}",
     "deleted": "Nieaktywny — konto Microsoft zostało usunięte.",
     "disabled": "Nieaktywny — konto Microsoft jest wyłączone."
+  },
+  "contactLocations": {
+    "locations": "Lokalizacje",
+    "addLocation": "Dodaj lokalizację",
+    "workArrangement": "Tryb pracy",
+    "primary": "Główna",
+    "none": "Brak lokalizacji",
+    "inactiveMarker": "(nieaktywna)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Najpierw wybierz klienta, aby wskazać jego lokalizacje.",
+    "loading": "Ładowanie lokalizacji…",
+    "noneForClient": "Ten klient nie ma jeszcze lokalizacji.",
+    "arrangement": {
+      "unset": "Nie ustawiono",
+      "on_site": "W biurze",
+      "hybrid": "Hybrydowy",
+      "remote": "Zdalny"
+    },
+    "clientChange": {
+      "title": "Zmienić klienta?",
+      "message": "Spowoduje to usunięcie {{count}} powiązania(-ń) z lokalizacjami. Lokalizacje należą do klienta, więc nie mogą przejść z kontaktem.",
+      "confirm": "Zmień klienta"
+    }
   }
 }

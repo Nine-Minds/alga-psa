@@ -96,7 +96,8 @@
       "policies": "Políticas",
       "apiKeys": "Claves API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Aprovisionamiento de usuarios"
+      "userProvisioning": "Aprovisionamiento de usuarios",
+      "servicePrincipals": "Principales de servicio"
     },
     "loading": {
       "roles": "Cargando configuración de roles...",
@@ -107,12 +108,13 @@
       "webhooks": "Cargando configuración de webhooks...",
       "sso": "Cargando herramientas de gestión de SSO...",
       "sessions": "Cargando sesiones activas...",
-      "userProvisioning": "Cargando el aprovisionamiento mediante SCIM..."
+      "userProvisioning": "Cargando el aprovisionamiento mediante SCIM...",
+      "servicePrincipals": "Cargando principales de servicio..."
     },
     "sso": {
       "advanced": {
         "title": "Avanzado: enrutamiento con proveedor de identidad personalizado",
-        "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Solo se necesita en instalaciones personalizadas o locales.",
+        "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Es necesario cuando el personal inicia sesión a través de su propio realm de Keycloak o de su propia aplicación de Google o Microsoft.",
         "inertNotice": "No hay ningún proveedor de identidad del inquilino configurado, por lo que las declaraciones de dominio actualmente no tienen efecto. Configure Keycloak arriba, o en la Enterprise Edition las credenciales de su aplicación de Google o Microsoft, y luego reclame aquí su dominio de inicio de sesión."
       }
     },
@@ -801,10 +803,11 @@
     "providers": {
       "title": "Conectar un proveedor",
       "description": "Elija un proveedor para finalizar el enlace SSO. Será redirigido a través del flujo de inicio de sesión del proveedor.",
-      "noneConfigured": "No hay proveedores SSO configurados para este entorno. Solicite a su administrador que configure las credenciales de Google o Microsoft.",
-      "noneConfiguredAdmin": "Aún no hay proveedores SSO configurados. Primero configure la aplicación de Google o Microsoft de su organización.",
-      "openProviderSetup": "Configurar un proveedor SSO",
+      "noneConfigured": "No hay proveedores SSO configurados para su organización. Solicite a su administrador que configure uno.",
+      "noneConfiguredAdmin": "Aún no hay proveedores SSO configurados. Use el enlace de configuración de uno de los proveedores de abajo para empezar.",
       "notConfigured": "No configurado",
+      "setUpProvider": "Configurar {{provider}}",
+      "askAdministrator": "Solicite a su administrador que lo configure.",
       "branding": {
         "google": "Continuar con Google",
         "microsoft": "Continuar con Microsoft",
@@ -830,6 +833,7 @@
     },
     "apiKeys": {
       "internalOnly": "Permiso denegado: la gestión de claves de API está reservada a los usuarios internos",
+      "notAvailableForAccount": "Las claves de API no están disponibles para esta cuenta.",
       "configInternalOnly": "Permiso denegado: la configuración de claves de API está reservada a los usuarios internos",
       "invalidExpiration": "Elija una fecha de caducidad válida para esta clave de API.",
       "notFound": "Clave de API no encontrada.",
@@ -843,7 +847,10 @@
       "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
       "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
       "unsupportedEventType": "Tipo de evento no compatible: {{eventTypes}}",
-      "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
+      "validation": {
+        "unknownEntity": "Entidad de webhook desconocida «{{entity}}».",
+        "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -862,7 +869,11 @@
       "deliveryNotFound": "Entrega entrante no encontrada.",
       "replayMissingConfig": "No se puede reenviar una entrega entrante sin una configuración de webhook.",
       "notFoundOrInactive": "Webhook entrante no encontrado o inactivo.",
-      "validation": { "slugReserved": "Este identificador está reservado para una integración incluida.", "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.", "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado." }
+      "validation": {
+        "slugReserved": "Este identificador está reservado para una integración incluida.",
+        "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.",
+        "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado."
+      }
     }
   }
 }

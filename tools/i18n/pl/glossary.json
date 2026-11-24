@@ -2216,6 +2216,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
@@ -2279,6 +2280,7 @@
       "Linux",
       "Logo",
       "macOS",
+      "Markdown",
       "Marketing",
       "Meta",
       "Microsoft",
@@ -2299,6 +2301,7 @@
       "Offline",
       "OK",
       "Online",
+      "Operator",
       "Outlook",
       "PDF",
       "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
@@ -2309,6 +2312,7 @@
       "Pro",
       "QuickBooks",
       "QuickBooks Online",
+      "RAM",
       "RAM (GB)",
       "Realm",
       "RMA",
@@ -2323,6 +2327,7 @@
       "Solo",
       "SSO",
       "Status",
+      "Status:",
       "Stripe",
       "System",
       "T&M",
@@ -2358,7 +2363,14 @@
       "Auto",
       "auto | 50% | 120px",
       "Code 128",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Plan",
+      "Workflow",
+      "status",
+      "{{actor}} • {{eventType}}",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "api",

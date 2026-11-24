@@ -238,7 +238,7 @@ test('applyAppUrl rewrites app and temporal-worker values, persists runtime, and
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', runtime: { appHostname: 'https://alga.local' } }));
 
   const coreYaml = 'appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nserver:\n  image:\n    tag: latest\n';
-  const temporalWorkerYaml = 'applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n';
+  const temporalWorkerYaml = 'applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\npublicWebhookBaseUrl: "$(NEXT_PUBLIC_BASE_URL)"\nimage:\n  tag: latest\n';
   const appliedManifests = [];
   const kube = fakeKube({
     json: (args) => {
@@ -274,6 +274,7 @@ test('applyAppUrl rewrites app and temporal-worker values, persists runtime, and
     .data['temporal-worker.single-node.yaml'];
   assert.match(newTemporalWorkerYaml, /applicationUrl: http:\/\/alga-core\.msp\.svc\.cluster\.local:3000/);
   assert.match(newTemporalWorkerYaml, /publicBaseUrl: "http:\/\/192\.168\.1\.50:3000"/);
+  assert.match(newTemporalWorkerYaml, /publicWebhookBaseUrl: "\$\(NEXT_PUBLIC_BASE_URL\)"/);
 
   // Operator intent persisted.
   const persisted = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));

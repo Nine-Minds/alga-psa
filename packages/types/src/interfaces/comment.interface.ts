@@ -52,6 +52,13 @@ export interface CommentMetadata {
   email?: CommentMetadataEmail;
   /** Per-comment Cc/Bcc for the outbound comment email. Public comments only. */
   email_recipients?: CommentEmailRecipients;
+  /**
+   * This comment is the inbound email that opened its ticket. Top-level on purpose:
+   * `metadata.email` is stripped for client principals, this marker is not.
+   */
+  opensTicket?: boolean;
+  /** Non-inline attachment count of the opening email. Absent when unknown (and on backfilled rows). */
+  attachmentCount?: number;
   [key: string]: unknown;
 }
 
@@ -59,6 +66,11 @@ export interface CommentMetadata {
 export type CommentAudience = 'requester' | 'shared_it' | 'organization_private';
 
 export interface IComment extends TenantEntity {
+  /** Safe display identity used by client-portal conversation projections. */
+  portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null } | null;
+  /** Caller-specific edit capability for UUID-redacted portal comments. */
+  portal_can_edit?: boolean;
+  portal_can_delete?: boolean;
   /** Owner-local attribution and saved labels for a foreign technician. These
    * fields never identify a local login, contact, or avatar. */
   actor_reference_id?: string | null;
@@ -82,6 +94,9 @@ export interface IComment extends TenantEntity {
   audience?: CommentAudience;
   is_resolution?: boolean;
   is_system_generated?: boolean;
+  /** Principal the author's request came through (EE); `via_principal_name` is its display name. */
+  created_via_principal_id?: string | null;
+  via_principal_name?: string | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
