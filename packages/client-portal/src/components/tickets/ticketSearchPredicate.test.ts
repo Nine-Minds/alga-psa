@@ -109,6 +109,39 @@ describe('buildTicketSearchPredicate', () => {
     expect(run('Ticket #2826')).toEqual(['ALGA-2026-0002826', 'TICKET-ALGA-2026-0002826']);
   });
 
+  it('resolves the concrete ALGA and TICKET-ALGA references by ticket identity', () => {
+    const rows = [
+      {
+        id: 'A',
+        title: 'Unrelated printer issue',
+        ticket_number: 'ALGA-2026-0002826',
+        status_name: 'Waiting on vendor',
+        priority_name: 'Low',
+      },
+      {
+        id: 'B',
+        title: 'Unrelated VPN issue',
+        ticket_number: 'TICKET-ALGA-2026-0002826',
+        status_name: 'In progress',
+        priority_name: 'Urgent',
+      },
+    ];
+    const run = (loaded: typeof rows, query: string) => loaded
+      .filter(buildTicketSearchPredicate(query, loaded))
+      .map(({ id }) => id);
+
+    expect(run([rows[1]], 'Ticket #ALGA-2026-0002826')).toEqual([]);
+    expect(run(rows, 'Ticket #ALGA-2026-0002826')).toEqual(['A']);
+    expect(run([rows[0]], '#TICKET ALGA 2026 0002826')).toEqual([]);
+    expect(run(rows, '#TICKET ALGA 2026 0002826')).toEqual(['B']);
+    expect(run([rows[0]], 'Ticket 2826')).toEqual(['A']);
+    expect(run([rows[0]], 'Ticket #2826')).toEqual(['A']);
+    expect(run([rows[0]], '2826')).toEqual(['A']);
+    expect(run(rows, 'Ticket #ALGA-2026')).toEqual(['A', 'B']);
+    expect(run(rows, '2826')).toEqual(['A', 'B']);
+    expect(run(rows, 'Ticket ALGA-2026-0002826')).toEqual(['B']);
+  });
+
   it.each([
     ['  ticket #alga-2026-0002826  ', ['ALGA-2026-0002826']],
     ['ALGA 2026 0002826', ['ALGA-2026-0002826']],
