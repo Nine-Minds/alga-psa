@@ -33,8 +33,12 @@ function latestInvitation(column: string): string {
  * same mailbox, and an empty address is no address at all. The JS twin
  * `normalizePortalInvitationAddress` does exactly this, so a legacy row with a
  * blank address cannot be called pending by the SQL and refused by the page.
+ *
+ * Exported because the verify path narrows its address join with the very same
+ * expression (`PortalInvitationService.verifyToken`): one spelling of "the same
+ * mailbox" for the column, the batch and the setup page.
  */
-function normalizedAddress(expression: string): string {
+export function normalizedInvitationAddressSql(expression: string): string {
   return `nullif(btrim(lower(${expression})), '')`;
 }
 
@@ -42,7 +46,7 @@ function normalizedAddress(expression: string): string {
 export const LATEST_INVITATION_EXPIRES_AT_SQL = latestInvitation('pi.expires_at');
 
 /** The address the latest invitation was mailed to. */
-const LATEST_INVITATION_ADDRESS_SQL = normalizedAddress(latestInvitation('pi.email'));
+const LATEST_INVITATION_ADDRESS_SQL = normalizedInvitationAddressSql(latestInvitation('pi.email'));
 
 /**
  * Every address the contact can receive at: its primary plus each row of
@@ -60,7 +64,7 @@ const LATEST_INVITATION_ADDRESS_SQL = normalizedAddress(latestInvitation('pi.ema
  * addresses contributes through the left join.
  */
 const CONTACT_ADDRESSES_SQL = `array_remove(
-      array_agg(${normalizedAddress('cea.email_address')}) || min(${normalizedAddress('c.email')}),
+      array_agg(${normalizedInvitationAddressSql('cea.email_address')}) || min(${normalizedInvitationAddressSql('c.email')}),
       null
     )`;
 

@@ -27,11 +27,14 @@ const state: {
   /** The addresses the MSP kept on the contact besides its primary one. */
   additionalEmails: string[];
   deletes: number;
+  /** Every tenant-scoped join the verify query asked for, in order. */
+  joins: Array<{ table: string; on: string[] }>;
 } = {
   contact: { is_inactive: false, email: 'casey@acme.test', full_name: 'Casey Client' },
   invitationEmail: invitation.email,
   additionalEmails: [],
   deletes: 0,
+  joins: [],
 };
 
 const trxStub = {
@@ -39,10 +42,22 @@ const trxStub = {
   fn: { now: () => ({ sql: 'now()' }) },
 };
 
+/** `nullif(btrim(lower(x)), '')`, as the joins and the JS rule both read it. */
+function normalized(value: string | null): string | null {
+  const trimmed = value?.trim().toLowerCase();
+  return trimmed ? trimmed : null;
+}
+
 /**
  * The joined invitation + contact row. The address and the contact's standing
  * are judged in code, by the one rule the MSP's screens are judged by, so the
  * row comes back whole and the refusal happens after it.
+ *
+ * `matched_additional_email` stands for the left join on
+ * `contact_additional_email_addresses`, whose ON clause already narrows the
+ * contact's additional addresses to the one that is the same mailbox as the
+ * address the invitation was mailed to — so the row carries that address or
+ * NULL, never the whole set.
  */
 function invitationQueryBuilder() {
   const builder: any = {
@@ -53,6 +68,7 @@ function invitationQueryBuilder() {
       return builder;
     },
     first() {
+      const mailedTo = normalized(state.invitationEmail);
       return Promise.resolve({
         ...invitation,
         email: state.invitationEmail,
@@ -61,6 +77,9 @@ function invitationQueryBuilder() {
         contact_email: state.contact.email,
         // coalesce(c.is_inactive, false): a NULL row is an active contact.
         contact_inactive: state.contact.is_inactive ?? false,
+        matched_additional_email: state.additionalEmails.find(
+          (email) => mailedTo !== null && normalized(email) === mailedTo
+        ) ?? null,
         client_name: 'Acme',
       });
     },
@@ -71,15 +90,6 @@ function invitationQueryBuilder() {
 const scopedDb = {
   table: (table: string) => {
     if (table === 'portal_invitations as pi') return invitationQueryBuilder();
-    if (table === 'contact_additional_email_addresses') {
-      return {
-        where: () => ({
-          select: () => Promise.resolve(
-            state.additionalEmails.map((email_address) => ({ email_address }))
-          ),
-        }),
-      } as any;
-    }
     if (table === 'portal_invitations') {
       return {
         where: () => ({
@@ -101,7 +111,18 @@ const scopedDb = {
       }),
     }),
   }),
-  tenantJoin: () => undefined,
+  tenantJoin: (
+    _builder: unknown,
+    table: string,
+    _left: string,
+    _right: string,
+    options?: { on?: (join: { andOn: (raw: { sql: string }) => void }) => void }
+  ) => {
+    const on: string[] = [];
+    options?.on?.({ andOn: (raw) => on.push(raw.sql) });
+    state.joins.push({ table, on });
+    return undefined;
+  },
 };
 
 vi.mock('@alga-psa/db', () => ({
@@ -127,6 +148,7 @@ beforeEach(() => {
   state.invitationEmail = invitation.email;
   state.additionalEmails = [];
   state.deletes = 0;
+  state.joins = [];
 });
 
 describe('PortalInvitationService.verifyToken', () => {
@@ -209,6 +231,25 @@ describe('PortalInvitationService.verifyToken', () => {
       valid: false,
       errorCode: 'INVALID_OR_EXPIRED_TOKEN',
     });
+  });
+
+  it('reads the contact\'s additional addresses through the invitation row\'s join', async () => {
+    // Verifying a token is unauthenticated, so this path may not grow a
+    // standalone read of a client-owned table (the read-authorization contract
+    // in server/src/test/unit/product refuses it, and there is no entry point
+    // to put in front of a token). Everything about the contact hangs off the
+    // invitation row instead, tenant-scoped through tenantJoin — and the ON
+    // clause does the address narrowing, so no address set is hauled back.
+    // A regression to a second query also trips the `table()` stub above.
+    await PortalInvitationService.verifyToken('token-1');
+
+    const addressJoin = state.joins.find(
+      (join) => join.table === 'contact_additional_email_addresses as cea'
+    );
+    expect(addressJoin).toBeDefined();
+    expect(addressJoin?.on).toEqual([
+      "nullif(btrim(lower(cea.email_address)), '') = nullif(btrim(lower(pi.email)), '')",
+    ]);
   });
 
   it('refuses a stored invitation with no address at all', async () => {

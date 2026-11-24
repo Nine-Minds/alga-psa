@@ -85,10 +85,38 @@ describe('portal invitation service tenant-scoped query contract', () => {
 
     expect(section).toContain('invitationRefusedAtUseTime({');
     expect(section).toContain('contactEmails: contactAddresses');
-    expect(section).toContain('this.resolveContactAddresses(');
     // The old single-address predicate refused a link sitting in an address the
     // MSP kept on the contact, which inbound email still matches to them.
     expect(section).not.toContain('lower(btrim(c.email)) = lower(btrim(pi.email))');
+  });
+
+  it('reaches the contact\'s addresses from the token\'s own row, not with a second read', () => {
+    // Verifying a token is unauthenticated: the token is the only credential,
+    // so there is no authorization entry point to put in front of it, and the
+    // read-authorization contract (server/src/test/unit/product/
+    // readAuthorizationCoverage.contract.test.ts) will not let this path grow a
+    // standalone read of a client-owned table. Every client-owned row it needs
+    // therefore hangs off the invitation row the token found, tenant-scoped
+    // through tenantJoin — the contact and its client always did, and the
+    // additional addresses now do too, narrowed in the join to the one address
+    // that could be the same mailbox so no aggregation is needed.
+    const section = sectionBetween('static async verifyToken', 'static async markTokenAsUsed');
+
+    expect(section).toMatch(
+      /scopedDb\.tenantJoin\(\s*invitationQuery,\s*'contact_additional_email_addresses as cea',/
+    );
+    expect(section).toContain("'cea.email_address as matched_additional_email'");
+    expect(section).toContain(
+      'const contactAddresses = [invitation.contact_email, invitation.matched_additional_email ?? null];'
+    );
+    // The join's notion of "the same mailbox" is the one the JS rule and the
+    // contact list's state SQL apply, from one helper.
+    expect(section).toContain("normalizedInvitationAddressSql('cea.email_address')");
+    expect(section).toContain("normalizedInvitationAddressSql('pi.email')");
+    // No standalone read of the contact's tables from the token path.
+    expect(section).not.toContain('this.resolveContactAddresses(');
+    expect(section).not.toContain(".table('contact_additional_email_addresses");
+    expect(section).not.toContain(".table('contacts");
   });
 
   it('keeps expired invitations until the retention floor instead of deleting them on sight', () => {

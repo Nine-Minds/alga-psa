@@ -7,6 +7,7 @@ import { withTransaction } from '@alga-psa/db';
 import {
   invitationAddressBelongsToContact,
   invitationRefusedAtUseTime,
+  normalizedInvitationAddressSql,
 } from '../lib/portalInvitationStateQuery';
 
 export interface PortalInvitation {
@@ -36,6 +37,14 @@ interface PortalInvitationVerificationRow extends PortalInvitation {
   full_name: string;
   contact_email: string;
   contact_inactive?: boolean | null;
+  /**
+   * The contact's additional address that the invitation was mailed to, or NULL
+   * when none of them is. The join below narrows the contact's additional
+   * addresses to the single one that could match, so the address set this row
+   * carries is "primary, plus the one additional address that is the same
+   * mailbox" — all `invitationAddressBelongsToContact` needs to decide.
+   */
+  matched_additional_email?: string | null;
   client_name?: string | null;
 }
 
@@ -282,6 +291,28 @@ export class PortalInvitationService {
         const invitationQuery = scopedDb.table('portal_invitations as pi');
         scopedDb.tenantJoin(invitationQuery, 'contacts as c', 'pi.contact_id', 'c.contact_name_id');
         scopedDb.tenantJoin(invitationQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+        // Whether the address this link was mailed to is still one of the
+        // contact's own is decided below, and "the contact's own" is primary ∪
+        // additional. The additional ones ride along on the row the token
+        // already fetches — narrowed in the join to the single address that
+        // could be the same mailbox — rather than in a second query: one
+        // round trip on the setup page's hot path, and the contact's rows stay
+        // reached the way this unauthenticated path has always reached them,
+        // through the token's own invitation row.
+        scopedDb.tenantJoin(
+          invitationQuery,
+          'contact_additional_email_addresses as cea',
+          'cea.contact_name_id',
+          'c.contact_name_id',
+          {
+            type: 'left',
+            on: (join) => {
+              join.andOn(trx.raw(
+                `${normalizedInvitationAddressSql('cea.email_address')} = ${normalizedInvitationAddressSql('pi.email')}`
+              ));
+            }
+          }
+        );
 
         const invitation = await invitationQuery
           .where({
@@ -296,6 +327,7 @@ export class PortalInvitationService {
             // contacts.is_inactive is nullable, and a NULL row is an active
             // contact — comparing it to false would refuse it for ever.
             trx.raw('coalesce(c.is_inactive, false) as contact_inactive'),
+            'cea.email_address as matched_additional_email',
             'comp.client_name'
           )
           .first() as PortalInvitationVerificationRow | undefined;
@@ -315,13 +347,11 @@ export class PortalInvitationService {
         // generic invalid-or-expired message. The address is judged against
         // every address the contact can receive at, exactly as the MSP's
         // "pending/expired" column judges it — one rule, so the contact list,
-        // the Portal tab and this page cannot disagree about one link.
-        const contactAddresses = await this.resolveContactAddresses(
-          trx,
-          tokenTenant,
-          invitation.contact_id,
-          invitation.contact_email
-        );
+        // the Portal tab and this page cannot disagree about one link. The
+        // verdict stays in `invitationRefusedAtUseTime`: the join above only
+        // narrows the additional addresses to the one candidate, with the same
+        // normalization this rule applies.
+        const contactAddresses = [invitation.contact_email, invitation.matched_additional_email ?? null];
         if (invitationRefusedAtUseTime({
           contactInactive: invitation.contact_inactive,
           contactEmails: contactAddresses,
