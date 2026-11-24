@@ -670,11 +670,23 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expectNoLeaks(ticket.description);
     });
 
-    it.each(['reply', 'new ticket'])('preserves an image-only %s', async (kind) => {
+    it.each([
+      ['reply', false],
+      ['new ticket', false],
+      ['reply', true],
+      ['new ticket', true],
+    ])('preserves an image-only %s (multipart: %j)', async (kind, multipart) => {
       const { parseEmailReply } = await import('../../../../lib/email/replyParser');
-      const html = '<img src="https://example.test/screenshot.png">';
-      const inboundEmail = { ...emailData, body: { html } };
-      const parsed = parseEmailReply({ text: '', html });
+      const html = '<img src="https://example.test/screenshot.png">'
+        + (multipart ? '<div data-alga-reply-boundary="true">--- Please reply above this line ---</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN image-token]</div>'
+          + '<p>Old notification</p><img src="https://example.test/quoted-logo.png">' : '');
+      const text = multipart
+        ? '[ALGA-REPLY-TOKEN image-token]\n--- Please reply above this line ---\nOld notification' : '';
+      const inboundEmail = { ...emailData, body: { text, html }, attachments: [] };
+      const parsed = parseEmailReply({ text, html });
+      expect(parsed.sanitizedText).toBe('');
+      expect(parsed.sanitizedHtml).toContain('https://example.test/screenshot.png');
       let content: string;
       if (kind === 'reply') {
         content = (await writtenComment(parsed, inboundEmail)).content;
@@ -687,6 +699,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expect(JSON.parse(content)).toEqual(expect.arrayContaining([
         expect.objectContaining({ type: 'image', props: expect.objectContaining({ url: 'https://example.test/screenshot.png' }) }),
       ]));
+      expectNoLeaks(content);
+      expect(content).not.toContain('Old notification');
+      expect(content).not.toContain('quoted-logo.png');
     });
 
     it('does not restore the raw text into the description of an empty parse', async () => {

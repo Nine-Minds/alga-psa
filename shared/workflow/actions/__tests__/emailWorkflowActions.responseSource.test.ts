@@ -100,7 +100,11 @@ describe('createCommentFromEmail response source metadata', () => {
     ticketStateFirstMock.mockResolvedValue({ response_state: null });
   });
 
-  it.each([false, true])('processes an attachment-only workflow reply through the writer and its side effects (Alga token: %j)', async (withToken) => {
+  it.each([
+    { kind: 'attachment-only', withToken: false },
+    { kind: 'attachment-only', withToken: true },
+    { kind: 'multipart image-only', withToken: true },
+  ])('processes a $kind workflow reply through the writer and its side effects (Alga token: $withToken)', async ({ kind, withToken }) => {
     const { registerEmailWorkflowActionsV2 } = await import('../../runtime/actions/registerEmailWorkflowActions');
     const { parseEmailReply } = await import('../../../lib/email/replyParser');
     registerEmailWorkflowActionsV2();
@@ -108,20 +112,24 @@ describe('createCommentFromEmail response source metadata', () => {
       .find((entry) => entry.id === 'create_comment_from_parsed_email');
     ticketStateFirstMock.mockResolvedValue({ response_state: 'awaiting_client' });
     createCommentMock.mockResolvedValue({ comment_id: 'comment-1', is_internal: false });
+    const imageOnly = kind === 'multipart image-only';
     const body = {
       text: withToken ? '[ALGA-REPLY-TOKEN attachment-token]\n--- Please reply above this line ---\nOld notification' : '',
-      html: '<div dir="ltr"><br></div>',
+      html: imageOnly ? '<img src="https://example.test/screenshot.png">'
+        + '<div data-alga-reply-boundary="true">--- Please reply above this line ---</div>'
+        + '<p>Old notification</p><img src="https://example.test/quoted-logo.png">'
+        : '<div dir="ltr"><br></div>',
     };
     const input = action.inputSchema.parse({
       ticketId: 'ticket-1',
       contact_id: 'contact-1',
       emailData: {
-        id: 'attachment-only-reply',
+        id: 'media-only-reply',
         subject: 'Re: Deployment failed',
         from: { email: 'client@example.com' },
         inReplyTo: '<original-message@example.com>',
         body,
-        attachments: [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }],
+        attachments: imageOnly ? [] : [{ id: 'attachment-1', name: 'diagnostics.txt', contentType: 'text/plain', size: 128 }],
       },
       parsedEmail: parseEmailReply(body),
     });
@@ -133,6 +141,13 @@ describe('createCommentFromEmail response source metadata', () => {
       is_internal: false,
       metadata: { responseSource: 'inbound_email' },
     });
+    if (imageOnly) {
+      const content = createCommentMock.mock.calls[0][0].content;
+      expect(content).toContain('https://example.test/screenshot.png');
+      expect(content).not.toContain('Old notification');
+      expect(content).not.toContain('quoted-logo.png');
+      expect(content).not.toContain('ALGA-REPLY-TOKEN');
+    }
     expect(updateTicketStateMock).toHaveBeenCalledWith({ response_state: 'awaiting_internal' });
     expect(ticketAuditLogInsertMock).toHaveBeenCalledWith(expect.objectContaining({
       event_type: 'TICKET_CUSTOMER_REPLIED',

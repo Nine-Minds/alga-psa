@@ -56,6 +56,26 @@ describe('inbound reply body', () => {
     expect(substantiveReplyBody(parsed, body)).toEqual({});
   });
 
+  it('keeps authored media in a multipart reply whose text contains only history', async () => {
+    const body = {
+      text: `${TOKEN}\n--- Please reply above this line ---\nOld notification`,
+      html: '<div><img src="https://example.test/screenshot.png"></div>'
+        + '<div data-alga-reply-boundary="true">--- Please reply above this line ---</div>'
+        + `<div style="display:none">${TOKEN}</div><p>Old notification</p>`
+        + '<img src="https://example.test/quoted-logo.png">',
+    };
+    const parsed = parseEmailReply(body);
+
+    expect(parsed.sanitizedText).toBe('');
+    expect(parsed.sanitizedHtml).toContain('https://example.test/screenshot.png');
+    expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
+    const stored = await storedBody(body);
+    expect(stored).toContain('https://example.test/screenshot.png');
+    expect(stored).not.toContain('quoted-logo.png');
+    expect(stored).not.toContain('Old notification');
+    expect(stored).not.toContain('ALGA-REPLY-TOKEN');
+  });
+
   it.each([
     '<html><body>',
     '<div><br></div>',

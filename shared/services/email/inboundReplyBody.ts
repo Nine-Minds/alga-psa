@@ -49,6 +49,12 @@ export function hasSubstantiveReplyContent(
   parsedEmail: any,
   body: InboundEmailBodyParts | undefined,
 ): boolean {
+  // A multipart reply can have authored media only in its HTML part, while the
+  // text part contains nothing but stripped history. Only inspect the selected
+  // body: rejected/absent parsed HTML must never revive media from raw history.
+  const html = replyBodyForComment(parsedEmail, body).html ?? '';
+  if (hasHtmlMediaContent(html)) return true;
+
   const candidateText =
     parsedEmail?.sanitizedText ??
     parsedEmail?.text ??
@@ -59,8 +65,7 @@ export function hasSubstantiveReplyContent(
   // HTML-only mail has no sanitizedText in the reply parser. Use its existing
   // HTML text projection, without reviving quoted HTML when a text part exists.
   if (body?.text?.trim()) return false;
-  const html = replyBodyForComment(parsedEmail, body).html ?? '';
-  return hasHtmlMediaContent(html) || stripAutomatedReplyMarkers(htmlToVisibleText(html)).length > 0;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(html)).length > 0;
 }
 
 /**
@@ -69,8 +74,8 @@ export function hasSubstantiveReplyContent(
  * The in-app processor skips a token-only email outright before it reaches a
  * comment; the workflow definition has no such step, so its actions apply the same
  * judgement here. An empty `sanitizedText` from a successful parse is the parser's
- * signal that the reply held nothing above the Alga boundary, and the HTML side of
- * the same mail must not be stored in its place.
+ * signal that the reply held no text above the Alga boundary. Preserved HTML
+ * media still counts as a reply; retained HTML text alone must not override it.
  */
 export function substantiveReplyBody(
   parsedEmail: any,
