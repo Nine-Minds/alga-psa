@@ -47,7 +47,7 @@ vi.mock('@alga-psa/jobs/handlers/reconcileBucketUsageHandler', () => ({ handleRe
 vi.mock('@alga-psa/jobs/handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHandler: (...a: unknown[]) => tenantHandlerMock('process-renewal-queue', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/autoCloseTicketsHandler', () => ({ autoCloseTicketsHandler: (...a: unknown[]) => tenantHandlerMock('auto-close-tickets', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/searchReconcileHandler', () => ({ SEARCH_RECONCILE_JOB_NAME: 'search:reconcile', searchReconcileHandler: (...a: unknown[]) => tenantHandlerMock('search:reconcile', ...a) }));
-vi.mock('@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler', () => ({ verifyGoogleCalendarProvisioning: (...a: unknown[]) => tenantHandlerMock('verify-google-calendar-pubsub', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/calendarWebhookMaintenanceHandler', () => ({ renewMicrosoftCalendarWebhooks: (...a: unknown[]) => tenantHandlerMock('renew-microsoft-calendar-webhooks', ...a), verifyGoogleCalendarProvisioning: (...a: unknown[]) => tenantHandlerMock('verify-google-calendar-pubsub', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler', () => ({ renewGoogleGmailWatchSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-google-gmail-watch', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler', () => ({ renewTeamsMeetingArtifactSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-teams-meeting-artifact-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler', () => ({ workflowQuotaResumeScanHandler: (...a: unknown[]) => systemHandlerMock('workflow-quota-resume-scan', ...a) }));
@@ -219,6 +219,31 @@ describe('runMaintenanceJob', () => {
     expect(result.total).toBe(1);
   });
 
+  it('narrows the calendar jobs to tenants selected from calendar_providers', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }, { tenant: 't3' }]);
+    selectTenantsMock.mockReturnValue([{ tenant: 't3' }]);
+    for (const jobName of ['renew-microsoft-calendar-webhooks', 'verify-google-calendar-pubsub']) {
+      tenantHandlerMock.mockClear();
+      selectorTablesSeen.length = 0;
+      const result = await runMaintenanceJob(jobName);
+      expect(selectorTablesSeen).toEqual(['calendar_providers']);
+      expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({ jobName, scope: 'tenant', total: 1, succeeded: 1, failed: 0 });
+    }
+  });
+
+  it('T001: runs the Microsoft calendar renewal per tenant with the 180 minute look-ahead', async () => {
+    expect(isKnownMaintenanceJob('renew-microsoft-calendar-webhooks')).toBe(true);
+    expect(listMaintenanceJobNames()).toContain('renew-microsoft-calendar-webhooks');
+    expect(MAINTENANCE_FANOUT_SCHEDULES).toContainEqual({ jobName: 'renew-microsoft-calendar-webhooks', cron: '*/30 * * * *' });
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
+    selectTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
+    const result = await runMaintenanceJob('renew-microsoft-calendar-webhooks');
+    expect(result).toEqual({ jobName: 'renew-microsoft-calendar-webhooks', scope: 'tenant', total: 2, succeeded: 2, failed: 0 });
+    expect(tenantHandlerMock).toHaveBeenCalledWith('renew-microsoft-calendar-webhooks', { tenantId: 't1', lookAheadMinutes: 180 });
+    expect(tenantHandlerMock).toHaveBeenCalledWith('renew-microsoft-calendar-webhooks', { tenantId: 't2', lookAheadMinutes: 180 });
+  });
+
   it('throws for an unknown job name', async () => {
     await expect(runMaintenanceJob('not-a-real-job')).rejects.toThrow(/Unknown maintenance job/);
   });
@@ -323,6 +348,68 @@ describe('maintenance schedule / fan-out registry parity', () => {
   it('runs recurring-ticket generation every 15 minutes, matching the CE pg-boss schedule', () => {
     expect(SERVER_MAINTENANCE_JOBS.generateRecurringTickets).toBe('generate-recurring-tickets');
     expect(MAINTENANCE_FANOUT_SCHEDULES).toContainEqual({ jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' });
+  });
+
+  // F009 / T009. A registered pg-boss handler that is recurring but has no
+  // `maintenance-fanout:<name>` schedule never runs on EE/appliance (the Microsoft
+  // calendar renewal was dead for months that way). Every registered handler name
+  // therefore has to be in the EE catalog or be listed here with the reason it
+  // is not a recurring EE job. A new handler fails this test until someone
+  // decides which it is; do not add a name here to silence it without a reason.
+  // `renew-microsoft-calendar-webhooks` must never appear in this list.
+  const NOT_AN_EE_MAINTENANCE_JOB: Record<string, string> = {
+    // On-demand work, enqueued by an action, an import or an event; never recurring.
+    'generate-invoice': 'on-demand: enqueued by billing actions',
+    'invoice_zip': 'on-demand: enqueued by the invoice zip export action',
+    'invoice_email': 'on-demand: enqueued by the invoice email action',
+    'finalize-link-accepted-quote': 'on-demand: enqueued when a quote is accepted',
+    'asset_import': 'on-demand: enqueued by an asset import',
+    'generate-document-previews': 'on-demand: enqueued after a document upload',
+    'kb-article-import': 'on-demand: enqueued by a knowledge base import',
+    'search-visible-user-reindex': 'on-demand: enqueued when a user\'s visibility changes (the recurring search job is search:reconcile, scheduled)',
+    'search-client-scope-reindex': 'on-demand: enqueued when a client scope changes (the recurring search job is search:reconcile, scheduled)',
+    'process-teams-meeting-artifact-notification': 'event-driven: runs per Graph notification (renewal is renew-teams-meeting-artifact-subscriptions, scheduled)',
+    'process-telephony-call-notification': 'event-driven: runs per Graph notification (renewal is renew-telephony-call-subscriptions, scheduled)',
+    'process-telephony-canonical-call': 'event-driven: runs per canonical call record',
+    'process-threecx-call-event': 'event-driven: runs per 3CX call event',
+    'process-threecx-chat': 'event-driven: runs per 3CX chat message',
+    'sync-threecx-phonebook-contact': 'event-driven: runs per contact change (the recurring reconcile is reconcile-threecx-phonebook, scheduled)',
+    // Recurring, but not through the maintenance fan-out.
+    'marketing:flip-due-posts': 'recurring, scheduled by the EE marketingFanoutWorkflow Temporal schedules (setupSchedules.ts), not the maintenance fan-out',
+    'marketing:expire-stale-targets': 'recurring, scheduled by the EE marketingFanoutWorkflow Temporal schedules (setupSchedules.ts), not the maintenance fan-out',
+    'marketing:send-sequence-steps': 'recurring, scheduled by the EE marketingFanoutWorkflow Temporal schedules (setupSchedules.ts), not the maintenance fan-out',
+    'sla-timer': 'CE-only recurring job (CE_MAINTENANCE_JOBS, pg-boss); EE runs SLA timing through its own mechanism',
+  };
+
+  async function registeredHandlerNames(): Promise<string[]> {
+    const { getAvailableJobHandlers } = await import('../../lib/jobs/registerAllHandlers');
+    const previous = { EDITION: process.env.EDITION, NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION };
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    try {
+      return [...new Set(getAvailableJobHandlers())];
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key]; else process.env[key] = value;
+      }
+    }
+  }
+
+  it('gives every registered handler an EE maintenance schedule or an explicit exemption', async () => {
+    const names = await registeredHandlerNames();
+    const unclassified = names.filter(
+      (name) => !scheduled.includes(name) && !(name in NOT_AN_EE_MAINTENANCE_JOB),
+    );
+    expect(unclassified).toEqual([]);
+  });
+
+  it('never exempts the Microsoft calendar renewal and keeps the exemption list honest', async () => {
+    expect(NOT_AN_EE_MAINTENANCE_JOB).not.toHaveProperty('renew-microsoft-calendar-webhooks');
+    expect(scheduled).toContain('renew-microsoft-calendar-webhooks');
+    const names = await registeredHandlerNames();
+    // An exemption for a name that is scheduled, or no longer registered, is stale.
+    expect(Object.keys(NOT_AN_EE_MAINTENANCE_JOB).filter((name) => scheduled.includes(name) || !names.includes(name))).toEqual([]);
+    for (const reason of Object.values(NOT_AN_EE_MAINTENANCE_JOB)) expect(reason.trim().length).toBeGreaterThan(0);
   });
 
   it('schedules each job exactly once', () => {

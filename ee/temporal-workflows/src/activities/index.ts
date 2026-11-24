@@ -13,7 +13,6 @@ export * from "./job-activities";
 export * from "./maintenance-fanout-activities";
 export * from "./marketing-activities";
 export * from "./email-webhook-maintenance-activities";
-export * from "./calendar-webhook-maintenance-activities";
 export * from "./ninjaone-sync-activities";
 export * from "./ninjaone-token-refresh-activities";
 export * from "./entra-discovery-activities";

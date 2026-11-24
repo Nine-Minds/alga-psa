@@ -5,6 +5,7 @@
 
 import { CalendarSyncService } from './CalendarSyncService';
 import { CalendarProviderService } from './CalendarProviderService';
+import { MicrosoftDeltaSyncService, executeWithRetry } from './MicrosoftDeltaSyncService';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
@@ -21,6 +22,15 @@ export class CalendarWebhookProcessor {
   constructor() {
     this.syncService = new CalendarSyncService();
     this.providerService = new CalendarProviderService();
+  }
+
+  // Built per use so it always runs on the processor's current services and adapter factory.
+  private get microsoftDeltaSync(): MicrosoftDeltaSyncService {
+    return new MicrosoftDeltaSyncService(
+      this.syncService,
+      this.providerService,
+      async (provider) => (await this.createAdapter(provider)) as MicrosoftCalendarAdapter
+    );
   }
 
   /**
@@ -402,114 +412,24 @@ export class CalendarWebhookProcessor {
       const { provider, notifications: notificationsForProvider } = entry;
 
       try {
-        const result = await runWithTenant(provider.tenant, async () => {
-          const adapter = (await this.createAdapter(provider)) as MicrosoftCalendarAdapter;
-          await adapter.connect();
-
-          const { knex } = await createTenantKnex();
-
-          let deltaLink = provider.provider_config?.deltaLink || undefined;
-          let deltaResult = await adapter.fetchDeltaChanges(deltaLink);
-
-          if (deltaResult.resetRequired) {
-            console.warn('[CalendarWebhookProcessor] Microsoft delta link invalid, resetting', {
-              providerId
-            });
-
-            await this.providerService.updateProvider(provider.id, provider.tenant, {
-              vendorConfig: { deltaLink: null }
-            });
-            deltaResult = await adapter.fetchDeltaChanges(undefined);
+        const additionalChanges: CalendarEventChange[] = [];
+        for (const notification of notificationsForProvider) {
+          const eventId =
+            notification.resourceData?.id ||
+            this.extractEventIdFromResource(notification.resource);
+          if (!eventId) {
+            continue;
           }
 
-          if (deltaResult.deltaLink && deltaResult.deltaLink !== deltaLink) {
-            await this.providerService.updateProvider(provider.id, provider.tenant, {
-              vendorConfig: { deltaLink: deltaResult.deltaLink }
-            });
-          }
+          const type =
+            typeof notification.changeType === 'string' &&
+            notification.changeType.toLowerCase() === 'deleted'
+              ? 'deleted'
+              : 'updated';
+          additionalChanges.push({ id: eventId, changeType: type });
+        }
 
-          const queuedChanges: Array<CalendarEventChange> = [];
-          const seen = new Set<string>();
-
-          for (const change of deltaResult.changes) {
-            const key = `${change.id}:${change.changeType}`;
-            if (!seen.has(key)) {
-              queuedChanges.push(change);
-              seen.add(key);
-            }
-          }
-
-          for (const notification of notificationsForProvider) {
-            const eventId =
-              notification.resourceData?.id ||
-              this.extractEventIdFromResource(notification.resource);
-            if (!eventId) {
-              continue;
-            }
-
-            const type =
-              typeof notification.changeType === 'string' &&
-              notification.changeType.toLowerCase() === 'deleted'
-                ? 'deleted'
-                : 'updated';
-
-            const key = `${eventId}:${type}`;
-            if (!seen.has(key)) {
-              queuedChanges.push({ id: eventId, changeType: type });
-              seen.add(key);
-            }
-          }
-
-          let localSuccess = 0;
-          let localFailed = 0;
-
-          for (const change of queuedChanges) {
-            if (change.changeType === 'deleted') {
-              try {
-                // @removed on an occurrence id must become an exception on the
-                // series master, not a delete of the whole series. Graph sends
-                // nothing but the opaque id, so the resolver falls back to the
-                // occurrence index recorded when that occurrence was synced.
-                await this.executeWithRetry(async () => {
-                  const result = await this.syncService.handleInboundExternalDelete(change.id, provider.id, {
-                    recurringEventId: change.recurringEventId,
-                    originalStart: change.originalStart,
-                    adapter
-                  });
-                  if (!result.success) {
-                    throw new Error(result.error || 'Failed to delete schedule entry');
-                  }
-                  return result;
-                }, `microsoft-delete-${change.id}`);
-
-                localSuccess++;
-              } catch (error: any) {
-                localFailed++;
-                console.error(`❌ Failed to process Microsoft deletion for event ${change.id}:`, error?.message || error);
-              }
-            } else {
-              try {
-                await this.executeWithRetry(async () => {
-                  const result = await this.syncService.syncExternalEventToSchedule(
-                    change.id,
-                    provider.id
-                  );
-                  if (!result.success) {
-                    throw new Error(result.error || 'Failed to sync schedule entry');
-                  }
-                  return result;
-                }, `microsoft-sync-${change.id}`);
-
-                localSuccess++;
-              } catch (error: any) {
-                localFailed++;
-                console.error(`❌ Failed to sync Microsoft event ${change.id}:`, error?.message || error);
-              }
-            }
-          }
-
-          return { success: localSuccess, failed: localFailed };
-        });
+        const result = await this.microsoftDeltaSync.syncProviderDelta(provider, { additionalChanges });
 
         successCount += result.success;
         failedCount += result.failed;
@@ -677,27 +597,7 @@ export class CalendarWebhookProcessor {
     return match ? match[1] : null;
   }
 
-  private async executeWithRetry<T>(fn: () => Promise<T>, label: string, attempts: number = 3): Promise<T> {
-    let lastError: any;
-    for (let attempt = 1; attempt <= attempts; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        lastError = error;
-        console.warn(`[CalendarWebhookProcessor] ${label} failed`, {
-          attempt,
-          attempts,
-          error: error instanceof Error ? error.message : error
-        });
-        if (attempt < attempts) {
-          await this.sleep(attempt * 250);
-        }
-      }
-    }
-    throw lastError;
-  }
-
-  private async sleep(ms: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, ms));
+  private executeWithRetry<T>(fn: () => Promise<T>, label: string, attempts: number = 3): Promise<T> {
+    return executeWithRetry(fn, label, attempts);
   }
 }

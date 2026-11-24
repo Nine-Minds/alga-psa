@@ -17,7 +17,6 @@ import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
   applianceCheckInWorkflow,
-  calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   emailPollingReconcileWorkflow,
   entraAllTenantsSyncWorkflow,
@@ -431,25 +430,6 @@ export async function setupSchedules() {
       },
     });
 
-    // Calendar webhook maintenance schedule (runs every 30 minutes, checks 3 hours ahead)
-    const calendarScheduleId = 'calendar-webhook-maintenance-schedule';
-    await upsertSchedule(client, calendarScheduleId, {
-      spec: {
-        intervals: [{ every: '30m' }],
-      },
-      action: {
-        type: 'startWorkflow',
-        workflowType: calendarWebhookMaintenanceWorkflow,
-        args: [{ lookAheadMinutes: 180 }],
-        taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
-        workflowExecutionTimeout: '10m',
-      },
-      policies: {
-        overlap: ScheduleOverlapPolicy.SKIP,
-        catchupWindow: '1m',
-      },
-    });
-
     await upsertSchedule(client, 'autopay-reconcile', {
       spec: { cronExpressions: ['0 * * * *'] },
       action: {
@@ -464,6 +444,11 @@ export async function setupSchedules() {
 
     // Remove the retired Premium-trial maintenance schedule from existing namespaces.
     await deleteScheduleIfExists(client, 'premium-trial-expiry-schedule');
+
+    // Microsoft calendar subscription renewal runs as the maintenance-fanout:renew-microsoft-calendar-webhooks
+    // schedule below. The Temporal workflow that used to own it called a stub activity and never renewed
+    // anything; remove its schedule from existing namespaces.
+    await deleteScheduleIfExists(client, 'calendar-webhook-maintenance-schedule');
 
     // Appliance connected-license check-in (runs daily). Renews this install's
     // connected license token before its ~31-day exp by calling the

@@ -1,6 +1,6 @@
 import { Client, Connection } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow, resendWelcomeEmailWorkflow, tenantDeletionWorkflow, tenantExportWorkflow } from './workflows/index';
+import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, resendWelcomeEmailWorkflow, tenantDeletionWorkflow, tenantExportWorkflow } from './workflows/index';
 import type {
   TenantCreationInput,
   TenantCreationResult,
@@ -250,27 +250,6 @@ export class TenantWorkflowClient {
     });
 
     const handle = await this.client.workflow.start(emailWebhookMaintenanceWorkflow, {
-      args: [options],
-      taskQueue: this.config.taskQueue,
-      workflowId,
-      workflowExecutionTimeout: '1h',
-    });
-
-    return handle.workflowId;
-  }
-
-  /**
-   * Start calendar webhook maintenance workflow
-   */
-  async startCalendarWebhookMaintenance(options: { tenantId?: string; lookAheadMinutes?: number }): Promise<string> {
-    const workflowId = `calendar-webhook-maintenance-${options.tenantId || 'global'}-${Date.now()}`;
-
-    logger.info('Starting calendar webhook maintenance workflow', {
-      workflowId,
-      ...options
-    });
-
-    const handle = await this.client.workflow.start(calendarWebhookMaintenanceWorkflow, {
       args: [options],
       taskQueue: this.config.taskQueue,
       workflowId,
