@@ -108,6 +108,7 @@ async function reconcileTenant(trx, tenant, definition, log) {
       find('duplicate_candidates', 'Several roles carry the seat role identity and no seat technician identifies one.', lookalikes.map((r) => r.role_id));
     }
     // No history: a lookalike is an unrelated custom role. Nothing is read from it or written to it.
+    // Seat admission (packages/co-managed/src/seatRole.ts, admitCoManagedSeatRole) applies the same rule.
 
     if (role) {
       await db.table('roles').where({ role_id: role.role_id }).update({ managed_by: definition.owner });

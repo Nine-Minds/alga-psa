@@ -28,6 +28,8 @@ export const CO_MANAGED_SEAT_ROLE_CAPABILITY: CapabilityKey = 'co-managed-seat';
 /** The `roles.managed_by` value of the seat role. */
 export const CO_MANAGED_SEAT_ROLE_OWNER = CO_MANAGED_SEAT_ROLE_OWNER_KEY;
 export const CO_MANAGED_SEAT_ROLE = { role_name: 'Seat Technician', msp: true, client: false } as const;
+/** The name of a new seat role in a tenant where a custom role already holds the canonical name. */
+export const CO_MANAGED_SEAT_ROLE_FALLBACK_NAME = 'Seat Technician (co-managed)';
 export const CO_MANAGED_SEAT_ROLE_DESCRIPTION = 'Client technician working this workspace on a co-managed seat';
 
 // Reserves the identity in every host that loads the seat domain (server, Temporal worker).
@@ -78,10 +80,10 @@ export const CO_MANAGED_SEAT_ROLE_GRANTS = [
  * permission row is written; a grant whose permission the tenant does not have is left to catalog
  * synchronization, which knows this role.
  *
- * The role is found by `managed_by`. Where none exists yet, a single unowned role of the same
- * name that nobody holds is adopted (a tenant that created it by hand before ownership existed);
- * anything else with that name is left alone and a new managed role is created. Reconciling
- * tenants that already have seats is the migration's job, which reports what it cannot decide.
+ * The role is found by `managed_by`, else created. A role that merely has the name is never
+ * adopted: with no seat history it is an unrelated custom role and keeps its name, grants and
+ * owner. Reconciling tenants that already have seats is the migration's job
+ * (`managedRoleReconciliation.cjs`, which applies the same rule and reports what it cannot decide).
  *
  * Call inside a transaction that holds the sponsor's entitlement lock, as arrangement creation
  * and invitation acceptance do, so concurrent first admissions cannot both insert the role.
@@ -93,21 +95,24 @@ export async function admitCoManagedSeatRole(trx: Knex.Transaction, sponsorTenan
 
     let roleId = await findCoManagedSeatRoleId(trx, sponsorTenant);
     if (!roleId) {
-      const lookalikes: Array<{ role_id: string }> = await sponsor.table('roles').where(CO_MANAGED_SEAT_ROLE)
-        .whereNull('managed_by').orderBy('created_at').select('role_id');
-      const adoptable = lookalikes.length === 1
-        && !(await sponsor.table('user_roles').where({ role_id: lookalikes[0].role_id }).first('user_id'));
-      if (adoptable) {
-        roleId = lookalikes[0].role_id;
-        await sponsor.table('roles').where({ role_id: roleId }).update({ managed_by: CO_MANAGED_SEAT_ROLE_OWNER });
-      } else {
-        roleId = randomUUID();
-        // write-admission: exempt — capability role, written by its owning admission under the pool lock
-        await sponsor.table('roles').insert({
-          tenant: sponsorTenant, role_id: roleId, ...CO_MANAGED_SEAT_ROLE, description: CO_MANAGED_SEAT_ROLE_DESCRIPTION,
-          managed_by: CO_MANAGED_SEAT_ROLE_OWNER,
-        });
-      }
+      // Never adopt a role by its name: with no managed role, a hand-made "Seat Technician" is an
+      // unrelated custom role, exactly as `server/migrations/utils/managedRoleReconciliation.cjs`
+      // treats a lookalike in a tenant with no seat history (this admission runs for the first
+      // arrangement, so there is none). Nothing is read from it or written to it. If it holds the
+      // canonical name, the new role takes a distinct one, as the migration's "canonical name
+      // taken" path leaves the seat role alone; `roles` has no unique constraint on the name, and
+      // the role is always found by `managed_by`.
+      const nameTaken = await sponsor.table('roles')
+        .where({ msp: CO_MANAGED_SEAT_ROLE.msp, client: CO_MANAGED_SEAT_ROLE.client })
+        .whereRaw('lower(trim(role_name)) = ?', [CO_MANAGED_SEAT_ROLE.role_name.toLowerCase()])
+        .first('role_id');
+      roleId = randomUUID();
+      // write-admission: exempt — capability role, written by its owning admission under the pool lock
+      await sponsor.table('roles').insert({
+        tenant: sponsorTenant, role_id: roleId, ...CO_MANAGED_SEAT_ROLE, description: CO_MANAGED_SEAT_ROLE_DESCRIPTION,
+        ...(nameTaken ? { role_name: CO_MANAGED_SEAT_ROLE_FALLBACK_NAME } : {}),
+        managed_by: CO_MANAGED_SEAT_ROLE_OWNER,
+      });
     }
     await sponsor.table('roles').where({ role_id: roleId }).whereRaw('description IS DISTINCT FROM ?', [CO_MANAGED_SEAT_ROLE_DESCRIPTION])
       .update({ description: CO_MANAGED_SEAT_ROLE_DESCRIPTION });

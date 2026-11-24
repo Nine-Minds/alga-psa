@@ -1,6 +1,6 @@
 import { ensureMiscellaneousService } from '@alga-psa/db';
 import { Context, ApplicationFailure } from '@temporalio/activity';
-import { tenantDb } from '@alga-psa/db';
+import { runAsTenantTeardown, tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation.js';
 import type { Knex } from 'knex';
@@ -710,7 +710,8 @@ export async function rollbackTenantInDB(
       // Delete in proper order to avoid foreign key violations
 
       // Delete user roles first (references users)
-      await db.table('user_roles').delete();
+      // Whole-tenant teardown: admitted by the managed-role ownership guard (deletes of this tenant only).
+      await runAsTenantTeardown(tenantId, async () => await db.table('user_roles').delete());
 
       // Delete users (references tenant)
       await db.table('users').delete();

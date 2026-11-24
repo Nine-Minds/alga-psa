@@ -21,6 +21,15 @@ import { tenantDb } from './tenantDb';
  * capability role's (name, scope), or to the identity of a role that is already managed in the
  * tenant, is refused, so a lookalike can never collide with the managed role.
  *
+ * Tenant teardown is the one other lifecycle the guard understands: `runAsTenantTeardown(tenant, fn)`.
+ * Deleting a whole tenant must remove its managed roles, grants and memberships, and no owner is
+ * running then. The scope is narrow on purpose: it names ONE tenant, and inside it the guard admits
+ * only `del` / `delete` against that tenant. Inserts, updates (so adopting or releasing
+ * `managed_by`, renaming, regranting), and deletes against any other tenant are checked exactly as
+ * outside it. A delete cannot create, change or take over a managed role, so the scope cannot
+ * reopen the hole; it is not a system owner and the guard and `tenantDb` take no flag for it.
+ * Only the tenant-deletion activity opens it; nothing reachable from a user request does.
+ *
  * Neutral by design: this file knows no capability. Owners register their role identities
  * (`registerManagedRoleIdentity`) from their own package, and the guard reads `managed_by` from
  * the tenant's own rows, so ownership is enforced whether or not the capability is currently
@@ -38,6 +47,7 @@ export interface ManagedRoleIdentity {
 interface ManagedRoleState {
   identities: Map<string, ManagedRoleIdentity>;
   lifecycle: AsyncLocalStorage<{ owner: string }>;
+  teardown: AsyncLocalStorage<{ tenant: string }>;
 }
 
 declare global {
@@ -50,6 +60,7 @@ function state(): ManagedRoleState {
   return (globalThis.__algaManagedRoleState ??= {
     identities: new Map(),
     lifecycle: new AsyncLocalStorage(),
+    teardown: new AsyncLocalStorage(),
   });
 }
 
@@ -81,6 +92,20 @@ export function runAsRoleOwner<T>(owner: string, fn: () => PromiseLike<T>): Prom
 /** The owner whose lifecycle is running in this async scope, if any. */
 export function currentRoleOwner(): string | undefined {
   return state().lifecycle.getStore()?.owner;
+}
+
+/**
+ * Runs `fn` as the teardown of `tenant`: inside it, DELETES of that tenant's role, grant and
+ * membership rows are admitted, managed or not. Nothing else is: see the file header. Only the
+ * tenant-deletion activity may call this.
+ */
+export function runAsTenantTeardown<T>(tenant: string, fn: () => PromiseLike<T>): Promise<T> {
+  return state().teardown.run({ tenant }, async () => await fn());
+}
+
+/** The tenant whose teardown is running in this async scope, if any. */
+export function currentTeardownTenant(): string | undefined {
+  return state().teardown.getStore()?.tenant;
 }
 
 interface ManagedRoleRow {
@@ -128,6 +153,8 @@ const tableCode = (table: ManagedRoleTable): ManagedRoleOwnershipCode =>
 export async function admitManagedRoleWrite(write: ManagedRoleWrite): Promise<void> {
   const { conn, tenant, table, method } = write;
   if (method !== 'insert' && method !== 'update' && method !== 'del' && method !== 'delete') return;
+  // Teardown of this very tenant removes rows; it never writes or reassigns them.
+  if ((method === 'del' || method === 'delete') && currentTeardownTenant() === tenant) return;
   const running = currentRoleOwner();
   const managed = new Map((await listManagedRoles(conn, tenant)).map((role) => [role.role_id, role]));
 

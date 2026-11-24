@@ -131,6 +131,8 @@ export {
   registerManagedRoleIdentity,
   registeredManagedRoleIdentities,
   runAsRoleOwner,
+  runAsTenantTeardown,
+  currentTeardownTenant,
 } from './lib/managedRoleOwnership';
 export type { ManagedRoleIdentity, ManagedRoleTable, ManagedRoleWrite } from './lib/managedRoleOwnership';
 

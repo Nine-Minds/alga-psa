@@ -35,7 +35,7 @@ import {
   BuiltinAuthorizationKernelProvider, RequestLocalAuthorizationCache, createAuthorizationKernel, registerBuiltinRuleResolver,
 } from '@alga-psa/authorization/kernel';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
-import { runWithTenant } from '@alga-psa/db';
+import { runAsTenantTeardown, runWithTenant, tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import { PermissionRoleService } from '../../lib/api/services/PermissionRoleService';
 import {
@@ -276,4 +276,67 @@ describeDb('the seat role belongs to Alga (T001, T002)', { shuffle: false }, () 
     expect(CO_MANAGED_SEAT_ROLE.role_name).toBe('Seat Technician');
     expect(CO_MANAGED_SEAT_RESOLVER_ID).toBeTruthy();
   }, 180_000);
+
+  // T002 (teardown): the guard still refuses every write outside the owner's lifecycle.
+  it('refuses a seat-role write through tenantDb outside any scope, and inside a teardown scope for anything but deleting this tenant', async () => {
+    const { sponsor, seatRole, admin } = await sponsorWithSeat();
+    const other = await createTenant(db, `Other tenant ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });
+    const grant = (await db('role_permissions').where({ tenant: sponsor, role_id: seatRole.role_id }).first()).permission_id;
+    const before = await snapshot(sponsor, seatRole.role_id);
+    const scoped = tenantDb(db, sponsor);
+
+    await expectRefused(() => scoped.table('roles').where({ role_id: seatRole.role_id }).update({ description: 'x' }), 'MANAGED_ROLE_DEFINITION');
+    await expectRefused(() => scoped.table('roles').where({ role_id: seatRole.role_id }).delete(), 'MANAGED_ROLE_DEFINITION');
+    await expectRefused(() => scoped.table('role_permissions').where({ role_id: seatRole.role_id, permission_id: grant }).delete(), 'MANAGED_ROLE_GRANTS');
+    await expectRefused(() => scoped.table('user_roles').insert({ tenant: sponsor, user_id: admin, role_id: seatRole.role_id }), 'MANAGED_ROLE_MEMBERSHIP');
+
+    // Inside the teardown scope of this tenant: only deletes are admitted.
+    await runAsTenantTeardown(sponsor, async () => {
+      await expectRefused(() => scoped.table('roles').where({ role_id: seatRole.role_id }).update({ description: 'x' }), 'MANAGED_ROLE_DEFINITION');
+      await expectRefused(() => scoped.table('roles').where({ role_id: seatRole.role_id }).update({ managed_by: null }), 'MANAGED_ROLE_DEFINITION');
+      await expectRefused(() => scoped.table('roles').insert({ tenant: sponsor, role_id: randomUUID(), role_name: 'Seat Technician', msp: true, client: false }), 'MANAGED_ROLE_IDENTITY_RESERVED');
+      await expectRefused(() => scoped.table('roles').insert({ tenant: sponsor, role_id: randomUUID(), role_name: 'Mine', managed_by: 'co-managed-seat' }), 'MANAGED_ROLE_DEFINITION');
+      await expectRefused(() => scoped.table('role_permissions').insert({ tenant: sponsor, role_id: seatRole.role_id, permission_id: randomUUID() }), 'MANAGED_ROLE_GRANTS');
+      await expectRefused(() => scoped.table('user_roles').insert({ tenant: sponsor, user_id: admin, role_id: seatRole.role_id }), 'MANAGED_ROLE_MEMBERSHIP');
+    });
+    // The scope names one tenant: a delete against another tenant's managed role is checked normally.
+    await db('roles').insert({ tenant: other, role_id: randomUUID(), role_name: 'Seat Technician', msp: true, client: false, managed_by: 'co-managed-seat' });
+    await runAsTenantTeardown(sponsor, async () => {
+      await expectRefused(() => tenantDb(db, other).table('roles').where({ managed_by: 'co-managed-seat' }).delete(), 'MANAGED_ROLE_DEFINITION');
+    });
+    expect(await db('roles').where({ tenant: other, managed_by: 'co-managed-seat' }).count('* as count').first()).toMatchObject({ count: '1' });
+    expect(await snapshot(sponsor, seatRole.role_id)).toEqual(before);
+  }, 120_000);
+
+  // T003 (admission): no seat history means a hand-made look-alike is an unrelated custom role.
+  it('leaves a hand-made Seat Technician role in a tenant with no seat history alone and creates a separate managed role', async () => {
+    const sponsor = await createTenant(db, `Handmade sponsor ${randomUUID().slice(0, 8)}`, { productCode: 'psa' });
+    await db('roles').insert(getDefaultRoles('psa').filter((role: any) => !role.legacy).map((role: any) => ({
+      tenant: sponsor, role_id: randomUUID(), role_name: role.roleName, msp: role.msp, client: role.client,
+    })));
+    await syncPermissionCatalog(db, sponsor, 'psa');
+    const handmade = randomUUID();
+    await db('roles').insert({ tenant: sponsor, role_id: handmade, role_name: 'Seat Technician', msp: true, client: false, description: 'mine' });
+    const billing = (await db('permissions').where({ tenant: sponsor, resource: 'billing', action: 'read', msp: true }).first()).permission_id;
+    await db('role_permissions').insert({ tenant: sponsor, role_id: handmade, permission_id: billing });
+    const before = await snapshot(sponsor, handmade);
+
+    await db('co_managed_entitlements').insert({ tenant: sponsor, source: 'hosted', source_reference: `sub_${randomUUID()}`,
+      capacity: 10, verified_at: new Date(Date.now() - 400 * DAY), valid_until: new Date(Date.now() + 365 * DAY) });
+    const clientId = await createClient(db, sponsor, `Seat client ${randomUUID().slice(0, 8)}`);
+    await createCoManagedSeatArrangement(db, { sponsorTenant: sponsor, clientId, operationId: randomUUID(), seats: 1 });
+
+    // Untouched: same name, description, grants, no owner.
+    expect(await snapshot(sponsor, handmade)).toEqual(before);
+    expect(before.role).toMatchObject({ role_name: 'Seat Technician', description: 'mine', managed_by: null });
+    // A separate managed role, with exactly the catalog grants and a name that does not collide.
+    const managed = await db('roles').where({ tenant: sponsor, managed_by: 'co-managed-seat' });
+    expect(managed).toHaveLength(1);
+    expect(managed[0].role_id).not.toBe(handmade);
+    expect(managed[0].role_name).not.toBe('Seat Technician');
+    const grants = await db('role_permissions as rp').join('permissions as p', function () {
+      this.on('p.tenant', 'rp.tenant').andOn('p.permission_id', 'rp.permission_id');
+    }).where({ 'rp.tenant': sponsor, 'rp.role_id': managed[0].role_id }).select('p.resource', 'p.action');
+    expect(grants.map((g: any) => `${g.resource}:${g.action}`).sort()).toEqual([...CO_MANAGED_SEAT_ROLE_GRANTS].sort());
+  }, 120_000);
 });

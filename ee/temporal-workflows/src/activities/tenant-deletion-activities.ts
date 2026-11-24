@@ -12,7 +12,7 @@ import { Context } from '@temporalio/activity';
 import { Client, Connection } from '@temporalio/client';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
-import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
+import { getTenantTableScope, retryOnReadOnly, runAsTenantTeardown, tenantDb, type TenantTableScope } from '@alga-psa/db';
 // Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
 import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 import { TENANT_TABLE_MANIFEST } from '../db/tenantTableManifest.js';
@@ -1903,8 +1903,10 @@ export async function deleteTenantData(
             }
 
             // Delete records with explicit tenant filter
+            // Teardown of this one tenant: the ownership guard admits these deletes (and only
+            // deletes) for managed roles, grants and memberships. See managedRoleOwnership.ts.
             const deleted = await withReadOnlyRetry(
-              (k) => explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete(),
+              (k) => runAsTenantTeardown(tenantId, async () => await explicitTenantDeletionTableQuery(k, tenantId, tableBoundary).delete()),
               `delete:${tableName}`
             );
 
