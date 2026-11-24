@@ -9,6 +9,7 @@ vi.mock('uuid', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  assertClientPortalContactAvailable: vi.fn(async () => undefined),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
     tenantJoin: (query: any) => query.join?.() ?? query,

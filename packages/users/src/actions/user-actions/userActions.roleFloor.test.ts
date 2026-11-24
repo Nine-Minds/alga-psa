@@ -44,6 +44,7 @@ class UserRoleFloorErrorStub extends Error {
 }
 
 vi.mock('@alga-psa/db', () => ({
+  lockClientPortalMutations: vi.fn(async () => undefined),
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
   withAdminTransaction: vi.fn(),

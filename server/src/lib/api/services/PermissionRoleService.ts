@@ -15,6 +15,7 @@
  * - HATEOAS link generation
  */
 
+import { lockClientPortalMutations, syncContactClientAdminFlagsForRole } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, tenantDb } from '@alga-psa/db';
 import type { UserRoleFloorChange } from '@alga-psa/db';
@@ -668,6 +669,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      await lockClientPortalMutations(trx, context.tenant);
       // Check if role exists
       const existing = await tenantDb(trx, context.tenant).table('roles')
         .where('role_id', roleId)
@@ -695,6 +697,8 @@ export class PermissionRoleService extends BaseService<IRole> {
         .where('role_id', roleId)
         .update(updateData)
         .returning('*');
+
+      await syncContactClientAdminFlagsForRole(trx, context.tenant, roleId);
 
       // Handle permissions update
       if (data.permissions !== undefined) {

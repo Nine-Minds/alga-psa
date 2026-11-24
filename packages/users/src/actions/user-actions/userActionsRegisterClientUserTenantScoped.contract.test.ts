@@ -33,11 +33,9 @@ describe('user actions register client user tenant-scoped query contract', () =>
     expect(section).toContain("contact_kind: 'contacts.contact_kind'");
     expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("await tenantDb(trx, contact.tenant).table('users')");
-    // The initial portal role is resolved from the contact's portal-admin
-    // pre-mark, and user_roles is written, through @alga-psa/db: both carry the
-    // contact's flag sync and keep their own tenant-scoping contract
-    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
-    expect(section).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);');
+    // Registration uses the User role, irrespective of the invitation pre-seed.
+    // Shared role lookup and writes carry tenant scoping and flag synchronization.
+    expect(section).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, null);');
     expect(section).toContain('await addUserRoles(trx, contact.tenant, newUser.user_id, [roleId]);');
     expect(section).toContain('tenant: contact.tenant');
 

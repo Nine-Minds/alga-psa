@@ -1,5 +1,6 @@
 'use server'
 
+import { checkClientPortalContactAvailability } from '@alga-psa/db';
 import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -1897,11 +1898,9 @@ export const updateContactPortalAdminStatus = withAuth(async (
       // would disagree with the roles until the next role change. The UI hides
       // the toggle in that state (ContactPortalTab); this is the action saying
       // the same thing to any other caller.
-      const portalUser = await tenantScopedTable(trx, 'users', tenant)
-        .where({ contact_id: contactId, user_type: 'client' })
-        .first('user_id');
+      const availability = await checkClientPortalContactAvailability(trx, tenant, contactId);
 
-      if (portalUser) {
+      if (availability === 'occupied') {
         throw await contactError('errors.contact.portalAdminRoleManaged');
       }
 

@@ -4,6 +4,8 @@ import { randomBytes } from 'node:crypto';
 import {
   addUserRoles,
   createTenantKnex,
+  assertClientPortalContactAvailable,
+  lockClientPortalMutations,
   resolveInitialPortalRoleId,
   syncContactClientAdminFlagsForUserLinkChange,
   tenantDb,
@@ -75,7 +77,7 @@ function normalizeCreateClientPortalUserError(
     if (message === 'Contact not found. Provide contact details to create a new contact.') {
       return { message, errorCode: 'CONTACT_NOT_FOUND' };
     }
-    if (message === 'A user account already exists for this contact') {
+    if (message === 'A user account already exists for this contact' || message === 'This contact already has a client portal user. Choose another contact.') {
       return { message, errorCode: 'USER_EXISTS_FOR_CONTACT' };
     }
     if (
@@ -305,6 +307,8 @@ async function relinkOrphanedPortalUser(
   userId: string,
   contactId: string
 ): Promise<void> {
+  await lockClientPortalMutations(db, tenant);
+  await assertClientPortalContactAvailable(db as Knex.Transaction, tenant, 'client', contactId, userId);
   const previous = await tenantDb(db, tenant).table('users')
     .where({ user_id: userId })
     .first('contact_id');
@@ -364,6 +368,7 @@ export const createClientPortalUser = withAuth(async (
 
     // Create user and assign role
     const result = await withTransaction(knex, async (trx) => {
+      await lockClientPortalMutations(trx, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
       // 1) Resolve or create contact
@@ -449,6 +454,7 @@ export const createClientPortalUser = withAuth(async (
         );
       }
 
+      await assertClientPortalContactAvailable(trx, tenant, 'client', contact.contact_name_id);
       // 2) Ensure no existing user for contact
       const existingUser = await scopedDb.table('users')
         .where({ contact_id: contact.contact_name_id })
@@ -552,10 +558,10 @@ export const createClientPortalUser = withAuth(async (
         }
         if (!targetRoleId) {
           // The contact's portal-admin pre-mark picks 'Admin', otherwise
-          // 'User' — the shared resolver every creation path now reads it with.
+          // 'User' — invitation creation deliberately honors the pre-seed.
           targetRoleId = (await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id)) ?? undefined;
           if (!targetRoleId) {
-            console.warn(`Failed to find a client portal role for tenant ${tenant}`);
+            throw new Error('No client portal role found for this tenant');
           }
         }
         if (targetRoleId) {
@@ -1385,6 +1391,7 @@ export async function completePortalSetup(
       ): Promise<CompleteSetupResult> => {
         try {
           await knex.transaction(async (trx) => {
+            await lockClientPortalMutations(trx, tenant);
             await acquireMicrosoftOAuthLinkLock(trx);
             await assertMicrosoftOAuthLinkAvailable(existingUser.user_id, trx);
 
@@ -1484,6 +1491,7 @@ export async function completePortalSetup(
         // contact whose user holds nothing. So a failed role assignment rolls
         // the account back instead of being logged and shrugged off.
         newUser = await knex.transaction(async (trx) => {
+          await assertClientPortalContactAvailable(trx, tenant, 'client', contact.contact_name_id);
           await acquireMicrosoftOAuthLinkLock(trx);
           await assertMicrosoftOAuthLinkAvailable(undefined, trx);
           const user = await createPortalUserInTransaction(trx);

@@ -10,7 +10,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, resolveInitialPortalRoleId, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertClientPortalContactAvailable, lockClientPortalMutations, addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, resolveInitialPortalRoleId, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -557,6 +557,7 @@ export const addUser = withAuth(async (
         return { success: false, code: 'USER_CREATE_FAILED', error: 'Invalid user type' };
       }
       const newUserType: 'internal' | 'client' = requestedUserType;
+      await lockClientPortalMutations(trx, tenant);
 
       if (!userData.roleId) {
         return { success: false, code: 'ROLE_REQUIRED', error: 'Role is required' };
@@ -611,6 +612,7 @@ export const addUser = withAuth(async (
         }
       }
 
+      await assertClientPortalContactAvailable(trx, tenant, newUserType, userData.contactId);
       const [newUser] = await tenantDb(trx, tenant).table('users')
         .insert({
           first_name: userData.firstName,
@@ -1041,6 +1043,8 @@ export const updateUser = withAuth(async (
       } else if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user');
       }
+
+      await lockClientPortalMutations(trx, tenant);
 
       // Client-portal callers may only manage client users of their own
       // company (self-profile updates above are unaffected). Email changes by
@@ -1795,6 +1799,7 @@ export const registerClientUser = withAuth(async (
       const hashedPassword = await hashPassword(password);
       logger.debug('Password hashed successfully');
 
+      await assertClientPortalContactAvailable(trx, contact.tenant, 'client', contact.contact_name_id);
       const [newUser] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
@@ -1810,12 +1815,8 @@ export const registerClientUser = withAuth(async (
         })
         .returning(['user_id']);
 
-      // The client portal role the account starts with: the contact's
-      // portal-admin pre-mark picks the client 'Admin' role, the way the
-      // invitation path does, and everything else the portal 'User' role (both
-      // exist via migrations). The flag mirrors that role from here on, so a
-      // registration that always picked 'User' took the pre-mark away.
-      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);
+      // Registration assigns User; the assigned role replaces the invitation pre-seed.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, null);
 
       if (!roleId) {
         throw new Error('Client portal User role not found for tenant');

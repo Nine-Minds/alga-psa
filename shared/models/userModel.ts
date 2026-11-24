@@ -4,6 +4,7 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { assertClientPortalContactAvailable } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { addUserRoles, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,6 +112,7 @@ async function _createPortalUserInDBWithTrx(
   input: CreatePortalUserInput
 ): Promise<CreatePortalUserResult> {
   try {
+      await assertClientPortalContactAvailable(trx, input.tenantId, 'client', input.contactId);
       const db = tenantDb(trx, input.tenantId);
       // Check if a client-portal user already exists for this email
       // Allow the same email to exist for other user types (e.g., internal MSP users)

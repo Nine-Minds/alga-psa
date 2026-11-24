@@ -100,7 +100,7 @@ describeDb('revoking and converting seat technicians', { shuffle: false }, () =>
   };
 
   beforeAll(async () => {
-    db = await createTestDbConnection({ databaseName: 's10_seat_revoke_convert_test' });
+    db = await createTestDbConnection({ databaseName: process.env.TEST_DB_NAME || 's10_seat_revoke_convert_test' });
   }, 300_000);
   afterAll(async () => { await db?.destroy(); });
 

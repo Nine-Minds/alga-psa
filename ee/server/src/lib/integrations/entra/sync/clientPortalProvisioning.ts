@@ -4,6 +4,8 @@ import { hashPassword } from '@alga-psa/core/encryption';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import {
   addUserRoles,
+  assertClientPortalContactAvailable,
+  lockClientPortalMutations,
   resolveInitialPortalRoleId,
   syncContactClientAdminFlagsForUserLinkChange,
 } from '@alga-psa/db';
@@ -194,6 +196,7 @@ export async function handleEligibleClientPortalProvisioning(
       };
 
       return knex.transaction(async (trx) => {
+        await lockClientPortalMutations(trx, context.tenantId);
         const existingForContact = await trx('users')
           .where({
             tenant: context.tenantId,
@@ -289,6 +292,9 @@ export async function handleEligibleClientPortalProvisioning(
         }
 
         if (userId && matchedUserRow) {
+          if (attachMatchedUserToContact) {
+            await assertClientPortalContactAvailable(trx, context.tenantId, 'client', context.contactNameId, userId);
+          }
           const didReactivate = shouldReactivateUser(
             Boolean(matchedUserRow.is_inactive),
             matchedUserRow.client_portal_entra_metadata
@@ -350,15 +356,12 @@ export async function handleEligibleClientPortalProvisioning(
             } as ClientPortalProvisioningResult;
           }
 
-          // A contact pre-marked as portal admin is promised the client 'Admin'
-          // role by the contact screen, so the pre-mark wins over the
-          // configured default role here too; everything else gets the
-          // configured default. The flag mirrors whichever role is written.
+          // The configured role wins over the contact's invitation pre-seed.
           const defaultRoleName = (context.defaultRoleName || 'User').trim() || 'User';
           const initialRoleId = await resolveInitialPortalRoleId(
             trx,
             context.tenantId,
-            context.contactNameId,
+            null,
             defaultRoleName,
           );
           if (!initialRoleId) {
@@ -369,6 +372,7 @@ export async function handleEligibleClientPortalProvisioning(
           }
           const hashedPassword = await createUnusablePasswordHash();
 
+          await assertClientPortalContactAvailable(trx, context.tenantId, 'client', context.contactNameId);
           const inserted = await trx('users')
             .insert({
               tenant: context.tenantId,
@@ -391,7 +395,7 @@ export async function handleEligibleClientPortalProvisioning(
           userId = String(inserted[0].user_id);
 
           // The role just resolved decides contacts.is_client_admin from here
-          // on, and it already honours the contact's pre-mark.
+          // on, replacing the contact's invitation pre-seed.
           // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
           await addUserRoles(trx, context.tenantId, userId, [initialRoleId]);
         }

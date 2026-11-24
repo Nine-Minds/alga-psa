@@ -28,6 +28,8 @@ describe('user role writes tenant-scoped query contract', () => {
       const body = source.slice(start, source.indexOf('\n}', start));
       expect(body).toContain('await syncContactClientAdminFlag(trx, tenant, userId)');
       expect(body).toContain(`assertTransaction(trx, '${writer}')`);
+      expect(body.indexOf('await lockClientPortalMutations(trx, tenant)')).toBeGreaterThan(0);
+      expect(body.indexOf('await lockClientPortalMutations(trx, tenant)')).toBeLessThan(body.indexOf("table('user_roles')"));
     }
   });
 

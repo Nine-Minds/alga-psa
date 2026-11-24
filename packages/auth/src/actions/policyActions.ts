@@ -1,5 +1,6 @@
 'use server'
 
+import { lockClientPortalMutations, syncContactClientAdminFlagsForRole } from '@alga-psa/db';
 import { getRoleAssignmentViolation, isMspPrincipalUserType } from '@alga-psa/types';
 import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
@@ -237,6 +238,7 @@ export const updateRole = withAuth(async (
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await assertSecuritySettingsPermission(user, 'update', trx);
+        await lockClientPortalMutations(trx, tenant);
         const existing = await tenantScopedTable(trx, 'roles', tenant)
             .where({ role_id: roleId })
             .first();
@@ -282,6 +284,7 @@ export const updateRole = withAuth(async (
             .where({ role_id: roleId })
             .update(update)
             .returning('*');
+        await syncContactClientAdminFlagsForRole(trx, tenant, roleId);
         return updatedRole;
     });
   } catch (error) {

@@ -19,13 +19,16 @@ const withTransactionMock = vi.fn();
 const assertMspPermissionMock = vi.fn();
 const assertContactIsNotSharedMailboxMock = vi.fn(async () => undefined);
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => ({
+  checkClientPortalContactAvailability: (await import('../../../../db/src/lib/clientPortalContactOwnership')).checkClientPortalContactAvailability,
   createTenantKnex: () => createTenantKnexMock(),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
   }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
+
+vi.mock('../../../../db/src/lib/tenantDb', () => ({ tenantDb: (conn: any) => ({ table: (name: string) => conn(name) }) }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
@@ -112,6 +115,7 @@ function buildTrx({ portalUser, updated = 1 }: { portalUser?: { user_id: string 
     if (table === 'contacts') {
       return {
         where: () => ({
+          forUpdate() { return this; },
           first: async () => ({ contact_name_id: 'contact-1', client_id: 'client-1' }),
           update: contactUpdate,
         }),
@@ -121,6 +125,7 @@ function buildTrx({ portalUser, updated = 1 }: { portalUser?: { user_id: string 
     throw new Error(`Unexpected table ${table}`);
   };
   trx.isTransaction = true;
+  trx.raw = vi.fn(async () => undefined);
   return { trx, contactUpdate, userWhere };
 }
 

@@ -172,6 +172,7 @@ vi.mock('../../../../../packages/db/src/lib/tenantDb', () => ({
 
 const trxStub: any = () => undefined;
 trxStub.isTransaction = true;
+trxStub.raw = vi.fn(async () => undefined);
 
 class BaseServiceStub {
   constructor(_options: unknown) {}

@@ -145,7 +145,7 @@ function unqualify(column: string): string {
   return column.replace(/^[^.]+\./, '');
 }
 
-const trx = () => ({ isTransaction: true }) as any;
+const trx = () => ({ isTransaction: true, raw: vi.fn(async () => undefined) }) as any;
 
 function seed({
   userType = 'client',

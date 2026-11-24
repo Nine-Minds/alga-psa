@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { addUserRoles, resolveInitialPortalRoleId, tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
+import { assertClientPortalContactAvailable, addUserRoles, resolveInitialPortalRoleId, tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import User from '@alga-psa/db/models/user';
@@ -140,6 +140,7 @@ async function registerContactUser(
       const lastName = nameParts.slice(1).join(' ') || '';
 
       const hashedPassword = await hashPassword(password);
+      await assertClientPortalContactAvailable(trx, contact.tenant, 'client', contact.contact_name_id);
       const [user] = await tenantDb(trx, contact.tenant).table('users')
         .insert({
           email: email.toLowerCase(),
@@ -155,12 +156,8 @@ async function registerContactUser(
         })
         .returning('*');
 
-      // The contact's portal-admin pre-mark picks the role, the way the
-      // invitation path does: the contact screen promises that a contact marked
-      // as portal admin "will be created with Client Admin role", and the flag
-      // follows the role from the first write on, so self-registration must not
-      // quietly downgrade them to 'User'.
-      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);
+      // Registration assigns User; the assigned role replaces the invitation pre-seed.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, null);
 
       if (!roleId) {
         throw new Error('User role not found');

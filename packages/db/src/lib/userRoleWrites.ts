@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from './tenantDb';
+import { lockClientPortalMutations } from './clientPortalContactOwnership';
 import { syncContactClientAdminFlag } from './clientPortalAdminFlag';
 
 /**
@@ -61,6 +62,7 @@ export async function setUserRoles(
   roleIds: readonly string[]
 ): Promise<void> {
   assertTransaction(trx, 'setUserRoles');
+  await lockClientPortalMutations(trx, tenant);
   const scopedDb = tenantDb(trx, tenant);
 
   await scopedDb.table('user_roles').where({ user_id: userId }).del();
@@ -90,6 +92,7 @@ export async function addUserRoles(
   roleIds: readonly string[]
 ): Promise<UserRoleWriteRow[]> {
   assertTransaction(trx, 'addUserRoles');
+  await lockClientPortalMutations(trx, tenant);
   const scopedDb = tenantDb(trx, tenant);
 
   const wanted = uniqueRoleIds(roleIds);
@@ -120,6 +123,7 @@ export async function removeUserRoles(
   roleIds: readonly string[]
 ): Promise<number> {
   assertTransaction(trx, 'removeUserRoles');
+  await lockClientPortalMutations(trx, tenant);
   const scopedDb = tenantDb(trx, tenant);
 
   const deleted = await scopedDb.table('user_roles')

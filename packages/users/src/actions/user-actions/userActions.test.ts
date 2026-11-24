@@ -43,6 +43,8 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  assertClientPortalContactAvailable: vi.fn(async () => undefined),
+  lockClientPortalMutations: vi.fn(async () => undefined),
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
   withAdminTransaction: vi.fn(),

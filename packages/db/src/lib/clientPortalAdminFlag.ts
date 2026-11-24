@@ -10,11 +10,9 @@ import { tenantDb } from './tenantDb';
  * contact left flagged after their Admin role was taken away keeps seeing their
  * colleagues' tickets (ticket alga-2026-0003317).
  *
- * Before the portal user exists the flag runs the other way round: it is the
- * invitation pre-mark the MSP sets on the contact ("the user will be created
- * with Client Admin role"), and `resolveInitialPortalRoleId` below is what every
- * account-creation path reads it with. Mirror afterwards, pre-mark before —
- * both directions live here so they cannot disagree.
+ * Before the portal user exists the flag is an invitation pre-mark. Invitation
+ * creation may derive its role from it; registration and provisioning use the
+ * requested/default role, which wins over that pre-mark once assigned.
  *
  * Lives in @alga-psa/db because the role writers sit in packages that may not
  * import one another (auth policyActions, users userActions) and the decision
@@ -156,10 +154,8 @@ export async function syncContactClientAdminFlagsForUserLinkChange(
  * 'Admin' role, anything else `defaultRoleName` (the portal 'User' role, or the
  * role an Entra sync is configured with).
  *
- * This is the promise the MSP contact screen makes — "when enabled, the user
- * will be created with Client Admin role" — and every creation path has to keep
- * it. The paths that only ever assigned 'User' took the pre-mark away the
- * moment the account was created, because the flag then follows the role.
+ * Invitation callers pass the contact to honor its pre-mark. Registration and
+ * provisioning pass null so their User/configured default role always wins.
  *
  * Returns null when neither role exists, so each caller keeps its own error
  * channel (a thrown message, a `role_conflict` outcome).
@@ -194,4 +190,18 @@ export async function resolveInitialPortalRoleId(
   }
 
   return await findClientRole(defaultRoleName);
+}
+
+/** Re-derive contacts after changing a role's name or portal classification. */
+export async function syncContactClientAdminFlagsForRole(
+  trx: Knex.Transaction,
+  tenant: string,
+  roleId: string,
+): Promise<void> {
+  // Caller holds lockClientPortalMutations before updating the role definition.
+  const members = await tenantDb(trx, tenant).table('user_roles')
+    .where({ role_id: roleId }).select('user_id');
+  for (const { user_id } of members) {
+    await syncContactClientAdminFlag(trx, tenant, user_id);
+  }
 }

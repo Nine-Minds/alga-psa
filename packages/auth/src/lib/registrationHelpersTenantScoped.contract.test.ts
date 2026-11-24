@@ -8,11 +8,9 @@ describe('registrationHelpers tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-known role roots', () => {
     expect(source).not.toContain('createTenantScopedQuery');
     expect(source).not.toContain("trx('roles').where({ tenant: contact.tenant })");
-    // The role of a new portal account is resolved from the contact's
-    // portal-admin pre-mark, and user_roles is written, through @alga-psa/db:
-    // both keep their own tenant-scoping contract and re-derive the flag from
-    // the role that was actually written (alga-2026-0003347).
-    expect(source).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);');
+    // Registration uses the User role, irrespective of the invitation pre-seed.
+    // Shared role lookup and writes carry tenant scoping and flag synchronization.
+    expect(source).toContain('await resolveInitialPortalRoleId(trx, contact.tenant, null);');
     expect(source).toContain('await addUserRoles(trx, contact.tenant, user.user_id, [roleId]);');
   });
 });

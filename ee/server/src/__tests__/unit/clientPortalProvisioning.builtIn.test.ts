@@ -9,11 +9,9 @@ const hashPasswordMock = vi.fn();
 /**
  * Provisioning resolves the role of a new portal account through
  * resolveInitialPortalRoleId and writes it through addUserRoles, both from
- * @alga-psa/db: the resolver reads the contact's portal-admin pre-mark (a
- * pre-marked contact is promised the client 'Admin' role by the contact screen,
- * so the configured default does not override it), and the write carries the
- * flag sync, so the flag and the role agree from the first write
- * (alga-2026-0003347).
+ * @alga-psa/db: the resolver uses the configured default role, regardless of
+ * the contact's invitation pre-mark. The write carries flag sync, so the
+ * assigned role wins from the first write (alga-2026-0003347).
  *
  * Both are faked here against the fixtures below, mirroring their contracts —
  * the real decision table is pinned in
@@ -33,6 +31,7 @@ const portalRoleFixture = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  assertClientPortalContactAvailable: vi.fn(async () => undefined),
   addUserRoles: vi.fn(async (_trx: unknown, tenant: string, userId: string, roleIds: string[]) => {
     const rows = roleIds.map((roleId) => ({ tenant, user_id: userId, role_id: roleId }));
     userRoleWrites.rows.push(...rows);
@@ -200,8 +199,8 @@ function setupKnexHarness(params: {
       };
     }
     // No `roles` table on purpose: the role of a new portal account is
-    // resolved through the shared resolver, which reads the contact's
-    // portal-admin pre-mark. A direct role lookup here would fail.
+    // resolved through the shared resolver using the configured default.
+    // A direct role lookup here would fail.
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -593,9 +592,8 @@ describe('clientPortalProvisioning built-in mutations', () => {
 
   // alga-2026-0003347: the role an account is created with decides the linked
   // contact's portal-admin flag from the moment the account exists, so the
-  // creation path has to read the pre-mark the contact screen promised — and
-  // the flag is never written here, only derived from the role.
-  it('creates the account of a pre-marked contact with the client Admin role', async () => {
+  // configured default must win over a pre-mark. The flag is derived from the role.
+  it('uses the configured User role even for a pre-marked contact', async () => {
     const harness = setupKnexHarness({
       existingContactUsers: [],
       emailMatches: [],
@@ -620,14 +618,13 @@ describe('clientPortalProvisioning built-in mutations', () => {
       })
     );
 
-    // Asked about this contact, with the configured default as the fallback.
+    // No invitation pre-mark is consulted; provisioning uses its configured default.
     expect(portalRoleFixture.resolverCalls).toEqual([
-      { tenant: 'tenant-preseed', contactId: 'contact-preseed', defaultRoleName: 'User' },
+      { tenant: 'tenant-preseed', contactId: null, defaultRoleName: 'User' },
     ]);
-    // The Admin role goes through addUserRoles, which re-derives
-    // contacts.is_client_admin from it — so the flag stays true.
+    // The configured role goes through addUserRoles; its flag derivation clears the pre-seed.
     expect(harness.userRoleInserts).toEqual([
-      { tenant: 'tenant-preseed', user_id: 'created-user-201', role_id: 'role-admin-preseed' },
+      { tenant: 'tenant-preseed', user_id: 'created-user-201', role_id: 'role-user-preseed' },
     ]);
     // No contacts write of its own: the flag is derived, never set here.
     expect(harness.updates.some((update) => 'is_client_admin' in update)).toBe(false);

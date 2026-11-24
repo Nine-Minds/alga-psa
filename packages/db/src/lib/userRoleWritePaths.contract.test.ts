@@ -171,3 +171,25 @@ describe('user_roles writer classification', () => {
     expect(reason.length).toBeGreaterThan(20);
   });
 });
+
+// Role definitions are another input to the flag, even without membership writes.
+describe('role-definition writer classification', () => {
+  it('classifies every role update and keeps synchronization on both live writers', () => {
+    const writers = productionSourceFiles(root, ['packages', 'server/src', 'shared', 'ee/server/src', 'ee/packages', 'ee/temporal-workflows/src'])
+      .filter((file: string) => !/(^|\/)(migrations|seeds)\//.test(file))
+      .filter((file: string) => {
+        const lines = read(file).split('\n').map((line) => line.replace(/\/\/.*$/, ''));
+        return lines.some((line, i) => /['"`]roles['"`]/.test(line) && /\.update\(/.test(lines.slice(i, i + 9).join(' ')));
+      });
+    const synced = ['packages/auth/src/actions/policyActions.ts', 'server/src/lib/api/services/PermissionRoleService.ts'];
+    // Scanner lookahead sees a USERS update after a roles read; activation
+    // grants an internal administrator role and never changes its definition.
+    const exempt = ['ee/server/src/lib/co-managed/portableWorkspaceActivation.ts'];
+    expect(writers.filter((file: string) => !synced.includes(file) && !exempt.includes(file))).toEqual([]);
+    for (const file of synced) {
+      expect(writers).toContain(file);
+      expect(read(file)).toContain('await lockClientPortalMutations(');
+      expect(read(file)).toContain('await syncContactClientAdminFlagsForRole(');
+    }
+  });
+});

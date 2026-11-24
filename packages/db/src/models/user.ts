@@ -1,3 +1,5 @@
+import { assertClientPortalContactAvailable, lockClientPortalMutations } from '../lib/clientPortalContactOwnership';
+import { syncContactClientAdminFlagsForUserLinkChange } from '../lib/clientPortalAdminFlag';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import type {
@@ -268,6 +270,7 @@ const User = {
       }
 
       return await knexOrTrx.transaction(async (trx) => {
+        await assertClientPortalContactAvailable(trx, tenant, userData.user_type, userData.contact_id);
         const [insertedUser] = await tenantDb(trx, tenant).table<IUser>('users')
           .insert({
             ...userData,
@@ -317,7 +320,21 @@ const User = {
   update: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, user: Partial<IUser>): Promise<void> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
+      if (!('contact_id' in user || 'user_type' in user)) {
+        await tenantDb(knexOrTrx, tenant).table<IUser>('users').where('user_id', user_id).update(user);
+        return;
+      }
+      await knexOrTrx.transaction(async (trx) => {
+        await lockClientPortalMutations(trx, tenant);
+        const previous = await tenantDb(trx, tenant).table<IUser>('users').where({ user_id }).first();
+        if (!previous) return;
+        await assertClientPortalContactAvailable(
+          trx, tenant, user.user_type ?? previous.user_type,
+          user.contact_id !== undefined ? user.contact_id : previous.contact_id, user_id,
+        );
+        await tenantDb(trx, tenant).table<IUser>('users').where({ user_id }).update(user);
+        await syncContactClientAdminFlagsForUserLinkChange(trx, tenant, user_id, previous.contact_id);
+      });
     } catch (error) {
       logger.error(`Error updating user with id ${user_id}:`, error);
       throw error;

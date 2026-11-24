@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, checkClientPortalContactAvailability, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, lockClientPortalMutations, checkClientPortalContactAvailability, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, syncContactClientAdminFlagsForUserLinkChange, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -337,6 +337,8 @@ export class UserService extends BaseService<IUser> {
         throw new ValidationError('user_type must be "internal" or "client"');
       }
       const targetUserType: 'internal' | 'client' = requestedUserType;
+      // Membership sync takes the role-floor lock; take it before seat admission too.
+      await lockClientPortalMutations(trx, context.tenant);
 
       // Seat admission for licensed (internal) users, in the same transaction as the insert.
       let admission: InternalUserLicenseLimitResult | null = null;
@@ -498,6 +500,7 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await lockClientPortalMutations(trx, context.tenant);
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
@@ -581,7 +584,7 @@ export class UserService extends BaseService<IUser> {
       // Compare the pre-image too: concurrent updates of this same account
       // must not combine a user_type from one request with an unchecked link
       // from another. A conflict rolls back without moving roles or flags.
-      // This avoids taking a user row lock before the existing role/seat locks.
+      // The shared mutation lock also serializes role writes with this link change.
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
