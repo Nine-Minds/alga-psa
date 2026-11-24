@@ -80,7 +80,7 @@ As a result:
    - The composition layer is the only one allowed to import reference-data, tags and projects together.
    - It reuses the existing query bodies by extracting each action's body into a plain function that takes `(trx/knex, tenant, user)`. The four existing exported actions stay and call the same functions, so other callers are unaffected.
    - A permission denial or tag error for one key returns that key as an error marker without failing the batch. This keeps today's per-list degradation.
-3. **`MspReferenceDataProvider`** mounts in `WorkspaceProviders.tsx` beside `MspActivityCrossFeatureProvider`. It supplies `load = loadReferenceLists` and the scope from the session.
+3. **`MspReferenceDataProvider`** mounts once in the MSP root layout (`server/src/app/msp/MspLayoutClient.tsx`), around the root `TagProvider`. It supplies `load = loadReferenceLists` and the scope from the session. (Amended during human-review preparation: `WorkspaceProviders` is mounted per workspace route segment, so Settings, onboarding and the dashboard had no provider and their invalidations were dropped.)
 4. **`useActivityFilterOptions`** becomes a thin call: `useReferenceLists(['boards','ticketStatuses','ticketTags','projectTaskTags','projectsWithPhases', …priorityKey])`. It returns the same `ActivityFilterOptions` shape plus a per-list `loading` map. `ctx.getProjectsWithPhases` is no longer used by this hook. The cross-feature context member stays for other consumers.
 
 ### Freshness policy (stale-while-revalidate)
@@ -120,7 +120,7 @@ Invalidation calls are added only at those chokepoints, after the mutation succe
 - `packages/ui/src/lib/referenceData/` (new): provider, `useReferenceLists`, `invalidateReferenceList`, key registry and freshness policy.
 - `packages/ui/src/context/index` or a lib export: export the above.
 - `packages/msp-composition/src/referenceData/` (new): `loadReferenceLists` server action and `MspReferenceDataProvider`.
-- `server/src/components/layout/WorkspaceProviders.tsx`: mount the provider.
+- `server/src/app/msp/MspLayoutClient.tsx`: mount the provider. `packages/msp-composition/package.json` declares the `./referenceData/*` export.
 - `packages/reference-data/src/actions/boardActions.ts`, `status-actions/statusActions.ts`, `priorityActions.ts`; `packages/tags/src/actions/tagActions.ts`; `packages/projects/src/actions/projectActions.ts`: extract each list body into an un-wrapped function that the existing action and the batch both call. Exported behaviour does not change.
 - `packages/user-activities/src/hooks/useActivityFilterOptions.ts`: rewrite on `useReferenceLists`.
 - `packages/user-activities/src/components/filters/ActivitiesTableFilters.tsx`: loading-state rendering.

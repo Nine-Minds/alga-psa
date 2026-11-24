@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useSession } from "next-auth/react";
 import { useProduct } from "@/context/ProductContext";
 import ClientCoManagedIntegration from '@/components/co-managed/CoManagedClientIntegration';
 import type { ClientCoManagedIntegrationProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
@@ -23,7 +22,6 @@ import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/docu
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import CoManagedProjectEffortProvider from '@/components/co-managed/CoManagedProjectEffortProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows/MspActivityCrossFeatureProvider';
-import { MspReferenceDataProvider, referenceDataScope } from '@alga-psa/msp-composition/referenceData/MspReferenceDataProvider';
 
 interface WorkspaceProvidersProps {
   children: React.ReactNode;
@@ -31,9 +29,6 @@ interface WorkspaceProvidersProps {
 
 export default function WorkspaceProviders({ children }: WorkspaceProvidersProps) {
   const { isAlgaDesk } = useProduct();
-  const { data: session } = useSession();
-  // Reference lists are user-scoped, so the shared cache is keyed by tenant + user.
-  const referenceScope = referenceDataScope(session?.user?.tenant, session?.user?.id);
   // App-owned co-managed client integration, injected through the composition
   // seam so packages/clients never imports server or enterprise code.
   const renderClientCoManagedIntegration = React.useCallback(
@@ -62,14 +57,12 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                   <MspDocumentsCrossFeatureProvider>
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
-                        <MspReferenceDataProvider scope={referenceScope}>
-                          <QuickAddClientProviderWithCallbacks>
-                            <CoManagedProjectEffortProvider>
-                              {children}
-                              <DrawerOutlet />
-                            </CoManagedProjectEffortProvider>
-                          </QuickAddClientProviderWithCallbacks>
-                        </MspReferenceDataProvider>
+                        <QuickAddClientProviderWithCallbacks>
+                          <CoManagedProjectEffortProvider>
+                            {children}
+                            <DrawerOutlet />
+                          </CoManagedProjectEffortProvider>
+                        </QuickAddClientProviderWithCallbacks>
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>
                   </MspDocumentsCrossFeatureProvider>
