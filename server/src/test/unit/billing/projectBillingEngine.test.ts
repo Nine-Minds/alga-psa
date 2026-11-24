@@ -926,6 +926,44 @@ describe("project billing engine orchestration", () => {
     expect(result.totalAmount).toBe(11_000);
   });
 
+  it("scheduled runs bill ticket fixed fees for clients that have a project billing config", async () => {
+    const billingContext = context(
+      [config({ billing_model: "time_and_materials", total_price: null })],
+      [],
+    );
+    const fixedFee = { type: "product", serviceName: "Onsite setup", total: 7_500 };
+    vi.spyOn(engine as any, "validateBillingPeriod").mockResolvedValue({
+      success: true,
+    });
+    vi.spyOn(engine as any, "getClientContractLinesAndCycle").mockResolvedValue({
+      clientContractLines: [
+        { client_contract_line_id: "line-1", currency_code: "USD" },
+      ],
+      billingCycle: "monthly",
+    });
+    vi.spyOn(engine as any, "buildRecurringTimingSelections").mockReturnValue({});
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockResolvedValue(
+      billingContext,
+    );
+    vi.spyOn(DatabaseChargeSource.prototype, "pools").mockResolvedValue([]);
+    vi.spyOn(engine as any, "loadRecurringQuantityObligation").mockResolvedValue(undefined);
+    vi.spyOn(engine as any, "loadHourBlockDrawRows").mockResolvedValue([]);
+    vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+    const calculateFixedFees = vi
+      .spyOn(engine as any, "calculateTicketFixedFeeCharges")
+      .mockResolvedValue([fixedFee]);
+
+    const result = await (engine as any).calculateBillingForPreparedPeriod(
+      "client-1",
+      PERIOD,
+      CLIENT,
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(calculateFixedFees).toHaveBeenCalledTimes(1);
+    expect(result.charges).toContainEqual(fixedFee);
+  });
+
   it("T014: fixed-price standalone projects include materials but exclude labor activity", async () => {
     const projectConfig = config({ invoice_mode: "standalone" });
     const billingContext = context(

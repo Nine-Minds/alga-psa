@@ -1792,7 +1792,9 @@ export class BillingEngine {
           billingPeriod,
           billingCurrency,
         );
-    if (!projectBillingContext && !options.projectTarget) {
+    // The project billing context is loaded whenever the client has any project
+    // billing config, so only a project-targeted run may skip ticket fixed fees.
+    if (!options.projectTarget) {
       materialCharges.push(...await this.calculateTicketFixedFeeCharges(clientId, billingPeriod, billingCurrency));
     }
     const projectMaterialWarnings = options.projectTarget
