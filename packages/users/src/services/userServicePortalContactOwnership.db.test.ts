@@ -464,7 +464,7 @@ describeDb('API portal contact ownership', () => {
     const result = await (createClientPortalUser as any)({ user_id: 'actor', user_type: 'internal' }, { tenant }, {
       contactId: 'contact-a', password: 'password123',
     });
-    expect(result).toMatchObject({ success: false, errorCode: 'CREATE_USER_FAILED' });
+    expect(result).toMatchObject({ success: false, errorCode: 'PORTAL_ROLE_NOT_CONFIGURED' });
     expect(await snapshot()).toEqual(before);
   });
 
