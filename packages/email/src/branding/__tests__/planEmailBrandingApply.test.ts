@@ -587,13 +587,13 @@ describe('enterprise brand assets in the plan', () => {
    * may be carried off with the attribution — the rest of the cell stays, and
    * does not open on the separator that used to join it to our line.
    */
-  it('keeps the words beside the attribution in a ticked customized row', () => {
+  it.each([
+    ['their own line instead of our slogan', 'Powered by AlgaPSA &middot; Acme MSP &middot; +1 555 0100'],
+    ['their own line after our slogan', 'Powered by AlgaPSA &middot; Keeping teams aligned &middot; +1 555 0100'],
+  ])('keeps the words beside the attribution in a ticked customized row, %s', (_shape, footer) => {
     const tenantRows = NAMES.map((name, index) => {
       const row = brandedRow(950 + index, name, 'en');
-      const html = row.html_content.replace(
-        /Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/,
-        'Powered by AlgaPSA &middot; Acme MSP &middot; +1 555 0100',
-      );
+      const html = row.html_content.replace(/Powered by AlgaPSA(?:\s*&middot;\s*[^<]*)?/, footer);
 
       expect(html).not.toBe(row.html_content);
       return { ...row, html_content: html };
@@ -611,9 +611,11 @@ describe('enterprise brand assets in the plan', () => {
     expect(plan.skipped).toEqual([]);
     expect(plan.updates).toHaveLength(3);
     for (const update of plan.updates) {
-      expect(update.html).toContain('Acme MSP');
       expect(update.html).toContain('+1 555 0100');
       expect(containsBrandAttribution(update.html)).toBe(false);
+      // Ours goes, theirs stays, and what stays opens on their own words rather
+      // than on the separator that used to join them to our line.
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => update.html.includes(slogan))).toEqual([]);
       expect(update.html).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/);
     }
   });

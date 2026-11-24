@@ -407,6 +407,10 @@ describe('stripBrandAttribution', () => {
     expect(stripped).toContain(theirs);
     expect(stripped).toMatch(/<tr>\s*<td/);
     expect(containsBrandAttribution(stripped)).toBe(false);
+    // Our slogan takes the separator that joined their line to it along with
+    // it: a footer may not go out opening on a bare "&middot;".
+    expect(stripped).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/);
+    expect(stripped).not.toContain('Keeping teams aligned');
     // The apply path decorates the standard template, where the row is ours.
     expect(stripBrandAttribution(footer)).toBe('<table></table>');
   });

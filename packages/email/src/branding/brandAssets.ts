@@ -217,10 +217,13 @@ const footerRow = (tail: string) =>
   layoutFooterRow(`${ATTRIBUTION}(?:\\s*${SEPARATOR}\\s*${tail})?`);
 /**
  * The same attribution-and-tail pair anywhere else — a footer cell the tenant
- * laid out themselves, where the row stays and only our own words go.
+ * laid out themselves, where the row stays and only our own words go. Takes both
+ * the separator that joined the attribution to the tail and the one that joined
+ * the tail to whatever follows, so a line the tenant wrote after our slogan is
+ * not left opening on a stray "&middot;".
  */
 const attributionWithTail = (tail: string) =>
-  new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*${tail}`, 'gi');
+  new RegExp(`${ATTRIBUTION}\\s*${SEPARATOR}\\s*${tail}(?:\\s*${SEPARATOR}\\s*)?`, 'gi');
 
 const ANY_TAIL_ROW = footerRow('[^<]*?');
 const ANY_TAIL = attributionWithTail('[^<]*');
