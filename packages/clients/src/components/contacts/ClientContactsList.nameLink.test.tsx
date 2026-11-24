@@ -36,6 +36,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
+  getPortalInvitationStatesForClient: async () => [],
 }));
 
 vi.mock('@alga-psa/auth/actions', () => ({
