@@ -34,13 +34,17 @@ export interface RemoveTagsResult {
 
 export interface ReplaceTagsResult extends AddTagsResult, RemoveTagsResult {}
 
-/** Trim, validate, and dedupe case-insensitively (first-seen casing wins). */
-export function normalizeTagTexts(tags: string[]): string[] {
+/**
+ * Trim, drop empties, and dedupe case-insensitively (first-seen casing wins).
+ * With `validate`, also reject text the UI would not accept; that matters only
+ * when creating definitions, so removal does not validate (legacy tags stay removable).
+ */
+export function normalizeTagTexts(tags: string[], options: { validate?: boolean } = {}): string[] {
   const seen = new Map<string, string>();
   for (const raw of tags ?? []) {
     const text = (raw ?? '').trim();
     if (!text) continue;
-    const validation = validateTagText(text);
+    const validation = options.validate ? validateTagText(text) : { valid: true as const, errors: undefined };
     if (!validation.valid) {
       throw new Error(`Validation failed: tag "${text}": ${validation.errors?.join('; ')}`);
     }
@@ -65,7 +69,7 @@ export async function addTagsToEntity(
   tenant: string,
   input: AddTagsInput
 ): Promise<AddTagsResult> {
-  const texts = normalizeTagTexts(input.tags);
+  const texts = normalizeTagTexts(input.tags, { validate: true });
   const mapped = await currentMappings(trx, tenant, input.entityType, input.entityId);
   let definitionsByLower: Map<string, string> | null = null;
   let added = 0;
@@ -135,7 +139,7 @@ export async function replaceTagsOnEntity(
   tenant: string,
   input: AddTagsInput
 ): Promise<ReplaceTagsResult> {
-  const target = normalizeTagTexts(input.tags);
+  const target = normalizeTagTexts(input.tags, { validate: true });
   const targetLower = new Set(target.map((t) => t.toLowerCase()));
   const mapped = await currentMappings(trx, tenant, input.entityType, input.entityId);
   // Delete surplus mappings directly (not via removeTagsFromEntity) so a legacy tag whose

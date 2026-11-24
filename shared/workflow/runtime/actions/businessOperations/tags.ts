@@ -12,21 +12,24 @@ import {
   actionProvidedKey,
   withTenantTransaction,
   admitWorkflowTagWrite,
+  requirePermission,
   writeRunAudit,
   throwActionError,
   rethrowAsStandardError,
 } from './shared';
 
-// Entity type -> table + primary key, used only to prove the entity exists before any tag row is written.
+// Entity type -> table + primary key (proves the entity exists before any tag row is written) and the
+// RBAC resource whose 'update' permission the actor needs, matching what each entity's own workflow
+// actions / UI require. Knowledge base has only a 'knowledge_base:read' grant; articles are documents, so document:update governs.
 // LEVERAGE: pattern taggable-entity-registry — TaggedEntityType -> table/id column is re-derived here; tag_mappings has no FK to the entity, so nothing shared owns this mapping
-const TAGGED_ENTITY_TABLES: Record<TaggedEntityType, { table: string; idColumn: string }> = {
-  ticket: { table: 'tickets', idColumn: 'ticket_id' },
-  client: { table: 'clients', idColumn: 'client_id' },
-  contact: { table: 'contacts', idColumn: 'contact_name_id' },
-  project_task: { table: 'project_tasks', idColumn: 'task_id' },
-  document: { table: 'documents', idColumn: 'document_id' },
-  knowledge_base_article: { table: 'knowledge_base_articles', idColumn: 'article_id' },
-  opportunity: { table: 'opportunities', idColumn: 'opportunity_id' },
+const TAGGED_ENTITY_TABLES: Record<TaggedEntityType, { table: string; idColumn: string; permissionResource: string }> = {
+  ticket: { table: 'tickets', idColumn: 'ticket_id', permissionResource: 'ticket' },
+  client: { table: 'clients', idColumn: 'client_id', permissionResource: 'client' },
+  contact: { table: 'contacts', idColumn: 'contact_name_id', permissionResource: 'contact' },
+  project_task: { table: 'project_tasks', idColumn: 'task_id', permissionResource: 'project_task' },
+  document: { table: 'documents', idColumn: 'document_id', permissionResource: 'document' },
+  knowledge_base_article: { table: 'knowledge_base_articles', idColumn: 'article_id', permissionResource: 'document' },
+  opportunity: { table: 'opportunities', idColumn: 'opportunity_id', permissionResource: 'opportunities' },
 };
 
 const entityTypeSchema = z
@@ -93,6 +96,7 @@ export function registerTagActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await ensureEntityExists(ctx, tx, input.entity_type, input.entity_id);
+        await requirePermission(ctx, tx, { resource: TAGGED_ENTITY_TABLES[input.entity_type].permissionResource, action: 'update' });
         await admitWorkflowTagWrite(ctx, tx);
 
         let result;
@@ -144,6 +148,7 @@ export function registerTagActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await ensureEntityExists(ctx, tx, input.entity_type, input.entity_id);
+        await requirePermission(ctx, tx, { resource: TAGGED_ENTITY_TABLES[input.entity_type].permissionResource, action: 'update' });
         await admitWorkflowTagWrite(ctx, tx);
 
         let result;

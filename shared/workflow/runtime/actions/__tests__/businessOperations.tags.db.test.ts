@@ -13,6 +13,7 @@ const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
   tenantId: '',
   actorUserId: '',
+  deniedResources: new Set<string>(),
 }));
 
 vi.mock('../businessOperations/shared', async (importOriginal) => {
@@ -26,7 +27,11 @@ vi.mock('../businessOperations/shared', async (importOriginal) => {
         return fn({ tenantId: runtimeState.tenantId, actorUserId: runtimeState.actorUserId, trx });
       });
     },
-    requirePermission: async () => undefined,
+    requirePermission: async (ctx: any, _tx: any, permission: { resource: string; action: string }) => {
+      if (runtimeState.deniedResources.has(`${permission.resource}:${permission.action}`)) {
+        actual.throwActionError(ctx, { category: 'ActionError', code: 'PERMISSION_DENIED', message: `Permission denied: ${permission.resource}:${permission.action}`, details: permission });
+      }
+    },
     writeRunAudit: async () => undefined,
   };
 });
@@ -105,7 +110,7 @@ describe('tag workflow actions (DB-backed)', () => {
   const definitionCount = async (text: string, type: string) =>
     Number((await db('tag_definitions').where({ tenant: tenant(), tag_text: text, tagged_type: type }).count('* as c').first())!.c);
 
-  beforeEach(() => undefined);
+  beforeEach(() => { runtimeState.deniedResources.clear(); });
 
   it('tags.add on a ticket creates the definition and mapping; a repeat call skips', async () => {
     const ticketId = await makeTicket();
@@ -187,5 +192,41 @@ describe('tag workflow actions (DB-backed)', () => {
     const cleared = await invoke('tickets.update_fields', { ticket_id: ticketId, patch: { tags: [] } });
     expect(cleared.tags).toEqual([]);
     expect(await mappings(ticketId)).toHaveLength(0);
+  });
+
+  it('tags.add and tags.remove require update permission on the entity type and write nothing when denied', async () => {
+    const ticketId = await makeTicket();
+    const text = `denied-${uuidv4().slice(0, 8)}`;
+    await invoke('tags.add', { entity_type: 'ticket', entity_id: ticketId, tags: [text] });
+
+    runtimeState.deniedResources.add('client:update');
+    const other = `denied-client-${uuidv4().slice(0, 8)}`;
+    await expect(invoke('tags.add', { entity_type: 'client', entity_id: clientId, tags: [other] }))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED', details: { resource: 'client', action: 'update' } });
+    expect(await definitionCount(other, 'client')).toBe(0);
+    expect(await mappings(clientId)).toHaveLength(0);
+
+    runtimeState.deniedResources.add('ticket:update');
+    await expect(invoke('tags.remove', { entity_type: 'ticket', entity_id: ticketId, tags: [text] }))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await texts(ticketId)).toEqual([text]);
+    await expect(invoke('tags.add', { entity_type: 'ticket', entity_id: ticketId, tags: ['x-denied'] }))
+      .rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await definitionCount('x-denied', 'ticket')).toBe(0);
+  });
+
+  it('tags.remove can detach a legacy tag whose text fails current validation', async () => {
+    const ticketId = await makeTicket();
+    const legacy = `legacy-é🔥-${uuidv4().slice(0, 8)}`;
+    const tagId = uuidv4();
+    await db('tag_definitions').insert({ tenant: tenant(), tag_id: tagId, tag_text: legacy, tagged_type: 'ticket', background_color: '#FFFFFF', text_color: '#000000' });
+    await db('tag_mappings').insert({ tenant: tenant(), mapping_id: uuidv4(), tag_id: tagId, tagged_id: ticketId, tagged_type: 'ticket' });
+
+    const out = await invoke('tags.remove', { entity_type: 'ticket', entity_id: ticketId, tags: [legacy.toUpperCase()] });
+    expect(out).toMatchObject({ removed_count: 1, missing_count: 0, tags: [] });
+    expect(await definitionCount(legacy, 'ticket')).toBe(1);
+    // Adding still validates, since that creates definitions.
+    await expect(invoke('tags.add', { entity_type: 'ticket', entity_id: ticketId, tags: [legacy] }))
+      .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 });
