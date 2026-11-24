@@ -137,7 +137,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
   };
 
   // Only lines with a bundle fee can be repriced by a schedule, so they are
-  // the ones a contract-wide row actually multiplies across.
+  // the ones a whole-contract row actually applies to.
   const bundleFeeLines = lineScopes.filter((line) => line.has_bundle_fee);
   const unitPricedLineCount = lineScopes.length - bundleFeeLines.length;
 
@@ -147,29 +147,33 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       || t('pricingSchedules.list.values.unnamedLine', { defaultValue: 'Unnamed line' });
   };
 
+  /** The scope of a row: the line it is scoped to, or the whole contract. */
+  const scopeLabel = (schedule: IContractPricingSchedule): string =>
+    schedule.contract_line_id
+      ? lineName(schedule.contract_line_id)
+      : t('pricingSchedules.list.values.wholeContract', { defaultValue: 'Whole contract' });
+
   /**
-   * What a row reprices. A contract-wide row (NULL scope) is flagged with the
-   * number it bills on every fixed line — those rows are left exactly as
-   * stored, so the list has to say what they do.
+   * The same scope, with what a whole-contract row bills spelled out when the
+   * contract has several fixed-fee lines — the rate applies to each of them.
    */
-  const renderAppliesTo = (schedule: IContractPricingSchedule) => {
+  const renderTimelineScope = (schedule: IContractPricingSchedule) => {
     if (schedule.contract_line_id) {
-      return <span>{lineName(schedule.contract_line_id)}</span>;
+      return <span>{scopeLabel(schedule)}</span>;
     }
 
-    const flagsEffect = bundleFeeLines.length > 1
+    const statesEffect = bundleFeeLines.length > 1
       && schedule.custom_rate !== undefined && schedule.custom_rate !== null;
 
     return (
-      <span className={flagsEffect ? 'flex items-center text-[rgb(var(--color-accent-600))]' : undefined}>
-        {flagsEffect && <AlertCircle className="h-3 w-3 mr-1 shrink-0" />}
-        {flagsEffect
-          ? t('pricingSchedules.list.values.contractWideEffect', {
+      <span>
+        {statesEffect
+          ? t('pricingSchedules.list.values.wholeContractEffect', {
             count: bundleFeeLines.length,
             amount: formatCustomRate(schedule.custom_rate as number),
-            defaultValue: 'All fixed lines — each of the {{count}} fixed lines bills {{amount}}',
+            defaultValue: 'Whole contract — each of the {{count}} fixed-fee lines bills {{amount}}',
           })
-          : t('pricingSchedules.list.values.contractWide', { defaultValue: 'All fixed lines' })}
+          : scopeLabel(schedule)}
       </span>
     );
   };
@@ -190,7 +194,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
     {
       title: t('pricingSchedules.list.columns.appliesTo', { defaultValue: 'Applies To' }),
       dataIndex: 'contract_line_id',
-      render: (_value, record) => renderAppliesTo(record)
+      render: (_value, record) => <span>{scopeLabel(record)}</span>
     },
     {
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
@@ -265,8 +269,8 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
             <Button
               id="add-pricing-schedule-button"
               onClick={handleAddNew}
-              // The dialog's line picker needs the loaded scopes to preselect
-              // the only eligible line.
+              // The dialog's scope picker can only offer the contract's
+              // fixed-fee lines once they are loaded.
               disabled={isReadOnly || isLoading}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -343,7 +347,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
                                       : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
                                   <div className="text-sm text-muted-foreground mt-1">
-                                    {renderAppliesTo(schedule)}
+                                    {renderTimelineScope(schedule)}
                                   </div>
                                 </div>
                               </div>

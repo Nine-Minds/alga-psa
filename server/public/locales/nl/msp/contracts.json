@@ -1062,8 +1062,8 @@
         "defaultRate": "Standaardtarief",
         "ongoing": "Lopend",
         "useDefaultRate": "Standaardtarief gebruiken",
-        "contractWide": "Alle vaste regels",
-        "contractWideEffect": "Alle vaste regels — elk van de {{count}} vaste regels factureert {{amount}}",
+        "wholeContract": "Hele contract",
+        "wholeContractEffect": "Hele contract — elk van de {{count}} contractregels met een vast tarief factureert {{amount}}",
         "unnamedLine": "Naamloze regel"
       }
     },
@@ -1097,11 +1097,11 @@
         "useDefaultRate": "Standaardtarief gebruiken",
         "useDuration": "Duur gebruiken",
         "appliesTo": "Geldt voor",
-        "appliesToPlaceholder": "Selecteer een contractregel",
+        "appliesToPlaceholder": "Selecteer het hele contract of één contractregel met een vast tarief",
         "lineFee": "Bedrag per factureerperiode",
         "lineFeeHelp": "Wat deze regel factureert in elke factureerperiode die het prijsschema dekt, in plaats van het gebruikelijke tarief.",
         "lineFeeHelpMixed": "Vervangt het bundeltarief van deze regel in elke factureerperiode die het prijsschema dekt. Services met een prijs per eenheid houden hun eigen stukprijs.",
-        "lineFeeHelpContractWide": "Elke vaste regel van dit contract factureert dit bedrag in elke factureerperiode die het prijsschema dekt."
+        "lineFeeHelpWholeContract": "Elke contractregel met een vast tarief van dit contract factureert dit bedrag in elke factureerperiode die het prijsschema dekt."
       },
       "title": {
         "addPricingSchedule": "Prijsschema toevoegen",
@@ -1115,15 +1115,15 @@
         "effectiveDateRequired": "Ingangsdatum is verplicht",
         "endDateAfterEffectiveDate": "Einddatum moet na de ingangsdatum liggen",
         "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld",
-        "contractLineRequired": "Kies de contractregel waarvoor dit prijsschema geldt"
+        "scopeRequired": "Kies of dit prijsschema voor het hele contract of voor één contractregel met een vast tarief geldt"
       },
       "values": {
-        "contractWide": "Alle vaste regels (hele contract)",
+        "wholeContract": "Hele contract",
         "unnamedLine": "Naamloze regel"
       },
       "notices": {
-        "contractWide": "Hele contract: dit prijsschema geldt voor elke vaste regel van dit contract. Kies een regel om het alleen op die regel toe te passen.",
-        "contractWideEffect": "Hele contract: elk van de {{count}} vaste regels factureert {{amount}} per factureerperiode. Kies een regel om dit prijsschema alleen op die regel toe te passen.",
+        "wholeContract": "Hele contract: dit prijsschema geldt voor elke contractregel met een vast tarief van dit contract.",
+        "wholeContractEffect": "Hele contract: elk van de {{count}} contractregels met een vast tarief factureert {{amount}} per factureerperiode.",
         "unitPricedExcluded": "Regels die per eenheid factureren staan er niet bij: een prijsschema wijzigt nooit een prijs per eenheid. Wijzig in plaats daarvan de stukprijs op de regel."
       },
       "empty": {
@@ -2900,7 +2900,8 @@
       "notFound": "Prijsplanning niet gevonden",
       "invalidDate": "Ingangsdatum en einddatum moeten kalenderdatums zijn (JJJJ-MM-DD)",
       "lineNotEligible": "Prijsschema’s gelden voor een regel met een vast tarief van dit contract; kies een van de vaste regels",
-      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel."
+      "lineUnitPriced": "Deze regel factureert per eenheid, dus een prijsschema zou niets aan de facturatie veranderen. Wijzig in plaats daarvan de stukprijs op de regel.",
+      "noRepriceableLine": "Dit contract heeft geen contractregel met een vast tarief die een prijsschema kan herprijzen; een regel die per eenheid factureert, wordt via de eigen stukprijs herprijsd"
     },
     "renewals": {
       "permissions": {

@@ -1062,8 +1062,8 @@
         "defaultRate": "Standardtarif",
         "ongoing": "Laufend",
         "useDefaultRate": "Standardtarif verwenden",
-        "contractWide": "Alle festen Positionen",
-        "contractWideEffect": "Alle festen Positionen – jede der {{count}} festen Positionen berechnet {{amount}}",
+        "wholeContract": "Gesamter Vertrag",
+        "wholeContractEffect": "Gesamter Vertrag – jede der {{count}} Vertragslinien mit Festpreis berechnet {{amount}}",
         "unnamedLine": "Unbenannte Position"
       }
     },
@@ -1097,11 +1097,11 @@
         "useDefaultRate": "Standardtarif verwenden",
         "useDuration": "Dauer verwenden",
         "appliesTo": "Gilt für",
-        "appliesToPlaceholder": "Vertragsposition auswählen",
+        "appliesToPlaceholder": "Wählen Sie den gesamten Vertrag oder eine Vertragslinie mit Festpreis",
         "lineFee": "Gebühr pro Abrechnungszeitraum",
         "lineFeeHelp": "Was diese Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum berechnet – anstelle ihrer üblichen Gebühr.",
         "lineFeeHelpMixed": "Ersetzt die Paketgebühr dieser Position in jedem vom Preisplan abgedeckten Abrechnungszeitraum. Pro Einheit bepreiste Services behalten ihren Einzelpreis.",
-        "lineFeeHelpContractWide": "Jede feste Position dieses Vertrags berechnet diesen Betrag in jedem vom Preisplan abgedeckten Abrechnungszeitraum."
+        "lineFeeHelpWholeContract": "Jede Vertragslinie mit Festpreis dieses Vertrags berechnet diesen Betrag in jedem vom Preisplan abgedeckten Abrechnungszeitraum."
       },
       "title": {
         "addPricingSchedule": "Preisplan hinzufügen",
@@ -1115,15 +1115,15 @@
         "effectiveDateRequired": "Gültigkeitsdatum ist erforderlich",
         "endDateAfterEffectiveDate": "Enddatum muss nach dem Gültigkeitsdatum liegen",
         "endDateRequiredWhenEnabled": "Enddatum ist erforderlich, wenn \"Hat Enddatum\" aktiviert ist",
-        "contractLineRequired": "Wählen Sie die Vertragsposition, für die dieser Preisplan gilt"
+        "scopeRequired": "Wählen Sie, ob dieser Preisplan für den gesamten Vertrag oder für eine Vertragslinie mit Festpreis gilt"
       },
       "values": {
-        "contractWide": "Alle festen Positionen (vertragsweit)",
+        "wholeContract": "Gesamter Vertrag",
         "unnamedLine": "Unbenannte Position"
       },
       "notices": {
-        "contractWide": "Vertragsweit: Dieser Preisplan gilt für jede feste Position dieses Vertrags. Wählen Sie eine Position, damit er nur für diese gilt.",
-        "contractWideEffect": "Vertragsweit: Jede der {{count}} festen Positionen berechnet {{amount}} pro Abrechnungszeitraum. Wählen Sie eine Position, damit dieser Preisplan nur für diese gilt.",
+        "wholeContract": "Gesamter Vertrag: Dieser Preisplan gilt für jede Vertragslinie mit Festpreis dieses Vertrags.",
+        "wholeContractEffect": "Gesamter Vertrag: Jede der {{count}} Vertragslinien mit Festpreis berechnet {{amount}} pro Abrechnungszeitraum.",
         "unitPricedExcluded": "Positionen, die pro Einheit abrechnen, werden nicht aufgeführt: Ein Preisplan ändert nie einen Preis pro Einheit. Ändern Sie stattdessen den Einzelpreis der Position."
       },
       "empty": {
@@ -2900,7 +2900,8 @@
       "notFound": "Preiszeitplan nicht gefunden",
       "invalidDate": "Gültigkeitsdatum und Enddatum müssen Kalenderdaten sein (JJJJ-MM-TT)",
       "lineNotEligible": "Preispläne gelten für eine Position mit Festpreis dieses Vertrags; wählen Sie eine seiner festen Positionen",
-      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position."
+      "lineUnitPriced": "Diese Position rechnet pro Einheit ab, daher würde ein Preisplan nichts an ihrer Abrechnung ändern. Ändern Sie stattdessen den Einzelpreis der Position.",
+      "noRepriceableLine": "Dieser Vertrag hat keine Vertragslinie mit Festpreis, die ein Preisplan neu bepreisen kann; eine Vertragslinie, die pro Einheit abrechnet, wird über ihren eigenen Einheitspreis neu bepreist"
     },
     "renewals": {
       "permissions": {

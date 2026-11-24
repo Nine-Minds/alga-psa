@@ -269,6 +269,7 @@ describe('PricingScheduleDialog calendar dates', () => {
       process.env.TZ = timeZone;
       const { onSave } = renderDialog({ schedule: null });
 
+      fireEvent.change(linePicker(), { target: { value: 'line-1' } });
       fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
       submitForm();
 
@@ -285,6 +286,7 @@ describe('PricingScheduleDialog calendar dates', () => {
       process.env.TZ = timeZone;
       const { onSave } = renderDialog({ schedule: null });
 
+      fireEvent.change(linePicker(), { target: { value: 'line-1' } });
       fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
       fireEvent.click(screen.getByLabelText('Has end date'));
       fireEvent.change(dateInput('end-date'), { target: { value: '2026-12-31' } });
@@ -340,7 +342,9 @@ describe('PricingScheduleDialog calendar dates', () => {
   );
 });
 
-describe('PricingScheduleDialog line scope', () => {
+describe('PricingScheduleDialog scope', () => {
+  const TWO_LINES = [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')];
+
   beforeEach(() => {
     vi.clearAllMocks();
     createPricingScheduleMock.mockResolvedValue(schedule());
@@ -351,25 +355,55 @@ describe('PricingScheduleDialog line scope', () => {
     cleanup();
   });
 
-  it('preselects the only eligible fixed line and scopes the new schedule to it', async () => {
-    const { onSave } = renderDialog({ schedule: null });
+  it('offers the whole contract and every eligible line, with nothing preselected', () => {
+    renderDialog({ schedule: null, eligibleLines: TWO_LINES });
 
-    expect(linePicker().value).toBe('line-1');
+    // A whole-contract schedule and a line-scoped one are both legitimate, so
+    // the dialog assumes neither.
+    expect(linePicker().value).toBe('');
+    expect([...linePicker().options].map((option) => option.textContent)).toEqual([
+      'Select the whole contract or one fixed-fee line',
+      'Whole contract',
+      'Managed Services',
+      'Backup',
+    ]);
+  });
+
+  it('saves a new schedule scoped to the picked line', async () => {
+    const { onSave } = renderDialog({ schedule: null, eligibleLines: TWO_LINES });
 
     fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+    fireEvent.change(linePicker(), { target: { value: 'line-2' } });
     submitForm();
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(createPricingScheduleMock).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-1' })
+      expect.objectContaining({ contract_line_id: 'line-2' })
     );
   });
 
-  it('requires a choice when several fixed lines are eligible', async () => {
-    renderDialog({
-      schedule: null,
-      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
-    });
+  it('saves a new whole-contract schedule with a null scope and states the effect', async () => {
+    const { onSave } = renderDialog({ schedule: null, eligibleLines: TWO_LINES });
+
+    fireEvent.change(dateInput('effective-date'), { target: { value: '2026-06-01' } });
+    fireEvent.change(linePicker(), { target: { value: '__whole_contract__' } });
+    fireEvent.click(screen.getByLabelText('Use default rate'));
+    fireEvent.change(rateInput(), { target: { value: '900' } });
+
+    expect(
+      screen.getByText(/each of the 2 fixed-fee lines bills \$900\.00 per billing period/)
+    ).toBeInTheDocument();
+
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(createPricingScheduleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ contract_line_id: null, custom_rate: 90000 })
+    );
+  });
+
+  it('requires a scope even when a single line is eligible', async () => {
+    renderDialog({ schedule: null });
 
     expect(linePicker().value).toBe('');
 
@@ -377,33 +411,34 @@ describe('PricingScheduleDialog line scope', () => {
     submitForm();
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Choose the contract line this schedule applies to'
+      'Choose whether this schedule applies to the whole contract or to one fixed-fee line'
     );
     expect(createPricingScheduleMock).not.toHaveBeenCalled();
 
-    fireEvent.change(linePicker(), { target: { value: 'line-2' } });
+    fireEvent.change(linePicker(), { target: { value: 'line-1' } });
     submitForm();
 
     await waitFor(() => expect(createPricingScheduleMock).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-2' })
+      expect.objectContaining({ contract_line_id: 'line-1' })
     ));
   });
 
-  it('flags a stored contract-wide schedule with what it bills on each fixed line', () => {
+  it('opens a stored whole-contract schedule on that scope and says what it bills', () => {
     renderDialog({
       schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
-      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+      eligibleLines: TWO_LINES,
     });
 
+    expect(linePicker().value).toBe('__whole_contract__');
     expect(
-      screen.getByText(/each of the 2 fixed lines bills \$900\.00 per billing period/)
+      screen.getByText(/each of the 2 fixed-fee lines bills \$900\.00 per billing period/)
     ).toBeInTheDocument();
   });
 
-  it('keeps a contract-wide schedule contract-wide when the picker is untouched', async () => {
+  it('keeps a whole-contract schedule whole-contract when the picker is untouched', async () => {
     const { onSave } = renderDialog({
       schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
-      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+      eligibleLines: TWO_LINES,
     });
 
     submitForm();
@@ -415,10 +450,10 @@ describe('PricingScheduleDialog line scope', () => {
     );
   });
 
-  it('re-scopes a contract-wide schedule once a line is picked', async () => {
+  it('re-scopes a whole-contract schedule to a line', async () => {
     const { onSave } = renderDialog({
       schedule: schedule({ contract_line_id: null, custom_rate: 90000 }),
-      eligibleLines: [fixedLine('line-1', 'Managed Services'), fixedLine('line-2', 'Backup')],
+      eligibleLines: TWO_LINES,
     });
 
     fireEvent.change(linePicker(), { target: { value: 'line-2' } });
@@ -431,7 +466,25 @@ describe('PricingScheduleDialog line scope', () => {
     );
   });
 
-  it('does not offer a unit-priced line and says where to change its price', () => {
+  it('re-scopes a line schedule to the whole contract', async () => {
+    const { onSave } = renderDialog({
+      schedule: schedule({ contract_line_id: 'line-1', custom_rate: 90000 }),
+      eligibleLines: TWO_LINES,
+    });
+
+    expect(linePicker().value).toBe('line-1');
+
+    fireEvent.change(linePicker(), { target: { value: '__whole_contract__' } });
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ contract_line_id: null })
+    );
+  });
+
+  it('offers neither scope when no line can be repriced, and says where to change the price', () => {
     renderDialog({ schedule: null, eligibleLines: [], unitPricedLineCount: 1 });
 
     expect(screen.queryByLabelText('pricing-schedule-contract-line')).toBeNull();
@@ -447,7 +500,7 @@ describe('PricingScheduleDialog line scope', () => {
   it('notes the unit-priced lines left out of the picker', () => {
     renderDialog({ schedule: null, unitPricedLineCount: 2 });
 
-    expect(linePicker().value).toBe('line-1');
+    expect([...linePicker().options].map((option) => option.value)).toContain('__whole_contract__');
     expect(
       screen.getByText(/Lines that bill per unit are not listed/)
     ).toBeInTheDocument();

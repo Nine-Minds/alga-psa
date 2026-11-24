@@ -1062,8 +1062,8 @@
         "defaultRate": "Tarifa predeterminada",
         "ongoing": "En curso",
         "useDefaultRate": "Usar tarifa predeterminada",
-        "contractWide": "Todas las líneas fijas",
-        "contractWideEffect": "Todas las líneas fijas: cada una de las {{count}} líneas fijas factura {{amount}}",
+        "wholeContract": "Todo el contrato",
+        "wholeContractEffect": "Todo el contrato: cada una de las {{count}} líneas de tarifa fija factura {{amount}}",
         "unnamedLine": "Línea sin nombre"
       }
     },
@@ -1097,11 +1097,11 @@
         "useDefaultRate": "Usar tarifa predeterminada",
         "useDuration": "Usar duración",
         "appliesTo": "Se aplica a",
-        "appliesToPlaceholder": "Seleccione una línea de contrato",
+        "appliesToPlaceholder": "Seleccione todo el contrato o una línea de tarifa fija",
         "lineFee": "Tarifa por período de facturación",
         "lineFeeHelp": "Lo que factura esta línea en cada período de facturación que cubre el programa, en lugar de su tarifa habitual.",
         "lineFeeHelpMixed": "Reemplaza la tarifa del paquete de esta línea en cada período de facturación que cubre el programa. Los servicios con precio por unidad conservan su precio unitario.",
-        "lineFeeHelpContractWide": "Cada línea fija de este contrato factura este importe en cada período de facturación que cubre el programa."
+        "lineFeeHelpWholeContract": "Cada línea de tarifa fija de este contrato factura este importe en cada período de facturación que cubre el programa."
       },
       "title": {
         "addPricingSchedule": "Agregar programa de precios",
@@ -1115,15 +1115,15 @@
         "effectiveDateRequired": "La fecha de entrada en vigor es obligatoria",
         "endDateAfterEffectiveDate": "La fecha de finalización debe ser posterior a la fecha de entrada en vigor",
         "endDateRequiredWhenEnabled": "La fecha de finalización es obligatoria cuando \"Tiene fecha de finalización\" está habilitado",
-        "contractLineRequired": "Elija la línea de contrato a la que se aplica este programa"
+        "scopeRequired": "Elija si este programa se aplica a todo el contrato o a una sola línea de tarifa fija"
       },
       "values": {
-        "contractWide": "Todas las líneas fijas (todo el contrato)",
+        "wholeContract": "Todo el contrato",
         "unnamedLine": "Línea sin nombre"
       },
       "notices": {
-        "contractWide": "Todo el contrato: este programa se aplica a todas las líneas fijas de este contrato. Elija una línea para aplicarlo solo a esa línea.",
-        "contractWideEffect": "Todo el contrato: cada una de las {{count}} líneas fijas factura {{amount}} por período de facturación. Elija una línea para aplicar este programa solo a esa línea.",
+        "wholeContract": "Todo el contrato: este programa se aplica a todas las líneas de tarifa fija de este contrato.",
+        "wholeContractEffect": "Todo el contrato: cada una de las {{count}} líneas de tarifa fija factura {{amount}} por período de facturación.",
         "unitPricedExcluded": "Las líneas que facturan por unidad no se muestran: un programa de precios nunca cambia un precio por unidad. Cambie el precio unitario en la línea."
       },
       "empty": {
@@ -2900,7 +2900,8 @@
       "notFound": "No se encontró el calendario de precios",
       "invalidDate": "La fecha de entrada en vigor y la fecha de finalización deben ser fechas de calendario (AAAA-MM-DD)",
       "lineNotEligible": "Los programas de precios se aplican a una línea de tarifa fija de este contrato; elija una de sus líneas fijas",
-      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea."
+      "lineUnitPriced": "Esta línea factura por unidad, por lo que un programa de precios no cambiaría lo que factura. Cambie el precio unitario en la línea.",
+      "noRepriceableLine": "Este contrato no tiene ninguna línea de tarifa fija que un programa de precios pueda volver a tarificar; una línea que factura por unidad se tarifica con su propio precio unitario"
     },
     "renewals": {
       "permissions": {

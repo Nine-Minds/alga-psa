@@ -25,8 +25,18 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-/** Sentinel value for the contract-wide option; CustomSelect only speaks strings. */
-const CONTRACT_WIDE_VALUE = '__contract_wide__';
+/** Sentinel value for the whole-contract option; CustomSelect only speaks strings. */
+const WHOLE_CONTRACT_VALUE = '__whole_contract__';
+
+/**
+ * Both scopes are real choices, so nothing is preselected for a new schedule:
+ * '' until the user picks the whole contract or one of its fixed-fee lines. A
+ * stored row opens on the scope it already has.
+ */
+function initialScope(schedule?: IContractPricingSchedule | null): string {
+  if (schedule?.contract_line_id) return schedule.contract_line_id;
+  return schedule?.schedule_id ? WHOLE_CONTRACT_VALUE : '';
+}
 
 interface PricingScheduleDialogProps {
   contractId: string;
@@ -34,9 +44,10 @@ interface PricingScheduleDialogProps {
   /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
   currencyCode?: string;
   /**
-   * Fixed lines a schedule rate actually reprices. Unit-priced lines are not in
-   * here: the engine prices their members from their own unit rates, so a
-   * schedule would change nothing on them.
+   * Fixed-fee lines a schedule rate actually reprices — the lines offered in the
+   * picker and the ones a whole-contract schedule applies to. Unit-priced lines
+   * are not in here: the engine prices their members from their own unit rates,
+   * so a schedule would change nothing on them.
    */
   eligibleLines: PricingScheduleLineScope[];
   /** Fixed lines left out because every member bills per unit. */
@@ -87,15 +98,12 @@ export function PricingScheduleDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // An existing row with no line scope reprices every fixed line on the
-  // contract. It is kept exactly as stored unless the user picks a line here.
-  const isStoredContractWide = Boolean(schedule?.schedule_id) && !schedule?.contract_line_id;
-  const [contractLineId, setContractLineId] = useState<string | null>(() => {
-    if (schedule?.contract_line_id) return schedule.contract_line_id;
-    if (schedule?.schedule_id) return null;
-    return eligibleLines.length === 1 ? eligibleLines[0].contract_line_id : null;
-  });
-  const selectedLine = eligibleLines.find((line) => line.contract_line_id === contractLineId) ?? null;
+  // A row already stored with no line scope: it reprices every fixed-fee line
+  // of the contract and is kept exactly as stored unless the user re-scopes it.
+  const isStoredWholeContract = Boolean(schedule?.schedule_id) && !schedule?.contract_line_id;
+  const [scope, setScope] = useState<string>(() => initialScope(schedule));
+  const isWholeContract = scope === WHOLE_CONTRACT_VALUE;
+  const selectedLine = eligibleLines.find((line) => line.contract_line_id === scope) ?? null;
 
   useEffect(() => {
     if (schedule) {
@@ -104,7 +112,7 @@ export function PricingScheduleDialog({
       setHasEndDate(!!schedule.end_date);
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
-      setContractLineId(schedule.contract_line_id ?? null);
+      setScope(initialScope(schedule));
       userEditedRateRef.current = false;
     }
   }, [schedule]);
@@ -131,11 +139,11 @@ export function PricingScheduleDialog({
       return;
     }
 
-    // A new schedule always names its line; only a row already stored
-    // contract-wide may stay that way.
-    if (!contractLineId && !isStoredContractWide) {
-      setError(t('pricingSchedules.dialog.validation.contractLineRequired', {
-        defaultValue: 'Choose the contract line this schedule applies to',
+    // Whole contract and one fixed-fee line are both offered, so neither is
+    // assumed: the user says which one.
+    if (!scope) {
+      setError(t('pricingSchedules.dialog.validation.scopeRequired', {
+        defaultValue: 'Choose whether this schedule applies to the whole contract or to one fixed-fee line',
       }));
       return;
     }
@@ -187,7 +195,9 @@ export function PricingScheduleDialog({
     try {
       const scheduleData = {
         contract_id: contractId,
-        contract_line_id: contractLineId,
+        // NULL is the whole-contract scope the engine already honours; a line id
+        // reprices that line only and wins over a whole-contract schedule.
+        contract_line_id: isWholeContract ? null : scope,
         // Calendar dates, never instants: effective_date/end_date are DATE
         // columns, and an instant built from a local-midnight pick lands on the
         // previous day east of UTC.
@@ -224,25 +234,26 @@ export function PricingScheduleDialog({
     }
   };
 
-  const lineOptions = [
-    // Offered only while editing a row that is already contract-wide: a new
-    // schedule must name its line.
-    ...(isStoredContractWide
-      ? [{
-        value: CONTRACT_WIDE_VALUE,
-        label: t('pricingSchedules.dialog.values.contractWide', { defaultValue: 'All fixed lines (contract-wide)' }),
-      }]
-      : []),
+  const scopeOptions = [
+    {
+      value: WHOLE_CONTRACT_VALUE,
+      label: t('pricingSchedules.dialog.values.wholeContract', { defaultValue: 'Whole contract' }),
+    },
     ...eligibleLines.map((line) => ({
       value: line.contract_line_id,
       label: line.contract_line_name
         || t('pricingSchedules.dialog.values.unnamedLine', { defaultValue: 'Unnamed line' }),
     })),
   ];
-  const canSave = eligibleLines.length > 0 || isStoredContractWide;
-  const storedContractWideRate = isStoredContractWide
-    && schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
-    ? money(schedule.custom_rate, currencyCode)
+  // With no fixed-fee line there is nothing for either scope to apply to.
+  const canSave = eligibleLines.length > 0 || isStoredWholeContract;
+  // What the rate currently in the form bills on each line, so the
+  // whole-contract notice can state the effect in numbers while it is picked.
+  const enteredRate = !useDefaultRate && customRate.trim() !== ''
+    ? Number.parseFloat(customRate)
+    : Number.NaN;
+  const wholeContractRate = Number.isFinite(enteredRate)
+    ? money(Math.round(enteredRate * rateMinorUnitFactor), currencyCode)
     : null;
 
   return (
@@ -287,7 +298,7 @@ export function PricingScheduleDialog({
             </Alert>
           )}
 
-          {eligibleLines.length === 0 && !isStoredContractWide ? (
+          {eligibleLines.length === 0 && (
             <Alert variant="warning">
               <AlertDescription>
                 {unitPricedLineCount > 0
@@ -299,31 +310,33 @@ export function PricingScheduleDialog({
                   })}
               </AlertDescription>
             </Alert>
-          ) : (
+          )}
+
+          {canSave && (
             <div>
               <Label htmlFor="pricing-schedule-contract-line">
                 {t('pricingSchedules.dialog.fields.appliesTo', { defaultValue: 'Applies to' })} *
               </Label>
               <CustomSelect
                 id="pricing-schedule-contract-line"
-                value={contractLineId ?? (isStoredContractWide ? CONTRACT_WIDE_VALUE : '')}
-                onValueChange={(value) => setContractLineId(value === CONTRACT_WIDE_VALUE ? null : value)}
-                options={lineOptions}
+                value={scope}
+                onValueChange={setScope}
+                options={scopeOptions}
                 placeholder={t('pricingSchedules.dialog.fields.appliesToPlaceholder', {
-                  defaultValue: 'Select a contract line',
+                  defaultValue: 'Select the whole contract or one fixed-fee line',
                 })}
                 className="mt-1 w-full"
               />
-              {isStoredContractWide && !contractLineId && (
+              {isWholeContract && (
                 <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
-                  {storedContractWideRate && eligibleLines.length > 1
-                    ? t('pricingSchedules.dialog.notices.contractWideEffect', {
+                  {wholeContractRate && eligibleLines.length > 1
+                    ? t('pricingSchedules.dialog.notices.wholeContractEffect', {
                       count: eligibleLines.length,
-                      amount: storedContractWideRate,
-                      defaultValue: 'Contract-wide: each of the {{count}} fixed lines bills {{amount}} per billing period. Pick a line to apply this schedule to that line only.',
+                      amount: wholeContractRate,
+                      defaultValue: 'Whole contract: each of the {{count}} fixed-fee lines bills {{amount}} per billing period.',
                     })
-                    : t('pricingSchedules.dialog.notices.contractWide', {
-                      defaultValue: 'Contract-wide: this schedule applies to every fixed line on this contract. Pick a line to apply it to that line only.',
+                    : t('pricingSchedules.dialog.notices.wholeContract', {
+                      defaultValue: 'Whole contract: this schedule applies to every fixed-fee line on this contract.',
                     })}
                 </p>
               )}
@@ -461,9 +474,9 @@ export function PricingScheduleDialog({
                 })} *
               </Label>
               <p className="text-xs text-[rgb(var(--color-text-600))]">
-                {!contractLineId
-                  ? t('pricingSchedules.dialog.fields.lineFeeHelpContractWide', {
-                    defaultValue: 'Each fixed line on this contract bills this amount in every billing period the schedule covers.',
+                {isWholeContract
+                  ? t('pricingSchedules.dialog.fields.lineFeeHelpWholeContract', {
+                    defaultValue: 'Every fixed-fee line on this contract bills this amount in every billing period the schedule covers.',
                   })
                   : selectedLine?.has_unit_priced_members
                     ? t('pricingSchedules.dialog.fields.lineFeeHelpMixed', {

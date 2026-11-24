@@ -143,7 +143,7 @@ describe('PricingSchedules contract-currency custom rate', () => {
     expect((await screen.findAllByText('Backup')).length).toBeGreaterThanOrEqual(1);
   });
 
-  it('flags a contract-wide schedule with what every fixed line bills', async () => {
+  it('calls a null-scope schedule "Whole contract" and states what it bills', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([
       schedule({ contract_line_id: null, custom_rate: 90000 }),
     ]);
@@ -154,12 +154,14 @@ describe('PricingSchedules contract-currency custom rate', () => {
 
     renderList();
 
+    // The column names the scope; the timeline spells out the effect.
+    expect((await screen.findAllByText('Whole contract')).length).toBeGreaterThanOrEqual(1);
     expect(
-      (await screen.findAllByText('All fixed lines — each of the 2 fixed lines bills $900.00')).length
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByText('Whole contract — each of the 2 fixed-fee lines bills $900.00')
+    ).toBeInTheDocument();
   });
 
-  it('does not count a unit-priced line in the contract-wide flag', async () => {
+  it('does not count a unit-priced line in the whole-contract effect', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([
       schedule({ contract_line_id: null, custom_rate: 90000 }),
     ]);
@@ -170,8 +172,8 @@ describe('PricingSchedules contract-currency custom rate', () => {
 
     renderList();
 
-    // One bundle-fee line left: there is no "each of the N lines" multiplier to state.
-    expect((await screen.findAllByText('All fixed lines')).length).toBeGreaterThanOrEqual(1);
+    // One bundle-fee line left: there is no "each of the N lines" effect to state.
+    expect((await screen.findAllByText('Whole contract')).length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/each of the/)).not.toBeInTheDocument();
   });
 

@@ -1062,8 +1062,8 @@
         "defaultRate": "Stawka domyślna",
         "ongoing": "Ciągła",
         "useDefaultRate": "Użyj stawki domyślnej",
-        "contractWide": "Wszystkie linie stałe",
-        "contractWideEffect": "Wszystkie linie stałe — każda z {{count}} linii stałych nalicza {{amount}}",
+        "wholeContract": "Cały kontrakt",
+        "wholeContractEffect": "Cały kontrakt — każda z {{count}} linii z opłatą stałą nalicza {{amount}}",
         "unnamedLine": "Linia bez nazwy"
       }
     },
@@ -1097,11 +1097,11 @@
         "useDefaultRate": "Użyj stawki domyślnej",
         "useDuration": "Użyj czasu trwania",
         "appliesTo": "Dotyczy",
-        "appliesToPlaceholder": "Wybierz linię kontraktową",
+        "appliesToPlaceholder": "Wybierz cały kontrakt lub jedną linię z opłatą stałą",
         "lineFee": "Opłata za okres rozliczeniowy",
         "lineFeeHelp": "Kwota, którą ta linia nalicza w każdym okresie rozliczeniowym objętym harmonogramem, zamiast zwykłej opłaty.",
         "lineFeeHelpMixed": "Zastępuje opłatę pakietową tej linii w każdym okresie rozliczeniowym objętym harmonogramem. Usługi wycenione za jednostkę zachowują swoją cenę jednostkową.",
-        "lineFeeHelpContractWide": "Każda linia stała tego kontraktu nalicza tę kwotę w każdym okresie rozliczeniowym objętym harmonogramem."
+        "lineFeeHelpWholeContract": "Każda linia z opłatą stałą tego kontraktu nalicza tę kwotę w każdym okresie rozliczeniowym objętym harmonogramem."
       },
       "title": {
         "addPricingSchedule": "Dodaj harmonogram cenowy",
@@ -1115,15 +1115,15 @@
         "effectiveDateRequired": "Data wejścia w życie jest wymagana",
         "endDateAfterEffectiveDate": "Data zakończenia musi być późniejsza niż data wejścia w życie",
         "endDateRequiredWhenEnabled": "Data zakończenia jest wymagana, gdy włączono opcję „Ma datę zakończenia”",
-        "contractLineRequired": "Wybierz linię kontraktową, której dotyczy ten harmonogram"
+        "scopeRequired": "Wybierz, czy ten harmonogram dotyczy całego kontraktu, czy jednej linii z opłatą stałą"
       },
       "values": {
-        "contractWide": "Wszystkie linie stałe (cały kontrakt)",
+        "wholeContract": "Cały kontrakt",
         "unnamedLine": "Linia bez nazwy"
       },
       "notices": {
-        "contractWide": "Cały kontrakt: ten harmonogram dotyczy każdej linii stałej tego kontraktu. Wybierz linię, aby dotyczył tylko tej linii.",
-        "contractWideEffect": "Cały kontrakt: każda z {{count}} linii stałych nalicza {{amount}} za okres rozliczeniowy. Wybierz linię, aby ten harmonogram dotyczył tylko tej linii.",
+        "wholeContract": "Cały kontrakt: ten harmonogram dotyczy każdej linii z opłatą stałą tego kontraktu.",
+        "wholeContractEffect": "Cały kontrakt: każda z {{count}} linii z opłatą stałą nalicza {{amount}} za okres rozliczeniowy.",
         "unitPricedExcluded": "Linie naliczane za jednostkę nie są wymienione: harmonogram cenowy nigdy nie zmienia ceny za jednostkę. Zmień cenę jednostkową na linii."
       },
       "empty": {
@@ -2910,7 +2910,8 @@
       "notFound": "Nie znaleziono harmonogramu cen",
       "invalidDate": "Data wejścia w życie i data zakończenia muszą być datami kalendarzowymi (RRRR-MM-DD)",
       "lineNotEligible": "Harmonogramy cenowe dotyczą linii z opłatą stałą tego kontraktu; wybierz jedną z jego linii stałych",
-      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii."
+      "lineUnitPriced": "Ta linia nalicza za jednostkę, więc harmonogram cenowy nie zmieniłby naliczanej kwoty. Zmień cenę jednostkową na linii.",
+      "noRepriceableLine": "Ten kontrakt nie ma linii z opłatą stałą, którą harmonogram cenowy mógłby przecenić; linia naliczana za jednostkę jest przeceniana własną ceną jednostkową"
     },
     "renewals": {
       "permissions": {
