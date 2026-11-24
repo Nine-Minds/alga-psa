@@ -3,6 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { parseEmailReply } from '../replyParser';
 
 describe('replyParser provider-header heuristics', () => {
+  it.each(['', '\n--- Please reply above this line ---\nOld notification'])(
+    'preserves an authored inline error quotation with boundary %j',
+    (boundary) => {
+      const authored = 'The console reports the following error:\n> ACCESS DENIED (code 5)\n'
+        + '> Retry failed.\nPlease investigate this failure.';
+      const result = parseEmailReply({ text: authored + boundary });
+
+      expect(result.sanitizedText).toBe(authored);
+      expect(result.appliedHeuristics).not.toContain('quote-prefix');
+    },
+  );
+
   it('preserves header-like fields in an authored Ninja support request', () => {
     const text = `New support request from
 

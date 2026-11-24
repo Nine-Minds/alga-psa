@@ -56,14 +56,16 @@ describe('inbound reply body', () => {
     expect(substantiveReplyBody(parsed, body)).toEqual({});
   });
 
-  it.each(['<html><body>', '<div><br></div>'])('stores an HTML-only bottom reply after %j', async (wrapper) => {
-    const answer = 'Yes, Thursday works, please book it.';
-    const body = { html: `${wrapper}<div>${TOKEN}</div><p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>` };
-    const parsed = parseEmailReply({ text: '', html: body.html });
+  it.each(['<html><body>', '<div><br></div>', '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'])(
+    'stores an HTML-only bottom reply after %j', async (wrapper) => {
+      const answer = 'Yes, Thursday works, please book it.';
+      const body = { html: `${wrapper}<div>${TOKEN}</div><p>--- Please reply above this line ---</p><p>Old notification</p><p>${answer}</p>` };
+      const parsed = parseEmailReply({ text: '', html: body.html });
 
-    expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
-    expect(await storedBody(body)).toContain(answer);
-  });
+      expect(hasSubstantiveReplyContent(parsed, body)).toBe(true);
+      expect(await storedBody(body)).toContain(answer);
+    },
+  );
 
   it('stores the authored answer and none of the quoted notification', async () => {
     const authored = 'Sounds good, go ahead.';
@@ -80,14 +82,32 @@ describe('inbound reply body', () => {
     }
   });
 
-  it('stores nothing of a reply that holds only quoted history', async () => {
+  it('stores nothing when the text confirms a reply holds only quoted history', async () => {
     const html = quotedHtml('<br>');
-    for (const body of [{ text: QUOTED_TEXT, html }, { text: QUOTED_TEXT }, { html }]) {
+    for (const body of [{ text: QUOTED_TEXT, html }, { text: QUOTED_TEXT }]) {
       const stored = await storedBody(body);
       for (const leaked of LEAKS) {
         expect(stored).not.toContain(leaked);
       }
     }
+  });
+
+  it('stores an authored quotation when the safety net falls back to text', async () => {
+    const authored = 'The console reports the following error:\n> ACCESS DENIED (code 5)\n'
+      + 'Please investigate this failure before attempting another deployment.';
+    const body = {
+      text: `${authored}\n--- Please reply above this line ---\nOld notification`,
+      html: '<p>Console error:</p><blockquote class="gmail_quote"><p>ACCESS DENIED (code 5)</p>'
+        + '<p>Please investigate this failure before attempting another deployment.</p></blockquote>',
+    };
+    const parsed = parseEmailReply(body);
+
+    expect(parsed.appliedHeuristics).toContain('html-trim-rejected');
+    expect(parsed.sanitizedHtml).toBeUndefined();
+    const stored = await storedBody(body);
+    expect(stored).toContain('ACCESS DENIED (code 5)');
+    expect(stored).toContain('Please investigate this failure');
+    expect(stored).not.toContain('Old notification');
   });
 
   it('treats an empty parsed reply as empty rather than reading its HTML side', () => {

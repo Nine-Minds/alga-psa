@@ -198,6 +198,19 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
   // so the parser is the only place left that can keep a trim from storing nothing at all. The
   // text fallback above restores the text side; HTML-only mail has no text side to restore.
   describe('a trim that consumes the whole body', () => {
+    it('preserves an HTML-only bottom answer after a legacy notification attribution', () => {
+      const result = parseEmailReply({
+        text: '',
+        html: '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'
+          + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
+          + '<div>--- Please reply above this line ---</div><div>New comment added</div>'
+          + '<div>Yes, Thursday works. Please book it.</div>',
+      });
+
+      expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Yes, Thursday works. Please book it.');
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
+    });
+
     it('restores the original HTML when a reply arrives entirely inside a quote', () => {
       const result = parseEmailReply({
         text: '',

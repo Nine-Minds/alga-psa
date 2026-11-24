@@ -591,7 +591,7 @@ function cutOffsetForHtmlMarker(html: string, index: number): number {
   return html.startsWith('</', tagStart) ? index : tagStart;
 }
 
-function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult {
+function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBaseline: boolean): TrimResult {
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
@@ -620,8 +620,16 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
   // the text, was what the comment stored (alga-2026-0003353).
   const markerIndex = earliestMarkerIndex(html, config);
   if (markerIndex >= 0) {
+    const prefix = html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim();
+    const visiblePrefix = htmlToVisibleText(prefix);
+    // An attribution before a legacy notification is not evidence of a top-posted answer.
+    // Without an independent text part, cutting here can silently discard a bottom reply.
+    if (!hasTextBaseline && config.providerReplyHeaders.some((regex) =>
+      regex.test(visiblePrefix.replace(/\s+/g, ' ').trim()))) {
+      return { text: html.trim() };
+    }
     return {
-      text: html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim(),
+      text: prefix,
       matched: 'alga-reply-marker',
       heuristic: 'html-marker-boundary',
     };
@@ -693,7 +701,23 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
     }
 
     if (line.startsWith('>')) {
-      removedQuoted = true;
+      let end = i + 1;
+      while (end < lines.length && (!lines[end].trim() || lines[end].trim().startsWith('>'))) {
+        end += 1;
+      }
+      const precedingLine = kept.filter((value) => value.trim()).at(-1)?.trim() ?? '';
+      const quoteOpening = line.replace(/^>\s*/, '');
+      const hasAttribution = [precedingLine, quoteOpening].some((value) =>
+        /\bwrote:$/i.test(value) || config.providerReplyHeaders.some((regex) => regex.test(value)));
+      // A quotation surrounded by authored prose may be an error message or other evidence.
+      // Only discard it as inline reply history when an attribution identifies it as such.
+      if (precedingLine && !hasAttribution && introducesInlineQuote(lines, i, config)) {
+        kept.push(...lines.slice(i, end));
+      } else {
+        kept.push(...lines.slice(i, end).filter((value) => !value.trim()));
+        removedQuoted = true;
+      }
+      i = end - 1;
       continue;
     }
 
@@ -881,7 +905,7 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
 
   let trimmedHtmlResult: TrimResult | undefined;
   if (originalHtml) {
-    trimmedHtmlResult = trimHtmlAtBoundary(originalHtml, mergedConfig);
+    trimmedHtmlResult = trimHtmlAtBoundary(originalHtml, mergedConfig, Boolean(originalText.trim()));
   }
 
   if (textBoundaryHeuristic) {

@@ -124,12 +124,22 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
       expectNoNotification(result);
     });
 
-    it('leaves nothing of the notification when the reply itself is empty', () => {
+    it('leaves nothing of the notification when the text confirms the reply is empty', () => {
       const html = QUOTED_HTML.replace('<div dir="ltr">ANSWER</div>', '<div dir="ltr"><br></div>');
 
-      for (const input of [{ text: QUOTED_TEXT, html }, { text: QUOTED_TEXT }, { text: '', html }]) {
+      for (const input of [{ text: QUOTED_TEXT, html }, { text: QUOTED_TEXT }]) {
         expectNoNotification(parseEmailReply(input));
       }
+    });
+
+    it('preserves ambiguous legacy HTML when only an attribution precedes the marker', () => {
+      const html = QUOTED_HTML.replace('<div dir="ltr">ANSWER</div>', '<div dir="ltr"><br></div>');
+      // With no text part or quoted blockquote, the parser cannot distinguish the final
+      // paragraph of a notification from an authored bottom reply. Preserve too much.
+      const result = parseEmailReply({ text: '', html });
+
+      expect(result.sanitizedHtml).toBe(html);
+      expect(result.appliedHeuristics).not.toContain('html-marker-boundary');
     });
   });
 
