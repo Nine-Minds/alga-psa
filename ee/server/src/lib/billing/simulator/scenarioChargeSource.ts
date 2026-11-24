@@ -510,6 +510,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
     if (fixedServices.length === 0 && line.contract_line_type !== "Fixed") {
       return null;
     }
+    // Match live billing: without Fixed members, attach the line fee to the
+    // first non-product service by ID, regardless of its configuration type.
+    // Fixed unit-priced members suppress this fallback just like bundle members.
+    const fallbackService = fixedServices.length === 0
+      ? line.services
+          .filter((service) => !isProductService(service))
+          .sort((a, b) => a.service_id.localeCompare(b.service_id))[0]
+      : null;
 
     const planServices = fixedServices.map((service) => {
       const config = service.configuration;
@@ -566,9 +574,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
           baseRateBasis: service.base_rate_basis,
           pricingBasis: service.pricing_basis,
         })),
-        // The scenario carries the full service list; there is no separate
-        // catalog fallback row to load for a hypothetical line.
-        fallbackService: null,
+        fallbackService: fallbackService
+          ? {
+              serviceId: fallbackService.service_id,
+              serviceName: fallbackService.service_name,
+              taxRateId: fallbackService.tax_rate_id,
+              configurationId: syntheticConfigId(line.key, fallbackService.service_id),
+            }
+          : null,
       },
       taxContext: this.input.taxPorts,
       metadata: { lineCycle, quantityLabel: cadenceQuantityLabel(lineCycle) },
