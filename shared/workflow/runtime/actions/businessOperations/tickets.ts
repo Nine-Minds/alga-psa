@@ -11,6 +11,8 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '../../../../lib/tickets/ticketLifecycleEvents';
 import { loadTicketRecurringProvenance } from '../../../../lib/tickets/ticketRecurringProvenance';
+import { TagModel } from '../../../../models/tagModel';
+import { replaceTagsOnEntity } from '../../../../services/tags/applyTagChanges';
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
@@ -30,7 +32,7 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
-import { retainWorkflowTicketAuthority } from './shared';
+import { retainWorkflowTicketAuthority, admitWorkflowTagWrite } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
 import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
@@ -778,7 +780,7 @@ export function registerTicketActions(): void {
           'client-location'
         ),
         due_date: isoDateTimeSchema.nullable().optional().describe('Due date'),
-        tags: z.array(z.string()).optional().describe('Tags (stored in ticket attributes)'),
+        tags: z.array(z.string()).optional().describe('Replaces the ticket\'s real tags (tag_definitions/tag_mappings). Tags not listed are removed; [] clears all tags.'),
         custom_fields: z.record(z.string(), z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
         attributes: z.record(z.string(), z.unknown()).optional().describe('Attributes merge')
       }).describe('Patch object').refine((patch) => Object.keys(patch).length > 0, {
@@ -846,6 +848,8 @@ export function registerTicketActions(): void {
         }
       }
 
+      if (input.patch.tags !== undefined) await admitWorkflowTagWrite(ctx, tx);
+
       let currentAttributes: Record<string, any> = {};
       const parsedAttrs = parseJsonMaybe(current.attributes);
       currentAttributes = parsedAttrs && typeof parsedAttrs === 'object' && !Array.isArray(parsedAttrs) ? parsedAttrs : {};
@@ -857,7 +861,6 @@ export function registerTicketActions(): void {
         ...currentAttributes,
         ...(input.patch.attributes ?? {})
       } as Record<string, any>;
-      if (input.patch.tags) mergedAttributes.tags = input.patch.tags;
       if (input.patch.custom_fields) mergedAttributes.custom_fields = input.patch.custom_fields;
       // The column is the due date (below). The attribute is mirrored only because workflows written
       // before the backfill read it through tickets.find include.attributes; nothing else reads it.
@@ -883,7 +886,9 @@ export function registerTicketActions(): void {
         subcategory_id: (current.subcategory_id as string | null) ?? null,
         location_id: (current.location_id as string | null) ?? null,
         due_date: toIsoOrNull(current.due_date),
-        tags: (currentAttributes.tags as string[] | undefined) ?? null
+        tags: input.patch.tags !== undefined
+          ? (await TagModel.getTagsByEntity(input.ticket_id, 'ticket', tx.tenantId, tx.trx)).map((t) => String(t.tag_text)).sort((a, b) => a.localeCompare(b))
+          : null
       };
 
       const resolvedAssignment = input.patch.assignment !== undefined
@@ -927,6 +932,15 @@ export function registerTicketActions(): void {
           tx.actorUserId
         );
 
+        if (input.patch.tags !== undefined) {
+          await replaceTagsOnEntity(tx.trx, tx.tenantId, {
+            entityType: 'ticket',
+            entityId: input.ticket_id,
+            tags: input.patch.tags,
+            actorUserId: tx.actorUserId,
+          });
+        }
+
         await publishTicketTransitionsAfterCommit(tx.trx, {
           tenant: tx.tenantId,
           before: transitionBefore,
@@ -946,10 +960,6 @@ export function registerTicketActions(): void {
         rethrowAsStandardError(ctx, error);
       }
 
-      const updatedAttributes = parseJsonMaybe(updated.attributes);
-      const normalizedUpdatedAttributes =
-        updatedAttributes && typeof updatedAttributes === 'object' && !Array.isArray(updatedAttributes) ? updatedAttributes : {};
-
       const after = {
         title: (updated.title as string | null) ?? null,
         status_id: (updated.status_id as string | null) ?? null,
@@ -965,7 +975,9 @@ export function registerTicketActions(): void {
         subcategory_id: (updated.subcategory_id as string | null) ?? null,
         location_id: (updated.location_id as string | null) ?? null,
         due_date: toIsoOrNull(updated.due_date),
-        tags: (normalizedUpdatedAttributes.tags as string[] | undefined) ?? null
+        tags: input.patch.tags !== undefined
+          ? (await TagModel.getTagsByEntity(input.ticket_id, 'ticket', tx.tenantId, tx.trx)).map((t) => String(t.tag_text)).sort((a, b) => a.localeCompare(b))
+          : null
       };
 
       await writeRunAudit(ctx, tx, {

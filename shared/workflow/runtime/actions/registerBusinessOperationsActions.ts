@@ -13,6 +13,7 @@ import { registerEntityLinkActions } from './businessOperations/entityLinks';
 import { registerActivityActions } from './businessOperations/activities';
 import { registerOpportunityActions } from './businessOperations/opportunities';
 import { registerInventoryActions } from './businessOperations/inventory';
+import { registerTagActions } from './businessOperations/tags';
 
 export function registerBusinessOperationsActionsV2(): void {
   registerTicketActions();
@@ -30,4 +31,5 @@ export function registerBusinessOperationsActionsV2(): void {
   registerActivityActions();
   registerOpportunityActions();
   registerInventoryActions();
+  registerTagActions();
 }
