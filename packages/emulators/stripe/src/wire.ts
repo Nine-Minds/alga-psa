@@ -3,7 +3,7 @@ import type { NextFunction, Request, RequestHandler, Response, Router } from 'ex
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { StripeWireError } from './core';
-import type { StripeEmulatorCore, StripeCheckoutSession, StripeEvent } from './core';
+import type { StripeEmulatorCore, StripeCheckoutSession, StripeEvent, StripeAddressInput } from './core';
 import { deliverEvent } from './notifier';
 
 const OPERATIONS = [
@@ -12,6 +12,11 @@ const OPERATIONS = [
   'customers.retrieve',
   'checkout.sessions.create',
   'checkout.sessions.retrieve',
+  'webhook_endpoints.create',
+  'webhook_endpoints.retrieve',
+  'webhook_endpoints.update',
+  'webhook_endpoints.delete',
+  'webhook_endpoints.list',
 ] as const;
 
 const KNOWN_ERROR_TYPES = new Set([
@@ -64,8 +69,60 @@ function sessionResponse(core: StripeEmulatorCore, session: StripeCheckoutSessio
   return { ...session };
 }
 
+/** Form-encoded `enabled_events[0]=…` arrives as an array (or index-keyed object). */
+function stringList(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  const raw = Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [value];
+  return raw.map(String);
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  return value === true || value === 'true';
+}
+
 function formatMoney(cents: number, currency: string): string {
   return `${currency.toUpperCase()} ${(cents / 100).toFixed(2)}`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
+
+/** Reads a Stripe form-encoded address (address[line1]=..., parsed to an object) into address input. */
+function addressParam(value: unknown): StripeAddressInput | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+  const field = (key: string) => (typeof raw[key] === 'string' ? (raw[key] as string) : undefined);
+  return {
+    line1: field('line1'),
+    line2: field('line2'),
+    city: field('city'),
+    state: field('state'),
+    postal_code: field('postal_code'),
+    country: field('country'),
+  };
+}
+
+/**
+ * Billing fields as Stripe Checkout shows them: country and postal code with
+ * the card ('auto'), the full address when billing_address_collection is 'required'.
+ */
+function billingFields(session: StripeCheckoutSession): string {
+  const input = (name: string, label: string, attrs = '') =>
+    `<label style="display:block;text-align:left;margin:8px 0;font-size:14px;">${label}
+      <input name="${name}" ${attrs} style="display:block;width:100%;box-sizing:border-box;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px;"></label>`;
+  const full = session.billing_address_collection === 'required';
+  return `<fieldset style="border:1px solid #e3e3e3;border-radius:6px;padding:8px 16px;margin:16px 0;">
+    <legend style="font-size:13px;color:#555;">${full ? 'Billing address' : 'Card billing details'}</legend>
+    ${full ? input('name', 'Name on card', 'autocomplete="cc-name"') : ''}
+    ${full ? input('address[line1]', 'Address line 1', 'autocomplete="address-line1"') : ''}
+    ${full ? input('address[line2]', 'Address line 2', 'autocomplete="address-line2"') : ''}
+    ${full ? input('address[city]', 'City', 'autocomplete="address-level2"') : ''}
+    ${full ? input('address[state]', 'State / province', 'autocomplete="address-level1"') : ''}
+    ${input('address[postal_code]', 'Postal code', 'autocomplete="postal-code"')}
+    ${input('address[country]', 'Country (two-letter code)', 'autocomplete="country" maxlength="2" placeholder="US"')}
+  </fieldset>`;
 }
 
 function hostedCheckoutPage(session: StripeCheckoutSession): string {
@@ -74,8 +131,10 @@ function hostedCheckoutPage(session: StripeCheckoutSession): string {
 <head><meta charset="utf-8"><title>Simulated Stripe Checkout</title></head>
 <body style="font-family:system-ui,sans-serif;max-width:480px;margin:48px auto;padding:0 16px;text-align:center;">
   <h1>Simulated Stripe Checkout</h1>
-  <p>Invoice total: <strong>${formatMoney(session.amount_total, session.currency)}</strong></p>
+  <p>${session.mode === 'subscription' ? 'Subscription' : 'Invoice'} total: <strong>${formatMoney(session.amount_total, session.currency)}</strong></p>
+  <p style="font-size:12px;color:#777;">Session <code>${escapeHtml(session.id)}</code></p>
   <form method="POST" action="/checkout/sessions/${session.id}/pay" style="margin:16px 0;">
+    ${billingFields(session)}
     <button type="submit" style="background:#635bff;color:#fff;border:0;padding:12px 28px;border-radius:6px;font-size:16px;cursor:pointer;">Pay</button>
   </form>
   <form method="POST" action="/checkout/sessions/${session.id}/decline" style="margin:8px 0;">
@@ -106,7 +165,8 @@ function hostedDeclinePage(session: StripeCheckoutSession, message: string): str
 }
 
 /**
- * Stripe-shaped vendor surface: the /v1 API (customers + checkout sessions)
+ * Stripe-shaped vendor surface: the /v1 API (customers, checkout sessions,
+ * subscriptions, webhook endpoints)
  * and the browser-facing simulated Checkout page with Pay / Decline / Cancel
  * controls. Point STRIPE_API_BASE_URL at the /v1 origin.
  */
@@ -135,6 +195,8 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
       email,
       name: typeof body.name === 'string' ? body.name : undefined,
       metadata: (body.metadata ?? {}) as Record<string, string>,
+      address: addressParam(body.address),
+      phone: typeof body.phone === 'string' ? body.phone : undefined,
     }));
   }));
 
@@ -164,6 +226,8 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
         expires_at: typeof body.expires_at === 'number' ? body.expires_at : undefined,
         currency: body.currency !== undefined ? String(body.currency) : undefined,
         amount: body.amount !== undefined ? Number(body.amount) : undefined,
+        billing_address_collection: body.billing_address_collection === 'required' ? 'required'
+          : body.billing_address_collection === 'auto' ? 'auto' : undefined,
       },
       hostedBaseFromRequest(req, core),
     );
@@ -237,6 +301,47 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.json(core.getCheckoutSession(sessionId));
   }));
 
+  // ── Webhook endpoints ─────────────────────────────────────────────────────
+
+  v1.post('/webhook_endpoints', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.create');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.createWebhookEndpoint({
+      url: typeof body.url === 'string' ? body.url : '',
+      enabled_events: stringList(body.enabled_events) ?? [],
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+      api_version: typeof body.api_version === 'string' ? body.api_version : undefined,
+    }));
+  }));
+
+  v1.get('/webhook_endpoints', route((_req, res) => {
+    checkFault(core, 'webhook_endpoints.list');
+    res.json(core.listWebhookEndpoints());
+  }));
+
+  v1.get('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.retrieve');
+    res.json(core.getWebhookEndpoint(String(req.params.id)));
+  }));
+
+  v1.post('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.update');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.updateWebhookEndpoint(String(req.params.id), {
+      url: typeof body.url === 'string' ? body.url : undefined,
+      enabled_events: stringList(body.enabled_events),
+      disabled: optionalBoolean(body.disabled),
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+    }));
+  }));
+
+  v1.delete('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.delete');
+    res.json(core.deleteWebhookEndpoint(String(req.params.id)));
+  }));
+
   // ── Browser-facing simulated Checkout ────────────────────────────────────
 
   router.get('/checkout/sessions/:id', route((req, res) => {
@@ -251,7 +356,11 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
       res.redirect(303, session.success_url.replace('{CHECKOUT_SESSION_ID}', session.id));
       return;
     }
-    const event: StripeEvent = core.completeSession(sessionId);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const event: StripeEvent = core.completeSession(sessionId, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      address: addressParam(body.address),
+    });
     await deliverEvent(core, event, env);
     res.redirect(303, session.success_url.replace('{CHECKOUT_SESSION_ID}', session.id));
   }));

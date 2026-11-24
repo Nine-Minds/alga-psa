@@ -25,11 +25,11 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import knex, { Knex } from 'knex';
 import {
-  TENANT_TABLE_MANIFEST,
   TenantManifestCycleError,
   computeTenantDeletionOrder,
   tenantDeletionOrder,
 } from '../packages/db/src/lib/tenantTableManifest';
+import { TENANT_TABLE_MANIFEST } from '../ee/temporal-workflows/src/db/tenantTableManifest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -285,7 +285,7 @@ export async function validateDeletionOrder(): Promise<ValidationResult> {
     // ground truth for FKs the committed snapshot may lag.
     const manifestProblems: string[] = [];
     try {
-      const computed = computeTenantDeletionOrder();
+      const computed = computeTenantDeletionOrder(TENANT_TABLE_MANIFEST);
       for (const v of computed.violations) {
         manifestProblems.push(`${v.child} (idx ${v.childIndex}) must be deleted before ${v.parent} (idx ${v.parentIndex}) [${v.column}, ${v.deleteRule}]`);
       }
@@ -293,7 +293,7 @@ export async function validateDeletionOrder(): Promise<ValidationResult> {
       if (error instanceof TenantManifestCycleError) manifestProblems.push(`cycle: ${error.cycle.join(' -> ')}`);
       else throw error;
     }
-    const manifestOrder = tenantDeletionOrder();
+    const manifestOrder = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
     if (manifestOrder.length !== tablesInDeletionOrder.length || manifestOrder.some((t, i) => t !== tablesInDeletionOrder[i])) {
       manifestProblems.push('TENANT_TABLES_DELETION_ORDER differs from the manifest deletion order');
     }

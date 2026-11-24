@@ -21,10 +21,12 @@ export function getAllSourceFiles(dir: string, base: string = dir): Record<strin
   const entries: Record<string, string> = {};
   for (const file of readdirSync(dir)) {
     const fullPath = join(dir, file);
+    // tsup expands entry paths as globs, which require forward slashes on Windows.
+    const entryPath = fullPath.replace(/\\/g, '/');
     if (statSync(fullPath).isDirectory()) {
       Object.assign(entries, getAllSourceFiles(fullPath, base));
     } else if (file.endsWith('.json')) {
-      entries[relative(base, fullPath)] = fullPath;
+      entries[relative(base, fullPath)] = entryPath;
     } else if (
       /\.(ts|tsx)$/.test(file) &&
       !file.endsWith('.d.ts') &&
@@ -34,7 +36,7 @@ export function getAllSourceFiles(dir: string, base: string = dir): Record<strin
       !file.endsWith('.spec.tsx')
     ) {
       const relPath = relative(base, fullPath).replace(/\.(ts|tsx)$/, '');
-      entries[relPath] = fullPath;
+      entries[relPath] = entryPath;
     }
   }
   return entries;

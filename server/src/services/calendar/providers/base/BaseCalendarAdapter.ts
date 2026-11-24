@@ -1,3 +1,10 @@
+// LEVERAGE: friction calendar-sync-duplicate-copies — stale copy of
+// ee/packages/calendar/src/lib/services/calendar (and utils/calendar). The live
+// path is @alga-psa/ee-calendar; the recurring-series import fix landed there
+// only. Reachable from tests alone (the integrations webhook handlers are dead:
+// calendarWebhookRoutes.delegator.test asserts the routes do not import them).
+// Do not fix bugs here — repoint the remaining test imports and delete.
+import { toSafeMicrosoftOAuthFailure } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
 
@@ -89,7 +96,9 @@ export abstract class BaseCalendarAdapter {
     }
 
     const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
-    this.log('error', errorMessage, error);
+    // Never pass a raw axios error to the logger: `config.data` is the
+    // urlencoded token request body and contains client_secret on refresh.
+    this.log('error', errorMessage, toSafeMicrosoftOAuthFailure(error));
     const wrapped = new Error(errorMessage);
     // Propagate metadata for outer catch blocks
     try {

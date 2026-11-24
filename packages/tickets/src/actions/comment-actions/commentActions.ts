@@ -2,7 +2,8 @@
 // TODO: Comment model method signature changes
 'use server'
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
-import { assertNativeEditKeepsAudience } from '@alga-psa/shared/lib/commentAudience';
+import { attachThreadAudiencesOnSeatTicket } from './commentAudienceRead';
+import { assertNativeEditKeepsAudience, resolveCommentWriteAuthor } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -114,12 +115,25 @@ async function assertClientOwnsTicket(
   }
 }
 
-async function assertClientCanCreateComment(
+// LEVERAGE: pattern ticket-comment-record-authz — all-principal concealed 'update' authorization of the parent
+// ticket is repeated in createComment, assertMayChangeComment and toggleCommentReaction.
+async function assertCanCreateComment(
   trx: Knex.Transaction,
   tenant: string,
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
+  // Fail closed for every principal: a comment with no parent ticket cannot be record-authorized.
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required to create a comment');
+  }
+
+  // Record-level authorization (bundle/relationship narrowing for MSP principals; contact / board /
+  // billing-profile narrowing for clients), the same gate every other comment mutation uses. A missing
+  // and an invisible ticket produce the identical denial, and it runs before any lookup that could probe
+  // records the caller cannot see (e.g. the parent thread below) and before any write.
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update', conceal: 'all' });
+
   if (!isClientUserType(user?.user_type)) {
     return;
   }
@@ -131,15 +145,6 @@ async function assertClientCanCreateComment(
   if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
     throw new Error('Client users can only create their own comments');
   }
-
-  if (!comment.ticket_id) {
-    throw new Error('ticket_id is required for client comments');
-  }
-
-  // Record-level visibility (contact / board / billing-profile narrowing), the same gate every other
-  // comment mutation uses. A missing and an invisible ticket produce the identical denial, and it runs
-  // before any lookup that could probe records the client cannot see (e.g. the parent thread below).
-  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
@@ -182,6 +187,10 @@ async function loadThreadVisibility(
   return new Map(rows.map((r) => [r.thread_id, { is_internal: r.is_internal }]));
 }
 
+/** Internal readers are filtered by comment audience in the read itself; client readers keep their projection. */
+const internalReader = <U extends { user_id: string; user_type?: string }>(user: U): U | undefined =>
+  user.user_type === 'internal' ? user : undefined;
+
 async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
   // The kernel's rbacEvaluator is a stub, so ticket:read is checked here for everyone.
   if (!(await hasPermission(user, 'ticket', 'read'))) {
@@ -202,7 +211,10 @@ export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeCommentRead(user, trx, tenant!, ticketId);
-      const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
+      const readComments = await Comment.getAllbyTicketId(trx, tenant!, ticketId, internalReader(user));
+      const comments = user.user_type === 'internal'
+        ? await attachThreadAudiencesOnSeatTicket(trx, tenant!, ticketId, readComments)
+        : readComments;
       const threads = isMspPrincipalUserType(user.user_type)
         ? undefined
         : await loadThreadVisibility(trx, tenant!, comments);
@@ -222,7 +234,7 @@ export const findCommentById = withAuth(async (user, { tenant }, commentId: stri
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const comment = await Comment.get(trx, tenant!, commentId);
+      const comment = await Comment.get(trx, tenant!, commentId, internalReader(user));
       if (!comment?.ticket_id) {
         throw commentReadNotFound();
       }
@@ -333,7 +345,7 @@ export const createComment = withAuth(async (
     const { knex: db } = await createTenantKnex();
     const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
+      await assertCanCreateComment(trx, commentTenant!, user, commentToInsert);
 
       // A reply inherits its thread's visibility (Comment.insert enforces it),
       // so resolve the effective visibility before validating one-off Cc/Bcc.
@@ -369,7 +381,11 @@ export const createComment = withAuth(async (
         };
       }
 
-      const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
+      // A seat technician reaches this action from the ticket screen: decide the write for their
+      // organization so Private and the legacy internal note are refused (COMMENT_AUDIENCE_INVALID).
+      const audienceAuthor = await resolveCommentWriteAuthor(trx, commentTenant!, user);
+      const insertedComment = await Comment.insertRecord(trx, commentTenant!, commentToInsert, undefined, audienceAuthor);
+      const commentId = insertedComment.comment_id!;
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
       // A named audience on a root comment is only stored for co-managed workspaces. Read back what
@@ -383,8 +399,7 @@ export const createComment = withAuth(async (
         labelledAudience = applied?.audience ?? null;
       }
 
-      // Verify the comment was inserted correctly
-      const insertedComment = await Comment.get(trx, commentTenant!, commentId);
+      // Log the stored values returned by the insert.
       if (insertedComment) {
         console.log(`[createComment] Verification - inserted comment:`, {
           comment_id: insertedComment.comment_id,
@@ -418,7 +433,7 @@ export const createComment = withAuth(async (
         // Publish TICKET_COMMENT_ADDED event for mention notifications
         // Persist notification intent with the comment; failed intent writes must roll back.
         try {
-          const eventComment = await Comment.get(trx, commentTenant, commentId);
+          const eventComment = insertedComment;
           await publishCommentEvent(trx, 'ticket', {
             tenantId: commentTenant,
             ticketId: comment.ticket_id!,
@@ -460,7 +475,6 @@ export const createComment = withAuth(async (
 
         // Publish workflow v2 domain ticket message events (additive; no impact on legacy comment events).
         try {
-          const insertedComment = await Comment.get(trx, commentTenant, commentId);
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
 
@@ -507,7 +521,7 @@ export const createComment = withAuth(async (
       // reconciler repairs a post-commit scheduling failure.
       if (isScheduled && labelledAudience && commentTenant && comment.ticket_id) {
         // Keep the audience with the durable intent so the scheduled dispatch cannot widen it.
-        const scheduledComment = await Comment.get(trx, commentTenant, commentId);
+        const scheduledComment = insertedComment;
         await tenantDb(trx, commentTenant).table('comments').where({ comment_id: commentId }).update({
           comment_publication_payload: JSON.stringify({
             ...buildTicketCommentAddedPayload({
@@ -638,16 +652,63 @@ export const createComment = withAuth(async (
  * that arrived by email). A co-managed collaborator's comment changes only
  * through the collaboration commands.
  */
-async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment, tenant: string): Promise<void> {
-  // A client principal may only reach comments on tickets it can still see: authorship alone
-  // (e.g. a row written before the write path was guarded) does not grant access.
-  if (isClientUserType(user.user_type) && existing.ticket_id) {
-    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update' });
+async function assertMayChangeComment(
+  trx: Knex.Transaction,
+  user: { user_id: string; user_type: string },
+  existing: IComment,
+  tenant: string,
+  operation: 'update' | 'delete',
+): Promise<void> {
+  // authorizeTicketRecordAccess performs the coarse delete permission check
+  // itself after its per-record decision. Keep update's coarse RBAC check here,
+  // where the record authorization kernel intentionally evaluates only the
+  // ticket-specific policy.
+  if ((operation === 'update' || !existing.ticket_id) && !(await hasPermission(user as any, 'ticket', operation, trx))) {
+    throw new Error(`Permission denied: Cannot ${operation} comment`);
+  }
+  // Authorship alone does not preserve access after ticket permissions or
+  // record visibility change. Pass the requested operation through so
+  // delete-specific ticket rules take precedence over update-rule fallback.
+  // Every principal is denied indistinguishably when the ticket is no longer
+  // visible, even if the comment author still matches.
+  if (existing.ticket_id) {
+    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: operation, conceal: 'all' });
   }
   if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
   if (existing.user_id === user.user_id) return;
   if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
   throw new Error('You can only edit your own comments');
+}
+
+/**
+ * Scheduled comments may only be changed by their internal author while that
+ * author can currently update the owning ticket. Ticket access does not grant
+ * authority over another user's withheld reply.
+ */
+async function assertMayManageScheduledComment(
+  trx: Knex.Transaction,
+  user: { user_id: string; user_type: string },
+  existing: IComment,
+  tenant: string,
+): Promise<void> {
+  if (!(await hasPermission(user as any, 'ticket', 'update', trx))) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
+  }
+  // Fail closed: a scheduled comment with no resolvable owning ticket cannot be
+  // record-authorized, so refuse rather than fall through to an allow.
+  if (!existing.ticket_id) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
+  }
+  await authorizeTicketRecordAccess({
+    trx,
+    tenant,
+    user: user as any,
+    ticketId: existing.ticket_id,
+    action: 'update',
+  });
+  if (!isMspPrincipalUserType(user.user_type) || existing.user_id !== user.user_id) {
+    throw new Error('Permission denied: Cannot manage scheduled comment');
+  }
 }
 
 export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {
@@ -690,15 +751,17 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
-      await assertMayChangeComment(trx, user, existingComment, commentTenant);
+      await assertMayChangeComment(trx, user, existingComment, commentTenant, 'update');
       // Only the text and its two flags are editable; authorship, timestamps,
       // publication and deletion are history and have their own commands.
       const comment: Partial<IComment> = {};
       if (requested.note !== undefined) comment.note = requested.note;
-      if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
-      // A client can never make a comment internal, nor change an internal one.
-      if (requested.is_internal !== undefined) {
-        if (isMspPrincipalUserType(user.user_type)) {
+      // Portal contacts may only revise the note body; ignore all other
+      // caller-controlled fields just as the portal action does.
+      if (isMspPrincipalUserType(user.user_type)) {
+        if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
+        // MSP edits may change visibility only when the thread audience permits it.
+        if (requested.is_internal !== undefined) {
           if (requested.is_internal !== Boolean(existingComment.is_internal)) {
             // A native text edit can never relabel a labelled thread, nor publish a legacy note in
             // a co-managed workspace. Only a real visibility change pays for the lookup.
@@ -707,8 +770,6 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
             await assertNativeEditKeepsAudience(trx, commentTenant, editedThread, { isInternal: requested.is_internal });
           }
           comment.is_internal = requested.is_internal;
-        } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
-          throw new Error('Only MSP users can set comments as internal');
         }
       }
 
@@ -751,11 +812,10 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
     });
 
       // Use the Comment model to update the comment
-      await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
+      const updatedComment = await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
 
-      // Verify the comment was updated correctly
-      const updatedComment = await Comment.get(trx, commentTenant, id);
+      // Log the stored values returned by the update.
       if (updatedComment) {
         console.log(`[updateComment] Verification - updated comment:`, {
           comment_id: updatedComment.comment_id,
@@ -868,7 +928,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
-      if (existingComment) await assertMayChangeComment(trx, user, existingComment, tenant);
+      if (existingComment) await assertMayChangeComment(trx, user, existingComment, tenant, 'delete');
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
       await tenantScopedTable(trx, 'comment_reactions', tenant)
@@ -879,7 +939,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
         .where({ comment_id: id })
         .update({ comment_id: null });
 
-      await Comment.delete(trx, tenant, id);
+      if (existingComment) await Comment.deleteRecord(trx, tenant, existingComment);
 
       if (existingComment?.ticket_id) {
         await publishTicketUpdate({
@@ -936,7 +996,7 @@ export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existing = await Comment.get(trx, tenant, id);
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be rescheduled');
-    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only reschedule your own comments');
+    await assertMayManageScheduledComment(trx, user, existing, tenant);
     if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
     const scheduled = await scheduleBackgroundJobAt(
       SCHEDULED_COMMENT_JOB, { tenantId: tenant, ticketId: existing.ticket_id!, commentId: id }, at,
@@ -960,7 +1020,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const existing = await Comment.get(trx, tenant, id);
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be canceled');
-    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only cancel your own comments');
+    await assertMayManageScheduledComment(trx, user, existing, tenant);
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });

@@ -61,6 +61,7 @@ import {
     parsePendingRememberContextCookie,
 } from "./mspRememberedEmail";
 import { UserSession } from "@alga-psa/db/models/UserSession";
+import { isTokenRevokedByLoginPolicy } from "./passwordLoginGate";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
@@ -154,7 +155,7 @@ const SESSION_COOKIE = getSessionCookieConfig();
  */
 type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
 
-async function logTrackedSessionRejection(reason: string): Promise<void> {
+async function logTrackedSessionRejection(reason: string, sessionId?: string): Promise<void> {
     let requestId = 'unavailable';
     try {
         const requestHeaders = await headers();
@@ -162,6 +163,7 @@ async function logTrackedSessionRejection(reason: string): Promise<void> {
         if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
     } catch { /* Auth callbacks can also run outside a request context. */ }
     console.warn('[auth] session_rejected', { reason, requestId });
+    if (sessionId) UserSession.logLifecycle?.('rejected', sessionId, reason);
 }
 
 async function checkTrackedSession(
@@ -180,7 +182,10 @@ async function checkTrackedSession(
         || typeof userType !== 'string'
         || !isInteractiveUserType(userType)
     ) {
-        await logTrackedSessionRejection('missing_identity_claims');
+        await logTrackedSessionRejection(
+            'missing_identity_claims',
+            typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : undefined,
+        );
         return 'revoked';
     }
 
@@ -190,12 +195,12 @@ async function checkTrackedSession(
             userType,
         });
         if (rejectionReason) {
-            await logTrackedSessionRejection(`durable_session_${rejectionReason}`);
+            await logTrackedSessionRejection(`durable_session_${rejectionReason}`, sessionId);
             return 'revoked';
         }
         return 'live';
     } catch {
-        await logTrackedSessionRejection('durable_session_lookup_unavailable');
+        await logTrackedSessionRejection('durable_session_lookup_unavailable', sessionId);
         return 'unverified';
     }
 }
@@ -1656,10 +1661,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
+            // LEVERAGE: pattern credentials-authorize — this authorize() is a near-verbatim copy of the other CredentialsProvider (login protection, tenant resolution, 2FA step, token claims); the policy gate is shared via passwordLoginGate.ts but the rest still drifts. Candidate for one shared authorize factory.
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
-                const { authenticateUser } = await import('../actions/auth');
+                const { authenticateUserForAuth } = await import('./authenticateUserForAuth');
+                const { completePasswordLoginSecondFactor } = await import('./passwordLoginGate');
                 const {
                     enforceLoginProtection,
                     normalizeLoginEmail,
@@ -1720,7 +1727,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
                     console.log('Attempting to authenticate user:', credentials.email);
                     console.log('user type', credentials.userType);
-                    const user = await authenticateUser(
+                    const user = await authenticateUserForAuth(
                         credentials.email as string,
                         credentials.password as string,
                         credentials.userType as string,
@@ -1773,70 +1780,17 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     }
                     }
 
-                    // 2FA Verification with device recognition
-                    if (user.two_factor_enabled) {
-                        console.log('2FA is enabled for user, checking device recognition');
-
-                        let shouldRequire2FA = true;
-
-                        // Check if device-based 2FA skip is enabled
-                        if ((user as any).two_factor_required_new_device && request) {
-                            try {
-                                // Generate device fingerprint from request
-                                const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
-                                const deviceFingerprint = generateDeviceFingerprint(userAgent);
-
-                                // Check if this device is known
-                                const isKnown = await UserSession.isKnownDevice(
-                                    user.tenant,
-                                    user.user_id.toString(),
-                                    deviceFingerprint
-                                );
-
-                                console.log('Device recognition check:', {
-                                    deviceFingerprint,
-                                    isKnownDevice: isKnown
-                                });
-
-                                // Skip 2FA for known devices
-                                if (isKnown) {
-                                    shouldRequire2FA = false;
-                                    console.log('Device recognized, skipping 2FA verification');
-                                }
-                            } catch (error) {
-                                console.error('Device recognition check failed, falling back to 2FA:', error);
-                                // On error, require 2FA for security
-                                shouldRequire2FA = true;
-                            }
-                        }
-
-                        if (shouldRequire2FA) {
-                            console.log('2FA verification required, starting verification');
-                            if (!credentials.twoFactorCode) {
-                                console.log('2FA verification failed: No code provided');
-                                logger.warn("2FA code required for email", credentials.email);
-                                return null;
-                            }
-                            if (!user.two_factor_secret) {
-                                console.log('2FA verification failed: No secret found');
-                                logger.warn("2FA secret not found for email", credentials.email);
-                                return null;
-                            }
-                            console.log('Verifying 2FA code');
-                            const { verifyAuthenticator } = await import('./authenticator/authenticator');
-                            const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
-                            console.log('2FA verification result:', { isValid: isValid2FA });
-                            if (!isValid2FA) {
-                                console.log('2FA verification failed: Invalid code');
-                                logger.warn("Invalid 2FA code for email", credentials.email);
-                                // A wrong TOTP code is guessable evidence just like a wrong
-                                // password, so it shares the same failure budget.
-                                await recordLoginFailure(attemptContext);
-                                return null;
-                            }
-                            console.log('2FA verification successful');
-                        }
-                    }
+                    // Second factor (tenant 2FA policy, the user's own 2FA, known-device skip).
+                    // authenticateUser has already applied the SSO-required / forced-enrollment
+                    // policy; the TOTP step is shared by both authorize copies in passwordLoginGate.
+                    await completePasswordLoginSecondFactor({
+                        user,
+                        twoFactorCode: typeof credentials.twoFactorCode === 'string' && credentials.twoFactorCode
+                            ? credentials.twoFactorCode
+                            : undefined,
+                        request,
+                        onInvalidCode: () => recordLoginFailure(attemptContext),
+                    });
 
                     // Defence in depth behind authenticateUser: re-read the stored type and
                     // active flag before recording success or touching any session state.
@@ -1859,7 +1813,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         tenant: user.tenant,
                         user_type: user.user_type,
                         clientId: clientId ?? undefined,
-                        contactId: user.contact_id,
+                        // A database contact link on an internal user is not
+                        // client-portal identity. Only client users may carry
+                        // client-scoped claims into a fresh session.
+                        contactId: user.user_type === 'client' ? user.contact_id : undefined,
                         tenantSlug: tenantSlugForUser,
                     };
 
@@ -1943,6 +1900,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         maxAge: SESSION_MAX_AGE,
     },
     cookies: NEXTAUTH_COOKIES,
+    events: {
+        async signOut({ token }: any) {
+            const sessionId = token?.session_id;
+            if (typeof sessionId === 'string' && sessionId.length > 0) {
+                // Auth.js clears the browser cookie here; durable revocation is a separate action.
+                UserSession.logLifecycle?.('signed_out', sessionId);
+            }
+        },
+    },
     callbacks: {
         async signIn({ user, account, credentials, profile, ...context }: any) {
             const providerId = account?.provider;
@@ -2190,6 +2156,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+                // When this token was minted by a sign-in; with `login_method` it lets the
+                // tenant login policy tell password sessions issued before a cutoff.
+                token.auth_issued_at = Date.now();
 
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
@@ -2300,6 +2269,20 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
             if (trackedSession === 'unverified') {
                 return token;
+            }
+
+            // Keep long-lived/refreshed tokens on the same identity contract
+            // as fresh credentials sessions. Internal users may have a legacy
+            // database contact link, but it never grants portal identity.
+            if (token.user_type === 'internal') {
+                delete token.clientId;
+                delete token.contactId;
+            }
+            // Tenant login policy: an internal password session issued before SSO became
+            // required is revoked (break-glass users excepted). A policy lookup that
+            // cannot complete leaves the cookie alone, like the session lookup above.
+            if (await isTokenRevokedByLoginPolicy(token)) {
+                return null;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2422,8 +2405,16 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.tenant = token.tenant as string;
                 user.tenantSlug = token.tenantSlug as string | undefined;
                 user.user_type = token.user_type as string;
-                user.clientId = token.clientId as string;
-                user.contactId = token.contactId as string;
+                if (typeof token.clientId === 'string' && token.clientId.length > 0) {
+                    user.clientId = token.clientId;
+                } else {
+                    delete user.clientId;
+                }
+                if (typeof token.contactId === 'string' && token.contactId.length > 0) {
+                    user.contactId = token.contactId;
+                } else {
+                    delete user.contactId;
+                }
                 user.plan = token.plan as string | undefined;
                 user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
@@ -2446,6 +2437,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
             if (token.login_method) {
                 (session as any).login_method = token.login_method as string;
+            }
+            if (typeof token.auth_issued_at === 'number') {
+                (session as any).auth_issued_at = token.auth_issued_at;
             }
 
             return session;

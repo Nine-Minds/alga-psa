@@ -27,7 +27,7 @@ export interface PaymentEventContext {
 export interface PaymentEventHandler {
   name: string;
   claims(event: Stripe.Event): boolean;
-  admits(ctx: Pick<PaymentEventContext, 'tenantId'>): Promise<boolean>;
+  admits(ctx: Pick<PaymentEventContext, 'tenantId' | 'event'>): Promise<boolean>;
   /** When claimed but not admitted: true = swallow the event, false = let the next handler run. */
   consumeWhenClosed: boolean;
   /** Return 'consumed' to stop default handling, 'continue' to let it run. */
@@ -47,7 +47,7 @@ export async function dispatchPaymentEvent(
   const outcome: PaymentEventOutcome = { consumed: false, handledBy: [], closed: [] };
   for (const handler of handlers) {
     if (!handler.claims(ctx.event)) continue;
-    if (!(await handler.admits({ tenantId: ctx.tenantId }))) {
+    if (!(await handler.admits({ tenantId: ctx.tenantId, event: ctx.event }))) {
       outcome.closed.push(handler.name);
       if (handler.consumeWhenClosed) { outcome.consumed = true; return outcome; }
       continue;

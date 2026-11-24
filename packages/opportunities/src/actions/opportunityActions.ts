@@ -8,7 +8,7 @@ import { SharedNumberingService } from '@alga-psa/shared/services/numberingServi
 import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityListFilters } from '@alga-psa/types';
 import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, recordDeclaredEvidenceSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
 import { OpportunityModel } from '../models/opportunityModel';
-import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngine';
+import { OPPORTUNITY_REF_REFUSAL, OpportunityEvidenceRefError, correctEvidence, declareStage, recordEvidence, type DeclarationRef } from '../lib/stageEngine';
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
 import { buildOpportunityCreatedPayload, buildOpportunityStageChangedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
@@ -112,18 +112,28 @@ export const declareOpportunityStage = withAuth(async (
   opportunityId: string,
   stage: 'identified' | 'qualified' | 'assessment' | 'proposed' | 'verbal',
   detail?: string,
+  refType?: string | null,
+  refId?: string | null,
 ): Promise<IOpportunity> => {
   await requirePermission(user, 'update');
-  const data = recordDeclaredEvidenceSchema.parse({ checkpoint: stage, detail });
+  const data = recordDeclaredEvidenceSchema.parse({ checkpoint: stage, detail, refType, refId });
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, (trx) => declareStage(
-    trx,
-    tenant,
-    opportunityId,
-    data.checkpoint,
-    actorId(user),
-    data.detail,
-  ));
+  try {
+    return await withTransaction(knex, (trx) => declareStage(
+      trx,
+      tenant,
+      opportunityId,
+      data.checkpoint,
+      actorId(user),
+      data.detail,
+      // Unsupported types reach the engine on purpose: its guard refuses them.
+      data.refType != null && data.refId != null ? { type: data.refType, id: data.refId } as DeclarationRef : null,
+    ));
+  } catch (error) {
+    // The engine's typed refusal is already user-facing; anything else propagates.
+    if (error instanceof OpportunityEvidenceRefError) throw new Error(OPPORTUNITY_REF_REFUSAL);
+    throw error;
+  }
 });
 
 /** @deprecated Use declareOpportunityStage so every open stage follows one path. */
@@ -308,6 +318,45 @@ export const linkQuoteToOpportunity = withAuth(async (user, { tenant }, opportun
     if (linked.status === 'accepted' || linked.status === 'converted') await onQuoteAccepted(trx, linked);
     return linked;
   });
+});
+
+export interface CitableOpportunitySource {
+  type: 'interaction' | 'document';
+  id: string;
+  /** Interaction title or document name. */
+  label: string;
+  /** ISO date the interaction happened / the document was filed. */
+  date: string | null;
+}
+
+/**
+ * The interactions and documents that belong to this deal, for the declare
+ * dialog's "Supporting source" picker. Scoped by the opportunity and tenant;
+ * the engine re-checks whatever the client sends back.
+ */
+export const listCitableSourcesForOpportunity = withAuth(async (
+  user,
+  { tenant },
+  opportunityId: string,
+): Promise<CitableOpportunitySource[]> => {
+  await requirePermission(user, 'read');
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const interactions = await db.table('interactions')
+    .where({ opportunity_id: opportunityId })
+    .select('interaction_id', 'title', 'interaction_date')
+    .orderBy('interaction_date', 'desc');
+  const documentQuery = db.table('document_associations as da')
+    .where({ 'da.entity_type': 'opportunity', 'da.entity_id': opportunityId });
+  db.tenantJoin(documentQuery, 'documents', 'documents.document_id', 'da.document_id');
+  const documents = await documentQuery
+    .select('documents.document_id', 'documents.document_name', 'documents.entered_at', 'documents.updated_at')
+    .orderBy('documents.updated_at', 'desc');
+  const toIso = (value: unknown): string | null => (value ? new Date(value as string | Date).toISOString() : null);
+  return [
+    ...interactions.map((row: any): CitableOpportunitySource => ({ type: 'interaction', id: String(row.interaction_id), label: String(row.title ?? ''), date: toIso(row.interaction_date) })),
+    ...documents.map((row: any): CitableOpportunitySource => ({ type: 'document', id: String(row.document_id), label: String(row.document_name ?? ''), date: toIso(row.entered_at ?? row.updated_at) })),
+  ];
 });
 
 export const listLinkableQuotesForOpportunity = withAuth(async (

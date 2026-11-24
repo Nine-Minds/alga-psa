@@ -133,7 +133,8 @@
       "notes": "Note",
       "deleteTimeEntry": "Elimina l'immissione dell'ora",
       "unsavedChanges": "Modifiche non salvate",
-      "contractLine": "Riga di contratto"
+      "contractLine": "Riga di contratto",
+      "operational": "Operativo – non fatturato"
     },
     "placeholders": {
       "selectService": "Seleziona un servizio",
@@ -152,7 +153,8 @@
       "endAfterStartPicker": "L'ora di fine deve essere successiva all'ora di inizio",
       "durationSameDay": "La durata deve terminare nello stesso giorno",
       "endSameDay": "L'ora di fine deve essere nello stesso giorno dell'ora di inizio",
-      "invalidTimeRange": "Inserisci un intervallo di tempo valido"
+      "invalidTimeRange": "Inserisci un intervallo di tempo valido",
+      "billableExceedsDuration": "La durata fatturabile non può superare la durata totale"
     },
     "serviceSource": {
       "task": "Predefinito dall’attività",
@@ -287,6 +289,7 @@
     }
   },
   "comments": {
+    "loading": "Caricamento dei commenti...",
     "placeholder": "Aggiungi un commento...",
     "responsePlaceholder": "Rispondere alle modifiche richieste...",
     "respondToChanges": "Rispondere ai cambiamenti"
@@ -362,6 +365,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabella dei dati del foglio ore",
+    "deleteWorkItem": {
+      "title": "Elimina elemento di lavoro",
+      "message": "Questa operazione eliminerà definitivamente tutti gli inserimenti ore per questo elemento di lavoro. Questa azione non può essere annullata."
+    },
+    "bundled": "In bundle",
+    "bundledTo": "In bundle → {{ticketNumber}}",
+    "addEntryForCell": "Aggiungi un inserimento ore per {{workItem}} il {{date}}",
+    "saveTimeEntry": "Salva inserimento ore",
+    "weeklyTotal": "Totale settimanale",
     "empty": {
       "title": "Nessun elemento di lavoro nel foglio ore",
       "description": "Aggiungi un nuovo elemento di lavoro per iniziare a registrare il tempo per questa settimana.",
@@ -424,6 +437,9 @@
     "viewEntryDetails": "Visualizza i dettagli della voce"
   },
   "messages": {
+    "saveEntryFailed": "Impossibile salvare l’inserimento ore",
+    "updateTaskFailed": "Impossibile aggiornare l’attività",
+    "deleteWorkItemFailed": "Impossibile eliminare l’elemento di lavoro",
     "serviceRequired": "Seleziona un servizio prima di salvare gli inserimenti ore",
     "invalidService": "Servizio selezionato non valido",
     "taxRegionRequired": "Seleziona una regione fiscale per i servizi imponibili",
@@ -516,6 +532,12 @@
     "save": {
       "noPeriod": "Nessun periodo copre il {{date}}. Scegli un giorno all’interno di un periodo.",
       "sheetLocked": "La scheda attività del {{date}} ha lo stato «{{status}}». Scegli un giorno su una bozza o su una scheda con modifiche richieste."
+    },
+    "multiDay": {
+      "notice": "Questo timer è durato {{count}} giorni, quindi verrà salvato come un inserimento ore per giorno. Rimuovi un giorno per escluderne il tempo.",
+      "dayHeading": "Giorno {{index}} di {{count}} · {{date}}",
+      "remove": "Rimuovi",
+      "total": "Totale: {{duration}}"
     }
   },
   "launch": {
@@ -554,6 +576,11 @@
     },
     "activitySummary_few": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})",
     "activitySummary_many": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Gestione dei fogli ore",
+    "delegationDisabledPrefix": "L’inserimento ore delegato è attualmente disabilitato. Abilita il flag di funzionalità",
+    "delegationDisabledSuffix": "per modificare i fogli ore degli altri utenti."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} tracciato in {{count}} segmento (in pausa {{paused}})",

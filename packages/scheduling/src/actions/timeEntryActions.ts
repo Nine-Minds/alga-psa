@@ -1,6 +1,6 @@
-'use server'
-
-// Import and re-export async functions explicitly to comply with 'use server'
+// The defining modules own their 'use server' boundaries. Keep this facade a
+// plain re-export so Next uses each action's original server reference instead
+// of registering a second reference for the same function.
 
 import { getClientIdForWorkItem } from './timeEntryHelpers';
 import {
@@ -14,6 +14,7 @@ import {
 import {
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  logStopwatchSession,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById
@@ -22,7 +23,8 @@ import { fetchTimeEntryChangeRequestsForTimeSheet } from './timeEntryChangeReque
 import {
   fetchWorkItemsForTimeSheet,
   addWorkItem,
-  deleteWorkItem
+  deleteWorkItem,
+  isServiceOptionalForWorkItem
 } from './timeEntryWorkItemActions';
 import {
   fetchTaxRegions,
@@ -43,6 +45,7 @@ export {
   deleteTimeSheets,
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  logStopwatchSession,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,
@@ -50,6 +53,7 @@ export {
   fetchWorkItemsForTimeSheet,
   addWorkItem,
   deleteWorkItem,
+  isServiceOptionalForWorkItem,
   fetchTaxRegions,
   fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,

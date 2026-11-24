@@ -192,7 +192,13 @@ export const createProjectTaskSchema = z.object({
   tags: z.array(z.string()).optional()
 });
 
-export const updateProjectTaskSchema = createUpdateSchema(createProjectTaskSchema);
+// Assignment, due date and priority are clearable on update (mobile's task
+// detail offers Unassign and Clear), so these three accept an explicit null.
+export const updateProjectTaskSchema = createUpdateSchema(createProjectTaskSchema).extend({
+  assigned_to: uuidSchema.nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  priority_id: uuidSchema.nullable().optional()
+});
 
 export const projectTaskResponseSchema = z.object({
   task_id: uuidSchema,
@@ -461,3 +467,48 @@ export type ProjectSearchData = z.infer<typeof projectSearchSchema>;
 export type ProjectExportQuery = z.infer<typeof projectExportQuerySchema>;
 export type CreateProjectTemplateData = z.infer<typeof createProjectTemplateSchema>;
 export type ProjectTemplateResponse = z.infer<typeof projectTemplateResponseSchema>;
+
+// Project materials (POST /projects/{id}/materials). client_id is derived from the project and
+// allow_reserved_override is an interactive confirmation, so .strict() rejects both with a 400.
+export const projectMaterialBillingDestinationSchema = z.enum([
+  'next_project_invoice',
+  'schedule_entry',
+  'separate',
+  'project_completion',
+  'on_hold',
+]);
+
+export const createProjectMaterialSchema = z.object({
+  service_id: uuidSchema,
+  quantity: z.number().int('Quantity must be a whole number').positive('Quantity must be greater than 0'),
+  rate: z.number().min(0, 'Rate must be 0 or greater'),
+  currency_code: z.string().trim().length(3, 'currency_code must be a 3-letter ISO code').transform((value) => value.toUpperCase()),
+  description: z.string().trim().max(1000).nullable().optional(),
+  // Serialized tracked products require the specific stock unit to deliver.
+  unit_id: uuidSchema.nullable().optional(),
+  billing_destination: projectMaterialBillingDestinationSchema.optional(),
+  billing_schedule_entry_id: uuidSchema.nullable().optional(),
+}).strict();
+
+export type CreateProjectMaterialData = z.infer<typeof createProjectMaterialSchema>;
+
+export const projectMaterialResponseSchema = z.object({
+  project_material_id: uuidSchema,
+  project_id: uuidSchema,
+  client_id: uuidSchema,
+  service_id: uuidSchema,
+  service_name: z.string().nullable().optional(),
+  sku: z.string().nullable().optional(),
+  quantity: z.number(),
+  rate: z.number().describe('Integer minor units (cents).'),
+  currency_code: z.string(),
+  description: z.string().nullable().optional(),
+  is_billed: z.boolean(),
+  billed_invoice_id: uuidSchema.nullable().optional(),
+  billed_at: z.string().nullable().optional(),
+  billing_destination: projectMaterialBillingDestinationSchema,
+  billing_schedule_entry_id: uuidSchema.nullable().optional(),
+  from_staging_line_id: uuidSchema.nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+});

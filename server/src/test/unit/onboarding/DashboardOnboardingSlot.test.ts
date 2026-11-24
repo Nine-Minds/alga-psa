@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
+vi.mock('@alga-psa/onboarding/actions', () => ({}));
 import { shouldHideCompletedOnboardingSection } from '../../../../../packages/onboarding/src/components/dashboard/DashboardOnboardingSlot';
 
 describe('shouldHideCompletedOnboardingSection', () => {

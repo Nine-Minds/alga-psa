@@ -1,8 +1,8 @@
 import { isGlobalUnicastAddress, type AddressPolicy } from './ssrf';
 import { sendWithValidatedRedirects } from './transport';
+import { MAX_WEBHOOK_RESPONSE_BODY_CHARS } from './responseBody';
 
 const REQUEST_TIMEOUT_MS = 10_000;
-const MAX_CAPTURED_BODY_CHARS = 8 * 1024;
 
 export type WebhookDeliveryErrorType =
   | 'dns'
@@ -32,11 +32,11 @@ export interface WebhookDeliveryResult {
 }
 
 function truncateBody(body: string): string {
-  if (body.length <= MAX_CAPTURED_BODY_CHARS) {
+  if (body.length <= MAX_WEBHOOK_RESPONSE_BODY_CHARS) {
     return body;
   }
 
-  return body.slice(0, MAX_CAPTURED_BODY_CHARS);
+  return body.slice(0, MAX_WEBHOOK_RESPONSE_BODY_CHARS);
 }
 
 function normalizeHeaders(headers: Record<string, string>): Record<string, string> {

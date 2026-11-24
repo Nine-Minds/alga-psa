@@ -97,7 +97,11 @@ describe('billing PDFGenerationService print settings', () => {
       }),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = { newPage: vi.fn().mockResolvedValue(page) };
+    const context = {
+      newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = { createBrowserContext: vi.fn().mockResolvedValue(context) };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
 
@@ -132,8 +136,13 @@ describe('billing PDFGenerationService print settings', () => {
     try {
       const { BrowserPoolService } = await vi.importActual<typeof import('./browserPoolService')>('./browserPoolService');
       browser = await new BrowserPoolService(1).getBrowser();
-      const page = await browser.newPage();
-      getBrowserMock.mockResolvedValue({ newPage: async () => page });
+      const browserContext = await browser.createBrowserContext();
+      const page = await browserContext.newPage();
+      const context = {
+        newPage: vi.fn().mockResolvedValue(page),
+        close: () => browserContext.close(),
+      };
+      getBrowserMock.mockResolvedValue({ createBrowserContext: async () => context });
       releaseBrowserMock.mockResolvedValue(undefined);
       const print = page.pdf.bind(page);
       vi.spyOn(page, 'pdf').mockImplementation(async (options) => {
@@ -171,8 +180,12 @@ describe('billing PDFGenerationService print settings', () => {
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -190,17 +203,20 @@ describe('billing PDFGenerationService print settings', () => {
 
     expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
     expect(page.setRequestInterception).toHaveBeenCalledWith(true);
-    expect(page.setContent).toHaveBeenCalledWith('<html><body>Invoice</body></html>', { waitUntil: 'domcontentloaded' });
+    const renderedHtml = page.setContent.mock.calls[0][0];
+    expect(renderedHtml).toContain('Invoice');
+    expect(page.setContent).toHaveBeenCalledWith(renderedHtml, { waitUntil: 'load' });
     expect(page.pdf).toHaveBeenCalledWith({
       format: 'Legal',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '18mm',
+        right: '18mm',
+        bottom: '18mm',
+        left: '18mm',
       },
     });
+    expect(context.close).toHaveBeenCalledOnce();
   });
 
   it('generates a PDF successfully for a template with explicit paper preset and margin settings', async () => {
@@ -212,8 +228,12 @@ describe('billing PDFGenerationService print settings', () => {
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -241,10 +261,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '12mm',
+        right: '12mm',
+        bottom: '12mm',
+        left: '12mm',
       },
     });
   });
@@ -258,8 +278,12 @@ describe('billing PDFGenerationService print settings', () => {
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    const browser = {
+    const context = {
       newPage: vi.fn().mockResolvedValue(page),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const browser = {
+      createBrowserContext: vi.fn().mockResolvedValue(context),
     };
     getBrowserMock.mockResolvedValue(browser);
     releaseBrowserMock.mockResolvedValue(undefined);
@@ -285,10 +309,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'Letter',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: '10.58mm',
+        right: '10.58mm',
+        bottom: '10.58mm',
+        left: '10.58mm',
       },
     });
   });

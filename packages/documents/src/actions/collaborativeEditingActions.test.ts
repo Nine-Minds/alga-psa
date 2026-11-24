@@ -2,16 +2,32 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const persistCollabSnapshot = vi.fn(async () => ({ success: true }));
 const yXmlFragmentToProsemirrorJSON = vi.fn(() => ({ type: 'doc', content: [] as unknown[] }));
+const hasPermission = vi.fn(async () => true);
+const authorizedDocument = vi.fn(async (): Promise<any> => ({ document_id: 'doc-1', content: '' }));
 
 let fragmentLength = 0;
 const providerDestroy = vi.fn();
 const ydocDestroy = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
+  hasPermission,
   withAuth:
     (fn: (user: unknown, ctx: unknown, ...args: any[]) => unknown) =>
     (...args: any[]) =>
       fn({ user_id: 'user-1' }, { tenant: 'tenant-abc' }, ...args),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {} }),
+  withTransaction: async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({}),
+}));
+vi.mock('./documentActions', () => ({ getAuthorizedDocumentById: authorizedDocument }));
+vi.mock('@shared/lib/documentAuthorization', () => ({
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
+}));
+vi.mock('@shared/lib/documentRoomToken', () => ({
+  DOCUMENT_ROOM_TOKEN_TTL_SECONDS: 900,
+  signDocumentRoomToken: () => 'signed-room-token',
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
@@ -41,6 +57,8 @@ describe('syncCollabSnapshot', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     persistCollabSnapshot.mockResolvedValue({ success: true });
+    hasPermission.mockResolvedValue(true);
+    authorizedDocument.mockResolvedValue({ document_id: 'doc-1', content: '' });
   });
 
   it('refuses to persist an empty room over stored content', async () => {
@@ -66,7 +84,19 @@ describe('syncCollabSnapshot', () => {
 
     const result = await syncCollabSnapshot('doc-1');
 
-    expect(persistCollabSnapshot).toHaveBeenCalledWith('tenant-abc', 'doc-1', doc);
+    expect(persistCollabSnapshot).toHaveBeenCalledWith('tenant-abc', 'doc-1', doc, 'signed-room-token');
     expect(result.success).toBe(true);
+  });
+
+  it('does not persist a snapshot when the authorized projection redacts content', async () => {
+    fragmentLength = 3;
+    authorizedDocument.mockResolvedValue({ document_id: 'doc-1' });
+    const syncCollabSnapshot = await importAction();
+
+    const result = await syncCollabSnapshot('doc-1');
+
+    expect(result).toMatchObject({ success: false, message: expect.stringContaining('Permission denied') });
+    expect(persistCollabSnapshot).not.toHaveBeenCalled();
+    expect(providerDestroy).not.toHaveBeenCalled();
   });
 });

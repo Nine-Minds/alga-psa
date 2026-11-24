@@ -6,6 +6,15 @@ export async function register() {
   }
   // Only initialize telemetry on the server side
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Register the billing catalog context loader with @alga-psa/licensing before anything can reach the
+    // co-managed gate (pages, server actions, API routes). Import side effect; the CE alias registers nothing.
+    // Kept ahead of initializeApp so a failure there cannot leave the gate on the env fallback.
+    try {
+      await import('@enterprise/lib/stripe/offerCatalog/surfaceProbe');
+    } catch (error) {
+      console.error('Failed to register the billing catalog context loader:', error);
+    }
+
     try {
       const { initializeTelemetry } = await import('./lib/telemetry/initialization');
       await initializeTelemetry();
@@ -37,6 +46,34 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // CM L6b: organization-SLA handlers on the ticket-lifecycle registry. Best-effort: without them
+    // the registry stays empty and every ticket write is unchanged.
+    try {
+      await import('@alga-psa/co-managed/ticketSlaRegistration');
+    } catch (error) {
+      console.error('Failed to register the co-managed SLA lifecycle handlers:', error);
+    }
+
+    // SLA pause re-evaluation (`reevaluateSlaPause`): registering it is a side effect of this import.
+    // Packages that contribute a pause condition (the co-managed seat handoff) ask through it rather
+    // than importing the SLA package. Without it their condition changes fail and roll back.
+    try {
+      await import('@alga-psa/sla/services');
+    } catch (error) {
+      console.error('Failed to register SLA pause re-evaluation:', error);
+    }
+
+    // Co-managed time source (L6a2): registers into the scheduling time-source registry. Best-effort:
+    // without it every time call resolves to native and behaves exactly as before.
+    try {
+      const { registerCoManagedTimeSource } = await import('./lib/co-managed/timeSource');
+      registerCoManagedTimeSource();
+      const { registerCoManagedTimeEntryWorkContributor } = await import('./lib/co-managed/timeWorkContext');
+      registerCoManagedTimeEntryWorkContributor();
+    } catch (error) {
+      console.error('Failed to register the co-managed time source:', error);
+    }
+
     // Delivery seam provider + inbound reply writer (CM L5; one entry point, shared with email-service). Best-effort: without it subscribers and the inbound path stay native.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
@@ -62,12 +99,13 @@ export async function register() {
     // CM L0c: install the co-managed write-admission resolver. Fails open: an image
     // whose co-managed packages do not resolve must still boot and write.
     try {
-      const { installCoManagedWriteAdmission, installCoManagedReviewAdmission, devForcedStatesFromEnv } = await import('@alga-psa/licensing/co-managed-write-admission');
+      const { installCoManagedWriteAdmission, installCoManagedReviewAdmission, devForcedStatesFromEnv,
+        readCoManagedLifecycleForServer } = await import('@alga-psa/licensing/co-managed-write-admission');
       // devForcedStatesFromEnv is undefined in production; the installer also ignores it there.
       if (globalThis.__algaCoManagedReviewReader) {
         installCoManagedReviewAdmission(globalThis.__algaCoManagedReviewReader);
       } else {
-        installCoManagedWriteAdmission({ devForcedStates: devForcedStatesFromEnv() });
+        installCoManagedWriteAdmission({ readState: readCoManagedLifecycleForServer, devForcedStates: devForcedStatesFromEnv() });
       }
     } catch (error) {
       console.error('Failed to install co-managed write admission:', error);

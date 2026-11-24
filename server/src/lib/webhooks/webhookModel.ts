@@ -157,6 +157,37 @@ export interface ListWebhookDeliveriesOptions {
   limit?: number;
 }
 
+export interface ListWebhooksPageOptions {
+  page?: number;
+  limit?: number;
+  filters?: ListWebhooksFilters;
+}
+
+export interface ListWebhooksFilters {
+  /** Case-insensitive substring match on name or url. */
+  search?: string;
+  name?: string;
+  url?: string;
+  eventType?: string;
+  isActive?: boolean;
+  createdFrom?: Date;
+  createdTo?: Date;
+  updatedFrom?: Date;
+  updatedTo?: Date;
+  lastDeliveryFrom?: Date;
+  lastDeliveryTo?: Date;
+  hasFailures?: boolean;
+}
+
+export interface CountDeliveriesOptions {
+  /** Omit to count across every webhook of the tenant. */
+  webhookId?: string;
+  status?: string;
+  /** Inclusive bounds on attempted_at. */
+  attemptedFrom?: Date;
+  attemptedTo?: Date;
+}
+
 export interface ListRetryableDeliveriesOptions {
   /** Lower bound on attempted_at; omit to consider the whole retention window. */
   since?: Date;
@@ -336,6 +367,69 @@ async function listByTenant(tenant: string): Promise<WebhookRecord[]> {
     .orderBy('created_at', 'desc');
 
   return rows.map(mapWebhookRow);
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+/**
+ * Tenant-scoped, filtered, paginated listing. Filtering and counting share one
+ * predicate so `total` always matches the rows that page through.
+ */
+async function listPage(
+  tenant: string,
+  options: ListWebhooksPageOptions = {},
+): Promise<{
+  data: WebhookRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}> {
+  const page = Math.max(1, options.page ?? 1);
+  const limit = Math.max(1, Math.min(options.limit ?? 25, 100));
+  const offset = (page - 1) * limit;
+  const filters = options.filters ?? {};
+  const knex = await getConnection(tenant);
+  const db = tenantDb(knex, tenant);
+
+  const filtered = () => {
+    const query = db.table(WEBHOOKS_TABLE);
+
+    if (filters.search) {
+      const pattern = `%${escapeLike(filters.search)}%`;
+      query.where((qb) => {
+        qb.whereILike('name', pattern).orWhereILike('url', pattern);
+      });
+    }
+    if (filters.name) query.whereILike('name', `%${escapeLike(filters.name)}%`);
+    if (filters.url) query.whereILike('url', `%${escapeLike(filters.url)}%`);
+    if (filters.eventType) query.whereRaw('? = ANY(event_types)', [filters.eventType]);
+    if (filters.isActive !== undefined) query.where('is_active', filters.isActive);
+    if (filters.createdFrom) query.where('created_at', '>=', filters.createdFrom);
+    if (filters.createdTo) query.where('created_at', '<=', filters.createdTo);
+    if (filters.updatedFrom) query.where('updated_at', '>=', filters.updatedFrom);
+    if (filters.updatedTo) query.where('updated_at', '<=', filters.updatedTo);
+    if (filters.lastDeliveryFrom) query.where('last_delivery_at', '>=', filters.lastDeliveryFrom);
+    if (filters.lastDeliveryTo) query.where('last_delivery_at', '<=', filters.lastDeliveryTo);
+    if (filters.hasFailures !== undefined) {
+      query.where('failed_deliveries', filters.hasFailures ? '>' : '=', 0);
+    }
+
+    return query;
+  };
+
+  const [rows, totalRow] = await Promise.all([
+    filtered().orderBy('created_at', 'desc').orderBy('webhook_id', 'asc').limit(limit).offset(offset),
+    filtered().count<{ count: string }[]>({ count: '*' }).first(),
+  ]);
+
+  return {
+    data: rows.map(mapWebhookRow),
+    page,
+    limit,
+    total: Number(totalRow?.count ?? 0),
+  };
 }
 
 async function insert(input: InsertWebhookInput): Promise<WebhookRecord> {
@@ -571,6 +665,22 @@ async function listDeliveries(
   };
 }
 
+async function countDeliveries(
+  tenant: string,
+  options: CountDeliveriesOptions = {},
+): Promise<number> {
+  const knex = await getConnection(tenant);
+  const query = tenantDb(knex, tenant).table(WEBHOOK_DELIVERIES_TABLE);
+
+  if (options.webhookId) query.where('webhook_id', options.webhookId);
+  if (options.status) query.where('status', options.status);
+  if (options.attemptedFrom) query.where('attempted_at', '>=', options.attemptedFrom);
+  if (options.attemptedTo) query.where('attempted_at', '<=', options.attemptedTo);
+
+  const row = await query.count<{ count: string }[]>({ count: '*' }).first();
+  return Number(row?.count ?? 0);
+}
+
 async function listRetryableDeliveries(
   tenant: string,
   webhookId: string,
@@ -683,12 +793,14 @@ export const webhookModel = {
   getById,
   listForEventType,
   listByTenant,
+  listPage,
   insert,
   update,
   delete: deleteWebhook,
   recordDelivery,
   getDeliveryById,
   listDeliveries,
+  countDeliveries,
   listRetryableDeliveries,
   updateStats,
   markAbandoned,

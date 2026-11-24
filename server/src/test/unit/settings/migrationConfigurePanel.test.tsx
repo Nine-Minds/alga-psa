@@ -103,7 +103,7 @@ describe('custom asset field configuration defaults', () => {
   it('renders custom-field guidance and sample counts in the selected locale', async () => {
     locale.language = 'fr';
     actions.getOptions.mockResolvedValue({
-      boards: [], statuses: [], priorities: [], clients: [], users: [],
+      boards: [], statuses: [], priorities: [], users: [],
       assetTypes: [{ slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [
         { key: 'count', label: 'Count', kind: 'number', required: true },
       ] }],
@@ -128,12 +128,12 @@ describe('custom asset field configuration defaults', () => {
     fireEvent.change(elementById('amp-config-asset-fields-door_access-0-select'), { target: { value: 'count' } });
     fireEvent.change(elementById('amp-config-asset-fields-door_access-1-select'), { target: { value: 'count' } });
     expect(screen.getByText('Un champ personnalisé est associé plusieurs fois. Choisissez une destination unique pour chaque source.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save configuration' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enregistrer la configuration' })).toBeDisabled();
   });
 
   it('removes stale source mappings after remapping and saves only the still-visible mapping', async () => {
     actions.getOptions.mockResolvedValue({
-      boards: [], statuses: [], priorities: [], clients: [], users: [],
+      boards: [], statuses: [], priorities: [], users: [],
       assetTypes: [
         { slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [
           { key: 'count', label: 'Count', kind: 'number', required: false },

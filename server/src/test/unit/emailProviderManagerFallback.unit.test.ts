@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IEmailProvider, TenantEmailSettings } from '@alga-psa/types';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const { createProviderMock } = vi.hoisted(() => ({
   createProviderMock: vi.fn()
@@ -104,7 +105,15 @@ describe('EmailProviderManager fallback behavior', () => {
             username: 'imap_user',
             password: 'imap_pass',
             from: 'no-reply@example.com',
-            rejectUnauthorized: false
+            rejectUnauthorized: false,
+            __secretFingerprint: connectionFingerprint({
+              host: 'localhost',
+              port: 3026,
+              username: 'imap_user',
+              password: 'imap_pass',
+              from: 'no-reply@example.com',
+              rejectUnauthorized: false
+            }, 'smtp', 'tenant-smtp')
           }
         }
       ]

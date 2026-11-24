@@ -11,7 +11,8 @@
       "oneTime": "Único",
       "other": "Outro",
       "quarterly": "Trimestral",
-      "semiAnnually": "Semestral"
+      "semiAnnually": "Semestral",
+      "weekly": "Semanal"
     },
     "cadenceTotal": "Total {{cadence}}",
     "currency": "Moeda",
@@ -29,6 +30,7 @@
     "invoiceTitle": "FATURA",
     "issueDate": "Data de emissão",
     "locationSubtotal": "Subtotal do local",
+    "unassignedLocation": "Toda a cotação",
     "monthly": "Mensal",
     "monthlyItems": "Itens mensais",
     "monthlyTotal": "Total mensal",
@@ -56,6 +58,20 @@
     "product": "Produto",
     "projectPhase": "Fase do projeto",
     "qty": "Qtd.",
+    "quoteAcceptance": {
+      "title": "Orçamento aceito",
+      "signedBy": "Assinado por",
+      "email": "E-mail",
+      "jobTitle": "Cargo",
+      "acceptedOn": "Aceito em",
+      "method": "Método",
+      "ipAddress": "Endereço IP",
+      "methods": {
+        "emailLink": "Link por e-mail",
+        "portal": "Portal do cliente",
+        "msp": "Registrado pelo MSP"
+      }
+    },
     "quoteNumber": "Cotação nº",
     "quoteTitle": "COTAÇÃO",
     "rate": "Tarifa",
@@ -69,6 +85,7 @@
     "sku": "SKU",
     "source": "Origem",
     "subtotal": "Subtotal",
+    "subtotalBeforeDiscounts": "Subtotal antes dos descontos",
     "tax": "Imposto",
     "termsAndConditions": "Termos e condições",
     "ticket": "Ticket",
@@ -125,7 +142,9 @@
     "replacementSerial": "Número de série da substituição",
     "shipping": "Envio",
     "returnBy": "Devolver até",
-    "returnShipTo": "Enviar devolução para"
+    "returnShipTo": "Enviar devolução para",
+    "yes": "Sim",
+    "no": "Não"
   },
   "errors": {
     "permissions": {
@@ -164,6 +183,7 @@
     "upload": {
       "fileRequired": "Escolha um arquivo antes de enviar.",
       "typeNotAllowed": "Este tipo de arquivo não é permitido.",
+      "contentMismatch": "O conteúdo deste arquivo não corresponde ao tipo de arquivo, por isso ele não foi enviado. Verifique se escolheu o arquivo correto.",
       "sessionRequired": "Sua sessão é necessária para enviar documentos. Entre novamente."
     }
   },

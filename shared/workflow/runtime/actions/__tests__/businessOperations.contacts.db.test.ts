@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../test-utils/assetFixtures';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knex, type Knex } from 'knex';
 import path from 'node:path';
@@ -530,14 +531,30 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       })
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
-    await expect(
-      invokeAction('contacts.update', {
-        contact_id: contactId,
-        patch: {
-          email: 'new.primary@example.com',
-        },
-      })
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    // A bare primary email change (a correction, not a promotion) now succeeds: the
+    // new address replaces the primary and the old one is dropped rather than refused.
+    const corrected = await invokeAction('contacts.update', {
+      contact_id: contactId,
+      patch: {
+        email: 'new.primary@example.com',
+      },
+    });
+    expect(corrected.contact_after.email).toBe('new.primary@example.com');
+    expect(corrected.changed_fields).toEqual(expect.arrayContaining(['email']));
+
+    const correctedStored = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: contactId })
+      .first();
+    expect(correctedStored.email).toBe('new.primary@example.com');
+
+    const additionalEmailsAfterCorrection = await tenantTable(
+      db,
+      runtimeState.tenantId,
+      'contact_additional_email_addresses'
+    ).where({ tenant: runtimeState.tenantId, contact_name_id: contactId });
+    expect(additionalEmailsAfterCorrection.map((row: any) => row.email_address)).toEqual([
+      'update.target+alt@example.com',
+    ]);
   });
 
   it('T005: contacts.add_to_client assigns unassigned contacts, no-ops on same client, and conflicts on other client', async () => {
@@ -858,7 +875,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       .where({ contact_name_id: reportId })
       .update({ manager_contact_id: managerId });
     const assetId = uuidv4();
-    await tenantTable(db, runtimeState.tenantId, 'assets').insert({
+    await insertTestAssets(db, {
       tenant: runtimeState.tenantId,
       asset_id: assetId,
       client_id: clientId,

@@ -6,7 +6,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import Documents from './Documents.tsx';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 import { updateBlockContent, createBlockDocument } from '../actions/documentBlockContentActions';
-import { getDocumentsByFolder } from '../actions/documentActions';
+import { getDocumentsByFolder, updateDocument } from '../actions/documentActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
@@ -512,6 +512,7 @@ describe('Documents drawer', () => {
       await Promise.resolve();
     });
 
+    fireEvent.change(screen.getByDisplayValue('Runbook'), { target: { value: 'Renamed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await act(async () => {
@@ -521,6 +522,44 @@ describe('Documents drawer', () => {
     expect(updateBlockContent).toHaveBeenCalledWith('doc-1', expect.objectContaining({
       block_data: JSON.stringify(mockFallbackContent),
     }));
+
+    expect(updateDocument).toHaveBeenCalledExactlyOnceWith('doc-1', { document_name: 'Renamed' });
+    expect(vi.mocked(updateBlockContent).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(updateDocument).mock.invocationCallOrder[0]);
+
+    vi.useRealTimers();
+  });
+
+  it('surfaces a denied block-content save and does not complete the drawer save', async () => {
+    mockCollabStatus = null;
+    mockFallbackUnsaved = true;
+    mockFallbackContent = { type: 'doc', content: [{ type: 'paragraph' }] };
+    (updateBlockContent as unknown as { mockResolvedValueOnce: (value: unknown) => void })
+      .mockResolvedValueOnce({ permissionError: 'Permission denied: Cannot update redacted document content' });
+    vi.useFakeTimers();
+
+    render(
+      <Documents
+        id="documents"
+        documents={[{
+          document_id: 'doc-1', document_name: 'Runbook', type_id: null, user_id: 'user-1',
+          order_number: 0, created_by: 'user-1', type_name: 'text/plain', tenant: 'tenant-1',
+        }]}
+        gridColumns={3} userId="user-1" entityId="entity-1" entityType="asset" isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    fireEvent.change(screen.getByDisplayValue('Runbook'), { target: { value: 'Renamed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await act(async () => { await Promise.resolve(); });
+
+    expect(screen.getByText('Permission denied: Cannot update redacted document content')).toBeInTheDocument();
+    expect(syncCollabSnapshot).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(updateDocument).not.toHaveBeenCalled();
+    expect(screen.getByTestId('fallback-editor')).toBeInTheDocument();
 
     vi.useRealTimers();
   });

@@ -11,11 +11,11 @@ import { resolveCoManagedRelationshipTarget } from '../co-managed/relationshipTa
 // The actor is derived from the verified session; the caller supplies no identity.
 
 /** The Customer Tickets queue: every shared ticket the signed-in technician may read right now. */
-export const listCoManagedCustomerTicketsAction = withAuth(async (user, { tenant }, input: { page?: number; pageSize?: number } = {}) => {
+export const listCoManagedCustomerTicketsAction = withAuth(async (user, { tenant }, input: { cursor?: string; page?: number; pageSize?: number } = {}) => {
   await requireCapabilityForAction('co-managed', tenant, 'serves');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
-  return listCoManagedCustomerTickets(knex, actor, { page: input?.page, pageSize: input?.pageSize });
+  return listCoManagedCustomerTickets(knex, actor, { cursor: input?.cursor, page: input?.page, pageSize: input?.pageSize });
 });
 
 /** One shared ticket. A denial in any access layer (or an unknown id) is `null`, which the page renders as not-found. */

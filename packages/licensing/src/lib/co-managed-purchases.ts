@@ -1,5 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { readCoManagedPoolCapacity } from './co-managed-capacity';
+import { readCoManagedFirstPurchasePhase } from './co-managed-first-purchase';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export interface CoManagedPurchaseOperation {
   operation_id: string;
@@ -7,6 +10,12 @@ export interface CoManagedPurchaseOperation {
   quantity: number;
   state: 'preparing' | 'checkout' | 'completed' | 'expired' | 'payment_failed';
   provider_reference: string | null;
+  trial_id?: string | null;
+  /** Catalog terms pinned when the purchase was first confirmed; null for pre-catalog operations. */
+  offer_version_id?: string | null;
+  price_id?: string | null;
+  stripe_account?: string | null;
+  livemode?: boolean | null;
 }
 
 export type CoManagedPurchaseResult =
@@ -16,13 +25,14 @@ export type CoManagedPurchaseResult =
 
 export class CoManagedPurchaseError extends Error {
   constructor(public readonly code: 'INVALID_PURCHASE' | 'SPONSOR_NOT_ELIGIBLE' | 'PURCHASE_IN_PROGRESS' |
-    'OPERATION_CONFLICT' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
+    'OPERATION_CONFLICT' | 'PURCHASE_AWAITING_VERIFICATION' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
     super({
       INVALID_PURCHASE: 'Enter a valid seat quantity and purchase reference.',
       SPONSOR_NOT_ELIGIBLE: 'Only Pro PSA workspaces can purchase co-managed seats.',
       PURCHASE_IN_PROGRESS: 'Complete or resume the pending purchase before starting another.',
+      PURCHASE_AWAITING_VERIFICATION: 'The first purchase is awaiting payment verification. Refresh shortly.',
       OPERATION_CONFLICT: 'This purchase was started with a different seat quantity.',
-      ALLOCATED_CAPACITY_REQUIRED: 'Release allocated customer seats before reducing this pool.',
+      ALLOCATED_CAPACITY_REQUIRED: 'Release allocated co-managed seats before reducing this pool.',
       OFFLINE_LICENSE_REQUIRED: 'Update the signed license to change self-hosted co-managed capacity.',
     }[code]);
     this.name = 'CoManagedPurchaseError';
@@ -32,10 +42,10 @@ export class CoManagedPurchaseError extends Error {
 const IN_FLIGHT = ['preparing', 'checkout', 'payment_failed'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function allocatedSeats(trx: Knex.Transaction, tenant: string): Promise<number> {
-  const totals = await tenantDb(trx, tenant).table('co_managed_allocations').whereNot('state', 'released')
-    .sum('seats as used').first();
-  return Number(totals?.used ?? 0);
+/** A pool cannot be sized below what its allocations, of either kind, already hold. */
+async function holdsAllocations(trx: Knex.Transaction, sponsor: string, quantity: number): Promise<boolean> {
+  const pool = await readCoManagedPoolCapacity(trx, sponsor, quantity);
+  return pool.allocated <= pool.purchased;
 }
 
 /**
@@ -54,7 +64,14 @@ export async function runCoManagedPurchase(db: Knex, input: {
   sponsorTenant: string;
   operationId: string;
   quantity: number;
-}, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>): Promise<CoManagedPurchaseResult> {
+  trialId?: string;
+  bindIntent?: (trx: Knex.Transaction) => Promise<void>;
+  /** Reviewed terms to record with a NEW operation. Resume and retry read them back from the row;
+   * they are never re-resolved, so a price rotation cannot reprice a confirmed purchase. */
+  pinned?: { offerVersionId: string | null; priceId: string; stripeAccount?: string; livemode?: boolean };
+}, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>,
+  beforeProvider?: (trx: Knex.Transaction, operation: CoManagedPurchaseOperation) => Promise<void>,
+  beforeIntent?: (trx: Knex.Transaction) => Promise<void>): Promise<CoManagedPurchaseResult> {
   if (!Number.isInteger(input.quantity) || input.quantity < 0 || input.quantity > 100000 ||
       !UUID.test(input.operationId) || !UUID.test(input.sponsorTenant)) {
     throw new CoManagedPurchaseError('INVALID_PURCHASE');
@@ -65,26 +82,57 @@ export async function runCoManagedPurchase(db: Knex, input: {
   try {
     await db.transaction(async (trx) => {
       const scoped = tenantDb(trx, input.sponsorTenant);
+      await lockCoManagedSponsorPool(trx, input.sponsorTenant);
       const tenant = await scoped.table('tenants').forUpdate().first();
       if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
-      const existing = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).first();
+      const existing = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).forUpdate().first();
       if (existing) {
-        if (existing.quantity !== input.quantity) throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        if (existing.quantity !== input.quantity || (existing.trial_id ?? null) !== (input.trialId ?? null)) throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        // A legacy pending operation may lack merchant columns. Its caller can recover these
+        // only from the operation's own historical Price mapping; persist that unique result while
+        // holding the operation/tenant lock so the provider retry observes the same pin.
+        const pinned = input.pinned;
+        if (pinned && existing.price_id && existing.price_id !== pinned.priceId) {
+          throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        }
+        if (pinned && (existing.stripe_account == null || existing.livemode == null)) {
+          if (!existing.price_id || !pinned.stripeAccount || pinned.livemode === undefined ||
+              (existing.stripe_account != null && existing.stripe_account !== pinned.stripeAccount) ||
+              (existing.livemode != null && existing.livemode !== pinned.livemode)) {
+            throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+          }
+          // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
+          await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
+            offer_version_id: existing.offer_version_id ?? pinned.offerVersionId,
+            stripe_account: pinned.stripeAccount, livemode: pinned.livemode,
+          });
+        }
         return;
       }
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {
         throw new CoManagedPurchaseError('PURCHASE_IN_PROGRESS');
       }
+      if (beforeIntent) await beforeIntent(trx);
+      // A first purchase needs a positive pool and cannot start while another one awaits verification.
+      const first = await readCoManagedFirstPurchasePhase(trx, input.sponsorTenant);
+      if (first.phase !== 'established') {
+        if (input.quantity < 1) throw new CoManagedPurchaseError('INVALID_PURCHASE');
+        if (first.phase === 'awaiting_verification') throw new CoManagedPurchaseError('PURCHASE_AWAITING_VERIFICATION');
+      }
       const entitlement = await scoped.table('co_managed_entitlements').first('source');
       if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');
       // An operator grant is not a billing subscription; a purchase would be unreconcilable.
       if (entitlement && entitlement.source !== 'hosted') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
-      if (input.quantity < await allocatedSeats(trx, input.sponsorTenant)) {
+      if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
         throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
       }
+      await input.bindIntent?.(trx);
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
-        operation_id: input.operationId, quantity: input.quantity, state: 'preparing' });
+        operation_id: input.operationId, quantity: input.quantity, state: 'preparing',
+        ...(input.trialId ? { trial_id: input.trialId } : {}),
+        ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId,
+          stripe_account: input.pinned.stripeAccount ?? null, livemode: input.pinned.livemode ?? null } : {}) });
     });
   } catch (error) {
     // The partial unique index is the backstop for two concurrent first writers.
@@ -95,7 +143,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
   // 2. Call the provider while holding entitlement then tenant, so a reservation cannot race a reduction.
   return db.transaction(async (trx) => {
     const scoped = tenantDb(trx, input.sponsorTenant);
-    const entitlement = await scoped.table('co_managed_entitlements').forUpdate().first();
+    const entitlement = await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     const tenant = await scoped.table('tenants').forUpdate().first();
     if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
     if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');
@@ -103,9 +151,10 @@ export async function runCoManagedPurchase(db: Knex, input: {
     const operation = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).first();
     if (operation.state === 'completed') return { kind: 'updated' as const, subscriptionId: operation.provider_reference };
     if (operation.state === 'expired') return { kind: 'expired' as const };
-    if (input.quantity < await allocatedSeats(trx, input.sponsorTenant)) {
+    if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
       throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
     }
+    if (beforeProvider) await beforeProvider(trx, operation);
     const result = await provider(operation);
     if (result.kind === 'updated' && entitlement?.source === 'hosted') {
       if (result.subscriptionId && result.subscriptionId !== entitlement.source_reference) {
@@ -123,7 +172,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
     }
     // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
     await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
-      state: result.kind === 'checkout' ? 'checkout' : result.kind === 'expired' ? 'expired' : 'completed',
+      state: result.kind === 'checkout' ? 'checkout' : result.kind === 'expired' ? 'expired' : operation.trial_id ? 'preparing' : 'completed',
       provider_reference: result.kind === 'checkout' ? result.sessionId : result.kind === 'updated' ? result.subscriptionId : null,
       updated_at: trx.fn.now(),
     });

@@ -72,7 +72,8 @@ export async function applyChecklistTemplateToTicket(
   ticketId: string,
   templateId: string,
   source: 'template' | 'workflow',
-  auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
+  auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT,
+  authorizedTicketClientId?: string | null,
 ): Promise<ApplyChecklistTemplateResult> {
   const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
     .where({ template_id: templateId })
@@ -83,13 +84,17 @@ export async function applyChecklistTemplateToTicket(
 
   // Client scope. Enforced here, the single apply chokepoint, so no caller can bypass it.
   if (template.client_id) {
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .first('client_id') as { client_id: string | null } | undefined;
-    if (!ticket) {
-      throw new Error('Ticket not found');
+    let ticketClientId = authorizedTicketClientId;
+    if (ticketClientId === undefined) {
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .first('client_id') as { client_id: string | null } | undefined;
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+      ticketClientId = ticket.client_id;
     }
-    if (!isChecklistTemplateInScopeForClient(template.client_id, ticket.client_id)) {
+    if (!isChecklistTemplateInScopeForClient(template.client_id, ticketClientId)) {
       return { applied: false, itemsAdded: 0, reason: CHECKLIST_TEMPLATE_CLIENT_MISMATCH };
     }
   }
@@ -162,7 +167,7 @@ export async function matchingRuleTemplateIds(
   if (!rules.length) return [];
   const schema = createTicketQuerySchema();
   const fragments = rules.map((rule) => compilePredicateFragment(
-    schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't' }
+    schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't', tenant }
   ));
   const row = await db.table('tickets as t').where('t.ticket_id', ticketId)
     .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`] as Knex.RawBinding[])))

@@ -7,6 +7,7 @@ import { buildTeamsArtifactCaptureDeps } from '@alga-psa/scheduling/actions';
 export interface TeamsMeetingArtifactSubscriptionRenewalJobData extends Record<string, unknown> {
   tenantId: string;
   lookAheadMinutes?: number;
+  force?: boolean;
 }
 
 export interface TeamsMeetingArtifactNotificationJobData extends Record<string, unknown> {

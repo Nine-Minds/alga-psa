@@ -32,3 +32,11 @@ export function parseContactActionError(message: string): ParsedContactActionErr
 
   return { code: match[1] as ContactActionErrorCode, detail: match[2]!.trim() };
 }
+
+/**
+ * Authorization refusals are not prefixed with a code: the actions pass `Permission denied: …` through as-is
+ * (RBAC, cross-client and out-of-scope create refusals alike), so callers recognise them by that prefix.
+ */
+export function isContactActionPermissionDenied(message: string): boolean {
+  return /^\s*Permission denied:/.test(message);
+}

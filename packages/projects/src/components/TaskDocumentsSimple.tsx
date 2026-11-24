@@ -231,6 +231,10 @@ export default function TaskDocumentsSimple({
     setIsLoadingContent(true);
     try {
       const content = await getBlockContent(document.document_id);
+      if (isDocumentActionError(content)) {
+        handleError(content, getErrorMessage(content));
+        return;
+      }
       if (content?.block_data) {
         try {
           const parsedContent = typeof content.block_data === 'string'
@@ -358,16 +362,19 @@ export default function TaskDocumentsSimple({
 
       // Update document name
       await updateDocument(selectedDocument.document_id, {
-        document_name: documentName,
-        edited_by: user.user_id
+        document_name: documentName
       });
 
       // Update content if changed
       if (hasContentChanged) {
-        await updateBlockContent(selectedDocument.document_id, {
+        const contentResult = await updateBlockContent(selectedDocument.document_id, {
           block_data: JSON.stringify(currentContent),
           user_id: user.user_id
         });
+        if (isDocumentActionError(contentResult)) {
+          handleError(contentResult, getErrorMessage(contentResult));
+          return;
+        }
       }
 
       toast.success(docT('updatedSuccess', 'Document updated successfully'));

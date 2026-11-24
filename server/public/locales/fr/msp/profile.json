@@ -96,7 +96,8 @@
       "policies": "Politiques",
       "apiKeys": "Clés API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Provisionnement des utilisateurs"
+      "userProvisioning": "Provisionnement des utilisateurs",
+      "servicePrincipals": "Principaux de service"
     },
     "loading": {
       "roles": "Chargement de la configuration des rôles...",
@@ -107,12 +108,13 @@
       "webhooks": "Chargement de la configuration des webhooks...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives...",
-      "userProvisioning": "Chargement du provisionnement SCIM…"
+      "userProvisioning": "Chargement du provisionnement SCIM…",
+      "servicePrincipals": "Chargement des principaux de service..."
     },
     "sso": {
       "advanced": {
         "title": "Options avancées : routage personnalisé du fournisseur d'identité",
-        "description": "Acheminez la connexion SSO du MSP vers votre propre fournisseur d'identité à l'aide de domaines de connexion vérifiés. Nécessaire uniquement pour les installations personnalisées ou sur site.",
+        "description": "Acheminez la connexion SSO du MSP vers votre propre fournisseur d'identité à l'aide de domaines de connexion vérifiés. Nécessaire lorsque le personnel se connecte via votre propre realm Keycloak ou votre propre application Google ou Microsoft.",
         "inertNotice": "Aucun fournisseur d’identité du locataire n’est configuré ; les revendications de domaine n’ont donc aucun effet pour le moment. Configurez Keycloak ci-dessus, ou dans l’Enterprise Edition les identifiants de votre application Google ou Microsoft, puis revendiquez ici votre domaine de connexion."
       }
     },
@@ -801,10 +803,11 @@
     "providers": {
       "title": "Connecter un fournisseur",
       "description": "Choisissez un fournisseur pour finaliser la liaison SSO. Vous serez redirigé vers le flux de connexion du fournisseur.",
-      "noneConfigured": "Aucun fournisseur SSO n'est configuré pour cet environnement. Demandez à votre administrateur de configurer les identifiants Google ou Microsoft.",
-      "noneConfiguredAdmin": "Aucun fournisseur SSO n'est encore configuré. Configurez d'abord l'application Google ou Microsoft de votre organisation.",
-      "openProviderSetup": "Configurer un fournisseur SSO",
+      "noneConfigured": "Aucun fournisseur SSO n'est configuré pour votre organisation. Demandez à votre administrateur d'en configurer un.",
+      "noneConfiguredAdmin": "Aucun fournisseur SSO n'est encore configuré. Utilisez le lien de configuration de l'un des fournisseurs ci-dessous pour commencer.",
       "notConfigured": "Non configuré",
+      "setUpProvider": "Configurer {{provider}}",
+      "askAdministrator": "Demandez à votre administrateur de le configurer.",
       "branding": {
         "google": "Continuer avec Google",
         "microsoft": "Continuer avec Microsoft",
@@ -830,6 +833,7 @@
     },
     "apiKeys": {
       "internalOnly": "Autorisation refusée : la gestion des clés d'API est réservée aux utilisateurs internes",
+      "notAvailableForAccount": "Les clés d'API ne sont pas disponibles pour ce compte.",
       "configInternalOnly": "Autorisation refusée : la configuration des clés d'API est réservée aux utilisateurs internes",
       "invalidExpiration": "Choisissez une date d'expiration valide pour cette clé d'API.",
       "notFound": "Clé d'API introuvable.",
@@ -843,7 +847,10 @@
       "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
       "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
       "unsupportedEventType": "Type d'événement non pris en charge : {{eventTypes}}",
-      "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
+      "validation": {
+        "unknownEntity": "Entité de webhook inconnue « {{entity}} ».",
+        "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -862,7 +869,11 @@
       "deliveryNotFound": "Livraison entrante introuvable.",
       "replayMissingConfig": "Impossible de rejouer une livraison entrante sans configuration de webhook.",
       "notFoundOrInactive": "Webhook entrant introuvable ou inactif.",
-      "validation": { "slugReserved": "Cet identifiant est réservé à une intégration incluse.", "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.", "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné." }
+      "validation": {
+        "slugReserved": "Cet identifiant est réservé à une intégration incluse.",
+        "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.",
+        "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné."
+      }
     }
   }
 }

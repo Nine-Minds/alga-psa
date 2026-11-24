@@ -3,20 +3,13 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { citusRuntimeFiles } from './lib/citus-runtime-inventory.mjs';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { reconcileDiscovery } from './lib/test-discovery.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const server = path.join(root, 'server');
-const files = [
-  'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
-  'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
-  'server/src/test/integration/remainingBucketUnits.integration.test.ts',
-  'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
-  'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
-  'server/migrations/__tests__/coManagedMeetingCreationOperationsMigration.integration.test.ts',
-];
 const output = path.join(root, 'test-results/citus-runtime');
 mkdirSync(output, { recursive: true });
 const save = (name, value) => writeFileSync(path.join(output, `${name}.json`), JSON.stringify(value, null, 2) + '\n');
@@ -28,11 +21,11 @@ try {
   const before = testRevision(root);
   const run = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'),
     ...args], { cwd: server, stdio: 'inherit' });
-  const selection = files.map(file => path.relative(server, path.join(root, file)));
+  const selection = citusRuntimeFiles.map(file => path.relative(server, path.join(root, file)));
   const fileCollection = run(['list', ...selection, '--filesOnly', `--json=${path.join(output, 'collected.json')}`]);
   if (fileCollection.status !== 0) throw new Error('Citus runtime file collection failed');
   const collected = JSON.parse(readFileSync(path.join(output, 'collected.json'), 'utf8'));
-  const discovery = reconcileDiscovery({ root, candidates: files,
+  const discovery = reconcileDiscovery({ root, candidates: citusRuntimeFiles,
     collections: [{ runner: 'citus-runtime', status: 'passed', files: collected }] });
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));

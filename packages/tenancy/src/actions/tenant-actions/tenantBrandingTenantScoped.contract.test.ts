@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-
-const files = [
-  'tenantBrandingActions.ts',
-  'tenantLogoActions.ts',
-  'getTenantBrandingByDomain.ts',
-];
+import { sanitizePortalBranding } from '../../lib/sanitizePortalBranding';
 
 describe('tenant branding actions tenant-scoped query contract', () => {
   it('persists the optional client portal hero gradient mode with branding', () => {
@@ -62,15 +57,6 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(brandingSource).toContain('const logoDarkMarkSource = existingSettings.branding?.logoDarkMarkSource');
   });
 
-  it('keeps the mark provenance out of the branding both portals read', () => {
-    const brandingSource = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
-    // Both read paths — the authenticated one and the public by-id one — go
-    // through the same strip, so the document id never reaches a browser.
-    const stripped = brandingSource.match(/\.\.\.withoutMarkProvenance\(tenantSettings\.settings\.branding\)/g);
-    expect(stripped).toHaveLength(2);
-    expect(brandingSource).not.toContain('...tenantSettings.settings.branding,');
-  });
-
   it('serves the logo slot details to internal users only', () => {
     const logoSource = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
     const infoAction = logoSource.slice(logoSource.indexOf('export const getTenantLogoInfoAction'));
@@ -78,15 +64,42 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(infoAction.slice(0, infoAction.indexOf('getConnection'))).toContain("user.user_type !== 'internal'");
   });
 
-  it('uses structural tenant scoping for tenant settings branding roots', () => {
-    for (const file of files) {
-      const source = readFileSync(resolve(__dirname, file), 'utf8');
-      expect(source).toContain('tenantDb');
-      expect(source).toContain("table('tenant_settings')");
-      expect(source).not.toContain('createTenantScopedQuery');
-      expect(source).not.toContain(".where({ tenant })");
-      expect(source).not.toContain('.where({ tenant: tenantId })');
-      expect(source).not.toContain("knex('tenant_settings')\n    .where");
+  it('gates every logo mutator on settings:update before it writes branding', () => {
+    const logoSource = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
+    expect(logoSource).toContain("hasPermission(user, 'settings', 'update', knex)");
+
+    const mutators = ['uploadTenantLogo', 'recropTenantLogo', 'deleteTenantLogo', 'linkDocumentAsTenantLogo'];
+    for (const mutator of mutators) {
+      const start = logoSource.indexOf(`export const ${mutator}`);
+      const body = logoSource.slice(start, logoSource.indexOf('\n});', start));
+      expect(body).toContain('guardTenantLogoWrite(user, tenant, tenantId)');
+      expect(body.indexOf('guardTenantLogoWrite(')).toBeLessThan(body.indexOf('writeBrandingLogoUrl('));
     }
+
+    // Only the four guarded mutators may call the branding writer.
+    const callers = logoSource.match(/await writeBrandingLogoUrl\(/g) ?? [];
+    const guardedCallers = mutators.reduce((count, mutator) => {
+      const start = logoSource.indexOf(`export const ${mutator}`);
+      const body = logoSource.slice(start, logoSource.indexOf('\n});', start));
+      return count + (body.match(/await writeBrandingLogoUrl\(/g) ?? []).length;
+    }, 0);
+    expect(callers).toHaveLength(guardedCallers);
+  });
+
+  it('projects branding fields for every reader through a fail-closed allow-list', () => {
+    const stored = {
+      logoUrl: 'https://cdn.example.test/logo.svg',
+      clientName: 'Example',
+      portalSidebarColor: '#123456',
+      logoMarkSource: { kind: 'square', documentId: 'private-document' },
+      nested: { apiKey: 'private' },
+      unexpected: ['private'],
+    };
+
+    expect(sanitizePortalBranding(stored)).toEqual({
+      logoUrl: 'https://cdn.example.test/logo.svg',
+      clientName: 'Example',
+      portalSidebarColor: '#123456',
+    });
   });
 });

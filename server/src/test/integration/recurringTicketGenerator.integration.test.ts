@@ -172,6 +172,7 @@ describe('recurring ticket generator (integration)', () => {
     expect(summary).toMatchObject({ definitions: 1, definitionClients: 1, created: 1, failed: 0, missed: 0 });
 
     const [occurrence] = await occurrences(f, definitionClientId);
+    const occurrenceDateText = (await db.raw('SELECT occurrence_date::text AS d FROM recurring_ticket_occurrences WHERE tenant = ? AND occurrence_id = ?', [f.tenant, occurrence.occurrence_id])).rows[0].d;
     expect(occurrence.status).toBe('created');
     expect(occurrence.attempts).toBe(1);
     expect(occurrence.ticket_id).toBeTruthy();
@@ -198,6 +199,14 @@ describe('recurring ticket generator (integration)', () => {
       tenantId: f.tenant,
       ticketId: occurrence.ticket_id,
       suppressContactNotifications: true,
+      // Provenance for workflows: origin, due date and the schedule ids handed down by the generator.
+      ticketOrigin: 'recurring',
+      dueDate: new Date(occurrence.due_at).toISOString(),
+      recurrence: {
+        definitionId: occurrence.definition_id,
+        occurrenceId: occurrence.occurrence_id,
+        occurrenceDate: occurrenceDateText,
+      },
     });
     expect(created[0].payload.userId).toBeUndefined();
 
@@ -351,6 +360,68 @@ describe('recurring ticket generator (integration)', () => {
     [row] = await occurrences(f, definitionClientId);
     expect(row.status).toBe('failed');
     expect(await countTickets(f)).toBe(0);
+  });
+
+  describe('priority family must match the effective board (card d4555320)', () => {
+    async function seedItilBoard(f: Fixture) {
+      const scoped = tenantDb(db, f.tenant);
+      const itilBoardId = uuidv4();
+      const itilStatusId = uuidv4();
+      const itilPriorityId = uuidv4();
+      await scoped.table('boards').insert({ tenant: f.tenant, board_id: itilBoardId, board_name: 'Service Desk', priority_type: 'itil' });
+      await scoped.table('statuses').insert({ tenant: f.tenant, status_id: itilStatusId, board_id: itilBoardId, name: 'ITIL New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false });
+      await scoped.table('priorities').insert({ tenant: f.tenant, priority_id: itilPriorityId, priority_name: 'P2 - High', item_type: 'ticket', order_number: 50, color: '#f00', is_from_itil_standard: true, created_by: f.userId });
+      return { itilBoardId, itilStatusId, itilPriorityId };
+    }
+
+    it('fails the occurrence when a definition-level board override makes the pair mismatch', async () => {
+      const f = await createFixture();
+      const itil = await seedItilBoard(f);
+      const { definitionClientId } = await createDefinition(f, {
+        evaluatedThrough: '2026-02-28T12:00:00Z',
+        // Custom priority (from the template) now lands on an ITIL board.
+        overrides: {},
+      });
+      await tenantDb(db, f.tenant).table('recurring_ticket_definitions').update({
+        overrides: JSON.stringify({ board: { board_id: itil.itilBoardId, status_id: itil.itilStatusId } }),
+      });
+
+      const summary = await sweep(f, '2026-03-01T14:00:00Z');
+      expect(summary).toMatchObject({ failed: 1, created: 0 });
+      const [row] = await occurrences(f, definitionClientId);
+      expect(row.status).toBe('failed');
+      expect(row.reason).toBe('Priority ‘Medium’ is a custom priority but board ‘Service Desk’ uses ITIL priorities; edit the schedule');
+      expect(await countTickets(f)).toBe(0);
+    });
+
+    it('fails the occurrence when a client-level priority override makes the pair mismatch', async () => {
+      const f = await createFixture();
+      const itil = await seedItilBoard(f);
+      const { definitionClientId } = await createDefinition(f, {
+        evaluatedThrough: '2026-02-28T12:00:00Z',
+        overrides: { priority: { priority_id: itil.itilPriorityId } },
+      });
+
+      await sweep(f, '2026-03-01T14:00:00Z');
+      const [row] = await occurrences(f, definitionClientId);
+      expect(row.status).toBe('failed');
+      expect(row.reason).toBe('Priority ‘P2 - High’ is an ITIL priority but board ‘Patching’ uses custom priorities; edit the schedule');
+    });
+
+    it('creates the ticket when the override moves board and priority together to the ITIL family', async () => {
+      const f = await createFixture();
+      const itil = await seedItilBoard(f);
+      const { definitionClientId } = await createDefinition(f, {
+        evaluatedThrough: '2026-02-28T12:00:00Z',
+        overrides: {
+          board: { board_id: itil.itilBoardId, status_id: itil.itilStatusId },
+          priority: { priority_id: itil.itilPriorityId },
+        },
+      });
+      await sweep(f, '2026-03-01T14:00:00Z');
+      const [row] = await occurrences(f, definitionClientId);
+      expect(row.status).toBe('created');
+    });
   });
 
   it('fails with the assigned user named when that user has been deactivated', async () => {

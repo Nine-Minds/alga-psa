@@ -73,6 +73,13 @@ vi.mock('@/lib/api/services/TimeSheetService', () => ({
       state.calls.push('listCalendars');
       return [];
     }
+    async getTimePeriodSettingsById() {
+      state.calls.push('getSettings');
+      return { time_period_settings_id: ENTRY };
+    }
+    async deleteTimePeriodSettings() {
+      state.calls.push('deleteSettings');
+    }
   },
 }));
 
@@ -107,6 +114,26 @@ beforeEach(() => {
 });
 
 const group = (level: string) => new Map([[CAL, { calendarId: CAL, level, isArchived: false }]]);
+
+describe('REST single time period settings authorization', () => {
+  it('read requires time_period:read before calling the service', async () => {
+    const c = new ApiTimeSheetController();
+    expect((await c.getTimePeriodSettingsById()(req('GET'))).status).toBe(403);
+    expect(state.calls).toEqual([]);
+    state.perms['time_period:read'] = true;
+    expect((await c.getTimePeriodSettingsById()(req('GET'))).status).toBe(200);
+    expect(state.calls).toEqual(['getSettings']);
+  });
+
+  it('delete requires time_period:manage before calling the service', async () => {
+    const c = new ApiTimeSheetController();
+    expect((await c.deleteTimePeriodSettings()(req('DELETE'))).status).toBe(403);
+    expect(state.calls).toEqual([]);
+    state.perms['time_period:manage'] = true;
+    expect((await c.deleteTimePeriodSettings()(req('DELETE'))).status).toBe(204);
+    expect(state.calls).toEqual(['deleteSettings']);
+  });
+});
 
 describe('REST schedule update / delete', () => {
   it('edit share on a group calendar: PUT and DELETE are allowed', async () => {

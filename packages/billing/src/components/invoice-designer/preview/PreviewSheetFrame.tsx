@@ -3,16 +3,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PREVIEW_SHEET_CLASS } from '../../../lib/invoice-template-ast/previewSheet';
+import { attachPreviewPan, resolvePreviewPanScroller, type PreviewPan } from './previewPan';
 import {
   computePreviewSheetScale,
+  PREVIEW_SHEET_GUTTER_PX as SHEET_GUTTER_PX,
   readPreviewSheetMetrics,
+  type PreviewSheetFit,
   type PreviewZoomMode,
 } from './previewSheetScale';
 
-/** Body padding the server's screen-only sheet CSS puts around the sheet, per side. */
-const SHEET_GUTTER_PX = 24;
 /** Height budget a label is fitted into, and the fixed height of an unframed document preview. */
 const FIT_HEIGHT_PX = 640;
+/** A paginated document sheet carries its page number; a label sheet stands alone. */
+const PAGE_NUMBER_ATTRIBUTE = 'data-preview-page';
 
 interface PreviewSheetFrameProps {
   html: string;
@@ -24,10 +27,11 @@ interface PreviewSheetFrameProps {
 }
 
 /**
- * The authoritative preview iframe. For a label the server draws the markup on a sheet the size of the
- * printed cell; this frame zooms that sheet (fit or 100%) and sizes itself to the result, so a 4 x 2 in
- * label shows as a label instead of a speck in the corner of a full-width page. HTML without a sheet (a
- * full-page document) keeps the plain fixed-height frame.
+ * The authoritative preview iframe. The server draws the markup on sheets the size of the paper it
+ * prints on — one cell for a label, one per printed page for a document — and this frame zooms them
+ * (fit or 100%) and sizes itself to the result, so a 4 x 2 in label shows as a label instead of a
+ * speck in the corner of a full-width page, and a quote shows as the pages it will be read as.
+ * HTML without a sheet keeps the plain fixed-height frame.
  */
 export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automationId }: PreviewSheetFrameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -43,9 +47,12 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
     const doc = iframe?.contentDocument;
     if (!iframe || !container || !doc?.documentElement) return;
 
-    const sheet = doc.querySelector<HTMLElement>(`.${PREVIEW_SHEET_CLASS}`);
-    const metrics = readPreviewSheetMetrics(sheet);
-    if (sheet && metrics) {
+    const sheets = Array.from(doc.querySelectorAll<HTMLElement>(`.${PREVIEW_SHEET_CLASS}`));
+    const metrics = readPreviewSheetMetrics(sheets[0] ?? null);
+    if (sheets.length > 0 && metrics) {
+      // A document is a stack of pages to scroll through, so it is fitted to the pane's width; a label
+      // is a single sheet that has to be visible whole.
+      const fit: PreviewSheetFit = sheets[0].hasAttribute(PAGE_NUMBER_ATTRIBUTE) ? 'width' : 'box';
       const scale = computePreviewSheetScale(
         metrics,
         {
@@ -53,9 +60,10 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
           heightPx: FIT_HEIGHT_PX - SHEET_GUTTER_PX * 2,
         },
         zoomMode,
+        fit,
       );
       // CSS zoom (not transform) so the scaled sheet takes up its scaled size and the frame can measure it.
-      sheet.style.setProperty('zoom', String(scale));
+      sheets.forEach((sheet) => sheet.style.setProperty('zoom', String(scale)));
       onScaleChangeRef.current?.(scale);
       setHasSheet(true);
     } else {
@@ -74,14 +82,22 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
       setFrameHeight(contentHeight);
     }
   }, [zoomMode]);
+
+  // A sheet wider than the pane (100% on a narrow screen) is dragged into view rather than chased
+  // with a scrollbar that sits below every page of the document.
+  const panRef = useRef<PreviewPan | null>(null);
+  const relayout = useCallback(() => {
+    layout();
+    panRef.current?.refresh();
+  }, [layout]);
   // Observers outlive renders, so they call the CURRENT layout (current zoom mode), never a stale one.
-  const layoutRef = useRef(layout);
-  layoutRef.current = layout;
+  const layoutRef = useRef(relayout);
+  layoutRef.current = relayout;
 
   // Re-lay out when the zoom mode changes (the iframe document stays loaded).
   useEffect(() => {
-    layout();
-  }, [layout, html]);
+    relayout();
+  }, [relayout, html]);
 
   // Re-fit when the pane resizes.
   useEffect(() => {
@@ -92,12 +108,21 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => () => {
+    panRef.current?.dispose();
+    panRef.current = null;
+  }, []);
+
   // Each srcdoc load is a fresh document: lay it out, and re-fit when it grows (late images, fonts).
-  // The observer dies with the document it watches.
+  // The observer dies with the document it watches, and so does the pan it is dragged by.
   const handleLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    panRef.current?.dispose();
+    panRef.current = doc ? attachPreviewPan(doc, resolvePreviewPanScroller(iframe)) : null;
     layoutRef.current();
-    const frameWindow = iframeRef.current?.contentWindow as (Window & { ResizeObserver?: typeof ResizeObserver }) | null;
-    const body = iframeRef.current?.contentDocument?.body;
+    const frameWindow = iframe?.contentWindow as (Window & { ResizeObserver?: typeof ResizeObserver }) | null;
+    const body = doc?.body;
     if (frameWindow?.ResizeObserver && body) {
       new frameWindow.ResizeObserver(() => layoutRef.current()).observe(body);
     }

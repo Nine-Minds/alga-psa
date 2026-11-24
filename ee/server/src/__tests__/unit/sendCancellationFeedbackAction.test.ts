@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkAccountManagementPermission: vi.fn(),
+  checkAccountManagementUpdatePermission: vi.fn(),
   getConnection: vi.fn(),
   getSession: vi.fn(),
   sendCancellationFeedbackEmail: vi.fn(),
@@ -11,12 +12,13 @@ const mocks = vi.hoisted(() => ({
   loggerInfo: vi.fn(),
 }));
 
-vi.mock('../../lib/license/get-license-usage', () => ({ getLicenseUsage: vi.fn() }));
+vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: vi.fn() }));
 
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.getSession }));
 
 vi.mock('@alga-psa/auth/actions', () => ({
   checkAccountManagementPermission: mocks.checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission: mocks.checkAccountManagementUpdatePermission,
 }));
 
 vi.mock('../../lib/stripe/StripeService', () => ({
@@ -92,6 +94,7 @@ describe('sendCancellationFeedbackAction', () => {
       user: { tenant: 'tenant-1', email: 'session@example.test' },
     });
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(true);
     mocks.getConnection.mockResolvedValue({});
     mocks.sendCancellationFeedbackEmail.mockResolvedValue(undefined);
   });

@@ -206,6 +206,12 @@ export function OnboardingWizard({
             }) }));
             return false;
           }
+          // The saved address is now the user's own. saveClientInfo records that
+          // server-side for later visits; clear it here so going Back in this
+          // session does not call it a billing prefill either.
+          if (wizardData.companyAddressPrefilled) {
+            setWizardData(prev => ({ ...prev, companyAddressPrefilled: false }));
+          }
           if (wizardData.locale && isSupportedLocale(wizardData.locale)) {
             const chosenLocale = wizardData.locale as SupportedLocale;
             const enabledLocales: SupportedLocale[] = chosenLocale === 'en'

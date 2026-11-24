@@ -11,7 +11,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
   createClientContractForBilling: vi.fn(),
   getContractLinePresets: vi.fn(),
   getContractLinePresetServiceCounts: vi.fn(),
@@ -23,7 +23,7 @@ const actionMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: actionMocks.getAllClientsForBilling,
+  getClientByIdForBilling: actionMocks.getClientByIdForBilling,
   createClientContractForBilling: actionMocks.createClientContractForBilling,
 }));
 
@@ -167,9 +167,9 @@ const minimumInput = () => document.getElementById('min-billable-preset-hourly')
 describe('ContractDialog preset override reset', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([
+    actionMocks.getClientByIdForBilling.mockResolvedValue(
       { client_id: 'client-1', client_name: 'Emerald City', default_currency_code: 'USD' },
-    ]);
+    );
     actionMocks.getContractLinePresets.mockResolvedValue([hourlyPreset]);
     actionMocks.getContractLinePresetServiceCounts.mockResolvedValue({ 'preset-hourly': 1 });
     actionMocks.getContractLinePresetServices.mockResolvedValue(hourlyPresetServices);

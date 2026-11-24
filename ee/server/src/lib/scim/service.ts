@@ -1,5 +1,12 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { CoManagedAdmissionError } from '@alga-psa/licensing';
+import {
+  admitInternalUserSeat,
+  assertInternalUserSeatsWithinLimit,
+  isInternalUserLicenseLimitRejected,
+  lockInternalUserSeats,
+} from '@alga-psa/users/lib/internalUserLicenseGuard';
 
 import {
   normalizeEmail,
@@ -420,6 +427,13 @@ export class ScimProvisioningService {
     linkState: ScimLinkRow['link_state'] = 'active'
   ): Promise<ScimLinkRow> {
     const db = tenantDb(trx, this.connection.tenant);
+    // A directory-driven reactivation occupies an internal seat. Take the seat
+    // lock BEFORE locking the user row: every other seat path takes the seat
+    // lock first and row locks after, so this order cannot invert.
+    const mayReactivate = input.active && Boolean(link.scim_inactive_at);
+    if (mayReactivate) {
+      await lockInternalUserSeats(trx, this.connection.tenant);
+    }
     const user = await db.table<UserRow>('users')
       .where('user_id', link.user_id)
       .forUpdate()
@@ -457,10 +471,22 @@ export class ScimProvisioningService {
         });
     } else if (link.scim_inactive_at) {
       if (user.is_inactive) {
+        // The one admission primitive, so a directory-provisioned seat technician is admitted
+        // against the arrangement's allocation like every other reactivation.
+        const licenseCheck = await admitInternalUserSeat(trx, this.connection.tenant, {
+          email: user.email, kind: 'user', existingUserId: link.user_id,
+        }).catch((error) => {
+          if (error instanceof CoManagedAdmissionError) throw new ScimError(409, error.message);
+          throw error;
+        });
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          throw new ScimError(409, licenseCheck.error);
+        }
         await db.table('users').where('user_id', link.user_id).update({
           is_inactive: false,
           updated_at: trx.fn.now(),
         });
+        await assertInternalUserSeatsWithinLimit(trx, this.connection.tenant, licenseCheck);
         lifecycleOperation = 'reactivate';
       }
       scimInactiveAt = null;

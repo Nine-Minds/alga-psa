@@ -10,8 +10,9 @@ import {
   type EntityType,
   type LogoCropRect,
 } from '@alga-psa/storage';
-import { getConnection, tenantDb } from '@alga-psa/db';
-import { withAuth, type AuthContext } from '@alga-psa/auth';
+import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
+import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -163,16 +164,57 @@ function resolveMarkSource(
   return { kind: 'wide' };
 }
 
+const TENANT_LOGO_PERMISSION_DENIED = 'Permission denied: Cannot update settings';
+
+export type TenantLogoWriteDenied = { success: false; error: string };
+
+/**
+ * Tenant logos are the tenant's publicly served branding, so changing them takes
+ * the same `settings:update` authority as every other tenant-settings write.
+ * Returns null when allowed, otherwise the failure the action returns unchanged.
+ */
+async function requireTenantLogoWrite(user: IUserWithRoles, knex: Knex): Promise<TenantLogoWriteDenied | null> {
+  if (!(await hasPermission(user, 'settings', 'update', knex))) {
+    return { success: false, error: TENANT_LOGO_PERMISSION_DENIED };
+  }
+  return null;
+}
+
+/**
+ * The guard every logo mutator runs first, before the try block that turns
+ * errors into generic messages. A `tenantId` other than the authenticated
+ * tenant is denied like a missing permission, and so is any failure to check:
+ * the guard fails closed.
+ */
+async function guardTenantLogoWrite(
+  user: IUserWithRoles,
+  tenant: string,
+  tenantId: string,
+): Promise<TenantLogoWriteDenied | null> {
+  if (tenantId !== tenant) {
+    return { success: false, error: TENANT_LOGO_PERMISSION_DENIED };
+  }
+  try {
+    return await requireTenantLogoWrite(user, await getConnection(tenant));
+  } catch (error) {
+    console.error('Error checking tenant logo permission:', error);
+    return { success: false, error: TENANT_LOGO_PERMISSION_DENIED };
+  }
+}
+
 /**
  * Upload a logo for the tenant
  */
 export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, formData: FormData, logoVariant: EntityLogoVariant = 'default') => {
-  try {
-    // Check if user has admin permissions
-    if (user.user_type !== 'internal') {
-      return { success: false, error: 'Only internal users can update tenant logo' };
-    }
+  if (user.user_type !== 'internal') {
+    return { success: false, error: 'Only internal users can update tenant logo' };
+  }
+  const denied = await guardTenantLogoWrite(user, tenant, tenantId);
+  if (denied) {
+    return denied;
+  }
 
+  try {
     const file = formData.get('logo') as File;
     if (!file) {
       return { success: false, error: 'No file provided' };
@@ -192,7 +234,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
     // Upload the logo using EntityImageService
     const result = await uploadEntityImage(
       'tenant' as EntityType,
-      tenantId,
+      tenant,
       file,
       user.user_id,
       tenant,
@@ -238,10 +280,15 @@ export const recropTenantLogo = withAuth(async (
   logoVariant: EntityLogoVariant,
   crop: LogoCropRect,
 ) => {
+  if (user.user_type !== 'internal') {
+    return { success: false, error: 'Only internal users can update tenant logo' };
+  }
+  const denied = await guardTenantLogoWrite(user, tenant, tenantId);
+  if (denied) {
+    return denied;
+  }
+
   try {
-    if (user.user_type !== 'internal') {
-      return { success: false, error: 'Only internal users can update tenant logo' };
-    }
     if (logoVariant !== 'default' && logoVariant !== 'dark') {
       return { success: false, error: 'Only the square marks can be cropped' };
     }
@@ -265,7 +312,7 @@ export const recropTenantLogo = withAuth(async (
       documents.get(logoVariant),
     );
 
-    const result = await recropEntityLogo('tenant' as EntityType, tenantId, user.user_id, tenant, {
+    const result = await recropEntityLogo('tenant' as EntityType, tenant, user.user_id, tenant, {
       sourceVariant: markSourceVariant(logoVariant),
       // Square-sourced marks re-cut the original upload, so adjusting the zone
       // twice never stacks two crops.
@@ -295,16 +342,20 @@ export const recropTenantLogo = withAuth(async (
  * Delete the tenant logo
  */
 export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, logoVariant: EntityLogoVariant = 'default') => {
+  if (user.user_type !== 'internal') {
+    return { success: false, error: 'Only internal users can delete tenant logo' };
+  }
+  const denied = await guardTenantLogoWrite(user, tenant, tenantId);
+  if (denied) {
+    return denied;
+  }
+
   try {
-    // Check if user has admin permissions
-    if (user.user_type !== 'internal') {
-      return { success: false, error: 'Only internal users can delete tenant logo' };
-    }
 
     // Delete the logo using EntityImageService
     const result = await deleteEntityImage(
       'tenant' as EntityType,
-      tenantId,
+      tenant,
       user.user_id,
       tenant,
       undefined,
@@ -397,16 +448,61 @@ export const linkDocumentAsTenantLogo = withAuth(async (
   documentId: string,
   logoVariant: EntityLogoVariant = 'default',
 ) => {
+  if (user.user_type !== 'internal') {
+    return { success: false, error: 'Only internal users can update tenant logo' };
+  }
+  const denied = await guardTenantLogoWrite(user, tenant, tenantId);
+  if (denied) {
+    return denied;
+  }
+
   try {
-    if (user.user_type !== 'internal') {
-      return { success: false, error: 'Only internal users can update tenant logo' };
-    }
     if (!documentId) {
       return { success: false, error: 'No document provided' };
     }
 
-    const result = await linkEntityImageFromDocument('tenant' as EntityType, tenantId, user.user_id, tenant, {
-      documentId,
+    // A general document:read grant is necessary but does not bypass the
+    // instance-level relationship, asset, and attachment lifecycle checks.
+    const knex = await getConnection(tenant);
+    let sourceDocument;
+    try {
+      sourceDocument = await withTransaction(knex, async (trx) => {
+        if (!await hasPermission(user, 'document', 'read', trx)) {
+          return null;
+        }
+
+        const candidate = await tenantDb(trx, tenant).table('documents')
+          .where({ document_id: documentId })
+          .first();
+        if (!candidate) {
+          return null;
+        }
+
+        const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [candidate]);
+        return authorizedDocument ?? null;
+      });
+    } catch (error) {
+      console.error('Error checking source document permission for tenant logo:', error);
+      return { success: false, error: 'Permission denied: Cannot read documents' };
+    }
+
+    // The byte fields may themselves be redacted. Never fall back to a fresh
+    // storage lookup by the caller-supplied ID after authorization.
+    if (!sourceDocument?.file_id || !sourceDocument.mime_type) {
+      return { success: false, error: 'Permission denied: Cannot read documents' };
+    }
+    if (!sourceDocument.mime_type.startsWith('image/')) {
+      return { success: false, error: 'Only image documents can be used here.' };
+    }
+
+    const result = await linkEntityImageFromDocument('tenant' as EntityType, tenant, user.user_id, tenant, {
+      sourceDocument: {
+        tenant,
+        documentId: sourceDocument.document_id,
+        fileId: sourceDocument.file_id,
+        documentName: sourceDocument.document_name,
+        mimeType: sourceDocument.mime_type,
+      },
       logoVariant,
       contextName: 'tenant_logo',
     });

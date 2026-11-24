@@ -158,8 +158,10 @@ describe('journey: client portal service request → MSP ticket triage → porta
     setupCommonMocks({ tenantId, userId: 'journey-msp-user', permissionCheck: () => true });
     ({ getRequestServiceDefinitionDetailAction, submitRequestServiceDefinitionAction } =
       await import('../../../app/client-portal/request-services/[definitionId]/actions'));
-    ({ listMyServiceRequestSubmissionsAction, getMyServiceRequestSubmissionDetailAction } =
-      await import('../../../app/client-portal/request-services/my-requests/actions'));
+    ({
+      listMyServiceRequestSubmissionsAction,
+      getMyServiceRequestSubmissionDetailAction,
+    } = await import('../../../app/client-portal/request-services/my-requests/actions'));
     ({ listServiceRequestDefinitionSubmissionsAction, getServiceRequestDefinitionSubmissionDetailAction } =
       await import('../../../app/msp/service-requests/actions'));
     ({ updateTicket } = await import('@alga-psa/tickets/actions/ticketActions'));
@@ -381,10 +383,28 @@ describe('journey: client portal service request → MSP ticket triage → porta
     const portalDetail = await getRequestServiceDefinitionDetailAction(definitionId);
     expect(portalDetail).not.toBeNull();
     expect(portalDetail?.title).toBe(`Journey Support Request ${suffix}`);
-    expect(portalDetail?.visibleFieldKeys).toContain('request_title');
+    const portalFields = (portalDetail?.formSchema as { fields?: Array<{ key: string }> })?.fields ?? [];
+    expect(portalFields.map((field) => field.key)).toContain('request_title');
+    // The portal receives the form projection only: execution/form-behavior
+    // config and version identifiers stay server-side.
+    expect(portalDetail?.visibilityRules).toEqual([]);
+    for (const internalKey of [
+      'definitionId',
+      'versionId',
+      'versionNumber',
+      'visibleFieldKeys',
+      'executionProvider',
+      'executionConfig',
+      'formBehaviorProvider',
+      'formBehaviorConfig',
+    ]) {
+      expect(portalDetail).not.toHaveProperty(internalKey);
+    }
 
     // --- step 2: portal user A submits the request; the action redirects to
-    // the catalog with the submission + created-ticket ids on the URL ---
+    // the catalog with only the submission id on the URL. The success banner
+    // resolves the created ticket server-side from the requester's own
+    // submissions, so no ticket id travels through the URL. ---
     const formData = new FormData();
     formData.set('request_title', `Printer on fire ${suffix}`);
     formData.set('notes', 'Third floor copier is smoking');
@@ -394,8 +414,20 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(redirectUrl.startsWith('/client-portal/request-services?')).toBe(true);
     const redirectParams = new URLSearchParams(redirectUrl.split('?')[1] ?? '');
     const submissionId = redirectParams.get('submitted');
-    const ticketId = redirectParams.get('ticketId');
     expect(submissionId).toBeTruthy();
+    expect(redirectParams.has('ticketId')).toBe(false);
+
+    // Seam: the banner (what the catalog page renders after the redirect)
+    // resolves the created ticket and its human-readable number from the
+    // requester's own submission list.
+    const bannerSummary =
+      (await listMyServiceRequestSubmissionsAction()).find(
+        (row) => row.submission_id === submissionId
+      ) ?? null;
+    expect(bannerSummary).not.toBeNull();
+    expect(bannerSummary?.submission_id).toBe(submissionId);
+    expect(bannerSummary?.execution_status).toBe('succeeded');
+    const ticketId = bannerSummary?.created_ticket_id ?? null;
     expect(ticketId).toBeTruthy();
 
     // Seam: the submission committed under user A's client and executed into a ticket.
@@ -422,11 +454,17 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(ticket?.status_id).toBe(statusOpenId);
     expect(ticket?.priority_id).toBe(priorityId);
     expect(ticket?.title).toBe(`Printer on fire ${suffix}`);
+    // The banner shows the ticket's number, never its GUID.
+    expect(ticket?.ticket_number).toBeTruthy();
+    expect(bannerSummary?.ticket_number).toBe(ticket?.ticket_number);
     expect(typeof ticket?.ticket_number).toBe('string');
     expect(String(ticket?.ticket_number).length).toBeGreaterThan(0);
     const ticketDescription = (ticket?.attributes as { description?: string } | null)?.description;
     expect(ticketDescription).toContain('Portal Service Request');
-    expect(ticketDescription).toContain(`request_title: Printer on fire ${suffix}`);
+    // The answers are serialized rich-text rows of label + value, never the raw field key.
+    expect(ticketDescription).toContain('"text":"Request Title"');
+    expect(ticketDescription).toContain(`"text":"Printer on fire ${suffix}"`);
+    expect(ticketDescription).not.toContain('request_title');
 
     // --- step 3: the MSP side sees the submission and its ticket ---
     actAs(mspActor);
@@ -489,7 +527,8 @@ describe('journey: client portal service request → MSP ticket triage → porta
     const portalTicket = portalTicketDetails as any;
     expect(portalTicket.ticket_id).toBe(ticketId);
     expect(portalTicket.status_name).toBe(`Journey In Progress ${suffix}`);
-    expect(portalTicket.assigned_to).toBe(mspUserId);
+    expect(portalTicket.assigned_to_name).toBe('Morgan Agent');
+    expect(portalTicket).not.toHaveProperty('assigned_to');
     const replyComment = (portalTicket.conversations as any[]).find(
       (comment) => comment.comment_id === commentId
     );
@@ -497,11 +536,9 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(replyComment.note).toBe(mspReply);
     expect(replyComment.is_internal).toBe(false);
     expect(replyComment.author_type).toBe('internal');
-    expect(portalTicket.userMap[mspUserId]).toMatchObject({
-      first_name: 'Morgan',
-      last_name: 'Agent',
-      user_type: 'internal',
-    });
+    expect(replyComment).not.toHaveProperty('user_id');
+    expect(replyComment.portal_author).toMatchObject({ name: 'Morgan Agent', role: 'staff' });
+    expect(portalTicket).not.toHaveProperty('userMap');
 
     const portalOpenTickets = await getClientTickets(TICKET_STATUS_FILTER_OPEN);
     expect(Array.isArray(portalOpenTickets)).toBe(true);
@@ -517,6 +554,8 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(siblingRequests).toHaveLength(0);
     const siblingSubmissionDetail = await getMyServiceRequestSubmissionDetailAction(submissionId!);
     expect(siblingSubmissionDetail).toBeNull();
+    // The banner resolves from that same (empty) list, so a sibling client
+    // replaying client A's submission id in the URL learns nothing about its ticket.
 
     const siblingTicketDetails = await getClientTicketDetails(ticketId!);
     expect(siblingTicketDetails).toMatchObject({

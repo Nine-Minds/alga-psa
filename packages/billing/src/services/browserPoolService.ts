@@ -1,4 +1,5 @@
 import puppeteer, { Browser } from 'puppeteer';
+import { ISOLATED_RENDERER_BROWSER_ARGS } from '@alga-psa/core/rendering/isolatedRendering';
 
 const MAX_BROWSERS = 5;
 
@@ -12,13 +13,7 @@ export class BrowserPoolService {
     return puppeteer.launch({
       headless: true,
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--proxy-server=socks5://127.0.0.1:1',
-        '--proxy-bypass-list=<-loopback>',
-      ],
+      args: ISOLATED_RENDERER_BROWSER_ARGS,
     });
   }
 

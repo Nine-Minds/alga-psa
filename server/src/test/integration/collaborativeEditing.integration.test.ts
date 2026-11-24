@@ -11,11 +11,14 @@ import { tenantDb } from '@alga-psa/db';
 import { createServer, type Server as HttpServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import jwt from 'jsonwebtoken';
 import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { POST as persistRoute } from '@/app/api/internal/collab/persist/route';
+import { POST as authorizeRoute } from '@/app/api/internal/collab/authorize/route';
 import { CollabPersistenceExtension } from '../../../../hocuspocus/CollabPersistenceExtension.js';
-import { validateDocumentRoomAccess } from '../../../../hocuspocus/tenantValidation.js';
+import { validateDocumentRoomAccess, validateDocumentRoomToken } from '../../../../hocuspocus/tenantValidation.js';
+import { signDocumentRoomToken } from '@shared/lib/documentRoomToken';
 import type { Hocuspocus } from '../../../../hocuspocus/node_modules/@hocuspocus/server';
 
 /**
@@ -40,6 +43,8 @@ let tenantId: string;
 let userId: string;
 let secondTenantId: string;
 let secondUserId: string;
+let secondSameTenantUserId: string;
+const deniedWriterIds = new Set<string>();
 
 
 function tenantTable(tenant: string, table: string) {
@@ -73,7 +78,7 @@ vi.mock('@alga-psa/auth', async () => {
         return fn(user, ctx, ...args);
       };
     }),
-    hasPermission: vi.fn(() => Promise.resolve(true)),
+    hasPermission: vi.fn((user: any) => Promise.resolve(!deniedWriterIds.has(user.user_id))),
     getSession: vi.fn(() => Promise.resolve({ user: { id: userId, tenant: tenantId } })),
   };
 });
@@ -102,6 +107,11 @@ describe('Collaborative Editing — Integration Tests', () => {
       last_name: 'One',
       email: 'editor1@test.com',
     });
+    secondSameTenantUserId = await createUser(db, tenantId, {
+      first_name: 'Editor',
+      last_name: 'Two',
+      email: 'editor2@test.com',
+    });
 
     secondTenantId = await createTenant(db, 'Other MSP');
     secondUserId = await createUser(db, secondTenantId, {
@@ -109,11 +119,28 @@ describe('Collaborative Editing — Integration Tests', () => {
       last_name: 'Two',
       email: 'editor2@test.com',
     });
+
+    const permissionIds = [uuidv4(), uuidv4()];
+    const roleId = uuidv4();
+    await db('roles').insert({ tenant: tenantId, role_id: roleId, role_name: 'Collab Test Editor', msp: true, client: false });
+    await db('user_roles').insert([
+      { tenant: tenantId, user_id: userId, role_id: roleId },
+      { tenant: tenantId, user_id: secondSameTenantUserId, role_id: roleId },
+    ]);
+    await db('permissions').insert([
+      { tenant: tenantId, permission_id: permissionIds[0], resource: 'document', action: 'read', msp: true, client: false },
+      { tenant: tenantId, permission_id: permissionIds[1], resource: 'document', action: 'update', msp: true, client: false },
+    ]);
+    await db('role_permissions').insert(permissionIds.map(permission_id => ({ tenant: tenantId, role_id: roleId, permission_id })));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
     try {
       // A migrated suite must not hide missing tables or failed cleanup.
+      await db('role_permissions').where({ tenant: tenantId }).del();
+      await db('user_roles').where({ tenant: tenantId }).del();
+      await db('permissions').where({ tenant: tenantId }).del();
+      await db('roles').where({ tenant: tenantId }).del();
       for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
         if (table === 'tenants') {
           await tenantRows().whereIn('tenant', [tenantId, secondTenantId]).del();
@@ -451,16 +478,23 @@ describe('Collaborative Editing — Integration Tests', () => {
 
   describe('Hocuspocus synchronization and persistence', () => {
     let service: Hocuspocus;
+    let persistence: CollabPersistenceExtension;
+    const authentications = new Set<Promise<unknown>>();
     let http: HttpServer;
     let url: string;
     let apiUrl: string;
+    let authApiUrl: string;
     const providers = new Set<HocuspocusProvider>();
     const documents = new Set<Y.Doc>();
-    const requests: Array<{ status: number }> = [];
+    const renewalStops = new Set<() => void>();
+    const requests: Array<{ status: number; path: string }> = [];
     const transportErrors: Error[] = [];
     let expectedStatuses: number[];
 
-    beforeEach(() => { expectedStatuses = [200]; });
+    beforeEach(() => {
+      expectedStatuses = [200];
+      deniedWriterIds.clear();
+    });
 
     beforeAll(async () => {
       vi.stubEnv('COLLAB_PERSIST_API_KEY', uuidv4());
@@ -468,13 +502,14 @@ describe('Collaborative Editing — Integration Tests', () => {
         try {
           const chunks: Buffer[] = [];
           for await (const chunk of incoming) chunks.push(Buffer.from(chunk));
-          const request = new NextRequest(apiUrl, {
+          const path = new URL(incoming.url ?? '/', 'http://localhost').pathname;
+          const request = new NextRequest(`http://localhost${path}`, {
             method: 'POST',
             headers: { 'x-api-key': String(incoming.headers['x-api-key'] ?? '') },
             body: Buffer.concat(chunks).toString(),
           });
-          const result = await persistRoute(request);
-          requests.push({ status: result.status });
+          const result = path.endsWith('/authorize') ? await authorizeRoute(request) : await persistRoute(request);
+          requests.push({ status: result.status, path });
           outgoing.writeHead(result.status, Object.fromEntries(result.headers.entries()));
           outgoing.end(await result.text());
         } catch (error) {
@@ -486,16 +521,33 @@ describe('Collaborative Editing — Integration Tests', () => {
         http.once('error', reject);
         http.listen(0, '127.0.0.1', resolve);
       });
-      apiUrl = `http://127.0.0.1:${(http.address() as AddressInfo).port}/api/internal/collab/persist`;
+      const apiBase = `http://127.0.0.1:${(http.address() as AddressInfo).port}/api/internal/collab`;
+      apiUrl = `${apiBase}/persist`;
+      authApiUrl = `${apiBase}/authorize`;
       // Resolve the service's own locked server version, not a test replacement.
       const requireService = createRequire(new URL('../../../../hocuspocus/package.json', import.meta.url));
       const { Hocuspocus } = await import(pathToFileURL(requireService.resolve('@hocuspocus/server')).href);
+      persistence = new CollabPersistenceExtension({ apiUrl, authorizationUrl: authApiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY });
       service = new Hocuspocus({
         address: '127.0.0.1', port: 0, quiet: true,
         debounce: 20, maxDebounce: 100,
-        extensions: [new CollabPersistenceExtension({ apiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY })],
-        onConnect: ({ documentName, request }: { documentName: string; request: unknown }) => {
-          validateDocumentRoomAccess(documentName, request);
+        extensions: [persistence],
+        onAuthenticate: async ({ documentName, token }: { documentName: string; token: string }) => {
+          const admission = validateDocumentRoomToken(documentName, token);
+          const authorization = fetch(authApiUrl, {
+            method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+            body: JSON.stringify({ tenantId: admission.tenantId, documentId: admission.documentId, credential: token }),
+          });
+          authentications.add(authorization);
+          const authorized = await authorization.finally(() => authentications.delete(authorization));
+          if (!authorized.ok) throw new Error('Document update authorization denied');
+          return { ...admission, documentRoomToken: token };
+        },
+        onConnect: ({ documentName, request, context }: { documentName: string; request: unknown; context: any }) => {
+          validateDocumentRoomAccess(documentName, request, {
+            credential: context?.documentRoomToken,
+            allowPendingAuthentication: true,
+          });
         },
       });
       await service.listen();
@@ -505,15 +557,36 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     afterEach(async () => {
-      for (const provider of providers) provider.destroy();
-      for (const document of documents) document.destroy();
-      providers.clear(); documents.clear();
-      await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
-      await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
-      expect(transportErrors).toEqual([]);
-      expect(requests.every(request => expectedStatuses.includes(request.status))).toBe(true);
-      requests.length = 0;
+      try {
+        for (const stop of renewalStops) stop();
+        renewalStops.clear();
+        for (const provider of providers) provider.destroy();
+        for (const document of documents) document.destroy();
+        providers.clear(); documents.clear();
+        await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+        await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
+        await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
+        await quiesce();
+        expect(transportErrors).toEqual([]);
+        expect(requests.every(request => expectedStatuses.includes(request.status))).toBe(true);
+      } finally {
+        // A failed test must not leak its traffic into the next one.
+        requests.length = 0;
+        transportErrors.length = 0;
+      }
     });
+
+    // Room eviction is not a persistence barrier: Hocuspocus unloads a room
+    // while an already-running store or authorization request is in flight.
+    async function quiesce() {
+      while (authentications.size > 0) await Promise.allSettled([...authentications]);
+      await persistence.settled();
+    }
+
+    async function evicted(room: string) {
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await quiesce();
+    }
 
     afterAll(async () => {
       await service?.destroy();
@@ -521,10 +594,12 @@ describe('Collaborative Editing — Integration Tests', () => {
       vi.unstubAllEnvs();
     });
 
-    function connect(room: string, connectingTenant = tenantId) {
+    function connect(room: string, connectingTenant = tenantId, principal = userId, credentialOverride?: string) {
       const document = new Y.Doc(); documents.add(document);
+      const documentId = room.split(':')[2];
+      const credential = credentialOverride ?? signDocumentRoomToken({ tenantId: connectingTenant, documentId, userId: principal });
       const provider = new HocuspocusProvider({
-        url, name: room, document, parameters: { tenantId: connectingTenant },
+        url, name: room, document, parameters: { tenantId: connectingTenant, userId: principal }, token: credential,
         preserveConnection: false,
       });
       providers.add(provider);
@@ -560,6 +635,36 @@ describe('Collaborative Editing — Integration Tests', () => {
       return typeof row.block_data === 'string' ? JSON.parse(row.block_data) : row.block_data;
     }
 
+    function shortLivedCredential(documentId: string) {
+      const token = jwt.sign({
+        tenantId,
+        documentId,
+        userId,
+        scope: 'document-room',
+      }, process.env.HOCUSPOCUS_JWT_SECRET || 'dev-hocuspocus-jwt-secret', {
+        algorithm: 'HS256', audience: 'document-room', issuer: 'alga-psa',
+        expiresIn: 4, jwtid: uuidv4(),
+      });
+      const claims = jwt.decode(token) as jwt.JwtPayload;
+      return { token, expiresAt: claims.exp! * 1000 };
+    }
+
+    async function connectWithRenewal(room: string, issueCredential: () => Promise<{ token: string; expiresAt: number }>) {
+      const { createYjsProvider } = await import('@alga-psa/ui/editor');
+      const { provider, ydoc: document } = createYjsProvider(room, {
+        parameters: { tenantId, userId }, connect: false,
+      });
+      documents.add(document);
+      providers.add(provider);
+      const { startDocumentRoomConnection } = await import('@alga-psa/documents/lib/documentRoomConnection');
+      const connection = startDocumentRoomConnection(provider, issueCredential, error => {
+        transportErrors.push(error instanceof Error ? error : new Error(String(error)));
+      });
+      renewalStops.add(connection.stop);
+      await connection.ready;
+      return { document, provider };
+    }
+
     it('persists editor content after the last client disconnects and the room is evicted', async () => {
       const documentId = await seedDocument();
       const room = `document:${tenantId}:${documentId}`;
@@ -568,7 +673,7 @@ describe('Collaborative Editing — Integration Tests', () => {
       write(first.document, 'Persisted content');
       await expect.poll(() => first.provider.hasUnsyncedChanges, { timeout: 5000 }).toBe(false);
       first.provider.destroy(); providers.delete(first.provider);
-      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await evicted(room);
       await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text).toBe('Persisted content');
       expect(requests.some(request => request.status === 200)).toBe(true);
 
@@ -579,7 +684,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('syncs content between two providers connected to the same room', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const first = connect(room), second = connect(room);
       await Promise.all([synced(first.provider), synced(second.provider)]);
       first.document.getText('test').insert(0, 'Hello from A');
@@ -589,7 +694,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('broadcasts awareness state between providers', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const first = connect(room), second = connect(room);
       await Promise.all([synced(first.provider), synced(second.provider)]);
       first.provider.awareness!.setLocalStateField('user', { id: userId, name: 'Editor One', color: '#ff0000' });
@@ -598,7 +703,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('rejects a mismatched tenant before synchronizing room content', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const owner = connect(room);
       await synced(owner.provider);
       owner.document.getText('test').insert(0, 'Private document');
@@ -624,21 +729,273 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('rejects unauthenticated and wrong-tenant persistence without changing stored content', async () => {
-      expectedStatuses = [401, 404];
+      expectedStatuses = [400, 401, 403];
       const documentId = await seedDocument();
       const before = await saved(documentId);
       const document = new Y.Doc(); documents.add(document);
       write(document, 'Must not be saved');
       const update = Buffer.from(Y.encodeStateAsUpdate(document)).toString('base64');
-      const send = (key: string, tenant: string) => fetch(apiUrl, {
+      const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+      const send = (key: string, tenant: string, roomCredential?: string) => fetch(apiUrl, {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key },
-        body: JSON.stringify({ tenantId: tenant, documentId, update }),
+        body: JSON.stringify({ tenantId: tenant, documentId, update, credential: roomCredential }),
       });
-      expect((await send('invalid-test-key', tenantId)).status).toBe(401);
+      expect((await send('invalid-test-key', tenantId, credential)).status).toBe(401);
       expect(await saved(documentId)).toEqual(before);
-      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, secondTenantId)).status).toBe(404);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, secondTenantId, credential)).status).toBe(403);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, tenantId)).status).toBe(400);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, tenantId, 'forged.credential.value')).status).toBe(403);
       expect(await saved(documentId)).toEqual(before);
-      expect(requests.map(request => request.status)).toEqual([401, 404]);
+      expect(requests.map(request => request.status)).toEqual([401, 403, 400, 403]);
+    });
+
+    it('denies unauthorized room writers and forged credentials before they join a shared room', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const owner = connect(room);
+      await synced(owner.provider);
+
+      deniedWriterIds.add(secondSameTenantUserId);
+      const deniedCredential = signDocumentRoomToken({ tenantId, documentId, userId: secondSameTenantUserId });
+      const denied = connect(room, tenantId, userId, deniedCredential);
+      let deniedClosed = false;
+      denied.provider.on('close', () => { deniedClosed = true; });
+      await expect.poll(() => deniedClosed, { timeout: 5000 }).toBe(true);
+      expect(denied.document.getXmlFragment('prosemirror').length).toBe(0);
+
+      const forged = connect(room, tenantId, userId, 'forged.credential.value');
+      let forgedClosed = false;
+      forged.provider.on('close', () => { forgedClosed = true; });
+      await expect.poll(() => forgedClosed, { timeout: 5000 }).toBe(true);
+      expect(forged.document.getXmlFragment('prosemirror').length).toBe(0);
+
+      write(owner.document, 'Only the authorized writer can change this room');
+      await expect.poll(() => owner.provider.hasUnsyncedChanges).toBe(false);
+      owner.provider.destroy(); providers.delete(owner.provider);
+      await evicted(room);
+      expect((await saved(documentId)).content[0].content[0].text)
+        .toBe('Only the authorized writer can change this room');
+      expect(requests.some(request => request.status === 403)).toBe(true);
+    });
+
+    it('rechecks a connected writer at message and persistence boundaries after access is revoked', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const editor = connect(room);
+      await synced(editor.provider);
+      write(editor.document, 'Authorized first change');
+      await expect.poll(() => editor.provider.hasUnsyncedChanges).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Authorized first change');
+
+      const storedBeforeDenial = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataBeforeDenial = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      deniedWriterIds.add(userId);
+      let connectionClosed = false;
+      editor.provider.on('close', () => { connectionClosed = true; });
+      write(editor.document, 'Revoked change must not persist');
+      await expect.poll(() => connectionClosed || requests.some(request => request.status === 403), { timeout: 5000 })
+        .toBe(true);
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await evicted(room);
+
+      const storedAfterDenial = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataAfterDenial = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      expect(storedAfterDenial.block_data).toEqual(storedBeforeDenial.block_data);
+      expect(storedAfterDenial.updated_at).toEqual(storedBeforeDenial.updated_at);
+      expect(metadataAfterDenial).toEqual(metadataBeforeDenial);
+      expect(requests.some(request => request.status === 403)).toBe(true);
+
+      deniedWriterIds.delete(userId);
+      const recovered = connect(room);
+      await synced(recovered.provider);
+      write(recovered.document, 'Editing recovers after access returns');
+      await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
+      recovered.provider.destroy(); providers.delete(recovered.provider);
+      await evicted(room);
+      expect((await saved(documentId)).content[0].content[0].text)
+        .toBe('Editing recovers after access returns');
+    });
+
+    it('renews an expiring credential and preserves pending edits through reconnect and room unload', async () => {
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      let tokenCalls = 0;
+      let transientRenewalFailures = 0;
+      let firstExpiresAt = 0;
+      let firstToken = '';
+      let releaseRenewal!: () => void;
+      let renewalStarted!: () => void;
+      const renewalStartedPromise = new Promise<void>(resolve => { renewalStarted = resolve; });
+      const renewalGate = new Promise<void>(resolve => { releaseRenewal = resolve; });
+      const issueCredential = async () => {
+        tokenCalls += 1;
+        if (tokenCalls === 2) {
+          renewalStarted();
+          await renewalGate;
+          transientRenewalFailures += 1;
+          throw new Error('Temporary credential service failure');
+        }
+        const credential = tokenCalls === 1 ? shortLivedCredential(documentId) : {
+          token: signDocumentRoomToken({ tenantId, documentId, userId }),
+          expiresAt: Date.now() + 900_000,
+        };
+        if (tokenCalls === 1) {
+          firstExpiresAt = credential.expiresAt;
+          firstToken = credential.token;
+        }
+        return credential;
+      };
+
+      const editor = await connectWithRenewal(room, issueCredential);
+      const originalDocument = editor.document;
+      await synced(editor.provider);
+      await expect(renewalStartedPromise).resolves.toBeUndefined();
+
+      // Simulate a dropped socket while a refresh is in flight. The update is
+      // now only in the provider's Y.Doc and must survive the credential swap.
+      editor.provider.disconnect();
+      await expect.poll(() => editor.provider.isConnected).toBe(false);
+      write(editor.document, 'Pending edit survives credential rotation');
+      expect(editor.document.getXmlFragment('prosemirror').length).toBeGreaterThan(0);
+      releaseRenewal();
+
+      await expect.poll(() => tokenCalls >= 2 && editor.provider.isConnected && editor.provider.synced, { timeout: 5000 })
+        .toBe(true);
+      await expect.poll(() => Date.now() > firstExpiresAt, { timeout: 5000 }).toBe(true);
+      expect(editor.provider.isConnected).toBe(true);
+      expect(editor.provider.synced).toBe(true);
+      expect(editor.document).toBe(originalDocument);
+      expect(editor.provider.configuration.preserveConnection).toBe(false);
+      expect(tokenCalls).toBeGreaterThanOrEqual(3);
+      expect(transientRenewalFailures).toBe(1);
+      expect(editor.provider.configuration.token).not.toBe(firstToken);
+      expect(() => validateDocumentRoomToken(room, firstToken)).toThrow();
+
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Pending edit survives credential rotation');
+      write(editor.document, 'Editing continues after the original credential expires');
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
+        .toBe('Editing continues after the original credential expires');
+
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await evicted(room);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
+        .toBe('Editing continues after the original credential expires');
+      expect(requests.some(request => request.path.endsWith('/persist') && request.status === 200)).toBe(true);
+    });
+
+    it('denies inactive writers issued credentials before admission and after connection, then recovers on reactivation', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+      const storedBefore = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
+      const metadataBefore = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: true });
+      const admission = await authorizeRoute(new NextRequest(authApiUrl, {
+        method: 'POST', headers: { 'x-api-key': process.env.COLLAB_PERSIST_API_KEY!, 'content-type': 'application/json' },
+        body: JSON.stringify({ tenantId, documentId, credential }),
+      }));
+      expect(admission.status).toBe(403);
+      const denied = connect(room, tenantId, userId, credential);
+      let deniedClosed = false;
+      denied.provider.on('close', () => { deniedClosed = true; });
+      await expect.poll(() => deniedClosed, { timeout: 5000 }).toBe(true);
+      expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+        .toMatchObject({ block_data: storedBefore.block_data, updated_at: storedBefore.updated_at });
+      expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+        .select('updated_at', 'edited_by').first()).toEqual(metadataBefore);
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+      const editor = connect(room);
+      await synced(editor.provider);
+      write(editor.document, 'Authorized before deactivation');
+      await expect.poll(() => editor.provider.hasUnsyncedChanges).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Authorized before deactivation');
+      const activeSnapshot = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
+      const activeMetadata = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: true });
+      const requestsBeforeRevocation = requests.length;
+      let revokedClosed = false;
+      editor.provider.on('close', () => { revokedClosed = true; });
+      write(editor.document, 'Inactive edit must not persist');
+      await expect.poll(() => revokedClosed || requests.slice(requestsBeforeRevocation).some(request => request.status === 403), { timeout: 5000 })
+        .toBe(true);
+
+      const attempted = new Y.Doc(); documents.add(attempted);
+      write(attempted, 'Inactive internal persistence must be denied');
+      const update = Buffer.from(Y.encodeStateAsUpdate(attempted)).toString('base64');
+      const persistenceResponse = await fetch(apiUrl, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+        body: JSON.stringify({ tenantId, documentId, update, credential }),
+      });
+      expect(persistenceResponse.status).toBe(403);
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await evicted(room);
+      expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+        .toMatchObject({ block_data: activeSnapshot.block_data, updated_at: activeSnapshot.updated_at });
+      expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+        .select('updated_at', 'edited_by').first()).toEqual(activeMetadata);
+      expect(requests.slice(requestsBeforeRevocation).some(request => request.status === 403)).toBe(true);
+
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+      const recovered = connect(room);
+      await synced(recovered.provider);
+      write(recovered.document, 'Editing recovers after reactivation');
+      await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
+      recovered.provider.destroy(); providers.delete(recovered.provider);
+      await evicted(room);
+      expect((await saved(documentId)).content[0].content[0].text).toBe('Editing recovers after reactivation');
+      await tenantTable(tenantId, 'users').where({ user_id: userId }).update({ is_inactive: false });
+    });
+
+    it('rejects redacted room admission and persistence without changing content or metadata', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const storedBefore = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataBefore = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      const bundles = await import('@alga-psa/authorization/bundles/service');
+      const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+        { id: 'redact-content', resource: 'document', action: 'read', constraintKey: 'hide_content', redactedFields: ['content'] },
+      ] as any);
+      try {
+        const room = `document:${tenantId}:${documentId}`;
+        const denied = connect(room);
+        let closed = false;
+        denied.provider.on('close', () => { closed = true; });
+        await expect.poll(() => closed, { timeout: 5000 }).toBe(true);
+        expect(denied.document.getXmlFragment('prosemirror').length).toBe(0);
+
+        const replacement = new Y.Doc(); documents.add(replacement);
+        write(replacement, 'redacted overwrite');
+        const update = Buffer.from(Y.encodeStateAsUpdate(replacement)).toString('base64');
+        const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+        const response = await fetch(apiUrl, {
+          method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+          body: JSON.stringify({ tenantId, documentId, update, credential }),
+        });
+        expect(response.status).toBe(403);
+        expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+          .toMatchObject({ block_data: storedBefore.block_data, updated_at: storedBefore.updated_at });
+        expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+          .select('updated_at', 'edited_by').first()).toEqual(metadataBefore);
+      } finally {
+        rulesSpy.mockRestore();
+      }
     });
   });
 });

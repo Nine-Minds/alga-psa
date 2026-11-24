@@ -1,9 +1,11 @@
+import { serverOnlyAlias } from '../scripts/lib/vitest-server-runtime.mjs';
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
 import { globSync } from 'tinyglobby';
 import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
 import { onUnhandledError } from '../scripts/lib/vitest-unhandled-errors.mjs';
+import { DB_SETUP_HOOK_TIMEOUT_MS } from './test-utils/dbSetupHookTimeout';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -119,7 +121,7 @@ export default defineConfig({
     pool: 'forks',
     logHeapUsage: true,
     testTimeout: 20000,
-    hookTimeout: 120000,
+    hookTimeout: DB_SETUP_HOOK_TIMEOUT_MS,
     // The main vitest process retains every test's console output for the
     // report; across the widened package/shared run the chatty suites (db
     // config dumps, workflow loggers) accumulate into the multi-GB range and
@@ -194,6 +196,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // Server tests run outside Next's react-server module condition.
+      serverOnlyAlias,
       { find: '@/empty', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this
@@ -384,6 +388,7 @@ export default defineConfig({
       // Emulator packages live under packages/emulators/* and are not linked
       // into node_modules; their smoke tests import each other by name.
       { find: /^@alga-psa\/emulator-host$/, replacement: path.resolve(__dirname, '../packages/emulators/host/src/index.ts') },
+      { find: /^@alga-psa\/emulator-google-calendar$/, replacement: path.resolve(__dirname, '../packages/emulators/google-calendar/src/index.ts') },
       { find: /^@alga-psa\/emulator-msgraph$/, replacement: path.resolve(__dirname, '../packages/emulators/msgraph/src/index.ts') },
       { find: /^@alga-psa\/emulator-qbo$/, replacement: path.resolve(__dirname, '../packages/emulators/qbo/src/index.ts') },
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
@@ -456,6 +461,7 @@ export default defineConfig({
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
+      { find: '@product/service-principals/entry', replacement: path.resolve(__dirname, '../packages/product-service-principals/oss/entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

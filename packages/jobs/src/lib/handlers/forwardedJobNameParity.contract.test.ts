@@ -38,9 +38,16 @@ function forwardedJobNames(source: string): string[] {
 
   const forwarded: string[] = [];
   for (const match of source.matchAll(
-    /registerJobHandlerForActivities\(\s*([A-Za-z0-9_]+)\s*,\s*forwardJobToServer\(/g,
+    /registerJobHandlerForActivities\(\s*([A-Za-z0-9_]+)\s*,\s*forwardJobToServer(?:AndAwait)?\(/g,
   )) {
     const value = literals.get(match[1]);
+    if (value) forwarded.push(value);
+  }
+  // Most forwarding registrations now go through this local helper so the
+  // worker can track the names it forwards. Resolve the same inlined constants
+  // used by direct registrations above.
+  for (const match of source.matchAll(/registerForwardedJobHandler\(\s*([A-Za-z0-9_]+|'([^']+)')/g)) {
+    const value = match[2] ?? literals.get(match[1]);
     if (value) forwarded.push(value);
   }
   return [...new Set(forwarded)];
@@ -59,7 +66,7 @@ function serverRegisteredJobNames(source: string): string[] {
   if (identifiers.length === 0 && literalNames.length === 0) return [];
 
   const constantValues = new Map<string, string>();
-  const roots = ['packages/jobs/src', 'server/src'];
+  const roots = ['packages/jobs/src', 'packages/documents/src', 'server/src'];
   const stack = roots.map((r) => path.join(repoRoot, r));
 
   while (stack.length) {

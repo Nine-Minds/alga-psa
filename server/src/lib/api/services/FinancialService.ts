@@ -16,20 +16,24 @@
  * that are explicitly service-period aware.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { hasPermission } from '../../auth/rbac';
 import {
   clearDefaultPaymentMethod,
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
+import { InvoiceService } from './InvoiceService';
+
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { finalizeInvoiceWithKnex } from '@alga-psa/billing/actions/invoiceModification';
+import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
 import {
   BadRequestError,
   ConflictError,
@@ -174,6 +178,46 @@ interface FinancialAnalytics {
 /**
  * Comprehensive Financial Management Service
  */
+/**
+ * Supported bulk invoice commands. Exhaustive over the schema enum
+ * (Record<...> fails to compile if an operation is added to
+ * bulkInvoiceOperationSchema without an entry). Each command delegates to the
+ * canonical engine and names the permission the dispatcher checks before the
+ * batch and at each item boundary. `cancel` requires bulk void authority;
+ * InvoiceService.voidInvoice also enforces invoice:update and
+ * accounting_integrations:remote_mutate. Bulk send
+ * remains unavailable until canonical recipient delivery is implemented.
+ */
+interface BulkInvoiceCommand {
+  permission: string;
+  outcome: 'finalized' | 'voided';
+  run: (
+    invoices: InvoiceService,
+    invoiceId: string,
+    parameters: Record<string, any>,
+    context: ServiceContext
+  ) => Promise<any>;
+}
+
+const BULK_INVOICE_COMMANDS: Record<BulkInvoiceOperation['operation'], BulkInvoiceCommand> = {
+  finalize: {
+    permission: 'finalize',
+    outcome: 'finalized',
+    run: (invoices, invoice_id, _parameters, context) =>
+      invoices.finalizeInvoice({ invoice_id } as any, context),
+  },
+  cancel: {
+    permission: 'void',
+    outcome: 'voided',
+    run: (invoices, invoiceId, parameters, context) =>
+      invoices.voidInvoice(
+        invoiceId,
+        context,
+        typeof parameters.reason === 'string' ? { reason: parameters.reason } : {}
+      ),
+  },
+};
+
 export class FinancialService extends BaseService<ITransaction> {
   private taxService: TaxService;
 
@@ -290,7 +334,7 @@ export class FinancialService extends BaseService<ITransaction> {
       throw new UnauthorizedError('Authentication required');
     }
 
-    if (!await hasPermission(context.user, resource, operation)) {
+    if (!await hasApiContextPermission(context, resource, operation)) {
       throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
@@ -299,6 +343,7 @@ export class FinancialService extends BaseService<ITransaction> {
   async listTaxRates(query: TaxRateListQuery, context: ServiceContext): Promise<ListResult<TaxRateResponse>> {
     await this.validatePermissions('read', 'billing', context);
     try {
+      // LEVERAGE: friction tenant-only-product-guard — a REST context is never a seat principal (its key is refused at validation), so this stays tenant-only; passing the principal would make the guard uniform.
       await assertPsaOnlyTenantAccess(context.tenant, 'billing_actions');
     } catch (error) {
       if (error instanceof ProductAccessError) throw new ForbiddenError('Billing tax rates are not available for this tenant.');
@@ -379,6 +424,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'transaction_created',
         tableName: 'transactions',
         recordId: transaction.transaction_id,
@@ -1088,6 +1134,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'payment_method_created',
         tableName: 'payment_methods',
         recordId: paymentMethod.payment_method_id,
@@ -1578,126 +1625,109 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Perform bulk operations on invoices
+   * Perform bulk finalize or cancel operations on invoices.
+   *
+   * This is a dispatcher, not an engine: each id is one independent canonical
+   * command (BULK_INVOICE_COMMANDS) that owns its invariants, locking and audit
+   * row. Permissions are checked before any id is touched and at each item boundary.
+   * Send is unsupported until canonical recipient delivery is implemented.
+   * There is deliberately no outer transaction — the canonical engines own theirs,
+   * so one failing id cannot roll back (or be committed by) another.
    */
   async bulkInvoiceOperation(
     operation: BulkInvoiceOperation,
     context: ServiceContext
   ): Promise<FinancialResponse<BulkOperationResult>> {
-    await this.validatePermissions('update', 'invoice', context);
-    
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const results: Array<{
-        id: string;
-        success: boolean;
-        error?: string;
-        result?: any;
-      }> = [];
+    const command = BULK_INVOICE_COMMANDS[operation.operation];
+    if (!command) {
+      throw new BadRequestError(`Unsupported operation: ${String(operation.operation)}`);
+    }
 
-      for (const invoiceId of operation.invoice_ids) {
-        try {
-          let result: any;
-          
-          switch (operation.operation) {
-            case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
-            case 'apply_credit':
-              // This would need additional parameters in the operation
-              const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .first();
-              
-              if (invoice && creditAmount > 0) {
-                // Apply credit logic here
-                result = { applied_amount: creditAmount };
-              }
-              break;
-              
-            default:
-              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
-          }
-          
-          results.push({
-            id: invoiceId,
-            success: true,
-            result
-          });
-          
-        } catch (error) {
-          results.push({
-            id: invoiceId,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
+    // Service-level checks protect non-route callers too. Preserve the coarse
+    // API surface permission as well as the canonical lifecycle permission.
+    await this.validatePermissions('update', 'invoice', context);
+    await this.validatePermissions(command.permission, 'invoice', context);
+
+    const { knex } = await this.getKnex();
+    const invoices = new InvoiceService();
+    const results: BulkOperationResult['results'] = [];
+
+    for (const invoiceId of operation.invoice_ids) {
+      try {
+        // Recheck at the per-invoice boundary so revoked access cannot authorize
+        // later commands in a long batch.
+        await this.validatePermissions(command.permission, 'invoice', context);
+        const invoice = await command.run(invoices, invoiceId, operation.parameters ?? {}, context);
+        results.push({
+          id: invoiceId,
+          success: true,
+          outcome: command.outcome,
+          result: {
+            invoice_id: invoiceId,
+            status: invoice?.status,
+            finalized_at: invoice?.finalized_at ?? null,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof NotFoundError ||
+          error instanceof ConflictError ||
+          error instanceof ForbiddenError ||
+          error instanceof BadRequestError
+        ) {
+          results.push({ id: invoiceId, success: false, error: error.message });
+        } else {
+          console.error(`[FinancialService.bulkInvoiceOperation] ${operation.operation} failed for ${invoiceId}`, error);
+          results.push({ id: invoiceId, success: false, error: 'Unexpected error processing invoice' });
         }
       }
+    }
 
-      // Audit log for bulk operation
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'bulk_invoice_operation',
-        tableName: 'invoices',
-        recordId: 'bulk',
-        changedData: operation,
-        details: {
-          action: `Bulk ${operation.operation} operation`,
-          total_requested: operation.invoice_ids.length,
-          successful: results.filter(r => r.success).length,
-          failed: results.filter(r => !r.success).length
-        }
-      });
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
 
-      const bulkResult: BulkOperationResult = {
+    // One summary audit row recording the canonical per-id outcomes. The
+    // canonical engines wrote their own per-invoice rows already.
+    await withTransaction(knex, (trx) => auditLog(trx, {
+      userId: context.userId,
+      operation: 'bulk_invoice_operation',
+      tableName: 'invoices',
+      recordId: 'bulk',
+      changedData: { operation: operation.operation, invoice_ids: operation.invoice_ids },
+      details: {
+        action: `Bulk ${operation.operation} operation`,
         total_requested: operation.invoice_ids.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length,
-        results
-      };
+        successful,
+        failed,
+        results: results.map(r => ({
+          id: r.id,
+          success: r.success,
+          ...(r.outcome ? { outcome: r.outcome } : {}),
+          ...(r.error ? { error: r.error } : {}),
+        })),
+      }
+    }));
 
-      return {
-        data: bulkResult,
-        links: [
-          {
-            rel: 'invoices',
-            href: `/api/v1/financial/invoices`,
-            method: 'GET',
-            description: 'List invoices'
-          }
-        ]
-      };
-    });
+    const bulkResult: BulkOperationResult = {
+      total_requested: operation.invoice_ids.length,
+      successful,
+      failed,
+      results
+    };
+
+    return {
+      data: bulkResult,
+      links: [
+        {
+          rel: 'invoices',
+          href: `/api/v1/financial/invoices`,
+          method: 'GET',
+          description: 'List invoices'
+        }
+      ]
+    };
   }
 
-  /**
-   * Bulk approve / reject / reverse existing transactions.
-   *
-   * `approve` and `reject` set the transaction status. `reverse` posts a
-   * compensating transaction (negated amount, linked to the original via
-   * related_transaction_id), recomputes the running balance, marks the original
-   * reversed. Available credit is derived from credit-tracking rows, so there
-   * is no client balance cache to synchronize.
-   * Each id is processed independently; one failure does not abort the rest.
-   */
   async bulkTransactionOperation(
     operation: BulkTransactionOperation,
     context: ServiceContext
@@ -1790,6 +1820,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_transaction_operation',
         tableName: 'transactions',
         recordId: 'bulk',
@@ -1930,6 +1961,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await withTransaction(knex, async (trx) => {
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_credit_operation',
         tableName: 'credit_tracking',
         recordId: 'bulk',

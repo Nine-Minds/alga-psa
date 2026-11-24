@@ -2,12 +2,6 @@
   "page": {
     "title": "Rapporter"
   },
-  "actions": {
-    "refresh": "Uppdatera"
-  },
-  "placeholders": {
-    "selectContract": "Välj avtal…"
-  },
   "units": {
     "hoursShort": "h",
     "days": "dagar",
@@ -66,7 +60,11 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "Senaste {{count}} dagarna",
-      "allActiveProjects": "Alla aktiva projekt, från start till idag"
+      "allActiveProjects": "Alla aktiva projekt, från start till idag",
+      "customRange": "{{start}} till {{end}}",
+      "customFrom": "Från datum",
+      "customTo": "Till datum",
+      "agingSnapshotNote": "Antal och åldersgrupper visar ärenden som är öppna just nu. Datumintervallet filtrerar bara listan över de äldsta öppna ärendena."
     },
     "units": {
       "daysWithCount": "{{count}} d"
@@ -431,64 +429,6 @@
       "reset": "Återställ standardkolumner"
     }
   },
-  "contractPerformance": {
-    "title": "Nyckeltal för avtalsresultat",
-    "errors": {
-      "loadData": "Det gick inte att läsa in avtalsdata"
-    },
-    "metrics": {
-      "totalClients": "Totalt antal kunder",
-      "activeClients": "Aktiva kunder",
-      "totalPlans": "Totalt antal avtalsrader",
-      "averagePlansPerClient": "Genomsnittligt antal avtalsrader per kund",
-      "totalRevenue": "Totala intäkter",
-      "averageRevenuePerClient": "Genomsnittlig intäkt per kund"
-    },
-    "empty": {
-      "selectContract": "Välj ett avtal för att visa nyckeltal för avtalsresultat",
-      "noContracts": "Inga avtal tillgängliga"
-    },
-    "comparison": {
-      "title": "Avtalsjämförelse",
-      "table": {
-        "contract": "Avtal",
-        "clients": "Kunder",
-        "plans": "Avtalsrader",
-        "revenue": "Intäkter"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Rapport över avtalsanvändning",
-    "errors": {
-      "loadInitialData": "Det gick inte att läsa in grunddata",
-      "loadUsageData": "Det gick inte att läsa in data om avtalsanvändning"
-    },
-    "empty": {
-      "noClientsUsingContract": "Inga kunder använder det här avtalet",
-      "selectContract": "Välj ett avtal för att visa användningsdata"
-    },
-    "table": {
-      "client": "Kund",
-      "startDate": "Startdatum",
-      "endDate": "Slutdatum",
-      "contractLines": "Avtalsrader",
-      "totalBilled": "Totalt fakturerat",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "ongoing": "Pågående",
-      "unknownClient": "Okänd kund"
-    },
-    "summary": {
-      "title": "Sammanfattning",
-      "totalClients": "Totalt antal kunder",
-      "activeAssignments": "Aktiva tilldelningar",
-      "totalBilled": "Totalt fakturerat"
-    }
-  },
   "deferredRevenue": {
     "title": "Förutbetalda intäkter / skuld för kundförskott",
     "description": "Månadsvis saldoutveckling per kund för tillgodohavanden och oanvända förbetalda timpottstimmar.",
@@ -555,7 +495,22 @@
       "invalidValue": "En av de valda rapportposterna är ogiltig. Ladda om sidan och försök igen.",
       "referenceMissing": "En av de valda rapportposterna finns inte längre. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt rapportfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den läser {{table}}, som saknar regel för kundtillhörighet.",
+        "raw_sql": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den bygger på rå SQL.",
+        "unsupported_join": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den kopplar {{table}} på ett sätt som behåller rader från andra kunder.",
+        "no_client_anchor": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: ingen av uppgifterna den läser tillhör en kund.",
+        "not_client_attributable": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den läser {{table}}, som inte kan hänföras till en kund.",
+        "unnarrowable_report": "Den här rapporten är inte tillgänglig för dig eftersom den inte kan begränsas till dina kunder: den summerar alla kunders konton."
+      },
+      "clientOutOfScope": "Du har inte åtkomst till den här kunden.",
+      "range": {
+        "malformed": "Det anpassade datumintervallet kunde inte läsas. Välj båda datumen igen.",
+        "backwards": "Slutdatumet ligger före startdatumet.",
+        "tooLong": "Ett anpassat datumintervall kan omfatta högst {{maxDays}} dagar.",
+        "startsInFuture": "Det anpassade datumintervallet börjar efter i dag, så det finns inget att rapportera än."
+      }
     }
   }
 }

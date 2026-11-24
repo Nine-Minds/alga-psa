@@ -17,6 +17,9 @@ import { resolveTeamsMeetingGraphConfig } from '../meetings/meetingConfig';
  */
 
 const SUBSCRIPTION_TTL_HOURS = 60;
+// Microsoft Graph rejects subscriptions whose clientState exceeds 128 characters.
+const MAX_CLIENT_STATE_LENGTH = 128;
+const WEBHOOK_SECRET_BYTES = 16;
 export const TEAMS_PHONE_PROVIDER = 'teams-phone' as const;
 export const TEAMS_CALL_RECORDS_RESOURCE = 'communications/callRecords';
 
@@ -50,8 +53,18 @@ interface GraphSubscriptionResponse {
 // clientState is Microsoft Graph's shared secret for webhooks: the tenant and
 // provider segments route the notification, the trailing secret proves it came
 // from a subscription we created.
-export function buildTelephonyClientState(tenantId: string, secret: string): string {
+function formatClientState(tenantId: string, secret: string): string {
   return `telephony-call-records:${tenantId}:${TEAMS_PHONE_PROVIDER}:${secret}`;
+}
+
+export function buildTelephonyClientState(tenantId: string, secret: string): string {
+  const clientState = formatClientState(tenantId, secret);
+  if (clientState.length > MAX_CLIENT_STATE_LENGTH) {
+    throw new Error(
+      `Teams call-records subscription clientState is ${clientState.length} characters; Microsoft Graph allows at most ${MAX_CLIENT_STATE_LENGTH}.`,
+    );
+  }
+  return clientState;
 }
 
 export function parseTelephonyClientState(
@@ -71,7 +84,7 @@ export function parseTelephonyClientState(
 }
 
 function generateWebhookSecret(): string {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(WEBHOOK_SECRET_BYTES).toString('hex');
 }
 
 function normalizeString(value: unknown): string {
@@ -217,8 +230,10 @@ export async function renewTelephonyCallSubscriptions(input: {
     return [];
   }
 
+  // Secrets stored by earlier releases were too long for Graph's clientState limit, so no
+  // subscription can be using them; replace them rather than failing every renewal.
   let clientStateSecret = normalizeString(row.webhook_secret);
-  if (!clientStateSecret) {
+  if (!clientStateSecret || formatClientState(tenantId, clientStateSecret).length > MAX_CLIENT_STATE_LENGTH) {
     clientStateSecret = generateWebhookSecret();
     await db.table('telephony_providers')
       .where({ provider_id: row.provider_id })

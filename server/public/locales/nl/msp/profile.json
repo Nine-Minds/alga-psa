@@ -96,7 +96,8 @@
       "policies": "Beleidsregels",
       "apiKeys": "API-sleutels",
       "webhooks": "Webhooks",
-      "userProvisioning": "Gebruikersinrichting"
+      "userProvisioning": "Gebruikersinrichting",
+      "servicePrincipals": "Serviceprincipals"
     },
     "loading": {
       "roles": "Rolconfiguratie laden...",
@@ -107,12 +108,13 @@
       "webhooks": "Webhookconfiguratie laden...",
       "sso": "SSO-beheertools laden...",
       "sessions": "Actieve sessies laden...",
-      "userProvisioning": "SCIM-inrichting laden..."
+      "userProvisioning": "SCIM-inrichting laden...",
+      "servicePrincipals": "Serviceprincipals laden..."
     },
     "sso": {
       "advanced": {
         "title": "Geavanceerd: aangepaste routering van identiteitsaanbieders",
-        "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Alleen nodig bij aangepaste of lokale installaties.",
+        "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Vereist wanneer medewerkers zich aanmelden via uw eigen Keycloak-realm of uw eigen Google- of Microsoft-applicatie.",
         "inertNotice": "Er is geen tenantidentiteitsaanbieder geconfigureerd, waardoor domeinclaims momenteel geen effect hebben. Configureer hierboven Keycloak, of in de Enterprise Edition uw Google-/Microsoft-app-referenties, en claim daarna hier uw aanmelddomein."
       }
     },
@@ -801,10 +803,11 @@
     "providers": {
       "title": "Een provider koppelen",
       "description": "Kies een provider om de SSO-koppeling te voltooien. U wordt doorgestuurd via de aanmeldingsflow van de provider.",
-      "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor deze omgeving. Vraag uw beheerder om Google- of Microsoft-inloggegevens te configureren.",
-      "noneConfiguredAdmin": "Er zijn nog geen SSO-providers geconfigureerd. Stel eerst de Google- of Microsoft-applicatie van uw organisatie in.",
-      "openProviderSetup": "Een SSO-provider instellen",
+      "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor uw organisatie. Vraag uw beheerder om er een in te stellen.",
+      "noneConfiguredAdmin": "Er zijn nog geen SSO-providers geconfigureerd. Gebruik de instellink bij een van de providers hieronder om te beginnen.",
       "notConfigured": "Niet geconfigureerd",
+      "setUpProvider": "{{provider}} instellen",
+      "askAdministrator": "Vraag uw beheerder om dit in te stellen.",
       "branding": {
         "google": "Doorgaan met Google",
         "microsoft": "Doorgaan met Microsoft",
@@ -830,6 +833,7 @@
     },
     "apiKeys": {
       "internalOnly": "Toestemming geweigerd: het beheer van API-sleutels is voorbehouden aan interne gebruikers",
+      "notAvailableForAccount": "API-sleutels zijn niet beschikbaar voor dit account.",
       "configInternalOnly": "Toestemming geweigerd: de configuratie van API-sleutels is voorbehouden aan interne gebruikers",
       "invalidExpiration": "Kies een geldige vervaldatum voor deze API-sleutel.",
       "notFound": "API-sleutel niet gevonden.",
@@ -843,7 +847,10 @@
       "testNotRetryable": "Testafleveringen kunnen niet opnieuw worden geprobeerd.",
       "payloadInvalid": "Deze aflevering kan niet opnieuw worden geprobeerd omdat de opgeslagen payload ongeldig is.",
       "unsupportedEventType": "Niet-ondersteund gebeurtenistype: {{eventTypes}}",
-      "validation": { "unknownEntity": "Onbekende webhookentiteit ‘{{entity}}’.", "unknownField": "Onbekend veld ‘{{field}}’ voor webhookentiteit ‘{{entity}}’." }
+      "validation": {
+        "unknownEntity": "Onbekende webhookentiteit ‘{{entity}}’.",
+        "unknownField": "Onbekend veld ‘{{field}}’ voor webhookentiteit ‘{{entity}}’."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -862,7 +869,11 @@
       "deliveryNotFound": "Inkomende aflevering niet gevonden.",
       "replayMissingConfig": "Een inkomende aflevering kan niet opnieuw worden afgespeeld zonder webhook-configuratie.",
       "notFoundOrInactive": "Inkomende webhook niet gevonden of inactief.",
-      "validation": { "slugReserved": "Deze identificatie is gereserveerd voor een gebundelde integratie.", "authTypeMismatch": "Het type authenticatieconfiguratie moet overeenkomen met het geselecteerde authenticatietype.", "handlerTypeMismatch": "Het type handlerconfiguratie moet overeenkomen met het geselecteerde handlertype." }
+      "validation": {
+        "slugReserved": "Deze identificatie is gereserveerd voor een gebundelde integratie.",
+        "authTypeMismatch": "Het type authenticatieconfiguratie moet overeenkomen met het geselecteerde authenticatietype.",
+        "handlerTypeMismatch": "Het type handlerconfiguratie moet overeenkomen met het geselecteerde handlertype."
+      }
     }
   }
 }

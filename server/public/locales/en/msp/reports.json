@@ -2,12 +2,6 @@
   "page": {
     "title": "Reports"
   },
-  "actions": {
-    "refresh": "Refresh"
-  },
-  "placeholders": {
-    "selectContract": "Select contract..."
-  },
   "units": {
     "hoursShort": "hrs",
     "days": "days",
@@ -66,7 +60,11 @@
     "fallbackTitle": "Report",
     "dateRange": {
       "lastDays": "Last {{count}} days",
-      "allActiveProjects": "All active projects, life-to-date"
+      "allActiveProjects": "All active projects, life-to-date",
+      "customRange": "{{start}} to {{end}}",
+      "customFrom": "From date",
+      "customTo": "To date",
+      "agingSnapshotNote": "Counts and age groups show tickets open right now. The date range only filters the oldest open tickets list."
     },
     "units": {
       "daysWithCount": "{{count}} days"
@@ -431,64 +429,6 @@
       "reset": "Reset to default columns"
     }
   },
-  "contractPerformance": {
-    "title": "Contract Performance Metrics",
-    "errors": {
-      "loadData": "Failed to load contract data"
-    },
-    "metrics": {
-      "totalClients": "Total Clients",
-      "activeClients": "Active Clients",
-      "totalPlans": "Total Plans",
-      "averagePlansPerClient": "Avg. Plans Per Client",
-      "totalRevenue": "Total Revenue",
-      "averageRevenuePerClient": "Avg. Revenue Per Client"
-    },
-    "empty": {
-      "selectContract": "Select a contract to view performance metrics",
-      "noContracts": "No contracts available"
-    },
-    "comparison": {
-      "title": "Contract Comparison",
-      "table": {
-        "contract": "Contract",
-        "clients": "Clients",
-        "plans": "Plans",
-        "revenue": "Revenue"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Contract Usage Report",
-    "errors": {
-      "loadInitialData": "Failed to load initial data",
-      "loadUsageData": "Failed to load contract usage data"
-    },
-    "empty": {
-      "noClientsUsingContract": "No clients are using this contract",
-      "selectContract": "Select a contract to view usage data"
-    },
-    "table": {
-      "client": "Client",
-      "startDate": "Start Date",
-      "endDate": "End Date",
-      "contractLines": "Contract Lines",
-      "totalBilled": "Total Billed",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "ongoing": "Ongoing",
-      "unknownClient": "Unknown Client"
-    },
-    "summary": {
-      "title": "Summary",
-      "totalClients": "Total Clients",
-      "activeAssignments": "Active Assignments",
-      "totalBilled": "Total Billed"
-    }
-  },
   "deferredRevenue": {
     "title": "Deferred revenue / prepaid liability",
     "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.",
@@ -555,7 +495,22 @@
       "invalidValue": "One of the selected report records is invalid. Please refresh and try again.",
       "referenceMissing": "One of the selected report records no longer exists. Please refresh and try again.",
       "missingField": "Missing required report field.",
-      "missingFieldNamed": "Missing required report field: {{field}}."
+      "missingFieldNamed": "Missing required report field: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "This report is not available to you because it cannot be limited to your clients: it reads {{table}}, which has no client ownership rule.",
+        "raw_sql": "This report is not available to you because it cannot be limited to your clients: it is built from raw SQL.",
+        "unsupported_join": "This report is not available to you because it cannot be limited to your clients: it joins {{table}} in a way that keeps rows from other clients.",
+        "no_client_anchor": "This report is not available to you because it cannot be limited to your clients: none of the data it reads belongs to a client.",
+        "not_client_attributable": "This report is not available to you because it cannot be limited to your clients: it reads {{table}}, which is not attributable to a client.",
+        "unnarrowable_report": "This report is not available to you because it cannot be limited to your clients: it totals the accounts of every client together."
+      },
+      "clientOutOfScope": "You do not have access to this client.",
+      "range": {
+        "malformed": "The custom date range could not be read. Pick both dates again.",
+        "backwards": "The end date is before the start date.",
+        "tooLong": "A custom date range can cover at most {{maxDays}} days.",
+        "startsInFuture": "The custom date range starts after today, so there is nothing to report yet."
+      }
     }
   }
 }

@@ -11,7 +11,7 @@ describe('project authorization kernel contracts', () => {
   // The comment rules live in the shared service used by the web actions and the REST API.
   const commentActionsSource = readSource('../lib/taskComments/taskCommentService.ts');
   // The record-level project read decision has one implementation (C6 extracted the private copies).
-  const projectReadAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
+  const projectReadAuthorizationSource = readSource('../../../authorization/src/projectReadAuthorization.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
     // Ownership/record authorization now lives only in withTaskCommentAccess; the service grants no blanket edit/delete.
@@ -21,15 +21,16 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('export const getProjects = withAuth(async (user, { tenant })');
     expect(projectActionsSource).toContain('export const getProject = withAuth(async (user, { tenant }, projectId: string)');
     expect(projectReadAuthorizationSource).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
-    expect(projectReadAuthorizationSource).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
-    expect(projectReadAuthorizationSource).toContain('return await resolveBundleNarrowingRulesForEvaluation(conn, input);');
+    // Rules load through the shared fail-closed provider: a load fault denies, it never reads as "no rules".
+    expect(projectReadAuthorizationSource).toContain('bundleProvider: createBundleNarrowingProvider(conn),');
+    expect(projectReadAuthorizationSource).not.toContain('resolveBundleNarrowingRulesForEvaluation');
     expect(projectReadAuthorizationSource).toContain('record: toProjectAuthorizationRecord(project),');
   });
 
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
     expect(projectReadAuthorizationSource).toContain('export async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
-    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
+    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain('async function filterAuthorizedProjects<T extends Partial<IProject>>(');
@@ -125,7 +126,7 @@ describe('project authorization kernel contracts', () => {
     const exportActionsSource = readSource('projectTaskExportActions.ts');
 
     expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
-    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
+    expect(projectReadAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
     expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
 
     expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
