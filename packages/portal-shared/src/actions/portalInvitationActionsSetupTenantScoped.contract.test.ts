@@ -21,18 +21,17 @@ describe('portal invitation setup tenant-scoped query contract', () => {
 
     expect(section).toContain('const scopedDb = tenantDb(knex, tenant);');
     expect(section).toContain("scopedDb.table('users')");
-    expect(section).toContain("scopedDb.table('contacts')");
-    expect(section).toContain("scopedDb.table('roles')");
-    // user_roles is written through @alga-psa/db, which carries the contact's
-    // portal-admin flag sync and keeps its own tenant-scoping contract
-    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
-    expect(section).toContain('await addUserRoles(trx, tenant, newUser.user_id, [role.role_id]);');
-    // The user row is already committed by then, so the role write opens its own
-    // transaction — the flag sync still commits with the role.
-    expect(section).toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
-    // Unchanged by alga-2026-0003347: while no portal user exists the flag IS
-    // the pre-seed, and it still picks the role the account is created with.
-    expect(section).toContain("const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';");
+    // The role of a new portal account is resolved from the contact's
+    // portal-admin pre-mark, and user_roles is written, through @alga-psa/db:
+    // both keep their own tenant-scoping contract and the write carries the
+    // flag sync (alga-2026-0003347).
+    expect(section).toContain('await resolveInitialPortalRoleId(trx, tenant, contact.contact_name_id);');
+    expect(section).toContain('await addUserRoles(trx, tenant, user.user_id, [roleId]);');
+    // Both run in the transaction that creates the account, so a role that
+    // cannot be resolved rolls the account back instead of leaving it with no
+    // role at all.
+    expect(section).not.toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
+    expect(section).toMatch(/newUser = await knex\.transaction\(async \(trx\) => \{[\s\S]*resolveInitialPortalRoleId[\s\S]*addUserRoles[\s\S]*\}\);/);
 
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*user_id: existingUser\.user_id,\s*tenant\s*\}\)/);

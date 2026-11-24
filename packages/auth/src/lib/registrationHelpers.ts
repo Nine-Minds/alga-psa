@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { addUserRoles, tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
+import { addUserRoles, resolveInitialPortalRoleId, tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import User from '@alga-psa/db/models/user';
@@ -17,11 +17,6 @@ interface IRegistrationResult {
   success: boolean;
   error?: string;
   registrationId?: string;
-}
-
-interface RegistrationRoleRow {
-  role_id: string;
-  role_name?: string | null;
 }
 
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
@@ -160,20 +155,19 @@ async function registerContactUser(
         })
         .returning('*');
 
-      const roles = await tenantDb(trx, contact.tenant).table<RegistrationRoleRow>('roles');
-      const userRole = roles.find(r =>
-        r.role_name && r.role_name.toLowerCase() === 'user'
-      );
+      // The contact's portal-admin pre-mark picks the role, the way the
+      // invitation path does: the contact screen promises that a contact marked
+      // as portal admin "will be created with Client Admin role", and the flag
+      // follows the role from the first write on, so self-registration must not
+      // quietly downgrade them to 'User'.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);
 
-      if (!userRole) {
+      if (!roleId) {
         throw new Error('User role not found');
       }
 
-      // The 'User' role is what decides contacts.is_client_admin from now on,
-      // even if the contact was pre-marked as a portal admin before the
-      // account existed.
       // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
-      await addUserRoles(trx, contact.tenant, user.user_id, [userRole.role_id]);
+      await addUserRoles(trx, contact.tenant, user.user_id, [roleId]);
 
       return { success: true };
     });

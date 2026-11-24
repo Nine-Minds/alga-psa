@@ -7,16 +7,29 @@ const upsertOAuthAccountLinkMock = vi.fn();
 const hashPasswordMock = vi.fn();
 
 /**
- * Provisioning assigns the configured default role through addUserRoles
- * (@alga-psa/db), which carries the linked contact's portal-admin flag sync
- * with the write — so a contact pre-marked as a portal admin before the account
- * existed does not keep the flag once it is created with the 'User' role
- * (alga-2026-0003347). The derivation itself is pinned in
- * packages/db/src/lib/userRoleWrites.test.ts; here the row the helper is asked
- * to write is recorded, so this suite keeps checking which role is assigned and
- * that it travels through the sync-carrying write.
+ * Provisioning resolves the role of a new portal account through
+ * resolveInitialPortalRoleId and writes it through addUserRoles, both from
+ * @alga-psa/db: the resolver reads the contact's portal-admin pre-mark (a
+ * pre-marked contact is promised the client 'Admin' role by the contact screen,
+ * so the configured default does not override it), and the write carries the
+ * flag sync, so the flag and the role agree from the first write
+ * (alga-2026-0003347).
+ *
+ * Both are faked here against the fixtures below, mirroring their contracts —
+ * the real decision table is pinned in
+ * packages/db/src/lib/clientPortalAdminFlag.test.ts and the real write in
+ * userRoleWrites.test.ts. What this suite checks is which role provisioning
+ * ends up assigning, and that it asks the shared resolver rather than looking a
+ * role up itself (the harness has no `roles` table at all).
  */
 const userRoleWrites = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>> }));
+const portalRoleFixture = vi.hoisted(() => ({
+  adminRoleId: null as string | null,
+  defaultRoleId: null as string | null,
+  preMarkedContactIds: [] as string[],
+  resolverCalls: [] as Array<{ tenant: string; contactId: string; defaultRoleName?: string }>,
+  linkSyncs: [] as Array<{ tenant: string; userId: string; previousContactId: string | null }>,
+}));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -24,6 +37,25 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
     const rows = roleIds.map((roleId) => ({ tenant, user_id: userId, role_id: roleId }));
     userRoleWrites.rows.push(...rows);
     return rows;
+  }),
+  resolveInitialPortalRoleId: vi.fn(async (
+    _trx: unknown,
+    tenant: string,
+    contactId: string,
+    defaultRoleName?: string
+  ) => {
+    portalRoleFixture.resolverCalls.push({ tenant, contactId, defaultRoleName });
+    return portalRoleFixture.preMarkedContactIds.includes(contactId)
+      ? portalRoleFixture.adminRoleId ?? portalRoleFixture.defaultRoleId
+      : portalRoleFixture.defaultRoleId;
+  }),
+  syncContactClientAdminFlagsForUserLinkChange: vi.fn(async (
+    _trx: unknown,
+    tenant: string,
+    userId: string,
+    previousContactId: string | null
+  ) => {
+    portalRoleFixture.linkSyncs.push({ tenant, userId, previousContactId });
   }),
 }));
 
@@ -76,11 +108,19 @@ function setupKnexHarness(params: {
   emailConflictUserId?: string | null;
   existingMicrosoftLinkUserId?: string | null;
   roleIdForDefaultRole?: string | null;
+  roleIdForClientAdminRole?: string | null;
+  preMarkedContactIds?: string[];
 }) {
   const updates: Array<Record<string, unknown>> = [];
   const inserts: Array<Record<string, unknown>> = [];
   const userRoleInserts = userRoleWrites.rows;
   userRoleInserts.length = 0;
+
+  portalRoleFixture.defaultRoleId = params.roleIdForDefaultRole ?? null;
+  portalRoleFixture.adminRoleId = params.roleIdForClientAdminRole ?? null;
+  portalRoleFixture.preMarkedContactIds = params.preMarkedContactIds ?? [];
+  portalRoleFixture.resolverCalls.length = 0;
+  portalRoleFixture.linkSyncs.length = 0;
 
   const usersWhereMock = vi.fn(() => {
     const selectOrderByMock = vi.fn(async () => params.existingContactUsers ?? []);
@@ -159,17 +199,9 @@ function setupKnexHarness(params: {
         where: userAuthAccountsWhereMock,
       };
     }
-    if (table === 'roles') {
-      return {
-        where: vi.fn(() => ({
-          andWhereRaw: vi.fn(() => ({
-            first: vi.fn(async () =>
-              params.roleIdForDefaultRole ? { role_id: params.roleIdForDefaultRole } : undefined
-            ),
-          })),
-        })),
-      };
-    }
+    // No `roles` table on purpose: the role of a new portal account is
+    // resolved through the shared resolver, which reads the contact's
+    // portal-admin pre-mark. A direct role lookup here would fail.
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -559,17 +591,17 @@ describe('clientPortalProvisioning built-in mutations', () => {
     expect(existingHarness.userRoleInserts).toHaveLength(0);
   });
 
-  // alga-2026-0003347: the configured default role decides the linked contact's
-  // portal-admin flag the moment the account exists. A contact pre-marked as a
-  // portal admin (the invitation pre-seed, set while no portal user existed)
-  // does not keep the flag when Entra creates its user with the 'User' role:
-  // the role write that lands here is the one that re-derives it, and
-  // provisioning never writes the flag itself.
-  it('lets the created role decide the contact portal-admin flag, pre-seed included', async () => {
+  // alga-2026-0003347: the role an account is created with decides the linked
+  // contact's portal-admin flag from the moment the account exists, so the
+  // creation path has to read the pre-mark the contact screen promised — and
+  // the flag is never written here, only derived from the role.
+  it('creates the account of a pre-marked contact with the client Admin role', async () => {
     const harness = setupKnexHarness({
       existingContactUsers: [],
       emailMatches: [],
       roleIdForDefaultRole: 'role-user-preseed',
+      roleIdForClientAdminRole: 'role-admin-preseed',
+      preMarkedContactIds: ['contact-preseed'],
     });
 
     const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
@@ -588,14 +620,74 @@ describe('clientPortalProvisioning built-in mutations', () => {
       })
     );
 
-    // The non-admin role goes through addUserRoles, which re-derives
-    // contacts.is_client_admin from the role set (the derivation itself is
-    // pinned in packages/db/src/lib/userRoleWrites.test.ts).
+    // Asked about this contact, with the configured default as the fallback.
+    expect(portalRoleFixture.resolverCalls).toEqual([
+      { tenant: 'tenant-preseed', contactId: 'contact-preseed', defaultRoleName: 'User' },
+    ]);
+    // The Admin role goes through addUserRoles, which re-derives
+    // contacts.is_client_admin from it — so the flag stays true.
     expect(harness.userRoleInserts).toEqual([
-      { tenant: 'tenant-preseed', user_id: 'created-user-201', role_id: 'role-user-preseed' },
+      { tenant: 'tenant-preseed', user_id: 'created-user-201', role_id: 'role-admin-preseed' },
     ]);
     // No contacts write of its own: the flag is derived, never set here.
     expect(harness.updates.some((update) => 'is_client_admin' in update)).toBe(false);
+  });
+
+  it('creates the account of an unmarked contact with the configured default role', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [],
+      roleIdForDefaultRole: 'role-user-plain',
+      roleIdForClientAdminRole: 'role-admin-plain',
+      preMarkedContactIds: [],
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-plain',
+        clientId: 'client-plain',
+        managedTenantId: 'managed-plain',
+        contactNameId: 'contact-plain',
+        defaultRoleName: 'User',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-plain',
+        email: 'plain@example.com',
+        userPrincipalName: 'plain@example.com',
+      })
+    );
+
+    expect(harness.userRoleInserts).toEqual([
+      { tenant: 'tenant-plain', user_id: 'created-user-201', role_id: 'role-user-plain' },
+    ]);
+    expect(harness.updates.some((update) => 'is_client_admin' in update)).toBe(false);
+  });
+
+  // Adopting an existing by-email account for this contact changes
+  // users.contact_id and writes no role, so the flag of the contact it now
+  // points at has to be re-derived from the roles that account already holds.
+  it('re-derives the contact portal-admin flag when it adopts an existing account', async () => {
+    setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [{ user_id: 'email-user-link', contact_id: null }],
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-link',
+        clientId: 'client-link',
+        managedTenantId: 'managed-link',
+        contactNameId: 'contact-link',
+        defaultRoleName: 'User',
+      },
+      buildUser({ entraObjectId: 'entra-object-link', email: 'link@example.com', userPrincipalName: 'link@example.com' })
+    );
+
+    expect(portalRoleFixture.linkSyncs).toEqual([
+      { tenant: 'tenant-link', userId: 'email-user-link', previousContactId: null },
+    ]);
   });
 
   it('skips new portal user provisioning when configured default role does not exist', async () => {

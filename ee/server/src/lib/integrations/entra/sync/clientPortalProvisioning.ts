@@ -2,7 +2,11 @@ import type { EntraSyncUser } from './types';
 import { randomBytes } from 'node:crypto';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { addUserRoles } from '@alga-psa/db';
+import {
+  addUserRoles,
+  resolveInitialPortalRoleId,
+  syncContactClientAdminFlagsForUserLinkChange,
+} from '@alga-psa/db';
 import {
   OAuthAccountLinkConflictError,
   upsertOAuthAccountLink,
@@ -315,6 +319,19 @@ export async function handleEligibleClientPortalProvisioning(
               },
               updated_at: trx.fn.now(),
             });
+
+          if (attachMatchedUserToContact) {
+            // Adopting an existing account for this contact changes the link
+            // without writing a role, and the roles it already holds are what
+            // the contact's portal-admin flag mirrors from now on
+            // (alga-2026-0003347).
+            await syncContactClientAdminFlagsForUserLinkChange(
+              trx,
+              context.tenantId,
+              userId,
+              matchedUserRow?.contact_id ?? null,
+            );
+          }
         }
 
         if (!userId) {
@@ -333,15 +350,18 @@ export async function handleEligibleClientPortalProvisioning(
             } as ClientPortalProvisioningResult;
           }
 
+          // A contact pre-marked as portal admin is promised the client 'Admin'
+          // role by the contact screen, so the pre-mark wins over the
+          // configured default role here too; everything else gets the
+          // configured default. The flag mirrors whichever role is written.
           const defaultRoleName = (context.defaultRoleName || 'User').trim() || 'User';
-          const roleRow = await trx('roles')
-            .where({
-              tenant: context.tenantId,
-              client: true,
-            })
-            .andWhereRaw('lower(role_name) = lower(?)', [defaultRoleName])
-            .first(['role_id']);
-          if (!roleRow?.role_id) {
+          const initialRoleId = await resolveInitialPortalRoleId(
+            trx,
+            context.tenantId,
+            context.contactNameId,
+            defaultRoleName,
+          );
+          if (!initialRoleId) {
             return {
               outcome: 'skipped_conflict',
               reason: 'role_conflict',
@@ -370,11 +390,10 @@ export async function handleEligibleClientPortalProvisioning(
             .returning(['user_id']);
           userId = String(inserted[0].user_id);
 
-          // The configured default role decides contacts.is_client_admin from
-          // here on; a contact pre-marked as portal admin does not keep the
-          // flag once its portal user exists with a non-admin role.
+          // The role just resolved decides contacts.is_client_admin from here
+          // on, and it already honours the contact's pre-mark.
           // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
-          await addUserRoles(trx, context.tenantId, userId, [String(roleRow.role_id)]);
+          await addUserRoles(trx, context.tenantId, userId, [initialRoleId]);
         }
 
         await upsertOAuthAccountLink({

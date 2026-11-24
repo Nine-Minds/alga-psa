@@ -10,7 +10,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, resolveInitialPortalRoleId, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -1810,24 +1810,19 @@ export const registerClientUser = withAuth(async (
         })
         .returning(['user_id']);
 
-      // Get the default client portal user role (must exist via migrations)
-      const clientRole = await tenantDb(trx, contact.tenant).table('roles')
-        .where({
-          client: true,
-          msp: false
-        })
-        .whereRaw('LOWER(role_name) = ?', ['user'])
-        .first();
+      // The client portal role the account starts with: the contact's
+      // portal-admin pre-mark picks the client 'Admin' role, the way the
+      // invitation path does, and everything else the portal 'User' role (both
+      // exist via migrations). The flag mirrors that role from here on, so a
+      // registration that always picked 'User' took the pre-mark away.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);
 
-      if (!clientRole) {
+      if (!roleId) {
         throw new Error('Client portal User role not found for tenant');
       }
 
-      // Assign the role to the user. The 'User' role is what decides
-      // contacts.is_client_admin from now on, even if the contact was
-      // pre-marked as a portal admin before the account existed.
       // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
-      await addUserRoles(trx, contact.tenant, newUser.user_id, [clientRole.role_id]);
+      await addUserRoles(trx, contact.tenant, newUser.user_id, [roleId]);
 
       return { success: true };
     });

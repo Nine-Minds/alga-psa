@@ -39,4 +39,26 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
     expect(invitationTarget).not.toContain("'pi.tenant': tenant");
     expect(clientUserTarget).not.toContain("'u.tenant': tenant");
   });
+
+  /**
+   * Relinking an orphaned account changes `users.contact_id` and writes no
+   * role, so the flag of the contact it now points at has to be re-derived
+   * from the roles that account already holds — otherwise a plain 'User'
+   * account adopted by a contact pre-marked as portal admin keeps that
+   * contact's company-wide portal scope (alga-2026-0003347).
+   */
+  it('re-derives the portal admin flag of both contacts when it relinks an account', () => {
+    const relink = sectionBetween(
+      'async function relinkOrphanedPortalUser',
+      'export const createClientPortalUser'
+    );
+
+    const previous = relink.indexOf(".first('contact_id')");
+    const write = relink.indexOf('.update({ contact_id: contactId');
+    const sync = relink.indexOf('await syncContactClientAdminFlagsForUserLinkChange(db, tenant, userId,');
+
+    expect(previous).toBeGreaterThan(0);
+    expect(write).toBeGreaterThan(previous);
+    expect(sync).toBeGreaterThan(write);
+  });
 });

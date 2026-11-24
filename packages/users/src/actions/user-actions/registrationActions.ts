@@ -1,7 +1,7 @@
 'use server'
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { addUserRoles, tenantDb, withTransaction } from '@alga-psa/db';
+import { addUserRoles, resolveInitialPortalRoleId, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { verifyContactEmail } from './userActions';
@@ -186,21 +186,18 @@ async function registerContactUser(
         })
         .returning('*');
 
-      // Get User role
-      const roles = await tenantDb(trx, contact.tenant).table('roles') as Array<{ role_id: string; role_name?: string | null }>;
-      const userRole = roles.find(r => 
-        r.role_name && r.role_name.toLowerCase() === 'user'
-      );
+      // The contact's portal-admin pre-mark picks the role, the way the
+      // invitation path does: a contact marked as portal admin is promised the
+      // Client Admin role on account creation, and the flag mirrors the role
+      // from the first write on.
+      const roleId = await resolveInitialPortalRoleId(trx, contact.tenant, contact.contact_name_id);
 
-      if (!userRole) {
+      if (!roleId) {
         throw new Error('User role not found');
       }
 
-      // Assign role. The 'User' role is what decides contacts.is_client_admin
-      // from now on, even if the contact was pre-marked as a portal admin
-      // before the account existed.
       // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
-      await addUserRoles(trx, contact.tenant, user.user_id, [userRole.role_id]);
+      await addUserRoles(trx, contact.tenant, user.user_id, [roleId]);
 
       return { success: true };
     });
