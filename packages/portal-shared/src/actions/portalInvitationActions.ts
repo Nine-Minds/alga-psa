@@ -17,6 +17,12 @@ import {
   type PortalEmailOwnerRow,
 } from '../lib/portalEmailOwner';
 import { resolvePortalInvitationValidityDays } from '../lib/portalInvitationValidity';
+import {
+  classifyPortalInvitationState,
+  invitationStateHaving,
+  LATEST_INVITATION_EXPIRES_AT_SQL,
+  LATEST_INVITATION_STATE_SQL,
+} from '../lib/portalInvitationStateQuery';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type {
@@ -117,7 +123,7 @@ function normalizeSendPortalInvitationError(
       return { message, errorCode: 'CONTACT_NOT_FOUND' };
     }
     if (message.startsWith('Too many attempts.')) {
-      return { message, errorCode: 'INVITATION_FAILED' };
+      return { message, errorCode: 'RATE_LIMITED' };
     }
     if (message === 'Failed to create invitation') {
       return { errorCode: 'INVITATION_FAILED' };
@@ -899,9 +905,12 @@ async function sendPortalInvitationForContact(
       invitationValidityDays
     );
     if (!invitationResult.success) {
+      const reason = invitationResult.error ?? '';
       throw new PortalInvitationError(
-        invitationResult.error || 'Portal invitation could not be created. Please try again.',
-        'INVITATION_FAILED'
+        reason || 'Portal invitation could not be created. Please try again.',
+        // The rate limiter's refusal carries its own code so the UI can say
+        // "too many attempts" in the reader's language.
+        reason.startsWith('Too many attempts.') ? 'RATE_LIMITED' : 'INVITATION_FAILED'
       );
     }
 
@@ -965,39 +974,28 @@ async function sendPortalInvitationForContact(
 }
 
 /**
- * One rule for a contact's invitation state, used by the state the MSP reads on
- * the client's contact list and by the state a batch is aimed at: the
- * invitations that were never used or revoked (`used_at is null`), classified
- * against database time. `bool_or(pi.expires_at > now())` is "still usable",
- * `count(pi.invitation_id) > 0` is "was invited at some point".
+ * Every invitation the contact ever had, for the state rule in
+ * portalInvitationStateQuery: the classification needs the LATEST row, so the
+ * join cannot pre-filter to the unused ones — a newer revoked or accepted
+ * invitation is exactly what makes an older lapsed row irrelevant.
  */
-function joinOpenInvitations(
+function joinContactInvitations(
   scopedDb: ReturnType<typeof tenantDb>,
-  query: Knex.QueryBuilder,
-  trx: Knex.Transaction
+  query: Knex.QueryBuilder
 ): void {
   scopedDb.tenantJoin(query, 'portal_invitations as pi', 'pi.contact_id', 'c.contact_name_id', {
     type: 'left',
-    on(join) {
-      join.andOn(trx.raw('pi.used_at is null'));
-    },
   });
 }
-const HAS_OPEN_INVITATION_SQL = 'count(pi.invitation_id) > 0';
-const HAS_ACTIVE_INVITATION_SQL = 'coalesce(bool_or(pi.expires_at > now()), false)';
 
-/** The HAVING predicate that selects the asked-for invitation states. */
-function invitationStateHavingSql(states: PortalInvitationStateTarget[]): string {
-  const wantsPending = states.includes('pending');
-  const wantsExpired = states.includes('expired');
-
-  if (wantsPending && wantsExpired) {
-    return HAS_OPEN_INVITATION_SQL;
-  }
-  if (wantsPending) {
-    return HAS_ACTIVE_INVITATION_SQL;
-  }
-  return `${HAS_OPEN_INVITATION_SQL} and not ${HAS_ACTIVE_INVITATION_SQL}`;
+/** Narrows a grouped contact query to the asked-for invitation states. */
+function applyInvitationStateFilter(
+  query: Knex.QueryBuilder,
+  states: PortalInvitationStateTarget[],
+  groupColumns: string[]
+): void {
+  const having = invitationStateHaving(states);
+  query.groupBy(...groupColumns).havingRaw(having.sql, having.bindings);
 }
 
 /**
@@ -1024,7 +1022,7 @@ async function resolveEligibleContactIdsForInvitation(
       },
     });
     if (invitationStates.length > 0) {
-      joinOpenInvitations(scopedDb, query, trx);
+      joinContactInvitations(scopedDb, query);
     }
     query
       .whereNull('u.user_id')
@@ -1032,8 +1030,7 @@ async function resolveEligibleContactIdsForInvitation(
       .modify((qb: Knex.QueryBuilder) => {
         if (clientId) qb.andWhere('c.client_id', clientId);
         if (invitationStates.length > 0) {
-          qb.groupBy('c.contact_name_id', 'c.full_name')
-            .havingRaw(invitationStateHavingSql(invitationStates));
+          applyInvitationStateFilter(qb, invitationStates, ['c.contact_name_id', 'c.full_name']);
         }
       })
       .select('c.contact_name_id')
@@ -1054,6 +1051,57 @@ function normalizeInvitationStates(states: unknown): PortalInvitationStateTarget
     states.filter((state): state is PortalInvitationStateTarget =>
       state === 'pending' || state === 'expired')
   ));
+}
+
+/**
+ * Which of these contacts the send path would refuse because their email is
+ * already held by a user it cannot adopt. Classified with
+ * `classifyPortalEmailOwner` — the very function sendPortalInvitationForContact
+ * refuses on — so a preview built on this cannot count an invitation the batch
+ * will skip.
+ */
+async function resolvePortalEmailConflicts(
+  db: DbConnection,
+  tenant: string,
+  contacts: Array<{ contact_name_id: string; email: string | null }>
+): Promise<Set<string>> {
+  const byEmail = new Map<string, string[]>();
+  for (const contact of contacts) {
+    const email = String(contact.email ?? '').trim().toLowerCase();
+    if (!email) continue;
+    byEmail.set(email, [...(byEmail.get(email) ?? []), contact.contact_name_id]);
+  }
+  if (byEmail.size === 0) {
+    return new Set();
+  }
+
+  const scopedDb = tenantDb(db, tenant);
+  const ownerQuery = scopedDb.table('users as u')
+    .whereIn(db.raw('lower(u.email)') as unknown as string, [...byEmail.keys()])
+    .select(
+      'u.user_id',
+      'u.user_type',
+      'u.contact_id',
+      'u.username',
+      db.raw('lower(u.email) as owner_email'),
+      'c.contact_name_id as linked_contact_id'
+    );
+  scopedDb.tenantJoin(ownerQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+  const owners = await ownerQuery as unknown as Array<PortalEmailOwnerRow & { owner_email: string }>;
+
+  const conflicted = new Set<string>();
+  for (const owner of owners) {
+    for (const contactId of byEmail.get(owner.owner_email) ?? []) {
+      const status = classifyPortalEmailOwner(owner, contactId);
+      // 'orphaned' is relinked by the send, and 'linked_this_contact' already
+      // reads as a portal user; everything else is a refusal.
+      if (status === 'internal' || status === 'linked_other_contact') {
+        conflicted.add(contactId);
+      }
+    }
+  }
+
+  return conflicted;
 }
 
 /**
@@ -1095,33 +1143,35 @@ export const getPortalInvitationStatesForClient = withAuth(async (
           join.andOn(trx.raw('u.user_type = ?', ['client']));
         },
       });
-      joinOpenInvitations(scopedDb, query, trx);
+      joinContactInvitations(scopedDb, query);
       query
         .andWhere('c.client_id', normalizedClientId)
-        .groupBy('c.contact_name_id', 'c.full_name')
+        .groupBy('c.contact_name_id', 'c.full_name', 'c.email')
         .orderBy('c.full_name', 'asc')
         .select('c.contact_name_id')
-        .select(trx.raw('bool_or(u.user_id is not null) as has_portal_user'))
-        .select(trx.raw(`${HAS_ACTIVE_INVITATION_SQL} as has_active_invitation`))
-        .select(trx.raw(`${HAS_OPEN_INVITATION_SQL} as has_open_invitation`))
-        .select(trx.raw('max(pi.expires_at) as latest_expires_at'));
-      return query as unknown as Promise<Array<{
+        .select('c.email')
+        .select(trx.raw('coalesce(bool_or(u.user_id is not null), false) as has_portal_user'))
+        // A portal user that was deactivated is not an active one: the row says
+        // so instead of passing for "Active portal user".
+        .select(trx.raw('coalesce(bool_or(u.user_id is not null and u.is_inactive = false), false) as has_active_portal_user'))
+        .select(trx.raw(`(${LATEST_INVITATION_STATE_SQL}) as invitation_state`))
+        .select(trx.raw(`${LATEST_INVITATION_EXPIRES_AT_SQL} as latest_expires_at`));
+      const contactRows = await query as unknown as Array<{
         contact_name_id: string;
+        email: string | null;
         has_portal_user: boolean | null;
-        has_active_invitation: boolean | null;
-        has_open_invitation: boolean | null;
+        has_active_portal_user: boolean | null;
+        invitation_state: string | null;
         latest_expires_at: Date | string | null;
-      }>>;
+      }>;
+
+      // Whose email the send path would refuse, by the same rule it refuses on.
+      const conflictedContactIds = await resolvePortalEmailConflicts(trx, tenant, contactRows);
+      return { contactRows, conflictedContactIds };
     });
 
-    return rows.map((row) => {
-      const state: PortalInvitationState = row.has_portal_user
-        ? 'active_user'
-        : row.has_active_invitation
-          ? 'pending'
-          : row.has_open_invitation
-            ? 'expired'
-            : 'none';
+    return rows.contactRows.map((row) => {
+      const state = classifyPortalInvitationState(row);
 
       return {
         contactId: row.contact_name_id,
@@ -1129,6 +1179,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
         expiresAt: state === 'pending' && row.latest_expires_at
           ? new Date(row.latest_expires_at).toISOString()
           : null,
+        emailConflict: rows.conflictedContactIds.has(row.contact_name_id),
       };
     });
 
@@ -1202,20 +1253,39 @@ export const sendBulkPortalInvitations = withAuth(async (
     let targetContactIds: string[];
 
     if (requestedContactIds.length > 0) {
-      const existingQuery = tenantDb(knex, tenant).table('contacts as c')
-        .whereIn('c.contact_name_id', requestedContactIds)
-        .modify((qb: Knex.QueryBuilder) => {
-          // An id that belongs to another client is not this batch's to invite.
-          if (clientId) qb.andWhere('c.client_id', clientId);
-        })
-        .select('c.contact_name_id');
-      // A contact the caller's bundle hides does not exist for this batch,
-      // exactly as it does not exist for their contact list.
-      (await scope.narrowing('contact', 'c')).apply(existingQuery);
-      const resolvable = new Set(
-        ((await existingQuery) as Array<{ contact_name_id: string }>).map((row) => row.contact_name_id)
+      const scopedDb = tenantDb(knex, tenant);
+      const narrowing = await scope.narrowing('contact', 'c');
+      const requestedContactsQuery = (states: PortalInvitationStateTarget[]) => {
+        const query = scopedDb.table('contacts as c')
+          .whereIn('c.contact_name_id', requestedContactIds)
+          .modify((qb: Knex.QueryBuilder) => {
+            // An id that belongs to another client is not this batch's to invite.
+            if (clientId) qb.andWhere('c.client_id', clientId);
+            if (states.length > 0) {
+              applyInvitationStateFilter(qb, states, ['c.contact_name_id']);
+            }
+          })
+          .select('c.contact_name_id');
+        if (states.length > 0) {
+          joinContactInvitations(scopedDb, query);
+        }
+        // A contact the caller's bundle hides does not exist for this batch,
+        // exactly as it does not exist for their contact list.
+        narrowing.apply(query);
+        return query as unknown as Promise<Array<{ contact_name_id: string }>>;
+      };
+
+      const resolvable = new Set((await requestedContactsQuery([])).map((row) => row.contact_name_id));
+      // An explicit list that came from a state selection is re-checked here
+      // against the current state: the sender was shown "resend the expired
+      // ones", and anything that has moved on since is not theirs to mail.
+      const inRequestedState = invitationStates.length > 0
+        ? new Set((await requestedContactsQuery(invitationStates)).map((row) => row.contact_name_id))
+        : null;
+
+      targetContactIds = requestedContactIds.filter(
+        (id) => resolvable.has(id) && (!inRequestedState || inRequestedState.has(id))
       );
-      targetContactIds = requestedContactIds.filter((id) => resolvable.has(id));
       for (const contactId of requestedContactIds.filter((id) => !resolvable.has(id))) {
         results.push({
           contactId,
@@ -1223,6 +1293,18 @@ export const sendBulkPortalInvitations = withAuth(async (
           errorCode: 'CONTACT_NOT_FOUND',
           message: 'Contact not found'
         });
+      }
+      if (inRequestedState) {
+        for (const contactId of requestedContactIds.filter(
+          (id) => resolvable.has(id) && !inRequestedState.has(id)
+        )) {
+          results.push({
+            contactId,
+            status: 'skipped',
+            errorCode: 'INVITATION_STATE_MISMATCH',
+            message: 'This contact\'s invitation is no longer in the state this batch was aimed at.'
+          });
+        }
       }
     } else {
       // An invitation-state selection is the chase-up case and is narrower than
@@ -1747,12 +1829,20 @@ export const getPortalInvitations = withAuth(async (
         status = 'expired';
       }
 
+      // A resend reuses the row it renews, so "Sent" alone would still read as
+      // the day the invitation was first created; the resend stamps say when it
+      // last went out and how often.
+      const lastSentAt = invitation.metadata?.last_sent_at;
+      const resendCount = Number(invitation.metadata?.resend_count ?? 0);
+
       return {
         invitation_id: invitation.invitation_id,
         email: invitation.email,
         created_at: invitation.created_at.toISOString(),
         expires_at: invitation.expires_at.toISOString(),
         used_at: invitation.used_at?.toISOString(),
+        last_sent_at: typeof lastSentAt === 'string' ? lastSentAt : undefined,
+        resend_count: resendCount > 0 ? resendCount : undefined,
         status
       };
     });

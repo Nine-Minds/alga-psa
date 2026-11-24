@@ -31,7 +31,7 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
         'Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given.',
       ),
       invitation_states: zOpenApi.array(zOpenApi.enum(['expired', 'pending'])).min(1).optional().describe(
-        'Narrows the eligible contacts to those whose latest unused invitation is expired and/or still pending — the chase-up case. A resend renews the link for the tenant\'s full invitation validity. Ignored when contact_ids is given; narrower than all_eligible when both are set.',
+        'Narrows the contacts to those whose latest invitation is expired and/or still pending — the chase-up case. A contact whose latest invitation was used or revoked is in neither state, whatever older invitations it has. A resend renews the link for the tenant\'s full invitation validity. Narrower than all_eligible, and it also narrows contact_ids: an id whose invitation is no longer in one of these states comes back as skipped with INVITATION_STATE_MISMATCH.',
       ),
     }).describe('Supply contact_ids, all_eligible=true, or invitation_states. One of the three is required.'),
   );
@@ -51,7 +51,7 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
       contact_id: zOpenApi.string().describe('contacts.contact_name_id.'),
       email: zOpenApi.string().optional().describe('Address the invitation went to, when the contact has one.'),
       status: zOpenApi.enum(['sent', 'skipped', 'failed']).describe(
-        'sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, already a portal user, shared mailbox, not in this client). failed: the invitation could not be delivered.',
+        'sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, already a portal user, shared mailbox, not in this client, or no longer in the requested invitation_states). failed: the invitation could not be delivered.',
       ),
       invitation_id: zOpenApi.string().optional().describe('portal_invitations.invitation_id of the invitation created.'),
       error_code: zOpenApi.string().optional().describe('Stable code for a skip or failure, e.g. USER_EXISTS_FOR_CONTACT.'),

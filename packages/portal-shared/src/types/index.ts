@@ -33,7 +33,11 @@ export type PortalInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'BATCH_LIMIT_EXCEEDED'
-  | 'NO_TARGETS_SELECTED';
+  | 'NO_TARGETS_SELECTED'
+  /** The contact's latest invitation is no longer in the state the batch targeted. */
+  | 'INVITATION_STATE_MISMATCH'
+  /** Too many invitations were attempted for this contact; the UI translates the wait. */
+  | 'RATE_LIMITED';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -74,10 +78,16 @@ export interface BulkSendInvitationResult {
 
 /**
  * A contact's standing with the client portal, as the MSP running a rollout
- * needs to see it: no portal user and no open invitation, an invitation that is
- * still usable, an invitation that lapsed unused, or a live portal user.
+ * needs to see it: no outstanding invitation, an invitation that is still
+ * usable, an invitation that lapsed unused, a live portal user, or a portal
+ * user that was deactivated. Derived from the contact's latest invitation only.
  */
-export type PortalInvitationState = 'none' | 'pending' | 'expired' | 'active_user';
+export type PortalInvitationState =
+  | 'none'
+  | 'pending'
+  | 'expired'
+  | 'active_user'
+  | 'inactive_user';
 
 /** The invitation states a batch can be aimed at. */
 export type PortalInvitationStateTarget = Extract<PortalInvitationState, 'pending' | 'expired'>;
@@ -87,6 +97,13 @@ export interface PortalInvitationContactState {
   state: PortalInvitationState;
   /** When a pending invitation lapses; null in every other state. */
   expiresAt: string | null;
+  /**
+   * True when the contact's email is already held by a user the invitation
+   * cannot adopt (an internal user, or another contact's portal user), which is
+   * the same rule the send path refuses on. Lets a preview count only what will
+   * actually be mailed.
+   */
+  emailConflict: boolean;
 }
 
 export interface SendBulkPortalInvitationsParams {
@@ -97,9 +114,11 @@ export interface SendBulkPortalInvitationsParams {
   /** Invite every contact without a portal user (optionally within `clientId`). */
   allEligible?: boolean;
   /**
-   * Narrows the eligible set to contacts whose invitation is in one of these
-   * states — the chase-up case ("resend everything that expired"). Ignored when
-   * `contactIds` is given, and narrower than `allEligible` when both are set.
+   * Narrows the batch to contacts whose latest invitation is in one of these
+   * states — the chase-up case ("resend everything that expired"). Narrower
+   * than `allEligible`, and it also narrows an explicit `contactIds` list: an
+   * id whose invitation is no longer in one of these states is skipped rather
+   * than mailed, so the batch can never outrun what the sender was shown.
    */
   invitationStates?: PortalInvitationStateTarget[];
 }
@@ -147,6 +166,10 @@ export interface InvitationHistoryItem {
   created_at: string;
   expires_at: string;
   used_at?: string;
+  /** When the invitation was last mailed again; absent until it is resent. */
+  last_sent_at?: string;
+  /** How many times the invitation was mailed again after it was created. */
+  resend_count?: number;
   status: 'pending' | 'expired' | 'used' | 'revoked';
 }
 

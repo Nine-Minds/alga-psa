@@ -49,7 +49,7 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
     expect(stateQuery).toContain('const scopedDb = tenantDb(trx, tenant);');
     expect(stateQuery).toContain("scopedDb.table('contacts as c')");
     expect(stateQuery).toContain("(await scope.narrowing('contact', 'c')).apply(query)");
-    expect(stateQuery).toContain('joinOpenInvitations(scopedDb, query, trx)');
+    expect(stateQuery).toContain('joinContactInvitations(scopedDb, query)');
     expect(stateQuery).toContain("canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)");
     expect(stateQuery).toContain("scope.permits('client', normalizedClientId)");
 
@@ -58,16 +58,18 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
   });
 
   it('builds the invitation-state filter and the state read from one predicate', () => {
-    // The rule the MSP filtered on has to be the rule the batch acts on.
-    expect(source).toContain("const HAS_OPEN_INVITATION_SQL = 'count(pi.invitation_id) > 0';");
-    expect(source).toContain(
-      "const HAS_ACTIVE_INVITATION_SQL = 'coalesce(bool_or(pi.expires_at > now()), false)';"
-    );
-    expect(source).toContain('.havingRaw(invitationStateHavingSql(invitationStates))');
-    expect(source).toContain('${HAS_ACTIVE_INVITATION_SQL} as has_active_invitation');
-    expect(source).toContain('${HAS_OPEN_INVITATION_SQL} as has_open_invitation');
+    // The rule the MSP filtered on has to be the rule the batch acts on: one
+    // SQL expression, read as a column and reused as the HAVING predicate.
+    expect(source).toContain('invitationStateHaving,');
+    expect(source).toContain('LATEST_INVITATION_STATE_SQL,');
+    expect(source).toContain('${LATEST_INVITATION_STATE_SQL}) as invitation_state');
+    expect(source).toContain('const having = invitationStateHaving(states);');
+    expect(source).toContain('query.groupBy(...groupColumns).havingRaw(having.sql, having.bindings);');
 
-    const joins = source.match(/joinOpenInvitations\(scopedDb, query, trx\)/g) ?? [];
-    expect(joins).toHaveLength(2);
+    // Every classification joins every invitation row, because the state of a
+    // contact is the state of its latest invitation.
+    const joins = source.match(/joinContactInvitations\(scopedDb, query\)/g) ?? [];
+    expect(joins).toHaveLength(3);
+    expect(source).not.toContain("join.andOn(trx.raw('pi.used_at is null'))");
   });
 });

@@ -37,6 +37,14 @@ describe('portal invitations OpenAPI', () => {
     expect(body.properties.invitation_states.items.enum).toEqual(['expired', 'pending']);
     expect(body.properties.invitation_states.description).toMatch(/expired/i);
     expect(body.required ?? []).not.toContain('invitation_states');
+
+    // The documented rule is the one the query runs: the state of the
+    // contact's LATEST invitation, and a narrowing of contact_ids rather than
+    // something the endpoint ignores when they are given.
+    expect(body.properties.invitation_states.description).toMatch(/latest invitation/i);
+    expect(body.properties.invitation_states.description).toMatch(/used or revoked/i);
+    expect(body.properties.invitation_states.description).toMatch(/narrows contact_ids/i);
+    expect(body.properties.invitation_states.description).not.toMatch(/Ignored when contact_ids/i);
   });
 
   it('is wired into the base registry', () => {

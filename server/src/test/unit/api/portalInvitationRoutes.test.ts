@@ -110,6 +110,22 @@ describe('POST /api/v1/clients/{id}/portal-invitations', () => {
     });
   });
 
+  it('passes a named subset together with the states it was chosen by', async () => {
+    await postForClient(request(clientUrl, {
+      contact_ids: [CONTACT_A],
+      invitation_states: ['expired'],
+    }));
+
+    // Both travel to the action, which re-checks each contact's state before
+    // mailing it: the API selects no wider than the caller was shown.
+    expect(state.calls[0]).toEqual({
+      clientId: CLIENT,
+      contactIds: [CONTACT_A],
+      allEligible: false,
+      invitationStates: ['expired'],
+    });
+  });
+
   it('rejects a body that names neither contacts, all_eligible nor invitation states', async () => {
     const res = await postForClient(request(clientUrl, {}));
     expect(res.status).toBe(400);

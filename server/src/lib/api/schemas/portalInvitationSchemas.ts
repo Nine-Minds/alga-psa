@@ -14,7 +14,11 @@ export const MAX_BULK_PORTAL_INVITATIONS = 500;
 
 export const portalInvitationStatusSchema = z.enum(['sent', 'skipped', 'failed']);
 
-/** The invitation states a batch can be aimed at, same rule as the MSP UI's filter. */
+/**
+ * The invitation states a batch can be aimed at, same rule as the MSP UI's
+ * filter: the state of the contact's latest invitation. Combined with
+ * contact_ids it narrows that list rather than being ignored.
+ */
 export const portalInvitationStateSchema = z.enum(['expired', 'pending']);
 
 /** POST /api/v1/clients/{id}/portal-invitations */
