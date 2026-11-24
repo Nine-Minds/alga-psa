@@ -9,6 +9,7 @@ import {
   searchContactListIds,
 } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
+import { isValidEmail } from '@alga-psa/validation';
 import type {
   PortalInvitationState,
   PortalInvitationStateTarget,
@@ -71,7 +72,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   // `null` is "this reader cannot see invitation state", which hides the column
   // rather than claiming nobody was ever invited.
   const [invitationStates, setInvitationStates] = useState<
-    Map<string, { state: PortalInvitationState; expiresAt: string | null; contactInactive: boolean }> | null
+    Map<string, { state: PortalInvitationState; expiresAt: string | null; contactInactive: boolean; emailConflict: boolean }> | null
   >(null);
   const [invitationFilter, setInvitationFilter] = useState<'all' | 'expired' | 'pending' | 'open'>('all');
   // False until the check resolves, so the invite affordances never flash in
@@ -130,6 +131,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           state: row.state,
           expiresAt: row.expiresAt,
           contactInactive: row.contactInactive,
+          emailConflict: row.emailConflict,
         }]),
       )))
       .catch((err) => {
@@ -262,12 +264,10 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       ? ['expired', 'pending']
       : ['expired'];
 
-  // Exactly the rows on screen that a resend would mail: every active filter
-  // applies, so the batch is what the MSP is looking at and never the client's
-  // whole backlog. A deactivated contact is left out — the send refuses it, so
-  // counting it here would promise an email that never goes out.
-  // Empty means there is nobody to offer the action to.
-  const resendContactIds = useMemo(
+  // Every active filter applies to the resend target. Deactivated contacts are
+  // excluded because their invitations cannot be used; the dialog explains any
+  // other skipped recipients in the target.
+  const resendContacts = useMemo(
     () => (invitationStates
       ? locationFilteredContacts
         .filter((contact) => {
@@ -276,10 +276,18 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             && !entry.contactInactive
             && (resendStates as string[]).includes(entry.state);
         })
-        .map((contact) => contact.contact_name_id)
       : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [locationFilteredContacts, invitationStates, resendStates.join(',')],
+  );
+
+  // Match the dialog's eligibility checks before offering an action that would
+  // have no recipients. Keep the full target so mixed batches explain skips.
+  const hasResendRecipients = resendContacts.some((contact) =>
+    !contact.is_inactive
+    && contact.contact_kind !== 'shared_mailbox'
+    && isValidEmail(contact.email)
+    && !invitationStates?.get(contact.contact_name_id)?.emailConflict
   );
 
   const invitationStateCell = (contactId: string): React.ReactNode => {
@@ -674,14 +682,14 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               })}
             </Button>
           )}
-          {canInvite && invitationStates && selectedContactIds.size === 0 && resendContactIds.length > 0 && (
+          {canInvite && invitationStates && selectedContactIds.size === 0 && hasResendRecipients && (
             <Button
               id="resend-portal-invitations-btn"
               variant="secondary"
               onClick={() => setInvitationTarget({
                 mode: 'invitationState',
                 states: resendStates,
-                contactIds: resendContactIds,
+                contactIds: resendContacts.map((contact) => contact.contact_name_id),
               })}
             >
               {resendStates.length > 1

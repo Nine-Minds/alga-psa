@@ -304,6 +304,26 @@ describe('ClientContactsList bulk portal invitations', () => {
     expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
   });
 
+  it.each([
+    { reason: 'missing email', email: null },
+    { reason: 'invalid email', email: 'not-an-email' },
+    { reason: 'shared mailbox', email: 'ada@acme.com', contact_kind: 'shared_mailbox' },
+    { reason: 'email owned by another user', email: 'ada@acme.com', emailConflict: true },
+  ])('hides resend when the only expired contact has $reason', async (candidate) => {
+    hoisted.getContactsByClient.mockResolvedValue([
+      { ...contact('contact-a', 'Ada Lovelace', candidate.email), contact_kind: candidate.contact_kind },
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'contact-a', state: 'expired', expiresAt: null, emailConflict: candidate.emailConflict ?? false },
+    ]);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByText('Invitation expired');
+    await waitFor(() => expect(screen.getByText('Invite all eligible')).toBeInTheDocument());
+
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
   it('says when a portal user is deactivated and dates a pending invitation in the app\'s locale', async () => {
     hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
       { contactId: 'contact-a', state: 'inactive_user', expiresAt: null, emailConflict: false },
