@@ -1717,6 +1717,9 @@ describe('processInboundEmailInApp', () => {
       'Subject: Deployment failure',
       'Here is what the deployment script wrote:',
       'Deployment details:\n> Here is what the deployment script wrote:',
+      'On startup the deployment script wrote:',
+      'Deployment details:\nOn startup the deployment script wrote:',
+      'Deployment details:\n> On startup the deployment script wrote:',
     ])(
       'stores the trailing error quotation introduced by %s above an explicit reply boundary', async (prefix) => {
         parseEmailReplyBodyMock.mockImplementation(async (body: any) => parseEmailReply(body));

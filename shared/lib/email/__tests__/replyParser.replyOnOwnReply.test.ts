@@ -242,10 +242,16 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
   it.each([
     'Here is what the deployment script wrote:',
     'The service account wrote:',
+    'On startup the deployment script wrote:',
+    'On Tuesday the service account wrote:',
     'On Tuesday I emailed jane.client@example.com about the invoice.\nShe wrote:',
   ])('preserves a trailing authored quotation introduced by %s', (introduction) => {
     const fixture = readFixture('authored-trailing-quotation.txt');
-    for (const prefix of [introduction, `Deployment details:\n> ${introduction.replace(/\n/g, '\n> ')}`]) {
+    for (const prefix of [
+      introduction,
+      `Deployment details:\n${introduction}`,
+      `Deployment details:\n> ${introduction.replace(/\n/g, '\n> ')}`,
+    ]) {
       const text = fixture.replace('The deployment failed with this error:', prefix);
       const result = parseEmailReply({ text });
 

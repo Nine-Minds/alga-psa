@@ -663,6 +663,16 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
   let matched: string | undefined;
   let heuristic: string | undefined;
   let removedQuoted = false;
+  const isProviderHeader = (line: string): boolean => {
+    // Above our boundary, "On startup the script wrote:" can introduce authored
+    // evidence. Require the date/time evidence used for wrapped attributions
+    // before treating this English header shape as quoted history.
+    if (preserveUnattributedQuotes && /^on .+wrote:$/i.test(line)
+      && !attributionDateTimeRegex.test(line)) {
+      return false;
+    }
+    return config.providerReplyHeaders.some((regex) => regex.test(line));
+  };
 
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i];
@@ -678,7 +688,7 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
       break;
     }
 
-    if (config.providerReplyHeaders.some((regex) => regex.test(line))) {
+    if (isProviderHeader(line)) {
       const headerField = classifyQuotedHeaderField(line);
       if (headerField) {
         // An Outlook envelope ends the reply only as a whole From/Sent/To/Subject block.
@@ -722,7 +732,7 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig, preserveU
         // Above an explicit boundary, "Here is what the deployment script wrote:"
         // is not evidence of provider history. Keep legacy stripping elsewhere.
         return (!preserveUnattributedQuotes && /\bwrote:$/i.test(value))
-          || config.providerReplyHeaders.some((regex) => regex.test(value));
+          || isProviderHeader(value);
       });
       // Above an explicit boundary, even a trailing quotation may be authored evidence.
       // Without an attribution, preserve it rather than silently deleting the customer's
