@@ -126,6 +126,8 @@ import {
 import { createTicketReadScopeFromRules, createTicketReadScope, type TicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { markAssignableAgents } from '../lib/assignableAgents';
+import { resolveOperationBoardIds } from '@alga-psa/authorization/operationScope';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { isRecordFieldHidden, projectReadableRecord } from '@alga-psa/authorization/recordProjection';
 import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
@@ -507,7 +509,7 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
  * A `users` row as this bundle may expose it: allow-listed columns only
  * (never hashed_password, two_factor_secret, ...), see USER_RESPONSE_FIELD_NAMES.
  */
-type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
+type SafeConsolidatedUser = SafeApiUser & { assignable?: boolean }; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
 
 /**
  * Whether the caller may read this specific ticket, by the same record-level authorization the ticket screen
@@ -620,6 +622,18 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const releasedPerson = <Row extends Record<string, unknown>>(row: Row): Row =>
       (seatPeople ? withholdPersonContactFields(row) : row);
 
+    // An existing ticket's destination boards (and the statuses that belong to them) are the boards an UPDATE may
+    // leave it on, the placement policy `authorizeTicketRecordAccess` enforces on the write. The board the ticket
+    // is on stays listed so the picker can show its current value.
+    const destinationBoardIds = await resolveOperationBoardIds(trx, { tenant, user: user as IUserWithRoles, action: 'update' });
+    const onDestinationBoards = <Q extends Knex.QueryBuilder>(query: Q): Q => {
+      if (destinationBoardIds === null) return query;
+      return query.where((scope) => {
+        scope.whereIn('board_id', destinationBoardIds);
+        if (ticket.board_id) scope.orWhere('board_id', ticket.board_id);
+      }) as Q;
+    };
+
     // Fetch all related data in parallel
     const [
       rawComments,
@@ -672,15 +686,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         ).orderBy('first_name', 'asc'),
       
       // Statuses
-      tenantScopedTable(trx, 'statuses', tenant)
+      onDestinationBoards(tenantScopedTable(trx, 'statuses', tenant)
         .where({
           status_type: 'ticket'
-        })
+        }))
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Boards
-      tenantScopedTable(trx, 'boards', tenant)
+      onDestinationBoards(tenantScopedTable(trx, 'boards', tenant))
         .orderBy('board_name', 'asc'),
       
       // All ticket priorities, both families. The client filters by the effective
@@ -727,8 +741,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
-    const users: SafeConsolidatedUser[] = keepThisClientsSeatTechnicians(loadedUsers, seatTicket).map(
-      (row) => sanitizeUserForResponse(row)
+    const users: SafeConsolidatedUser[] = markAssignableAgents(
+      keepThisClientsSeatTechnicians(loadedUsers, seatTicket).map((row) => sanitizeUserForResponse(row)),
+      seatAssigneeAudience
     );
 
     // Use the same document policy as subsequent fetches before returning rows
@@ -2739,6 +2754,12 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       const seatPeople = await projectedPeopleForCaller(trx, tenant, user, { kinds: ['msp_staff', 'client_technician'] });
       const seatAssignees = seatPeople ? projectedUsers(seatPeople) : null;
 
+      // The filters offer the boards the caller may READ (Add Ticket and an existing ticket's destination ask the
+      // authorization layer for their own operation). Statuses and categories belong to a board, so they follow it.
+      const readableBoardIds = await resolveOperationBoardIds(trx, { tenant, user: user as IUserWithRoles, action: 'read' });
+      const onReadableBoards = <Q extends Knex.QueryBuilder>(query: Q, column: string = 'board_id'): Q =>
+        (readableBoardIds === null ? query : query.whereIn(column, readableBoardIds)) as Q;
+
       const [
         statuses,
         priorities,
@@ -2747,10 +2768,10 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         users,
         tags
       ] = await Promise.all([
-      tenantScopedTable(trx, 'statuses', tenant)
+      onReadableBoards(tenantScopedTable(trx, 'statuses', tenant)
         .where({
           status_type: 'ticket'  // Changed from item_type to status_type
-        })
+        }))
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
 
@@ -2760,11 +2781,11 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc'),
       
-      tenantScopedTable(trx, 'boards', tenant)
+      onReadableBoards(tenantScopedTable(trx, 'boards', tenant), 'board_id')
         .orderBy('board_name', 'asc'),
 
       // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
-      tenantScopedTable(trx, 'categories', tenant)
+      onReadableBoards(tenantScopedTable(trx, 'categories', tenant))
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
@@ -2791,7 +2812,10 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('td.created_at', 'asc')
     ]);
 
-      const safeUsers = (users as Array<Record<string, unknown>>).map((row) => sanitizeUserForResponse(row));
+      const safeUsers = markAssignableAgents(
+        (users as Array<Record<string, unknown>>).map((row) => sanitizeUserForResponse(row)),
+        seatAssigneeAudience
+      );
 
       // Contact and client tag definitions for the Requester tags / Client tags filters. A definition
       // is listed when it has a mapping or something refers to it (tag_references), so a referenced tag

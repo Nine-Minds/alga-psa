@@ -1,5 +1,6 @@
 'use client';
 
+import { assignableAgentsOf } from '../../lib/assignableAgents';
 import { ticketCreatorName } from './ticketCreatorName';
 import React, { useState, useEffect, useRef } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
@@ -1338,7 +1339,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   isProcessingAgentsRef.current = false;
                 }
               }}
-              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
+              users={assignableAgentsOf(availableAgents).filter(agent => agent.user_id !== ticket.assigned_to)}
               size="sm"
               placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}

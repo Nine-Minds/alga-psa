@@ -1,5 +1,6 @@
 'use client';
 
+import { assignableAgentsOf } from '../../../lib/assignableAgents';
 import { ticketCreatorName } from '../ticketCreatorName';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
@@ -1096,7 +1097,7 @@ export function BentoHero({
                 onTeamSelect={async (teamId) => {
                   await onAssignTeam?.(teamId);
                 }}
-                users={availableAgents}
+                users={assignableAgentsOf(availableAgents)}
                 // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
                 userGroups={clientItUserIds?.length
                   ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
@@ -1112,7 +1113,7 @@ export function BentoHero({
                   savedAssigneeId: ticket.assigned_to,
                   savedAssigneeName: ticket.assigned_to_name,
                   currentValue: displayValue('assigned_to'),
-                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                  selectableUserIds: assignableAgentsOf(availableAgents).map((user) => user.user_id),
                 }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />

@@ -7,6 +7,10 @@ import { createAssetReadContext, filterReadableAssets, resolveAuthorizationSubje
 import { compileResourceReadAuthorizationSql, type BundleNarrowingRule, type RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createProjectReadAuthorizer } from '@alga-psa/authorization/projectReadAuthorization';
+import { narrowQueryToReadable } from '@alga-psa/authorization/operationScope';
+import { resolveNarrowedReadScope } from '@alga-psa/authorization/readScope';
+import { createTicketReadScope, narrowTicketQueryToReadable } from '@alga-psa/authorization/ticketReadAuthorization';
+import { createClientRelationshipSqlAdapter, createContactRelationshipSqlAdapter } from '@alga-psa/authorization/clientScopeSqlAdapters';
 import { canAccessAttachmentTicket } from './ticketCommentAttachments';
 import { authorizeAndRedactDocumentsForAction } from './documentAuthorization';
 import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
@@ -106,6 +110,58 @@ async function hasTargetPermission(user: IUser, resource: string, action: Target
 async function clientOwns(conn: Knex.Transaction, tenant: string, user: IUser, clientId: string | null | undefined): Promise<boolean> {
   return isMspPrincipalUserType(user.user_type) ||
     Boolean(isClientUserType(user.user_type) && user.clientId && clientId && user.clientId === clientId);
+}
+
+type KernelReadResource = 'client' | 'contact' | 'ticket';
+
+/**
+ * Target-record read authorization for an MSP principal, compiled into the query itself (so search, count, page
+ * and hydration all see the same set). A seat technician is an MSP principal whose reads the kernel narrows to
+ * its arrangement client and board scope, and a bundle may narrow any MSP user further; an MSP user nothing
+ * narrows leaves the query untouched. A client-portal principal is not handled here: its visibility rules are
+ * the ones in `directClientScope` and `ticketScope`, unchanged.
+ */
+async function narrowToKernelReadable(
+  query: Knex.QueryBuilder,
+  conn: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  resource: KernelReadResource,
+  alias: string,
+): Promise<void> {
+  if (!isMspPrincipalUserType(user.user_type)) return;
+  if (resource === 'ticket') {
+    // The ticket list's own narrowing, so a picker and the list cannot disagree about what is readable.
+    if (!await resolveNarrowedReadScope(conn, { tenant, user: user as IUserWithRoles, resourceType: 'ticket' })) return;
+    const scope = await createTicketReadScope(conn, tenant, user as IUserWithRoles);
+    await narrowTicketQueryToReadable(conn, scope, query, alias);
+    return;
+  }
+  await narrowQueryToReadable(conn, {
+    tenant,
+    user: user as IUserWithRoles,
+    resourceType: resource,
+    adapter: resource === 'client' ? createClientRelationshipSqlAdapter(alias) : createContactRelationshipSqlAdapter(alias),
+  }, query);
+}
+
+/** Whether the one record `id` is inside the principal's kernel read scope: the same predicate, as an existence query. */
+async function isKernelReadable(
+  conn: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  resource: KernelReadResource,
+  id: string,
+): Promise<boolean> {
+  if (!isMspPrincipalUserType(user.user_type)) return true;
+  const target = {
+    client: { table: 'clients as r', idColumn: 'r.client_id' },
+    contact: { table: 'contacts as r', idColumn: 'r.contact_name_id' },
+    ticket: { table: 'tickets as r', idColumn: 'r.ticket_id' },
+  }[resource];
+  const query = dbTable(conn, tenant, target.table).where(target.idColumn, id);
+  await narrowToKernelReadable(query, conn, tenant, user, resource, 'r');
+  return Boolean(await query.first(target.idColumn));
 }
 
 function directClientScope(column: string): SearchScope {
@@ -241,28 +297,40 @@ async function assertOwnedRecord(
 const adapters: Record<AssociationTargetEntity, AssociationTargetAdapter> = {
   client: {
     permissionResource: 'client',
-    scopeSearch: directClientScope('client_id'),
-    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'client', async () => {
-      const row = await dbTable(conn, tenant, 'clients').select('client_id').where({ client_id: id }).first();
-      return row?.client_id;
-    }),
+    scopeSearch: async (query, conn, tenant, user, alias) => {
+      await directClientScope('client_id')(query, conn, tenant, user, alias);
+      await narrowToKernelReadable(query, conn, tenant, user, 'client', alias);
+    },
+    assertTarget: async (conn, tenant, user, id, action) =>
+      await assertOwnedRecord(conn, tenant, user, action, 'client', async () => {
+        const row = await dbTable(conn, tenant, 'clients').select('client_id').where({ client_id: id }).first();
+        return row?.client_id;
+      }) && await isKernelReadable(conn, tenant, user, 'client', id),
   },
   contact: {
     permissionResource: 'contact',
-    scopeSearch: directClientScope('c.client_id'),
-    assertTarget: (conn, tenant, user, id, action) => assertOwnedRecord(conn, tenant, user, action, 'contact', async () => {
-      const row = await dbTable(conn, tenant, 'contacts').select('client_id').where({ contact_name_id: id }).first();
-      return row?.client_id;
-    }),
+    scopeSearch: async (query, conn, tenant, user, alias) => {
+      await directClientScope('c.client_id')(query, conn, tenant, user, alias);
+      await narrowToKernelReadable(query, conn, tenant, user, 'contact', alias);
+    },
+    assertTarget: async (conn, tenant, user, id, action) =>
+      await assertOwnedRecord(conn, tenant, user, action, 'contact', async () => {
+        const row = await dbTable(conn, tenant, 'contacts').select('client_id').where({ contact_name_id: id }).first();
+        return row?.client_id;
+      }) && await isKernelReadable(conn, tenant, user, 'contact', id),
   },
   ticket: {
     permissionResource: 'ticket',
-    scopeSearch: ticketScope,
+    scopeSearch: async (query, conn, tenant, user, alias) => {
+      await ticketScope(query, conn, tenant, user, alias);
+      await narrowToKernelReadable(query, conn, tenant, user, 'ticket', alias);
+    },
     assertTarget: async (conn, tenant, user, id, action) => {
       if (!await hasTargetPermission(user, 'ticket', action, conn)) return false;
       const row = await dbTable(conn, tenant, 'tickets').select('client_id').where({ ticket_id: id }).first();
       if (!row || !await clientOwns(conn, tenant, user, row.client_id)) return false;
-      return isMspPrincipalUserType(user.user_type) || canAccessAttachmentTicket(conn, tenant, user.user_id, id);
+      if (isMspPrincipalUserType(user.user_type)) return isKernelReadable(conn, tenant, user, 'ticket', id);
+      return canAccessAttachmentTicket(conn, tenant, user.user_id, id);
     },
   },
   asset: {

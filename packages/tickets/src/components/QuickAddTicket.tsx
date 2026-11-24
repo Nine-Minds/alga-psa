@@ -58,6 +58,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions/permissionActions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -307,6 +308,18 @@ export function QuickAddTicket({
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
+  // UI gating only: createTicketCategory enforces ticket_settings:update itself. False until the
+  // check resolves (and on failure), so a seat technician is never offered the control.
+  const [canCreateCategory, setCanCreateCategory] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    checkCurrentUserPermissions([{ resource: 'ticket_settings', action: 'update' }])
+      .then((results) => {
+        if (!cancelled) setCanCreateCategory(results.some((r) => r.granted));
+      })
+      .catch(() => { /* stay hidden; the server remains the boundary */ });
+    return () => { cancelled = true; };
+  }, []);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
@@ -1923,7 +1936,7 @@ export function QuickAddTicket({
                         : t('quickAdd.selectItilCategory', 'Select ITIL category')}
                       multiSelect={false}
                       className="w-full"
-                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
+                      onAddNew={canCreateCategory ? () => setIsQuickAddCategoryOpen(true) : undefined}
                     />
                   )}
 

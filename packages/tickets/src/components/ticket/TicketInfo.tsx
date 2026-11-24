@@ -2,6 +2,7 @@
 // TODO: Priority index signature issue
 'use client';
 
+import { assignableAgentsOf } from '../../lib/assignableAgents';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { PartialBlock } from '@blocknote/core';
@@ -1465,7 +1466,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       handlePendingChange('assigned_to', leadId);
                     }
                   }}
-                  users={usersList}
+                  users={assignableAgentsOf(usersList)}
                   // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
                   userGroups={clientItUserIds?.length
                     ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
@@ -1481,7 +1482,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     savedAssigneeId: originalTicketValues.assigned_to,
                     savedAssigneeName: ticket.assigned_to_name,
                     currentValue: pendingChanges.assigned_to ?? originalTicketValues.assigned_to,
-                    selectableUserIds: usersList.map((user) => user.user_id),
+                    selectableUserIds: assignableAgentsOf(usersList).map((user) => user.user_id),
                   }) ?? t('info.notAssigned', 'Not assigned')}
                   disabled={workflowLocked || isFieldFrozen('assigned_to')}
                 />

@@ -1,9 +1,12 @@
 'use server'
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { mayReadBoardOptions, readableBoardIdsForOptions } from '@alga-psa/shared/lib/boardOptionAccess';
 import { ITicketCategory, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
+import { evaluateBoardMutationPolicy, BOARD_PERMISSION_DENIED } from '@alga-psa/auth/boardPolicy';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -114,14 +117,27 @@ async function orderCategoriesHierarchically(categories: ITicketCategory[]): Pro
   return orderedCategories;
 }
 
+/** Narrow a categories query to the boards the caller may read; a no-op for a caller nothing restricts. */
+async function narrowCategoriesToReadableBoards(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: unknown,
+  query: Knex.QueryBuilder,
+): Promise<void> {
+  const readable = await readableBoardIdsForOptions(trx, tenant, user as IUserWithRoles);
+  if (readable) query.whereIn('board_id', readable);
+}
+
 export const getTicketCategories = withAuth(async (user, { tenant }) => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get all categories ordered by name
-      const categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+      const query = tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .select('*')
         .orderBy('category_name');
+      await narrowCategoriesToReadableBoards(trx, tenant, user, query);
+      const categories = await query;
 
       // Order them hierarchically
       return orderCategoriesHierarchically(categories);
@@ -148,6 +164,18 @@ export const createTicketCategory = withAuth(async (user, { tenant }, categoryNa
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // A category is board configuration: it needs ticket-settings authority (and an MSP principal)
+      // for the target board, before anything is read or written. A co-managed seat role does not
+      // hold ticket_settings, so a stock seat is refused here however the form was reached.
+      const decision = await evaluateBoardMutationPolicy(user, 'update', hasPermission, trx);
+      if (decision.allowed === false) {
+        throw new Error(BOARD_PERMISSION_DENIED.update.message);
+      }
+      const targetBoard = await tenantScopedTable(trx, 'boards', tenant).where({ board_id: boardId }).first('board_id');
+      if (!targetBoard) {
+        throw new Error('Board not found');
+      }
+
       // Check if category with same name exists in the board
       const existingCategory = await tenantScopedTable(trx, 'categories', tenant)
         .where({
@@ -374,7 +402,7 @@ type MaxDisplayOrderRow = {
   max: number | string | null;
 };
 
-export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boardId: string): Promise<BoardCategoryData | CategoryActionError> => {
+export const getTicketCategoriesByBoard = withAuth(async (user, { tenant }, boardId: string): Promise<BoardCategoryData | CategoryActionError> => {
   try {
     if (!boardId) {
       throw new Error('Board ID is required');
@@ -382,6 +410,11 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // A board's categories follow the board: a board outside the caller's read scope is indistinguishable
+      // from a board that does not exist.
+      if (!await mayReadBoardOptions(trx, tenant, user as IUserWithRoles, boardId)) {
+        throw new Error('Board not found');
+      }
       // Get board configuration
       const board = await tenantScopedTable<BoardCategoryConfigRow>(trx, 'boards', tenant)
         .where('board_id', boardId)
@@ -433,13 +466,15 @@ export const getTicketCategoriesByBoard = withAuth(async (_user, { tenant }, boa
   }
 });
 
-export const getAllCategories = withAuth(async (_user, { tenant }): Promise<ITicketCategory[] | CategoryActionError> => {
+export const getAllCategories = withAuth(async (user, { tenant }): Promise<ITicketCategory[] | CategoryActionError> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const categories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+      const query = tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
         .select('category_id', 'category_name', 'display_order', 'parent_category', 'board_id')
         .orderBy('display_order', 'asc');
+      await narrowCategoriesToReadableBoards(trx, tenant, user, query);
+      const categories = await query;
 
       return categories;
     } catch (error) {
