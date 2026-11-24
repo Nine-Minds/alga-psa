@@ -26,7 +26,7 @@ export interface PricingScheduleLineScope {
   contract_line_id: string;
   contract_line_name: string | null;
   /**
-   * The line has at least one member priced as part of the bundle, so the
+   * The line has a bundle member or a non-product fallback service, so the
    * schedule rate becomes the line's fee for the period. False when every
    * member is unit-priced: the engine prices those from their own unit rates
    * and the plan-level rate has no precedence
@@ -150,17 +150,24 @@ async function fetchFixedLineScopes(
 
   const unitMembers = new Set<string>();
   const bundleMembers = new Set<string>();
+  const fallbackMembers = new Set<string>();
   for (const member of (Array.isArray(members) ? members : []) as any[]) {
-    // Match the engine's fixed-fee members. Products have a separate billing
-    // path, and a non-Fixed configuration is not a bundle member.
-    if (member.configuration_type !== 'Fixed' || member.item_kind !== 'service') continue;
+    // Match the engine's non-product service queries (SQL excludes NULL too).
+    if (member.item_kind == null || member.item_kind === 'product') continue;
+    if (member.configuration_type !== 'Fixed') {
+      fallbackMembers.add(member.contract_line_id);
+      continue;
+    }
     (member.pricing_basis === 'unit' ? unitMembers : bundleMembers).add(member.contract_line_id);
   }
 
   return lines.map((line: any) => ({
     contract_line_id: line.contract_line_id,
     contract_line_name: line.contract_line_name ?? null,
-    has_bundle_fee: bundleMembers.has(line.contract_line_id),
+    // The engine falls back to a non-product service of any configuration
+    // only when no Fixed services exist. Fixed unit members suppress fallback.
+    has_bundle_fee: bundleMembers.has(line.contract_line_id) ||
+      (!unitMembers.has(line.contract_line_id) && fallbackMembers.has(line.contract_line_id)),
     has_unit_priced_members: unitMembers.has(line.contract_line_id),
   }));
 }

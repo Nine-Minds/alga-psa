@@ -77,7 +77,7 @@ const initialLine: ScenarioLine = {
   services: [usageService],
 };
 
-function Harness({ initialLines = [initialLine], initialSchedules = [] }: { initialLines?: ScenarioLine[]; initialSchedules?: ScenarioPricingSchedule[] }) {
+function Harness({ initialLines = [initialLine], initialSchedules = [], currencyCode = 'USD' }: { initialLines?: ScenarioLine[]; initialSchedules?: ScenarioPricingSchedule[]; currencyCode?: string }) {
   const pristine = useMemo(() => structuredClone(initialLines), []);
   const [lines, setLines] = useState(() => structuredClone(pristine));
   const [schedules, setSchedules] = useState<ScenarioPricingSchedule[]>(initialSchedules);
@@ -134,7 +134,7 @@ function Harness({ initialLines = [initialLine], initialSchedules = [] }: { init
       pricingSchedules={schedules}
       discounts={[]}
       adjustments={[]}
-      currencyCode="USD"
+      currencyCode={currencyCode}
       modifiedLineKeys={modified}
       hasModifications={
         JSON.stringify(lines) !== JSON.stringify(pristine) ||
@@ -250,6 +250,15 @@ function scheduleState() {
 }
 
 describe('simulator schedule line selection', () => {
+  it.each([
+    ['JPY', '¥900'], ['KWD', 'KWD\u00a00.900'],
+  ])('formats legacy schedule minor units in %s', (currencyCode, amount) => {
+    render(<Harness currencyCode={currencyCode} initialLines={[fixedLine('line-a'), fixedLine('line-b')]} initialSchedules={[
+      { effective_date: '2026-06-01', end_date: null, custom_rate: 900 },
+    ]} />);
+    expect(screen.getByRole('status').textContent).toContain(`each of the 2 fixed-fee lines bills ${amount}`);
+  });
+
   it('preselects the only eligible line and never authors whole-contract scope', () => {
     render(<Harness initialLines={[fixedLine('bundle'), fixedLine('product', 'product'), fixedLine('units', 'service', 'unit')]} />);
     const picker = screen.getByLabelText('Applies to');

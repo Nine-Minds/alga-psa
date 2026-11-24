@@ -317,7 +317,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
   onAdjustmentsChange,
 }) => {
   const { t } = useTranslation("msp/contracts");
-  const { formatCurrency } = useFormatters();
+  const { money } = useCurrencyFormat();
   const eligibleScheduleLines = lines.filter((line) =>
     line.contract_line_type === "Fixed" && line.services.some((service) =>
       service.item_kind !== "product" &&
@@ -1587,7 +1587,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                       ? t("pricingSchedules.dialog.notices.wholeContractEffect", {
                           defaultValue: "Whole contract: each of the {{count}} fixed-fee lines bills {{amount}} per billing period.",
                           count: eligibleScheduleLines.length,
-                          amount: formatCurrency(schedule.custom_rate / 100, currencyCode),
+                          amount: money(schedule.custom_rate, currencyCode),
                         })
                       : t("pricingSchedules.dialog.notices.wholeContract", { defaultValue: "Whole contract: this schedule applies to every fixed-fee line on this contract." })}
                   </p>}

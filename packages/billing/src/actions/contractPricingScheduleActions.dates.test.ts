@@ -187,6 +187,20 @@ describe('pricing schedule actions: calendar dates', () => {
     );
   });
 
+  it('normalises incoming timestamps in the update payload and overlap probe', async () => {
+    const { schedulesQuery } = seedTables({ schedulesFirst: [storedRow, undefined] });
+
+    await callUpdatePricingSchedule(user, ctx, 'schedule-1', {
+      effective_date: '2026-05-31T22:00:00.000Z',
+      end_date: '2026-12-30T23:00:00.000Z',
+    });
+
+    expect(schedulesQuery.update).toHaveBeenCalledWith(expect.objectContaining({
+      effective_date: '2026-05-31', end_date: '2026-12-30',
+    }));
+    expect(schedulesQuery.where).toHaveBeenCalledWith('effective_date', '<', '2026-12-30');
+  });
+
   it.each([
     ['days', 10, '2026-06-11'],
     ['weeks', 2, '2026-06-15'],
@@ -351,7 +365,6 @@ describe('pricing schedule actions: line scope', () => {
   it.each([
     ['product bundle', [{ contract_line_id: 'line-1', pricing_basis: 'bundle', item_kind: 'product' }]],
     ['legacy product', [{ contract_line_id: 'line-1', pricing_basis: null, item_kind: 'product' }]],
-    ['non-Fixed configuration', [{ contract_line_id: 'line-1', pricing_basis: null, configuration_type: 'Usage' }]],
     ['empty line', []],
   ])('excludes and rejects a %s without a billable bundle member', async (_name, members) => {
     const { schedulesQuery } = seedTables({ members, schedulesFirst: [storedRow] });
@@ -374,6 +387,35 @@ describe('pricing schedule actions: line scope', () => {
     expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
       expect.objectContaining({ has_bundle_fee: false, has_unit_priced_members: true }),
     ]);
+  });
+
+  it('includes a non-Fixed fallback service in scope inventory, create, and re-scope', async () => {
+    const { schedulesQuery } = seedTables({
+      schedulesFirst: [undefined, storedRow, undefined],
+      members: [{ contract_line_id: 'line-1', pricing_basis: null, configuration_type: 'Usage' }],
+    });
+    expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
+      expect.objectContaining({ has_bundle_fee: true, has_unit_priced_members: false }),
+    ]);
+    await expect(callCreatePricingSchedule(user, ctx, createData())).resolves.toEqual(storedRow);
+    expect(schedulesQuery.insert).toHaveBeenCalledWith(expect.objectContaining({ contract_line_id: 'line-1' }));
+    await expect(callUpdatePricingSchedule(user, ctx, 'schedule-1', { contract_line_id: 'line-1' }))
+      .resolves.toEqual(storedRow);
+    expect(schedulesQuery.update).toHaveBeenCalledWith(expect.objectContaining({ contract_line_id: 'line-1' }));
+  });
+
+  it('does not use the fallback when Fixed unit members already exist', async () => {
+    const { schedulesQuery } = seedTables({ members: [
+      { contract_line_id: 'line-1', pricing_basis: 'unit' },
+      { contract_line_id: 'line-1', pricing_basis: null, configuration_type: 'Usage' },
+    ] });
+    expect(await (getPricingScheduleLineScopes as any)(user, ctx, 'contract-1')).toEqual([
+      expect.objectContaining({ has_bundle_fee: false, has_unit_priced_members: true }),
+    ]);
+    await expect(callCreatePricingSchedule(user, ctx, createData())).resolves.toMatchObject({
+      messageKey: 'msp/contracts:errors.pricingSchedule.lineUnitPriced',
+    });
+    expect(schedulesQuery.insert).not.toHaveBeenCalled();
   });
 
   it('accepts a mixed line that still has a bundle member', async () => {
