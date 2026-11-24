@@ -14,7 +14,8 @@ import {
   BRAND_LOGO_MARKER,
 } from '../brandAssets';
 import { isDarkEmailHeader } from '../color';
-import { loadSystemTemplate } from './systemTemplateFixtures';
+import { LEGACY_BRAND_SLOGANS } from '../orphanedSlogan';
+import { loadAllSystemTemplates, loadSystemTemplate } from './systemTemplateFixtures';
 
 const LOGO = { variant: 'wide' as const, alt: 'Acme MSP' };
 
@@ -350,6 +351,44 @@ describe('stripBrandAttribution', () => {
       expect(shippedOnly).toBe(stripBrandAttribution(template.html));
       expect(containsBrandAttribution(shippedOnly)).toBe(false);
     }
+  });
+
+  /**
+   * Every translation that ships, not only the languages spelled out above. The
+   * footer wording and the layout both vary by template and language, and any
+   * shape the strip fails to recognize whole is exactly the bug reported: an
+   * orphaned slogan, or an empty coloured band, in the footer of every branded
+   * copy of that template (alga-2026-0003353).
+   */
+  it('leaves no attribution, slogan or empty band anywhere in the shipped corpus', () => {
+    const templates = loadAllSystemTemplates();
+    expect(templates.length).toBeGreaterThan(400);
+
+    let carriedAttribution = 0;
+
+    for (const template of templates) {
+      const where = `${template.name}/${template.language}`;
+      const stripped = stripBrandAttribution(template.html);
+
+      if (!containsBrandAttribution(template.html)) {
+        expect(stripped, where).toBe(template.html);
+        continue;
+      }
+
+      carriedAttribution += 1;
+      // The classifier normalizes a stored row in the narrower mode, so the two
+      // have to agree on the stock footer or a branded copy stops reading as ours.
+      expect(stripBrandAttribution(template.html, { footerRow: 'shipped-slogan' }), where).toBe(stripped);
+      expect(containsBrandAttribution(stripped), where).toBe(false);
+      expect(LEGACY_BRAND_SLOGANS.filter((slogan) => stripped.includes(slogan)), where).toEqual([]);
+      // No empty coloured band where the footer row was, and no cell left
+      // opening on the separator that only joined the attribution to it.
+      expect(stripped, where).not.toMatch(/<td[^>]*background:[^>]*>\s*<\/td>/i);
+      expect(stripped, where).not.toMatch(/<td[^>]*>\s*(?:&middot;|&#183;|·|•)/i);
+      expect(stripBrandAttribution(stripped), where).toBe(stripped);
+    }
+
+    expect(carriedAttribution).toBeGreaterThan(300);
   });
 
   it.each([
