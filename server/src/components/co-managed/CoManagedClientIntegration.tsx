@@ -14,6 +14,7 @@ import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSea
 import CoManagedSeatTrial from '@enterprise/components/co-managed/CoManagedSeatTrial';
 import CoManagedShapeChooser from './CoManagedShapeChooser';
 import { useSeatTrialOffer } from './useSeatTrialOffer';
+import { workspaceSetupOpen } from '@/lib/co-managed/clientRelationshipSummary';
 import { resolveSeatEnableStory } from '@/lib/co-managed/seatEnableStory';
 
 type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
@@ -148,13 +149,20 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const enable = seat?.enable ?? null;
   // Held back until the trial read settles, so a trial never shows as a red blocker first and a neutral note after.
   const trialEnds = trialStory === 'active' && trialOffer?.pilot?.deadline ? formatDate(new Date(trialOffer.pilot.deadline)) : undefined;
-  const chooser = enable && !trialLoading ? (workspace: React.ReactNode) => (
+  const story = enable && !trialLoading
+    ? resolveSeatEnableStory({ enable, trial: trialStory, purchaseOpen, workspaceOffered: true }) : null;
+  const trial = <CoManagedSeatTrial key={clientId} offer={trialOffer} onReload={reloadTrial} clientId={clientId} onChanged={reloadAll} />;
+  // When the trial is how Seat is enabled, the Seat option opens the trial card, so the tab shows it there and not twice.
+  const showsChooser = Boolean(seat && !seat.panel && (!workspaceReady || (view !== null && workspaceSetupOpen(view))));
+  const trialInChooser = story?.seatLeadsTo === 'trial' && showsChooser;
+  const chooser = enable && story ? (workspace: React.ReactNode) => (
     <CoManagedShapeChooser clientId={clientId} idPrefix={idPrefix} enable={enable} workspaceSetup={workspace} purchaseOpen={purchaseOpen}
-      story={resolveSeatEnableStory({ enable, trial: trialStory, purchaseOpen, workspaceOffered: workspace !== null })} trialEnds={trialEnds}
+      story={story} trialEnds={trialEnds}
+      seatTrial={trialInChooser ? trial : undefined}
       onEnabled={reloadAll} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
   ) : null;
-
-  const trial = <CoManagedSeatTrial key={clientId} offer={trialOffer} onReload={reloadTrial} clientId={clientId} onChanged={reloadAll} />;
+  const heading = story?.heading ?? 'notEnabled';
+  const topTrial = trialInChooser ? null : trial;
   const tabLabel = t('coManaged.client.tab', { defaultValue: 'Co-managed IT' });
   const tabBase = {
     id: 'co-managed',
@@ -169,8 +177,8 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     const slots: ClientCoManagedSlots = {
       summary: <CoManagedSeatSummary state={seat} idPrefix={idPrefix} onOpenTab={onOpenTab} />,
       tab: { ...tabBase, content: (<>
-        {trial}
-        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll}>
+        {topTrial}
+        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} notEnabledHeading={heading}>
           {chooser?.(null)}
         </CoManagedSeatClientView></>) },
     };
@@ -184,8 +192,8 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
         selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
     tab: {
       ...tabBase,
-      content: <>{trial}{seat?.panel ? (
-        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} />
+      content: <>{topTrial}{seat?.panel ? (
+        <CoManagedSeatClientView key={resetKey} state={seat} clientName={clientName} idPrefix={idPrefix} onReload={reloadAll} notEnabledHeading={heading} />
       ) : (
         <CoManagedClientView
           view={view}
@@ -198,6 +206,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
           resetKey={resetKey}
           onDirtyChange={(dirty) => { dirtyRef.current = dirty; }}
           renderSetup={chooser ?? undefined}
+          notEnabledHeading={heading}
         />
       )}</>,
     },

@@ -552,7 +552,7 @@
         "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
       },
       "trial": {
-        "available": "Qui sopra è disponibile una prova gratuita di 15 giorni. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
+        "available": "Invitare il tecnico avvia la prova e abilita l'IT in co-gestione per questo cliente. Dopo i 15 giorni, acquista una postazione per mantenere il tecnico.",
         "pending": "Un invito alla prova di 15 giorni è in attesa del tecnico. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
         "active": "La prova di 15 giorni è in corso. Aggiungi postazioni in co-gestione per mantenere il tecnico in seguito.",
         "ended": "La prova di 15 giorni è terminata. Aggiungi postazioni in co-gestione per mantenere il tecnico."
@@ -567,7 +567,8 @@
         "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate.",
         "poolEmpty": "Ancora nessuna postazione in co-gestione.",
         "seatHintAfterTrial": "Aggiungi postazioni in co-gestione per mantenere il tecnico dopo la prova di 15 giorni.",
-        "seatHintTrialCovers": "La postazione di prova copre questo tecnico fino al {{date}}. Acquista una postazione per mantenerlo."
+        "seatHintTrialCovers": "La postazione di prova copre questo tecnico fino al {{date}}. Acquista una postazione per mantenerlo.",
+        "seatHintTrial": "Gratis per 15 giorni. Invita un tecnico per abilitare l'IT in co-gestione per questo cliente."
       },
       "states": {
         "active": "Attivo",
@@ -625,6 +626,7 @@
       "inconsistentHint": "Una configurazione in co-gestione per questo cliente punta a un record di area di lavoro che appartiene a un altro cliente. Qui non è possibile gestire o configurare nulla finché l’assistenza non corregge il record.",
       "invitation": "Invito dell'amministratore",
       "notEnabled": "IT cogestita non abilitata",
+      "notEnabledTrialEnables": "L'IT in co-gestione non è ancora abilitata. Avviare la prova gratuita di 15 giorni di una postazione la abilita per questo cliente.",
       "progress": "Avanzamento della configurazione",
       "provisioningHint": "I posti riservati restano trattenuti finché la configurazione non è completata o la pulizia non è confermata.",
       "relationship": "Relazione",

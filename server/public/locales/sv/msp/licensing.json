@@ -552,7 +552,7 @@
         "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
       "trial": {
-        "available": "En kostnadsfri provperiod på 15 dagar finns ovan. Samhanterade platser kan läggas till när som helst.",
+        "available": "När teknikern bjuds in startar provperioden och samhanterad IT aktiveras för den här kunden. Köp en plats efter de 15 dagarna för att behålla teknikern.",
         "pending": "En inbjudan till provperioden på 15 dagar väntar på teknikern. Samhanterade platser kan läggas till när som helst.",
         "active": "Provperioden på 15 dagar pågår. Lägg till samhanterade platser för att behålla teknikern efteråt.",
         "ended": "Provperioden på 15 dagar har avslutats. Lägg till samhanterade platser för att behålla teknikern."
@@ -567,7 +567,8 @@
         "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade.",
         "poolEmpty": "Inga samhanterade platser ännu.",
         "seatHintAfterTrial": "Lägg till samhanterade platser för att behålla teknikern efter provperioden på 15 dagar.",
-        "seatHintTrialCovers": "Provplatsen täcker den här teknikern till {{date}}. Köp en plats för att behålla dem."
+        "seatHintTrialCovers": "Provplatsen täcker den här teknikern till {{date}}. Köp en plats för att behålla dem.",
+        "seatHintTrial": "Gratis i 15 dagar. Bjud in en tekniker för att aktivera samhanterad IT för den här kunden."
       },
       "states": {
         "active": "Aktiv",
@@ -625,6 +626,7 @@
       "inconsistentHint": "En samförvaltad konfiguration för den här kunden pekar på en arbetsytepost som tillhör en annan kund. Inget kan hanteras eller konfigureras här förrän supporten har rättat posten.",
       "invitation": "Administratörsinbjudan",
       "notEnabled": "Samhanterad IT är inte aktiverad",
+      "notEnabledTrialEnables": "Samhanterad IT är inte aktiverad ännu. Att starta den kostnadsfria provperioden på 15 dagar för en plats aktiverar den för den här kunden.",
       "progress": "Konfigurationsförlopp",
       "provisioningHint": "Reserverade användarlicenser hålls kvar tills konfigurationen är klar eller rensningen har bekräftats.",
       "relationship": "Relation",

@@ -21,7 +21,7 @@ export interface CoManagedSeatEnableView {
  * too few seats continues into setup, which reviews a purchase for the shortfall; otherwise it shows the
  * blocker and stops.
  */
-export default function CoManagedShapeChooser({ clientId, idPrefix, enable, workspaceSetup, purchaseOpen = false, story, trialEnds, onEnabled, onDirtyChange }: {
+export default function CoManagedShapeChooser({ clientId, idPrefix, enable, workspaceSetup, purchaseOpen = false, story, trialEnds, seatTrial, onEnabled, onDirtyChange }: {
   clientId: string;
   idPrefix: string;
   enable: CoManagedSeatEnableView;
@@ -33,11 +33,14 @@ export default function CoManagedShapeChooser({ clientId, idPrefix, enable, work
   story?: SeatEnableStory;
   /** The running trial's end, already formatted, for the Seat hint. */
   trialEnds?: string;
+  /** The trial card, shown where Seat opens when the story says Seat is enabled by the trial. */
+  seatTrial?: ReactNode;
   onEnabled: () => Promise<void> | void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
-  const [choice, setChoice] = useState<'seat' | 'workspace' | null>(null);
+  // Seat leads to the trial card when the trial is how Seat is enabled, so it opens with the card already in view.
+  const [choice, setChoice] = useState<'seat' | 'workspace' | null>(story?.seatLeadsTo === 'trial' && seatTrial ? 'seat' : null);
   // A request left waiting on a purchase (a reload, a return from checkout) reopens Seat, where setup resumes it.
   useEffect(() => {
     if (purchaseOpen && readSeatAllocationIntent(clientId)) setChoice((current) => current ?? 'seat');
@@ -47,11 +50,13 @@ export default function CoManagedShapeChooser({ clientId, idPrefix, enable, work
   const { capacity } = enable;
   const seatHint = resolved.seatHint === 'trialCovers' && trialEnds
     ? t('coManaged.seat.chooser.seatHintTrialCovers', { defaultValue: 'The trial seat covers this technician until {{date}}. Buy a seat to keep them.', date: trialEnds })
+    : resolved.seatHint === 'trial'
+      ? t('coManaged.seat.chooser.seatHintTrial', { defaultValue: 'Free for 15 days. Invite a technician to enable co-managed IT for this client.' })
     : resolved.seatHint !== 'default'
       ? t('coManaged.seat.chooser.seatHintAfterTrial', { defaultValue: 'Add co-managed seats to keep the technician after the 15-day trial.' })
       : t('coManaged.seat.chooser.seatHint', { defaultValue: 'The client\'s technicians work in your PSA, limited to their company.' });
   const notice = resolved.notice && resolved.notice !== 'none' ? {
-    available: t('coManaged.seat.trial.available', { defaultValue: 'A free 15-day trial is available above. Co-managed seats can be added at any time.' }),
+    available: t('coManaged.seat.trial.available', { defaultValue: 'Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.' }),
     pending: t('coManaged.seat.trial.pending', { defaultValue: 'A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.' }),
     active: t('coManaged.seat.trial.active', { defaultValue: 'The 15-day trial is running. Add co-managed seats to keep the technician afterwards.' }),
     ended: t('coManaged.seat.trial.ended', { defaultValue: 'The 15-day trial has ended. Add co-managed seats to keep the technician.' }),
@@ -95,7 +100,8 @@ export default function CoManagedShapeChooser({ clientId, idPrefix, enable, work
           {blocker && <Alert variant="destructive"><AlertDescription id={`${idPrefix}-blocker`}>{coManagedSeatMessage(blocker, t)}</AlertDescription></Alert>}
         </CardContent>
       </Card>
-      {choice === 'seat' && !resolved.seatDisabled && (
+      {choice === 'seat' && resolved.seatLeadsTo === 'trial' && seatTrial}
+      {choice === 'seat' && resolved.seatLeadsTo === 'setup' && !resolved.seatDisabled && (
         <Card id={`${idPrefix}-seat-card`}>
           <CardHeader><CardTitle>{t('coManaged.seat.setup.title', { defaultValue: 'Seat arrangement' })}</CardTitle></CardHeader>
           <CardContent>

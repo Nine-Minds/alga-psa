@@ -552,7 +552,7 @@
         "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
       },
       "trial": {
-        "available": "Powyżej dostępny jest bezpłatny 15-dniowy okres próbny. Stanowiska współzarządzania można dodać w dowolnym momencie.",
+        "available": "Zaproszenie technika rozpoczyna okres próbny i włącza współzarządzane IT dla tego klienta. Po 15 dniach kup stanowisko, aby zachować technika.",
         "pending": "Zaproszenie do 15-dniowego okresu próbnego czeka na technika. Stanowiska współzarządzania można dodać w dowolnym momencie.",
         "active": "15-dniowy okres próbny trwa. Dodaj stanowiska współzarządzania, aby zachować technika po jego zakończeniu.",
         "ended": "15-dniowy okres próbny dobiegł końca. Dodaj stanowiska współzarządzania, aby zachować technika."
@@ -567,7 +567,8 @@
         "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}.",
         "poolEmpty": "Brak jeszcze stanowisk współzarządzania.",
         "seatHintAfterTrial": "Dodaj stanowiska współzarządzania, aby zachować technika po 15-dniowym okresie próbnym.",
-        "seatHintTrialCovers": "Stanowisko próbne obejmuje tego technika do {{date}}. Kup stanowisko, aby go zachować."
+        "seatHintTrialCovers": "Stanowisko próbne obejmuje tego technika do {{date}}. Kup stanowisko, aby go zachować.",
+        "seatHintTrial": "Bezpłatnie przez 15 dni. Zaproś technika, aby włączyć współzarządzane IT dla tego klienta."
       },
       "states": {
         "active": "Aktywny",
@@ -625,6 +626,7 @@
       "inconsistentHint": "Konfiguracja współzarządzania dla tego klienta wskazuje rekord obszaru roboczego należący do innego klienta. Niczym nie można tu zarządzać ani niczego konfigurować, dopóki wsparcie nie poprawi rekordu.",
       "invitation": "Zaproszenie administratora",
       "notEnabled": "Współzarządzane IT nie jest włączone",
+      "notEnabledTrialEnables": "Współzarządzane IT nie zostało jeszcze włączone. Rozpoczęcie bezpłatnego 15-dniowego okresu próbnego stanowiska włącza je dla tego klienta.",
       "progress": "Postęp konfiguracji",
       "provisioningHint": "Zarezerwowane miejsca pozostają zarezerwowane, dopóki konfiguracja nie zostanie ukończona lub czyszczenie nie zostanie potwierdzone.",
       "relationship": "Relacja",

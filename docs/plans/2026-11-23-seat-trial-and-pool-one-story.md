@@ -144,9 +144,9 @@ a trial *does* exist, the integration does not render the chooser until both rea
   intact so the rebase is mechanical: §2 only replaces `load()`/`refresh()` with props.
 - **Not** changing `getSeatTrialOfferAction`'s eligibility rule (24e96db5's item 4) — this card consumes
   `intake`/`canStart` as they are.
-- **Not** changing the status card heading ("Co-managed IT not enabled") or the workspace provisioning
-  flow; the captain's report is about the Seat/pool story, and a not-yet-started trial genuinely has no
-  relationship.
+- **Not** changing the workspace provisioning flow. The status heading is no longer out of scope: §10
+  changes it while the trial is `available` (and only then); every other state keeps "Co-managed IT not
+  enabled".
 - **Not** hiding the chooser: the workspace shape and the paid path must stay reachable; the fix is that
   the chooser stops contradicting the trial, not that it disappears.
 - **Not** adding a feature flag; the resolver is total, so there is no configuration axis.
@@ -173,3 +173,42 @@ a trial *does* exist, the integration does not render the chooser until both rea
 | Seat option silently loses its paid path | `seatDisabled` derives from the same expressions as today; the no-trial branch is asserted byte-identical in the resolver test |
 | Copy across 10 locales | keys added with `defaultValue`, as the rest of the module already does; a missing translation falls back to English |
 | Rebase conflict with 24e96db5 | §7: mutation bodies untouched, only the load contract changes |
+
+## 10. Follow-up: starting the trial IS enabling co-managed IT
+
+`prepareCoManagedSeatTrial` (`ee/server/src/lib/co-managed/seatTrial.ts`) creates the same 1-seat Seat
+arrangement, board scope and invitation as `enableCoManagedSeatArrangementAction`; the only difference is who
+pays. Showing a trial card, a flat "not enabled" heading and a separate pool-funded Seat route is two setup
+flows for one act. While the trial is startable and there is no paid pool, the tab tells one story.
+
+**Rule** (extends `resolveSeatEnableStory`; same totality, no ad-hoc booleans at call sites):
+
+| trial | paid pool (`capacity.purchased`) | `heading` | `seatLeadsTo` | `seatHint` | seat disabled |
+|---|---|---|---|---|---|
+| `available` | `0` / unknown | `trialEnables` | `trial` | `trial` | no |
+| `available` | `> 0` | `notEnabled` | `setup` | as §3 | as §3 |
+| `pending`, `active`, `ended` | any | `notEnabled` | `setup` | as §3 | as §3 |
+| `none` | any | `notEnabled` | `setup` | `default` | as today |
+
+New resolver outputs: `heading: 'notEnabled' | 'trialEnables'`, `seatLeadsTo: 'setup' | 'trial'`, and
+`seatHint: 'trial'`. `tone`, `blocker` (null), `notice` (`available`) and `pool` (`hidden` with no pool) are as in §3.
+
+**Heading.** Only the paths that render on the client's Co-managed IT tab take the variant:
+`CoManagedSeatClientView` (seat-only tab) and `CoManagedClientView` (tab with the workspace side), both through
+a `notEnabledHeading` prop that the integration fills from the resolver. `trialEnables` renders
+`coManaged.client.notEnabledTrialEnables`. `CoManagedClientSummary` and `CoManagedSeatSummary` sit on the
+client's summary, beside an "Enable co-managed IT" link to the tab; they keep `notEnabled`.
+
+**Seat option is the trial.** With `seatLeadsTo: 'trial'` the chooser opens with Seat selected and renders the
+existing `CoManagedSeatTrial` card (passed in as `seatTrial`) where the pool-funded `CoManagedSeatSetup` would
+be. The card is then not rendered above the chooser, so it appears once. It stays above the chooser whenever
+the chooser is not shown (a live relationship or arrangement) or the story is not `available`. Workspace stays
+the other shape. The set-up predicate is shared (`workspaceSetupOpen` in `clientRelationshipSummary.ts`).
+
+**Copy.** `coManaged.client.notEnabledTrialEnables` (heading), `coManaged.seat.chooser.seatHintTrial` (Seat
+option) and the reworded `coManaged.seat.trial.available` (note: inviting the technician enables co-managed IT;
+buy a seat after the 15 days to keep them), in all locales.
+
+**Tests.** `seatEnableStory.test.ts` (heading for available, pending, active, ended, paid pool, no offer);
+`CoManagedShapeChooser.test.tsx` (Seat opens the trial, no setup route, Workspace kept);
+`CoManagedClientIntegration.test.tsx` (heading prop and card placement per state).

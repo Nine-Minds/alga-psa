@@ -552,7 +552,7 @@
         "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
       },
       "trial": {
-        "available": "A free 15-day trial is available above. Co-managed seats can be added at any time.",
+        "available": "Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.",
         "pending": "A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.",
         "active": "The 15-day trial is running. Add co-managed seats to keep the technician afterwards.",
         "ended": "The 15-day trial has ended. Add co-managed seats to keep the technician."
@@ -567,7 +567,8 @@
         "pool": "{{available}} of {{purchased}} seats available. {{allocated}} allocated.",
         "poolEmpty": "No co-managed seats yet.",
         "seatHintAfterTrial": "Add co-managed seats to keep the technician after the 15-day trial.",
-        "seatHintTrialCovers": "The trial seat covers this technician until {{date}}. Buy a seat to keep them."
+        "seatHintTrialCovers": "The trial seat covers this technician until {{date}}. Buy a seat to keep them.",
+        "seatHintTrial": "Free for 15 days. Invite a technician to enable co-managed IT for this client."
       },
       "states": {
         "active": "Active",
@@ -625,6 +626,7 @@
       "inconsistentHint": "A co-managed setup for this client points to a workspace record that belongs to a different client. Nothing can be managed or set up here until support corrects the record.",
       "invitation": "Administrator invitation",
       "notEnabled": "Co-managed IT not enabled",
+      "notEnabledTrialEnables": "Co-managed IT is not enabled yet. Starting the free 15-day Seat trial enables it for this client.",
       "progress": "Setup progress",
       "provisioningHint": "Reserved seats stay held until setup completes or cleanup is acknowledged.",
       "relationship": "Relationship",

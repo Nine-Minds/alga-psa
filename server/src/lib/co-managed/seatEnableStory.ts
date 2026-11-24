@@ -5,6 +5,8 @@
  *
  * Total: every (enable, trial, purchaseOpen) combination is defined.
  *  - `trial === 'none'` reproduces the chooser as it was before the trial story existed.
+ *  - A startable trial with no paid pool (`available`, `purchased === 0`) IS the way to enable Seat: the Seat
+ *    option leads to the trial card, there is no pool-funded Seat route next to it, and the heading says so.
  *  - Any other trial state is `tone: 'trial'`: the paid-pool requirement is never an error while a
  *    trial is on screen, so `blocker` is null and a 0-of-0 pool is hidden.
  */
@@ -25,7 +27,11 @@ export interface SeatEnableStory {
   notice: SeatTrialStory | null;
   pool: 'count' | 'empty' | 'hidden';
   seatDisabled: boolean;
-  seatHint: 'default' | 'afterTrial' | 'trialCovers';
+  seatHint: 'default' | 'trial' | 'afterTrial' | 'trialCovers';
+  /** What choosing Seat opens: the paid seat setup, or the trial card (the trial is how Seat is enabled). */
+  seatLeadsTo: 'setup' | 'trial';
+  /** The status heading while the client has no arrangement. `trialEnables` says starting the trial enables co-managed IT. */
+  heading: 'notEnabled' | 'trialEnables';
 }
 
 export function resolveSeatEnableStory({ enable, trial, purchaseOpen }: SeatEnableInput): SeatEnableStory {
@@ -34,10 +40,14 @@ export function resolveSeatEnableStory({ enable, trial, purchaseOpen }: SeatEnab
   const paidPathBlocker = raw === 'CAPACITY_UNAVAILABLE' && purchaseOpen ? null : raw;
   const seatDisabled = paidPathBlocker !== null;
   if (trial === 'none') {
-    return { tone: 'blocked', blocker: paidPathBlocker, notice: null, pool: enable ? 'count' : 'hidden', seatDisabled, seatHint: 'default' };
+    return { tone: 'blocked', blocker: paidPathBlocker, notice: null, pool: enable ? 'count' : 'hidden', seatDisabled, seatHint: 'default', seatLeadsTo: 'setup', heading: 'notEnabled' };
   }
-  const pool = enable && enable.capacity.purchased > 0 ? 'count' : 'hidden';
+  const hasPool = Boolean(enable && enable.capacity.purchased > 0);
+  if (trial === 'available' && !hasPool) {
+    return { tone: 'trial', blocker: null, notice: trial, pool: 'hidden', seatDisabled: false, seatHint: 'trial', seatLeadsTo: 'trial', heading: 'trialEnables' };
+  }
+  const pool = hasPool ? 'count' : 'hidden';
   // Only a running trial has an end date to name; the others say what adding seats keeps.
   const seatHint = !seatDisabled ? 'default' : trial === 'active' ? 'trialCovers' : 'afterTrial';
-  return { tone: 'trial', blocker: null, notice: trial, pool, seatDisabled, seatHint };
+  return { tone: 'trial', blocker: null, notice: trial, pool, seatDisabled, seatHint, seatLeadsTo: 'setup', heading: 'notEnabled' };
 }

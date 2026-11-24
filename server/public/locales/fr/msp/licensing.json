@@ -552,7 +552,7 @@
         "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
       "trial": {
-        "available": "Un essai gratuit de 15 jours est disponible ci-dessus. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "available": "Inviter le technicien lance l’essai et active l’informatique cogérée pour ce client. Après les 15 jours, achetez un poste pour conserver le technicien.",
         "pending": "Une invitation à l’essai de 15 jours attend le technicien. Des postes cogérés peuvent être ajoutés à tout moment.",
         "active": "L’essai de 15 jours est en cours. Ajoutez des postes cogérés pour conserver le technicien ensuite.",
         "ended": "L’essai de 15 jours est terminé. Ajoutez des postes cogérés pour conserver le technicien."
@@ -567,7 +567,8 @@
         "pool": "{{available}} sur {{purchased}} postes disponibles. {{allocated}} alloués.",
         "poolEmpty": "Aucun poste cogéré pour le moment.",
         "seatHintAfterTrial": "Ajoutez des postes cogérés pour conserver le technicien après l’essai de 15 jours.",
-        "seatHintTrialCovers": "Le poste d’essai couvre ce technicien jusqu’au {{date}}. Achetez un poste pour le conserver."
+        "seatHintTrialCovers": "Le poste d’essai couvre ce technicien jusqu’au {{date}}. Achetez un poste pour le conserver.",
+        "seatHintTrial": "Gratuit pendant 15 jours. Invitez un technicien pour activer l’informatique cogérée pour ce client."
       },
       "states": {
         "active": "Actif",
@@ -625,6 +626,7 @@
       "inconsistentHint": "Une configuration cogérée de ce client renvoie à un enregistrement d’espace de travail appartenant à un autre client. Rien ne peut être géré ni configuré ici tant que le support n’a pas corrigé l’enregistrement.",
       "invitation": "Invitation de l'administrateur",
       "notEnabled": "Informatique cogérée non activée",
+      "notEnabledTrialEnables": "L’informatique cogérée n’est pas encore activée. Démarrer l’essai gratuit de 15 jours d’un poste l’active pour ce client.",
       "progress": "Progression de la configuration",
       "provisioningHint": "Les sièges réservés restent retenus jusqu'à la fin de la configuration ou la confirmation du nettoyage.",
       "relationship": "Relation",

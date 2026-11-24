@@ -20,9 +20,9 @@ vi.mock('@enterprise/components/co-managed/CoManagedSeatTrial', () => ({
   default: ({ offer }: any) => offer ? <div>trial-card:{offer.canStart ? 'available' : offer.pilot?.status}</div> : null,
 }));
 vi.mock('@/lib/actions/coManagedSeatActions', () => ({ getCoManagedSeatClientState: getSeat }));
-vi.mock('@/components/co-managed/CoManagedSeatClientView', () => ({ default: ({ children }: any) => <div>seat-tab-body{children}</div> }));
+vi.mock('@/components/co-managed/CoManagedSeatClientView', () => ({ default: ({ children, notEnabledHeading }: any) => <div>seat-tab-body<span>heading:{notEnabledHeading}</span>{children}</div> }));
 vi.mock('@/components/co-managed/CoManagedSeatSummary', () => ({ default: () => <div>seat-summary</div> }));
-vi.mock('@/components/co-managed/CoManagedShapeChooser', () => ({ default: ({ workspaceSetup, story }: any) => <div>chooser{workspaceSetup ? '+workspace' : ''}:{story?.tone}:{story?.notice ?? 'no-notice'}</div> }));
+vi.mock('@/components/co-managed/CoManagedShapeChooser', () => ({ default: ({ workspaceSetup, story, seatTrial }: any) => <div>chooser{workspaceSetup ? '+workspace' : ''}:{story?.tone}:{story?.notice ?? 'no-notice'}{seatTrial}</div> }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_k: string, o?: any) => (o?.defaultValue ?? _k).replace(/\{\{(\w+)\}\}/g, (_m: string, k: string) => String(o?.[k])) }),
   useFormatters: () => ({ formatDate: (d: Date) => d.toISOString().slice(0, 10) }),
@@ -142,9 +142,34 @@ describe('seat trial and chooser tell one story', () => {
       getOffer.mockResolvedValue(offer);
       seatOnly();
       await waitFor(() => expect(screen.getByText(card)).toBeInTheDocument());
-      expect(screen.getByText(`chooser:trial:${notice}`)).toBeInTheDocument();
+      expect(screen.getByText(`chooser:trial:${notice}`, { exact: false })).toBeInTheDocument();
+      expect(screen.getAllByText(card)).toHaveLength(1);
       expect(getOffer).toHaveBeenCalledTimes(1);
       expect(getOffer).toHaveBeenCalledWith('client-1');
+    });
+  }
+
+  // The trial is how Seat is enabled: the heading says so and the trial card sits inside the chooser's Seat option, once.
+  it('available: the heading variant says the trial enables co-managed IT and the card is handed to the chooser, not shown above it', async () => {
+    getOffer.mockResolvedValue({ canStart: true, canPurchase: false, intake: true, pilot: null, price: null });
+    seatOnly();
+    await waitFor(() => expect(screen.getByText('heading:trialEnables')).toBeInTheDocument());
+    const chooser = screen.getByText(/^chooser:trial:available/);
+    expect(chooser).toHaveTextContent('trial-card:available');
+  });
+
+  for (const [name, offer] of [
+    ['pending', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'pending', invited: true }, price: null }],
+    ['active', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'active', invited: true }, price: null }],
+    ['ended', { canStart: false, canPurchase: true, intake: true, pilot: { trialId: 't', status: 'ended', invited: true }, price: null }],
+    ['no offer', null],
+  ] as const) {
+    it(`${name}: heading unchanged and the card stays above the chooser`, async () => {
+      getOffer.mockResolvedValue(offer);
+      seatOnly();
+      await waitFor(() => expect(screen.getByText(/^chooser:/)).toBeInTheDocument());
+      expect(screen.getByText('heading:notEnabled')).toBeInTheDocument();
+      expect(screen.getByText(/^chooser:/)).not.toHaveTextContent('trial-card');
     });
   }
 
@@ -162,6 +187,6 @@ describe('seat trial and chooser tell one story', () => {
     await waitFor(() => expect(screen.getByText(/seat-tab-body/)).toBeInTheDocument());
     expect(screen.queryByText(/chooser/)).not.toBeInTheDocument();
     resolve({ canStart: true, canPurchase: false, intake: true, pilot: null, price: null });
-    await waitFor(() => expect(screen.getByText('chooser:trial:available')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/^chooser:trial:available/)).toBeInTheDocument());
   });
 });

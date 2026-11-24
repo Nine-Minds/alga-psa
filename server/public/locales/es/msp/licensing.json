@@ -552,7 +552,7 @@
         "unavailable": "No aparecen por estar inactivos, no tener correo o tener ya un puesto o una invitación: {{count}}."
       },
       "trial": {
-        "available": "Hay una prueba gratuita de 15 días disponible arriba. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "available": "Al invitar al técnico se inicia la prueba y se habilita la TI cogestionada para este cliente. Pasados los 15 días, compre un puesto para conservar al técnico.",
         "pending": "Una invitación a la prueba de 15 días está esperando al técnico. Los puestos cogestionados se pueden añadir en cualquier momento.",
         "active": "La prueba de 15 días está en curso. Añada puestos cogestionados para conservar al técnico después.",
         "ended": "La prueba de 15 días ha terminado. Añada puestos cogestionados para conservar al técnico."
@@ -567,7 +567,8 @@
         "pool": "{{available}} de {{purchased}} puestos disponibles. {{allocated}} asignados.",
         "poolEmpty": "Aún no hay puestos cogestionados.",
         "seatHintAfterTrial": "Añada puestos cogestionados para conservar al técnico después de la prueba de 15 días.",
-        "seatHintTrialCovers": "El puesto de prueba cubre a este técnico hasta el {{date}}. Compre un puesto para conservarlo."
+        "seatHintTrialCovers": "El puesto de prueba cubre a este técnico hasta el {{date}}. Compre un puesto para conservarlo.",
+        "seatHintTrial": "Gratis durante 15 días. Invite a un técnico para habilitar la TI cogestionada para este cliente."
       },
       "states": {
         "active": "Activo",
@@ -625,6 +626,7 @@
       "inconsistentHint": "Una configuración cogestionada de este cliente apunta a un registro de espacio de trabajo que pertenece a otro cliente. No se puede gestionar ni configurar nada aquí hasta que soporte corrija el registro.",
       "invitation": "Invitación del administrador",
       "notEnabled": "TI cogestionada no habilitada",
+      "notEnabledTrialEnables": "La TI cogestionada aún no está habilitada. Al iniciar la prueba gratuita de 15 días de un puesto, se habilita para este cliente.",
       "progress": "Progreso de configuración",
       "provisioningHint": "Los puestos reservados se mantienen hasta que finalice la configuración o se confirme la limpieza.",
       "relationship": "Relación",
