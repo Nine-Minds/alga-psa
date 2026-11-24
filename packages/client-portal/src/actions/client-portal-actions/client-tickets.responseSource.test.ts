@@ -183,11 +183,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {
@@ -290,11 +301,22 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'tickets') {
+              // The shared response-state engine reads the current state, then updates it.
               return {
+                select: vi.fn().mockReturnValue({
+                  where: vi.fn().mockReturnValue({
+                    first: vi.fn().mockResolvedValue({ response_state: null }),
+                  }),
+                }),
                 where: vi.fn().mockReturnValue({
                   update: vi.fn().mockResolvedValue(1),
                 }),
               };
+            }
+
+            if (table === 'tenant_settings') {
+              // No row: response-state tracking defaults to enabled.
+              return { select: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(undefined) }) };
             }
 
             if (table === 'ticket_comment_attachments') {
@@ -377,14 +399,16 @@ describe('addClientTicketComment response source metadata', () => {
               return {
                 where: vi.fn((criteria: any) => {
                   if (criteria && 'user_id' in criteria) {
-                    // Ownership lookup: comment_id + user_id
-                    return {
+                    // Ownership lookup: comment_id + user_id + visibility guards
+                    const ownershipBuilder: any = {
+                      whereNull: vi.fn(() => ownershipBuilder),
                       first: vi.fn().mockResolvedValue({
                         comment_id: 'comment-1',
                         ticket_id: TICKET_1,
                         user_id: 'user-1',
                       }),
                     };
+                    return ownershipBuilder;
                   }
                   return {
                     update: commentsUpdateMock,

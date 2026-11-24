@@ -133,7 +133,8 @@
       "notes": "Notas",
       "deleteTimeEntry": "Excluir entrada de tempo",
       "unsavedChanges": "Alterações não salvas",
-      "contractLine": "Linha de contrato"
+      "contractLine": "Linha de contrato",
+      "operational": "Operacional – não faturado"
     },
     "placeholders": {
       "selectService": "Selecione um serviço",
@@ -152,7 +153,8 @@
       "endAfterStartPicker": "O horário de término deve ser posterior ao horário de início",
       "durationSameDay": "A duração deve terminar no mesmo dia",
       "endSameDay": "O horário de término deve ser no mesmo dia do horário de início",
-      "invalidTimeRange": "Insira um intervalo de tempo válido"
+      "invalidTimeRange": "Insira um intervalo de tempo válido",
+      "billableExceedsDuration": "A duração faturável não pode exceder a duração total"
     },
     "serviceSource": {
       "task": "Padrão da tarefa",
@@ -287,6 +289,7 @@
     }
   },
   "comments": {
+    "loading": "Carregando comentários...",
     "placeholder": "Adicione um comentário...",
     "responsePlaceholder": "Responda às alterações solicitadas...",
     "respondToChanges": "Responder às mudanças"
@@ -362,6 +365,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabela de dados da planilha de horas",
+    "deleteWorkItem": {
+      "title": "Excluir item de trabalho",
+      "message": "Isso excluirá permanentemente todos os lançamentos de horas deste item de trabalho. Esta ação não pode ser desfeita."
+    },
+    "bundled": "Empacotado",
+    "bundledTo": "Empacotado → {{ticketNumber}}",
+    "addEntryForCell": "Adicionar lançamento de horas para {{workItem}} em {{date}}",
+    "saveTimeEntry": "Salvar lançamento de horas",
+    "weeklyTotal": "Total semanal",
     "empty": {
       "title": "Nenhum item de trabalho na sua planilha de horas",
       "description": "Adicione um novo item de trabalho para começar a monitorar seu tempo desta semana.",
@@ -424,6 +437,9 @@
     "viewEntryDetails": "Ver detalhes da entrada"
   },
   "messages": {
+    "saveEntryFailed": "Falha ao salvar o lançamento de horas",
+    "updateTaskFailed": "Falha ao atualizar a tarefa",
+    "deleteWorkItemFailed": "Falha ao excluir o item de trabalho",
     "serviceRequired": "Selecione um serviço antes de salvar as entradas de tempo",
     "invalidService": "Serviço inválido selecionado",
     "taxRegionRequired": "Selecione uma região fiscal para serviços tributáveis",
@@ -516,6 +532,12 @@
     "save": {
       "noPeriod": "Nenhum período abrange {{date}}. Escolha um dia dentro de um período.",
       "sheetLocked": "A folha de horas de {{date}} tem o estado «{{status}}». Escolha um dia numa folha de rascunho ou numa folha com alterações solicitadas."
+    },
+    "multiDay": {
+      "notice": "Este cronômetro abrangeu {{count}} dias, por isso será salvo como uma entrada de tempo por dia. Remova um dia para deixar o tempo dele de fora.",
+      "dayHeading": "Dia {{index}} de {{count}} · {{date}}",
+      "remove": "Remover",
+      "total": "Total: {{duration}}"
     }
   },
   "launch": {
@@ -554,6 +576,11 @@
     },
     "activitySummary_few": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
     "activitySummary_many": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Gerenciamento de planilhas de horas",
+    "delegationDisabledPrefix": "O lançamento de horas delegado está desabilitado no momento. Ative a sinalização de recurso",
+    "delegationDisabledSuffix": "para editar as planilhas de horas de outros usuários."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado em {{count}} segmento (pausado {{paused}})",

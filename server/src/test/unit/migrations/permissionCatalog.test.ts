@@ -386,14 +386,47 @@ describe('permission catalog synchronization', () => {
 
   it('fails the tenant when a required default role is missing or ambiguous', async () => {
     const missing = tenantFixture('psa');
-    missing.roles = missing.roles.filter((role) => !(role.role_name === 'Dispatcher' && role.msp));
+    missing.roles = missing.roles.filter((role) => !(role.role_name === 'Admin' && role.client));
     await expect(syncPermissionCatalog(makeKnex(missing).knex, TENANT, 'psa'))
-      .rejects.toThrow(/has no psa default role \(role_name="Dispatcher"/);
+      .rejects.toThrow(/has no psa default role \(role_name="Admin", msp=false, client=true\)/);
 
     const ambiguous = tenantFixture('psa');
     ambiguous.roles.push({ tenant: TENANT, role_id: 'second-admin', role_name: 'Admin', msp: true, client: false });
     await expect(syncPermissionCatalog(makeKnex(ambiguous).knex, TENANT, 'psa'))
       .rejects.toThrow(/2 roles matching the psa default role identity/);
+  });
+
+  // Only the two protected Admin roles are required. A tenant that deleted or renamed its
+  // client "User" role (the Cloud Solution Pros incident) must still receive every permission
+  // row and every other role's grants; the absent role just gets nothing.
+  it('still reconciles a tenant that lost a non-required default role, granting nothing to it', async () => {
+    const fixture = tenantFixture('psa');
+    const dropped = fixture.roles.find((role) => role.role_name === 'User' && role.client)!;
+    fixture.roles = fixture.roles.filter((role) => role !== dropped);
+    const { knex, tables } = makeKnex(fixture);
+
+    const result = await syncPermissionCatalog(knex, TENANT, 'psa');
+
+    const psaIdentities = catalog.getProductPermissions('psa').map(catalog.permissionIdentity).sort();
+    expect(tables.permissions.map(catalog.permissionIdentity).sort()).toEqual(psaIdentities);
+    expect(tables.role_permissions.some((grant) => grant.role_id === dropped.role_id)).toBe(false);
+    for (const role of fixture.roles) {
+      const expected = roleGrants.compileRoleGrants('psa').get(`${role.msp ? 'msp' : 'client'}:${role.role_name}`)!.identities.length;
+      expect(tables.role_permissions.filter((grant) => grant.role_id === role.role_id).length, role.role_name).toBe(expected);
+    }
+    expect(result.insertedPermissions.length).toBe(psaIdentities.length);
+
+    const plan = buildCatalogPlan({ tenantId: TENANT, product: 'psa', permissions: [], roles: fixture.roles, rolePermissions: [] });
+    expect(plan.errors).toEqual([]);
+    expect(plan.roleResolution.find((role: any) => role.roleKey === 'client:User').status).toBe('missing');
+
+    // A duplicated non-required role is likewise skipped rather than guessed.
+    const duplicated = tenantFixture('psa');
+    duplicated.roles.push({ tenant: TENANT, role_id: 'second-technician', role_name: 'Technician', msp: true, client: false });
+    const duplicatedPlan = buildCatalogPlan({ tenantId: TENANT, product: 'psa', permissions: [], roles: duplicated.roles, rolePermissions: [] });
+    expect(duplicatedPlan.errors).toEqual([]);
+    expect(duplicatedPlan.roleResolution.find((role: any) => role.roleKey === 'msp:Technician').status).toBe('ambiguous');
+    expect(duplicatedPlan.missingGrants.some((grant: any) => grant.roleKey === 'msp:Technician')).toBe(false);
   });
 
   it('grants a legacy default role when present and skips it silently when absent', async () => {

@@ -14,6 +14,18 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+const assertCoManagedSeatCapacityMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/licensing')>(),
+  assertCoManagedSeatCapacity: assertCoManagedSeatCapacityMock,
+}));
+const userGetMock = vi.hoisted(() => vi.fn());
+const uploadEntityImageMock = vi.hoisted(() => vi.fn());
+const deleteEntityImageMock = vi.hoisted(() => vi.fn());
+// The role floors have their own suite (packages/db userRoleFloor.test.ts);
+// here they allow everything unless a case says otherwise.
+const assertUserRoleFloorMock = vi.hoisted(() => vi.fn(async (..._args: any[]): Promise<any> => ({ ok: true })));
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -49,6 +61,15 @@ vi.mock('@alga-psa/db', () => ({
     table: (t: string) => conn(t),
     unscoped: (t: string, _reason?: string) => conn(t),
   }),
+  assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
+  isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  isUserRoleFloorError: (error: any) => error?.name === 'UserRoleFloorError',
+  UserRoleFloorError: class UserRoleFloorError extends Error {
+    readonly name = 'UserRoleFloorError';
+    constructor(message: string, readonly violation: string) {
+      super(message);
+    }
+  },
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -57,11 +78,17 @@ vi.mock('@alga-psa/db/admin', () => ({
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
+    get: userGetMock,
     update: userUpdateMock,
     getUserWithRoles: getUserWithRolesMock,
     getUserRoles: modelGetUserRolesMock,
     isInReportsToChain: isInReportsToChainMock,
   },
+}));
+
+vi.mock('@alga-psa/storage', () => ({
+  uploadEntityImage: uploadEntityImageMock,
+  deleteEntityImage: deleteEntityImageMock,
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -148,8 +175,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
   // getSafeUserWithRoles lookup (where().select(FIELDS).first()) can return it.
   let insertedUser: Record<string, any> | null = null;
 
-  // The seat guard requires a transaction and takes the advisory xact lock
-  // through trx.raw.
+  // The seat guard requires a transaction and locks the tenant seat row.
   const trx: any = (table: string) => {
     if (table === 'roles') {
       return {
@@ -169,6 +195,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
       return {
         first: async (..._fields: any[]) => tenantRow,
         where: (_criteria: Record<string, any>) => ({
+          forUpdate: () => ({ first: async () => ({ tenant: 'tenant-1' }) }),
           first: async () => tenantRow,
         }),
       };
@@ -177,7 +204,8 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
-          count: async () => [{ count: String(input.usedInternalUsers) }],
+          // The licensed count leaves out users holding a live seat assignment.
+          whereNotExists: () => ({ count: () => ({ first: async () => ({ count: String(input.usedInternalUsers) }) }) }),
           select: (..._fields: any[]) => ({
             first: async () => insertedUser,
           }),
@@ -189,6 +217,11 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
           },
         }),
       };
+    }
+
+    if (table === 'co_managed_seat_assignments as seat_assignment') {
+      const subquery: any = { whereNot: () => subquery, select: () => subquery, whereRaw: () => subquery };
+      return subquery;
     }
 
     if (table === 'user_roles') {
@@ -211,7 +244,7 @@ function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number
 function createUpdateTenantDb(current: { email: string; user_type?: 'internal' | 'client' }) {
   const updatedRow = { user_id: 'user-1', email: 'updated@example.com' };
 
-  return ((table: string) => {
+  const trx: any = ((table: string) => {
     if (table === 'users') {
       return {
         where: (_criteria: Record<string, any>) => ({
@@ -219,7 +252,7 @@ function createUpdateTenantDb(current: { email: string; user_type?: 'internal' |
             first: async () =>
               Array.isArray(fields[0])
                 ? updatedRow
-                : { email: current.email, user_type: current.user_type ?? 'internal' },
+                : { email: current.email, user_type: current.user_type ?? 'internal', is_inactive: false },
           }),
         }),
       };
@@ -235,6 +268,9 @@ function createUpdateTenantDb(current: { email: string; user_type?: 'internal' |
 
     throw new Error(`Unexpected tenant table ${table}`);
   }) as any;
+  trx.isTransaction = true;
+  trx.raw = vi.fn(async () => ({ rows: [] }));
+  return trx;
 }
 
 describe('addUser', () => {
@@ -252,6 +288,7 @@ describe('addUser', () => {
     isInReportsToChainMock.mockReset();
     publishWorkflowEventMock.mockReset();
     modelGetUserRolesMock.mockReset();
+    assertCoManagedSeatCapacityMock.mockReset();
 
     publishWorkflowEventMock.mockResolvedValue(undefined);
     modelGetUserRolesMock.mockResolvedValue([]);
@@ -265,6 +302,7 @@ describe('addUser', () => {
       email: 'updated@example.com',
     });
     isInReportsToChainMock.mockResolvedValue(false);
+    assertCoManagedSeatCapacityMock.mockResolvedValue(undefined);
 
     withTransactionMock.mockImplementation(async (db: any, callback: (trx: any) => Promise<any>) => callback(db));
     getAdminConnectionMock.mockResolvedValue(createAdminDb());
@@ -360,8 +398,9 @@ describe('addUser', () => {
   });
 
   it('normalizes updated email addresses to lowercase before saving', async () => {
+    const trx = createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' });
     createTenantKnexMock.mockResolvedValue({
-      knex: createUpdateTenantDb({ email: 'old@example.com', user_type: 'internal' }),
+      knex: trx,
     });
 
     const updateUser = await loadUpdateUser();
@@ -385,6 +424,10 @@ describe('addUser', () => {
         email: 'updated@example.com',
       },
     });
+    expect(trx.raw).toHaveBeenCalledWith('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
+      'internal_user_seats', 'tenant-1',
+    ]);
+    expect(assertCoManagedSeatCapacityMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1');
   });
 
   // Regression for PR #2356: editing reports_to (or any field) re-submits the
@@ -452,7 +495,7 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'contract_template_price_sets',
   'escalation_managers', 'external_files', 'external_tax_imports',
   'invoice_template_assignments', 'project_tasks', 'projects',
-  'quote_activities', 'quote_document_template_assignments', 'quote_items',
+  'quote_activities', 'quote_decisions', 'quote_document_template_assignments', 'quote_items',
   'quotes', 'service_categories', 'sla_audit_log', 'statuses', 'tag_mappings',
   'task_resources', 'ticket_resources', 'time_entries', 'time_sheets',
   'authorization_bundles', 'authorization_bundle_revisions',
@@ -695,5 +738,86 @@ describe('deleteUser', () => {
     const docOp = ops.find((o) => o.table === 'documents' && o.op === 'update');
     expect(docOp).toBeTruthy();
     expect(docOp!.values).toEqual({ created_by: ACTOR_USER_ID });
+  });
+});
+
+describe.each([
+  ['uploadUserAvatar', 'other-user'],
+  ['deleteUserAvatar', 'other-user'],
+] as const)('%s authorization boundary', (actionName, targetUserId) => {
+  const tenant = 'tenant-1';
+  const callerId = 'caller-user';
+  let action: (...args: any[]) => Promise<any>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    userGetMock.mockReset();
+    uploadEntityImageMock.mockReset();
+    deleteEntityImageMock.mockReset();
+    hasPermissionMock.mockReset();
+    createTenantKnexMock.mockReset();
+    hasPermissionMock.mockResolvedValue(false);
+    userGetMock.mockResolvedValue({ user_id: targetUserId, tenant, user_type: 'internal' });
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    uploadEntityImageMock.mockResolvedValue({ success: true, imageUrl: '/avatar.png' });
+    deleteEntityImageMock.mockResolvedValue({ success: true, message: 'deleted' });
+    action = (await import('./userActions'))[actionName] as any;
+  });
+
+  function caller(userType: 'internal' | 'client', roles: Array<{ role_name: string }> = []) {
+    return { user_id: callerId, user_type: userType, tenant, roles };
+  }
+
+  async function invoke(user: any, id: string = targetUserId) {
+    if (actionName === 'uploadUserAvatar') {
+      const formData = new FormData();
+      formData.append('avatar', new Blob(['avatar bytes'], { type: 'image/png' }), 'avatar.png');
+      return action(user, { tenant }, id, formData);
+    }
+    return action(user, { tenant }, id);
+  }
+
+  function expectNoMutation() {
+    expect(uploadEntityImageMock).not.toHaveBeenCalled();
+    expect(deleteEntityImageMock).not.toHaveBeenCalled();
+  }
+
+  it('denies a client-portal Admin changing an internal user even when user:update is granted', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('client', [{ role_name: 'Admin' }]));
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Permission denied/);
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expectNoMutation();
+  });
+
+  it('denies an internal caller without user:update', async () => {
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(false);
+    expectNoMutation();
+  });
+
+  it('permits an internal caller with user:update for a same-tenant target', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(true);
+    expect(actionName === 'uploadUserAvatar' ? uploadEntityImageMock : deleteEntityImageMock).toHaveBeenCalledOnce();
+  });
+
+  it('preserves self-service without requiring user:update', async () => {
+    userGetMock.mockResolvedValue({ user_id: callerId, tenant, user_type: 'client' });
+    const result = await invoke(caller('client'), callerId);
+    expect(result.success).toBe(true);
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(actionName === 'uploadUserAvatar' ? uploadEntityImageMock : deleteEntityImageMock).toHaveBeenCalledOnce();
+  });
+
+  it('rejects cross-tenant targets before mutation', async () => {
+    userGetMock.mockResolvedValue({ user_id: targetUserId, tenant: 'tenant-2', user_type: 'internal' });
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/different tenant/);
+    expectNoMutation();
   });
 });

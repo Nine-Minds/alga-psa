@@ -73,6 +73,9 @@ describe('service request linked-service picker', () => {
     expect(matches[0].service_id).toBe(firstServiceId);
     expect(matches[0].service_name).toBe('Endpoint Onboarding');
 
+    // Nothing typed, nothing searched: the card lists results only once the author asks.
+    expect(await searchServiceCatalogForLinking(db, tenant, '   ')).toEqual([]);
+
     await setLinkedServiceForServiceRequestDefinitionDraft({
       knex: db,
       tenant,

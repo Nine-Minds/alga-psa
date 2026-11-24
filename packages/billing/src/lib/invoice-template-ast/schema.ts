@@ -25,6 +25,9 @@ const i18nRefSchema = z.object({
 }).strict();
 
 const i18nTextSchema = z.union([z.string(), i18nRefSchema]);
+
+/** Wording for specific values, keyed by `String(value)`; an empty label prints nothing. */
+const valueLabelsSchema = z.record(z.string(), i18nTextSchema);
 const nonEmptyI18nTextSchema = z.union([z.string().min(1), i18nRefSchema]);
 
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
@@ -127,6 +130,8 @@ type ValueExpressionInput =
 type TableColumnLineInput = {
   id: string;
   value: ValueExpressionInput;
+  format?: z.infer<typeof valueFormatSchema>;
+  valueLabels?: Record<string, I18nTextInput>;
   style?: z.infer<typeof nodeStyleRefSchema>;
 };
 
@@ -135,6 +140,7 @@ type TableColumnInput = {
   header?: I18nTextInput;
   value: ValueExpressionInput;
   format?: z.infer<typeof valueFormatSchema>;
+  valueLabels?: Record<string, I18nTextInput>;
   style?: z.infer<typeof nodeStyleRefSchema>;
   lines?: TableColumnLineInput[];
 };
@@ -175,6 +181,7 @@ const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
     id: z.string().min(1),
     value: valueExpressionSchema,
     format: valueFormatSchema.optional(),
+    valueLabels: valueLabelsSchema.optional(),
     style: nodeStyleRefSchema.optional(),
     supplemental: z.boolean().optional(),
   }).strict()
@@ -188,8 +195,33 @@ const tableColumnSchema: z.ZodTypeAny = z.lazy(() =>
     header: i18nTextSchema.optional(),
     value: valueExpressionSchema,
     format: valueFormatSchema.optional(),
+    valueLabels: valueLabelsSchema.optional(),
     style: nodeStyleRefSchema.optional(),
     lines: z.array(tableColumnLineSchema).optional(),
+  }).strict()
+);
+
+const childRowCellSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    valueLabels: valueLabelsSchema.optional(),
+    lines: z.array(tableColumnLineSchema).optional(),
+    change: z.object({
+      value: valueExpressionSchema,
+      format: z.literal('signed-number'),
+    }).strict().optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
+const childRowsSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    sourcePath: z.string().min(1),
+    itemBinding: z.string().min(1),
+    cells: z.record(z.string().min(1), childRowCellSchema),
+    parentBlankColumns: z.array(z.string().min(1)).optional(),
+    style: nodeStyleRefSchema.optional(),
   }).strict()
 );
 
@@ -372,6 +404,7 @@ type NodeInput =
       emptyValue?: string;
       placeholder?: string;
       format?: z.infer<typeof valueFormatSchema>;
+      valueLabels?: Record<string, I18nTextInput>;
       displayFormat?: z.infer<typeof fieldDisplayFormatSchema>;
       borderStyle?: z.infer<typeof fieldBorderStyleSchema>;
     }
@@ -413,6 +446,7 @@ type NodeInput =
         keyPath?: string;
       };
       columns: TableColumnInput[];
+      childRows?: unknown;
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -425,6 +459,7 @@ type NodeInput =
         label: I18nTextInput;
         value: ValueExpressionInput;
         format?: z.infer<typeof valueFormatSchema>;
+        valueLabels?: Record<string, I18nTextInput>;
         emphasize?: boolean;
         labelStyle?: z.infer<typeof nodeStyleRefSchema>;
       }>;
@@ -487,6 +522,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       emptyValue: z.string().optional(),
       placeholder: z.string().optional(),
       format: valueFormatSchema.optional(),
+      valueLabels: valueLabelsSchema.optional(),
       displayFormat: fieldDisplayFormatSchema.optional(),
       borderStyle: fieldBorderStyleSchema.optional(),
     }).strict(),
@@ -535,6 +571,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         keyPath: z.string().min(1).optional(),
       }).strict(),
       columns: z.array(tableColumnSchema).min(1),
+      childRows: childRowsSchema.optional(),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
@@ -548,6 +585,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         label: nonEmptyI18nTextSchema,
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
+        valueLabels: valueLabelsSchema.optional(),
         emphasize: z.boolean().optional(),
         hideWhenZero: z.boolean().optional(),
         style: nodeStyleRefSchema.optional(),

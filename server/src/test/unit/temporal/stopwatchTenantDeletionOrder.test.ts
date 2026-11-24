@@ -24,6 +24,7 @@ describe('stopwatch tenant deletion ordering', () => {
   const createdTables = [
     'server/migrations/20261009120000_create_time_tracking_sessions.cjs',
     'server/migrations/20261009130000_create_time_entry_suggestion_dismissals.cjs',
+    'server/migrations/20261116060000_create_time_tracking_session_entries.cjs',
   ].flatMap((file) =>
     [...readRepoFile(file).matchAll(/createTable\('([a-z_]+)'/g)].map((m) => m[1])
   );
@@ -31,6 +32,7 @@ describe('stopwatch tenant deletion ordering', () => {
   it('deletes every table the stopwatch migrations create', () => {
     expect(createdTables.sort()).toEqual([
       'time_entry_suggestion_dismissals',
+      'time_tracking_session_entries',
       'time_tracking_session_segments',
       'time_tracking_sessions',
     ]);
@@ -42,6 +44,7 @@ describe('stopwatch tenant deletion ordering', () => {
   it('deletes segments before their sessions and every stopwatch table before users', () => {
     const index = (table: string) => order.indexOf(table);
     expect(index('time_tracking_session_segments')).toBeLessThan(index('time_tracking_sessions'));
+    expect(index('time_tracking_session_entries')).toBeLessThan(index('time_tracking_sessions'));
     for (const table of createdTables) {
       expect(index(table)).toBeLessThan(index('users'));
     }

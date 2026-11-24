@@ -37,15 +37,18 @@ export function publishFlakyTests({ documentPath, directory }) {
 }
 
 export function flakyPolicy({ tests, eventName } = {}) {
+  // The line names the test and, when the reporter caught it, the first
+  // attempt's error: the log is otherwise green and says nothing about why.
   const identities = (Array.isArray(tests) ? tests : [])
-    .map(entry => (typeof entry === 'string' ? entry : entry?.testId))
-    .filter(testId => typeof testId === 'string' && testId.length > 0);
+    .map(entry => (typeof entry === 'string' ? { testId: entry } : entry))
+    .filter(entry => typeof entry?.testId === 'string' && entry.testId.length > 0)
+    .map(entry => (typeof entry.error === 'string' && entry.error ? `${entry.testId} — ${entry.error}` : entry.testId));
   if (!identities.length) return { warnings: [], failures: [] };
   if (eventName === 'pull_request') {
-    return { warnings: identities.map(testId => `::warning::Flaky test passed only on retry: ${testId}`), failures: [] };
+    return { warnings: identities.map(line => `::warning::Flaky test passed only on retry: ${line}`), failures: [] };
   }
   const event = typeof eventName === 'string' && eventName ? eventName : 'unknown';
-  return { warnings: [], failures: identities.map(testId => `retry-only pass on ${event} run: ${testId}`) };
+  return { warnings: [], failures: identities.map(line => `retry-only pass on ${event} run: ${line}`) };
 }
 
 // Publishes, then reports. `failures` belong in the lane's evidence; the

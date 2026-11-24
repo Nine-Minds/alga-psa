@@ -47,6 +47,35 @@ test('partitions cover every file once and do not depend on collection order', (
   assert.equal(result.status, 'passed');
   assert.equal(result.counts.passed, 5);
 });
+test('weighted partitions balance by duration, cover every file once and ignore collection order', () => {
+  // Heaviest first onto the lightest shard: a(40) -> 1, b(30) -> 2, c(20) -> 3,
+  // d(10) -> 3, e(10) -> 2, so 40 / 40 / 30 where the modulo split gives
+  // a+d / b+e / c = 50 / 40 / 20.
+  const weights = { 'a.test.ts': 40, 'b.test.ts': 30, 'c.test.ts': 20, 'd.test.ts': 10, 'e.test.ts': 10 };
+  const partitions = [1, 2, 3].map(index => partitionTestFiles(files, index, 3, weights));
+  assert.deepEqual(partitions, [['a.test.ts'], ['b.test.ts', 'e.test.ts'], ['c.test.ts', 'd.test.ts']]);
+  assert.deepEqual(partitions.flat().sort(), files);
+  assert.deepEqual(partitionTestFiles([...files].reverse(), 2, 3, weights), partitions[1]);
+  // Unknown files weigh the median of the known ones, so a new file never
+  // skews a shard; equal weights then fall by name onto the lowest shard, which
+  // is plain round-robin.
+  assert.deepEqual([1, 2, 3].map(index => partitionTestFiles(files, index, 3, { 'a.test.ts': 40, 'b.test.ts': 40 })),
+    [['a.test.ts', 'd.test.ts'], ['b.test.ts', 'e.test.ts'], ['c.test.ts']]);
+  // Equal weights everywhere degrade to round-robin by name: still every file once.
+  assert.deepEqual([1, 2, 3].map(index => partitionTestFiles(files, index, 3, {})).flat().sort(), files);
+  for (const invalid of [{ 'a.test.ts': -1 }, { 'a.test.ts': 'fast' }, { 'a.test.ts': Number.NaN }, ['a.test.ts'], 7]) {
+    assert.throws(() => partitionTestFiles(files, 1, 3, invalid));
+  }
+  // The reunion must verify against the same weights, or the balanced shards read as misassigned.
+  const weighted = [1, 2, 3].map(index => {
+    const assigned = partitionTestFiles(files, index, 3, weights);
+    return { ...shards()[index - 1], expectedFiles: assigned, executedFiles: assigned,
+      counts: { passed: assigned.length, failed: 0, skipped: 0, todo: 0, pending: 0 } };
+  });
+  assert.equal(reconcileTestShards({ shards: weighted, suite: 'infrastructure', revision: 'abc', mode: 'full', total: 3, weights }).status, 'passed');
+  assert.equal(reconcile(weighted).status, 'failed');
+});
+
 test('invalid, duplicate and empty partitions fail before test execution', () => {
   for (const [entries, index, total] of [[[], 1, 1], [files, 0, 3], [files, 4, 3], [files, 1, 0], [files, 1.5, 3], [files, 6, 6], [['a', 'a'], 1, 1]]) {
     assert.throws(() => partitionTestFiles(entries, index, total));

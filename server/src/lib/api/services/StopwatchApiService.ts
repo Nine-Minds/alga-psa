@@ -18,7 +18,7 @@ import {
   updateSessionDraft,
   type StopwatchSessionView,
 } from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
-import { publishPersistedTimeEntryEvents, type PersistedTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
+import { assertTimeEntryCreateInScope, publishPersistedTimeEntryEvents, type PersistedTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import { timeSheetActionErrorFrom } from '@alga-psa/scheduling/actions/timeSheetActionErrors';
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -149,14 +149,20 @@ export class StopwatchApiService extends BaseService<never> {
   async start(data: StartStopwatchData, context: ServiceContext): Promise<StopwatchSessionView> {
     const db = await this.getDbForContext(context);
     try {
-      return await db.transaction((trx) =>
-        startSession(trx, context.tenant, context.userId, {
+      return await db.transaction(async (trx) => {
+        // The session becomes a time entry: refuse a work item the caller could not log time on (a seat
+        // technician's out-of-scope ticket or unshared project), as the log path does.
+        await assertTimeEntryCreateInScope(trx, context.tenant, context.user as IUser, context.userId, {
+          work_item_type: data.work_item_type,
+          work_item_id: data.work_item_id,
+        });
+        return startSession(trx, context.tenant, context.userId, {
           workItemType: data.work_item_type,
           workItemId: data.work_item_id,
           serviceId: data.service_id ?? null,
           notes: data.notes,
-        }),
-      );
+        });
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }
@@ -203,12 +209,16 @@ export class StopwatchApiService extends BaseService<never> {
     }
   }
 
-  /** Log the session as one time entry; returns the closed session and the persisted entry row. */
+  /** Log the session (one entry per work day unless a span is given); returns the closed session and the persisted entry rows. */
   async log(
     sessionId: string,
     data: LogStopwatchData,
     context: ServiceContext,
-  ): Promise<{ session: StopwatchSessionView; time_entry: Record<string, unknown> }> {
+  ): Promise<{
+    session: StopwatchSessionView;
+    time_entry: Record<string, unknown>;
+    time_entries: Record<string, unknown>[];
+  }> {
     const db = await this.getDbForContext(context);
     let result;
     try {
@@ -219,7 +229,14 @@ export class StopwatchApiService extends BaseService<never> {
       throw mapStopwatchError(error);
     }
     // After commit, exactly like saveTimeEntry.
-    await publishLoggedSessionEvents(result.persisted, context);
-    return { session: result.session, time_entry: result.persisted.entry as unknown as Record<string, unknown> };
+    for (const persisted of result.persisted) {
+      await publishLoggedSessionEvents(persisted, context);
+    }
+    return {
+      session: result.session,
+      // time_entry stays the first entry for existing clients; time_entries lists every entry.
+      time_entry: result.persisted[0].entry as unknown as Record<string, unknown>,
+      time_entries: result.persisted.map((p) => p.entry as unknown as Record<string, unknown>),
+    };
   }
 }

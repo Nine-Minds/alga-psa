@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { commentAudienceSql, resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { dispatchTicketLifecycle } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -110,6 +111,9 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
       const [saved] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
         relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,
         command_type: 'ticket_comment_create', request_hash: hash, applied_at: trx.raw('clock_timestamp()') }).returning('applied_at');
+      // A reply from the other organization can answer the organization SLA response clock (the handler re-reads the stored comment).
+      if (foreign && actorReferenceId) await dispatchTicketLifecycle(trx, { kind: 'firstResponse', tenant: resource.tenant, ticketId: resource.id,
+        relationshipId: resource.relationshipId, commentId: request.operationId, actorTenant: actor.tenant, actorUserId: actor.userId, actorReferenceId });
       await assertWriteAuthority(trx);
       return result(saved.applied_at);
     }));

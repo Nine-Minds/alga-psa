@@ -18,6 +18,14 @@ export const EXTERNAL_LINK_RELATIONSHIPS = ['origin', 'mirror', 'reference'] as 
 export type ExternalLinkRelationship =
   (typeof EXTERNAL_LINK_RELATIONSHIPS)[number];
 
+/**
+ * Identity relationships: the Alga entity *is* that external record, so one record maps to at most one
+ * entity per level across the tenant. Every other relationship (`reference`) is a citation, unique only
+ * per entity. The partial unique indexes in server/migrations/20261109120000_ticket_template_links.cjs
+ * express the same split; externalLinkUniquenessRule.contract.test.ts keeps the two in step.
+ */
+export const EXTERNAL_LINK_IDENTITY_RELATIONSHIPS = ['origin', 'mirror'] as const satisfies readonly ExternalLinkRelationship[];
+
 /** Built-in keys are lowercase `[a-z0-9_]+`; tenant systems are `custom:<slug>`. */
 export const BUILT_IN_EXTERNAL_SYSTEM_KEY_PATTERN = /^[a-z0-9_]+$/;
 export const CUSTOM_EXTERNAL_SYSTEM_KEY_PREFIX = 'custom:';
@@ -96,6 +104,13 @@ export const BUILT_IN_EXTERNAL_SYSTEMS: readonly ExternalSystemDefinition[] = [
     originCategory: 'api',
   },
   {
+    // No urlTemplate: each tenant runs its own Hudu host, so an explicit absolute URL is required.
+    key: 'hudu',
+    label: 'Hudu',
+    icon: 'BookOpen',
+    originCategory: 'other',
+  },
+  {
     key: 'generic',
     label: 'External Reference',
     icon: 'Link',
@@ -137,6 +152,8 @@ export interface IExternalEntityLink {
   realm?: string | null;
   /** Explicit link-out; overrides the system's urlTemplate when present. */
   url?: string | null;
+  /** Human title for a citation (e.g. a knowledge-base article name). */
+  title?: string | null;
   relationship: ExternalLinkRelationship;
   actor?: ExternalSystemActor | null;
   external_status?: string | null;

@@ -17,15 +17,12 @@ export async function GET() {
       return null;
     }
   })();
-  let adminConnection: Awaited<ReturnType<typeof getAdminConnection>> | null = null;
-
   const target = await resolveRootRedirect({
     hostname,
     hostHeader,
     canonicalHostname,
     lookupPortalDomain: async (candidate) => {
-      adminConnection ??= await getAdminConnection();
-      return getPortalDomainByHostname(adminConnection, candidate);
+      return getPortalDomainByHostname(await getAdminConnection(), candidate);
     },
   });
 

@@ -21,6 +21,8 @@ const createTicketFromEmailMock = vi.fn(async (..._args: any[]) => ({
 }));
 const createCommentFromEmailMock = vi.fn(async (..._args: any[]) => 'comment-1');
 const findContactByEmailMock = vi.fn(async (..._args: any[]) => null);
+const findTicketByReplyTokenMock = vi.fn(async (..._args: any[]) => null);
+const findTicketByEmailThreadMock = vi.fn(async (..._args: any[]) => null);
 
 vi.mock('../../registries/actionRegistry', () => ({
   getActionRegistryV2: () => getActionRegistryV2Mock(),
@@ -28,8 +30,8 @@ vi.mock('../../registries/actionRegistry', () => ({
 
 vi.mock('../../../actions/emailWorkflowActions', () => ({
   findContactByEmail: findContactByEmailMock,
-  findTicketByEmailThread: vi.fn(),
-  findTicketByReplyToken: vi.fn(),
+  findTicketByEmailThread: (...args: any[]) => findTicketByEmailThreadMock(...args),
+  findTicketByReplyToken: (...args: any[]) => findTicketByReplyTokenMock(...args),
   resolveInboundTicketDefaults: vi.fn(),
   resolveEffectiveInboundTicketDefaults: vi.fn(async (input: any) => ({
     defaults: input?.providerDefaults ?? null,
@@ -54,6 +56,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     createCommentFromEmailMock.mockClear();
     findContactByEmailMock.mockClear();
     findContactByEmailMock.mockResolvedValue(null);
+    findTicketByReplyTokenMock.mockReset();
+    findTicketByEmailThreadMock.mockReset();
+    findTicketByEmailThreadMock.mockResolvedValue(null);
   });
 
   it('T020: create_comment_from_email action schema accepts contact_id in input', async () => {
@@ -114,6 +119,64 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       }),
       'tenant-1'
     );
+  });
+
+  it('marks the initial comment as the opener with the non-inline attachment count (and does not use the legacy suppress flag)', async () => {
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+    const action = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
+
+    await action!.handler(
+      {
+        emailData: {
+          id: 'email-1',
+          subject: 'Inbound subject',
+          body: { text: 'Inbound body' },
+          from: { email: 'contact@example.com' },
+          to: [{ email: 'support@example.com' }],
+          attachments: [
+            { id: 'a1', name: 'invoice.pdf', contentType: 'application/pdf', size: 10 },
+            { id: 'a2', name: 'logo.png', contentType: 'image/png', size: 5, contentId: 'cid-logo' },
+            { id: 'a3', name: 'photo.jpg', contentType: 'image/jpeg', size: 7 },
+          ],
+        },
+        parsedEmail: { sanitizedText: 'Inbound body' },
+        ticketDefaults: { board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', entered_by: 'user-1' },
+        targetClientId: 'client-1',
+        targetContactId: 'contact-1',
+        targetLocationId: null,
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    const payload = createCommentFromEmailMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.opensTicket).toBe(true);
+    expect(payload.attachmentCount).toBe(2); // inline cid image is not counted
+    expect('suppressTechEmailNotification' in payload).toBe(false);
+  });
+
+  it('leaves attachmentCount undefined when the email lists no attachments array', async () => {
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+    const action = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
+    await action!.handler(
+      {
+        emailData: { id: 'email-1', subject: 's', body: { text: 'b' }, from: { email: 'c@example.com' }, to: [{ email: 's@example.com' }] },
+        parsedEmail: { sanitizedText: 'b' },
+        ticketDefaults: { board_id: 'b', status_id: 's', priority_id: 'p' },
+        targetClientId: 'client-1', targetContactId: 'contact-1', targetLocationId: null,
+      },
+      { tenantId: 'tenant-1' }
+    );
+    expect(createCommentFromEmailMock.mock.calls[0][0]).toMatchObject({ opensTicket: true, attachmentCount: undefined });
+  });
+
+  it('reply actions (create_comment_from_email) never set opensTicket', async () => {
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+    const action = registeredActions.find((entry) => entry.id === 'create_comment_from_email');
+    await action!.handler({ ticket_id: 'ticket-1', content: 'hello', author_type: 'contact' }, { tenantId: 'tenant-1' });
+    expect('opensTicket' in (createCommentFromEmailMock.mock.calls[0][0] as object)).toBe(false);
   });
 
   it('T022: create_comment_from_email runtime action forwards contact_id to shared email action', async () => {
@@ -416,6 +479,56 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       matched_email: 'billing@example.com',
       contact_id: 'contact-1',
     });
+  });
+
+  it.each([
+    ['fresh', true, true],
+    ['expired', false, false],
+    ['null-expiry', false, false],
+  ])('find_ticket_by_reply_token reports %s cm2 credentials as expiry-aware matches', async (_label, expiryValid, success) => {
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-1', expiryValid } as any);
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'find_ticket_by_reply_token');
+    expect(action).toBeDefined();
+    const result = await action!.handler({ token: 'cm2:reply-token' }, { tenantId: 'tenant-1' });
+    const parsed = action!.outputSchema!.parse(result);
+    expect(parsed).toMatchObject({ success, match: { expiryValid } });
+    expect(parsed.match?.ticketId).toBe(success ? 'ticket-1' : undefined);
+  });
+
+  it.each([
+    ['fresh', true, true],
+    ['expired', false, false],
+    ['null-expiry', false, false],
+  ])('resolve_existing_ticket_from_email handles %s cm2 credentials before thread-header fallback', async (_label, expiryValid, success) => {
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-1', expiryValid } as any);
+    findTicketByEmailThreadMock.mockResolvedValue({
+      ticketId: 'header-ticket', ticketNumber: 'T-2', subject: 'Matched header', status: 'Open',
+      originalEmailId: '<original@example.test>', threadInfo: { originalMessageId: '<original@example.test>' },
+    } as any);
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'resolve_existing_ticket_from_email');
+    expect(action).toBeDefined();
+    const result = await action!.handler({
+      emailData: {
+        id: 'inbound-1', from: { email: 'requester@example.test' }, subject: 'Re: ticket',
+        body: { text: 'reply' }, inReplyTo: '<original@example.test>', references: ['<original@example.test>'],
+      },
+      parsedEmail: { metadata: { parser: { tokens: { conversationToken: 'cm2:reply-token' } } } },
+    }, { tenantId: 'tenant-1' });
+
+    if (expiryValid) {
+      expect(result).toMatchObject({ success: true, source: 'replyToken', ticket: { ticketId: 'ticket-1' } });
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    } else {
+      expect(result).toMatchObject({ success: false, source: 'replyToken', ticket: null });
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    }
+    expect(action!.outputSchema!.parse(result)).toMatchObject({ success, source: 'replyToken' });
   });
 
 });

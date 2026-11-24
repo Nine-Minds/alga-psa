@@ -1,0 +1,11 @@
+{
+  "repository": "/home/robert/alga-dev/ghostty-pane-ide-cli-viewer-fix/ghostty-pane-ide",
+  "branch": "fix/cli-capable-viewer-routing",
+  "revision": "f1627486d2440b5b82734a29c0782482630e17eb",
+  "command": "npm test -- --reporter=dot tests/agent/viewer-command-router.test.ts tests/agent/agent-server-cli-routing.test.ts",
+  "status": "passed",
+  "filesPassed": 2,
+  "testsPassed": 12,
+  "testsFailed": 0,
+  "runtimeOrSupervisorRestarted": false
+}

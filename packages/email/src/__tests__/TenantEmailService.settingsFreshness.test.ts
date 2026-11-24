@@ -1,15 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EmailProviderError } from '@alga-psa/types';
+import { connectionFingerprint, verifyProviderSecretFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const runtime = vi.hoisted(() => ({
   companyName: 'Example MSP',
   initializedSettings: [] as Array<Record<string, any>>,
   sent: [] as Array<{ config: Record<string, any>; message: Record<string, any> }>,
   settingsRow: null as Record<string, any> | null,
+  concurrentSettingsRow: null as Record<string, any> | null,
   sender: null as Record<string, any> | null,
   logged: [] as Array<Record<string, any>>,
   senderUpdates: [] as Array<Record<string, any>>,
   boardName: 'General Support' as string | null,
   routeDisplayName: null as string | null,
+  enterprise: false,
+  initializationErrorCode: null as string | null,
+  fallbackCreated: 0,
+  fallbackSent: 0,
+  smtpTransports: 0,
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -38,17 +46,58 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('../features', () => ({
-  isEnterprise: false,
+  get isEnterprise() { return runtime.enterprise; },
+}));
+vi.mock('../system/SystemEmailProviderFactory', () => ({
+  SystemEmailProviderFactory: {
+    createProvider: vi.fn(async () => {
+      runtime.fallbackCreated += 1;
+      return {
+        providerId: 'system-provider',
+        providerType: 'system',
+        capabilities: {},
+        sendEmail: vi.fn(async () => {
+          runtime.fallbackSent += 1;
+          return { success: true, providerId: 'system-provider', providerType: 'system', sentAt: new Date() };
+        }),
+      };
+    }),
+    getConfigFingerprint: () => 'system-config',
+  },
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => ({ transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) })),
   isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => ({
     table: (table: string) => {
       if (table === 'tenant_email_settings') {
-        return { first: vi.fn(async () => runtime.settingsRow) };
+        const predicates: Array<[string, unknown]> = [];
+        const query: any = {
+          first: vi.fn(async () => runtime.settingsRow),
+          forUpdate: () => query,
+          where: (column: string, value: unknown) => { predicates.push([column, value]); return query; },
+          whereRaw: (_sql: string, bindings: unknown[]) => {
+            predicates.push(['provider_configs', JSON.parse(String(bindings[0]))]);
+            return query;
+          },
+          update: vi.fn(async (changes: Record<string, unknown>) => {
+            const row = runtime.settingsRow;
+            if (runtime.concurrentSettingsRow) {
+              runtime.settingsRow = runtime.concurrentSettingsRow;
+              runtime.concurrentSettingsRow = null;
+              return 0;
+            }
+            if (!row || predicates.some(([column, value]) => column === 'provider_configs'
+              ? JSON.stringify(row.provider_configs) !== JSON.stringify(value)
+              : row[column] !== value)) return 0;
+            Object.assign(row, changes);
+            if (typeof changes.provider_configs === 'string') row.provider_configs = JSON.parse(changes.provider_configs);
+            return 1;
+          }),
+        };
+        return query;
       }
       if (table === 'email_sending_logs') {
         return { insert: vi.fn(async (entry: Record<string, any>) => { runtime.logged.push(entry); return 1; }) };
@@ -74,6 +123,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('../senderIdentity', () => ({
+  parseEmailAddress: (value?: string) => value ? { email: value } : null,
+  isValidEmailAddress: (value?: string) => Boolean(value && value.includes('@')),
   applyFromNameOverride: (
     address: string | { email: string; name?: string },
     fromName?: string
@@ -106,6 +157,14 @@ vi.mock('../providers/EmailProviderManager', () => ({
     async initialize(settings: Record<string, any>) {
       runtime.initializedSettings.push(settings);
       const config = settings.providerConfigs.find((candidate: Record<string, any>) => candidate.isEnabled);
+      const bindingError = verifyProviderSecretFingerprint(settings as any);
+      if (bindingError) {
+        throw new EmailProviderError(bindingError, config.providerId, config.providerType, false, 'SECRET_IDENTITY_MISMATCH');
+      }
+      if (runtime.initializationErrorCode) {
+        throw new EmailProviderError('SMTP initialization failed', config.providerId, config.providerType, false, runtime.initializationErrorCode);
+      }
+      runtime.smtpTransports += 1;
       const capturedConfig = { ...config.config };
       this.provider = {
         providerId: config.providerId,
@@ -135,6 +194,15 @@ function buildSettingsRow(
   config: { password: string; from: string; fromName: string },
   updatedAt = new Date('2026-08-04T12:00:00.000Z')
 ) {
+  const providerConfig: Record<string, any> = {
+    host: 'smtp.example.test',
+    port: 587,
+    username: 'mailer',
+    ...config,
+  };
+  if (providerConfig.password) {
+    providerConfig.__secretFingerprint = connectionFingerprint(providerConfig, 'smtp');
+  }
   return {
     tenant: 'tenant-settings-freshness',
     default_from_domain: 'example.test',
@@ -146,11 +214,7 @@ function buildSettingsRow(
       providerId: 'smtp-provider',
       providerType: 'smtp',
       isEnabled: true,
-      config: {
-        host: 'smtp.example.test',
-        username: 'mailer',
-        ...config,
-      },
+      config: providerConfig,
     }],
     tracking_enabled: false,
     created_at: new Date('2026-08-04T12:00:00.000Z'),
@@ -168,11 +232,18 @@ describe('TenantEmailService settings freshness', () => {
       from: 'old-notifications@example.test',
       fromName: 'Old Notifications',
     });
+    runtime.concurrentSettingsRow = null;
     runtime.sender = null;
     runtime.logged.length = 0;
     runtime.senderUpdates.length = 0;
     runtime.boardName = 'General Support';
     runtime.routeDisplayName = null;
+    runtime.enterprise = false;
+    runtime.initializationErrorCode = null;
+    runtime.fallbackCreated = 0;
+    runtime.fallbackSent = 0;
+    runtime.smtpTransports = 0;
+    process.env.EMAIL_FROM = 'system@example.test';
     await TenantEmailService.invalidateTenantSettings('tenant-settings-freshness');
   });
 
@@ -220,6 +291,34 @@ describe('TenantEmailService settings freshness', () => {
     ]);
   });
 
+  it('rebuilds the provider when a secret reference rotates, even if updated_at is unchanged', async () => {
+    const withRef = (ref: string) => {
+      const row = buildSettingsRow({ password: '', from: 'refs@example.test', fromName: 'Refs' });
+      const config = row.provider_configs[0].config as Record<string, any>;
+      delete config.password;
+      config.secretRefs = { password: ref };
+      return row;
+    };
+    runtime.settingsRow = withRef('email_outbound_smtp_password_00000000-0000-4000-8000-000000000001');
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    const params = {
+      mailClass: 'general' as const,
+      tenantId: 'tenant-settings-freshness',
+      to: 'client@example.test',
+      subject: 'Status update',
+      html: '<p>Status update</p>',
+    };
+
+    await service.sendEmail(params);
+    await service.sendEmail(params);
+    expect(runtime.initializedSettings).toHaveLength(1);
+
+    runtime.settingsRow = withRef('email_outbound_smtp_password_00000000-0000-4000-8000-000000000002');
+    await service.sendEmail(params);
+    expect(runtime.initializedSettings).toHaveLength(2);
+    expect(runtime.initializedSettings[1].providerConfigs[0].config.secretRefs.password).toMatch(/000000000002$/);
+  });
+
   it('uses the ticket board name for From when route and sender names are absent', async () => {
     runtime.settingsRow = buildSettingsRow({ password: 'password', from: 'shared@example.test', fromName: '' });
     const service = TenantEmailService.getInstance('tenant-settings-freshness');
@@ -228,6 +327,59 @@ describe('TenantEmailService settings freshness', () => {
       to: 'client@example.test', subject: 'Comment', html: '<p>Comment</p>',
     })).resolves.toMatchObject({ success: true });
     expect(runtime.sent.at(-1)?.message.from).toEqual({ email: 'shared@example.test', name: 'General Support' });
+  });
+
+  it('binds a legacy stored SMTP credential once from its persisted row and sends with it', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
+    delete runtime.settingsRow.provider_configs[0].config.__secretFingerprint;
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+
+    await expect(service.sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general',
+      to: 'client@example.test', subject: 'Legacy credential', html: '<p>Sent</p>',
+    })).resolves.toMatchObject({ success: true });
+
+    expect(runtime.settingsRow.provider_configs[0].config.password).toBe('legacy-password');
+    expect(runtime.settingsRow.provider_configs[0].config.__secretFingerprint).toBe(
+      connectionFingerprint(runtime.settingsRow.provider_configs[0].config, 'smtp', 'smtp-provider'),
+    );
+    expect(runtime.sent).toHaveLength(1);
+    expect(runtime.initializedSettings[0].providerConfigs[0].config.password).toBe('legacy-password');
+  });
+
+  it('keeps the initial legacy binding across later endpoint changes and permits explicit replacement credentials', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
+    delete runtime.settingsRow.provider_configs[0].config.__secretFingerprint;
+
+    const testKnex = { transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) } as any;
+    const settings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', testKnex);
+    const originalFingerprint = settings?.providerConfigs[0].config.__secretFingerprint;
+    runtime.settingsRow.provider_configs[0].config.host = 'smtp.concurrent-change.test';
+
+    expect(settings?.providerConfigs[0].config.host).toBe('smtp.example.test');
+    expect(originalFingerprint).toBe(connectionFingerprint(settings!.providerConfigs[0].config, 'smtp', 'smtp-provider'));
+    const repeatedSettings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', testKnex);
+    expect(repeatedSettings?.providerConfigs[0].config.__secretFingerprint).toBe(originalFingerprint);
+
+    const sendResult = await TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general', to: 'client@example.test',
+      subject: 'Changed endpoint', html: '<p>Must reject</p>',
+    });
+    const testResult = await TenantEmailService.testConnection('tenant-settings-freshness');
+    expect(sendResult).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(testResult).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.smtpTransports).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
+
+    const replacement = buildSettingsRow({ password: 'replacement-password', from: 'saved@example.test', fromName: '' });
+    replacement.provider_configs[0].config.host = 'smtp.concurrent-change.test';
+    replacement.provider_configs[0].config.__secretFingerprint = connectionFingerprint(replacement.provider_configs[0].config, 'smtp', 'smtp-provider');
+    runtime.settingsRow = replacement;
+    await expect(TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general', to: 'client@example.test',
+      subject: 'Replacement credential', html: '<p>Can send</p>',
+    })).resolves.toMatchObject({ success: true });
+    expect(runtime.sent.at(-1)?.config.password).toBe('replacement-password');
   });
 
   it('keeps a route display name ahead of the ticket board name', async () => {
@@ -349,6 +501,7 @@ describe('TenantEmailService settings freshness', () => {
     runtime.settingsRow = buildSettingsRow({ password: 'key', from: 'support@removed.example', fromName: 'Support' });
     runtime.settingsRow.email_provider = 'resend';
     runtime.settingsRow.provider_configs[0].providerType = 'resend';
+    runtime.settingsRow.provider_configs[0].config.__secretFingerprint = connectionFingerprint(runtime.settingsRow.provider_configs[0].config, 'resend', runtime.settingsRow.provider_configs[0].providerId);
 
     const service = TenantEmailService.getInstance('tenant-settings-freshness');
     await expect(service.sendEmail({
@@ -362,5 +515,99 @@ describe('TenantEmailService settings freshness', () => {
     expect(runtime.senderUpdates).toContainEqual(expect.objectContaining({ verification_status: 'failed' }));
     expect(runtime.logged).toContainEqual(expect.objectContaining({ status: 'failed', provider_id: 'sender-validation' }));
     expect(runtime.sent).toHaveLength(0);
+  });
+
+  it('refuses a mutated persisted SMTP host in Enterprise mode without fallback on send', async () => {
+    runtime.enterprise = true;
+    runtime.settingsRow = buildSettingsRow({ password: 'stored-password', from: 'alerts@example.test', fromName: 'Alerts' });
+    runtime.settingsRow.provider_configs[0].config.host = 'smtp.changed-in-database.test';
+
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    const result = await service.sendEmail({
+      mailClass: 'general', tenantId: 'tenant-settings-freshness', to: 'client@example.test',
+      subject: 'Status update', html: '<p>Status update</p>',
+    });
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.fallbackCreated).toBe(0);
+    expect(runtime.fallbackSent).toBe(0);
+    expect(runtime.smtpTransports).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
+  });
+
+  it('refuses a mutated persisted SMTP host in testConnection before transport initialization', async () => {
+    runtime.enterprise = true;
+    runtime.settingsRow = buildSettingsRow({ password: 'stored-password', from: 'alerts@example.test', fromName: 'Alerts' });
+    runtime.settingsRow.provider_configs[0].config.host = 'smtp.changed-in-database.test';
+
+    const result = await TenantEmailService.testConnection('tenant-settings-freshness');
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.fallbackCreated).toBe(0);
+    expect(runtime.fallbackSent).toBe(0);
+    expect(runtime.smtpTransports).toBe(0);
+  });
+
+  it.each(['send', 'testConnection'] as const)('rejects a database-mutated alias-backed Resend provider id before %s initializes a transport', async (operation) => {
+    runtime.enterprise = true;
+    runtime.settingsRow = buildSettingsRow({ password: 'temporary', from: 'alerts@example.test', fromName: 'Alerts' });
+    runtime.settingsRow.email_provider = 'resend';
+    const provider = runtime.settingsRow.provider_configs[0];
+    provider.providerType = 'resend';
+    delete provider.config.password;
+    provider.config.api_key = 'synthetic-resend-secret';
+    provider.config.__secretFingerprint = connectionFingerprint(provider.config, 'resend', provider.providerId);
+    provider.providerId = 'reused-resend-provider-id';
+
+    const result = operation === 'send'
+      ? await TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+          mailClass: 'general', tenantId: 'tenant-settings-freshness', to: 'client@example.test',
+          subject: 'Status update', html: '<p>Status update</p>',
+        })
+      : await TenantEmailService.testConnection('tenant-settings-freshness');
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.smtpTransports).toBe(0);
+    expect(runtime.fallbackCreated).toBe(0);
+    expect(runtime.fallbackSent).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
+  });
+
+  it('does not fall back after an already initialized service observes a persisted host mutation', async () => {
+    runtime.enterprise = true;
+    runtime.settingsRow = buildSettingsRow({ password: 'stored-password', from: 'alerts@example.test', fromName: 'Alerts' });
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    const params = {
+      mailClass: 'general' as const, tenantId: 'tenant-settings-freshness', to: 'client@example.test',
+      subject: 'Status update', html: '<p>Status update</p>',
+    };
+
+    await expect(service.sendEmail(params)).resolves.toMatchObject({ success: true });
+    expect(runtime.smtpTransports).toBe(1);
+    runtime.settingsRow.provider_configs[0].config.host = 'smtp.changed-in-database.test';
+    const transportsBeforeMutationSend = runtime.smtpTransports;
+
+    const result = await service.sendEmail(params);
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.smtpTransports).toBe(transportsBeforeMutationSend);
+    expect(runtime.fallbackCreated).toBe(0);
+    expect(runtime.fallbackSent).toBe(0);
+    expect(runtime.sent).toHaveLength(1);
+  });
+
+  it('preserves Enterprise system fallback for an ordinary provider initialization failure', async () => {
+    runtime.enterprise = true;
+    runtime.initializationErrorCode = 'INIT_FAILED';
+    runtime.settingsRow = buildSettingsRow({ password: 'stored-password', from: 'alerts@example.test', fromName: 'Alerts' });
+
+    const result = await TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+      mailClass: 'general', tenantId: 'tenant-settings-freshness', to: 'client@example.test',
+      subject: 'Status update', html: '<p>Status update</p>',
+    });
+
+    expect(result).toMatchObject({ success: true });
+    expect(runtime.fallbackCreated).toBe(1);
+    expect(runtime.fallbackSent).toBe(1);
   });
 });

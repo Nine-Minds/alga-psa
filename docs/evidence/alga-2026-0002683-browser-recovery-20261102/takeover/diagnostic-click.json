@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-11-02T17:34:34.164424+00:00",
+  "command": [
+    "browser-click",
+    "--selector=#probe-button"
+  ],
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "exitStatus": 0,
+  "stdout": "{\"paneId\":\"c8403826-ff91-488f-aa28-8447b4f96c06\",\"success\":true,\"result\":{\"clicked\":true,\"target\":\"#probe-button\"}}\n",
+  "stderr": ""
+}

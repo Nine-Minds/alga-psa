@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
+import { getNamespacesForRoute } from '@alga-psa/core/i18n/config';
 import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
@@ -193,15 +193,17 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
     expect(onboardingKeys.filter((key) => dashboardKeys.has(key))).toEqual([]);
   });
 
-  it('T040: ROUTE_NAMESPACES loads the new MSP feature namespaces on the expected routes', () => {
+  it('T040: resolves feature namespaces for MSP routes', () => {
     // These routes can also open ticket details (including the shared SLA
     // badge and time-entry launcher), so they carry those namespaces too.
-    expect(ROUTE_NAMESPACES['/msp/clients']).toEqual(['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents']);
-    expect(ROUTE_NAMESPACES['/msp/contacts']).toEqual(['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
-    expect(ROUTE_NAMESPACES['/msp/interactions']).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry', 'msp/schedule']);
-    expect(ROUTE_NAMESPACES['/msp/assets']).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
-    expect(ROUTE_NAMESPACES['/msp/assets/maintenance']).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
-    expect(ROUTE_NAMESPACES['/msp/onboarding']).toEqual(['common', 'msp/core', 'msp/onboarding']);
+    const clientNamespaces = ['common', 'msp/core', 'msp/clients', 'msp/licensing', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents'];
+    expect(getNamespacesForRoute('/msp/clients')).toEqual(clientNamespaces);
+    expect(getNamespacesForRoute('/msp/clients/client-1')).toEqual(clientNamespaces);
+    expect(getNamespacesForRoute('/msp/contacts')).toEqual(['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
+    expect(getNamespacesForRoute('/msp/interactions')).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry', 'msp/schedule']);
+    expect(getNamespacesForRoute('/msp/assets')).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
+    expect(getNamespacesForRoute('/msp/assets/maintenance')).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
+    expect(getNamespacesForRoute('/msp/onboarding')).toEqual(['common', 'msp/core', 'msp/onboarding']);
   });
 
   it('T042: pseudo-locale files for all four namespaces mirror English key structure and keep representative fills', () => {
@@ -225,7 +227,6 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T044: representative surfaces use the right namespaces and keep English fallbacks', () => {
     const representativeFiles = [
       ['packages/clients/src/components/clients/Clients.tsx', "useTranslation('msp/clients')"],
-      ['packages/clients/src/components/contacts/ContactDetails.tsx', "useTranslation('msp/contacts')"],
       ['packages/assets/src/components/AssetDashboardClient.tsx', "useTranslation('msp/assets')"],
       ['packages/onboarding/src/components/OnboardingWizard.tsx', "useTranslation('msp/onboarding')"],
     ] as const;
@@ -258,6 +259,23 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
 
     for (const [source, key, maxLength] of lengthChecks) {
       expect(getValue(source, key).length).toBeLessThanOrEqual(maxLength);
+    }
+  });
+
+  it('onboarding address copy: every locale carries the description and prefill keys', () => {
+    const english = readLocaleJson('en', 'onboarding');
+    const englishDescription = getValue(english, 'clientInfoStep.address.description');
+    expect(englishDescription).toBe('This address appears on your invoices and quotes.');
+
+    for (const locale of [...productionLocales, ...pseudoLocales]) {
+      const bundle = readLocaleJson(locale, 'onboarding');
+      const description = getValue(bundle, 'clientInfoStep.address.description');
+      const prefill = getValue(bundle, 'clientInfoStep.address.prefilledFromBilling');
+      expect(typeof description, `${locale} description`).toBe('string');
+      expect(typeof prefill, `${locale} prefilledFromBilling`).toBe('string');
+      expect(prefill.length, `${locale} prefilledFromBilling`).toBeGreaterThan(0);
+      // The neutral description no longer claims a prefill.
+      expect(description).not.toMatch(/Prefilled|Préremplie|Vorausgefüllt/i);
     }
   });
 });

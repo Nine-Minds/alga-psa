@@ -49,8 +49,8 @@ describe('ticketListIdentity', () => {
     // `undefined === 'msp'` -> false for every row. Nothing was handback
     // eligible, so the qualified list's selection column offered no rows and
     // the single composer never rendered.
-    const item = (fields: Record<string, unknown>, relationshipId: string | null = RELATIONSHIP) =>
-      ({ tenant: TENANT, ticketId: TICKET, workspaceName: 'Customer', relationshipId, fields }) as never;
+    const item = (fields: Record<string, unknown>, relationshipId: string | null = RELATIONSHIP, canHandBack = true) =>
+      ({ tenant: TENANT, ticketId: TICKET, workspaceName: 'Customer', relationshipId, canHandBack, fields }) as never;
 
     expect(isQualifiedHandbackEligible(item({ responsibility: 'msp', work_revision: 3 }))).toBe(true);
     // Customer-responsible work is never handback-selectable from the list.
@@ -60,14 +60,19 @@ describe('ticketListIdentity', () => {
     // No revision means the command cannot freeze an identity.
     expect(isQualifiedHandbackEligible(item({ responsibility: 'msp', work_revision: null }))).toBe(false);
     // Redacted rows omit the fields entirely rather than sending nulls.
-    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP })).toBe(false);
+    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP, canHandBack: true })).toBe(false);
+  });
+
+  it('is not eligible for a viewer: canHandBack gates it even when the MSP holds the ticket', () => {
+    // A relationship_role='viewer' reads the queue but may not write it; the server says so per row.
+    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP, canHandBack: false, fields: { responsibility: 'msp', work_revision: 3 } })).toBe(false);
   });
 
   it('does not accept a flat item, which is how the eligibility bug hid', () => {
     // The regression that would have caught it. A top-level shape carries no
     // `fields`, so it must be ineligible rather than quietly true.
     expect(isQualifiedHandbackEligible(
-      { relationshipId: RELATIONSHIP, responsibility: 'msp', work_revision: 3 } as never,
+      { relationshipId: RELATIONSHIP, canHandBack: true, responsibility: 'msp', work_revision: 3 } as never,
     )).toBe(false);
   });
 });

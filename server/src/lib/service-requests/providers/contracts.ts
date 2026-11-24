@@ -21,6 +21,11 @@ export interface ServiceRequestExecutionContext {
   clientId: string;
   contactId?: string | null;
   payload: Record<string, unknown>;
+  /**
+   * The published version's form schema snapshot, which matches `payload`. Lets a provider
+   * present the answers in the order and grouping the form asked them.
+   */
+  formSchema: Record<string, unknown>;
   config: Record<string, unknown>;
 }
 

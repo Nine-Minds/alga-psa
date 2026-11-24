@@ -52,7 +52,10 @@ function queryBuilderStub(table: string) {
       return builder;
     };
   }
-  builder.select = async () => rowsForTable(table);
+  builder.select = async (...args: unknown[]) => {
+    tableCalls.current.push({ table, method: 'select', args });
+    return rowsForTable(table);
+  };
   builder.first = async () => rowsForTable(table)[0];
   return builder;
 }
@@ -274,7 +277,7 @@ describe('getIntegrationHealthAlerts', () => {
     });
   });
 
-  it('reports RMM sync errors and reconnect-required token lifecycles', async () => {
+  it('reports RMM sync errors and reconnect-required token lifecycles without exposing raw errors', async () => {
     tableRows.current.rmm_integrations = [
       {
         integration_id: 'int-1',
@@ -310,7 +313,7 @@ describe('getIntegrationHealthAlerts', () => {
         severity: 'error',
         reason: 'rmm_sync_error',
         providerName: 'NinjaOne',
-        detail: 'NinjaOne returned HTTP 500',
+        detail: 'NinjaOne',
         href: RMM_HREF,
       },
       {
@@ -323,6 +326,68 @@ describe('getIntegrationHealthAlerts', () => {
         href: RMM_HREF,
       },
     ]);
+    expect(JSON.stringify(alerts)).not.toContain('NinjaOne returned HTTP 500');
+    expect(tableCalls.current).toContainEqual({
+      table: 'rmm_integrations',
+      method: 'select',
+      args: ['integration_id', 'provider', 'sync_status', 'settings'],
+    });
+  });
+
+  it('returns no RMM alerts or protected reads for a client with settings:read', async () => {
+    sessionUser.user_type = 'client';
+    // This permission is deliberately granted to prove the action boundary,
+    // rather than the source permission, rejects client-portal callers.
+    hasPermissionMock.mockResolvedValue(true);
+    tableRows.current.rmm_integrations = [
+      {
+        integration_id: 'secret-integration-id',
+        provider: 'ninjaone',
+        sync_status: 'error',
+        sync_error: 'SECRET-PROVIDER-ERROR',
+        settings: { tokenLifecycle: { status: 'reconnect_required' } },
+      },
+    ];
+
+    const getIntegrationHealthAlerts = await loadAction();
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(tableCalls.current).not.toContainEqual(
+      expect.objectContaining({ table: 'rmm_integrations', method: 'select' })
+    );
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'settings',
+      'read',
+      expect.anything()
+    );
+  });
+
+  it('gates the RMM source with the MSP-only system_settings:read permission', async () => {
+    tableRows.current.rmm_integrations = [
+      {
+        integration_id: 'int-1',
+        provider: 'ninjaone',
+        sync_status: 'error',
+        settings: {},
+      },
+    ];
+    denyPermission('system_settings', 'read');
+
+    const getIntegrationHealthAlerts = await loadAction();
+    const alerts = await getIntegrationHealthAlerts();
+
+    expect(alerts.filter((alert) => alert.integration === 'rmm')).toEqual([]);
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_type: 'internal' }),
+      'system_settings',
+      'read',
+      expect.anything()
+    );
+    expect(tableCalls.current).not.toContainEqual(
+      expect.objectContaining({ table: 'rmm_integrations', method: 'select' })
+    );
   });
 
   it('asks only for active RMM integrations', async () => {
@@ -338,8 +403,8 @@ describe('getIntegrationHealthAlerts', () => {
     });
   });
 
-  it('returns no RMM alerts for a caller without settings:read', async () => {
-    denyPermission('settings', 'read');
+  it('returns no RMM alerts for a caller without system_settings:read', async () => {
+    denyPermission('system_settings', 'read');
     tableRows.current.rmm_integrations = [
       {
         integration_id: 'int-1',

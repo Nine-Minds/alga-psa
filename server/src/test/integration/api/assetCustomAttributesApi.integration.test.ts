@@ -31,7 +31,13 @@ async function fixture() {
   // A tenant made straight in SQL misses the onboarding seed that gives real
   // tenants their builtin statuses, and every asset write validates its slug.
   await table(tenant, 'asset_statuses').insert({ tenant, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 });
-  return { tenant, clientId, svc: service(tenant), context: { tenant, userId: uuidv4(), db } as any };
+  const userId = uuidv4();
+  return {
+    tenant,
+    clientId,
+    svc: service(tenant),
+    context: { tenant, userId, user: { user_id: userId, user_type: 'internal' }, db } as any,
+  };
 }
 async function createAsset(f: Awaited<ReturnType<typeof fixture>>, attrs: Record<string, unknown>, type = 'rmm_endpoint') {
   return f.svc.create({ client_id: f.clientId, asset_type: type, asset_tag: `tag-${uuidv4()}`, name: 'Endpoint', status: 'active', attributes: attrs } as any, f.context);

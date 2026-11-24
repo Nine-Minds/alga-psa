@@ -1,10 +1,11 @@
 import type { Session } from 'next-auth';
 
 import logger from '@alga-psa/core/logger';
+import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { headers } from 'next/headers';
 import { getSessionCookieName } from './session';
 
-export async function logSessionRejection(reason: string): Promise<void> {
+export async function logSessionRejection(reason: string, sessionId?: string): Promise<void> {
   let requestId = 'unavailable';
   try {
     const requestHeaders = await headers();
@@ -12,11 +13,13 @@ export async function logSessionRejection(reason: string): Promise<void> {
     if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
   } catch { /* Some auth callers run outside a Next request context. */ }
   logger.warn('[auth] session_rejected', { reason, requestId });
+  if (sessionId) UserSession.logLifecycle?.('rejected', sessionId, reason);
 }
 import { isInteractiveUserType } from '@alga-psa/types';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
+import { isSessionRevokedByLoginPolicy } from './passwordLoginGate';
 
 /**
  * Decoding a session cookie only proves the JWT is authentic; it says nothing
@@ -61,7 +64,7 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
     || typeof sessionId !== 'string'
     || sessionId.length === 0
   ) {
-    await logSessionRejection('missing_identity_claims');
+    await logSessionRejection('missing_identity_claims', typeof sessionId === 'string' ? sessionId : undefined);
     return null;
   }
 
@@ -71,15 +74,38 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
       userType,
     });
     if (rejectionReason) {
-      await logSessionRejection(`durable_session_${rejectionReason}`);
+      await logSessionRejection(`durable_session_${rejectionReason}`, sessionId);
       return null;
     }
   } catch {
-    await logSessionRejection('durable_session_lookup_unavailable');
+    await logSessionRejection('durable_session_lookup_unavailable', sessionId);
     logger.error('[auth] Session revocation check failed closed');
     return null;
   }
 
+  // The edge-decoded path never runs the jwt callback, so the SSO-required
+  // cutoff is enforced here too. Uses the cached policy and fails open on an
+  // unreadable policy (same as the jwt callback).
+  if (
+    await isSessionRevokedByLoginPolicy({
+      tenant,
+      userId,
+      userType,
+      loginMethod: (session as { login_method?: unknown }).login_method,
+      authIssuedAtMs: (session as { auth_issued_at?: unknown }).auth_issued_at,
+    })
+  ) {
+    await logSessionRejection('login_policy_sso_required');
+    return null;
+  }
+
+  if (userType === 'internal' && !getApiKeyUserOverride()) {
+    const { admitSeatTrialSession } = await import('@enterprise/lib/co-managed/seatTrialSession');
+    if (!await admitSeatTrialSession(tenant, userId, sessionId)) {
+      await logSessionRejection('seat_trial_access');
+      return null;
+    }
+  }
   return session;
 }
 

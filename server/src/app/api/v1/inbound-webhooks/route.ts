@@ -12,10 +12,11 @@ import {
   handleApiError,
   isServerActionErrorResult,
 } from 'server/src/lib/api/middleware/apiMiddleware';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const webhooks = await listInboundWebhooks();
+    const webhooks = await runWithApiKeyOrSession(request, () => listInboundWebhooks());
     if (isServerActionErrorResult(webhooks)) {
       return createServerActionErrorResponse(webhooks);
     }
@@ -28,7 +29,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const input = await request.json();
-    const result = await upsertInboundWebhook(input);
+    const result = await runWithApiKeyOrSession(request, () => upsertInboundWebhook(input));
     if (isServerActionErrorResult(result)) {
       return createServerActionErrorResponse(result);
     }

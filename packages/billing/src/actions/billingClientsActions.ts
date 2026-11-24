@@ -1,10 +1,10 @@
 'use server';
 
+import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
 import {
-  getAllClients,
   getAllClientsPaginated,
   getClientsWithBillingCycleRangePaginated,
   getClientById,
@@ -143,22 +143,6 @@ async function requireClientReadPermission(user: IUserWithRoles): Promise<void> 
   }
 }
 
-export const getAllClientsForBilling = withAuth(async (
-  user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[] | BillingClientsActionError> => {
-  return withBillingClientsActionErrors(async () => {
-    await requireClientReadPermission(user);
-  const { knex } = await createTenantKnex();
-  const clients = await getAllClients(knex, tenant, includeInactive);
-  return attachClientLogos(clients, tenant);
-  });
-});
-
-/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
-export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
-
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,
   { tenant },
@@ -168,7 +152,7 @@ export const getAllClientsPaginatedForBilling = withAuth(async (
     await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getAllClientsPaginated(knex, tenant, params);
-  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  return { ...response, clients: await projectClientsForSubject(user, await attachClientLogos(response.clients, tenant)) };
   });
 });
 
@@ -181,7 +165,7 @@ export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async
     await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getClientsWithBillingCycleRangePaginated(knex, tenant, params);
-  return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  return { ...response, clients: await projectClientsForSubject(user, await attachClientLogos(response.clients, tenant)) };
   });
 });
 
@@ -200,9 +184,12 @@ export const getClientByIdForBilling = withAuth(async (
   // Resolve the uploaded logo so the client drawer (e.g. from a contract) shows
   // the real logo, not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return { ...client, logoUrl };
+  return projectClientForSubject(user, { ...client, logoUrl });
   });
 });
+
+/** Same by-id read for the draft adjustment loader, with auth rejection kept serializable. */
+export const getClientByIdForBillingRecoverable = withSerializableAuth(getClientByIdForBilling);
 
 export const getClientContractsForBilling = withAuth(async (
   user,

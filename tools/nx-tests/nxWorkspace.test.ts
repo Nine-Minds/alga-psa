@@ -4,42 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseTrailingJsonArray, runNx, workspaceRoot } from './nxTestUtils';
 
 const execFileAsync = promisify(execFile);
-const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
-
-async function runNx(args: string[]) {
-  const { stdout } = await execFileAsync(nxBin, args, {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NX_DAEMON: 'false',
-      NX_ISOLATE_PLUGINS: 'false',
-      CI: 'true',
-      // Nx loads Playwright configs while building the project graph. In some restricted
-      // environments, binding/listening on ports is not permitted (EPERM), so force a
-      // locked port to avoid probing during config evaluation.
-      PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT || '3300',
-      PLAYWRIGHT_APP_PORT_LOCKED: 'true',
-    },
-    encoding: 'utf8',
-    timeout: 180_000,
-    maxBuffer: 8 * 1024 * 1024,
-  });
-  return stdout;
-}
-
-function parseTrailingJsonArray(output: string): string[] {
-  const start = output.lastIndexOf('[');
-  const end = output.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error(`Expected JSON array in output. Output:\n${output}`);
-  }
-  const json = output.slice(start, end + 1);
-  const parsed = JSON.parse(json);
-  if (!Array.isArray(parsed)) throw new Error(`Expected JSON array, got: ${typeof parsed}`);
-  return parsed as string[];
-}
 
 describe('nx workspace', () => {
   it('initializes and lists projects', { timeout: 120_000 }, async () => {
@@ -56,13 +23,97 @@ describe('nx workspace', () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-graph-'));
     const outFile = path.join(tmpDir, 'graph.html');
 
-    await runNx(['graph', '--file', outFile, '--focus', 'server']);
+    try {
+      // HTML output embeds a task graph plus expanded task inputs. Without
+      // --targets, Nx builds that for every target of every project and expands
+      // each task's inputs against the whole workspace file list (--focus only
+      // narrows the project view), so the cost grows with the repo and drifted
+      // past the timeout. Scoping to the build target keeps the same generation
+      // path while bounding the work.
+      await runNx(['graph', '--file', outFile, '--focus', 'server', '--targets', 'build']);
 
-    const stat = fs.statSync(outFile);
-    expect(stat.size).toBeGreaterThan(0);
+      expect(fs.statSync(outFile).size).toBeGreaterThan(0);
+      expect(fs.readFileSync(outFile, 'utf8')).toContain('static/environment.js');
+
+      const environment: Record<string, any> = {};
+      new Function('window', fs.readFileSync(path.join(tmpDir, 'static', 'environment.js'), 'utf8'))(environment);
+
+      const projectNames = environment.projectGraphResponse.projects.map((p: { name: string }) => p.name);
+      expect(projectNames).toContain('server');
+
+      const { taskGraph, error } = environment.taskGraphResponse;
+      expect(error).toBeNull();
+      const taskIds = Object.keys(taskGraph.tasks);
+      expect(taskIds).toContain('server:build');
+      expect(taskIds.every((id) => id.split(':')[1] === 'build')).toBe(true);
+      expect(environment.expandedTaskInputsResponse['server:build']).toBeDefined();
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('generates a package graph that passes the circular dependency gate', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-cycles-'));
+    try {
+      const outFile = path.join(tmpDir, 'graph.json');
+      await runNx(['graph', '--file', outFile]);
+      // Test-only fixtures and locale resources participate in Nx dependency
+      // analysis too, and must not introduce application build cycles.
+      await execFileAsync(process.execPath, [
+        'scripts/check-circular-deps.mjs', outFile,
+        '--baseline', '.github/known-cycles.json',
+      ], { cwd: workspaceRoot, encoding: 'utf8' });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('plans standalone database builds without application or worker tasks', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-db-build-'));
+    try {
+      const outFile = path.join(tmpDir, 'tasks.json');
+      await runNx(['run', '@alga-psa/db:build', '--graph', outFile]);
+      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+      // Even test imports contribute Nx project edges. DB tests must not pull
+      // their application consumers back into the database build plan.
+      expect(targets).toContainEqual(expect.objectContaining({
+        project: '@alga-psa/db', target: 'build',
+      }));
+      expect(targets.some(target => ['server', 'sebastian-ee', 'temporal-workflows'].includes(target.project))).toBe(false);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps shared dependencies below its auth and feature consumers', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-shared-deps-'));
+    try {
+      const outFile = path.join(tmpDir, 'graph.json');
+      await runNx(['graph', '--file', outFile]);
+      const { graph } = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const projects = new Set<string>();
+      function visit(project: string) {
+        if (projects.has(project)) return;
+        projects.add(project);
+        for (const { target } of graph.dependencies[project] ?? []) visit(target);
+      }
+      visit('@alga-psa/shared');
+      expect(projects).toContain('@alga-psa/shared');
+      expect(projects).toContain('@alga-psa/authorization');
+      for (const consumer of ['@alga-psa/auth', '@alga-psa/projects', '@alga-psa/documents', 'server', 'sebastian-ee']) {
+        expect(projects).not.toContain(consumer);
+      }
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it('plans dependency builds without prematurely building the server', { timeout: 180_000 }, async () => {
+    // LEVERAGE: pattern nx-build-plan-fixture — task graph fixtures repeat across build boundary checks
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-build-deps-'));
     try {
       const outFile = path.join(tmpDir, 'tasks.json');
@@ -86,24 +137,28 @@ describe('nx workspace', () => {
     }
   });
 
-  it('plans standalone integrations builds without pulling in the server', { timeout: 180_000 }, async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-integrations-build-'));
-    try {
-      const outFile = path.join(tmpDir, 'tasks.json');
-      await runNx(['run', '@alga-psa/integrations:build', '--graph', outFile]);
-      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
-      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
-      expect(targets).toContainEqual(expect.objectContaining({
-        project: '@alga-psa/integrations', target: 'build',
-      }));
-      // Cross-implementation calendar tests belong to the application layer:
-      // importing server implementations from the package creates build cycles.
-      expect(targets.some(target => target.project === 'server')).toBe(false);
-      expect(targets.some(target => target.project === 'sebastian-ee')).toBe(false);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
+  it.each(['@alga-psa/integrations', '@alga-psa/assets'])(
+    'plans standalone %s builds without pulling in the server',
+    { timeout: 180_000 },
+    async (project) => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-package-build-'));
+      try {
+        const outFile = path.join(tmpDir, 'tasks.json');
+        await runNx(['run', `${project}:build`, '--graph', outFile]);
+        const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+        const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+        expect(targets).toContainEqual(expect.objectContaining({
+          project, target: 'build',
+        }));
+        // Package fixtures must use lower-layer test helpers: importing server
+        // implementations from a package creates application build cycles.
+        expect(targets.some(target => target.project === 'server')).toBe(false);
+        expect(targets.some(target => target.project === 'sebastian-ee')).toBe(false);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it('runs the alga-module generator in dry-run mode', { timeout: 120_000 }, async () => {
     const output = await runNx([

@@ -29,6 +29,7 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' },
   { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' },
   { i18nKey: 'labels.locationSubtotal', defaultValue: 'Location Subtotal' },
+  { i18nKey: 'labels.unassignedLocation', defaultValue: 'Quote-wide' },
   { i18nKey: 'labels.monthly', defaultValue: 'Monthly' },
   { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
   { i18nKey: 'labels.monthlyTotal', defaultValue: 'Monthly Total' },
@@ -69,6 +70,7 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.sku', defaultValue: 'SKU' },
   { i18nKey: 'labels.source', defaultValue: 'Source' },
   { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' },
+  { i18nKey: 'labels.subtotalBeforeDiscounts', defaultValue: 'Subtotal Before Discounts' },
   { i18nKey: 'labels.tax', defaultValue: 'Tax' },
   { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
   { i18nKey: 'labels.ticket', defaultValue: 'Ticket' },
@@ -107,6 +109,8 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.shipping', defaultValue: 'Shipping' },
   { i18nKey: 'labels.returnBy', defaultValue: 'Return by' },
   { i18nKey: 'labels.returnShipTo', defaultValue: 'Return ship to' },
+  { i18nKey: 'labels.yes', defaultValue: 'Yes' },
+  { i18nKey: 'labels.no', defaultValue: 'No' },
 ];
 
 const byKey = new Map(STANDARD_DOCUMENT_LABELS.map((label) => [label.i18nKey, label] as const));

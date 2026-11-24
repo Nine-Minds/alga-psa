@@ -62,7 +62,9 @@ export function ActivitiesCardsView({ filterState, filterOptions, focusNotificat
   const selected = filters.types ?? [];
   const shows = (type: ActivityType) => selected.length === 0 || selected.includes(type);
 
-  const common = { filters, targetUserId, readOnly };
+  // Sections stay in their loading state until the saved filters have resolved, so the first
+  // query is already the filtered one (Notifications has its own filter model and is exempt).
+  const common = { filters, targetUserId, readOnly, filtersReady: filterState.isReady };
 
   const filterBar = (
     <div className="mb-4">

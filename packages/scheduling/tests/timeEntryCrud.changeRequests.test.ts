@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// The client-scope create gate needs a real connection; it is covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined), assertWorkItemParentAllowed: vi.fn(async () => undefined) }));
 import { ZodError } from 'zod';
+import { commercialTimeEntrySql, isCommercialTimeEntry } from '@alga-psa/types';
 
 const createTenantKnexMock = vi.fn();
 const hasPermissionMock = vi.fn();
@@ -20,6 +24,7 @@ const resolveContractLineSelectionMock = vi.fn(async () => ({
 // The human-work guard is covered against a real database in T043; this fake DB has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
+  timeEntryWorkItem: vi.fn(() => ({ kind: 'unscoped', surface: 'time_entry' })),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
@@ -44,6 +49,12 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+// The save resolves the principal's billing mode from the admin connection; this suite is an ordinary (non-seat) user.
+vi.mock('@shared/services/productPrincipal', () => ({ loadProductPrincipal: async () => ({ rawProductCode: 'psa', surfaceKind: null }) }));
+vi.mock('../src/lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
   assertCanActOnBehalf: (...args: any[]) => assertCanActOnBehalfMock(...args),
 }));
@@ -172,11 +183,18 @@ function createFetchEntriesDbStub() {
     }
 
     if (table === 'time_entries') {
+      const rowFilters: Array<(row: any) => boolean> = [];
       const builder: any = {
         leftJoin() {
           return builder;
         },
         where() {
+          return builder;
+        },
+        // The shared commercial-read predicate (S28 / F068), applied to the rows as SQL would.
+        whereRaw(sql: string) {
+          if (sql !== commercialTimeEntrySql('time_entries')) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+          rowFilters.push(isCommercialTimeEntry);
           return builder;
         },
         orderBy() {
@@ -186,6 +204,7 @@ function createFetchEntriesDbStub() {
           return Promise.resolve([
             {
               entry_id: 'entry-1',
+              billing_mode: 'commercial',
               work_item_id: null,
               work_item_type: 'non_billable_category',
               start_time: new Date('2026-03-10T09:00:00.000Z'),
@@ -201,7 +220,26 @@ function createFetchEntriesDbStub() {
               work_date: '2026-03-10',
               service_id: undefined,
             },
-          ]);
+            {
+              // A seat technician's operational entry on the same sheet: never shown to someone else reading it.
+              entry_id: 'entry-operational',
+              billing_mode: 'operational',
+              work_item_id: null,
+              work_item_type: 'non_billable_category',
+              start_time: new Date('2026-03-10T11:00:00.000Z'),
+              end_time: new Date('2026-03-10T12:00:00.000Z'),
+              created_at: new Date('2026-03-10T11:00:00.000Z'),
+              updated_at: new Date('2026-03-10T12:00:00.000Z'),
+              billable_duration: 0,
+              notes: 'Operational time',
+              user_id: 'user-1',
+              time_sheet_id: 'sheet-1',
+              approval_status: 'DRAFT',
+              tenant: 'tenant-1',
+              work_date: '2026-03-10',
+              service_id: undefined,
+            },
+          ].filter((row) => rowFilters.every((keep) => keep(row))));
         },
       };
 
@@ -561,7 +599,8 @@ describe('time entry change-request action integration', () => {
       'sheet-1',
     );
 
-    expect(result).toHaveLength(1);
+    // The viewer is not the sheet's owner, so the operational entry on it is left out.
+    expect(result.map((entry: any) => entry.entry_id)).toEqual(['entry-1']);
     expect(result[0].latest_change_request?.change_request_id).toBe('cr-1');
     expect(result[0].change_request_state).toBe('unresolved');
     expect(result[0].change_requests?.[0].comment).toBe('Please split out the admin block.');

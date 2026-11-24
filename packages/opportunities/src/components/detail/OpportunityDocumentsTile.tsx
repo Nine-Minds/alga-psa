@@ -53,9 +53,12 @@ function formatFileSize(bytes?: number): string {
 export function OpportunityDocumentsTile({
   id = 'opportunity-detail-documents-tile',
   opportunityId,
+  onDocumentsChanged,
 }: {
   id?: string;
   opportunityId: string;
+  /** Called after the attached document set is reloaded following a mutation. */
+  onDocumentsChanged?: () => void;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const { data: session } = useSession();
@@ -79,6 +82,11 @@ export function OpportunityDocumentsTile({
       setIsLoading(false);
     }
   }, [getDocumentsByEntity, opportunityId]);
+
+  const refreshAfterDocumentMutation = useCallback(async () => {
+    await loadDocuments();
+    onDocumentsChanged?.();
+  }, [loadDocuments, onDocumentsChanged]);
 
   useEffect(() => {
     void loadDocuments();
@@ -162,7 +170,7 @@ export function OpportunityDocumentsTile({
             documentToOpen: viewingDocument,
             drawerOnly: true,
             onDocumentClosed: () => setViewingDocument(null),
-            onDocumentCreated: loadDocuments,
+            onDocumentCreated: refreshAfterDocumentMutation,
           })
         : null}
 
@@ -183,7 +191,7 @@ export function OpportunityDocumentsTile({
             entityId: opportunityId,
             entityType: 'opportunity',
             isLoading,
-            onDocumentCreated: loadDocuments,
+            onDocumentCreated: refreshAfterDocumentMutation,
           })}
         </ContentCardVariantProvider>
       </Dialog>

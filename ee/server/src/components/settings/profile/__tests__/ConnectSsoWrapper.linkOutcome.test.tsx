@@ -102,13 +102,13 @@ describe('ConnectSsoWrapper with no configured provider', () => {
     await noProviders();
     sso.canConfigure.mockResolvedValueOnce(true);
     render(<ConnectSsoWrapper />);
-    expect(await screen.findByRole('button', { name: 'Set up an SSO provider' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Set up Microsoft' })).toBeTruthy();
   });
 
   it('keeps asking a non-administrator to contact their administrator', async () => {
     await noProviders();
     render(<ConnectSsoWrapper />);
-    await screen.findByText(/Ask your administrator to configure Google or Microsoft credentials/);
-    expect(screen.queryByRole('button', { name: 'Set up an SSO provider' })).toBeNull();
+    await screen.findByText(/Ask your administrator to set one up/);
+    expect(screen.queryByRole('button', { name: 'Set up Microsoft' })).toBeNull();
   });
 });

@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:05.864 --> 00:00:11.256
+Accessible opening and review status
+
+2
+00:00:11.256 --> 00:00:16.262
+Board A route and matching sender header
+
+3
+00:00:16.262 --> 00:00:21.351
+Board B route and distinct sender header
+
+4
+00:00:21.351 --> 00:00:26.376
+Queued observation and final sent audit records
+
+5
+00:00:26.376 --> 00:00:31.390
+SMTP refusal, failed audit and worker IDs
+
+6
+00:00:31.390 --> 00:00:36.427
+In-app notifications remain functional
+
+7
+00:00:36.427 --> 00:00:40.235
+Repeatable setup and exact commands

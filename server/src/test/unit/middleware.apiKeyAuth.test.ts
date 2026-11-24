@@ -41,6 +41,16 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
   });
 
+  it('lets the resumable document upload routes authenticate in their handlers, and only those shapes', () => {
+    const id = '0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c';
+    expect(shouldSkipApiKeyAuth('/api/documents/uploads')).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/other`)).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete/extra`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/documents/uploadsevil')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -92,6 +102,12 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/email/refresh-watch')).toBe(true);
   });
 
+  it('lets IMAP maintenance routes authenticate their own browser session', () => {
+    expect(shouldSkipApiKeyAuth('/api/email/imap/resync')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/email/imap/reconnect')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/email/imap')).toBe(false);
+  });
+
   it('allows workflow run APIs to use MSP session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/workflow-runs')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/workflow-runs/run-123/audit/export')).toBe(true);
@@ -115,6 +131,13 @@ describe('shouldSkipApiKeyAuth', () => {
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/export')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/export/evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/exportevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
   });
 
   it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
@@ -141,6 +164,7 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments/0ad8e710-13bc-4e01-a6ca-3f8992978ae8')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
@@ -148,5 +172,15 @@ describe('shouldSkipApiKeyAuth', () => {
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
+  });
+
+  it('exempts exactly the two co-managed attachment download routes', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments')).toBe(false);
   });
 });

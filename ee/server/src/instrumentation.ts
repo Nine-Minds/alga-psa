@@ -6,6 +6,15 @@ export async function register() {
   }
   // Only initialize on the server side
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Register the billing catalog context loader with @alga-psa/licensing before anything can reach the
+    // co-managed gate (pages, server actions, API routes). Import side effect; the CE alias registers nothing.
+    // Kept ahead of initializeApp so a failure there cannot leave the gate on the env fallback.
+    try {
+      await import('@enterprise/lib/stripe/offerCatalog/surfaceProbe');
+    } catch (error) {
+      console.error('Failed to register the billing catalog context loader:', error);
+    }
+
     try {
       const { initializeApp } = await import('@/lib/initializeApp');
       await initializeApp();

@@ -5,8 +5,16 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { releaseStagingForTask, releaseStagingForTasks } from '@alga-psa/inventory/lib';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import {
+  addMaterial,
+  deleteMaterial,
+  InsufficientStockError,
+  listMaterials,
+  MaterialValidationError,
+  releaseStagingForTask,
+  releaseStagingForTasks,
+} from '@alga-psa/inventory/lib';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, registerAfterCommit, withViaPrincipal } from '@alga-psa/db';
 import { 
   IProject, 
   IProjectPhase, 
@@ -16,7 +24,7 @@ import {
   IProjectTicketLink,
   ProjectStatus
 } from 'server/src/interfaces/project.interfaces';
-import type { ProjectServiceSource } from '@alga-psa/types';
+import type { IProjectMaterial, ProjectServiceSource } from '@alga-psa/types';
 import {
   effectiveServiceIdSql,
   effectiveServiceNameSql,
@@ -27,6 +35,7 @@ import {
   UpdateProjectData,
   ProjectFilterData,
   CreateProjectPhaseData,
+  CreateProjectMaterialData,
   UpdateProjectPhaseData,
   CreateProjectTaskData,
   UpdateProjectTaskData,
@@ -37,6 +46,7 @@ import {
   ProjectExportQuery
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
@@ -129,6 +139,11 @@ function scopedTable<Row extends object = Record<string, any>>(
   return tenantDb(conn, tenant).table<Row>(tableExpression) as Knex.QueryBuilder<any, any>;
 }
 
+/** rate is a bigint column (the driver returns a string); the REST contract documents integer minor units. */
+function normalizeProjectMaterial<T extends { rate?: unknown }>(material: T): T {
+  return { ...material, rate: Number(material.rate) };
+}
+
 async function resolveUserName(
   trx: Knex.Transaction,
   tenant: string,
@@ -209,52 +224,52 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       const query = scopedTable<IProject>(knex, context.tenant, this.tableName);
 
-      // Common + project-specific range filters (created_*, updated_*,
-      // start_date_*, end_date_*). Unsupported range keys fail loudly.
+      // Every predicate below goes through the policy guard: a filter or search over a column the caller's
+      // redactions hide matches nothing, so it cannot confirm a hidden value.
+      // LEVERAGE: pattern filter-key-to-response-field — each `if (filters.x) guard.filter(query, col, ...)` repeats the
+      // key->column->field mapping that TicketService keeps as a table; a shared filter-spec layer would remove it.
+      const guard = await createPredicateGuard(knex, context, 'project');
+      const col = (name: string) => `${this.tableName}.${name}`;
       if (filters) {
-        this.applyRangeFilters(query, filters);
-      }
-  
-      // Apply filters
-      if (filters) {
+        // All declared ranges use the same policy guard as scalar predicates, including the cloned count query.
+        this.applyRangeFilters(query, filters, undefined, (q, column, operator, value) => {
+          guard.filter(q, column, (builder, readableColumn) => {
+            if (operator === '>=') builder.where(readableColumn, '>=', value as any);
+            else builder.where(readableColumn, '<=', value as any);
+          });
+        });
         if (filters.project_name) {
-          query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+          guard.filter(query, col('project_name'), (q, c) => { q.where(c, 'ilike', `%${filters.project_name}%`); });
         }
         if (filters.client_id) {
-          query.where(`${this.tableName}.client_id`, filters.client_id);
+          guard.filter(query, col('client_id'), (q, c) => { q.where(c, filters.client_id); });
         }
         if (filters.status) {
-          query.where(`${this.tableName}.status`, filters.status);
+          guard.filter(query, col('status'), (q, c) => { q.where(c, filters.status); });
         }
         if (filters.is_inactive !== undefined) {
-          query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+          guard.filter(query, col('is_inactive'), (q, c) => { q.where(c, filters.is_inactive); });
         }
         if (filters.assigned_to) {
-        query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
-      }
-      if (filters.contact_name_id) {
-        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
-      }
-      if (filters.is_closed !== undefined) {
-        query.where(`${this.tableName}.is_closed`, filters.is_closed);
-      }
-      if (filters.has_assignment !== undefined) {
-        if (filters.has_assignment) {
-          query.whereNotNull(`${this.tableName}.assigned_to`);
-        } else {
-          query.whereNull(`${this.tableName}.assigned_to`);
+          guard.filter(query, col('assigned_to'), (q, c) => { q.where(c, filters.assigned_to); });
+        }
+        if (filters.contact_name_id) {
+          guard.filter(query, col('contact_name_id'), (q, c) => { q.where(c, filters.contact_name_id); });
+        }
+        if (filters.is_closed !== undefined) {
+          guard.filter(query, col('is_closed'), (q, c) => { q.where(c, filters.is_closed); });
+        }
+        if (filters.has_assignment !== undefined) {
+          guard.filter(query, col('assigned_to'), (q, c) => {
+            if (filters.has_assignment) q.whereNotNull(c); else q.whereNull(c);
+          });
         }
       }
+
+      if (filters?.search) {
+        guard.search(query, [col('project_name'), col('description')], String(filters.search));
       }
-  
-      // Apply search from filters
-    if (filters?.search) {
-      query.where(subQuery => {
-        subQuery.where(`${this.tableName}.project_name`, 'ilike', `%${filters.search}%`)
-          .orWhere(`${this.tableName}.description`, 'ilike', `%${filters.search}%`);
-      });
-    }
-  
+
       // Get total count for pagination
       const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
   
@@ -676,6 +691,113 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
+  // Project materials: thin callers of the shared inventory cores (packages/inventory/src/lib/materials.ts),
+  // the same ones the project server actions call. Stock, serialized-unit and validation rules live there.
+
+  /** Lists a project's materials with product name and SKU. Catalog unit cost is not part of the REST shape. */
+  async getProjectMaterials(projectId: string, context: ServiceContext): Promise<IProjectMaterial[]> {
+    const knex = await this.getDbForContext(context);
+    const rows = await listMaterials(knex, context.tenant, 'project', projectId);
+    return rows.map(({ catalog_unit_cost: _cost, catalog_cost_currency: _costCurrency, ...material }: any) =>
+      normalizeProjectMaterial(material)) as IProjectMaterial[];
+  }
+
+  /**
+   * Adds a material through the shared addMaterial core. client_id comes from the project inside the core
+   * (never from the body), and allow_reserved_override is never passed: reserved or held stock is refused.
+   */
+  async addProjectMaterial(
+    projectId: string,
+    data: CreateProjectMaterialData,
+    context: ServiceContext,
+  ): Promise<IProjectMaterial> {
+    const knex = await this.getDbForContext(context);
+
+    let created: { project_material_id?: string };
+    try {
+      created = (await addMaterial(
+        knex,
+        context.tenant,
+        {
+          parent_type: 'project',
+          parent_id: projectId,
+          service_id: data.service_id,
+          quantity: data.quantity,
+          rate: data.rate,
+          currency_code: data.currency_code,
+          description: data.description ?? null,
+          unit_id: data.unit_id ?? null,
+          billing_destination: data.billing_destination,
+          billing_schedule_entry_id: data.billing_schedule_entry_id ?? null,
+        },
+        context.userId ?? null,
+      )) as { project_material_id?: string };
+    } catch (error) {
+      const name = (error as Error)?.name;
+      if (error instanceof MaterialValidationError || name === 'MaterialValidationError') {
+        const e = error as MaterialValidationError;
+        if (e.path === 'project_id') {
+          throw new NotFoundError('Project not found');
+        }
+        throw new ValidationError('Validation failed', [{ path: [e.path], message: e.message }]);
+      }
+      // Stock that is short, reserved for or held by a sales order is a clean refusal on quantity.
+      if (error instanceof InsufficientStockError || name === 'InsufficientStockError') {
+        throw new ValidationError('Validation failed', [{ path: ['quantity'], message: (error as Error).message }]);
+      }
+      throw error;
+    }
+
+    const material = await this.getProjectMaterialById(created.project_material_id as string, context);
+    if (!material) {
+      throw new Error('Created material could not be loaded');
+    }
+    return material;
+  }
+
+  /**
+   * Deletes a material and restores its stock through the shared deleteMaterial core. The core takes only the
+   * material id, so ownership is confirmed here first: a material of another project (or tenant) is a 404 and
+   * is never touched.
+   */
+  async deleteProjectMaterial(projectId: string, materialId: string, context: ServiceContext): Promise<void> {
+    const knex = await this.getDbForContext(context);
+
+    const owned = await scopedTable(knex, context.tenant, 'project_materials')
+      .where({ project_material_id: materialId, project_id: projectId })
+      .first('project_material_id');
+    if (!owned) {
+      throw new NotFoundError('Project material not found');
+    }
+
+    let deleted: boolean;
+    try {
+      deleted = await deleteMaterial(knex, context.tenant, 'project', materialId, context.userId ?? null);
+    } catch (error) {
+      // LEVERAGE: friction material-billed-delete-untyped — deleteMaterial throws a bare Error for billed materials, so callers match its message text.
+      if ((error as Error)?.message === 'Cannot delete a billed material.') {
+        throw new ConflictError((error as Error).message);
+      }
+      throw error;
+    }
+    if (!deleted) {
+      throw new NotFoundError('Project material not found');
+    }
+  }
+
+  private async getProjectMaterialById(materialId: string, context: ServiceContext): Promise<IProjectMaterial | null> {
+    const knex = await this.getDbForContext(context);
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('project_materials as pm') as Knex.QueryBuilder<any, any>;
+    db.tenantJoin(query, 'service_catalog as sc', 'pm.service_id', 'sc.service_id', { type: 'left' });
+    const material = await query
+      .where({ 'pm.project_material_id': materialId })
+      .select('pm.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .first();
+    return material ? (normalizeProjectMaterial(material) as IProjectMaterial) : null;
+  }
+
+
   // Project tasks
   async getTasks(projectId: string, context: ServiceContext): Promise<IProjectTask[]> {
       const knex = await this.getDbForContext(context);
@@ -787,10 +909,10 @@ export class ProjectService extends BaseService<IProject> {
         };
   
         // Human-work guard: a task's assignee must be an active internal user.
-        await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to], { kind: 'project_phase', phaseId });
 
         const [task] = await db.table('project_tasks')
-          .insert(taskData)
+          .insert(withViaPrincipal(context, taskData, 'created_via_principal_id'))
           .returning('*');
 
         const occurredAt = task.created_at instanceof Date ? task.created_at : new Date();
@@ -868,7 +990,7 @@ export class ProjectService extends BaseService<IProject> {
         // Human-work guard: only when this write changes assigned_to (legacy references untouched).
         const requestedAssignee = (updateData as { assigned_to?: string | null }).assigned_to;
         if (requestedAssignee && requestedAssignee !== beforeTask.assigned_to) {
-          await assertHumanWorkAssignee(trx, context.tenant, [requestedAssignee]);
+          await assertHumanWorkAssignee(trx, context.tenant, [requestedAssignee], { kind: 'project_task', taskId });
         }
 
         const [task] = await db.table('project_tasks')
@@ -1193,40 +1315,30 @@ export class ProjectService extends BaseService<IProject> {
       const db = tenantDb(knex, context.tenant);
       const query = db.table(tableName);
   
-      // Build search query
-      if (searchData.fields && searchData.fields.length > 0) {
-        query.where(function() {
-          searchData.fields!.forEach(field => {
-            if (field === 'client_name') {
-              this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
-            } else {
-              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-            }
-          });
-        });
-      } else {
-        // Default search across all text fields
-        query.where(function() {
-          this.orWhere(`${tableName}.project_name`, 'ilike', `%${searchData.query}%`)
-            .orWhere(`${tableName}.description`, 'ilike', `%${searchData.query}%`)
-            .orWhere(`${tableName}.wbs_code`, 'ilike', `%${searchData.query}%`);
-        });
-      }
-  
+      // Search columns come from the policy guard: hidden columns drop out of the match set, whether they were
+      // defaulted or named explicitly in `fields`.
+      const guard = await createPredicateGuard(knex, context, 'project');
+      const searchColumns = searchData.fields && searchData.fields.length > 0
+        ? searchData.fields.map(field => field === 'client_name'
+            ? { column: 'clients.client_name', field: 'client_name' }
+            : { column: `${tableName}.${field}`, field })
+        : ['project_name', 'description', 'wbs_code'].map(field => `${tableName}.${field}`);
+      guard.search(query, searchColumns, searchData.query);
+
       // Apply filters
       if (searchData.status && searchData.status.length > 0) {
-        query.whereIn(`${tableName}.status`, searchData.status);
+        guard.filter(query, `${tableName}.status`, (q, c) => { q.whereIn(c, searchData.status!); });
       }
       if (searchData.client_ids && searchData.client_ids.length > 0) {
-        query.whereIn(`${tableName}.client_id`, searchData.client_ids);
+        guard.filter(query, `${tableName}.client_id`, (q, c) => { q.whereIn(c, searchData.client_ids!); });
       }
       if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
-        query.whereIn(`${tableName}.assigned_to`, searchData.assigned_to_ids);
+        guard.filter(query, `${tableName}.assigned_to`, (q, c) => { q.whereIn(c, searchData.assigned_to_ids!); });
       }
       if (!searchData.include_inactive) {
-        query.where(`${tableName}.is_inactive`, false);
+        guard.filter(query, `${tableName}.is_inactive`, (q, c) => { q.where(c, false); });
       }
-  
+
       // Add client join for client name search
       db.tenantJoin(query, 'clients', `${tableName}.client_id`, 'clients.client_id', { type: 'left' });
       query
@@ -1489,27 +1601,28 @@ export class ProjectService extends BaseService<IProject> {
       )
       .orderBy(`${tableName}.project_name`);
 
-    // Apply filters
+    // Apply filters through the policy guard (hidden columns match nothing)
+    const guard = await createPredicateGuard(knex, context, 'project');
     if (filters.project_name) {
-      query.where(`${tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+      guard.filter(query, `${tableName}.project_name`, (q, c) => { q.where(c, 'ilike', `%${filters.project_name}%`); });
     }
     if (filters.client_id) {
-      query.where(`${tableName}.client_id`, filters.client_id);
+      guard.filter(query, `${tableName}.client_id`, (q, c) => { q.where(c, filters.client_id); });
     }
     if (filters.status) {
-      query.where(`${tableName}.status`, filters.status);
+      guard.filter(query, `${tableName}.status`, (q, c) => { q.where(c, filters.status); });
     }
     if (filters.assigned_to) {
-      query.where(`${tableName}.assigned_to`, filters.assigned_to);
+      guard.filter(query, `${tableName}.assigned_to`, (q, c) => { q.where(c, filters.assigned_to); });
     }
     if (filters.start_date_from) {
-      query.where(`${tableName}.start_date`, '>=', filters.start_date_from);
+      guard.filter(query, `${tableName}.start_date`, (q, c) => { q.where(c, '>=', filters.start_date_from); });
     }
     if (filters.start_date_to) {
-      query.where(`${tableName}.start_date`, '<=', filters.start_date_to);
+      guard.filter(query, `${tableName}.start_date`, (q, c) => { q.where(c, '<=', filters.start_date_to); });
     }
     if (filters.is_inactive !== undefined) {
-      query.where(`${tableName}.is_inactive`, filters.is_inactive);
+      guard.filter(query, `${tableName}.is_inactive`, (q, c) => { q.where(c, filters.is_inactive); });
     }
 
     const projects = await query;
@@ -1677,8 +1790,8 @@ export class ProjectService extends BaseService<IProject> {
   /**
    * One task with the names a detail view needs: phase and project, the
    * resolved status (custom mapping name, then project status, then standard),
-   * and the assignee. Mobile opens tasks by id from pushes and deep links, so
-   * the row has to stand on its own.
+   * the assignee and the priority. Mobile opens tasks by id from pushes and
+   * deep links, so the row has to stand on its own.
    */
   async getTaskById(taskId: string, context: ServiceContext): Promise<(IProjectTask & {
     phase_name?: string | null;
@@ -1688,6 +1801,7 @@ export class ProjectService extends BaseService<IProject> {
     status_name?: string | null;
     is_closed?: boolean;
     assigned_user_name?: string | null;
+    priority_name?: string | null;
     effective_service_id?: string | null;
     service_source?: ProjectServiceSource | null;
     service_name?: string | null;
@@ -1702,6 +1816,7 @@ export class ProjectService extends BaseService<IProject> {
     db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
     db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
     db.tenantJoin(query, 'users as assignee', 'project_tasks.assigned_to', 'assignee.user_id', { type: 'left' });
+    db.tenantJoin(query, 'priorities as pri', 'project_tasks.priority_id', 'pri.priority_id', { type: 'left' });
     // One catalog join per level so the name matches the id the COALESCE picked.
     db.tenantJoin(query, 'service_catalog as task_service', 'project_tasks.service_id', 'task_service.service_id', { type: 'left' });
     db.tenantJoin(query, 'service_catalog as phase_service', 'project_phases.service_id', 'phase_service.service_id', { type: 'left' });
@@ -1718,6 +1833,7 @@ export class ProjectService extends BaseService<IProject> {
         knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
         knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
         knex.raw("NULLIF(TRIM(CONCAT(assignee.first_name, ' ', assignee.last_name)), '') as assigned_user_name"),
+        'pri.priority_name',
         // The task's own service_id stays in `project_tasks.*`; these three say
         // which service a time entry should actually prefill, and from where.
         knex.raw(`${effectiveServiceIdSql(TASK_SERVICE_ALIASES)} as effective_service_id`),

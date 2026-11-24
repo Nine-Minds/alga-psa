@@ -96,7 +96,8 @@
       "policies": "Zasady",
       "apiKeys": "Klucze API",
       "webhooks": "Webhooki",
-      "userProvisioning": "Inicjowanie obsługi użytkowników"
+      "userProvisioning": "Inicjowanie obsługi użytkowników",
+      "servicePrincipals": "Podmioty usług"
     },
     "loading": {
       "roles": "Ładowanie konfiguracji ról...",
@@ -107,12 +108,13 @@
       "webhooks": "Ładowanie konfiguracji webhooków...",
       "sso": "Ładowanie narzędzi zarządzania SSO...",
       "sessions": "Ładowanie aktywnych sesji...",
-      "userProvisioning": "Wczytywanie inicjowania obsługi SCIM..."
+      "userProvisioning": "Wczytywanie inicjowania obsługi SCIM...",
+      "servicePrincipals": "Ładowanie podmiotów usług..."
     },
     "sso": {
       "advanced": {
         "title": "Zaawansowane: niestandardowe kierowanie do dostawcy tożsamości",
-        "description": "Kieruj pojedyncze logowanie MSP do własnego dostawcy tożsamości przy użyciu zweryfikowanych domen logowania. Jest to potrzebne tylko w instalacjach niestandardowych lub lokalnych.",
+        "description": "Kieruj pojedyncze logowanie MSP do własnego dostawcy tożsamości przy użyciu zweryfikowanych domen logowania. Jest to wymagane, gdy pracownicy logują się przez realm Keycloak lub aplikację Google albo Microsoft należącą do Twojej organizacji.",
         "inertNotice": "Nie skonfigurowano dostawcy tożsamości organizacji, dlatego deklaracje domen nie mają obecnie żadnego skutku. Skonfiguruj powyżej Keycloak lub – w Enterprise Edition – poświadczenia aplikacji Google / Microsoft, a następnie zgłoś tutaj domenę logowania."
       }
     },
@@ -803,10 +805,11 @@
     "providers": {
       "title": "Połącz dostawcę",
       "description": "Wybierz dostawcę, aby zakończyć łączenie SSO. Zostaniesz przekierowany przez proces logowania dostawcy.",
-      "noneConfigured": "Dla tego środowiska nie skonfigurowano żadnych dostawców SSO. Poproś administratora o skonfigurowanie poświadczeń Google lub Microsoft.",
-      "noneConfiguredAdmin": "Nie skonfigurowano jeszcze żadnych dostawców SSO. Najpierw skonfiguruj aplikację Google lub Microsoft swojej organizacji.",
-      "openProviderSetup": "Skonfiguruj dostawcę SSO",
+      "noneConfigured": "Dla Twojej organizacji nie skonfigurowano żadnych dostawców SSO. Poproś administratora o skonfigurowanie jednego z nich.",
+      "noneConfiguredAdmin": "Nie skonfigurowano jeszcze żadnych dostawców SSO. Aby rozpocząć, użyj linku konfiguracji przy jednym z dostawców poniżej.",
       "notConfigured": "Nie skonfigurowano",
+      "setUpProvider": "Skonfiguruj {{provider}}",
+      "askAdministrator": "Poproś administratora o konfigurację.",
       "branding": {
         "google": "Kontynuuj z Google",
         "microsoft": "Kontynuuj z Microsoft",
@@ -832,6 +835,7 @@
     },
     "apiKeys": {
       "internalOnly": "Odmowa uprawnień: zarządzanie kluczami API jest zastrzeżone dla użytkowników wewnętrznych",
+      "notAvailableForAccount": "Klucze API nie są dostępne dla tego konta.",
       "configInternalOnly": "Odmowa uprawnień: konfiguracja kluczy API jest zastrzeżona dla użytkowników wewnętrznych",
       "invalidExpiration": "Wybierz prawidłową datę wygaśnięcia tego klucza API.",
       "notFound": "Nie znaleziono klucza API.",
@@ -843,7 +847,10 @@
       "signingSecretMissing": "Brak sekretu podpisu webhooka. Wymień sekret podpisu i spróbuj ponownie.",
       "deliveryNotFound": "Nie znaleziono dostarczenia.",
       "testNotRetryable": "Dostarczeń testowych nie można ponowić.",
-      "validation": { "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.", "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”." },
+      "validation": {
+        "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.",
+        "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”."
+      },
       "unsupportedEventType": "Nieobsługiwany typ zdarzenia: {{eventTypes}}",
       "payloadInvalid": "Tego dostarczenia nie można ponowić, ponieważ zapisany ładunek jest nieprawidłowy."
     },
@@ -863,7 +870,11 @@
       "unsupportedAuthType": "Nieobsługiwany typ uwierzytelniania przychodzącego webhooka: {{authType}}.",
       "deliveryNotFound": "Nie znaleziono przychodzącego dostarczenia.",
       "replayMissingConfig": "Nie można ponownie odtworzyć przychodzącego dostarczenia bez konfiguracji webhooka.",
-      "validation": { "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.", "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.", "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi." },
+      "validation": {
+        "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.",
+        "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.",
+        "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi."
+      },
       "notFoundOrInactive": "Nie znaleziono przychodzącego webhooka lub jest nieaktywny."
     }
   }

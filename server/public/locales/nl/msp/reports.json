@@ -2,12 +2,6 @@
   "page": {
     "title": "Rapporten"
   },
-  "actions": {
-    "refresh": "Vernieuwen"
-  },
-  "placeholders": {
-    "selectContract": "Contract selecteren..."
-  },
   "units": {
     "hoursShort": "u",
     "days": "dagen",
@@ -66,7 +60,11 @@
     "fallbackTitle": "Rapport",
     "dateRange": {
       "lastDays": "Laatste {{count}} dagen",
-      "allActiveProjects": "Alle actieve projecten, sinds de start"
+      "allActiveProjects": "Alle actieve projecten, sinds de start",
+      "customRange": "{{start}} tot {{end}}",
+      "customFrom": "Van",
+      "customTo": "Tot",
+      "agingSnapshotNote": "Aantallen en leeftijdsgroepen tonen de tickets die nu open staan. Het datumbereik filtert alleen de lijst met oudste open tickets."
     },
     "units": {
       "daysWithCount": "{{count}} dagen"
@@ -431,64 +429,6 @@
       "reset": "Standaardkolommen herstellen"
     }
   },
-  "contractPerformance": {
-    "title": "Prestatiestatistieken van contracten",
-    "errors": {
-      "loadData": "Contractgegevens konden niet worden geladen"
-    },
-    "metrics": {
-      "totalClients": "Totale klanten",
-      "activeClients": "Actieve klanten",
-      "totalPlans": "Totale plannen",
-      "averagePlansPerClient": "Gem. plannen per klant",
-      "totalRevenue": "Totale omzet",
-      "averageRevenuePerClient": "Gem. omzet per klant"
-    },
-    "empty": {
-      "selectContract": "Selecteer een contract om prestatiestatistieken te bekijken",
-      "noContracts": "Geen contracten beschikbaar"
-    },
-    "comparison": {
-      "title": "Contractvergelijking",
-      "table": {
-        "contract": "Contract",
-        "clients": "Klanten",
-        "plans": "Plannen",
-        "revenue": "Omzet"
-      }
-    }
-  },
-  "contractUsage": {
-    "title": "Contractgebruikrapport",
-    "errors": {
-      "loadInitialData": "Initiële gegevens konden niet worden geladen",
-      "loadUsageData": "Contractgebruiksgegevens konden niet worden geladen"
-    },
-    "empty": {
-      "noClientsUsingContract": "Geen klanten gebruiken dit contract",
-      "selectContract": "Selecteer een contract om gebruiksgegevens te bekijken"
-    },
-    "table": {
-      "client": "Klant",
-      "startDate": "Startdatum",
-      "endDate": "Einddatum",
-      "contractLines": "Contractregels",
-      "totalBilled": "Totaal gefactureerd",
-      "status": "Status"
-    },
-    "statusValues": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "ongoing": "Doorlopend",
-      "unknownClient": "Onbekende klant"
-    },
-    "summary": {
-      "title": "Samenvatting",
-      "totalClients": "Totale klanten",
-      "activeAssignments": "Actieve toewijzingen",
-      "totalBilled": "Totaal gefactureerd"
-    }
-  },
   "deferredRevenue": {
     "title": "Uitgestelde omzet / vooruitbetaalde verplichting",
     "description": "Rollforward per klant en per maand van kredietsaldi van klanten en niet-verbruikte vooruitbetaalde urenbundeluren.",
@@ -555,7 +495,22 @@
       "invalidValue": "Een van de geselecteerde rapportrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Een van de geselecteerde rapportrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht rapportveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht rapportveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht rapportveld: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het leest {{table}}, waarvoor geen klanteigendomsregel bestaat.",
+        "raw_sql": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het is opgebouwd uit onbewerkte SQL.",
+        "unsupported_join": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het koppelt {{table}} op een manier die rijen van andere klanten behoudt.",
+        "no_client_anchor": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: geen van de gelezen gegevens hoort bij een klant.",
+        "not_client_attributable": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het leest {{table}}, dat niet aan een klant kan worden toegewezen.",
+        "unnarrowable_report": "Dit rapport is niet beschikbaar voor u omdat het niet tot uw klanten kan worden beperkt: het telt de rekeningen van alle klanten bij elkaar op."
+      },
+      "clientOutOfScope": "U hebt geen toegang tot deze klant.",
+      "range": {
+        "malformed": "Het aangepaste datumbereik kon niet worden gelezen. Kies beide datums opnieuw.",
+        "backwards": "De einddatum ligt vóór de begindatum.",
+        "tooLong": "Een aangepast datumbereik kan maximaal {{maxDays}} dagen beslaan.",
+        "startsInFuture": "Het aangepaste datumbereik begint na vandaag, dus er is nog niets te rapporteren."
+      }
     }
   }
 }

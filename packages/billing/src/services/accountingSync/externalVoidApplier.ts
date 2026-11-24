@@ -26,7 +26,13 @@ import { providerForAdapterType } from './normalizedChange';
 
 export type ExternalVoidOutcome =
   | { status: 'applied' }
-  | { status: 'blocked'; reason: string };
+  | {
+      status: 'blocked';
+      /** Human-readable; names the payment sources when payments blocked it. */
+      reason: string;
+      /** Stable machine code when the shared blocker produced one. */
+      reasonCode?: string;
+    };
 
 export interface ApplyExternalVoidParams {
   knex: Knex;
@@ -63,7 +69,7 @@ export async function applyExternalVoidToInvoice(params: ApplyExternalVoidParams
 
   const blocker = await findLocalVoidBlocker(knex, tenantId, invoice);
   if (blocker) {
-    return { status: 'blocked', reason: blocker };
+    return { status: 'blocked', reason: blocker.message, reasonCode: blocker.code };
   }
 
   const reason = `Voided in ${providerLabel}`;
