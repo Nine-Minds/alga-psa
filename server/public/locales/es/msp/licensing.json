@@ -552,7 +552,8 @@
         "unavailable": "No aparecen por estar inactivos, no tener correo o tener ya un puesto o una invitación: {{count}}."
       },
       "trial": {
-        "available": "Al invitar al técnico se inicia la prueba y se habilita la TI cogestionada para este cliente. Pasados los 15 días, compre un puesto para conservar al técnico.",
+        "available": "Hay una prueba gratuita de 15 días disponible arriba. Los puestos cogestionados se pueden añadir en cualquier momento.",
+        "availableTrialEnables": "Al invitar al técnico se inicia la prueba y se habilita la TI cogestionada para este cliente. Pasados los 15 días, compre un puesto para conservar al técnico.",
         "pending": "Una invitación a la prueba de 15 días está esperando al técnico. Los puestos cogestionados se pueden añadir en cualquier momento.",
         "active": "La prueba de 15 días está en curso. Añada puestos cogestionados para conservar al técnico después.",
         "ended": "La prueba de 15 días ha terminado. Añada puestos cogestionados para conservar al técnico."

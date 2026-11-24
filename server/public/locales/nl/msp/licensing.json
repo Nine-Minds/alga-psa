@@ -552,7 +552,8 @@
         "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
       },
       "trial": {
-        "available": "Door de technicus uit te nodigen start de proefperiode en wordt co-managed IT voor deze klant ingeschakeld. Koop na de 15 dagen een plek om de technicus te behouden.",
+        "available": "Hierboven is een gratis proefperiode van 15 dagen beschikbaar. Co-managed plekken kunnen op elk moment worden toegevoegd.",
+        "availableTrialEnables": "Door de technicus uit te nodigen start de proefperiode en wordt co-managed IT voor deze klant ingeschakeld. Koop na de 15 dagen een plek om de technicus te behouden.",
         "pending": "Een uitnodiging voor de proefperiode van 15 dagen wacht op de technicus. Co-managed plekken kunnen op elk moment worden toegevoegd.",
         "active": "De proefperiode van 15 dagen loopt. Voeg co-managed plekken toe om de technicus daarna te behouden.",
         "ended": "De proefperiode van 15 dagen is afgelopen. Voeg co-managed plekken toe om de technicus te behouden."

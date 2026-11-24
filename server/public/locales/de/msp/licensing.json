@@ -552,7 +552,8 @@
         "unavailable": "Nicht aufgeführt, weil inaktiv, ohne E-Mail-Adresse oder bereits mit Platz oder Einladung: {{count}}."
       },
       "trial": {
-        "available": "Mit der Einladung des Technikers beginnt die Testphase und Co-Managed IT wird für diesen Kunden aktiviert. Kaufen Sie nach den 15 Tagen einen Platz, um den Techniker zu behalten.",
+        "available": "Oben ist eine kostenlose 15-Tage-Testphase verfügbar. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
+        "availableTrialEnables": "Mit der Einladung des Technikers beginnt die Testphase und Co-Managed IT wird für diesen Kunden aktiviert. Kaufen Sie nach den 15 Tagen einen Platz, um den Techniker zu behalten.",
         "pending": "Eine Einladung zur 15-Tage-Testphase wartet auf den Techniker. Co-Managed-Plätze können jederzeit hinzugefügt werden.",
         "active": "Die 15-Tage-Testphase läuft. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker danach zu behalten.",
         "ended": "Die 15-Tage-Testphase ist beendet. Fügen Sie Co-Managed-Plätze hinzu, um den Techniker zu behalten."

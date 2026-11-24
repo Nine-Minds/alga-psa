@@ -56,7 +56,11 @@ export default function CoManagedShapeChooser({ clientId, idPrefix, enable, work
       ? t('coManaged.seat.chooser.seatHintAfterTrial', { defaultValue: 'Add co-managed seats to keep the technician after the 15-day trial.' })
       : t('coManaged.seat.chooser.seatHint', { defaultValue: 'The client\'s technicians work in your PSA, limited to their company.' });
   const notice = resolved.notice && resolved.notice !== 'none' ? {
-    available: t('coManaged.seat.trial.available', { defaultValue: 'Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.' }),
+    // Where Seat opens the trial, inviting the technician is what enables co-managed IT; where Seat opens the paid
+    // setup (a paid pool exists), the trial is the separate card above and inviting through Seat uses a paid seat.
+    available: resolved.seatLeadsTo === 'trial'
+      ? t('coManaged.seat.trial.availableTrialEnables', { defaultValue: 'Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.' })
+      : t('coManaged.seat.trial.available', { defaultValue: 'A free 15-day trial is available above. Co-managed seats can be added at any time.' }),
     pending: t('coManaged.seat.trial.pending', { defaultValue: 'A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.' }),
     active: t('coManaged.seat.trial.active', { defaultValue: 'The 15-day trial is running. Add co-managed seats to keep the technician afterwards.' }),
     ended: t('coManaged.seat.trial.ended', { defaultValue: 'The 15-day trial has ended. Add co-managed seats to keep the technician.' }),

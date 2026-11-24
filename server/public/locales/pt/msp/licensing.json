@@ -552,7 +552,8 @@
         "unavailable": "Não listados por estarem inativos, sem e-mail ou já com vaga ou convite: {{count}}."
       },
       "trial": {
-        "available": "Convidar o técnico inicia o teste e ativa a TI cogerida para este cliente. Após os 15 dias, compre um lugar para manter o técnico.",
+        "available": "Há um teste gratuito de 15 dias disponível acima. Lugares cogeridos podem ser adicionados a qualquer momento.",
+        "availableTrialEnables": "Convidar o técnico inicia o teste e ativa a TI cogerida para este cliente. Após os 15 dias, compre um lugar para manter o técnico.",
         "pending": "Um convite para o teste de 15 dias está à espera do técnico. Lugares cogeridos podem ser adicionados a qualquer momento.",
         "active": "O teste de 15 dias está em curso. Adicione lugares cogeridos para manter o técnico depois.",
         "ended": "O teste de 15 dias terminou. Adicione lugares cogeridos para manter o técnico."

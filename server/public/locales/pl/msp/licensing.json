@@ -552,7 +552,8 @@
         "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
       },
       "trial": {
-        "available": "Zaproszenie technika rozpoczyna okres próbny i włącza współzarządzane IT dla tego klienta. Po 15 dniach kup stanowisko, aby zachować technika.",
+        "available": "Powyżej dostępny jest bezpłatny 15-dniowy okres próbny. Stanowiska współzarządzania można dodać w dowolnym momencie.",
+        "availableTrialEnables": "Zaproszenie technika rozpoczyna okres próbny i włącza współzarządzane IT dla tego klienta. Po 15 dniach kup stanowisko, aby zachować technika.",
         "pending": "Zaproszenie do 15-dniowego okresu próbnego czeka na technika. Stanowiska współzarządzania można dodać w dowolnym momencie.",
         "active": "15-dniowy okres próbny trwa. Dodaj stanowiska współzarządzania, aby zachować technika po jego zakończeniu.",
         "ended": "15-dniowy okres próbny dobiegł końca. Dodaj stanowiska współzarządzania, aby zachować technika."

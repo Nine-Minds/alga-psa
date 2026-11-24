@@ -206,8 +206,10 @@ the chooser is not shown (a live relationship or arrangement) or the story is no
 the other shape. The set-up predicate is shared (`workspaceSetupOpen` in `clientRelationshipSummary.ts`).
 
 **Copy.** `coManaged.client.notEnabledTrialEnables` (heading), `coManaged.seat.chooser.seatHintTrial` (Seat
-option) and the reworded `coManaged.seat.trial.available` (note: inviting the technician enables co-managed IT;
-buy a seat after the 15 days to keep them), in all locales.
+option) and `coManaged.seat.trial.availableTrialEnables` (note: inviting the technician enables co-managed IT;
+buy a seat after the 15 days to keep them), in all locales. The note is chosen by `seatLeadsTo`: with a paid
+pool (`seatLeadsTo: 'setup'`) Seat opens the paid setup, where inviting a technician uses a paid seat, so that
+state keeps `coManaged.seat.trial.available` ("a free 15-day trial is available above") unchanged.
 
 **Tests.** `seatEnableStory.test.ts` (heading for available, pending, active, ended, paid pool, no offer);
 `CoManagedShapeChooser.test.tsx` (Seat opens the trial, no setup route, Workspace kept);

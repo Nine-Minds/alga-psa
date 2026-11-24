@@ -552,7 +552,8 @@
         "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
       },
       "trial": {
-        "available": "Invitare il tecnico avvia la prova e abilita l'IT in co-gestione per questo cliente. Dopo i 15 giorni, acquista una postazione per mantenere il tecnico.",
+        "available": "Qui sopra è disponibile una prova gratuita di 15 giorni. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
+        "availableTrialEnables": "Invitare il tecnico avvia la prova e abilita l'IT in co-gestione per questo cliente. Dopo i 15 giorni, acquista una postazione per mantenere il tecnico.",
         "pending": "Un invito alla prova di 15 giorni è in attesa del tecnico. Le postazioni in co-gestione possono essere aggiunte in qualsiasi momento.",
         "active": "La prova di 15 giorni è in corso. Aggiungi postazioni in co-gestione per mantenere il tecnico in seguito.",
         "ended": "La prova di 15 giorni è terminata. Aggiungi postazioni in co-gestione per mantenere il tecnico."

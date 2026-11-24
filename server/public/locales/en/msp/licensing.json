@@ -552,7 +552,8 @@
         "unavailable": "Not listed because they are inactive, have no email address, or already hold a seat or invitation: {{count}}."
       },
       "trial": {
-        "available": "Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.",
+        "available": "A free 15-day trial is available above. Co-managed seats can be added at any time.",
+        "availableTrialEnables": "Inviting the technician starts the trial and enables co-managed IT for this client. After the 15 days, buy a seat to keep the technician.",
         "pending": "A 15-day trial invitation is waiting for the technician. Co-managed seats can be added at any time.",
         "active": "The 15-day trial is running. Add co-managed seats to keep the technician afterwards.",
         "ended": "The 15-day trial has ended. Add co-managed seats to keep the technician."

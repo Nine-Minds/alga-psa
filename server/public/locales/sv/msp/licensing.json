@@ -552,7 +552,8 @@
         "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
       },
       "trial": {
-        "available": "När teknikern bjuds in startar provperioden och samhanterad IT aktiveras för den här kunden. Köp en plats efter de 15 dagarna för att behålla teknikern.",
+        "available": "En kostnadsfri provperiod på 15 dagar finns ovan. Samhanterade platser kan läggas till när som helst.",
+        "availableTrialEnables": "När teknikern bjuds in startar provperioden och samhanterad IT aktiveras för den här kunden. Köp en plats efter de 15 dagarna för att behålla teknikern.",
         "pending": "En inbjudan till provperioden på 15 dagar väntar på teknikern. Samhanterade platser kan läggas till när som helst.",
         "active": "Provperioden på 15 dagar pågår. Lägg till samhanterade platser för att behålla teknikern efteråt.",
         "ended": "Provperioden på 15 dagar har avslutats. Lägg till samhanterade platser för att behålla teknikern."

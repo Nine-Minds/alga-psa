@@ -214,6 +214,15 @@ describe('shape chooser under a seat trial', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('trial available with a paid pool: Seat opens the paid setup and the note points at the trial card above', () => {
+    const e = enable();
+    mount({ enable: e, story: trialStory('available', e), seatTrial: <div>seat-trial-card</div> });
+    expect(screen.getByText('A free 15-day trial is available above. Co-managed seats can be added at any time.')).toBeInTheDocument();
+    expect(screen.queryByText(/Inviting the technician starts the trial/)).not.toBeInTheDocument();
+    expect(screen.getByText('6 of 10 seats available. 4 allocated.')).toBeInTheDocument();
+    expect(screen.queryByText('seat-trial-card')).not.toBeInTheDocument();
+  });
+
   it('a trial with a paid pool still shows the counts', () => {
     mount({ story: trialStory('pending', enable()) });
     expect(screen.getByText('6 of 10 seats available. 4 allocated.')).toBeInTheDocument();

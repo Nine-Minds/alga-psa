@@ -552,7 +552,8 @@
         "unavailable": "Non listés car inactifs, sans adresse e-mail ou occupant déjà un poste ou une invitation : {{count}}."
       },
       "trial": {
-        "available": "Inviter le technicien lance l’essai et active l’informatique cogérée pour ce client. Après les 15 jours, achetez un poste pour conserver le technicien.",
+        "available": "Un essai gratuit de 15 jours est disponible ci-dessus. Des postes cogérés peuvent être ajoutés à tout moment.",
+        "availableTrialEnables": "Inviter le technicien lance l’essai et active l’informatique cogérée pour ce client. Après les 15 jours, achetez un poste pour conserver le technicien.",
         "pending": "Une invitation à l’essai de 15 jours attend le technicien. Des postes cogérés peuvent être ajoutés à tout moment.",
         "active": "L’essai de 15 jours est en cours. Ajoutez des postes cogérés pour conserver le technicien ensuite.",
         "ended": "L’essai de 15 jours est terminé. Ajoutez des postes cogérés pour conserver le technicien."
