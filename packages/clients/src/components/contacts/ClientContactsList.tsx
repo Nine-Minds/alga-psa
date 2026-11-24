@@ -285,14 +285,18 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const invitationStateCell = (contactId: string): React.ReactNode => {
     const entry = invitationStates?.get(contactId);
     if (!entry || entry.state === 'none') {
-      return <span className="text-gray-400">{t('clientContactsList.invitation.none', { defaultValue: 'Not invited' })}</span>;
+      return (
+        <span className="text-[rgb(var(--color-text-400))]">
+          {t('clientContactsList.invitation.none', { defaultValue: 'Not invited' })}
+        </span>
+      );
     }
     if (entry.state === 'active_user') {
       return t('clientContactsList.invitation.activeUser', { defaultValue: 'Active portal user' });
     }
     if (entry.state === 'inactive_user') {
       return (
-        <span className="text-gray-400">
+        <span className="text-[rgb(var(--color-text-400))]">
           {t('clientContactsList.invitation.inactiveUser', { defaultValue: 'Inactive portal user' })}
         </span>
       );
@@ -301,7 +305,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     // cell says it cannot be used rather than counting down to an expiry.
     if (entry.contactInactive) {
       return (
-        <span className="text-gray-400">
+        <span className="text-[rgb(var(--color-text-400))]">
           {t('clientContactsList.invitation.contactInactive', {
             defaultValue: 'Invitation unusable (contact inactive)',
           })}
