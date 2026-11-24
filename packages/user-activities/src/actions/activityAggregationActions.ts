@@ -691,7 +691,7 @@ export async function fetchProjectActivities(
     // Convert authorized, masked projections to activities.
     const clientIdsByTask = new Map(tasks.map(({ task, clientId }: any) => [task.task_id, clientId]));
     const priorityIdsByTask = new Map(tasks.map(({ task }: any) => [task.task_id, task.priority_id]));
-    const activities: ProjectTaskActivity[] = tasks.map(({ task, projectName, projectIsClosed, phaseName, statusName, isClosed, priorityName, priorityColor }: any): ProjectTaskActivity => {
+    const activities: ProjectTaskActivity[] = tasks.map(({ task, projectName, projectIsClosed, phaseName, statusName, statusColor, isClosed, priorityName, priorityColor }: any): ProjectTaskActivity => {
       // Map priority from project task to ActivityPriority
       let priority: ActivityPriority;
       switch (priorityName?.toLowerCase()) {
@@ -714,7 +714,7 @@ export async function fetchProjectActivities(
         description: task.description || undefined,
         type: ActivityType.PROJECT_TASK,
         status: statusName || 'To Do', // Use the status name from standard_statuses
-        statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
+        statusColor: statusColor || '#3b82f6', // Use the blue color for consistency
         // A task is effectively closed when its own status is closed OR its project is closed.
         isClosed: Boolean(isClosed) || Boolean(projectIsClosed),
         priority,
@@ -788,7 +788,7 @@ export async function fetchProjectActivities(
     // Priority tier is derived from the projected priority name, defaulting to Medium.
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter((activity: Activity) =>
+      filteredActivities = filteredActivities.filter((activity: Activity) =>
         normalizedFilterPriorities.includes(activity.priority.toLowerCase())
       );
     }

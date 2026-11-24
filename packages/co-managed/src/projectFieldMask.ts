@@ -58,8 +58,13 @@ export const CO_MANAGED_PROJECT_COLUMNS: CoManagedColumnSpec = {
 
 /** The non-text `project_tasks` columns (and their joined display values) a candidate carries. */
 export const CO_MANAGED_TASK_COLUMNS: CoManagedColumnSpec = {
-  due_date: [], updated_at: [], status_name: ['status', 'project_status_mapping_id'], is_closed: ['status', 'project_status_mapping_id'],
-  priority_name: ['priority_id', 'priority'], assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
+  due_date: [], updated_at: [],
+  status_name: ['status', 'status_id', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
+  is_closed: ['status', 'status_id', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
+  status_color: ['status', 'status_id', 'status_name', 'project_tasks.status_name', 'project_status_mapping_id', 'project_tasks.project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses', 'statusMappingId', 'mapping_id'],
+  priority_name: ['priority_id', 'project_tasks.priority_id', 'priority', 'priorities', 'priorityId'],
+  priority_color: ['priority_id', 'project_tasks.priority_id', 'priority', 'priority_name', 'project_tasks.priority_name', 'priorities', 'priorityId'],
+  assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
 };
 
 /** The logical columns of `spec` that the reader's redactions hide. */

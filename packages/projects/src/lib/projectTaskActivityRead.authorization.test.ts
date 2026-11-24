@@ -1,77 +1,160 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  decisions: new Map<string, { allowed: boolean; redactedFields: string[] }>(),
-  loadedRedactions: [] as string[][],
+  redactedFields: [] as string[],
+  tenant: 'tenant-1',
 }));
 
+const fixtures = {
+  task: {
+    tenant: 'tenant-1', task_id: 'task-1', phase_id: 'phase-1', project_status_mapping_id: 'mapping-1',
+    priority_id: 'priority-1', task_name: 'Restore the network', description: 'Protected task description',
+    description_rich_text: null, assigned_to: 'owner-1', assigned_team_id: null, estimated_hours: 3,
+    actual_hours: 1, created_at: new Date('2026-01-01T00:00:00Z'), updated_at: new Date('2026-01-02T00:00:00Z'),
+    wbs_code: '1.2', order_key: 'a', start_date: null, due_date: null, task_type_key: 'task', service_id: null,
+  },
+  phase: {
+    tenant: 'tenant-1', phase_id: 'phase-1', project_id: 'project-1', phase_name: 'Network work',
+    description: null, start_date: null, end_date: null, completed_at: null, status: null, order_number: 1,
+    order_key: 'a', created_at: new Date('2026-01-01T00:00:00Z'), updated_at: new Date('2026-01-02T00:00:00Z'),
+    wbs_code: '1', service_id: null,
+  },
+  mapping: { tenant: 'tenant-1', project_status_mapping_id: 'mapping-1', project_id: 'project-1', phase_id: 'phase-1', custom_name: 'Blocked', status_id: 'status-1', standard_status_id: null },
+  status: { tenant: 'tenant-1', status_id: 'status-1', name: 'Custom blocked', color: '#bb0000', is_closed: true },
+  priority: { tenant: 'tenant-1', priority_id: 'priority-1', priority_name: 'High', color: '#aa0000', item_type: 'project_task' },
+  user: { tenant: 'tenant-1', user_id: 'owner-1', first_name: 'Task', last_name: 'Owner' },
+};
+
+function tableName(expression: string) {
+  const [tableName, alias] = expression.split(/\s+as\s+/i);
+  return { tableName, alias: alias ?? tableName };
+}
+
+function rawValue(selection: { sql: string; args?: unknown[] }, joined: Record<string, any>) {
+  const { sql, args = [] } = selection;
+  const output = String(args.at(-1) ?? (sql.match(/\bas\s+([a-z_]+)$/i)?.[1] ?? ''));
+  if (sql.startsWith('NULL::')) return [output, null];
+  if (sql.includes('?::text as ??')) return [String(args[1]), args[0]];
+  if (sql.includes('CASE WHEN FALSE')) return [output, null];
+  if (sql.includes('CONCAT(users.first_name')) return ['assigned_to_name', `${joined.users?.first_name ?? ''} ${joined.users?.last_name ?? ''}`.trim()];
+  if (sql.includes('COALESCE(psm.custom_name, cs.name, ss.name)')) return ['status_name', joined.psm?.custom_name ?? joined.cs?.name ?? joined.ss?.name ?? null];
+  if (sql.includes('CASE WHEN psm.project_status_mapping_id IS NULL')) return ['is_closed', joined.psm ? Boolean(joined.cs?.is_closed ?? joined.ss?.is_closed ?? false) : null];
+  if (sql.includes('cs.color')) return ['status_color', joined.cs?.color ?? null];
+  if (sql.includes('priorities.priority_name')) return ['priority_name', joined.priorities?.priority_name ?? null];
+  if (sql.includes('priorities.color')) return ['priority_color', joined.priorities?.color ?? null];
+  return [output, null];
+}
+
+function makeQuery(rootExpression: string, tenant: string) {
+  const { tableName: rootTable, alias: rootAlias } = tableName(rootExpression);
+  const filters: Array<{ kind: 'where' | 'whereIn'; field: any; value?: any }> = [];
+  const joins: Array<{ expression: string; left: string; right: string; type: string }> = [];
+  let selections: any[] = [];
+  const builder: any = {
+    where(field: any, value?: any) { filters.push({ kind: 'where', field, value }); return builder; },
+    join(expression: string, left: string, right: string, type = 'inner') { joins.push({ expression, left, right, type }); return builder; },
+    whereIn(field: any, value: any[]) { filters.push({ kind: 'whereIn', field, value }); return builder; },
+    select(...values: any[]) { selections = values.flat(); return builder; },
+    orderBy() { return builder; },
+    first(...values: any[]) { if (values.length) selections = values.flat(); return Promise.resolve(execute()[0]); },
+    then(resolve: (rows: any[]) => unknown, reject?: (error: unknown) => unknown) { return Promise.resolve(execute()).then(resolve, reject); },
+  };
+  function execute() {
+    const rootRows = rootTable === 'project_tasks' ? [fixtures.task]
+      : rootTable === 'project_phases' ? [fixtures.phase] : [];
+    return rootRows.filter((row) => row.tenant === tenant).flatMap((rootRow) => {
+      const joined: Record<string, any> = { [rootAlias]: rootRow };
+      let rows: Array<Record<string, any>> = [joined];
+      for (const item of joins) {
+        const { tableName: joinedTable, alias } = tableName(item.expression);
+        const source = ({
+          project_phases: [fixtures.phase], users: [fixtures.user], project_status_mappings: [fixtures.mapping],
+          statuses: [fixtures.status], standard_statuses: [], priorities: [fixtures.priority],
+        } as Record<string, any[]>)[joinedTable] ?? [];
+        rows = rows.flatMap((current) => {
+          const leftValue = current[item.left.split('.')[0]]?.[item.left.split('.')[1]];
+          const matches = source.filter((candidate) => candidate.tenant === tenant
+            && candidate[item.right.split('.')[1]] === leftValue
+            && (joinedTable !== 'project_status_mappings' || candidate.project_id === fixtures.phase.project_id)
+            && (joinedTable !== 'project_status_mappings' || candidate.phase_id == null || candidate.phase_id === fixtures.task.phase_id));
+          if (matches.length) return matches.map((match) => ({ ...current, [alias]: match }));
+          return item.type === 'left' ? [{ ...current, [alias]: null }] : [];
+        });
+      }
+      return rows.filter((current) => filters.every((filter) => {
+        if (filter.kind === 'whereIn') return filter.value.includes(current[filter.field.split('.')[0]]?.[filter.field.split('.')[1]]);
+        if (typeof filter.field === 'object') return Object.entries(filter.field).every(([key, value]) => { const [alias, field] = key.includes('.') ? key.split('.') : [rootAlias, key]; return current[alias]?.[field] === value; });
+        return current[filter.field.split('.')[0]]?.[filter.field.split('.')[1]] === filter.value;
+      })).map((current) => Object.fromEntries(selections.map((selection) => {
+        if (typeof selection !== 'string') return rawValue(selection, current);
+        const [reference, outputName] = selection.split(/\s+as\s+/i);
+        const [alias, field] = reference.split('.');
+        return [outputName ?? field, current[alias]?.[field] ?? null];
+      })));
+    });
+  }
+  return { builder };
+}
+
 vi.mock('@alga-psa/authorization/projectReadAuthorization', () => ({
-  authorizeProjectsByIds: vi.fn(async (_trx: unknown, _tenant: string, _reader: unknown, ids: string[]) => ids.map((id) => ({
-    project: { project_id: id, client_id: `client-${id}` },
-    ...(state.decisions.get(id) ?? { allowed: true, redactedFields: [] }),
-  }))),
-}));
-vi.mock('./projectTaskReadProjection', () => ({
-  loadAuthorizedProjectTasks: vi.fn(async (_trx: unknown, _tenant: string, projectId: string, fields: string[], taskIds: string[]) => {
-    state.loadedRedactions.push(fields);
-    return taskIds.map((task_id) => ({ tenant: 'tenant-1', task_id, phase_id: `phase-${projectId}`, project_id: projectId,
-      task_name: fields.includes('task_name') ? 'Project task' : `Task ${task_id}`, description: null,
-      wbs_code: fields.some((field) => field === 'wbs_code' || field === 'wbsCode') ? null : '1.2',
-      project_status_mapping_id: fields.some((field) => ['status', 'statusMappingId'].includes(field)) ? null : 'mapping-1',
-      assigned_to: 'owner-1', priority_id: null, created_at: new Date('2026-01-01T00:00:00Z'), updated_at: new Date('2026-01-02T00:00:00Z'),
-    }));
-  }),
-}));
-vi.mock('./projectPhaseReadProjection', () => ({
-  loadAuthorizedProjectPhase: vi.fn(async (_trx: unknown, _tenant: string, phaseId: string, fields: string[]) => ({
-    phase_id: phaseId, project_id: phaseId.replace('phase-', ''), phase_name: fields.includes('phase_name') ? 'Project phase' : 'Phase One',
-  })),
+  authorizeProjectsByIds: vi.fn(async (_trx: unknown, tenant: string, _reader: unknown, projectIds: string[]) => projectIds
+    .filter((projectId) => tenant === state.tenant && projectId === 'project-1')
+    .map((project_id) => ({ project: { project_id, client_id: 'client-1' }, allowed: true, redactedFields: [...state.redactedFields] }))),
 }));
 vi.mock('../models/project', () => ({ default: {
-  getByIds: async (_trx: unknown, _tenant: string, ids: string[]) => ids.map((project_id) => ({ project_id, project_name: `Project ${project_id}`, is_closed: false, client_id: `client-${project_id}` })),
-  getMaskedByIds: async (_trx: unknown, _tenant: string, ids: string[], fields: string[]) => ids.map((project_id) => ({ project_id,
-    project_name: fields.includes('project_name') ? 'Project' : `Project ${project_id}`, is_closed: false, client_id: `client-${project_id}` })),
+  getByIds: async (_trx: unknown, tenant: string, ids: string[]) => tenant === state.tenant ? ids.map((project_id) => ({ project_id, project_name: 'Network project', is_closed: false, client_id: 'client-1' })) : [],
+  getMaskedByIds: async (_trx: unknown, tenant: string, ids: string[], fields: string[]) => tenant === state.tenant ? ids.map((project_id) => ({
+    project_id, project_name: fields.includes('projects.project_name') ? 'Project' : 'Network project', is_closed: false, client_id: 'client-1',
+  })) : [],
 } }));
-vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({ table: () => ({ where() { return this; }, select() { return this; }, first: async () => null }), tenantJoin() {} }), raw: (sql: string) => sql }));
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (_conn: unknown, tenant: string) => ({
+    table: (expression: string) => makeQuery(expression, tenant).builder,
+    tenantJoin: (builder: any, expression: string, left: string, right: string, options: any = {}) => {
+      const query = builder;
+      query.join(expression, left, right, options.type);
+      return builder;
+    },
+  }),
+}));
 
 import { loadAuthorizedProjectTaskActivities } from './projectTaskActivityRead';
 
 const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
+const trx = { raw: (sql: string, args?: unknown[]) => ({ sql, args }) } as any;
 
-beforeEach(() => {
-  state.decisions.clear();
-  state.loadedRedactions = [];
-});
+beforeEach(() => { state.redactedFields = []; });
 
 describe('authorized project task activity projection', () => {
-  it('omits denied projects, applies each effective mask, and restores values when access returns', async () => {
-    const identities = [
+  it('uses real masked task and phase projections for populated status and priority data', async () => {
+    const [allowed] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
       { taskId: 'task-1', projectId: 'project-1' },
-      { taskId: 'task-2', projectId: 'project-2' },
-    ];
-    const trx = { raw: (sql: string) => sql } as any;
-
-    const allowed = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
-    expect(allowed).toHaveLength(2);
-    expect(allowed[0]).toMatchObject({ task: { task_name: 'Task task-1', wbs_code: '1.2', project_status_mapping_id: 'mapping-1' }, phaseName: 'Phase One' });
-
-    state.decisions.set('project-1', { allowed: true, redactedFields: ['task_name', 'phase_name', 'wbsCode', 'statusMappingId'] });
-    state.decisions.set('project-2', { allowed: false, redactedFields: [] });
-    const restricted = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
-    expect(restricted).toHaveLength(1);
-    expect(restricted[0]).toMatchObject({
-      task: { task_name: 'Project task', wbs_code: null, project_status_mapping_id: null },
-      phaseName: 'Project phase',
+    ]);
+    expect(allowed).toMatchObject({
+      task: {
+        task_name: 'Restore the network', status_name: 'Blocked', is_closed: true, status_color: '#bb0000',
+        priority_name: 'High', priority_color: '#aa0000', wbs_code: '1.2',
+      },
+      phaseName: 'Network work',
     });
-    expect(state.loadedRedactions.at(-1)).toEqual(['phase_name', 'statusMappingId', 'task_name', 'wbsCode']);
 
-    state.decisions.set('project-1', { allowed: false, redactedFields: [] });
-    expect(await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities)).toEqual([]);
-
-    state.decisions.set('project-1', { allowed: true, redactedFields: [] });
-    const restored = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, identities);
-    expect(restored.find(({ task }) => task.task_id === 'task-1')).toMatchObject({
-      task: { task_name: 'Task task-1', wbs_code: '1.2', project_status_mapping_id: 'mapping-1' }, phaseName: 'Phase One',
-    });
+    for (const [redaction, expected] of [
+      ['project_tasks.status_name', { statusName: null, statusColor: null }],
+      ['project_tasks.is_closed', { isClosed: false }],
+      ['statusMappingId', { statusName: null, statusColor: null, isClosed: false }],
+      ['project_tasks.priority_name', { priorityName: null, priorityColor: null }],
+      ['priorityId', { priorityName: null, priorityColor: null }],
+      ['project_tasks.priority_color', { priorityColor: null }],
+      ['statusColor', { statusColor: null }],
+      ['priorityColor', { priorityColor: null }],
+    ] as const) {
+      state.redactedFields = [redaction];
+      const [masked] = await loadAuthorizedProjectTaskActivities(trx, 'tenant-1', reader, [
+        { taskId: 'task-1', projectId: 'project-1' },
+      ]);
+      expect(masked, redaction).toMatchObject(expected);
+      if (redaction === 'project_tasks.status_name') expect(masked.statusName).not.toBe('Blocked');
+      if (redaction === 'project_tasks.priority_name') expect(masked.priorityName).not.toBe('High');
+    }
   });
 });

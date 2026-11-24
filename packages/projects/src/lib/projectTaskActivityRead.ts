@@ -1,6 +1,5 @@
 import type { Knex } from 'knex';
 import type { IUserWithRoles, IProjectTask } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
 import { authorizeProjectsByIds } from '@alga-psa/authorization/projectReadAuthorization';
 import { loadAuthorizedProjectPhase } from './projectPhaseReadProjection';
 import { loadAuthorizedProjectTasks } from './projectTaskReadProjection';
@@ -18,6 +17,7 @@ export interface AuthorizedProjectTaskActivity {
   isClosed: boolean;
   priorityName: string | null;
   priorityColor: string | null;
+  statusColor: string | null;
 }
 
 /** Resolve candidate identities first, retain each decision, and only then load masked activity data. */
@@ -55,7 +55,6 @@ export async function loadAuthorizedProjectTaskActivities(
       ? await ProjectModel.getMaskedByIds(trx, tenant, [...idsByProject.keys()], group.redactedFields)
       : await ProjectModel.getByIds(trx, tenant, [...idsByProject.keys()]);
     const projectsById = new Map(projectRows.map((project) => [project.project_id, project]));
-    const db = tenantDb(trx, tenant);
     for (const [projectId, taskIds] of idsByProject) {
       const project = projectsById.get(projectId);
       if (!project) continue;
@@ -65,30 +64,16 @@ export async function loadAuthorizedProjectTaskActivities(
           ? await loadAuthorizedProjectPhase(trx, tenant, task.phase_id, group.redactedFields)
           : null;
         const phaseName = phase?.project_id === projectId ? phase.phase_name : null;
-        const mappingId = task.project_status_mapping_id;
-        let statusName: string | null = null;
-        let isClosed = false;
-        if (mappingId) {
-          const statusQuery = db.table('project_status_mappings as psm');
-          db.tenantJoin(statusQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
-          db.tenantJoin(statusQuery, 'statuses as cs', 'psm.status_id', 'cs.status_id', { type: 'left' });
-          const status = await statusQuery
-            .where('psm.project_status_mapping_id', mappingId)
-            .select(trx.raw('COALESCE(psm.custom_name, cs.name, ss.name) as status_name'),
-              trx.raw('COALESCE(cs.is_closed, ss.is_closed, false) as is_closed'))
-            .first();
-          statusName = status?.status_name ?? null;
-          isClosed = Boolean(status?.is_closed);
-        }
-        const priority = task.priority_id
-          ? await db.table('priorities').where({ priority_id: task.priority_id }).select('priority_name', 'color').first()
-          : null;
         output.push({
           task, projectName: project.project_name ?? null,
           projectIsClosed: Boolean(project.is_closed),
           clientId: coManagedColumnHidden(group.redactedFields, 'projects', 'client_id') ? null : project.client_id ?? null,
-          phaseName, statusName, isClosed,
-          priorityName: priority?.priority_name ?? null, priorityColor: priority?.color ?? null,
+          phaseName,
+          statusName: task.status_name ?? null,
+          isClosed: Boolean(task.is_closed),
+          priorityName: task.priority_name ?? null,
+          priorityColor: task.priority_color ?? null,
+          statusColor: task.status_color ?? null,
         });
       }
     }

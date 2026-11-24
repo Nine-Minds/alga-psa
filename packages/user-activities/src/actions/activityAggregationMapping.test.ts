@@ -315,6 +315,26 @@ describe('fetchProjectActivities mapping', () => {
     expect(status.map(({ id }) => id)).toEqual(['task-1']);
     expect(tagged.map(({ id }) => id)).toEqual(['task-2']);
   });
+
+  it('composes phase, tag, and priority filters in direct and paginated aggregation', async () => {
+    setRows([
+      projectTaskRow({ task_id: 'task-1', phase_id: 'phase-1', priority_name: 'High' }),
+      projectTaskRow({ task_id: 'task-2', phase_id: 'phase-2', priority_name: 'High' }),
+    ]);
+    tagRowsRef.value = [{ tagged_id: 'task-2', tag_id: 'tag-1' }];
+    const filters = {
+      phaseId: 'phase-2',
+      projectTaskTagIds: ['tag-1'],
+      priority: [ActivityPriority.HIGH],
+    };
+    const reader = { user_id: 'reader-1', user_type: 'internal' } as any;
+
+    const direct = await fetchProjectActivities('owner-1', 'tenant-1', filters, reader);
+    const paged = await fetchUserActivitiesForApi(reader, 'tenant-1', { ...filters, types: [ActivityType.PROJECT_TASK] }, 1, 10);
+
+    expect(direct.map(({ id }) => id)).toEqual(['task-2']);
+    expect(paged).toMatchObject({ totalCount: 1, pageCount: 1, activities: [{ id: 'task-2' }] });
+  });
 });
 
 describe('fetchTicketActivities mapping', () => {
