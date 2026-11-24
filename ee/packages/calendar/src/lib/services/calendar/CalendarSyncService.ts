@@ -119,6 +119,24 @@ function utcMidnight(value: Date): Date {
   return date;
 }
 
+/**
+ * Unique index on (tenant, external_event_id, calendar_provider_id). Postgres
+ * truncates identifiers to 63 bytes, so the name it reports is a prefix of this.
+ */
+const EXTERNAL_EVENT_MAPPING_UNIQUE_INDEX = 'calendar_event_mappings_tenant_external_event_id_calendar_provider_id_unique';
+
+/**
+ * True for a Postgres unique violation (23505) on the external-event mapping
+ * index and nothing else, so other errors still surface as provider errors.
+ * Citus routes a tenant-scoped insert to one shard, which enforces the index
+ * and reports the same code, so this holds there as well.
+ */
+function isExternalEventMappingRace(error: unknown): boolean {
+  const e = error as { code?: unknown; constraint?: unknown } | null;
+  if (!e || e.code !== '23505' || typeof e.constraint !== 'string') return false;
+  return e.constraint.length > 0 && EXTERNAL_EVENT_MAPPING_UNIQUE_INDEX.startsWith(e.constraint);
+}
+
 /** `calendar_event_mappings.occurrence_index`, however the driver hands it over. */
 function parseOccurrenceIndex(value: unknown): Record<string, string> {
   const parsed = typeof value === 'string' ? safeJsonParse(value) : value;
@@ -318,6 +336,7 @@ export class CalendarSyncService {
         // Create event in external calendar
         const createdEvent = await adapter.createEvent(externalEvent);
 
+        // LEVERAGE: pattern mapping-unique-race — a lost unique-index race here (schedule_entry or external_event index) still surfaces as a provider error; the inbound insert classifies it via isExternalEventMappingRace.
         // Create mapping
         const [mapping] = await tenantDb(trx, tenant).table('calendar_event_mappings')
           .insert({
@@ -827,6 +846,18 @@ export class CalendarSyncService {
       }
       return result;
     } catch (error: any) {
+      // Lost the race to import this event: a concurrent call (an inbound
+      // notification or the post-recreate catch-up) committed the entry and its
+      // mapping first, and our transaction - entry included - rolled back. That
+      // is success, not a provider fault, so the status is left alone.
+      if (isExternalEventMappingRace(error)) {
+        console.log('[CalendarSyncService] Concurrent sync already imported this event', {
+          externalEventId,
+          calendarProviderId
+        });
+        return { success: true, skipped: true, reason: 'Concurrent sync already imported this event' };
+      }
+
       console.error(`Failed to sync external event ${externalEventId} to schedule entry:`, error);
 
       await this.markProviderError(calendarProviderId, error.message);
