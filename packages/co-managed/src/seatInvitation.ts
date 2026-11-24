@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
-import { readCoManagedSeatAllocationState, type CountCoManagedSeatCommitments } from '@alga-psa/licensing';
+import { lockCoManagedSponsorPool, readCoManagedSeatAllocationState, type CountCoManagedSeatCommitments } from '@alga-psa/licensing';
 import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject/resolverSubjects';
 import { CO_MANAGED_SEAT_RESOLVER_ID } from './seatAuthority';
 import { admitCoManagedSeatRole } from './seatRole';
@@ -61,6 +61,8 @@ export interface InviteCoManagedSeatTechnicianInput {
   contactId: string;
   /** The sponsor user who sent the invitation, when there is one. */
   invitedBy?: string;
+  /** Reserved for an EE trial binding transaction after hosted Pro eligibility is checked. */
+  allowTrialFunding?: boolean;
 }
 
 export interface CoManagedSeatInvitation {
@@ -177,6 +179,9 @@ export async function inviteCoManagedSeatTechnician(
     if (!found) throw new CoManagedSeatInvitationError('ARRANGEMENT_NOT_FOUND');
 
     // (2) and (3): the pool, then the allocation, as every capacity writer locks them.
+    await lockCoManagedSponsorPool(trx, input.sponsorTenant);
+    const allocationFunding = await sponsor.table('co_managed_allocations').where({ allocation_id: found.allocation_id })
+      .first('funding_source');
     const pool = await readCoManagedSeatAllocationState(trx, input.sponsorTenant, found.allocation_id);
     // (4)
     const arrangement = await arrangements().forUpdate().first('state', 'allocation_id', 'client_id');
@@ -184,7 +189,8 @@ export async function inviteCoManagedSeatTechnician(
     if (arrangement.state !== 'active' || arrangement.allocation_id !== found.allocation_id || pool.state === 'terminated') {
       throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
     }
-    if (pool.state !== 'active') throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
+    const trialBinding = input.allowTrialFunding === true && allocationFunding?.funding_source === 'seat_trial';
+    if (allocationFunding?.funding_source === 'seat_trial' ? !trialBinding : pool.state !== 'active') throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
 
     // A contact who already holds a live seat or pending invitation. On this arrangement a pending
     // invitation is returned as it is (the command is declarative); anywhere else it is refused.
@@ -244,6 +250,8 @@ export async function inviteCoManagedSeatTechnician(
     const [invitation] = await sponsor.table('user_invitations').insert({
       tenant: input.sponsorTenant,
       email,
+      email_normalized: email,
+      invited_user_id: null,
       first_name: firstName,
       last_name: lastName,
       role_id: null,
@@ -347,6 +355,11 @@ export async function acceptCoManagedSeatInvitation(
     if (!unlocked) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
 
     // (2) and (3): the pool, then the allocation. (4): the arrangement.
+    await lockCoManagedSponsorPool(trx, sponsorTenant);
+    const allocationFunding = await sponsor.table('co_managed_allocations').where({ allocation_id: unlocked.allocation_id })
+      .first('funding_source');
+    const pilot = allocationFunding?.funding_source === 'seat_trial'
+      ? await sponsor.table('co_managed_seat_trials').where({ allocation_id: unlocked.allocation_id, assignment_id: assignmentId }).first('state') : undefined;
     const pool = await readCoManagedSeatAllocationState(trx, sponsorTenant, unlocked.allocation_id);
     const arrangement = await arrangements().forUpdate().first('state', 'allocation_id');
     const assignment = await assignments().forUpdate().first('assignment_id', 'arrangement_id', 'state', 'user_id');
@@ -369,7 +382,9 @@ export async function acceptCoManagedSeatInvitation(
         pool.state === 'terminated') {
       throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
     }
-    if (pool.state !== 'active') throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
+    if (allocationFunding?.funding_source === 'seat_trial' ? pilot?.state !== 'pending' : pool.state !== 'active') {
+      throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
+    }
     if (invitation.expired) throw new CoManagedSeatInvitationError('INVITATION_EXPIRED');
 
     // The invitation promised the address, but only against other invitations: an internal user

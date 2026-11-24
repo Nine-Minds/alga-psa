@@ -1,7 +1,8 @@
 'use server'
 
+import { applyAssociationTargetSearchScope, assertAuthorizedAssociationTarget } from '@shared/lib/documentAssociationTargetAuthorization';
 import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
-import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
+import { canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
 import { resolveDocumentTypeForMime } from '../lib/documentTypeLookup';
 import { assertDocumentUploadAllowed } from '../lib/documentUploadAuthorization';
 import { createDocumentFromCommittedFile, ensureEntityFoldersInitializedInternal, publishDocumentUpdatedSearchEvent } from '../lib/createDocumentFromCommittedFile';
@@ -58,12 +59,14 @@ import {
   type DocumentActionError,
 } from './documentActionErrors';
 import {
-  authorizeAndRedactDocumentsForAction as authorizeDocumentRowsForAction,
+  authorizeAndRedactDocuments as authorizeDocumentRows,
+  isDocumentFieldRedacted,
   resolveDocumentReadScope,
-  type DocumentAuthorizationAction,
   type DocumentReadScope,
 } from '@shared/lib/documentAuthorization';
-import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
+import { resolveMeetingDocumentBrowserActor } from '@alga-psa/auth/lib/meetingDocumentActor';
+import { authorizeDocumentsForAction, loadAuthorizedDocumentById } from '@shared/lib/documentAccess';
+import { applyDocumentProductReadScope } from '@shared/lib/documentProductReadScope';
 import { getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
@@ -209,22 +212,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', verifiedRecipientLifecycleAccess);
-}
-
-/** `authorizeAndRedactDocuments` for any document action; `update` and `delete` also pass the kernel's mutation decision. */
-async function authorizeDocumentsForAction<T extends IDocument>(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUser,
-  documents: T[],
-  action: DocumentAuthorizationAction,
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
-): Promise<T[]> {
-  const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
-  const authorized = await authorizeDocumentRowsForAction(trx, tenant, user, admitted.documents, action, verifiedRecipientLifecycleAccess);
-  await admitted.assertCurrent?.();
-  return authorized;
+  return authorizeDocumentsForAction(trx, tenant, user, documents, 'read', () => resolveMeetingDocumentBrowserActor(user, tenant), verifiedRecipientLifecycleAccess);
 }
 
 export async function getAuthorizedDocumentByFileId(
@@ -252,27 +240,7 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
-  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read');
-}
-
-async function loadAuthorizedDocumentById(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUser,
-  documentId: string,
-  action: DocumentAuthorizationAction
-): Promise<IDocument | null> {
-  const document = await tenantScopedTable(trx, 'documents', tenant)
-    .modify(query => applyDocumentProductReadScope(query, trx, user))
-    .where('document_id', documentId)
-    .first();
-
-  if (!document) {
-    return null;
-  }
-
-  const [authorizedDocument] = await authorizeDocumentsForAction(trx, tenant, user, [document as IDocument], action);
-  return authorizedDocument ?? null;
+  return loadAuthorizedDocumentById(trx, tenant, user, documentId, 'read', () => resolveMeetingDocumentBrowserActor(user, tenant));
 }
 
 function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
@@ -312,7 +280,8 @@ async function assertAuthorizedDocumentSetForMutation(
     tenant,
     user,
     documents as IDocument[],
-    'update'
+    'update',
+    () => resolveMeetingDocumentBrowserActor(user, tenant)
   );
 
   if (authorizedDocuments.length !== uniqueDocumentIds.length) {
@@ -521,14 +490,17 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const { knex } = await createTenantKnex();
 
     const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update', () => resolveMeetingDocumentBrowserActor(user, tenant));
       if (!authorizedDocument) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
-
       // Empty command: issue no UPDATE at all (not even the audit stamp).
       if (changedFields.length === 0) {
         return null;
+      }
+
+      if (isDocumentFieldRedacted(authorizedDocument, 'content')) {
+        return permissionError('Permission denied: Cannot update redacted document content', 'documents:errors.permissions.update');
       }
 
       await tenantScopedTable(trx, 'documents', tenant)
@@ -593,7 +565,7 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
     const { knex } = await createTenantKnex();
 
     const outcome = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update');
+      const target = await loadAuthorizedDocumentById(trx, tenant, user, documentId, 'update', () => resolveMeetingDocumentBrowserActor(user, tenant));
       if (!target) {
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
@@ -767,7 +739,7 @@ export const deleteDocument = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete')
+      loadAuthorizedDocumentById(trx, tenant, user, documentId, 'delete', () => resolveMeetingDocumentBrowserActor(user, tenant))
     );
     if (!authorizedDocumentForDelete) {
       return {
@@ -781,7 +753,7 @@ export const deleteDocument = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
-      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete');
+      const authorizedDocument = await loadAuthorizedDocumentById(trx, tenantId, user, documentId, 'delete', () => resolveMeetingDocumentBrowserActor(user, tenantId));
       if (!authorizedDocument) {
         throw new Error('Permission denied: Cannot delete documents');
       }
@@ -2091,11 +2063,14 @@ export const searchDocumentAssociationEntities = withAuth(async (
     };
 
     const db = tenantDb(trx, tenant);
+    const scoped = (query: Knex.QueryBuilder, alias: string) =>
+      applyAssociationTargetSearchScope(query, trx, tenant, user, entityType, alias);
 
     if (entityType === 'client') {
       let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');
+      if (!await scoped(query, 'clients')) return { options: [], total: 0 };
       query = applySearch(query, ['client_name']);
       const total = await countRows(query, 'client_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2117,6 +2092,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('c.full_name', 'asc');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.full_name', 'c.email', 'cl.client_name']);
       const total = await countRows(query, 'c.contact_name_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2143,6 +2119,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('t.updated_at', 'desc');
+      if (!await scoped(query, 't')) return { options: [], total: 0 };
       query = applySearch(query, ['t.ticket_number', 't.title', 'cl.client_name']);
       const total = await countRows(query, 't.ticket_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2172,6 +2149,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('a.name', 'asc');
+      if (!await scoped(query, 'a')) return { options: [], total: 0 };
       query = applySearch(query, ['a.name', 'a.serial_number', 'cl.client_name']);
       const total = await countRows(query, 'a.asset_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2203,6 +2181,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('pt.updated_at', 'desc');
+      if (!await scoped(query, 'pt')) return { options: [], total: 0 };
       query = applySearch(query, ['pt.task_name', 'p.project_name', 'cl.client_name']);
       const total = await countRows(query, 'pt.task_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2220,6 +2199,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         )
         .orderBy('c.contract_name', 'asc')
         .distinct('c.contract_id', 'c.contract_name');
+      if (!await scoped(query, 'c')) return { options: [], total: 0 };
       query = applySearch(query, ['c.contract_name', 'cl.client_name']);
       const total = await countRows(query, 'c.contract_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2246,6 +2226,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
           `)
         )
         .orderBy('o.updated_at', 'desc');
+      if (!await scoped(query, 'o')) return { options: [], total: 0 };
       query = applySearch(query, ['o.opportunity_number', 'o.title', 'cl.client_name']);
       const total = await countRows(query, 'o.opportunity_id');
       const rows = await query.limit(safeLimit).offset(offset);
@@ -2271,6 +2252,7 @@ export const searchDocumentAssociationEntities = withAuth(async (
         `)
       )
       .orderBy('q.updated_at', 'desc');
+    if (!await scoped(quoteQuery, 'q')) return { options: [], total: 0 };
     quoteQuery = applySearch(quoteQuery, ['q.quote_number', 'q.title', 'cl.client_name']);
     const total = await countRows(quoteQuery, 'q.quote_id');
     const rows = await quoteQuery.limit(safeLimit).offset(offset);
@@ -2328,6 +2310,10 @@ export const createDocumentAssociations = withAuth(async (
         if (!asset || !await isAssetMutationAllowed(trx, tenant, assetContext, asset, 'update')) {
           return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
         }
+      }
+
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
       }
 
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
@@ -2473,6 +2459,10 @@ export const removeDocumentAssociations = withAuth(async (
             return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
           }
         }
+      }
+
+      if (!await assertAuthorizedAssociationTarget(trx, tenant, user, entity_type, entity_id, 'update')) {
+        return permissionError('Permission denied: Cannot access association target');
       }
 
       const targetedDocumentIds = rows.map((row: { document_id: string }) => row.document_id);

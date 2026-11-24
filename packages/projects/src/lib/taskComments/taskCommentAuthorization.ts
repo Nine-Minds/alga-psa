@@ -104,7 +104,13 @@ function requireGovernedStandIn(standIn: boolean, governed: boolean, action: Tas
 }
 
 /** Per-project record decisions, memoised for the request. */
-function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRoles, recordAction: 'read' | 'update') {
+function projectDecider(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  recordAction: 'read' | 'update',
+  apiKeyId?: string | null
+) {
   const decisions = new Map<string, Promise<ProjectReadDecision>>();
   let decider: ReturnType<typeof createProjectActionDecider> | null = null;
   return (projectId: string): Promise<ProjectReadDecision> => {
@@ -113,7 +119,7 @@ function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRo
       decision = (async () => {
         const project = await ProjectModel.getById(trx, tenant, projectId);
         if (!project) return { allowed: false, redactedFields: [], governed: false };
-        decider ??= createProjectActionDecider(trx, tenant, user, recordAction);
+        decider ??= createProjectActionDecider(trx, tenant, user, recordAction, apiKeyId);
         return (await decider)(project);
       })();
       decisions.set(projectId, decision);
@@ -129,6 +135,7 @@ export async function withTaskCommentAccess<T>(
   target: TaskCommentTarget,
   action: TaskCommentAction,
   work: (ctx: TaskCommentAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const standIn = await assertCoarse(trx, user, action);
@@ -150,7 +157,7 @@ export async function withTaskCommentAccess<T>(
     const [task] = await resolveTasks(trx, tenant, [taskId]);
     if (!task) throw new Error(notFound);
 
-    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read');
+    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read', apiKeyId);
     const decision = await decide(task.project_id);
     if (!decision.allowed) throw new Error(notFound);
     requireGovernedStandIn(standIn, decision.governed, action);
@@ -185,10 +192,11 @@ export async function withTaskCommentBatchReadAccess<T>(
   target: TaskCommentBatchTarget,
   action: 'read',
   work: (ctx: TaskCommentBatchAccessContext) => Promise<T>,
+  apiKeyId?: string | null,
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await assertCoarse(trx, user, action);
-    const decideRead = projectDecider(trx, tenant, user, 'read');
+    const decideRead = projectDecider(trx, tenant, user, 'read', apiKeyId);
     const decide = async (projectId: string): Promise<boolean> => (await decideRead(projectId)).allowed;
 
     let allowed: string[];

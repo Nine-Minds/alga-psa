@@ -286,7 +286,8 @@
     },
     "primary": {
       "title": "Primäre E-Mail",
-      "description": "Diese bleibt die Standardadresse im Kontaktdatensatz"
+      "description": "Diese bleibt die Standardadresse im Kontaktdatensatz",
+      "keepOldEmail": "{{email}} als zusätzliche E-Mail behalten"
     },
     "row": {
       "title": "Zusätzliche E-Mail {{number}}",
@@ -455,6 +456,7 @@
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto. Verwenden Sie die Passwort-Zurücksetzung anstatt eine Einladung zu senden.",
+        "portalUserAlreadyExists": "Diese E-Mail-Adresse gehört bereits zu einem anderen Benutzerkonto in dieser Organisation.",
         "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
         "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
         "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
@@ -649,12 +651,43 @@
     "actions": {
       "openMenu": "Menü öffnen",
       "quickView": "Schnellansicht",
-      "addNewContact": "Neuen Kontakt hinzufügen"
+      "addNewContact": "Neuen Kontakt hinzufügen",
+      "selectAll": "Alle Kontakte auswählen",
+      "selectContact": "{{name}} auswählen",
+      "inviteSelected": "Zum Portal einladen ({{selected}})",
+      "inviteAllEligible": "Alle berechtigten einladen"
     },
     "errors": {
       "loadFailed": "Kontakte konnten nicht geladen werden.",
       "loadingTitle": "Fehler beim Laden der Kontakte",
       "retryFailed": "Kontakte konnten nicht geladen werden. Bitte erneut versuchen."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Kontakte zum Kundenportal einladen",
+    "description": "Bestätigung für Portal-Masseneinladungen mit Vorschau der Berechtigten und Ergebnis je Kontakt",
+    "loading": "Es wird geprüft, wer eingeladen werden kann...",
+    "inviteCount": "{{total}} Kontakte werden zum Kundenportal eingeladen.",
+    "skipCount": "{{total}} werden übersprungen:",
+    "visibilityNote": "Jede Einladung gewährt den Zugriff, den der Kontakt bereits hat: {{grouped}} sind auf eine Portal-Sichtbarkeitsgruppe beschränkt, {{full}} erhalten vollen Zugriff auf die Portaldaten ihres Kunden.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "hat bereits Portalzugriff",
+      "missingEmail": "keine verwendbare E-Mail-Adresse",
+      "sharedMailbox": "gemeinsames Postfach"
+    },
+    "actions": {
+      "send": "{{total}} Einladungen senden",
+      "sending": "Wird gesendet..."
+    },
+    "results": {
+      "summary": "{{sent}} gesendet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
+      "sent": "Gesendet",
+      "skipped": "Übersprungen",
+      "failed": "Fehlgeschlagen"
+    },
+    "errors": {
+      "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
+      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen."
     }
   },
   "contactsLayout": {

@@ -1,0 +1,15 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-2-findings-in-client-tickets-ts/packages/user-composition
+      Running tests with seed "1793776442512"
+
+Environment file path: /home/robert/alga-copies/feature-security-2-findings-in-client-tickets-ts/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-2-findings-in-client-tickets-ts/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-2-findings-in-client-tickets-ts/.env.localtest
+ ✓ |node| src/lib/currentUserProjection.test.ts (1 test) 5ms 13 MB heap used
+ ✓ |jsdom| src/lib/currentUserProjection.test.ts (1 test) 6ms 55 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  07:14:03
+   Duration  836ms (transform 100ms, setup 284ms, import 20ms, tests 10ms, environment 288ms)
+

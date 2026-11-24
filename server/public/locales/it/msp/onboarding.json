@@ -334,7 +334,8 @@
     },
     "address": {
       "title": "Indirizzo dell'azienda",
-      "description": "Precompilato dai dati di fatturazione — controlla e correggi se necessario. Questo indirizzo compare su fatture e preventivi.",
+      "description": "Questo indirizzo compare su fatture e preventivi.",
+      "prefilledFromBilling": "Alcuni di questi valori sono stati compilati dai dati di fatturazione. Controllali.",
       "fields": {
         "addressLine1": {
           "label": "Indirizzo riga 1",
@@ -554,7 +555,8 @@
         "success": {
           "one": "Importata correttamente 1 bacheca.",
           "other": "Importate correttamente {{count}} bacheche."
-        }
+        },
+        "empty": "Tutte le bacheche standard sono già state importate."
       },
       "table": {
         "headers": {
@@ -584,7 +586,8 @@
           "placeholder": "Seleziona una bacheca per le categorie importate",
           "help": "Tutte le categorie importate verranno assegnate a questa bacheca"
         },
-        "parentAutoSelectTitle": "La categoria padre verrà selezionata automaticamente"
+        "parentAutoSelectTitle": "La categoria padre verrà selezionata automaticamente",
+        "empty": "Questa bacheca ha già tutte le categorie standard."
       },
       "errors": {
         "missingParents": "Non è possibile importare le sottocategorie senza le relative categorie padre. Seleziona anche: {{parents}}",
@@ -702,7 +705,8 @@
         "success": {
           "one": "Importato con successo 1 stato.",
           "other": "Importati con successo {{count}} stati."
-        }
+        },
+        "empty": "Questa bacheca ha già tutti gli stati standard."
       },
       "table": {
         "headers": {
@@ -771,7 +775,8 @@
         "success": {
           "one": "Importata con successo 1 priorità.",
           "other": "Importate con successo {{count}} priorità."
-        }
+        },
+        "empty": "Tutte le priorità standard sono già state importate."
       },
       "table": {
         "headers": {
@@ -797,6 +802,9 @@
       },
       "table": {
         "actions": "Azioni"
+      },
+      "import": {
+        "loading": "Caricamento degli elementi disponibili..."
       }
     },
     "header": {

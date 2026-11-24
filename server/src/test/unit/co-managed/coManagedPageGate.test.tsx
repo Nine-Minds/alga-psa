@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ served: true, admitted: true, product: 'psa' as string, tenant: 't1' as string | undefined, calls: [] as string[],
-  commercial: false, operational: true, access: [] as string[] }));
+  commercial: false, operational: true, access: [] as string[], clientRead: true, permissionChecks: [] as string[] }));
 
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); } }));
-vi.mock('@alga-psa/auth', () => ({ getSession: async () => ({ user: { tenant: state.tenant } }) }));
+vi.mock('@alga-psa/auth', () => ({
+  getSession: async () => ({ user: { tenant: state.tenant } }),
+  getCurrentUser: async () => ({ user_id: 'u', tenant: state.tenant }),
+  hasPermission: async (_user: unknown, resource: string, action: string) => { state.permissionChecks.push(`${resource}:${action}`); return state.clientRead; },
+}));
 vi.mock('@alga-psa/core/capability/server', () => ({
   requireCapabilityForPage: async (_cap: string, _tenant: string, mode: 'serves' | 'admits' = 'serves') => {
     state.calls.push(mode);
@@ -31,7 +35,7 @@ import CoManagedOverview from '@/components/co-managed/CoManagedOverview';
 import CoManagedCustomerHome from '@/components/co-managed/CoManagedCustomerHome';
 import { CO_MANAGED_MENU_GROUP } from '@/config/coManagedMenu';
 
-beforeEach(() => { state.served = true; state.admitted = true; state.product = 'psa'; state.tenant = 't1'; state.calls = []; state.commercial = false; state.operational = true; state.access = []; });
+beforeEach(() => { state.served = true; state.admitted = true; state.product = 'psa'; state.tenant = 't1'; state.calls = []; state.commercial = false; state.operational = true; state.access = []; state.clientRead = true; state.permissionChecks = []; });
 
 describe('/msp/co-managed page gate', () => {
   it('psa, served and admitted: the overview', async () => {
@@ -99,6 +103,14 @@ describe('/msp/co-managed page gate', () => {
       expect(el.type).toBe(CoManagedOverview);
       expect(el.props.initialClientId).toBe(UUID);
       expect(el.props.purchasePool.type).toBe(CoManagedPurchasePool);
+      expect(el.props.purchasePool.props.clientsHref).toBe('/msp/clients');
+      expect(state.permissionChecks).toEqual(['client:read']);
+    });
+
+    it('both paths apply, but the actor may not open clients: the pool gets no Clients link', async () => {
+      state.commercial = true; state.operational = true; state.clientRead = false;
+      const el: any = await CoManagedPage({});
+      expect(el.props.purchasePool.props.clientsHref).toBeUndefined();
     });
 
     it('operational only: the existing overview with no pool slot', async () => {

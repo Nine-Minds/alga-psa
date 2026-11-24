@@ -239,9 +239,12 @@ describe('voidInvoice (credit note)', () => {
       'inv-cn-1',
       'too late'
     );
+    // The refusal carries the localization key alongside the English sentence:
+    // withAuth rewrites `error` into the caller's locale on the way out.
     expect(result).toEqual({
       success: false,
       error: 'This credit note has applied credit. Unapply the credit before voiding.',
+      messageKey: 'msp/invoicing:errors.void.creditNoteCreditApplied',
     });
 
     // Nothing was mutated.
@@ -262,6 +265,8 @@ describe('voidInvoice (credit note)', () => {
       'inv-cn-1',
       'raced with an application'
     );
+    // No messageKey here: this refusal comes from the authoritative re-check
+    // inside voidInvoiceLocally, whose LocalVoidOutcome carries a bare string.
     expect(result).toEqual({
       success: false,
       error: 'This credit note has applied credit. Unapply the credit before voiding.',

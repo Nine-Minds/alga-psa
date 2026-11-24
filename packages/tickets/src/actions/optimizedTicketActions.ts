@@ -1,5 +1,6 @@
 'use server';
 
+import { deriveSearchIdentifierMatch } from '@alga-psa/shared/ticketClients/searchIdentifier';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
@@ -88,6 +89,7 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import { getContactAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
@@ -210,7 +212,6 @@ function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
 }
 
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -929,7 +930,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         return new Map<string, string | null>();
       }),
       authorContactIds.length > 0
-        ? getEntityImageUrlsBatch('contact', authorContactIds, tenant).catch((imgError) => {
+        ? getContactAvatarUrlsBatchAction(authorContactIds, tenant).catch((imgError) => {
             console.error('Error batch-fetching comment author contact avatar URLs:', imgError);
             return new Map<string, string | null>();
           })
@@ -1463,7 +1464,7 @@ async function buildTicketListBaseQuery(
     const compiled = compilePredicateFragment(
       createTicketQuerySchema(() => codecContext.nowIso),
       filterGroup,
-      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled' }
+      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled', tenant }
     );
     if (compiled.sql !== 'TRUE') {
       baseQuery = baseQuery.whereRaw(compiled.sql, compiled.bindings as Knex.RawBinding[]);
@@ -1639,7 +1640,7 @@ function applyTicketListIndexedSearchFilter(
   }
 
   const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const { exact: identifier, prefix: identifierPrefix, isFullNumber } = deriveSearchIdentifierMatch(rawSearch);
   const includeBundledChildren = validatedFilters.bundleView === 'bundled';
   const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
@@ -1667,7 +1668,9 @@ function applyTicketListIndexedSearchFilter(
             websearch_to_tsquery('english', ?) AS tsq,
             CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
             ?::text AS raw,
-            ?::text AS identifier
+            ?::text AS identifier,
+            ?::text AS identifier_prefix,
+            ?::boolean AS fuzzy_enabled
         ) q
         WHERE si.object_type = ANY(?::text[])
           AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
@@ -1680,10 +1683,10 @@ function applyTicketListIndexedSearchFilter(
             OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
             OR si.title ILIKE '%' || q.raw || '%'
             OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-            OR si.title % q.raw
-            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.fuzzy_enabled AND si.title % q.raw)
+            OR (q.fuzzy_enabled AND coalesce(si.subtitle, '') % q.raw)
             OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
-            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+            OR (q.identifier_prefix IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier_prefix || '%')
           )
   `;
   const legABindings: Knex.RawBinding[] = [
@@ -1693,6 +1696,8 @@ function applyTicketListIndexedSearchFilter(
     prefixTsquery,
     rawSearch,
     identifier,
+    identifierPrefix,
+    !isFullNumber,
     ['ticket', 'ticket_comment'],
     ['ticket:read'],
     user.user_id,
@@ -1731,7 +1736,9 @@ function applyTicketListIndexedSearchFilter(
             websearch_to_tsquery('english', ?) AS tsq,
             CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
             ?::text AS raw,
-            ?::text AS identifier
+            ?::text AS identifier,
+            ?::text AS identifier_prefix,
+            ?::boolean AS fuzzy_enabled
         ) q
         JOIN ${childTickets.sql}
           ON ${childSearchIndexTenantPredicate.sql}
@@ -1751,10 +1758,10 @@ function applyTicketListIndexedSearchFilter(
             OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
             OR si.title ILIKE '%' || q.raw || '%'
             OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-            OR si.title % q.raw
-            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.fuzzy_enabled AND si.title % q.raw)
+            OR (q.fuzzy_enabled AND coalesce(si.subtitle, '') % q.raw)
             OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
-            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+            OR (q.identifier_prefix IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier_prefix || '%')
           )
 
         UNION ALL
@@ -1770,6 +1777,8 @@ function applyTicketListIndexedSearchFilter(
       prefixTsquery,
       rawSearch,
       identifier,
+      identifierPrefix,
+      !isFullNumber,
       ...childTickets.bindings,
       ...childSearchIndexTenantPredicate.bindings,
       ['ticket', 'ticket_comment'],
@@ -2249,7 +2258,7 @@ async function enrichTicketListItems(
       ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
     contactIds.size > 0
-      ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
+      ? getContactAvatarUrlsBatchAction(Array.from(contactIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
   ]);
 

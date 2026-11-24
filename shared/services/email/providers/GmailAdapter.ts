@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb } from '@alga-psa/db';
 import { parseEmailAddress, parseEmailAddressList } from '../../../lib/email/addressUtils';
+import { repairUtf8Mojibake } from '../inboundEmailMimeHelpers';
 
 /**
  * Gmail API adapter for email processing
@@ -723,7 +724,7 @@ This indicates a problem with the OAuth token saving process.`;
         },
         to: parsedTo,
         cc: parsedCc.length > 0 ? parsedCc : undefined,
-        subject: getHeader('Subject') || '',
+        subject: repairUtf8Mojibake(getHeader('Subject') || ''),
         body: {
           text: bodyContent,
           html: htmlContent

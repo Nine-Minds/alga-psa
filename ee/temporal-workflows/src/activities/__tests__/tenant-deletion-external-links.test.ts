@@ -22,12 +22,14 @@ vi.mock('../tenant-suspension-activities.js', () => ({}));
 
 import { deleteTenantData } from '../tenant-deletion-activities.js';
 
-describe('tenant deletion with external links', () => {
-  it('explicitly deletes external links and custom systems before their parents, preserving other tenants', async () => {
+describe('tenant deletion with external links and IMAP OAuth states', () => {
+  it('deletes tenant-owned links, custom systems and OAuth nonces before their parents, preserving other tenants', async () => {
     const target = 'tenant-to-delete';
     const survivor = 'another-tenant';
     const rows = new Map(['tenants', 'tickets', 'users', 'external_entity_links', 'tenant_external_systems', 'accounting_export_artifacts', 'accounting_export_batches']
       .map(table => [table, [{ tenant: target }, { tenant: survivor }]]));
+    const oauthStates = [target, survivor].map(tenant => ({ tenant, nonce: 'shared-nonce' }));
+    rows.set('imap_oauth_states', oauthStates);
     const deletedTables: string[] = [];
     const query = (table: string, tenant?: string) => {
       let counting = false;
@@ -63,7 +65,10 @@ describe('tenant deletion with external links', () => {
 
     const result = await deleteTenantData(target, 'deletion-id');
 
-    expect(result).toMatchObject({ success: true, deletedRecords: 7, tablesAffected: 7 });
+    expect(result).toMatchObject({ success: true, deletedRecords: 8, tablesAffected: 8 });
+    expect(rows.get('imap_oauth_states')).toEqual([oauthStates[1]]);
+    expect(deletedTables).toContain('imap_oauth_states');
+    expect(deletedTables.indexOf('imap_oauth_states')).toBeLessThan(deletedTables.indexOf('tenants'));
     for (const table of ['external_entity_links', 'tenant_external_systems']) {
       expect(deletedTables).toContain(table);
       expect(rows.get(table)).toEqual([{ tenant: survivor }]);
@@ -74,8 +79,8 @@ describe('tenant deletion with external links', () => {
     }
     expect(deletedTables.indexOf('accounting_export_artifacts')).toBeLessThan(deletedTables.indexOf('accounting_export_batches'));
     expect(rows.get('accounting_export_artifacts')).toEqual([{ tenant: survivor }]);
-    for (const remaining of rows.values()) {
-      expect(remaining).toEqual([{ tenant: survivor }]);
+    for (const [table, remaining] of rows) {
+      expect(remaining).toEqual(table === 'imap_oauth_states' ? [oauthStates[1]] : [{ tenant: survivor }]);
     }
   });
 });

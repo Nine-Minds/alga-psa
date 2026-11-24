@@ -1685,6 +1685,7 @@
       "printing": "Préparation…",
       "print": "Imprimer",
       "reason": "Motif",
+      "sizeMismatch": "Cette mise en page est plus petite que l'étiquette pour laquelle ce modèle est conçu. Imprimez plutôt à la taille propre du modèle.",
       "skipFailures": "Ignorer ceux-ci et imprimer le reste",
       "skipped_one": "{{count}} enregistrement a été ignoré car il n'a pas pu être ouvert.",
       "skipped_other": "{{count}} enregistrements ont été ignorés car ils n'ont pas pu être ouverts.",
@@ -1695,6 +1696,9 @@
       "useTemplate": "Utiliser {{template}}",
       "copiesPerAsset": "Exemplaires par actif",
       "adjacentCopies": "Les exemplaires de chaque actif sont imprimés ensemble."
+    },
+    "layout": {
+      "template-preferred": "Utiliser la taille du modèle"
     }
   },
   "deleteEntity": {
@@ -2300,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "{{count}} autres étiquettes : {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Mode focus",
+      "exit": "Quitter le mode focus"
+    }
   }
 }

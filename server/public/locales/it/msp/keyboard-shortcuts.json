@@ -396,6 +396,12 @@
         "label": "Mostra suggerimenti per i link in una nuova scheda",
         "description": "Mostra i suggerimenti da tastiera e, quando possibile, apre i link in una nuova scheda."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Attiva o disattiva la modalità focus",
+        "description": "Espandi l’editor di layout a tutta la finestra o torna al layout normale."
+      }
     }
   },
   "platform": {

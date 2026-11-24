@@ -634,7 +634,8 @@
       "downloadPdf": "Pobierz PDF",
       "sendEmail": "Wyślij e-mail",
       "unfinalize": "Cofnij finalizację",
-      "recordPayment": "Zarejestruj płatność"
+      "recordPayment": "Zarejestruj płatność",
+      "viewPayments": "Płatności"
     },
     "status": {
       "finalized": "Sfinalizowana"
@@ -922,7 +923,9 @@
       "reasonPlaceholder": "Powód anulowania...",
       "cancel": "Anuluj",
       "confirm": "Anuluj fakturę",
-      "voiding": "Anulowanie…"
+      "voiding": "Anulowanie…",
+      "algaOnly": "Anuluj tylko w AlgaPSA (odłącz od {{provider}})",
+      "algaOnlyWarning": "Dokument w {{provider}} pozostaje bez zmian, a ta faktura zostaje od niego odłączona, więc AlgaPSA i {{provider}} nie będą co do niej zgodne."
     },
     "history": {
       "title": "Historia",
@@ -1212,7 +1215,9 @@
       "send_few": "Wyślij {{count}} e-maile",
       "send_many": "Wyślij {{count}} e-maili",
       "sending_few": "Wysyłanie {{count}} faktur...",
-      "sending_many": "Wysyłanie {{count}} faktur..."
+      "sending_many": "Wysyłanie {{count}} faktur...",
+      "schedule": "Zaplanuj",
+      "scheduling": "Planowanie..."
     },
     "toasts": {
       "noValidRecipients": "Nie znaleziono prawidłowych odbiorców",
@@ -1224,11 +1229,13 @@
       "sentFailure_few": "Nie udało się wysłać {{count}} faktur",
       "sentFailure_many": "Nie udało się wysłać {{count}} faktur",
       "sentSuccess_few": "{{count}} faktury zostały wysłane pomyślnie",
-      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie"
+      "sentSuccess_many": "{{count}} faktur zostało wysłanych pomyślnie",
+      "scheduled": "Zaplanowano wiadomość e-mail z fakturą"
     },
     "errors": {
       "loadRecipients": "Nie udało się załadować informacji o odbiorcy",
-      "sendFailed": "Nie udało się wysłać e-maili"
+      "sendFailed": "Nie udało się wysłać e-maili",
+      "scheduleFailed": "Nie udało się zaplanować wiadomości e-mail z fakturą"
     }
   },
   "generateTab": {
@@ -1838,7 +1845,9 @@
           "actual": "100%",
           "label": "Powiększenie podglądu",
           "fitWithScale": "Dopasuj ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Strona {{page}} z {{total}}",
+        "frameTitle": "Podgląd faktury"
       },
       "tabs": {
         "design": "Projektowanie",
@@ -1934,6 +1943,10 @@
       "spacer": {
         "label": "Odstęp",
         "description": "Puste miejsce do regulacji układu."
+      },
+      "page-break": {
+        "label": "Podział strony",
+        "description": "Rozpoczyna następny blok na nowej stronie."
       },
       "container": {
         "label": "Kontener",
@@ -2257,6 +2270,17 @@
               "label": "Kolor"
             }
           }
+        },
+        "pagination": {
+          "title": "Podział na strony",
+          "fields": {
+            "breakBefore": {
+              "label": "Rozpocznij na nowej stronie"
+            },
+            "breakInside": {
+              "label": "Utrzymaj razem na jednej stronie"
+            }
+          }
         }
       }
     },
@@ -2370,6 +2394,8 @@
       "signatureLabel": "Podpis",
       "attachmentsLabel": "Załączniki",
       "spacerLabel": "Odstęp",
+      "pageBreakLabel": "Podział strony",
+      "pageBreakBefore": "Rozpoczyna się na nowej stronie",
       "companyLogo": "Logotyp firmy",
       "insertionMarker": "Następny dodany blok trafi tutaj",
       "emptyContainer": "Pusty — zaznacz go i dodaj bloki z lewego panelu",
@@ -2726,6 +2752,15 @@
         "clearLines": "Pojedynczy wiersz",
         "stackedLinesHint": "Każdy niepusty wiersz jest wyświetlany w osobnym wierszu. Gdy wszystkie wiersze są puste, wyświetlany jest klucz powiązania kolumny podany powyżej.",
         "removeLine": "Usuń wiersz {{index}}",
+        "valueLabels": "Brzmienie wartości",
+        "addKnownValues": "+ Znane wartości",
+        "addValueLabel": "+ Wartość",
+        "valueLabelsHint": "Wybierz słowa drukowane dla wartości, np. true → Wliczone. Pusta etykieta nic nie drukuje.",
+        "valueLabelKey": "Wartość",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Drukowany tekst",
+        "valueLabelTextPlaceholder": "Puste",
+        "removeValueLabel": "Usuń brzmienie",
         "align": "Wyrównanie",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2852,29 +2887,24 @@
     "editor": {
       "titles": {
         "create": "Nowy układ dokumentu typu „{{type}}”",
-        "edit": "Edytuj układ dokumentu typu „{{type}}”"
-      },
-      "description": "Zaprojektuj układ dokumentu typu „{{type}}” w edytorze wizualnym, a następnie wyświetl podgląd z danymi przykładowymi.",
-      "errorTitle": "Edytor układu dokumentu typu „{{type}}”",
-      "sections": {
-        "details": "Szczegóły układu"
+        "edit": "Edytuj układ: {{name}}"
       },
       "fields": {
-        "version": "Wersja",
+        "created": "Utworzono {{time}}",
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
-        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
+        "notSaved": "Jeszcze nie zapisano",
+        "savedAt": "Zapisano {{time}}",
+        "version": "Wersja"
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
       },
       "actions": {
-        "back": "Wróć do układów",
+        "back": "Powrót do układów: {{type}}",
+        "labelSettings": "Ustawienia etykiety",
         "save": "Zapisz układ"
-      },
-      "labels": {
-        "created": "Utworzono: {{date}}",
-        "lastUpdated": "Ostatnia aktualizacja: {{date}}"
       },
       "preview": {
         "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
@@ -2909,10 +2939,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceFinalize": "Odmowa uprawnień: wymagane uprawnienie finalizowania faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
       "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",
-      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur"
+      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur",
+      "invoiceSend": "Odmowa dostępu: wymagane jest uprawnienie do wysyłania faktur"
     },
     "invoice": {
       "notFound": "Nie znaleziono faktury",
@@ -2975,6 +3007,25 @@
       "statusNotPayable": "Nie można zarejestrować płatności dla faktury o statusie: {{status}}.",
       "overpaymentNotConfirmed": "Ta płatność jest wyższa niż pozostała kwota do zapłaty. Potwierdź nadpłatę, aby ją zarejestrować.",
       "recordFailed": "Nie udało się zarejestrować płatności. Spróbuj ponownie."
+    },
+    "void": {
+      "paymentsRecorded": "Wycofaj płatności przed anulowaniem.",
+      "paymentsRecordedManual": "Wycofaj płatności zarejestrowane w AlgaPSA ({{sources}}) przed anulowaniem tej faktury.",
+      "paymentsRecordedIntegration": "Ta faktura ma płatności z Twojego systemu księgowego ({{sources}}). Usuń je lub edytuj tam, a następna synchronizacja wycofa je tutaj, albo wycofaj je tylko w AlgaPSA.",
+      "paymentsRecordedGateway": "Ta faktura ma płatności pobrane przez dostawcę płatności ({{sources}}). Zwróć je tam przed anulowaniem.",
+      "paymentsRecordedMixed": "Wycofaj płatności na tej fakturze ({{sources}}) przed jej anulowaniem.",
+      "creditNoteCreditApplied": "Ta nota kredytowa ma zastosowany kredyt. Cofnij zastosowanie kredytu przed anulowaniem."
+    },
+    "reversePayment": {
+      "permissionDenied": "Brak uprawnień: wycofywanie płatności faktur wymaga uprawnienia do płatności faktur.",
+      "reasonRequired": "Wycofanie płatności wymaga podania powodu.",
+      "paymentNotFound": "Nie znaleziono płatności. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "notReversible": "Tej płatności nie można wycofać.",
+      "alreadyReversed": "Ta płatność została już wycofana.",
+      "gatewayRefundRequired": "Ta płatność została pobrana przez dostawcę płatności ({{method}}). Zamiast tego zwróć ją tam.",
+      "integrationOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj w {{provider}}, a następna synchronizacja wycofa ją tutaj.",
+      "remoteMutateRequired": "Brak uprawnień: wycofanie zsynchronizowanej płatności tylko w AlgaPSA wymaga uprawnienia do zdalnych zmian w księgowości.",
+      "reverseFailed": "Nie udało się wycofać płatności. Spróbuj ponownie."
     }
   },
   "periodTotal": {
@@ -3034,6 +3085,37 @@
     },
     "toasts": {
       "recorded": "Płatność zarejestrowana"
+    }
+  },
+  "invoicePayments": {
+    "title": "Płatności",
+    "titleForInvoice": "Płatności — {{invoiceNumber}}",
+    "loading": "Wczytywanie płatności...",
+    "empty": "Dla tej faktury nie zarejestrowano żadnych płatności.",
+    "sources": {
+      "manual": "Zarejestrowano w AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Dostawca płatności"
+    },
+    "fields": {
+      "reason": "Powód"
+    },
+    "actions": {
+      "reverse": "Wycofaj płatność",
+      "confirmReverse": "Wycofaj płatność",
+      "algaOnly": "Wycofaj tylko w AlgaPSA",
+      "cancel": "Anuluj",
+      "close": "Zamknij"
+    },
+    "notes": {
+      "gatewayRefund": "Pobrano przez dostawcę płatności ({{method}}): zwróć ją tam.",
+      "alreadyReversed": "Już wycofano.",
+      "providerOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj tam, a następna synchronizacja wycofa ją tutaj.",
+      "algaOnlyWarning": "AlgaPSA i {{provider}} nie będą zgodne co do tej płatności: zapis w {{provider}} pozostaje bez zmian, a płatność zostaje tutaj odłączona."
+    },
+    "toasts": {
+      "reversed": "Płatność wycofana"
     }
   }
 }

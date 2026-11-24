@@ -606,7 +606,8 @@
       "downloadPdf": "Télécharger le PDF",
       "sendEmail": "Envoyer un e-mail",
       "unfinalize": "Définaliser",
-      "recordPayment": "Enregistrer un paiement"
+      "recordPayment": "Enregistrer un paiement",
+      "viewPayments": "Paiements"
     },
     "status": {
       "finalized": "Finalisée"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Motif de l'annulation...",
       "cancel": "Annuler",
       "confirm": "Annuler la facture",
-      "voiding": "Annulation…"
+      "voiding": "Annulation…",
+      "algaOnly": "Annuler uniquement dans AlgaPSA (dissocier de {{provider}})",
+      "algaOnlyWarning": "Le document {{provider}} reste inchangé et cette facture en est dissociée : AlgaPSA et {{provider}} divergeront à son sujet."
     },
     "history": {
       "title": "Historique",
@@ -1164,7 +1167,9 @@
       "send_one": "Envoyer un e-mail à {{count}}",
       "send_other": "Envoyer des e-mails {{count}}",
       "sending_one": "Envoi de la facture {{count}}...",
-      "sending_other": "Envoi des factures {{count}}..."
+      "sending_other": "Envoi des factures {{count}}...",
+      "schedule": "Programmer",
+      "scheduling": "Programmation..."
     },
     "toasts": {
       "noValidRecipients": "Aucun destinataire valide trouvé",
@@ -1172,11 +1177,13 @@
       "sentSuccess_other": "Factures {{count}} envoyées avec succès",
       "sentFailure_one": "Échec de l'envoi de la facture {{count}}",
       "sentFailure_other": "Échec de l'envoi des factures {{count}}",
-      "sentPartial": "{{successCount}} envoyé, {{failureCount}} a échoué"
+      "sentPartial": "{{successCount}} envoyé, {{failureCount}} a échoué",
+      "scheduled": "E-mail de facture programmé"
     },
     "errors": {
       "loadRecipients": "Échec du chargement des informations sur le destinataire",
-      "sendFailed": "Échec de l'envoi des e-mails"
+      "sendFailed": "Échec de l'envoi des e-mails",
+      "scheduleFailed": "Échec de la programmation de l’e-mail de facture"
     }
   },
   "generateTab": {
@@ -1786,7 +1793,9 @@
           "actual": "100 %",
           "label": "Zoom de l'aperçu",
           "fitWithScale": "Ajuster ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Page {{page}} sur {{total}}",
+        "frameTitle": "Aperçu de la facture"
       },
       "tabs": {
         "design": "Conception",
@@ -1882,6 +1891,10 @@
       "spacer": {
         "label": "Espaceur",
         "description": "Espace vide pour ajuster la mise en page."
+      },
+      "page-break": {
+        "label": "Saut de page",
+        "description": "Commence le bloc suivant sur une nouvelle page."
       },
       "container": {
         "label": "Conteneur",
@@ -2205,6 +2218,17 @@
               "label": "Couleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Pagination",
+          "fields": {
+            "breakBefore": {
+              "label": "Commencer sur une nouvelle page"
+            },
+            "breakInside": {
+              "label": "Garder groupé sur une seule page"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2342,8 @@
       "signatureLabel": "Signature",
       "attachmentsLabel": "Pièces jointes",
       "spacerLabel": "Espaceur",
+      "pageBreakLabel": "Saut de page",
+      "pageBreakBefore": "Commence sur une nouvelle page",
       "companyLogo": "Logo de l'entreprise",
       "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
       "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",
@@ -2674,6 +2700,15 @@
         "clearLines": "Ligne unique",
         "stackedLinesHint": "Chaque ligne non vide s’affiche sur sa propre ligne. Lorsque toutes les lignes sont vides, la clé de liaison de la colonne ci-dessus est affichée.",
         "removeLine": "Retirer la ligne {{index}}",
+        "valueLabels": "Libellé des valeurs",
+        "addKnownValues": "+ Valeurs connues",
+        "addValueLabel": "+ Valeur",
+        "valueLabelsHint": "Choisissez les mots imprimés pour une valeur, par exemple true → Inclus. Un libellé vide n’imprime rien.",
+        "valueLabelKey": "Valeur",
+        "valueLabelKeyPlaceholder": "true",
+        "valueLabelText": "Texte imprimé",
+        "valueLabelTextPlaceholder": "Vide",
+        "removeValueLabel": "Supprimer le libellé",
         "align": "Alignement",
         "widthPlaceholder": "auto | 50% | 120px"
       },
@@ -2800,29 +2835,24 @@
     "editor": {
       "titles": {
         "create": "Nouvelle mise en page pour {{type}}",
-        "edit": "Modifier la mise en page pour {{type}}"
-      },
-      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
-      "errorTitle": "Éditeur de mise en page pour {{type}}",
-      "sections": {
-        "details": "Détails de la mise en page"
+        "edit": "Modifier la mise en page : {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Créé {{time}}",
         "labelClass": "Classe d'étiquette",
         "labelFields": "Champs affichés sur l'étiquette",
-        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés.",
+        "notSaved": "Pas encore enregistré",
+        "savedAt": "Enregistré {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"
       },
       "actions": {
-        "back": "Retour aux mises en page",
+        "back": "Retour aux présentations de {{type}}",
+        "labelSettings": "Réglages d’étiquette",
         "save": "Enregistrer la mise en page"
-      },
-      "labels": {
-        "created": "Créée : {{date}}",
-        "lastUpdated": "Dernière mise à jour : {{date}}"
       },
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
@@ -2857,10 +2887,12 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceFinalize": "Autorisation refusée : autorisation de finalisation des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
       "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",
-      "invoiceRead": "Autorisation refusée : lecture des factures requise"
+      "invoiceRead": "Autorisation refusée : lecture des factures requise",
+      "invoiceSend": "Autorisation refusée : l’autorisation d’envoyer des factures est requise"
     },
     "invoice": {
       "notFound": "Facture introuvable",
@@ -2923,6 +2955,25 @@
       "statusNotPayable": "Impossible d’enregistrer un paiement pour une facture au statut : {{status}}.",
       "overpaymentNotConfirmed": "Ce paiement dépasse le solde dû. Confirmez le trop-perçu pour l'enregistrer.",
       "recordFailed": "Échec de l'enregistrement du paiement. Veuillez réessayer."
+    },
+    "void": {
+      "paymentsRecorded": "Annulez les paiements avant d’annuler la facture.",
+      "paymentsRecordedManual": "Annulez les paiements enregistrés dans AlgaPSA ({{sources}}) avant d’annuler cette facture.",
+      "paymentsRecordedIntegration": "Cette facture comporte des paiements provenant de votre système comptable ({{sources}}). Supprimez-les ou modifiez-les là-bas et la prochaine synchronisation les annulera ici, ou annulez-les uniquement dans AlgaPSA.",
+      "paymentsRecordedGateway": "Cette facture comporte des paiements encaissés via un prestataire de paiement ({{sources}}). Remboursez-les là-bas avant d’annuler la facture.",
+      "paymentsRecordedMixed": "Annulez les paiements de cette facture ({{sources}}) avant de l’annuler.",
+      "creditNoteCreditApplied": "Cet avoir comporte du crédit appliqué. Annulez l’application du crédit avant d’annuler l’avoir."
+    },
+    "reversePayment": {
+      "permissionDenied": "Accès refusé : l’annulation des paiements de factures nécessite l’autorisation de paiement de facture.",
+      "reasonRequired": "Un motif est requis pour annuler un paiement.",
+      "paymentNotFound": "Paiement introuvable. Il a peut-être été modifié ou supprimé. Veuillez actualiser la page et réessayer.",
+      "notReversible": "Ce paiement ne peut pas être annulé.",
+      "alreadyReversed": "Ce paiement a déjà été annulé.",
+      "gatewayRefundRequired": "Ce paiement a été encaissé via un prestataire de paiement ({{method}}). Remboursez-le plutôt là-bas.",
+      "integrationOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le dans {{provider}} et la prochaine synchronisation l’annulera ici.",
+      "remoteMutateRequired": "Accès refusé : annuler un paiement synchronisé uniquement dans AlgaPSA nécessite l’autorisation de modification distante de la comptabilité.",
+      "reverseFailed": "Échec de l’annulation du paiement. Veuillez réessayer."
     }
   },
   "periodTotal": {
@@ -2982,6 +3033,37 @@
     },
     "toasts": {
       "recorded": "Paiement enregistré"
+    }
+  },
+  "invoicePayments": {
+    "title": "Paiements",
+    "titleForInvoice": "Paiements — {{invoiceNumber}}",
+    "loading": "Chargement des paiements...",
+    "empty": "Aucun paiement n’a été enregistré pour cette facture.",
+    "sources": {
+      "manual": "Enregistré dans AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Prestataire de paiement"
+    },
+    "fields": {
+      "reason": "Motif"
+    },
+    "actions": {
+      "reverse": "Annuler le paiement",
+      "confirmReverse": "Annuler le paiement",
+      "algaOnly": "Annuler uniquement dans AlgaPSA",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "notes": {
+      "gatewayRefund": "Encaissé via un prestataire de paiement ({{method}}) : remboursez-le plutôt là-bas.",
+      "alreadyReversed": "Déjà annulé.",
+      "providerOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le là-bas et la prochaine synchronisation l’annulera ici.",
+      "algaOnlyWarning": "AlgaPSA et {{provider}} divergeront sur ce paiement : l’enregistrement dans {{provider}} reste inchangé et le paiement est dissocié ici."
+    },
+    "toasts": {
+      "reversed": "Paiement annulé"
     }
   }
 }

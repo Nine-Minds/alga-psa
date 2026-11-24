@@ -2259,6 +2259,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
       const idsByText = await resolveTicketTagIdsByText(trx, tenant, validatedFilters.tags);
       const compiledTags = compileTicketTagIdsFilter(
+        tenant,
         (validatedFilters.tags as string[]).map((text) => idsByText[text]).filter((id): id is string => !!id)
       );
       query = query.whereRaw(compiledTags.sql, compiledTags.bindings as Knex.RawBinding[]);

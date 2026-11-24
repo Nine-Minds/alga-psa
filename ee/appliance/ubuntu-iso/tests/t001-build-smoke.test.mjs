@@ -217,6 +217,12 @@ test('T005 temporal-worker profile injects appliance auth, public URL, and Redis
   });
   assert.equal(env.find((entry) => entry.name === 'APPLICATION_URL')?.value, 'http://alga-core.msp.svc.cluster.local:3000');
   assert.equal(env.find((entry) => entry.name === 'NEXT_PUBLIC_BASE_URL')?.value, 'https://alga.local');
+  // Kubernetes expands references using only previously declared variables.
+  const publicUrlIndex = env.findIndex((entry) => entry.name === 'NEXT_PUBLIC_BASE_URL');
+  const webhookUrlIndex = env.findIndex((entry) => entry.name === 'PUBLIC_WEBHOOK_BASE_URL');
+  assert.ok(webhookUrlIndex > publicUrlIndex);
+  assert.equal(env[webhookUrlIndex].value, '$(NEXT_PUBLIC_BASE_URL)');
+  assert.equal(env.filter((entry) => entry.name === 'PUBLIC_WEBHOOK_BASE_URL').length, 1);
   assert.equal(env.find((entry) => entry.name === 'REDIS_HOST')?.value, 'redis.msp.svc.cluster.local');
   assert.equal(env.find((entry) => entry.name === 'REDIS_PORT')?.value, '6379');
   assert.deepEqual(env.find((entry) => entry.name === 'REDIS_PASSWORD')?.valueFrom.secretKeyRef, {
@@ -229,6 +235,11 @@ test('T006 alga-core appliance profile gives the app Deployment a first-install-
   const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'alga-core.single-node.yaml'));
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
   assert.ok(deployment);
+  const env = deployment.spec.template.spec.containers.find((container) => container.name === 'sebastian').env;
+  const publicUrlIndex = env.findIndex((entry) => entry.name === 'NEXT_PUBLIC_BASE_URL');
+  const webhookUrlIndex = env.findIndex((entry) => entry.name === 'PUBLIC_WEBHOOK_BASE_URL');
+  assert.ok(webhookUrlIndex > publicUrlIndex);
+  assert.equal(env[webhookUrlIndex].value, '$(NEXT_PUBLIC_BASE_URL)');
   assert.ok(deployment.spec.progressDeadlineSeconds >= 1800);
 });
 

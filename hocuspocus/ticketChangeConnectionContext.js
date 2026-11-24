@@ -1,6 +1,6 @@
-import { validateDocumentRoomAccess } from './tenantValidation.js'
+import { parseTicketRoom, validateDocumentRoomAccess } from './tenantValidation.js'
 
-/** Validate upgrade-time room context; ticket rooms wait for protocol authentication. */
+/** Validate upgrade-time room context. Ticket-list rooms use protocol authentication. */
 export async function resolveDocumentConnectionContext(data) {
   if (data.documentName?.startsWith('tenant:') && data.documentName.endsWith(':ticket-changes')) return undefined
   await validateDocumentRoomAccess(data.documentName, data.request)
@@ -13,6 +13,7 @@ export async function resolveDocumentAuthenticationContext(data) {
     const access = validateDocumentRoomAccess(data.documentName, data.request, { token: data.token })
     return { ticketChangesAccess: access }
   }
-  await validateDocumentRoomAccess(data.documentName, data.request)
+  const access = await validateDocumentRoomAccess(data.documentName, data.request)
+  if (parseTicketRoom(data.documentName)) return { ticketAccess: access }
   return undefined
 }

@@ -5,7 +5,8 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
+import { isLicensedUserType } from '@alga-psa/types';
 import {
   classifyTenantTemplate,
   copiedFromSystemRowFor,
@@ -51,7 +52,7 @@ async function readTenantSettings(trx: Knex.Transaction, tenant: string): Promis
 }
 
 async function requireSettingsUpdate(user: any, trx: Knex.Transaction): Promise<void> {
-  if (!(await hasPermission(user, 'settings', 'update', trx))) {
+  if (!isLicensedUserType(user.user_type) || !(await hasPermission(user, 'settings', 'update', trx))) {
     throw new Error('Permission denied: Cannot update settings');
   }
 }
@@ -81,7 +82,7 @@ export const saveEmailBrandingAction = withAuth(async (
     ...(existing?.appliedPalette ? { appliedPalette: existing.appliedPalette } : {}),
   };
 
-  await updateTenantSettings({ emailBranding: palette });
+  await mergeTenantSettingsJson(tenant, { emailBranding: palette });
   revalidatePath(SETTINGS_PATH);
 
   return palette;
@@ -227,7 +228,7 @@ async function persistAppliedPalette(
   palette: EmailBrandingPalette,
   applied: { appliedAt: string; appliedPalette: EmailPaletteTokens } | null,
 ): Promise<void> {
-  await updateTenantSettings({
+  await mergeTenantSettingsJson(tenant, {
     emailBranding: applied ? { ...palette, ...applied } : { ...palette, appliedAt: undefined, appliedPalette: undefined },
   });
 }

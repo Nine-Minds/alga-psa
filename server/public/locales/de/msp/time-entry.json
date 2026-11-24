@@ -153,7 +153,8 @@
       "endAfterStartPicker": "Die Endzeit muss nach der Startzeit liegen",
       "durationSameDay": "Die Dauer muss am selben Tag enden",
       "endSameDay": "Die Endzeit muss am selben Tag wie die Startzeit liegen",
-      "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein"
+      "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein",
+      "billableExceedsDuration": "Die abrechenbare Dauer darf die Gesamtdauer nicht überschreiten"
     },
     "serviceSource": {
       "task": "Standard aus Aufgabe",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Kein Zeitraum umfasst den {{date}}. Wählen Sie einen Tag innerhalb eines Zeitraums.",
       "sheetLocked": "Der Stundenzettel für den {{date}} hat den Status „{{status}}“. Wählen Sie einen Tag auf einem Entwurf oder einem Stundenzettel mit angeforderten Änderungen."
+    },
+    "multiDay": {
+      "notice": "Dieser Timer lief über {{count}} Tage und wird daher als ein Zeiteintrag pro Tag gespeichert. Entfernen Sie einen Tag, um dessen Zeit nicht zu erfassen.",
+      "dayHeading": "Tag {{index}} von {{count}} · {{date}}",
+      "remove": "Entfernen",
+      "total": "Gesamt: {{duration}}"
     }
   },
   "launch": {

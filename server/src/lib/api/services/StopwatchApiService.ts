@@ -209,12 +209,16 @@ export class StopwatchApiService extends BaseService<never> {
     }
   }
 
-  /** Log the session as one time entry; returns the closed session and the persisted entry row. */
+  /** Log the session (one entry per work day unless a span is given); returns the closed session and the persisted entry rows. */
   async log(
     sessionId: string,
     data: LogStopwatchData,
     context: ServiceContext,
-  ): Promise<{ session: StopwatchSessionView; time_entry: Record<string, unknown> }> {
+  ): Promise<{
+    session: StopwatchSessionView;
+    time_entry: Record<string, unknown>;
+    time_entries: Record<string, unknown>[];
+  }> {
     const db = await this.getDbForContext(context);
     let result;
     try {
@@ -225,7 +229,14 @@ export class StopwatchApiService extends BaseService<never> {
       throw mapStopwatchError(error);
     }
     // After commit, exactly like saveTimeEntry.
-    await publishLoggedSessionEvents(result.persisted, context);
-    return { session: result.session, time_entry: result.persisted.entry as unknown as Record<string, unknown> };
+    for (const persisted of result.persisted) {
+      await publishLoggedSessionEvents(persisted, context);
+    }
+    return {
+      session: result.session,
+      // time_entry stays the first entry for existing clients; time_entries lists every entry.
+      time_entry: result.persisted[0].entry as unknown as Record<string, unknown>,
+      time_entries: result.persisted.map((p) => p.entry as unknown as Record<string, unknown>),
+    };
   }
 }

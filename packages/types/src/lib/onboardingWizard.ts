@@ -18,6 +18,10 @@ export interface WizardData {
   companyPostalCode?: string;
   companyCountryCode?: string;
   companyCountryName?: string;
+  // True when the default location holds real values (not placeholders); set by getOnboardingInitialData
+  companyAddressPrefilled?: boolean;
+  // Server-set when saveClientInfo wrote the address; keeps it from being reported as prefilled
+  companyAddressSavedByWizard?: boolean;
 
   // Team Members
   teamMembers: TeamMember[];

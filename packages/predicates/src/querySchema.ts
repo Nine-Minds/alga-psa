@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import { SET_OPERATORS, isPredicateGroup, operatorTakesList, operatorTakesValue } from './types';
 import type { PredicateClause, PredicateLiteral, PredicateNode, PredicateOperator } from './types';
 
@@ -6,7 +7,8 @@ export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestam
 /** A fragment of SQL with positional `?` bindings and `??` identifier bindings (knex syntax). */
 export interface SqlFragment {
   sql: string;
-  bindings: unknown[];
+  /** Bindings accepted by Knex's raw SQL adapter, including identifier names for `??` slots. */
+  bindings: Knex.RawBinding[];
 }
 
 export interface ColumnAttribute {
@@ -44,6 +46,8 @@ export interface ComputedResolverContext {
   /** Always a non-complement operator: the compiler resolves `not_in` and `is_empty` by negation (`COMPLEMENTS`). */
   operator: PredicateOperator;
   value?: PredicateLiteral | PredicateLiteral[];
+  /** `CompileOptions.tenant`, when the caller gave one: a subquery the resolver opens must filter on it by value too. */
+  tenant?: string;
 }
 
 /**

@@ -31,6 +31,11 @@
       "import": "./dist/lib/index.mjs",
       "require": "./dist/lib/index.js"
     },
+    "./lib/boardDefaultPriority": {
+      "types": "./dist/lib/boardDefaultPriority.d.ts",
+      "import": "./dist/lib/boardDefaultPriority.mjs",
+      "require": "./dist/lib/boardDefaultPriority.js"
+    },
     "./lib/ticketLifecycleHooks": {
       "types": "./dist/lib/ticketLifecycleHooks.d.ts",
       "import": "./dist/lib/ticketLifecycleHooks.mjs",

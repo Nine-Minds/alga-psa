@@ -153,7 +153,8 @@
       "endAfterStartPicker": "Sluttiden måste vara efter starttiden",
       "durationSameDay": "Tidsintervallet måste sluta samma dag",
       "endSameDay": "Sluttiden måste vara samma dag som starttiden",
-      "invalidTimeRange": "Ange ett giltigt tidsintervall"
+      "invalidTimeRange": "Ange ett giltigt tidsintervall",
+      "billableExceedsDuration": "Den fakturerbara tiden får inte överstiga den totala tiden"
     },
     "serviceSource": {
       "task": "Standard från uppgift",
@@ -531,6 +532,12 @@
     "save": {
       "noPeriod": "Ingen tidsperiod täcker {{date}}. Välj en dag inom en tidsperiod.",
       "sheetLocked": "Tidrapporten för {{date}} har status {{status}}. Välj en dag i en tidrapport i utkastform eller en där ändringar har begärts."
+    },
+    "multiDay": {
+      "notice": "Den här timern pågick under {{count}} dagar och sparas därför som en tidsregistrering per dag. Ta bort en dag för att utesluta dess tid.",
+      "dayHeading": "Dag {{index}} av {{count}} · {{date}}",
+      "remove": "Ta bort",
+      "total": "Totalt: {{duration}}"
     }
   },
   "launch": {

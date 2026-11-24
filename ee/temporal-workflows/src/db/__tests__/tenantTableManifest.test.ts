@@ -38,10 +38,17 @@ describe('tenant table manifest golden order', () => {
     expect(tenantDeletionOrder(TENANT_TABLE_MANIFEST)).toEqual(literal);
   });
 
-  it('has 628 unique ordered names', () => {
+  it('has 633 unique ordered names', () => {
     const order = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
-    expect(order).toHaveLength(628);
-    expect(new Set(order).size).toBe(628);
+    expect(order).toHaveLength(633);
+    expect(new Set(order).size).toBe(633);
+  });
+
+  it('deletes stopwatch session entry links before their sessions and time entries', () => {
+    const order = tenantDeletionOrder(TENANT_TABLE_MANIFEST);
+    expect(order).toContain('time_tracking_session_entries');
+    expect(order.indexOf('time_tracking_session_entries')).toBeLessThan(order.indexOf('time_tracking_sessions'));
+    expect(order.indexOf('time_tracking_session_entries')).toBeLessThan(order.indexOf('time_entries'));
   });
 
   it('deletes asset numbering dependents before assets and their immutable claims', () => {

@@ -32,12 +32,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     roleIds?: string[];
   };
   if (!body.name) return NextResponse.json({ error: '"name" is required' }, { status: 400 });
+  const name = body.name;
 
   return withServiceErrorMapping(async () => {
     try {
       const agent = await createAgent({
         tenant: admin.tenant,
-        name: body.name!,
+        name,
         description: body.description,
         idpIssuer: body.idpIssuer,
         idpSubject: body.idpSubject,

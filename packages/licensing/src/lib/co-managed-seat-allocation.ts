@@ -16,13 +16,14 @@ import { materializeState, type CoManagedEntitlementState } from './co-managed-e
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
 import { coManagedStateForLapse, resolveCoManagedLapse } from './co-managed-lifecycle';
 import type { CoManagedSeatAllocationRecord } from './co-managed-reservation';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validSeats = (seats: number) => Number.isSafeInteger(seats) && seats >= 1 && seats <= 2147483647;
 
 /** A seat-kind row of `co_managed_allocations`, as the commands here read it. */
 export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocationRecord,
-  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'>;
+  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'> & { funding_source?: 'paid' | 'seat_trial' };
 
 /**
  * Counts the seats in use inside one seat allocation: active technicians plus pending
@@ -38,10 +39,10 @@ export type CountCoManagedSeatCommitments = (
 /** Locks the pool, then the live seat allocation. Entitlement first: the order every capacity writer uses. */
 async function lockSeatAllocation(trx: Knex.Transaction, sponsorTenant: string, allocationId: string) {
   const sponsor = tenantDb(trx, sponsorTenant);
-  const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
+  const entitlement = await lockCoManagedSponsorPool(trx, sponsorTenant);
   const allocation: CoManagedSeatAllocationSnapshot | undefined = await sponsor.table('co_managed_allocations')
     .where({ allocation_id: allocationId, allocation_kind: 'seat' }).forUpdate()
-    .first('allocation_id', 'sponsor_client_id', 'seats', 'state');
+    .first('allocation_id', 'sponsor_client_id', 'seats', 'state', 'funding_source');
   return { sponsor, entitlement, allocation };
 }
 
@@ -74,6 +75,7 @@ export async function resizeCoManagedSeatAllocation(db: Knex, sponsorTenant: str
       throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
     }
     if (input.seats === input.expectedSeats) return;
+    if (allocation.funding_source === 'seat_trial') throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
     if (input.seats > input.expectedSeats) {
       const pool = await poolState(trx, sponsorTenant, entitlement);
       if (!pool || pool.graceEndsAt || pool.isReadOnly) throw new CoManagedAdmissionError('CO_MANAGED_LICENSE_LAPSED');
@@ -111,6 +113,12 @@ export async function releaseCoManagedSeatAllocation(db: Knex, sponsorTenant: st
       .where({ allocation_id: allocation.allocation_id, allocation_kind: 'seat' }).whereNull('released_at').whereNot('state', 'released')
       .update({ state: 'released', released_at: trx.fn.now(), updated_at: trx.fn.now() }).returning('seats');
     if (freed.length === 0) return { released: false, seats: 0 };
+    if (allocation.funding_source === 'seat_trial') {
+      // write-admission: exempt — releasing trial funding ends the trial under the sponsor and allocation locks.
+      await sponsor.table('co_managed_seat_trials').where({ allocation_id: allocation.allocation_id }).whereNot('state', 'paid')
+        .update({ state: 'ended', updated_at: trx.fn.now(), revision: trx.raw('revision + 1') });
+      return { released: true, seats: 0 };
+    }
     // The returned seats may end an over-allocation; record that now rather than at the next reading.
     await poolState(trx, sponsorTenant, entitlement);
     return { released: true, seats: Number(freed[0].seats) };
@@ -133,6 +141,9 @@ export async function readCoManagedSeatAllocationState(
   const { entitlement, allocation } = await lockSeatAllocation(trx, sponsorTenant, allocationId);
   if (!allocation || allocation.state === 'released') return { state: 'terminated', canWrite: false, graceEndsAt: null };
   if (allocation.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
+  if (allocation.funding_source === 'seat_trial') {
+    return readCoManagedSeatAllocationStateLockFree(trx, sponsorTenant, allocationId);
+  }
   // No entitlement row: capacity is zero, which the workspace lifecycle also reads as read-only.
   if (!entitlement) return { state: 'read_only', canWrite: false, graceEndsAt: null };
   const pool = await materializeState(trx, sponsorTenant, entitlement, new Date());
@@ -153,9 +164,13 @@ export async function readCoManagedSeatAllocationStateLockFree(
 ): Promise<CoManagedOperationalState> {
   const sponsor = tenantDb(db, sponsorTenant);
   const allocation = await sponsor.table('co_managed_allocations')
-    .where({ allocation_id: allocationId, allocation_kind: 'seat' }).first('state');
+    .where({ allocation_id: allocationId, allocation_kind: 'seat' }).first('state', 'funding_source');
   if (!allocation || allocation.state === 'released') return { state: 'terminated', canWrite: false, graceEndsAt: null };
   if (allocation.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
+  if (allocation.funding_source === 'seat_trial') {
+    const admitted = await sponsor.table('co_managed_trial_access').where({ allocation_id: allocationId }).first('assignment_id');
+    return admitted ? { state: 'active', canWrite: true, graceEndsAt: null } : { state: 'read_only', canWrite: false, graceEndsAt: null };
+  }
   const entitlement = await sponsor.table('co_managed_entitlements').first('lapse_started_at', 'valid_until');
   if (!entitlement) return { state: 'read_only', canWrite: false, graceEndsAt: null };
   const at = now();

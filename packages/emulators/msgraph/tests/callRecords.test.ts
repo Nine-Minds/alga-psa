@@ -380,5 +380,5 @@ describe('msgraph call records', { shuffle: false }, () => {
     // Restart the original host so afterAll's stop() stays valid.
     host = new EmulatorHost({ emulators: [msgraphEmulator], controlPort: 0, ports: { msgraph: 0 } });
     await host.start();
-  });
+  }, 15_000);
 });

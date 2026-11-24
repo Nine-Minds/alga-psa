@@ -1,6 +1,8 @@
 import type { ZodTypeAny } from 'zod';
 import {
+  createProjectMaterialSchema,
   createProjectTaskSchema,
+  projectMaterialResponseSchema,
   projectTaskStatusMappingResponseSchema,
   projectTaskResponseSchema,
   updateProjectTaskSchema,
@@ -383,6 +385,102 @@ export function registerProjectRoutes(
       'x-chat-rbac-resource': 'project',
       'x-chat-approval-required': true,
     },
+    edition: 'both',
+  });
+
+  // ---------------------------------------------------------------------------
+  // Project materials (shared inventory cores; same behaviour as the MSP UI and ticket materials).
+  // ---------------------------------------------------------------------------
+  const ProjectMaterialParams = registry.registerSchema(
+    'ProjectMaterialParams',
+    zOpenApi.object({
+      id: zOpenApi.string().guid().describe('Project UUID.'),
+      materialId: zOpenApi.string().guid().describe('Project material UUID.'),
+    }),
+  );
+  const ProjectMaterialResource = registry.registerSchema('ProjectMaterialResource', projectMaterialResponseSchema);
+  const ProjectMaterialEnvelope = registry.registerSchema(
+    'ProjectMaterialEnvelope',
+    zOpenApi.object({ data: ProjectMaterialResource }),
+  );
+  const ProjectMaterialListEnvelope = registry.registerSchema(
+    'ProjectMaterialListEnvelope',
+    zOpenApi.object({ data: zOpenApi.array(ProjectMaterialResource) }),
+  );
+  const ProjectMaterialCreateBody = registry.registerSchema(
+    'ProjectMaterialCreateBody',
+    createProjectMaterialSchema.describe(
+      'Material to add to a project. client_id is taken from the project and is rejected if sent; allow_reserved_override is not accepted. rate is integer minor units. unit_id is required for serialized stock-tracked products.',
+    ),
+  );
+  const materialExtensions = (rbacAction: 'read' | 'update', approvalRequired: boolean, displayName: string) => ({
+    'x-tenant-header-required': true,
+    'x-rbac-resource': 'project',
+    'x-rbac-action': rbacAction,
+    'x-chat-callable': true,
+    'x-chat-display-name': displayName,
+    'x-chat-rbac-resource': 'project',
+    'x-chat-approval-required': approvalRequired,
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/projects/{id}/materials',
+    summary: 'List project materials',
+    description:
+      'Returns the materials (products) recorded against a project, newest first, with product name and SKU. Requires project:read and read access to the project.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectIdParams },
+    responses: {
+      200: { description: 'Project materials returned successfully.', schema: ProjectMaterialListEnvelope },
+      400: { description: 'Invalid project identifier.', schema: deps.ErrorResponse },
+      401: { description: 'Authentication failed.', schema: deps.ErrorResponse },
+      403: { description: 'Authenticated user lacks project read permission.', schema: deps.ErrorResponse },
+      404: { description: 'Project not found.', schema: deps.ErrorResponse },
+    },
+    extensions: materialExtensions('read', false, 'List Project Materials'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/projects/{id}/materials',
+    summary: 'Add a project material',
+    description:
+      'Adds a product to a project with quantity, rate and currency. A stock-tracked product consumes stock and a serialized product delivers the picked unit_id. Insufficient stock, or stock reserved or held for a sales order, is refused with 400 on quantity and nothing is written. Requires project:update. Returns the created material.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectIdParams, body: { schema: ProjectMaterialCreateBody } },
+    responses: {
+      201: { description: 'Material added.', schema: ProjectMaterialEnvelope },
+      400: { description: 'Invalid body (field path reported), insufficient or reserved stock (path: quantity).', schema: deps.ErrorResponse },
+      401: { description: 'Authentication failed.', schema: deps.ErrorResponse },
+      403: { description: 'Authenticated user lacks project update permission.', schema: deps.ErrorResponse },
+      404: { description: 'Project not found.', schema: deps.ErrorResponse },
+    },
+    extensions: materialExtensions('update', true, 'Add Project Material'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/projects/{id}/materials/{materialId}',
+    summary: 'Delete a project material',
+    description:
+      'Deletes an unbilled material from the project and restores the stock it consumed. Returns 404 if the material does not belong to the project, and 409 if it has been billed. Requires project:update.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectMaterialParams },
+    responses: {
+      204: { description: 'Material deleted and stock restored.', emptyBody: true },
+      400: { description: 'Invalid identifier.', schema: deps.ErrorResponse },
+      401: { description: 'Authentication failed.', schema: deps.ErrorResponse },
+      403: { description: 'Authenticated user lacks project update permission.', schema: deps.ErrorResponse },
+      404: { description: 'Project not found, or the material does not belong to it.', schema: deps.ErrorResponse },
+      409: { description: 'The material has been billed and cannot be deleted.', schema: deps.ErrorResponse },
+    },
+    extensions: materialExtensions('update', true, 'Delete Project Material'),
     edition: 'both',
   });
 

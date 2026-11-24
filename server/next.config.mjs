@@ -1356,6 +1356,8 @@ const nextConfig = {
   // This prevents Turbopack from bundling them with mangled names.
   serverExternalPackages: [
     'puppeteer',
+    // Read off disk and injected into the headless page by previewPagination.server; never bundled.
+    'pagedjs',
     'sharp',
     '@opentelemetry/sdk-node',
     '@opentelemetry/auto-instrumentations-node',

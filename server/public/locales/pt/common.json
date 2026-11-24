@@ -1685,6 +1685,7 @@
       "printing": "Preparando…",
       "print": "Imprimir",
       "reason": "Motivo",
+      "sizeMismatch": "Esta disposição é menor do que a etiqueta para a qual este modelo foi projetado. Imprima no tamanho próprio do modelo.",
       "skipFailures": "Ignorar estes e imprimir o restante",
       "skipped_one": "{{count}} registro foi ignorado porque não pôde ser aberto.",
       "skipped_other": "{{count}} registros foram ignorados porque não puderam ser abertos.",
@@ -1695,6 +1696,9 @@
       "useTemplate": "Usar {{template}}",
       "copiesPerAsset": "Cópias por ativo",
       "adjacentCopies": "As cópias de cada ativo são impressas juntas."
+    },
+    "layout": {
+      "template-preferred": "Usar o tamanho do modelo"
     }
   },
   "deleteEntity": {
@@ -2300,5 +2304,11 @@
   },
   "entityChip": {
     "moreTags": "mais {{count}} tags: {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Modo de foco",
+      "exit": "Sair do modo de foco"
+    }
   }
 }

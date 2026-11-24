@@ -146,12 +146,11 @@ export interface ScheduleTeamsMeetingFromClientResult {
 
 /**
  * Feature slots the app-owned co-managed integration supplies once it has
- * resolved capability admission and client read authority. A null slots value
- * means "no feature UI" and the ordinary client renders.
+ * resolved capability admission and client read authority. The integration
+ * supplies the tab only; the client header carries no co-managed UI. A null
+ * slots value means "no feature UI" and the ordinary client renders.
  */
 export interface ClientCoManagedSlots {
-  /** Compact relationship state summary for the client header. */
-  summary: ReactNode;
   /** The stable `co-managed` entry registered in the client tab registry. */
   tab: TabContent;
 }

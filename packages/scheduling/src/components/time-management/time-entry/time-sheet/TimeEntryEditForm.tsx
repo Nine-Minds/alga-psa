@@ -6,7 +6,7 @@ import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
-import { formatISO, isSameDay, parseISO, setHours, setMinutes, setSeconds } from 'date-fns';
+import { formatISO, parseISO, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -20,7 +20,7 @@ import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
 import { resolvePrefilledServiceSource } from './serviceSourceBadge';
-import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay, formatTimeForInput, parseTimeToDate, getDurationParts, getTimeEntryValidationErrors } from './utils';
 import {
   dateOnlyToLocalDate,
   dateToPlainDate,
@@ -93,7 +93,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   isNewEntry = false,
   isSaving = false,
   disableSave = false,
-  serviceOptional = false
+  serviceOptional = false,
+  errors: externalErrors,
+  showErrors: externalShowErrors = false,
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
@@ -164,15 +166,23 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     return t(`timeEntryForm.serviceSource.${source}`, { defaultValue: defaults[source] });
   }, [entry, t]);
 
-  const [validationErrors, setValidationErrors] = useState<{
+  const [localValidationErrors, setValidationErrors] = useState<{
     startTime?: string;
     endTime?: string;
     duration?: string;
+    date?: string;
     service?: string;
     contractLine?: string;
   }>({});
 
-  const [showErrors, setShowErrors] = useState(false);
+  const [localShowErrors, setShowErrors] = useState(false);
+  // A parent that validates on its own (the drawer's footer Save bypasses handleSave below) hands its
+  // field errors down; they render in the same slots as the form's own.
+  const validationErrors = useMemo(
+    () => ({ ...localValidationErrors, ...externalErrors }),
+    [localValidationErrors, externalErrors],
+  );
+  const showErrors = localShowErrors || externalShowErrors;
   // null = eligibility still loading (or nothing to look up yet).
   const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[] | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -260,50 +270,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
-    const startTime = parseISO(entry.start_time);
-    const endTime = parseISO(entry.end_time);
-    const duration = calculateDuration(startTime, endTime);
-    const newErrors: typeof validationErrors = {};
-
-    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-      newErrors.duration = t('timeEntryForm.validation.invalidTimeRange', {
-        defaultValue: 'Enter a valid time range'
-      });
-    } else if (
-      useSubjectZone
-        ? workDateInTimeZone(entry.start_time, workTimeZone) !== workDateInTimeZone(entry.end_time, workTimeZone)
-        : !isSameDay(startTime, endTime)
-    ) {
-      newErrors.duration = t('timeEntryForm.validation.durationSameDay', {
-        defaultValue: 'Duration must end on the same day'
-      });
-      newErrors.endTime = t('timeEntryForm.validation.endSameDay', {
-        defaultValue: 'End time must be on the same day as start time'
-      });
-    }
-
-    if (startTime >= endTime) {
-      newErrors.startTime = t('timeEntryForm.validation.startBeforeEnd', {
-        defaultValue: 'Start time must be earlier than end time'
-      });
-      newErrors.endTime = t('timeEntryForm.validation.endAfterStart', {
-        defaultValue: 'End time must be later than start time'
-      });
-    }
-
-    if (duration <= 0) {
-      newErrors.duration = t('timeEntryForm.validation.durationMinimum', {
-        defaultValue: 'Duration must be at least 1 minute'
-      });
-    } else if (duration < 1) {
-      newErrors.duration = t('timeEntryForm.validation.minimumDuration', {
-        defaultValue: 'Minimum duration is 1 minute'
-      });
-    }
-
+    const newErrors = getTimeEntryValidationErrors(
+      { start_time: entry.start_time, end_time: entry.end_time },
+      useSubjectZone ? workTimeZone : undefined,
+    );
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entry?.start_time, entry?.end_time, t, useSubjectZone, workTimeZone]);
+  }, [entry?.start_time, entry?.end_time, useSubjectZone, workTimeZone]);
 
   // Get client ID from entry or work item
   useEffect(() => {
@@ -703,7 +676,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           dropdownMode="overlay"
         />
         {showErrors && validationErrors.service && (
-          <span className="text-sm text-red-500">{validationErrors.service}</span>
+          <span id={`${id}-service-error`} className="text-sm text-red-500">{validationErrors.service}</span>
         )}
       </div>
 
@@ -838,6 +811,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           clearable={false}
           isDateDisabled={isDateDisabled}
         />
+        {showErrors && validationErrors.date && (
+          <span id={`${id}-date-error`} className="text-sm text-destructive">{validationErrors.date}</span>
+        )}
         {sheetForSelectedDate && (
           <p id={`${id}-sheet-hint`} className="text-xs text-[rgb(var(--color-text-500))]">
             {t('workItemEntry.sheetHint', {

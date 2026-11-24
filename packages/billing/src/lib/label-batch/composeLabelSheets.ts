@@ -57,7 +57,8 @@ export function composeLabelSheets(
       throw new LabelLayoutError(
         `${cell.description ?? `Label ${index + 1}`} is designed for ${designed.widthMm.toFixed(1)} x ` +
           `${designed.heightMm.toFixed(1)} mm but its label cell is ${placement.widthMm.toFixed(1)} x ` +
-          `${placement.heightMm.toFixed(1)} mm.`
+          `${placement.heightMm.toFixed(1)} mm.`,
+        'template-size-mismatch'
       );
     }
   });
