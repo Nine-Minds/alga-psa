@@ -13,6 +13,7 @@ import { hiddenTicketFields } from '@alga-psa/tickets/lib/ticketFieldProjection'
 import { runWithTenant } from '@alga-psa/db';
 import * as bundleService from '@alga-psa/authorization/bundles/service';
 import { createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule } from '@alga-psa/authorization/bundles/service';
+import { authorizeTicketIdsWithRedactions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 /**
  * Chip tag hydration (T019, T020): list rows and expanded bundle children carry contact_tags and
@@ -61,7 +62,7 @@ type OptimizedActions = typeof import('@alga-psa/tickets/actions/optimizedTicket
 let optimized: OptimizedActions;
 let db: Knex;
 
-const ids = { tenant: uuidv4(), actor: uuidv4(), c1: uuidv4(), k1: uuidv4(), k2: uuidv4(), A: uuidv4(), B: uuidv4(), M: uuidv4(), CH: uuidv4() };
+const ids = { tenant: uuidv4(), actor: uuidv4(), c1: uuidv4(), k1: uuidv4(), k2: uuidv4(), A: uuidv4(), B: uuidv4(), C: uuidv4(), M: uuidv4(), CH: uuidv4() };
 const defs = {
   contactVip: uuidv4(), contactBilling: uuidv4(), clientVip: uuidv4(), clientGold: uuidv4(), urgent: uuidv4(),
 };
@@ -118,6 +119,7 @@ async function seed() {
     t(ids.M, 1, ids.k2, { assigned_to: actor }),
     t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION', DESCRIPTION: 'SMOKE4050-ATTRIBUTE-DESCRIPTION', title: 'SMOKE4050-ATTRIBUTE-TITLE', status_id: 'SMOKE4050-ATTRIBUTE-STATUS', secret_alias: 'SMOKE4050-SECRET-ALIAS', SECRET_ALIAS: 'SMOKE4050-SECRET-ALIAS-UPPER', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
     t(ids.B, 3, ids.k2, { attributes: { DESCRIPTION: 'SMOKE4050-B-DESCRIPTION', title: 'SMOKE4050-B-ATTRIBUTE-TITLE', status_id: 'SMOKE4050-B-ATTRIBUTE-STATUS', Secret_Alias: 'SMOKE4050-SECRET-ALIAS-MIXED', visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
+    t(ids.C, 5, ids.k2, { attributes: { description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
   ]);
   await db('tickets').insert(t(ids.CH, 4, ids.k1, { master_ticket_id: ids.M }));
   await db('tag_mappings').insert([
@@ -212,7 +214,7 @@ describeDb('ticket chip tag hydration (DB)', () => {
       email: `redaction-${redactionUser.slice(0, 8)}@example.com`, hashed_password: 'not-used',
       first_name: 'Redaction', last_name: 'Reader', user_type: 'internal', is_inactive: false, timezone: 'UTC',
     });
-    await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B]).update({ assigned_to: redactionUser });
+    await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B, ids.C]).update({ assigned_to: redactionUser });
     const bundle = await createAuthorizationBundle(db, { tenant: ids.tenant, name: `Smart Search redaction ${uuidv4()}`, actorUserId: ids.actor });
     await createBundleAssignment(db, {
       tenant: ids.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: redactionUser, actorUserId: ids.actor,
@@ -226,15 +228,44 @@ describeDb('ticket chip tag hydration (DB)', () => {
     const previousUser = authMocks.user;
     authMocks.user = { user_id: redactionUser, user_type: 'internal', tenant: ids.tenant };
     try {
-      const result: any = await ticketSmartSearch.hydrateRows(base, [ids.A, ids.B], new Map());
+      const authorized = await authorizeTicketIdsWithRedactions([ids.A, ids.B, ids.C]);
+      expect(authorized).toHaveLength(3);
+      const redactions = new Map(authorized.map(({ ticketId, redactedFields }) => [ticketId, redactedFields]));
+      const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+        trx, ids.tenant, authMocks.user, [ids.A, ids.B, ids.C], redactions
+      )));
+      expect(candidates.map(({ id }) => id)).toEqual(expect.arrayContaining([ids.A, ids.B, ids.C]));
+      let scoreRequest: unknown;
+      await scoreBatch({ systemOne: async (request: unknown) => {
+        scoreRequest = request;
+        return { model: 'db-test', answers: {
+          c0: { type: 'noul', noul: 0.9 }, c1: { type: 'noul', noul: 0.9 }, c2: { type: 'noul', noul: 0.9 },
+        }, usage: { input_tokens: 1 } } as never;
+      } } as never, ticketSmartSearch.relevance, 'incident', candidates, new AbortController().signal);
+      const scorerInput = JSON.stringify(scoreRequest);
+      for (const restrictedKey of ['secret_alias', 'SECRET_ALIAS', 'Secret_Alias']) {
+        expect(scorerInput).not.toContain(restrictedKey);
+      }
+      for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED']) {
+        expect(scorerInput).not.toContain(secret);
+      }
+      expect(scorerInput).toContain('DB-C-PERMITTED-DESCRIPTION');
+
+      const result: any = await ticketSmartSearch.hydrateRows(base, [ids.A, ids.B, ids.C], redactions);
       const serialized = JSON.stringify(result);
       for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED']) {
         expect(serialized).not.toContain(secret);
       }
-      expect(result.rows).toHaveLength(2);
+      for (const row of result.rows) {
+        for (const restrictedKey of ['secret_alias', 'SECRET_ALIAS', 'Secret_Alias']) {
+          expect(row.attributes).not.toHaveProperty(restrictedKey);
+        }
+      }
+      expect(result.rows).toHaveLength(3);
       expect(result.rows[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2', status_name: 'Open' });
       expect(result.rows[0].attributes).toMatchObject({ description: 'DB-SECRET-DESCRIPTION', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
       expect(result.rows[1].attributes).toMatchObject({ visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' });
+      expect(result.rows.find((row: any) => row.ticket_id === ids.C).attributes).toMatchObject({ description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE' });
       expect(serialized).toContain('DB-SECRET-TITLE');
       expect(serialized).toContain('Open');
 
@@ -243,11 +274,44 @@ describeDb('ticket chip tag hydration (DB)', () => {
       expect(JSON.stringify(qualified)).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
       expect(JSON.stringify(qualified)).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
 
+      const qualifiedMixed = new Map([
+        [ids.A, ['attributes.title', 'attributes.status_id']],
+        [ids.C, ['attributes.title', 'attributes.status_id']],
+      ]);
+      const qualifiedCandidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+        trx, ids.tenant, authMocks.user, [ids.A, ids.C], qualifiedMixed
+      )));
+      let qualifiedRequest: unknown;
+      await scoreBatch({ systemOne: async (request: unknown) => {
+        qualifiedRequest = request;
+        return { model: 'db-test', answers: {
+          c0: { type: 'noul', noul: 0.9 }, c1: { type: 'noul', noul: 0.9 },
+        }, usage: { input_tokens: 1 } } as never;
+      } } as never, ticketSmartSearch.relevance, 'incident', qualifiedCandidates, new AbortController().signal);
+      const qualifiedScorer = JSON.stringify(qualifiedRequest);
+      expect(qualifiedScorer).toContain('DB-C-PERMITTED-DESCRIPTION');
+      expect(qualifiedScorer).toContain('DB-SECRET-TITLE');
+      expect(qualifiedScorer).toContain('Open');
+      expect(qualifiedScorer).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
+      expect(qualifiedScorer).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
+      expect(qualifiedScorer).not.toContain('"title":"SMOKE4050-ATTRIBUTE-TITLE"');
+      expect(qualifiedScorer).not.toContain('"status_id":"SMOKE4050-ATTRIBUTE-STATUS"');
+      const qualifiedHydrated: any = await ticketSmartSearch.hydrateRows(base, [ids.A, ids.C], qualifiedMixed);
+      const hydratedA = qualifiedHydrated.rows.find((row: any) => row.ticket_id === ids.A);
+      const hydratedC = qualifiedHydrated.rows.find((row: any) => row.ticket_id === ids.C);
+      expect(hydratedA).toMatchObject({ title: 'DB-SECRET-TITLE', status_name: 'Open' });
+      expect(hydratedA.attributes).not.toHaveProperty('title');
+      expect(hydratedA.attributes).not.toHaveProperty('status_id');
+      expect(hydratedC).toMatchObject({ title: 'Ticket 5', status_name: 'Open' });
+      expect(hydratedC.attributes).toEqual({ description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE' });
+
       const wildcard: any = await optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['attributes.*'] });
       expect(wildcard.tickets[0]).toMatchObject({ ticket_number: 'CH-2', title: 'DB-SECRET-TITLE', attributes: null });
       expect(JSON.stringify(wildcard)).not.toContain('SMOKE4050-SECRET-ALIAS');
 
       await expect(optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['never_a_ticket_field'] }))
+        .rejects.toThrow(/Unsupported ticket redaction/);
+      await expect(optimized.loadTicketListItemsByIds(base, [ids.C], { [ids.C]: ['attributes.missing_key'] }))
         .rejects.toThrow(/Unsupported ticket redaction/);
     } finally {
       authMocks.user = previousUser;
@@ -256,7 +320,7 @@ describeDb('ticket chip tag hydration (DB)', () => {
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).update({ published_revision_id: null });
       await db('authorization_bundle_revisions').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
-      await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B]).update({ assigned_to: ids.actor });
+      await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B, ids.C]).update({ assigned_to: ids.actor });
       await db('users').where({ tenant: ids.tenant, user_id: redactionUser }).del();
     }
   });
@@ -299,7 +363,40 @@ describeDb('ticket chip tag hydration (DB)', () => {
     expect(JSON.stringify(row)).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
   });
 
-  it.each(['attributes.*', 'ticket.attributes.*', 'tickets.attributes.*', 'attributes.missing_key'])(
+  it('preserves permitted attributes when qualified custom keys are absent from some authorized tickets', async () => {
+    const redactions = new Map([
+      [ids.A, ['attributes.title', 'attributes.status_id']],
+      [ids.C, ['attributes.title', 'attributes.status_id']],
+    ]);
+    const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+      trx, ids.tenant, authMocks.user, [ids.A, ids.C], redactions
+    )));
+    expect(candidates).toHaveLength(2);
+    let request: unknown;
+    await scoreBatch({ systemOne: async (captured: unknown) => {
+      request = captured;
+      return { model: 'db-test', answers: {
+        c0: { type: 'noul', noul: 0.9 }, c1: { type: 'noul', noul: 0.9 },
+      }, usage: { input_tokens: 1 } } as never;
+    } } as never, ticketSmartSearch.relevance, 'incident', candidates, new AbortController().signal);
+    const scorerInput = JSON.stringify(request);
+    expect(scorerInput).toContain('DB-C-PERMITTED-DESCRIPTION');
+    expect(scorerInput).toContain('DB-SECRET-TITLE');
+    expect(scorerInput).toContain('Open');
+    expect(scorerInput).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
+    expect(scorerInput).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
+
+    const hydrated: any = await ticketSmartSearch.hydrateRows(base, [ids.A, ids.C], redactions);
+    const rowA = hydrated.rows.find((row: any) => row.ticket_id === ids.A);
+    const rowC = hydrated.rows.find((row: any) => row.ticket_id === ids.C);
+    expect(rowA).toMatchObject({ title: 'DB-SECRET-TITLE', status_name: 'Open' });
+    expect(rowA.attributes).not.toHaveProperty('title');
+    expect(rowA.attributes).not.toHaveProperty('status_id');
+    expect(rowC).toMatchObject({ title: 'Ticket 5', status_name: 'Open' });
+    expect(rowC.attributes).toEqual({ description: 'DB-C-PERMITTED-DESCRIPTION', visible_alias: 'VISIBLE-C-CUSTOM-ATTRIBUTE' });
+  });
+
+  it.each(['attributes', 'ticket.attributes', 'tickets.attributes', 'attributes.*', 'ticket.attributes.*', 'tickets.attributes.*'])(
     'keeps whole-object redaction %s out of scorer inputs and hydrated rows', async (redaction) => {
       const redactions = new Map([[ids.A, [redaction]]]);
       const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
@@ -326,7 +423,7 @@ describeDb('ticket chip tag hydration (DB)', () => {
 
   it('by-id loads preserve list rows and metadata, request order, deduplication and filters', async () => {
     const listed: any = await optimized.getTicketsForList(base, 1, 50);
-    expect(listed.tickets).toHaveLength(4);
+    expect(listed.tickets).toHaveLength(5);
     const reloaded: any = await optimized.loadTicketListItemsByIds(base, [ids.CH, ids.A, ids.CH, uuidv4()]);
     expect(reloaded.tickets).toEqual([ids.CH, ids.A].map(id =>
       listed.tickets.find((row: any) => row.ticket_id === id)

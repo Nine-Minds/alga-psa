@@ -201,11 +201,12 @@ export async function loadTicketCandidates(
   const principal = await resolveSearchAclPrincipal(trx, user);
   const attributesRows = await tenantDb(trx, tenant).table('tickets').whereIn('ticket_id', authorizedIds).select('ticket_id', 'attributes');
   const attributesById = new Map(attributesRows.map((row: { ticket_id: string; attributes: Record<string, unknown> | null }) => [row.ticket_id, row.attributes]));
+  const knownAttributeKeys = [...new Set(attributesRows.flatMap((row: { attributes: Record<string, unknown> | null }) => Object.keys(row.attributes ?? {})))];
   const grouped = new Map<string, { ids: string[]; interpretation: TicketRedactionInterpretation; hasRedactions: boolean }>();
   for (const id of authorizedIds) {
     const fields = [...new Set(redactions.get(id)!)].sort();
     // Candidate construction must reject policy names it cannot interpret just as hydration does.
-    const interpretation = interpretTicketRedactions(fields, attributesById.get(id));
+    const interpretation = interpretTicketRedactions(fields, attributesById.get(id), knownAttributeKeys);
     const key = JSON.stringify({
       fields: [...interpretation.hiddenFields].sort(),
       attributes: [...interpretation.hiddenAttributes].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())),

@@ -101,28 +101,33 @@ export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
   return hidden;
 }
 
-/** Resolve policy names once against the ticket's actual custom-attribute keys.
- * Unqualified custom keys are supported; names that are neither known ticket
- * fields nor present custom keys are rejected so callers cannot return data
- * after silently dropping an unrecognized policy instruction.
+/** Resolve policy names against the custom keys available to the projection.
+ * Callers processing a set of tickets pass the union of their keys so one row
+ * missing a key cannot change the meaning of a valid restriction for another.
+ * Names that are neither known ticket fields nor known custom keys are rejected.
  */
 export function interpretTicketRedactions(
   redactions: readonly string[],
-  attributes: Record<string, unknown> | null | undefined
+  attributes: Record<string, unknown> | null | undefined,
+  knownAttributeKeys: readonly string[] = []
 ): TicketRedactionInterpretation {
   const hiddenFields = hiddenTicketFields([]);
   const hiddenAttributes = new Set<string>();
+  const availableAttributeKeys = [...new Set([...Object.keys(attributes ?? {}), ...knownAttributeKeys])];
   for (const raw of redactions) {
     if (typeof raw !== 'string' || raw.trim() === '') throw new Error('Unsupported empty ticket redaction');
     const name = raw.trim();
+    if (/^(?:tickets?\.)?attributes$/i.test(name)) {
+      hiddenFields.add('attributes');
+      continue;
+    }
     if (/^(?:tickets?\.)?attributes\.\*$/i.test(name)) {
       hiddenFields.add('attributes');
       continue;
     }
     const qualifiedAttributePath = /^(?:tickets?\.)?attributes\.(.+)$/i.test(name);
     const attributeName = name.replace(/^(?:tickets?\.)?attributes\./i, '').toLowerCase();
-    const attributeKeys = Object.keys(attributes ?? {});
-    const attributeMatches = attributeKeys.filter((key) => key.toLowerCase() === attributeName);
+    const attributeMatches = availableAttributeKeys.filter((key) => key.toLowerCase() === attributeName);
     if (qualifiedAttributePath && attributeMatches.length > 0) {
       for (const key of attributeMatches) hiddenAttributes.add(key);
       if (attributeName === 'description') {
@@ -133,8 +138,7 @@ export function interpretTicketRedactions(
     if (qualifiedAttributePath && attributeName !== 'description') {
       // A qualified JSON path must never fall through to a catalog field with
       // the same suffix (for example attributes.title or attributes.status_id).
-      hiddenFields.add('attributes');
-      continue;
+      throw new Error(`Unsupported ticket redaction: ${name}`);
     }
     if (attributeName === 'description') {
       for (const key of attributeMatches) hiddenAttributes.add(key);

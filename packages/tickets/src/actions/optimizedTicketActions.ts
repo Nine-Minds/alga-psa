@@ -2420,6 +2420,9 @@ export const loadTicketListItemsByIds = withAuth(async (
       const freshDecisions = await authorizeTicketRowsWithRedactions(trx, authorizationContext, authorizationRecords);
       const freshById = new Map(freshDecisions.map(({ ticket, redactedFields }) => [ticket.ticket_id!, redactedFields] as const));
       const attributesById = new Map(authorizationRecords.map((row: any) => [row.ticket_id, row.attributes] as const));
+      const knownAttributeKeys: string[] = [...new Set<string>(authorizationRecords
+        .filter((row: any) => freshById.has(row.ticket_id))
+        .flatMap((row: any) => Object.keys(row.attributes ?? {})))];
       const redactionsById = new Map<string, string[]>();
       for (const id of requestedIds) {
         if (!freshById.has(id)) continue;
@@ -2433,7 +2436,7 @@ export const loadTicketListItemsByIds = withAuth(async (
       const interpretationsById = new Map<string, TicketRedactionInterpretation>();
       for (const id of authorizedIds) {
         const fields = redactionsById.get(id)!;
-        const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined);
+        const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined, knownAttributeKeys);
         interpretationsById.set(id, interpreted);
         const key = JSON.stringify({
           fields: [...interpreted.hiddenFields].sort(),
