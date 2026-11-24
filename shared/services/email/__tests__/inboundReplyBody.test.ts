@@ -59,6 +59,7 @@ describe('inbound reply body', () => {
   it.each([
     '<html><body>',
     '<div><br></div>',
+    '<p>See my answer below.</p>',
     '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
     '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
   ])(

@@ -143,6 +143,7 @@ describe('Gmail reply to the contact’s own reply (alga-2026-0003353)', () => {
     });
 
     it.each([
+      '<p>See my answer below.</p>',
       '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
       '<div>My answer is below.<br>On Mon, Nov 17, 2026 Dana Tech wrote:</div>',
       '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech &lt;<br>dana@msp.test&gt; wrote:</div>',

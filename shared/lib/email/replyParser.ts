@@ -620,21 +620,14 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig, hasTextBase
   // the text, was what the comment stored (alga-2026-0003353).
   const markerIndex = earliestMarkerIndex(html, config);
   if (markerIndex >= 0) {
-    const prefix = html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim();
-    const visiblePrefix = htmlToVisibleText(prefix);
-    // An attribution before a legacy notification is not evidence of a top-posted answer.
-    // Without an independent text part, cutting here can silently discard a bottom reply.
-    // Check each line, including folded attributions: an authored preface must not hide
-    // the provider header from the anchored expressions. This guard only preserves HTML.
-    const prefixLines = visiblePrefix.split('\n').map((line) => line.trim());
-    if (!hasTextBaseline && config.providerReplyHeaders.some((regex) =>
-      regex.test(visiblePrefix.replace(/\s+/g, ' ').trim())
-      || prefixLines.some((_, index) => [1, 2, 3].some((count) =>
-        regex.test(prefixLines.slice(index, index + count).join(' ').trim()))))) {
+    // A legacy marker does not establish where the customer's answer ends. Without
+    // an independent text part, preserve ambiguous HTML: even a substantive preface
+    // with no provider attribution can introduce an answer below the notification.
+    if (!hasTextBaseline) {
       return { text: html.trim() };
     }
     return {
-      text: prefix,
+      text: html.slice(0, cutOffsetForHtmlMarker(html, markerIndex)).trim(),
       matched: 'alga-reply-marker',
       heuristic: 'html-marker-boundary',
     };

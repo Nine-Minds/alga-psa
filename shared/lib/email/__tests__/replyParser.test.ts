@@ -232,9 +232,9 @@ On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
       expect(htmlToVisibleText(result.sanitizedHtml ?? '')).toContain('Jane');
     });
 
-    it('closes the paragraph above a banner that follows it as plain text', () => {
+    it('closes the paragraph above a banner when the text part confirms the boundary', () => {
       const result = parseEmailReply({
-        text: '',
+        text: 'Yes, Thursday works, please book it.\n--- Please reply above this line ---\nNew comment added',
         html: '<p>Yes, Thursday works, please book it.</p>--- Please reply above this line ---'
           + '<div>New comment added</div>',
       });

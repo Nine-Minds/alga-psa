@@ -616,20 +616,22 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       expectNoLeaks(comment.content);
     });
 
-    it('keeps an HTML-only bottom answer after a preface and legacy notification', async () => {
-      const { parseEmailReply } = await import('../../../../lib/email/replyParser');
-      const answer = 'No, do not restart it. Payroll is still running.';
-      const html = '<p>My answer is below.</p><div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'
-        + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
-        + '<p>--- Please reply above this line ---</p><p>Old notification</p>'
-        + `<p>${answer}</p>`;
-      const comment = await writtenComment(
-        parseEmailReply({ text: '', html }),
-        { ...emailData, body: { html } },
-      );
+    it.each(['', '<div>On Mon, Nov 17, 2026 Dana Tech wrote:</div>'])(
+      'keeps an HTML-only bottom answer after a preface and legacy notification with attribution %j', async (attribution) => {
+        const { parseEmailReply } = await import('../../../../lib/email/replyParser');
+        const answer = 'No, do not restart it. Payroll is still running.';
+        const html = '<p>See my answer below.</p>' + attribution
+          + '<div style="display:none">[ALGA-REPLY-TOKEN bottom-token]</div>'
+          + '<p>--- Please reply above this line ---</p><p>Old notification</p>'
+          + `<p>${answer}</p>`;
+        const comment = await writtenComment(
+          parseEmailReply({ text: '', html }),
+          { ...emailData, body: { html } },
+        );
 
-      expect(visibleText(comment.content)).toContain(answer);
-    });
+        expect(visibleText(comment.content)).toContain(answer);
+      },
+    );
 
     it('builds the new ticket description and first comment from the parsed body', async () => {
       const { ticket, comment } = await writtenTicket(REJECTED_TRIM);
